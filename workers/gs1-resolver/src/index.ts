@@ -369,16 +369,45 @@ function passportHtml(payload: ReturnType<typeof passportPayload>): string {
 </main></body></html>`;
 }
 
-/** GS1 Conformant Resolver description — standard discovery document. */
+/**
+ * Resolver description document.
+ *
+ * Corrected 2026-09-11. This previously called itself a "GS1 Conformant
+ * Resolver" and advertised supportedLinkType ["gs1:pip",
+ * "gs1:certificationInfo", "gs1:epcis"] — three link types it cannot serve.
+ * The worker implements none of Digital Link's resolution behaviour: no
+ * linkType query handling, no linkset, no 307 redirect to a linked resource,
+ * no Link header. It parses Digital Link paths and answers a verification
+ * question about the identifier, which is a different service.
+ *
+ * A machine reading a description file is entitled to act on it. Advertising
+ * capabilities that do not exist is the same failure this product sells
+ * against, so the document now describes what the worker actually does, and
+ * says plainly that it is not conformant.
+ *
+ * docs/GS1_CONFORMANCE.md tracks what conformance would require.
+ */
 function wellKnown(env: Env) {
   return {
+    name: "AuthiChain identifier verification service",
     resolverRoot: env.RESOLVER_ORIGIN,
     supportedPrimaryKeys: ["01"],
-    supportedLinkType: ["gs1:pip", "gs1:certificationInfo", "gs1:epcis"],
-    name: "AuthiChain GS1 Digital Link resolver",
-    // Declared here rather than implied: this resolver answers identity and
-    // scan-pattern questions only.
-    documentation: `${env.PASSPORT_ORIGIN}/docs/resolver`,
+
+    // Empty on purpose: no linkType is resolvable here yet. An empty list is
+    // a true statement; the previous list was not.
+    supportedLinkType: [],
+
+    gs1ConformantResolver: false,
+    conformanceNote:
+      "Parses GS1 Digital Link URIs and returns a verification result for the identifier. Does not implement linkType resolution, linksets, or redirection to linked resources, and so is not a GS1-Conformant Resolver.",
+
+    // The two behaviours a caller most needs to distinguish.
+    endpoints: {
+      scan: "GET /01/{gtin}/21/{serial} or /cert/{certId} — records a scan and may advance seal status",
+      read: "GET /v1/passport/{certId} — returns the same payload, records nothing, never changes status",
+    },
+
+    documentation: `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/docs/resolver`,
   };
 }
 
