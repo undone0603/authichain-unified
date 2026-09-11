@@ -11,11 +11,11 @@ database_name = "authichain-provenance"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 
 [vars]
-# NOTE (verified 2026-09-04): authichain.com/passport/{certId} has NO route --
-# it serves the marketing homepage for any cert id. The resolver therefore does
-# not link to it (see passportUrl in src/index.ts). PASSPORT_ORIGIN is still
-# used for the /.well-known docs link. Re-enable the passport link only after
-# that route actually renders a passport.
+# PASSPORT_ORIGIN is where a scanned seal sends a human. As of 2026-09-11 that
+# route exists (src/app/passport/[id]) and passportUrl is populated again; the
+# 2026-09-04 note about it serving the marketing homepage no longer applies.
+# The passport page reads through /v1/passport/{id}, which is scan-free, so
+# following the link cannot advance a seal's state.
 PASSPORT_ORIGIN = "https://authichain.com"
 RESOLVER_ORIGIN = "https://id.authichain.com"
 

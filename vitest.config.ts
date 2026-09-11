@@ -25,6 +25,20 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "attestation") + "$1",
       },
+      // Same carve-out as attestation above: these live under src/lib, while
+      // the catch-all sends @/* to client/src. A blanket @/lib rule cannot be
+      // used — client/src/lib/utils.ts is imported as @/lib/utils by most of
+      // the UI components.
+      {
+        find: /^@\/lib\/fingerprint(\/.*)?$/,
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "fingerprint") + "$1",
+      },
+      {
+        find: /^@\/lib\/genetics(\/.*)?$/,
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "genetics") + "$1",
+      },
       {
         find: /^@\/db(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "db") + "$1",
