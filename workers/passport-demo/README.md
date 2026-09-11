@@ -61,6 +61,58 @@ params, empty/symbol/unicode/emoji/300-char brands, `*italic*` markup, blank
 milestones) and produced byte-identical `innerHTML` for all 22 rendered ids,
 with zero console errors on both.
 
+## `em()` fix
+
+The recovered `em()` helper used `.replace(/\*(.+?)\*/g, '<i>$1</i>')` — a
+literal, valid form with no undefined identifiers. Despite that, the live
+branch-preview deploy threw `ReferenceError: g is not defined` inside `em()`
+on every page load, aborting the render right after the first story chapter
+(matching a live screenshot: chapter 1's title rendered, everything after it —
+brand, batch, date, origin, proof ID, QR image — stayed blank, even with the
+null-safe hardening above in place, since each of those fields never got a
+chance to run). The exact mechanism producing that error from this exact
+source was never identified — the deployed artifact did not match this file's
+content, and there was no way to inspect the live build environment further —
+so rather than chase the anomaly, `em()` was rewritten to remove the entire
+class of bug: it no longer calls `.replace()` with a literal `$1` or a named
+capture-group callback parameter at all. It splits the string on `*` and pairs
+segments manually. Confirmed fixed live: the branch-preview deploy running
+this version renders every field correctly, verified via browser console
+(no errors) after the change, versus the reproducible failure before it.
+
+## QR art (`/qr.png`)
+
+Redesigned for two goals that turned out to be in tension: on-brand and
+actually scannable. Several visually striking references (dark background,
+light/inverted modules — the "galactic," "neon," dark-metal style of AI QR
+art) were tested and **do not reliably decode**: standard QR readers (zbar,
+OpenCV's `QRCodeDetector`) require dark modules on a light background, and an
+inverted-polarity code that looks structurally identical fails both, even
+though some phone camera apps are lenient enough to read it. That's not a risk
+worth taking on a real prospect's phone.
+
+The shipped design instead keeps the polarity standard readers require, and
+gets the "premium" look from color and texture that doesn't touch contrast:
+
+- Solid black finder squares (untouched — these are load-bearing for
+  detection) and dot-style data modules, each dot radius tuned to the largest
+  value that still reads reliably (swept 0.34–0.50× the module box; anything
+  below ~0.46× started failing).
+- A subtle green→ink gradient across the dots (hue varies by position; every
+  dot stays dark enough to keep the light/dark threshold readers rely on).
+- A center crest (gold ring, laurel ticks, brand initials — original
+  geometry, no third-party marks) over a reserved zone sized well inside the
+  tested-safe margin: verified scannable up to 36% center coverage; shipped
+  at 20% for margin.
+- Fine paper-grain background texture and a corner vignette, both low
+  amplitude — nowhere near dark enough to be mistaken for a module.
+
+Every variant above was verified with **two independent decoders** (`pyzbar`
+and OpenCV's `QRCodeDetector`) before being accepted, including a byte-level
+round-trip check against the exact base64 payload embedded in this file (not
+just the source PNG). `/authichain-qr.png` (`QR_BRAND`) was left as-is —
+out of scope for this pass.
+
 ## Known gap
 
 `/qr.png` and `/authichain-qr.png` serve JPEG bytes under `.png` names. Browsers
