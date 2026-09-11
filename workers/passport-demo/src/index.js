@@ -193,7 +193,7 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
     var ms = [q.get('m1'), q.get('m2'), q.get('m3'), q.get('m4')];
     var defMs = ['Origin','Craft','Release','Verified'];
     for (var j = 0; j < 4; j++) {
-      setText('m' + (j+1), esc(ms[j] || defMs[j]));
+      setText('m' + (j+1), ms[j] || defMs[j]);
     }
     setText('brand', brand);
     setText('vbrand', brand);
