@@ -8,6 +8,7 @@ import {
   SectionRule,
   Tick,
 } from "../components";
+import { ThcvTimeline } from "../ThcvTimeline";
 
 type Params = { farm: string };
 
@@ -106,6 +107,11 @@ export default async function FarmIndex({
           <Stat v={String(flaggedTotal)} l="Panels incomplete" />
         </div>
       </header>
+
+      <section>
+        <SectionRule>Chemistry across the family</SectionRule>
+        <ThcvTimeline certificates={d.certificates} />
+      </section>
 
       <section>
         <SectionRule>Cultivars · by verified peak THCV</SectionRule>

@@ -205,3 +205,38 @@
 .ledger .n {
   text-align: right;
 }
+
+/* ---- chart ---------------------------------------------------------------
+   Categorical slots 1 and 2 from the reference palette, validated in both
+   modes against this surface with --pairs all: lightness band, chroma floor,
+   CVD separation, normal-vision floor and contrast all pass. Do not substitute
+   the botanical accents here — --teal fails the chroma floor as a data mark
+   (0.068, reads gray). Chrome colours and data colours are not interchangeable.
+--------------------------------------------------------------------------- */
+.viz-root {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+}
+@media (prefers-color-scheme: dark) {
+  .dossier:not([data-theme="light"]) .viz-root {
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+  }
+}
+.dossier[data-theme="dark"] .viz-root {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+}
+
+/* Per-mark hover tooltip. Kept in CSS so the chart stays a server component. */
+.viz-root .tip {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.viz-root .pt:hover .tip,
+.viz-root .pt:focus-within .tip {
+  opacity: 1;
+}
+.viz-root .pt:hover circle:nth-child(2) {
+  r: 6;
+}
