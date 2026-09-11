@@ -9,6 +9,7 @@ import {
   toSlug,
   type DerivedCertificate,
 } from "@/lib/genetics";
+import { fingerprintCultivar } from "@/lib/fingerprint";
 import {
   IssuerCommitment,
   PassportFooter,
@@ -89,6 +90,7 @@ export default async function CultivarDossier({
   if (!view || !dossier) notFound();
 
   const { certificates, cultivar: c } = view;
+  const fp = fingerprintCultivar(view, farm);
   const flagged = certificates.filter(x => x.derived.mismatch);
   const terpCert = certificates.find(x => x.terpenes_pct);
 
@@ -400,6 +402,74 @@ export default async function CultivarDossier({
         </section>
       )}
 
+      {/* ---- prior-art fingerprint ---- */}
+      <section>
+        <SectionRule>Record fingerprint</SectionRule>
+        <h2 className="serif" style={h2}>
+          A checksum over what this record says
+        </h2>
+        <p style={sectionNote}>
+          Computed from the certificates and lineage on this page, not stored.
+          Recompute it from the published bytes and it must match.
+        </p>
+
+        <div
+          className="mono"
+          style={{
+            border: "1px solid var(--line-strong)",
+            borderRadius: 4,
+            background: "var(--paper-raised)",
+            padding: "14px 16px",
+            fontSize: ".78rem",
+            wordBreak: "break-all",
+            lineHeight: 1.6,
+          }}
+        >
+          {fp.digest}
+        </div>
+
+        <div
+          className="grid-cells"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
+            marginTop: 16,
+          }}
+        >
+          <div className="cell">
+            <p className="mono" style={cellHead}>
+              What it proves
+            </p>
+            <p style={cellBody}>{fp.proves}</p>
+          </div>
+          <div className="cell">
+            <p className="mono" style={cellHead}>
+              What it does not
+            </p>
+            <p style={cellBody}>{fp.doesNotProve}</p>
+          </div>
+        </div>
+
+        <div className="note" style={{ marginTop: 16 }}>
+          <strong style={{ color: "var(--ink)" }}>Covers</strong>
+          <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+            {fp.covers.map(x => (
+              <li key={x} style={{ marginBottom: 4 }}>
+                {x}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="note note-amber" style={{ marginTop: 12 }}>
+          <strong style={{ color: "var(--ink)" }}>Not anchored yet.</strong> A
+          fingerprint on its own carries no date — it says what this record
+          contains, not when it existed. Establishing priority needs this digest
+          written somewhere neither party controls, which needs signing keys
+          this deployment does not hold. Until then, treat it as a checksum, not
+          as evidence of precedence.
+        </div>
+      </section>
+
       <IssuerCommitment />
 
       <PassportFooter
@@ -558,6 +628,19 @@ const h2: React.CSSProperties = {
   fontSize: "1.5rem",
   margin: "0 0 4px",
   fontWeight: 600,
+};
+const cellHead: React.CSSProperties = {
+  fontSize: ".68rem",
+  letterSpacing: ".1em",
+  textTransform: "uppercase",
+  color: "var(--muted)",
+  margin: "0 0 8px",
+};
+const cellBody: React.CSSProperties = {
+  margin: 0,
+  fontSize: ".9rem",
+  lineHeight: 1.55,
+  color: "var(--ink-soft)",
 };
 const sectionNote: React.CSSProperties = {
   fontSize: ".92rem",
