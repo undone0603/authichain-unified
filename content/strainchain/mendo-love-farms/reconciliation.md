@@ -1,6 +1,6 @@
 # Mendo Love Farms — reconciliation findings
 
-**Date:** 2026-09-11
+**Date:** 2026-09-11 (updated same day — see "What the inbox still held")
 **Scope:** the seven Digital Product Passport prototypes and the library index published 2026-09-10/11, plus the passport-as-a-service proposal.
 **Data of record:** `certificates.json` in this directory.
 
@@ -26,14 +26,14 @@ intended. But it must be corrected before anything further goes out, per step 6
 
 ### 1. "Highest THCV on file" is claimed for the wrong cultivar — HIGH
 
-LT-35's passport carries the headline *"highest THCV on file"* and a crimson
+LT-35's passport carries the headline _"highest THCV on file"_ and a crimson
 `Highest verified THCV` chip. The library index repeats it.
 
-| Cultivar | Peak total THCV |
-|---|---|
-| **VT-26** | **11.618%** |
-| LT-35 #10 | 11.233% |
-| VT-26 × LT-11 #6 | 8.814% |
+| Cultivar         | Peak total THCV |
+| ---------------- | --------------- |
+| **VT-26**        | **11.618%**     |
+| LT-35 #10        | 11.233%         |
+| VT-26 × LT-11 #6 | 8.814%          |
 
 VT-26 is higher by 0.385 points. The library index's own masthead states
 "11.62% — Peak verified THCV," contradicting the LT-35 card three inches below
@@ -41,8 +41,8 @@ it. LT-35 is the **second**-highest.
 
 ### 2. THCV does not exceed both parents in the crosses — HIGH
 
-Both the VT-26 passport and the crosses passport state that THCV *"climbs above
-either confirmed parent's levels."* The crosses peak at 8.814% (#6). VT-26, a
+Both the VT-26 passport and the crosses passport state that THCV _"climbs above
+either confirmed parent's levels."_ The crosses peak at 8.814% (#6). VT-26, a
 confirmed parent, is 11.618%. The crosses exceed LT-11 (6.244%) but fall well
 short of VT-26.
 
@@ -53,15 +53,15 @@ licensing partner's diligence would check first.
 ### 3. "#6 is the only one to show detectable CBD" — MEDIUM
 
 The crosses passport says so; the table immediately beneath it shows #14 at
-0.103% CBD and #6 at 0.092%. #14 has *more*. Two selections show CBD, not one.
+0.103% CBD and #6 at 0.092%. #14 has _more_. Two selections show CBD, not one.
 
 ### 4. Certificate count is stated three different ways — MEDIUM
 
-| Source | Count |
-|---|---|
-| Library index masthead | "17 certificates reconciled" |
-| Proposal (twice) | "14 certificates" |
-| Itemised across all seven passports | **12 unique CoA IDs** |
+| Source                              | Count                        |
+| ----------------------------------- | ---------------------------- |
+| Library index masthead              | "17 certificates reconciled" |
+| Proposal (twice)                    | "14 certificates"            |
+| Itemised across all seven passports | **12 unique CoA IDs**        |
 
 The library index's own per-cultivar cards sum to 13 card-declared CoAs, of
 which `240823Q009-001` is double-counted (it appears on both the VT-26 batch
@@ -72,14 +72,14 @@ passport, or the headline is inflated. Resolve before restating any count.
 ### 5. "0 open lineage questions" — MEDIUM
 
 The library index masthead claims zero. The same page displays an amber flag on
-the VT-41 card reading *"Unexplained 'x 6.75' / 'V#17' codes."* LT-35's passport
-says *"No parentage on file … treat as a separate line."* There are at least
+the VT-41 card reading _"Unexplained 'x 6.75' / 'V#17' codes."_ LT-35's passport
+says _"No parentage on file … treat as a separate line."_ There are at least
 two open lineage questions; `certificates.json` records eight open items.
 
 ### 6. "Within one day of each other" — LOW
 
-VT-41's passport says both selections were collected *"within one day of each
-other in August 2024."* The dates are 2024-08-23 and 2024-08-07 — sixteen days
+VT-41's passport says both selections were collected _"within one day of each
+other in August 2024."_ The dates are 2024-08-23 and 2024-08-07 — sixteen days
 apart.
 
 ### 7. LT-57 "second-highest absolute THCV" — LOW
@@ -105,7 +105,7 @@ Worth stating plainly, because the list above is lopsided:
 - The lineage confirmation is properly sourced — three CoA sample names showing
   the `VT 26 x 41 #N` pattern, 3-for-3, plus Mike's written confirmation. That
   is the model for how provenance should be recorded.
-- The backcross inference is correct reasoning, even though the *consequence*
+- The backcross inference is correct reasoning, even though the _consequence_
   drawn from it (finding 2) is wrong.
 - The VT-41 "x 6.75" / "V#17" flag is exactly right: an anomaly found on the
   certificates, absent from correspondence, raised rather than papered over.
@@ -125,3 +125,60 @@ from the source SC Labs PDFs. The chemistry is self-consistent, which is strong
 evidence of faithful transcription, but self-consistency is not verification
 against the certificate. A pass against the original PDFs is still owed before
 any of this is presented as certificate-verified to a third party.
+
+---
+
+## What the inbox still held — 2026-09-11
+
+Going back to the source emails to start the CoA verification pass turned up a
+message that had never been processed. Mike, 2026-09-10 20:43 UTC, subject
+**"Lineage"**:
+
+> The VT 26 female and the VT 41 male were grown out in 2024, LT 11, LT 17 and
+> LT 57 are there male offspring that were grown out in 2025 and used for
+> breeding purposes. **LT 35 and LT 63 are females from that cross**, that we
+> have clones of. **The LT 63 is available for licenscing.** The LT 35 we are
+> keeping for breeding purposes.
+
+It arrived 35 minutes after the lineage confirmation the passports were built
+on, and nothing downstream had read it.
+
+### It settles the bigger of the two open questions
+
+**LT-35 is not a separate line.** It is a VT-26 × VT-41 female — a full sibling
+of LT-11, LT-17 and LT-57. Every surface said "no parentage on file, treat as a
+separate line," which was honest when written and is now wrong. The edge is
+recorded as `confirmed_in_writing`, and `lt35_parentage` moves to
+`answered_questions`.
+
+That also explains the chemistry rather than leaving it a curiosity: LT-35 #10
+at 11.233% THCV is not an unrelated outlier, it is what this cross produces in a
+female.
+
+### And it introduces a cultivar nobody had heard of
+
+**LT-63 exists, is a full sibling of LT-35, and is the one offered for
+licensing.** LT-35 is retained for breeding.
+
+This is the commercially significant half. Every passport built so far covers
+genetics the breeder is _keeping_. The cultivar he is actually willing to
+license has **no certificate on file, no chemistry, and no passport** — and a
+licensee's first question will be what LT-63 tests at.
+
+Recorded as a cultivar with an empty `coa_ids`, so it is visible as a known gap
+rather than absent. Two new questions replace the answered one: whether SC Labs
+certificates exist for LT-63, and whether it tests comparably to its sibling.
+
+### Method note
+
+This is why step 7 of the playbook exists. The lineage claim was already
+confirmed in writing; this email was a _fuller_ written answer sitting unread
+behind it. The reconciliation was accurate against what had been read, and
+wrong about the world. Re-reading the source before publishing is not optional.
+
+### Still owed
+
+The certificate-by-certificate verification against the source SC Labs PDFs.
+The attachments are located — four emails from 2026-09-06 carrying roughly 9 MB
+between them — but each CoA still has to be opened and checked field by field
+against `certificates.json`.

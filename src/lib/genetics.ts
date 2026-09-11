@@ -68,7 +68,8 @@ export interface Cultivar {
   role: string;
   description?: string;
   coa_ids: string[];
-  peak_total_thcv_pct: number;
+  /** null when no certificate exists for this cultivar yet. */
+  peak_total_thcv_pct: number | null;
   awards?: {
     name: string;
     year: number;
@@ -272,8 +273,10 @@ export function getCultivar(
     .filter((n): n is number => n != null);
 
   // Rank across the farm on the same basis the dossier displays.
+  // A cultivar with no certificate has no measured peak and ranks last, rather
+  // than producing NaN in the comparator and an unstable order.
   const ranked = [...d.cultivars].sort(
-    (a, b) => b.peak_total_thcv_pct - a.peak_total_thcv_pct
+    (a, b) => (b.peak_total_thcv_pct ?? -1) - (a.peak_total_thcv_pct ?? -1)
   );
 
   const q = d.openQuestions.filter(

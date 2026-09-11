@@ -121,8 +121,12 @@ describe("the Mendo Love Farms dossier", () => {
     const lt11 = getCultivar(farm, "lt-11")!;
     expect(lt11.parentEdges[0].provenance).toBe("confirmed_in_writing");
 
+    // LT-35 read as "no parentage on file" until the breeder's 2026-09-10
+    // "Lineage" email was processed. It is a VT-26 x VT-41 female, confirmed
+    // in writing, and a full sibling of the LT males.
     const lt35 = getCultivar(farm, "lt-35")!;
-    expect(lt35.parentEdges[0].provenance).toBe("none");
+    expect(lt35.parentEdges[0].provenance).toBe("confirmed_in_writing");
+    expect(lt35.parentEdges[0].parents).toEqual(["VT-26", "VT-41"]);
   });
 
   it("surfaces open questions instead of guessing", () => {
@@ -139,6 +143,29 @@ describe("the Mendo Love Farms dossier", () => {
   it("returns null for an unknown farm or cultivar", () => {
     expect(getDossier("nope")).toBeNull();
     expect(getCultivar(farm, "nope")).toBeNull();
+  });
+});
+
+describe("LT-63 — known, licensable, and untested", () => {
+  const farm = "mendo-love-farms";
+
+  it("is recorded even though no certificate exists for it", () => {
+    const lt63 = getCultivar(farm, "lt-63")!;
+    expect(lt63).not.toBeNull();
+    expect(lt63.certificates).toEqual([]);
+    expect(lt63.peakThcvPct).toBeNull();
+  });
+
+  it("carries confirmed parentage despite having no chemistry", () => {
+    // The cultivar actually offered for licensing has no lab data on file.
+    // That gap is the point: it must stay visible, not be inferred away.
+    const lt63 = getCultivar(farm, "lt-63")!;
+    expect(lt63.parentEdges[0].provenance).toBe("confirmed_in_writing");
+  });
+
+  it("ranks last on THCV rather than corrupting the ordering", () => {
+    const lt63 = getCultivar(farm, "lt-63")!;
+    expect(lt63.thcvRank).toBe(lt63.totalCultivars);
   });
 });
 
