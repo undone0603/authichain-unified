@@ -5,7 +5,8 @@
   "method": {
     "decarboxylation_factor": 0.877,
     "decarboxylation_note": "Molar ratio of THC (314.46) to THCA (358.47) = 0.8772. total_thcv = THCV + THCVA * 0.877; total_thc = d9_THC + THCA * 0.877.",
-    "verification": "All eight certificate rows were recomputed from raw mg/g. Every published total and ratio reproduces exactly except LT-35 #10 — see discrepancies."
+    "verification": "All eight certificate rows were recomputed from raw mg/g. Every published total and ratio reproduces exactly except LT-35 #10 — see discrepancies.",
+    "moisture_note": "Breeder, email \"VT 26\" 2026-09-06: \"you will see high moisture on our COA's because we test fresh leaf/ flower since gauging THCV levels for harvest. The California State fair entry is at the proper moisture levels.\" This explains moisture of 70-86% across the set against 11.6% on the State Fair flower entry — the samples are deliberately fresh-tested, not mishandled. Analysis is dry-weight, so totals remain comparable."
   },
   "laboratory": {
     "name": "SC Laboratories California LLC",
@@ -292,7 +293,12 @@
           "provenance": "claimed",
           "evidence": "Breeder correspondence and the CoA sample name 'CA State Fair entry'. No award certificate is on file."
         }
-      ]
+      ],
+      "chemotype_claim": {
+        "claim": "Terpinolene-dominant, unlike most THCV chemovars which are Myrcene-dominant, including Phylos and Pink Boost (Emerald Spirits).",
+        "provenance": "claimed",
+        "evidence": "Breeder, email \"VT 26\" 2026-09-06, verbatim. The terpinolene-over-myrcene ratio on VT-26's own certificate (0.629% vs 0.138%, 4.6x) is verified; the comparison to Phylos and Pink Boost is the breeder's and has not been checked against those chemovars' published data."
+      }
     },
     {
       "id": "VT-41",
@@ -426,11 +432,6 @@
       "blocks": "Publishing the award as verified rather than claimed."
     },
     {
-      "id": "certificate_count",
-      "question": "How many SC Labs certificates exist in total for this genetics family? Published materials say 17, 14, and an itemized 12.",
-      "blocks": "Any headline count shown to a third party."
-    },
-    {
       "id": "lt63_certificates",
       "question": "Are there SC Labs certificates for LT-63? It is the cultivar offered for licensing and currently has no chemistry on file at all.",
       "blocks": "Any passport for LT-63, which is the one a licensee would ask to see."
@@ -439,6 +440,11 @@
       "id": "lt35_lt63_sibling_chemistry",
       "question": "LT-35 tests 11.233% THCV as a VT-26 x VT-41 female. Does LT-63 test comparably? The two are full siblings.",
       "blocks": "Whether the licensable cultivar carries the chemistry the retained one does."
+    },
+    {
+      "id": "phytofacts_reports",
+      "question": "The two PhytoFacts reports have not been opened. Do they carry terpene data beyond what the certificates show?",
+      "blocks": "Terpene profiles for anything other than VT-26, which is the only cultivar with a terpene panel on file."
     }
   ],
   "answered_questions": [
@@ -448,6 +454,125 @@
       "answered": "2026-09-10",
       "answer": "VT-26 female x VT-41 male — a full sibling of LT-11/17/57, not a separate line.",
       "source": "Mike, email subject \"Lineage\", 2026-09-10T20:43Z."
+    },
+    {
+      "id": "certificate_count",
+      "question": "How many SC Labs certificates exist for this genetics family?",
+      "answered": "2026-09-11",
+      "answer": "14 PDF attachments across four emails, comprising 12 distinct certificates of analysis, one PhytoFacts chemotype report, and one second document for sample 251104R041. The proposal's '14' counted attachments; 12 is the certificate count. The '17' on the library index was never supportable.",
+      "source": "Gmail attachment manifests for the four 2026-09-06 emails from realthcv@gmail.com."
     }
-  ]
+  ],
+  "source_attachments": {
+    "note": "Inventory of every PDF the breeder actually sent, taken from the Gmail attachment manifests on 2026-09-11. Resolves the certificate-count question: 14 attachments, 12 distinct CoA IDs, plus one PhytoFacts report and one second document for sample 251104R041. The proposal's '14' counted attachments; '12 unique CoAs' is the correct certificate count. The library index's '17' was never supportable.",
+    "attachment_bytes_unavailable": "The Gmail tool surface exposes attachment IDs and filenames but not attachment content, so the certificates themselves still have not been opened. Filenames carry the CoA ID, which is what makes this inventory possible.",
+    "emails": [
+      {
+        "subject": "VT 26",
+        "date": "2026-09-06",
+        "attachments": [
+          "251104R041-001 CoA (17) (2).pdf",
+          "240823Q009-001 CoA (12) (2).pdf",
+          "251104R041 (3) (2).pdf",
+          "240807R036-001 CoA (14) (3).pdf",
+          "VT-26-California-State-Fair-CoA-1 (3) (1).pdf",
+          "VT-26-California-State-Fair-PhytoFacts (1) (2).pdf"
+        ]
+      },
+      {
+        "subject": "2025 breeding males",
+        "date": "2026-09-06",
+        "attachments": [
+          "250707R019-002 CoA (8) (2) (1).pdf",
+          "250707R025-002 CoA (11) (2) (1).pdf",
+          "250812V069-001 CoA (10) (1) (1) (1).pdf"
+        ]
+      },
+      {
+        "subject": "2026 leaf females",
+        "date": "2026-09-06",
+        "attachments": [
+          "260715S029-001 CoA (2) (1).pdf",
+          "260715S032-001 CoA (1) (1).pdf"
+        ]
+      },
+      {
+        "subject": "2026 breeding males",
+        "date": "2026-09-06",
+        "attachments": [
+          "260715S005-001 CoA (2) (1).pdf",
+          "260715S011-001 CoA (4) (1).pdf",
+          "260715S028-001 CoA (3) (1).pdf"
+        ]
+      }
+    ],
+    "unrecorded": [
+      {
+        "filename": "VT-26-California-State-Fair-PhytoFacts (1) (2).pdf",
+        "what": "A PhytoFacts chemotype report, not a certificate of analysis. Different document class; no CoA ID. Breeder: \"There are two flower/phyto facts COA's of the VT 26.\""
+      },
+      {
+        "filename": "251104R041 (3) (2).pdf",
+        "what": "Second document for sample 251104R041, without the -001 suffix the certificate carries. Likely the PhytoFacts companion to 251104R041-001. Unopened."
+      }
+    ],
+    "filename_without_id": [
+      {
+        "filename": "VT-26-California-State-Fair-CoA-1 (3) (1).pdf",
+        "assumed_coa_id": "260320S005-001",
+        "caution": "The only certificate whose filename does not carry its CoA ID. The mapping to 260320S005-001 is inferred from it being the State Fair entry, not read off the document."
+      }
+    ]
+  },
+  "claimed_vs_derived": {
+    "note": "Figures the breeder stated in email, against values recomputed from the transcribed panels. All are small except LT-17. None is resolvable without opening the certificates.",
+    "rows": [
+      {
+        "cultivar": "LT-11",
+        "claimed_ratio": 7.48,
+        "derived_ratio": 7.49,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "LT-17",
+        "claimed_ratio": 6.28,
+        "derived_ratio": 6.09,
+        "delta": 0.19,
+        "assessment": "the one material mismatch; likely a %-based calculation against the lab's mg/g method"
+      },
+      {
+        "cultivar": "LT-57",
+        "claimed_ratio": 4.37,
+        "derived_ratio": 4.36,
+        "claimed_thcv_pct": 7.997,
+        "derived_thcv_pct": 7.977,
+        "delta": 0.02,
+        "assessment": "breeder's pair is internally consistent (7.997/1.829=4.37), so the certificate's printed total may differ slightly from recomputation off rounded mg/g"
+      },
+      {
+        "cultivar": "LT-35 #10",
+        "claimed_ratio": 8.57,
+        "derived_ratio": 8.58,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "LT-35 #4",
+        "claimed_ratio": 7.95,
+        "derived_ratio": 7.96,
+        "claimed_thcv_pct": 10.9,
+        "derived_thcv_pct": 10.901,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "VT-41 (leaf)",
+        "claimed_ratio": 4.75,
+        "derived_ratio": 4.79,
+        "delta": 0.04,
+        "assessment": "rounding or a different sample; breeder cites this as the father's leaf ratio"
+      }
+    ]
+  }
 }

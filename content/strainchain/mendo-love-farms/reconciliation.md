@@ -182,3 +182,88 @@ The certificate-by-certificate verification against the source SC Labs PDFs.
 The attachments are located — four emails from 2026-09-06 carrying roughly 9 MB
 between them — but each CoA still has to be opened and checked field by field
 against `certificates.json`.
+
+---
+
+## Source inventory — 2026-09-11
+
+The Gmail tool surface exposes attachment **filenames and IDs but not bytes**, so
+the certificates still have not been opened. SC Labs names each file after its
+CoA ID, though, which makes a full inventory possible without reading them.
+
+### The certificate count is settled
+
+**14 PDF attachments across four emails. 12 distinct certificates of analysis.**
+
+| Email (2026-09-06)  | PDFs |
+| ------------------- | ---- |
+| VT 26               | 6    |
+| 2025 breeding males | 3    |
+| 2026 leaf females   | 2    |
+| 2026 breeding males | 3    |
+
+The two beyond the twelve certificates are not certificates:
+
+- `VT-26-California-State-Fair-PhytoFacts.pdf` — a PhytoFacts chemotype report.
+  The breeder's own wording: _"There are two flower/ phyto facts COA's of the
+  VT 26."_
+- `251104R041 (3).pdf` — a second document for sample `251104R041`, without the
+  `-001` the certificate carries. Probably its PhytoFacts companion. Unopened.
+
+So **the proposal's "14" was counting attachments, and 12 is the certificate
+count.** Both were defensible readings of the same pile; neither was written
+down. The library index's "17" was never supportable by anything.
+
+One caution: `VT-26-California-State-Fair-CoA-1.pdf` is the only certificate
+whose filename does not carry its CoA ID. Its mapping to `260320S005-001` is
+inferred from it being the State Fair entry, not read off the document.
+
+### The high moisture is deliberate, and nothing said so
+
+Every certificate except the State Fair flower entry shows moisture between 70%
+and 86%, against 11.6% on that one. Read cold, that looks like mishandled
+samples. The breeder explained it in the first email and no passport carried it:
+
+> you will see high moisture on our COA's because we test fresh leaf/ flower
+> since gauging THCV levels for harvest. The California State fair entry is at
+> the proper moisture levels.
+
+The samples are fresh-tested on purpose, to time harvest. Analysis is dry-weight,
+so the totals stay comparable — but a buyer looking at 85.6% moisture without
+that sentence would reasonably wonder.
+
+### Claimed against derived, across the whole set
+
+Now that every breeder-stated figure is collected in one place, five of the six
+deltas are rounding and one is not:
+
+| Cultivar   | Breeder         | Derived          | Δ           |
+| ---------- | --------------- | ---------------- | ----------- |
+| LT-11      | 7.48:1          | 7.49:1           | 0.01        |
+| **LT-17**  | **6.28:1**      | **6.09:1**       | **0.19**    |
+| LT-57      | 4.37:1 · 7.997% | 4.36:1 · 7.977%  | 0.01 · 0.02 |
+| LT-35 #10  | 8.57:1          | 8.58:1           | 0.01        |
+| LT-35 #4   | 7.95:1 · 10.90% | 7.96:1 · 10.901% | 0.01        |
+| VT-41 leaf | 4.75:1          | 4.79:1           | 0.04        |
+
+LT-57 is worth a note: the breeder's pair is internally consistent
+(7.997 / 1.829 = 4.37), so the certificate's printed total may genuinely differ
+from a recomputation off rounded mg/g. That is a question only the PDF can
+answer.
+
+### The Phylos comparison is the breeder's claim, not ours
+
+The VT-26 passport states that most THCV genetics on the market — _"including
+reference chemovars like Phylos and Pink Boost (Emerald Spirits)"_ — are
+myrcene-dominant. That sentence came from Mike's email verbatim. It is now
+tagged `claimed` rather than presented as research.
+
+The measurable half stands: VT-26's own certificate shows 0.629% terpinolene
+against 0.138% myrcene, 4.6×. What has not been checked is the claim about the
+other chemovars.
+
+### What is still owed
+
+Opening the twelve certificates. The inventory is complete and every CoA ID is
+accounted for, but no field has been read off a source document. `arithmetic_check`
+in `certificates.json` still means "internally consistent", not "matches the PDF".
