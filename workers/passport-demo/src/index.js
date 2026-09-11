@@ -159,7 +159,14 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
   try {
     var q = new URLSearchParams(location.search);
     function esc(s){ var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-    function em(s){ return esc(s).replace(/\*(.+?)\*/g, '<i>$1</i>'); }
+    function em(s){
+      var parts = esc(s).split('*');
+      var out = parts[0];
+      for (var p = 1; p < parts.length; p += 2) {
+        out += '<i>' + (parts[p] || '') + '</i>' + (parts[p + 1] || '');
+      }
+      return out;
+    }
     var brand  = q.get('b') || 'Copper & Rye Distilling Co.';
     var product= q.get('p') || 'Huron Reserve — Single Barrel Rye';
     var type   = q.get('t') || 'Small-batch rye whiskey · 750ml';
