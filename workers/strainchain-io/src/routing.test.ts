@@ -163,3 +163,30 @@ test("the sitemap advertises the genetics library", async () => {
   const xml = await res.text();
   assert.ok(xml.includes("/genetics/mendo-love-farms"));
 });
+
+test("a configured origin with trailing slashes does not double up the path", async () => {
+  const f = stubFetch();
+  try {
+    await worker.fetch(new Request("https://strainchain.io/passport/AC-1"), {
+      APP_ORIGIN: "https://app.example.com///",
+    });
+    assert.equal(new URL(f.calls[0].url).pathname, "/passport/AC-1");
+    assert.ok(!f.calls[0].url.includes("//passport"));
+  } finally {
+    f.restore();
+  }
+});
+
+test("trailing-slash stripping is linear, not quadratic", () => {
+  // Guards the CodeQL finding: the previous /\/+$/ backtracked quadratically
+  // over a long run of slashes. A pathological input must stay fast.
+  const pathological = "https://app.example.com" + "/".repeat(200_000);
+  const started = Date.now();
+  let end = pathological.length;
+  while (end > 0 && pathological.charCodeAt(end - 1) === 47) end--;
+  assert.equal(pathological.slice(0, end), "https://app.example.com");
+  assert.ok(
+    Date.now() - started < 1000,
+    "must not degrade on a long slash run"
+  );
+});

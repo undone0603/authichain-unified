@@ -1993,8 +1993,23 @@ const APP_PATHS = [/^\/genetics(?:\/|$)/, /^\/passport(?:\/|$)/];
  * The original host travels in X-Forwarded-Host so the app can still resolve
  * the brand.
  */
+/**
+ * Strips trailing slashes in linear time.
+ *
+ * Replaces `.replace(/\/+$/, "")`, which CodeQL flagged as a polynomial
+ * regular expression on uncontrolled data: an anchored `+` backtracks
+ * quadratically over a run of slashes. These origins come from configuration
+ * rather than from a request, so the practical exposure was small — but the
+ * regex buys nothing over a scan, so there is no reason to keep it.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  return value.slice(0, end);
+}
+
 async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
-  const upstream = new URL(`${origin.replace(/\/+$/, "")}${url.pathname}${url.search}`);
+  const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
   const proxied = new Request(upstream, {
     method: request.method,
     headers: request.headers,

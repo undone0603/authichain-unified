@@ -57,12 +57,19 @@ export interface PassportPayload {
   passportUrl: string | null;
 }
 
+/** Linear-time trailing-slash strip; see the note in the resolver worker. */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  return value.slice(0, end);
+}
+
 export function resolverBase(): string {
-  return (
+  return stripTrailingSlashes(
     process.env.NEXT_PUBLIC_RESOLVER_ORIGIN ||
-    process.env.RESOLVER_ORIGIN ||
-    "https://id.authichain.com"
-  ).replace(/\/+$/, "");
+      process.env.RESOLVER_ORIGIN ||
+      "https://id.authichain.com"
+  );
 }
 
 /**

@@ -258,9 +258,24 @@ function passportPayload(
     // Only linked for a seal we actually resolved — a not_found response has
     // nothing to link to.
     passportUrl: seal?.cert_id
-      ? `${env.PASSPORT_ORIGIN.replace(/\/+$/, "")}/passport/${encodeURIComponent(seal.cert_id)}`
+      ? `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/passport/${encodeURIComponent(seal.cert_id)}`
       : null,
   };
+}
+
+/**
+ * Strips trailing slashes in linear time.
+ *
+ * Replaces `.replace(/\/+$/, "")`, which CodeQL flagged as a polynomial
+ * regular expression on uncontrolled data: an anchored `+` backtracks
+ * quadratically over a run of slashes. These origins come from configuration
+ * rather than from a request, so the practical exposure was small — but the
+ * regex buys nothing over a scan, so there is no reason to keep it.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  return value.slice(0, end);
 }
 
 const STATUS_TONE: Record<SealStatus, string> = {
