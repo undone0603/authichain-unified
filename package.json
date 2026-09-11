@@ -181,7 +181,7 @@
     "vite@<6.4.3": "6.4.3",
     "postcss@<8.5.18": "8.5.26",
     "axios@<1.18.0": "1.20.0",
-    "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
+    "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
     "ioredis": "file:./stubs/empty-redis",
     "redis": "file:./stubs/empty-redis",
     "sharp": "^0.35.4"
@@ -196,7 +196,7 @@
       "vite@<6.4.3": "6.4.3",
       "postcss@<8.5.18": "8.5.26",
       "axios@<1.18.0": "1.20.0",
-      "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
+      "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
       "ioredis": "file:./stubs/empty-redis",
       "redis": "file:./stubs/empty-redis"
     },

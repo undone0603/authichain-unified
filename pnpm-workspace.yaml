@@ -44,7 +44,9 @@ overrides:
   # Added 2026-09-11 (recuyUrMAPEEwQIr1). 1.20.0 dedupes onto the version
   # already resolved as a direct dependency and via @sendgrid/mail.
   'axios@<1.18.0': 1.20.0
-  # GHSA high: js-yaml <4.3.1 prototype pollution / code exec on untrusted input.
-  # Added 2026-09-11 (recuyUrMAPEEwQIr1). Patch release on the 4.x line already in use.
-  'js-yaml@>=4.0.0 <4.3.1': 4.3.1
+  # GHSA high: js-yaml prototype pollution / code exec on untrusted input,
+  # AND CVE-2026-84375 (high, DoS via unbounded merge-key expansion) which
+  # affects 4.3.1 itself -- caught by re-auditing after landing the 4.3.1
+  # pin below, same day (recuyUrMAPEEwQIr1). 4.3.2 fixes both.
+  'js-yaml@>=4.0.0 <4.3.2': 4.3.2
 verifyDepsBeforeRun: false
