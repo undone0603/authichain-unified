@@ -167,22 +167,39 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
       }
       return out;
     }
+    // Copper & Rye is a fictional distillery invented for this demo, so its
+    // specifics ("Barrel No. 14", "212 bottles") are safe to assert only while
+    // the page is showing Copper & Rye. The moment a real company's name is
+    // passed in ?b=, those same specifics become false claims printed under
+    // that company's name — a prospect opening a half-filled link would see
+    // invented facts about their own product. So the canonical demo keeps its
+    // story, and any branded link falls back to copy that asserts nothing.
+    var custom = Boolean(q.get('b'));
     var brand  = q.get('b') || 'Copper & Rye Distilling Co.';
-    var product= q.get('p') || 'Huron Reserve — Single Barrel Rye';
-    var type   = q.get('t') || 'Small-batch rye whiskey · 750ml';
-    var origin = q.get('o') || 'Traverse City, Michigan';
-    var date   = q.get('d') || 'October 2026';
-    var batch  = q.get('x') || 'HR-14-2026';
+    var product= q.get('p') || (custom ? 'Your product name' : 'Huron Reserve — Single Barrel Rye');
+    var type   = q.get('t') || (custom ? 'Product type · size' : 'Small-batch rye whiskey · 750ml');
+    var origin = q.get('o') || (custom ? 'Your town, your state' : 'Traverse City, Michigan');
+    var date   = q.get('d') || (custom ? 'Release date' : 'October 2026');
+    var batch  = q.get('x') || (custom ? 'BATCH-0000' : 'HR-14-2026');
     var c1 = q.get('c1'), c2 = q.get('c2'), c3 = q.get('c3'), c4 = q.get('c4');
     var t1 = q.get('s1'), t2 = q.get('s2'), t3 = q.get('s3'), t4 = q.get('s4');
     var fallback = q.get('s');
-    var defTitles = ['I — The Field', 'II — The Barrel', 'III — The Hand', 'IV — The Moment'];
-    var defTexts = [
-      'Michigan rye from a single farm outside Ann Arbor, harvested in the fall of *2021*.',
-      'Barrel No. 14, filled *October 2022*. New charred American oak, aged four years through Lake-effect seasons.',
-      'Bottled by hand — *212 bottles*, each numbered and signed by the distiller.',
-      'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
-    ];
+    var defTitles = custom
+      ? ['I — Origin', 'II — Craft', 'III — The Hand', 'IV — The Moment']
+      : ['I — The Field', 'II — The Barrel', 'III — The Hand', 'IV — The Moment'];
+    var defTexts = custom
+      ? [
+          'Where it came from — the field, the grower, the season.',
+          'How it was made — the process that gives it its character.',
+          'The hand behind it — who made it, and how many were made.',
+          'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
+        ]
+      : [
+          'Michigan rye from a single farm outside Ann Arbor, harvested in the fall of *2021*.',
+          'Barrel No. 14, filled *October 2022*. New charred American oak, aged four years through Lake-effect seasons.',
+          'Bottled by hand — *212 bottles*, each numbered and signed by the distiller.',
+          'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
+        ];
     var texts = [t1, t2, t3, t4];
     if (fallback) texts[3] = texts[3] || fallback;
     var titles = [c1, c2, c3, c4];

@@ -113,6 +113,38 @@ round-trip check against the exact base64 payload embedded in this file (not
 just the source PNG). `/authichain-qr.png` (`QR_BRAND`) was left as-is —
 out of scope for this pass.
 
+## Branded links assert nothing
+
+Copper & Rye Distilling Co. is a fictional distillery invented for this demo, so
+its story specifics — "Barrel No. 14", "212 bottles, each numbered and signed by
+the distiller", batch `HR-14-2026`, Traverse City — are safe to state while the
+page is showing Copper & Rye.
+
+They are not safe under someone else's name. `?b=Iron%20Fish%20Distillery` alone
+used to render all of those beneath _Iron Fish Distillery_, so a prospect opening
+a half-filled outreach link saw invented facts about their own product.
+
+So every fallback is now conditional on `b`:
+
+| field   | no `b` (canonical demo)               | `b` set (a branded link)      |
+| ------- | ------------------------------------- | ----------------------------- |
+| product | `Huron Reserve — Single Barrel Rye`   | `Your product name`           |
+| type    | `Small-batch rye whiskey · 750ml`     | `Product type · size`         |
+| origin  | `Traverse City, Michigan`             | `Your town, your state`       |
+| date    | `October 2026`                        | `Release date`                |
+| batch   | `HR-14-2026`                          | `BATCH-0000`                  |
+| titles  | `I — The Field`, `II — The Barrel`, … | `I — Origin`, `II — Craft`, … |
+| story   | the Copper & Rye specifics            | copy that names no fact       |
+
+An incomplete branded link now reads as a visibly unfilled template rather than a
+false claim. Supplying `p`, `t`, `o`, `d`, `x` and `s1`–`s4` overrides every
+placeholder, which is what a real prospect link should do.
+
+Verified in Chromium against this file: the canonical demo still renders "Barrel
+No. 14" and "212 bottles"; `?b=Iron%20Fish%20Distillery` leaks none of the eight
+Copper & Rye specifics; supplied copy is used verbatim. Zero console errors in
+all three cases.
+
 ## Known gap
 
 `/qr.png` and `/authichain-qr.png` serve JPEG bytes under `.png` names. Browsers
