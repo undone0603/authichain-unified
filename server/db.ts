@@ -384,12 +384,10 @@ export async function logActivity(
 ) {
   const d = await getDb();
   if (typeof actionOrData === "string") {
-    await d
-      .insert(activityLog)
-      .values({
-        action: actionOrData,
-        details: details ? { text: details } : undefined,
-      });
+    await d.insert(activityLog).values({
+      action: actionOrData,
+      details: details ? { text: details } : undefined,
+    });
   } else {
     await d.insert(activityLog).values({
       userId: actionOrData.userId ?? undefined,
@@ -705,7 +703,46 @@ export async function createProposal(data: {
 }): Promise<string> {
   const d = await getDb();
   const id = randomUUID();
-  await d.insert(proposals).values({ id, ...data });
+  try {
+    await d.insert(proposals).values({
+      id,
+      leadEmail: data.leadEmail,
+      segment: data.segment,
+      content: data.content,
+      missionId: data.missionId,
+      taskId: data.taskId,
+      paymentLink: data.paymentLink,
+      checkoutSessionId: data.checkoutSessionId,
+      pilotPriceUsd: data.pilotPriceUsd,
+    });
+  } catch (err) {
+    // Pre-migration DBs only have id/lead_email/segment/content/created_at —
+    // fold Stripe + mission metadata into content so the email path still works.
+    console.warn(
+      `[createProposal] full insert failed, falling back to core columns: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    const appendix = [
+      data.paymentLink ? `Payment link: ${data.paymentLink}` : null,
+      data.checkoutSessionId
+        ? `Checkout session: ${data.checkoutSessionId}`
+        : null,
+      data.missionId ? `Mission: ${data.missionId}` : null,
+      data.taskId ? `Task: ${data.taskId}` : null,
+      data.pilotPriceUsd != null
+        ? `Pilot price USD: ${data.pilotPriceUsd}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await d.insert(proposals).values({
+      id,
+      leadEmail: data.leadEmail,
+      segment: data.segment,
+      content: appendix ? `${data.content}\n\n---\n${appendix}` : data.content,
+    });
+  }
   return id;
 }
 
