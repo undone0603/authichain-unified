@@ -29,11 +29,24 @@ overrides:
   # GHSA high: js-cookie per-instance prototype hijack in assign().
   'js-cookie@<=3.0.5': 3.0.7
   # GHSA high: ws memory-exhaustion DoS from tiny fragments (8.x only).
-  # Note: miniflare depends on ws@8.18.0, so we allow up to 8.21.0 but don't force it
-  # Dependabot should be able to update within this range as deps allow
-  'ws@>=8.0.0 <8.18.0': 8.18.0
+  # Bumped 2026-09-11 (Blocker Register recuyUrMAPEEwQIr1): 8.18.0 was itself
+  # vulnerable by the time this was re-audited. 8.21.3 dedupes onto a version
+  # already resolved elsewhere in the tree (openai, @solana/*) rather than
+  # introducing a new one.
+  'ws@>=8.0.0 <8.21.0': 8.21.3
   # GHSA: vite server.fs.deny bypass + NTLMv2 hash disclosure (vitest peer pulls 5.x).
   'vite@<6.4.3': 6.4.3
   # GHSA moderate: postcss XSS via unescaped </style> (transitive via next).
-  'postcss@<8.5.10': 8.5.10
+  # Bumped 2026-09-11 (recuyUrMAPEEwQIr1): 8.5.10 was itself vulnerable by the
+  # time this was re-audited. 8.5.26 dedupes onto the root devDependency version.
+  'postcss@<8.5.18': 8.5.26
+  # GHSA high: axios <1.18.0 SSRF/credential-leak on absolute-URL redirects.
+  # Added 2026-09-11 (recuyUrMAPEEwQIr1). 1.20.0 dedupes onto the version
+  # already resolved as a direct dependency and via @sendgrid/mail.
+  'axios@<1.18.0': 1.20.0
+  # GHSA high: js-yaml prototype pollution / code exec on untrusted input,
+  # AND CVE-2026-84375 (high, DoS via unbounded merge-key expansion) which
+  # affects 4.3.1 itself -- caught by re-auditing after landing the 4.3.1
+  # pin below, same day (recuyUrMAPEEwQIr1). 4.3.2 fixes both.
+  'js-yaml@>=4.0.0 <4.3.2': 4.3.2
 verifyDepsBeforeRun: false

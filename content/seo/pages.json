@@ -7489,5 +7489,388 @@
         }
       ]
     }
+  },
+  {
+    "slug": "csddd-omnibus-supply-chain-due-diligence-2026",
+    "keyword": "csddd omnibus supply chain due diligence 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "CSDDD Omnibus Supply Chain Due Diligence 2026 | AuthiChain",
+    "metaDescription": "The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion.",
+    "h1": "CSDDD Omnibus Supply Chain Due Diligence 2026",
+    "bodyHtml": "<p>The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion in turnover, and narrowed the obligation from the full chain of activities to direct, tier-1 business partners — exactly the layer a signed provenance record already covers.</p><h2>Why AuthiChain</h2><ul><li>The amended CSDDD focuses due diligence on tier-1 business partners rather than every upstream and downstream link in the chain of activities</li><li>A W3C Verifiable Credential from a direct supplier is a tier-1 record a compliance team can check for authorship without asking that supplier to vouch for it a second time</li><li>National transposition is due by 26 July 2028, with application from 26 July 2029 for companies meeting the raised thresholds — a longer runway, not a lower bar</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does Omnibus I cancel CSDDD?</h3><p>No — it narrows the scope (roughly to companies above 5,000 employees and €1.5bn turnover), narrows the due-diligence layer to tier-1 partners, and pushes the timeline out. The underlying obligation still stands for companies that meet the new thresholds.</p><h3>Does a signed record satisfy CSDDD due diligence by itself?</h3><p>No — CSDDD requires a due-diligence process, not a single artifact. A signed provenance record documents what a tier-1 partner asserted and when; that is one input to the process, not a substitute for running it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — CSDDD Omnibus Supply Chain Due Diligence 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion in turnover, and narrowed the obligation from the full chain of activities to direct, tier-1 business partners — exactly the layer a signed provenance record already covers.",
+          "url": "https://authichain.com/p/csddd-omnibus-supply-chain-due-diligence-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CSDDD Omnibus Supply Chain Due Diligence 2026",
+              "item": "https://authichain.com/p/csddd-omnibus-supply-chain-due-diligence-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does Omnibus I cancel CSDDD?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it narrows the scope (roughly to companies above 5,000 employees and €1.5bn turnover), narrows the due-diligence layer to tier-1 partners, and pushes the timeline out. The underlying obligation still stands for companies that meet the new thresholds."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy CSDDD due diligence by itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CSDDD requires a due-diligence process, not a single artifact. A signed provenance record documents what a tier-1 partner asserted and when; that is one input to the process, not a substitute for running it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "california-sb-253-scope-3-supplier-emissions-verification",
+    "keyword": "california sb 253 scope 3 supplier emissions verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "California SB 253 Scope 3 Supplier Emissions | AuthiChain",
+    "metaDescription": "California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in.",
+    "h1": "California SB 253 Scope 3 Supplier Emissions Verification",
+    "bodyHtml": "<p>California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in revenue — CARB’s extension from the statute’s original 10 August 2026 date — with Scope 3 supplier emissions, the figures a reporting company can’t measure itself, required in 2027 and later years.</p><h2>Why AuthiChain</h2><ul><li>Scope 3 numbers come from suppliers, not the reporting company’s own meters — a figure a compliance team can’t independently remeasure, only check who reported it and when</li><li>A signed emissions record ties a Scope 3 figure to a specific supplier, batch, and timestamp; a spreadsheet forwarded by email ties it to nothing checkable later</li><li>AuthiChain signs and anchors whatever figure a supplier reports — it does not calculate emissions, the same distinction the protocol draws between what a record proves and what it merely carries</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does SB 253 require Scope 3 reporting yet?</h3><p>The near-term deadline — 10 November 2026, per CARB’s extension — covers Scope 1 and Scope 2 only. Scope 3 disclosure follows in the 2027 reporting year and beyond.</p><h3>Can a signed record make a false emissions figure verified?</h3><p>No — signing proves who reported the figure and that it hasn’t changed since, not that the figure is accurate. protocol/SPEC.md §8 states this plainly: a signature proves authorship, not truth.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — California SB 253 Scope 3 Supplier Emissions Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in revenue — CARB’s extension from the statute’s original 10 August 2026 date — with Scope 3 supplier emissions, the figures a reporting company can’t measure itself, required in 2027 and later years.",
+          "url": "https://authichain.com/p/california-sb-253-scope-3-supplier-emissions-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "California SB 253 Scope 3 Supplier Emissions Verification",
+              "item": "https://authichain.com/p/california-sb-253-scope-3-supplier-emissions-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does SB 253 require Scope 3 reporting yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The near-term deadline — 10 November 2026, per CARB’s extension — covers Scope 1 and Scope 2 only. Scope 3 disclosure follows in the 2027 reporting year and beyond."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a signed record make a false emissions figure verified?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — signing proves who reported the figure and that it hasn’t changed since, not that the figure is accurate. protocol/SPEC.md §8 states this plainly: a signature proves authorship, not truth."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ftc-made-in-usa-labeling-verification",
+    "keyword": "ftc made in usa labeling verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "FTC Made In USA Labeling Verification | AuthiChain",
+    "metaDescription": "A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case.",
+    "h1": "FTC Made In USA Labeling Verification",
+    "bodyHtml": "<p>A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.</p><h2>Why AuthiChain</h2><ul><li>The FTC’s “all or virtually all” standard requires final assembly, all significant processing, and all or virtually all components to originate in the US — components a supply-chain record can trace, not just a label can assert</li><li>A signed record ties a specific batch or serial to the sourcing data behind a USA claim, evidence that outlasts a label printed once at the factory</li><li>This is a separate rule from USDA’s “Product of USA” standard, which applies only to meat, poultry, and egg products under a different agency</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed record satisfy the FTC’s substantiation requirement?</h3><p>The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard.</p><h3>What’s the penalty for a false Made in USA claim?</h3><p>Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — FTC Made In USA Labeling Verification",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.",
+          "url": "https://authichain.com/p/ftc-made-in-usa-labeling-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "FTC Made In USA Labeling Verification",
+              "item": "https://authichain.com/p/ftc-made-in-usa-labeling-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy the FTC’s substantiation requirement?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s the penalty for a false Made in USA claim?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-product-passport-paints-lubricants-detergents-timeline",
+    "keyword": "digital product passport paints lubricants detergents timeline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Product Passport Paints Lubricants | AuthiChain",
+    "metaDescription": "The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints.",
+    "h1": "Digital Product Passport Paints Lubricants Detergents Timeline",
+    "bodyHtml": "<p>The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints, lubricants, detergents, and chemicals are still under study, with no delegated act or passport deadline assigned as of this writing.</p><h2>Why AuthiChain</h2><ul><li>The April 2025 working plan lists paints, lubricants, detergents, and chemicals as categories the Commission is still assessing for a future working plan, not ones with a delegated act already in progress</li><li>A category outside the current priority list isn’t exempt from ESPR forever — it’s a schedule gap, and the same passport infrastructure AuthiChain runs for batteries and textiles today ports over once a delegated act lands</li><li>Waiting for the delegated act before building the passport means starting from zero against a compliance deadline; the record format doesn’t have to wait for the regulation to name the product</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is there a DPP deadline for paints or detergents yet?</h3><p>No — as of the 2025–2030 ESPR working plan, these categories are under study for a future prioritization decision, with no delegated act or compliance date assigned.</p><h3>Should a paints or detergents manufacturer prepare before a deadline exists?</h3><p>The underlying record format — W3C Verifiable Credentials, GS1 Digital Link identifiers — is the same across every ESPR category. Issuing it early costs nothing to reverse and saves a scramble once a delegated act sets the clock running.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Product Passport Paints Lubricants Detergents Timeline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints, lubricants, detergents, and chemicals are still under study, with no delegated act or passport deadline assigned as of this writing.",
+          "url": "https://authichain.com/p/digital-product-passport-paints-lubricants-detergents-timeline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Product Passport Paints Lubricants Detergents Timeline",
+              "item": "https://authichain.com/p/digital-product-passport-paints-lubricants-detergents-timeline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is there a DPP deadline for paints or detergents yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — as of the 2025–2030 ESPR working plan, these categories are under study for a future prioritization decision, with no delegated act or compliance date assigned."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Should a paints or detergents manufacturer prepare before a deadline exists?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The underlying record format — W3C Verifiable Credentials, GS1 Digital Link identifiers — is the same across every ESPR category. Issuing it early costs nothing to reverse and saves a scramble once a delegated act sets the clock running."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "oid4vci-credential-issuance-vs-did-key-offline-verification",
+    "keyword": "oid4vci credential issuance vs did key offline verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "OID4VCI Credential Issuance Vs DID Key Offline | AuthiChain",
+    "metaDescription": "OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from.",
+    "h1": "OID4VCI Credential Issuance Vs DID Key Offline Verification",
+    "bodyHtml": "<p>OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from the offline verification AuthiChain’s protocol spec is built around once that credential exists.</p><h2>Why AuthiChain</h2><ul><li>OID4VCI v1.0 is referenced in the EU’s implementing regulation for wallet interoperability and governs how a credential gets into a wallet, not how a third party checks it afterward</li><li>protocol/SPEC.md §5 verifies a record’s signature with zero network access once issued — OID4VCI and this protocol solve different steps of the same credential’s lifecycle, not competing ones</li><li>A record issued over OID4VCI into a wallet and a record served directly by AuthiChain’s reference verifier can be the same W3C Verifiable Credential 2.0 payload underneath</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain implement OID4VCI?</h3><p>No — the protocol spec issues and verifies Verifiable Credentials directly. OID4VCI is a wallet-issuance transport layer that a EUDI Wallet integration could put in front of the same record format.</p><h3>Why does AuthiChain use did:key instead of a wallet-issuance flow?</h3><p>did:key lets a verifier resolve the issuer’s public key with zero network access, which is the offline-verification property the spec is built around. A wallet-issuance flow answers a different question — how the credential reached the holder’s device in the first place.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — OID4VCI Credential Issuance Vs DID Key Offline Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from the offline verification AuthiChain’s protocol spec is built around once that credential exists.",
+          "url": "https://authichain.com/p/oid4vci-credential-issuance-vs-did-key-offline-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "OID4VCI Credential Issuance Vs DID Key Offline Verification",
+              "item": "https://authichain.com/p/oid4vci-credential-issuance-vs-did-key-offline-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain implement OID4VCI?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the protocol spec issues and verifies Verifiable Credentials directly. OID4VCI is a wallet-issuance transport layer that a EUDI Wallet integration could put in front of the same record format."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why does AuthiChain use did:key instead of a wallet-issuance flow?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "did:key lets a verifier resolve the issuer’s public key with zero network access, which is the offline-verification property the spec is built around. A wallet-issuance flow answers a different question — how the credential reached the holder’s device in the first place."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "global-battery-alliance-battery-passport-vs-eu-regulation",
+    "keyword": "global battery alliance battery passport vs eu regulation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Global Battery Alliance Battery Passport Vs EU | AuthiChain",
+    "metaDescription": "The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers.",
+    "h1": "Global Battery Alliance Battery Passport Vs EU Regulation",
+    "bodyHtml": "<p>The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers representing most of global production — running alongside, not instead of, the EU Battery Regulation’s separate legal mandate arriving 18 February 2027.</p><h2>Why AuthiChain</h2><ul><li>GBA’s passport is a voluntary industry scheme with its own verification handbook for third-party verifiers; the EU Battery Regulation is a legal requirement enforced by market-surveillance authorities</li><li>Both converge on the same underlying data — carbon footprint, material composition, state-of-health — so a record built to the EU Battery Regulation’s required fields covers most of what a GBA-aligned passport asks for</li><li>GBA’s certification scheme is planned to launch in early 2027, close to but distinct from the EU mandate’s own 18 February 2027 date — two deadlines from two different bodies, not one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does complying with the EU Battery Regulation satisfy GBA certification?</h3><p>They overlap heavily on data fields but are separate programs — GBA certification is a voluntary industry scheme with its own verification process, run independently of EU market-surveillance enforcement.</p><h3>Is GBA certification mandatory?</h3><p>No — participation in GBA’s Battery Passport framework is voluntary industry certification. The EU Battery Regulation’s passport mandate, arriving 18 February 2027, is the legal requirement.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Global Battery Alliance Battery Passport Vs EU Regulation",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers representing most of global production — running alongside, not instead of, the EU Battery Regulation’s separate legal mandate arriving 18 February 2027.",
+          "url": "https://authichain.com/p/global-battery-alliance-battery-passport-vs-eu-regulation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Global Battery Alliance Battery Passport Vs EU Regulation",
+              "item": "https://authichain.com/p/global-battery-alliance-battery-passport-vs-eu-regulation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does complying with the EU Battery Regulation satisfy GBA certification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They overlap heavily on data fields but are separate programs — GBA certification is a voluntary industry scheme with its own verification process, run independently of EU market-surveillance enforcement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is GBA certification mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — participation in GBA’s Battery Passport framework is voluntary industry certification. The EU Battery Regulation’s passport mandate, arriving 18 February 2027, is the legal requirement."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]

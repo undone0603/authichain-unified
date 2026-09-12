@@ -13,14 +13,20 @@
  *
  * MERGE_PR:
  *   payload: { prNumber: number; branch: string }
- *   Merges the PR (squash). If REQUIRE_DEV_APPROVAL=true → sets task WAITING_HUMAN first.
+ *   Checks the PR's mergeable state, then the latest CI run for its head SHA:
+ *     - no run yet / still running  → re-enqueues MERGE_PR a few minutes out
+ *       (not a failure; this task simply hasn't landed yet)
+ *     - run completed but failed    → enqueues AUTO_FIX and fails this task
+ *     - run completed successfully  → proceeds
+ *   Only once CI is confirmed green: if REQUIRE_DEV_APPROVAL=true → sets task
+ *   WAITING_HUMAN and comments; otherwise merges the PR (squash).
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
-import { ENV } from '../../_core/env.js';
-import { missionTasks } from '../../../drizzle/schema.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from "../../_core/llm.js";
+import { logActivity, markTaskWaitingHuman, getDb } from "../../db.js";
+import { ENV } from "../../_core/env.js";
+import { missionTasks } from "../../../drizzle/schema.js";
+import type { MissionTask as Task } from "../../../drizzle/schema.js";
 import {
   createPR,
   getPR,
@@ -28,7 +34,8 @@ import {
   addPRReview,
   addPRComment,
   mergePR,
-} from './github-service.js';
+  getLatestRunForSha,
+} from "./github-service.js";
 
 // ─── OPEN_PR ─────────────────────────────────────────────────────────────
 
@@ -42,22 +49,22 @@ export async function runOpenPR(task: Task): Promise<void> {
 
   const pr = await createPR({
     title: p.title,
-    body:  p.body,
-    head:  p.branch,
-    base:  p.base,
+    body: p.body,
+    head: p.branch,
+    base: p.base,
   });
 
   await logActivity({
     userId: null,
-    action: 'pr_opened',
-    entityType: 'task',
+    action: "pr_opened",
+    entityType: "task",
     entityId: 0,
     details: {
-      taskId:    task.id,
+      taskId: task.id,
       missionId: task.missionId,
-      prNumber:  pr.number,
-      prUrl:     pr.html_url,
-      branch:    p.branch,
+      prNumber: pr.number,
+      prUrl: pr.html_url,
+      branch: p.branch,
     },
   });
 
@@ -66,10 +73,10 @@ export async function runOpenPR(task: Task): Promise<void> {
   await db.insert(missionTasks).values({
     id: crypto.randomUUID(),
     missionId: task.missionId,
-    kind: 'CODE_REVIEW',
+    kind: "CODE_REVIEW",
     title: `Code review for PR #${pr.number}`,
     payload: { branch: p.branch, prNumber: pr.number },
-    status: 'PENDING',
+    status: "PENDING",
     scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
   });
 }
@@ -107,20 +114,27 @@ export async function runCodeReview(task: Task): Promise<void> {
   const changedFiles = await getPRFiles(p.prNumber);
 
   // Read full content of changed files for deep review
-  const fileDiffs = changedFiles.slice(0, 10).map(f =>
-    `### ${f.filename} (${f.status})\n\`\`\`diff\n${f.patch ?? '(binary or large file)'}\n\`\`\``
-  ).join('\n\n');
+  const fileDiffs = changedFiles
+    .slice(0, 10)
+    .map(
+      f =>
+        `### ${f.filename} (${f.status})\n\`\`\`diff\n${f.patch ?? "(binary or large file)"}\n\`\`\``
+    )
+    .join("\n\n");
 
   const result = await invokeLLM({
     messages: [
-      { role: 'system', content: REVIEW_SYSTEM_PROMPT },
-      { role: 'user', content: `PR #${p.prNumber}: ${pr.title}\n\n${pr.body}\n\n## Changed Files\n\n${fileDiffs}` },
+      { role: "system", content: REVIEW_SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: `PR #${p.prNumber}: ${pr.title}\n\n${pr.body}\n\n## Changed Files\n\n${fileDiffs}`,
+      },
     ],
-    responseFormat: { type: 'json_object' },
+    responseFormat: { type: "json_object" },
   });
 
   const review: {
-    verdict: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+    verdict: "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
     summary: string;
     inlineComments: Array<{ path: string; line: number; body: string }>;
     requiredFixes: string[];
@@ -128,17 +142,24 @@ export async function runCodeReview(task: Task): Promise<void> {
   } = parseLLMContent(result.choices[0].message.content);
 
   // Post review to GitHub
-  const ghEvent = review.verdict === 'APPROVE'
-    ? 'APPROVE'
-    : review.verdict === 'REQUEST_CHANGES'
-    ? 'REQUEST_CHANGES'
-    : 'COMMENT';
+  const ghEvent =
+    review.verdict === "APPROVE"
+      ? "APPROVE"
+      : review.verdict === "REQUEST_CHANGES"
+        ? "REQUEST_CHANGES"
+        : "COMMENT";
 
   const reviewBody = [
     `**AgentZ Code Review** — ${review.summary}`,
-    review.requiredFixes.length ? `\n**Required fixes:**\n${review.requiredFixes.map(f => `- ${f}`).join('\n')}` : '',
-    review.suggestions.length   ? `\n**Suggestions:**\n${review.suggestions.map(s => `- ${s}`).join('\n')}` : '',
-  ].filter(Boolean).join('\n');
+    review.requiredFixes.length
+      ? `\n**Required fixes:**\n${review.requiredFixes.map(f => `- ${f}`).join("\n")}`
+      : "",
+    review.suggestions.length
+      ? `\n**Suggestions:**\n${review.suggestions.map(s => `- ${s}`).join("\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   await addPRReview({
     prNumber: p.prNumber,
@@ -151,46 +172,46 @@ export async function runCodeReview(task: Task): Promise<void> {
 
   await logActivity({
     userId: null,
-    action: 'code_review_posted',
-    entityType: 'task',
+    action: "code_review_posted",
+    entityType: "task",
     entityId: 0,
     details: {
-      taskId:    task.id,
+      taskId: task.id,
       missionId: task.missionId,
-      prNumber:  p.prNumber,
-      verdict:   review.verdict,
-      summary:   review.summary,
-      fixes:     review.requiredFixes,
+      prNumber: p.prNumber,
+      verdict: review.verdict,
+      summary: review.summary,
+      fixes: review.requiredFixes,
     },
   });
 
   const db = await getDb();
 
-  if (review.verdict === 'APPROVE') {
+  if (review.verdict === "APPROVE") {
     // Enqueue MERGE_PR
     await db.insert(missionTasks).values({
       id: crypto.randomUUID(),
       missionId: task.missionId,
-      kind: 'MERGE_PR',
+      kind: "MERGE_PR",
       title: `Merge PR #${p.prNumber}`,
       payload: { prNumber: p.prNumber, branch: p.branch },
-      status: 'PENDING',
+      status: "PENDING",
       scheduledAt: new Date(Date.now() + 60 * 1000),
     });
-  } else if (review.verdict === 'REQUEST_CHANGES') {
+  } else if (review.verdict === "REQUEST_CHANGES") {
     // Re-enqueue WRITE_CODE with the fix list as context
     await db.insert(missionTasks).values({
       id: crypto.randomUUID(),
       missionId: task.missionId,
-      kind: 'WRITE_CODE',
+      kind: "WRITE_CODE",
       title: `Fix review feedback on PR #${p.prNumber}`,
       payload: {
-        branch:   p.branch,
-        feature:  `Fix review feedback on PR #${p.prNumber}`,
-        context:  `Required fixes:\n${review.requiredFixes.join('\n')}`,
+        branch: p.branch,
+        feature: `Fix review feedback on PR #${p.prNumber}`,
+        context: `Required fixes:\n${review.requiredFixes.join("\n")}`,
         prNumber: p.prNumber,
       },
-      status: 'PENDING',
+      status: "PENDING",
       scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
     });
   }
@@ -201,7 +222,90 @@ export async function runCodeReview(task: Task): Promise<void> {
 export async function runMergePR(task: Task): Promise<void> {
   const p = task.payload as { prNumber: number; branch: string };
 
-  // If approval required — gate here
+  // Check PR is mergeable
+  const pr = await getPR(p.prNumber);
+  if (pr.state !== "open") {
+    throw new Error(`PR #${p.prNumber} is already ${pr.state}`);
+  }
+  if (pr.mergeable === false) {
+    throw new Error(
+      `PR #${p.prNumber} has merge conflicts — needs manual resolution`
+    );
+  }
+
+  // CI status gate: RUN_TESTS/OPEN_PR/MERGE_PR are independently-triggerable
+  // tasks with no enforced sequencing (server/agents/dev-team/router.ts), so
+  // nothing upstream guarantees CI actually ran and passed for this PR's head
+  // SHA before this task fires. Check directly here, regardless of
+  // ENV.requireDevApproval — a red or unstarted CI run should never reach
+  // either the "ready to merge" human-approval comment below or an actual
+  // merge.
+  //
+  // A run that hasn't completed yet is not a failure -- there is no
+  // automatic retry for a FAILED task (task-runner.ts's catch block calls
+  // markTaskFailed and stops there), so throwing here would permanently
+  // strand a PR whose CI simply hasn't finished. Re-enqueue a fresh MERGE_PR
+  // for the same PR a few minutes out instead, and mark this attempt done
+  // (not failed) so the pipeline keeps checking rather than giving up.
+  const ciRun = await getLatestRunForSha(pr.head.sha);
+  if (!ciRun || ciRun.status !== "completed") {
+    const db = await getDb();
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: "MERGE_PR",
+      title: `Merge PR #${p.prNumber}`,
+      payload: { prNumber: p.prNumber, branch: p.branch },
+      status: "PENDING",
+      scheduledAt: new Date(Date.now() + 3 * 60 * 1000),
+    });
+    await logActivity({
+      userId: null,
+      action: "merge_deferred_ci_pending",
+      entityType: "task",
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        missionId: task.missionId,
+        prNumber: p.prNumber,
+        ciStatus: ciRun?.status ?? "no run found",
+      },
+    });
+    return;
+  }
+  if (ciRun.conclusion !== "success") {
+    const db = await getDb();
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: "AUTO_FIX",
+      title: `Auto-fix CI failure on PR #${p.prNumber}`,
+      payload: {
+        branch: p.branch,
+        errorSummary: `CI failed on PR #${p.prNumber} (${pr.head.sha.slice(0, 8)}). Run: ${ciRun.html_url}. Conclusion: ${ciRun.conclusion}.`,
+      },
+      status: "PENDING",
+      scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
+    });
+    await logActivity({
+      userId: null,
+      action: "merge_blocked_ci_failed",
+      entityType: "task",
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        missionId: task.missionId,
+        prNumber: p.prNumber,
+        conclusion: ciRun.conclusion,
+        runUrl: ciRun.html_url,
+      },
+    });
+    throw new Error(
+      `PR #${p.prNumber}: CI failed (${ciRun.conclusion}). AUTO_FIX enqueued. See: ${ciRun.html_url}`
+    );
+  }
+
+  // If approval required — gate here. Only reached once CI is confirmed green.
   if (ENV.requireDevApproval) {
     await markTaskWaitingHuman(task.id);
     await addPRComment(
@@ -210,42 +314,41 @@ export async function runMergePR(task: Task): Promise<void> {
     );
     await logActivity({
       userId: null,
-      action: 'merge_awaiting_approval',
-      entityType: 'task',
+      action: "merge_awaiting_approval",
+      entityType: "task",
       entityId: 0,
-      details: { taskId: task.id, missionId: task.missionId, prNumber: p.prNumber },
+      details: {
+        taskId: task.id,
+        missionId: task.missionId,
+        prNumber: p.prNumber,
+      },
     });
     return;
   }
 
-  // Check PR is mergeable
-  const pr = await getPR(p.prNumber);
-  if (pr.state !== 'open') {
-    throw new Error(`PR #${p.prNumber} is already ${pr.state}`);
-  }
-  if (pr.mergeable === false) {
-    throw new Error(`PR #${p.prNumber} has merge conflicts — needs manual resolution`);
-  }
-
-  await mergePR(p.prNumber, 'squash');
+  await mergePR(p.prNumber, "squash");
 
   // Enqueue MONITOR_DEPLOY
   const db = await getDb();
   await db.insert(missionTasks).values({
     id: crypto.randomUUID(),
     missionId: task.missionId,
-    kind: 'MONITOR_DEPLOY',
+    kind: "MONITOR_DEPLOY",
     title: `Monitor deploy for PR #${p.prNumber}`,
     payload: { prNumber: p.prNumber, branch: p.branch },
-    status: 'PENDING',
+    status: "PENDING",
     scheduledAt: new Date(Date.now() + 3 * 60 * 1000),
   });
 
   await logActivity({
     userId: null,
-    action: 'pr_merged',
-    entityType: 'task',
+    action: "pr_merged",
+    entityType: "task",
     entityId: 0,
-    details: { taskId: task.id, missionId: task.missionId, prNumber: p.prNumber },
+    details: {
+      taskId: task.id,
+      missionId: task.missionId,
+      prNumber: p.prNumber,
+    },
   });
 }

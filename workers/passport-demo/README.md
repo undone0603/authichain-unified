@@ -80,6 +80,51 @@ segments manually. Confirmed fixed live: the branch-preview deploy running
 this version renders every field correctly, verified via browser console
 (no errors) after the change, versus the reproducible failure before it.
 
+**The mechanism has since been identified — see "The backslash trap" below.**
+The `em()` rewrite was a correct fix for the symptom, but the cause was not the
+`.replace()` call; it was that a single backslash cannot survive inside `HTML`.
+
+## The backslash trap
+
+**This whole page lives inside a JavaScript template literal** (`const HTML = \`…\``),
+so every backslash in it is consumed when that literal is evaluated. What the
+worker sends to the browser is not what the source file reads like:
+
+| in the source file          | what the browser receives |
+| --------------------------- | ------------------------- |
+| `split(/\s+/)`              | `split(/s+/)`             |
+| `.replace(/\*(.+?)\*/g, …)` | `.replace(/*(.+?)*/g, …)` |
+
+That second row is the original bug, exactly: `/*` opens a block comment, which
+swallows everything to the next `*/` and leaves a bare `g` where an argument
+should be — hence `ReferenceError: g is not defined`, thrown inside `em()`, on
+every page load. Nothing about the deployment was anomalous and the deployed
+artifact did match this file; the template literal simply does not preserve
+backslashes.
+
+The same trap silently corrupted the monogram for two months: `split(/\s+/)`
+emitted as `split(/s+/)` splits a brand name **on the letter "s"**, so
+_Coppercraft Distillery_ rendered `CT` and _Iron Fish Distillery_ rendered `IH`.
+No error, no console output — just a quietly wrong initial on a page being sent
+to prospects.
+
+**The rule: inside `HTML`, write `\\` for every backslash the browser must
+receive.** `split(/\\s+/)` in this file is correct and deliberate; `split(/\s+/)`
+is a bug.
+
+**How to check.** Never verify by extracting the text of the literal from this
+file — that reads the _source_, in which the backslashes are still present, and
+will pass while production is broken. Verify against what `fetch()` actually
+returns:
+
+```js
+const html = await worker.fetch(new Request("https://x/")).then(r => r.text());
+// assert against `html`, not against the template literal's source text
+```
+
+Any test that slices this file between backticks is testing a string the browser
+never sees.
+
 ## QR art (`/qr.png`)
 
 Redesigned for two goals that turned out to be in tension: on-brand and
@@ -112,6 +157,38 @@ and OpenCV's `QRCodeDetector`) before being accepted, including a byte-level
 round-trip check against the exact base64 payload embedded in this file (not
 just the source PNG). `/authichain-qr.png` (`QR_BRAND`) was left as-is —
 out of scope for this pass.
+
+## Branded links assert nothing
+
+Copper & Rye Distilling Co. is a fictional distillery invented for this demo, so
+its story specifics — "Barrel No. 14", "212 bottles, each numbered and signed by
+the distiller", batch `HR-14-2026`, Traverse City — are safe to state while the
+page is showing Copper & Rye.
+
+They are not safe under someone else's name. `?b=Iron%20Fish%20Distillery` alone
+used to render all of those beneath _Iron Fish Distillery_, so a prospect opening
+a half-filled outreach link saw invented facts about their own product.
+
+So every fallback is now conditional on `b`:
+
+| field   | no `b` (canonical demo)               | `b` set (a branded link)      |
+| ------- | ------------------------------------- | ----------------------------- |
+| product | `Huron Reserve — Single Barrel Rye`   | `Your product name`           |
+| type    | `Small-batch rye whiskey · 750ml`     | `Product type · size`         |
+| origin  | `Traverse City, Michigan`             | `Your town, your state`       |
+| date    | `October 2026`                        | `Release date`                |
+| batch   | `HR-14-2026`                          | `BATCH-0000`                  |
+| titles  | `I — The Field`, `II — The Barrel`, … | `I — Origin`, `II — Craft`, … |
+| story   | the Copper & Rye specifics            | copy that names no fact       |
+
+An incomplete branded link now reads as a visibly unfilled template rather than a
+false claim. Supplying `p`, `t`, `o`, `d`, `x` and `s1`–`s4` overrides every
+placeholder, which is what a real prospect link should do.
+
+Verified in Chromium against this file: the canonical demo still renders "Barrel
+No. 14" and "212 bottles"; `?b=Iron%20Fish%20Distillery` leaks none of the eight
+Copper & Rye specifics; supplied copy is used verbatim. Zero console errors in
+all three cases.
 
 ## Known gap
 

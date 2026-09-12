@@ -19,14 +19,15 @@ vi.mock("../server/identity-db-helpers", () => ({
 
 const { renderDynamicPage } = await import("./dynamic-pages");
 const { getHyperdriveDb } = await import("../server/db");
-const { getCertificateByNumber, getProductById } = await import("../server/content-db-helpers");
+const { getCertificateByNumber, getProductById } =
+  await import("../server/content-db-helpers");
 const { getQronById } = await import("../server/identity-db-helpers");
 
 // A tiny local Hono app wired straight to renderDynamicPage -- exercises the
 // real Hono Context (c.redirect/c.html/c.env) instead of a hand-rolled fake,
 // same spirit as routes.test.ts's `app.request(path, {}, env)`.
 const app = new Hono();
-app.get("*", (c) => renderDynamicPage(c));
+app.get("*", c => renderDynamicPage(c));
 
 function makeEnv(dbOverrides?: Record<string, any>) {
   return {
@@ -70,7 +71,11 @@ describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
       storyEnabled: false,
     });
 
-    const res = await app.request("/s/abc123", { redirect: "manual" }, makeEnv() as any);
+    const res = await app.request(
+      "/s/abc123",
+      { redirect: "manual" },
+      makeEnv() as any
+    );
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("https://example.com/dest");
@@ -80,7 +85,11 @@ describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
   it("redirects to home for an unknown shortcode (miss behavior)", async () => {
     (getQronById as any).mockResolvedValue(null);
 
-    const res = await app.request("/s/does-not-exist", { redirect: "manual" }, makeEnv() as any);
+    const res = await app.request(
+      "/s/does-not-exist",
+      { redirect: "manual" },
+      makeEnv() as any
+    );
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
@@ -89,14 +98,22 @@ describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
   it("falls back to a home redirect if the db lookup throws", async () => {
     (getQronById as any).mockRejectedValue(new Error("db down"));
 
-    const res = await app.request("/s/whatever", { redirect: "manual" }, makeEnv() as any);
+    const res = await app.request(
+      "/s/whatever",
+      { redirect: "manual" },
+      makeEnv() as any
+    );
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
   });
 
   it("does not 500 on malformed percent-encoding and degrades to the home redirect", async () => {
-    const res = await app.request("/s/%zz", { redirect: "manual" }, makeEnv() as any);
+    const res = await app.request(
+      "/s/%zz",
+      { redirect: "manual" },
+      makeEnv() as any
+    );
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
@@ -174,7 +191,10 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Golden Widget");
-    expect(getCertificateByNumber).toHaveBeenCalledWith(expect.anything(), "CERT-001");
+    expect(getCertificateByNumber).toHaveBeenCalledWith(
+      expect.anything(),
+      "CERT-001"
+    );
   });
 });
 
@@ -196,7 +216,9 @@ describe("renderDynamicPage: /verify verification landing", () => {
       category: "footwear",
     });
     (getHyperdriveDb as any).mockReturnValue(
-      makeDbSelectStub([{ id: 99, productId: 7, status: "active", certificateNumber: "C-99" }]),
+      makeDbSelectStub([
+        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
+      ])
     );
 
     const res = await app.request("/verify?id=7", {}, makeEnv() as any);
@@ -214,6 +236,46 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(res.status).toBe(200);
     expect(body).toBe("SPA-SHELL");
     expect(getProductById).not.toHaveBeenCalled();
+  });
+});
+
+describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
+  it("returns 200 HTML with the brand's headline, features, and CTAs for a known brand", async () => {
+    const res = await app.request("/landing/qron", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("Transform QR Codes Into Stunning Artwork.");
+    expect(body).toContain("11 AI Styles");
+    expect(body).toContain('href="/qr-codes"');
+    expect(body).toContain('rel="canonical"');
+  });
+
+  it("returns 404 HTML for an unconfigured brand id", async () => {
+    const res = await app.request("/landing/not-a-brand", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("Brand Not Found");
+  });
+
+  it("returns 404 HTML for a bare /landing with no brand id", async () => {
+    const res = await app.request("/landing", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("Brand Not Found");
+  });
+
+  it("strips a trailing slash so /landing/authichain/ resolves the same as /landing/authichain", async () => {
+    const res = await app.request("/landing/authichain/", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      "Every Product Verified. Every Transaction Trusted."
+    );
   });
 });
 

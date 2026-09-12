@@ -7,7 +7,10 @@ const HTML = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>Product Passport</title>
+<!--META-->
+
 <style>
 :root{
   --ink:#14211b; --cream:#faf7f0; --paper:#ffffff; --gold:#b08d3f; --gold-soft:#d9c391;
@@ -167,22 +170,39 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
       }
       return out;
     }
+    // Copper & Rye is a fictional distillery invented for this demo, so its
+    // specifics ("Barrel No. 14", "212 bottles") are safe to assert only while
+    // the page is showing Copper & Rye. The moment a real company's name is
+    // passed in ?b=, those same specifics become false claims printed under
+    // that company's name — a prospect opening a half-filled link would see
+    // invented facts about their own product. So the canonical demo keeps its
+    // story, and any branded link falls back to copy that asserts nothing.
+    var custom = Boolean(q.get('b'));
     var brand  = q.get('b') || 'Copper & Rye Distilling Co.';
-    var product= q.get('p') || 'Huron Reserve — Single Barrel Rye';
-    var type   = q.get('t') || 'Small-batch rye whiskey · 750ml';
-    var origin = q.get('o') || 'Traverse City, Michigan';
-    var date   = q.get('d') || 'October 2026';
-    var batch  = q.get('x') || 'HR-14-2026';
+    var product= q.get('p') || (custom ? 'Your product name' : 'Huron Reserve — Single Barrel Rye');
+    var type   = q.get('t') || (custom ? 'Product type · size' : 'Small-batch rye whiskey · 750ml');
+    var origin = q.get('o') || (custom ? 'Your town, your state' : 'Traverse City, Michigan');
+    var date   = q.get('d') || (custom ? 'Release date' : 'October 2026');
+    var batch  = q.get('x') || (custom ? 'BATCH-0000' : 'HR-14-2026');
     var c1 = q.get('c1'), c2 = q.get('c2'), c3 = q.get('c3'), c4 = q.get('c4');
     var t1 = q.get('s1'), t2 = q.get('s2'), t3 = q.get('s3'), t4 = q.get('s4');
     var fallback = q.get('s');
-    var defTitles = ['I — The Field', 'II — The Barrel', 'III — The Hand', 'IV — The Moment'];
-    var defTexts = [
-      'Michigan rye from a single farm outside Ann Arbor, harvested in the fall of *2021*.',
-      'Barrel No. 14, filled *October 2022*. New charred American oak, aged four years through Lake-effect seasons.',
-      'Bottled by hand — *212 bottles*, each numbered and signed by the distiller.',
-      'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
-    ];
+    var defTitles = custom
+      ? ['I — Origin', 'II — Craft', 'III — The Hand', 'IV — The Moment']
+      : ['I — The Field', 'II — The Barrel', 'III — The Hand', 'IV — The Moment'];
+    var defTexts = custom
+      ? [
+          'Where it came from — the field, the grower, the season.',
+          'How it was made — the process that gives it its character.',
+          'The hand behind it — who made it, and how many were made.',
+          'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
+        ]
+      : [
+          'Michigan rye from a single farm outside Ann Arbor, harvested in the fall of *2021*.',
+          'Barrel No. 14, filled *October 2022*. New charred American oak, aged four years through Lake-effect seasons.',
+          'Bottled by hand — *212 bottles*, each numbered and signed by the distiller.',
+          'Now in your hands. This passport is the proof that this bottle is *exactly* what it claims to be.'
+        ];
     var texts = [t1, t2, t3, t4];
     if (fallback) texts[3] = texts[3] || fallback;
     var titles = [c1, c2, c3, c4];
@@ -203,7 +223,11 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
     setText('origin2', origin);
     setText('date', date);
     setText('batch', batch);
-    var initials = brand.replace(/&/g,'and').split(/\s+/).filter(function(w){return /^[A-Za-z]/.test(w)}).slice(0,2).map(function(w){return w[0].toUpperCase()}).join('') || 'AC';
+    // NOTE: this whole script lives inside a template literal, so a single
+    // backslash is consumed when HTML is evaluated -- \\s here emits \s, which
+    // is what the browser must actually receive. Writing \s would emit a bare
+    // "s" and split the brand on the letter s. See README, "The backslash trap".
+    var initials = brand.replace(/&/g,'and').split(/\\s+/).filter(function(w){return /^[A-Za-z]/.test(w)}).slice(0,2).map(function(w){return w[0].toUpperCase()}).join('') || 'AC';
     setText('mark', initials);
     var hex = ''; var seed = brand+product+batch;
     for (var k=0;k<seed.length;k++){ hex += seed.charCodeAt(k).toString(16); if(hex.length>=12) break; }
@@ -235,19 +259,73 @@ h1{font-size:26px;line-height:1.2;font-weight:600;letter-spacing:.01em}
 </body>
 </html>
 `;
+// The only place a query parameter reaches HTML as markup rather than through
+// textContent. Everything else in this worker is rendered client-side, where the
+// DOM API escapes for us; these meta tags are built by string concatenation, so
+// they escape here or not at all.
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Link previews. The page is client-rendered, so without this every prospect's
+// link unfurls identically in an inbox — no title, no description. Reading the
+// brand server-side means the preview carries their name.
+function metaFor(u) {
+  const brand = (u.searchParams.get("b") || "").slice(0, 80);
+  const product = (u.searchParams.get("p") || "").slice(0, 80);
+  const title = brand
+    ? `${brand} — Digital Product Passport`
+    : "Digital Product Passport";
+  const desc = brand
+    ? `${product ? product + ". " : ""}A verified product passport for ${brand} — issued by the brand, independently verifiable.`
+    : "A verified product passport — issued by the brand, independently verifiable.";
+  const img = new URL("/authichain-qr.jpg", u.origin).toString();
+  return [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${esc(title)}">`,
+    `<meta property="og:description" content="${esc(desc)}">`,
+    `<meta property="og:image" content="${esc(img)}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${esc(title)}">`,
+    `<meta name="twitter:description" content="${esc(desc)}">`,
+  ].join("\n");
+}
+
+const IMG_HEADERS = { "content-type": "image/jpeg", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff" };
+
+// noindex: the page renders whatever brand is passed in ?b=, so letting a
+// crawler index it would put real companies' names on this domain without them
+// having asked. Same reasoning as /genetics in the app (D2).
+const HTML_HEADERS = {
+  "content-type": "text/html;charset=utf-8",
+  "cache-control": "public, max-age=300",
+  "x-robots-tag": "noindex, nofollow",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+};
+
 export default {
   async fetch(request) {
     if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
     const u = new URL(request.url);
-    if (u.pathname === "/health") return new Response("ok");
-    if (u.pathname === "/qr.png") return new Response(QR_ART, {
-      headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=86400" } });
-    if (u.pathname === "/authichain-qr.png") return new Response(QR_BRAND, {
-      headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=86400" } });
+    if (u.pathname === "/health") return new Response("ok", { headers: { "content-type": "text/plain;charset=utf-8" } });
+    // .jpg is the honest name; .png kept as an alias so nothing already pointing
+    // at the old path breaks.
+    if (u.pathname === "/qr.jpg" || u.pathname === "/qr.png")
+      return new Response(QR_ART, { headers: IMG_HEADERS });
+    if (u.pathname === "/authichain-qr.jpg" || u.pathname === "/authichain-qr.png")
+      return new Response(QR_BRAND, { headers: IMG_HEADERS });
     if (u.pathname !== "/" && u.pathname !== "/passport" && u.pathname !== "/demo")
       return new Response("Not found", { status: 404 });
-    return new Response(HTML, {
-      headers: { "content-type": "text/html;charset=utf-8", "cache-control": "public, max-age=300" } });
+    // Replacer function, not a string: a brand containing $& or $1 would
+    // otherwise be treated as a substitution pattern.
+    const html = HTML.replace("<!--META-->", () => metaFor(u));
+    return new Response(html, { headers: HTML_HEADERS });
   }
 };
 
