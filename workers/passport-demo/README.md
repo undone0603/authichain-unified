@@ -193,12 +193,14 @@ all three cases.
 
 ## Short links (`/t/<slug>`) and trailing-punctuation tolerance
 
-**Sync gap — read first.** The live worker (as of 2026-09-12) also serves
-per-prospect short links: `/t/<slug>` looks up a `SLUGS` table of 18 Michigan
-outreach targets and 302-redirects to the fully parameterized passport. This
-directory's `src/index.js` was recovered from a deploy that predates both the
-short links and the path-cleaning below; both exist **only in the deployed
-script** and need a reconciliation pass before anything redeploys from here.
+**Reconciled 2026-09-12 — this file is the source of record again.**
+`/t/<slug>` looks up a `SLUGS` table of 18 Michigan outreach targets and
+302-redirects to the fully parameterized passport. The production worker and
+this `src/index.js` were unified on 2026-09-12: the hardened render (below)
+plus `SLUGS` + the path-cleaning in this section deployed together and were
+verified live — 18/18 slugs (raw and percent-encoded punctuation included),
+full coppercraft render with zero console errors, `/qr.jpg` + `.png` aliases,
+server-side og meta with the prospect's brand, and `noindex` headers.
 
 ### The bug
 
@@ -264,8 +266,8 @@ stacked combos `).`, `.),`, `..`, trailing slash `/`, and slash+period `/.`
    failures across unrelated routes mean "check the harness," not "the worker
    is down."
 
-## Known gap
+## Known gap — closed 2026-09-12
 
-`/qr.png` and `/authichain-qr.png` serve JPEG bytes under `.png` names. Browsers
-sniff the `content-type` header so it renders, but the names are misleading and
-should be corrected when the images move out of source.
+The JPEGs are now served under honest `.jpg` names (`/qr.jpg`,
+`/authichain-qr.jpg`), with the old `.png` paths kept as aliases so nothing
+already pointing at them breaks.
