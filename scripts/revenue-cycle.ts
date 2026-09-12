@@ -13,6 +13,7 @@
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=report
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=fix-provenance
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=closer-proposals
+ *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=retry-closer
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=all
  *   DRY_RUN=false pnpm exec tsx scripts/revenue-cycle.ts --phase=checkout-links
  */
@@ -25,6 +26,7 @@ type Phase =
   | "all"
   | "proposals"
   | "closer-proposals"
+  | "retry-closer"
   | "dunning"
   | "report"
   | "checkout-links"
@@ -34,6 +36,7 @@ const PHASES: Phase[] = [
   "all",
   "proposals",
   "closer-proposals",
+  "retry-closer",
   "dunning",
   "report",
   "checkout-links",
@@ -995,6 +998,17 @@ async function main() {
         console.warn(
           `  ⚠️  closer-proposals failed (non-fatal): ${err.message}`
         );
+      }
+    }
+    // retry-closer is opt-in only (not part of phase=all) — re-runs failed
+    // GENERATE_PROPOSAL tasks after LLM provider recovery.
+    if (PHASE === "retry-closer") {
+      try {
+        const { retryCloserProposals } =
+          await import("./retry-closer-proposals");
+        await retryCloserProposals();
+      } catch (err: any) {
+        console.warn(`  ⚠️  retry-closer failed (non-fatal): ${err.message}`);
       }
     }
     if (PHASE === "all" || PHASE === "dunning") {

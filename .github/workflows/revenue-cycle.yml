@@ -25,6 +25,7 @@ on:
           - checkout-links
           - proposals
           - closer-proposals
+          - retry-closer
           - dunning
       live:
         description: "Allow live side effects (requires REVENUE_CYCLE_ENABLED=true)"
@@ -120,7 +121,8 @@ jobs:
 
           # Standalone closer-proposals live runs execute GENERATE_PROPOSAL
           # unless vars.CLOSER_EXECUTE=false. phase=all stays enqueue-only.
-          if [ "$DRY_RUN" = "false" ] && [ "$PHASE" = "closer-proposals" ] && [ "${{ vars.CLOSER_EXECUTE }}" != "false" ]; then
+          # retry-closer always executes when live (that is the phase purpose).
+          if [ "$DRY_RUN" = "false" ] && { [ "$PHASE" = "closer-proposals" ] || [ "$PHASE" = "retry-closer" ]; } && [ "${{ vars.CLOSER_EXECUTE }}" != "false" ]; then
             export CLOSER_EXECUTE=true
           elif [ "${{ vars.CLOSER_EXECUTE }}" = "true" ]; then
             export CLOSER_EXECUTE=true
