@@ -21,6 +21,7 @@ on:
         options:
           - all
           - report
+          - fix-provenance
           - checkout-links
           - proposals
           - dunning
