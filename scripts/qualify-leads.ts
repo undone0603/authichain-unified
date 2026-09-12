@@ -3,12 +3,15 @@
 // Generates lead_score_detail with blockchain/sector/budget/timeline breakdown.
 // Creates leads table entries for downstream email-proposals pipeline.
 
-import { createClient } from '@supabase/supabase-js';
-import { chat } from './lib/llm.ts';
-import { normalizeContactEmail } from './lib/contact-email.ts';
+import { createClient } from "@supabase/supabase-js";
+import { chat } from "./lib/llm.ts";
+import { normalizeContactEmail } from "./lib/contact-email.ts";
 
-const isDryRun = process.env.DRY_RUN === 'true';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const isDryRun = process.env.DRY_RUN === "true";
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const FIT_THRESHOLD = 70; // Only qualify high-fit opportunities
 
@@ -38,7 +41,7 @@ You are a government contracting analyst for AuthiChain.
 Opportunity:
 Title: ${opp.title}
 Agency: ${opp.agency}
-Description: ${(opp.description ?? '').slice(0, 2000)}
+Description: ${(opp.description ?? "").slice(0, 2000)}
 Key Requirements: ${JSON.stringify(opp.key_requirements)}
 AI Reasoning: ${opp.ai_reasoning}
 
@@ -65,42 +68,63 @@ Generate a detailed lead scoring breakdown (JSON only) with four dimensions (eac
 
   try {
     const { content } = await chat({
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
       jsonMode: true,
       temperature: 0.2,
-      openaiModel: 'gpt-4o-mini',
+      openaiModel: "gpt-4o-mini",
     });
 
-    const detail = JSON.parse(content || '{}') as LeadScoreDetail;
+    const detail = JSON.parse(content || "{}") as LeadScoreDetail;
     return detail;
   } catch (err: any) {
-    console.warn(`  ⚠️  Failed to generate lead score detail for ${opp.notice_id}: ${err.message}`);
+    console.warn(
+      `  ⚠️  Failed to generate lead score detail for ${opp.notice_id}: ${err.message}`
+    );
     // Return safe defaults on LLM failure
     return {
-      blockchain_fit: { score: opp.fit_score, rationale: 'Generated from opportunity fit_score' },
-      agency_sector_match: { score: opp.fit_score, rationale: 'Generated from opportunity fit_score' },
-      budget_alignment: { score: opp.fit_score, rationale: 'Generated from opportunity fit_score' },
-      timeline_fit: { score: opp.fit_score, rationale: 'Generated from opportunity fit_score' },
+      blockchain_fit: {
+        score: opp.fit_score,
+        rationale: "Generated from opportunity fit_score",
+      },
+      agency_sector_match: {
+        score: opp.fit_score,
+        rationale: "Generated from opportunity fit_score",
+      },
+      budget_alignment: {
+        score: opp.fit_score,
+        rationale: "Generated from opportunity fit_score",
+      },
+      timeline_fit: {
+        score: opp.fit_score,
+        rationale: "Generated from opportunity fit_score",
+      },
     };
   }
 }
 
-async function qualifyLeads(): Promise<{ qualified: number; failed: number; skippedNoContact: number; total: number }> {
+async function qualifyLeads(): Promise<{
+  qualified: number;
+  failed: number;
+  skippedNoContact: number;
+  total: number;
+}> {
   // Fetch high-fit opportunities not yet qualified. Qualification is tracked via
   // qualified_at (not status) so this pipeline never competes with
   // generate-proposals.ts, which consumes status='scored'.
   const { data: opps, error } = await supabase
-    .from('gov_opportunities')
-    .select('*')
-    .in('status', ['scored', 'proposal_drafted'])
-    .is('qualified_at', null)
-    .gte('fit_score', FIT_THRESHOLD)
-    .order('fit_score', { ascending: false })
+    .from("gov_opportunities")
+    .select("*")
+    .in("status", ["scored", "proposal_drafted"])
+    .is("qualified_at", null)
+    .gte("fit_score", FIT_THRESHOLD)
+    .order("fit_score", { ascending: false })
     .limit(20);
 
   if (error) throw error;
   if (!opps?.length) {
-    console.log(`No opportunities with fit_score >= ${FIT_THRESHOLD} to qualify.`);
+    console.log(
+      `No opportunities with fit_score >= ${FIT_THRESHOLD} to qualify.`
+    );
     return { qualified: 0, failed: 0, skippedNoContact: 0, total: 0 };
   }
 
@@ -114,7 +138,7 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; skip
       const lead_score_detail = await generateLeadScoreDetail(opp);
 
       // Extract agency name as lead name (try to parse contact info from description)
-      const agency_name = opp.agency || 'Unknown Agency';
+      const agency_name = opp.agency || "Unknown Agency";
 
       // Only opportunities carrying a real, deliverable contact address become
       // leads. This previously synthesised one by slugifying the SAM.gov office
@@ -126,30 +150,32 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; skip
       const contactEmail = normalizeContactEmail(opp.contact_email);
       if (!contactEmail) {
         skippedNoContact++;
-        console.log(`  ⏭️  ${opp.notice_id} — qualified, but no contact email on the opportunity`);
+        console.log(
+          `  ⏭️  ${opp.notice_id} — qualified, but no contact email on the opportunity`
+        );
         if (!isDryRun) {
           // Still advance the opportunity so it isn't re-scored forever; it just
           // doesn't become a lead until a contact is attached.
           await supabase
-            .from('gov_opportunities')
+            .from("gov_opportunities")
             .update({ qualified_at: new Date().toISOString() })
-            .eq('notice_id', opp.notice_id);
+            .eq("notice_id", opp.notice_id);
         }
         continue;
       }
 
       if (!isDryRun) {
         // Upsert into leads table with gov_engine specific fields
-        const { error: insertError } = await supabase.from('leads').upsert(
+        const { error: insertError } = await supabase.from("leads").upsert(
           {
             email: contactEmail,
             name: agency_name,
             company: opp.agency,
-            source: 'gov_engine',
+            source: "gov_engine",
             score: opp.fit_score,
             leadScore: opp.fit_score,
-            status: 'qualified',
-            industry: opp.naics_code || 'Government',
+            status: "qualified",
+            industry: opp.naics_code || "Government",
             metadata: {
               opportunity_id: opp.notice_id,
               fit_score: opp.fit_score,
@@ -159,39 +185,53 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; skip
               govchain_url: opp.govchain_detail_url,
               sam_url: opp.sam_url,
               deadline: opp.deadline,
+              // SAM.gov POC addresses are published by the agency for contact —
+              // same vocabulary as send-guard / revenue-cycle checkout gate.
+              verification_source: "published_contact",
+              provenance: "published_contact",
+              provenanceNote:
+                "qualify-leads: SAM.gov opportunity contact_email",
             },
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
-          { onConflict: 'email' }
+          { onConflict: "email" }
         );
 
         if (insertError) {
-          console.warn(`  ⚠️  Failed to create lead for ${opp.notice_id}: ${insertError.message}`);
+          console.warn(
+            `  ⚠️  Failed to create lead for ${opp.notice_id}: ${insertError.message}`
+          );
           failed++;
           continue;
         }
 
         // Mark opportunity as qualified (leaves lifecycle status untouched)
         const { error: updateError } = await supabase
-          .from('gov_opportunities')
+          .from("gov_opportunities")
           .update({
             qualified_at: new Date().toISOString(),
           })
-          .eq('notice_id', opp.notice_id);
+          .eq("notice_id", opp.notice_id);
 
         if (updateError) {
-          console.warn(`  ⚠️  Failed to update opportunity ${opp.notice_id}: ${updateError.message}`);
+          console.warn(
+            `  ⚠️  Failed to update opportunity ${opp.notice_id}: ${updateError.message}`
+          );
           failed++;
           continue;
         }
       }
 
-      console.log(`  ✅ Qualified: ${opp.title?.slice(0, 60)} (${opp.fit_score}/100)`);
+      console.log(
+        `  ✅ Qualified: ${opp.title?.slice(0, 60)} (${opp.fit_score}/100)`
+      );
       qualified++;
     } catch (err: any) {
       failed++;
-      const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
+      const shortMsg = (err?.message || String(err))
+        .split("\n")[0]
+        .slice(0, 200);
       console.warn(`  ⚠️  skipped ${opp.notice_id}: ${shortMsg}`);
     }
   }
@@ -200,12 +240,14 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; skip
 }
 
 const { qualified, failed, skippedNoContact, total } = await qualifyLeads();
-console.log(`✅ Qualified ${qualified}/${total} leads (${failed} failed, ${skippedNoContact} without a contact email)`);
+console.log(
+  `✅ Qualified ${qualified}/${total} leads (${failed} failed, ${skippedNoContact} without a contact email)`
+);
 
 if (skippedNoContact > 0) {
   console.log(
     `ℹ️  ${skippedNoContact} opportunity(ies) scored well but carry no usable contact address. ` +
-      'They are advanced but not counted as leads — attach a real contact to gov_opportunities.contact_email to convert them.',
+      "They are advanced but not counted as leads — attach a real contact to gov_opportunities.contact_email to convert them."
   );
 }
 
@@ -213,7 +255,9 @@ if (skippedNoContact > 0) {
 // batch that is entirely contactless is a sourcing gap, not a pipeline failure,
 // so it must not turn the scheduled run red.
 if (total > 0 && qualified === 0 && skippedNoContact < total) {
-  console.error('❌ All lead qualification attempts failed — see errors above.');
+  console.error(
+    "❌ All lead qualification attempts failed — see errors above."
+  );
   process.exit(1);
 }
 process.exit(0);
