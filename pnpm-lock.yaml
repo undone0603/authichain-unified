@@ -26,10 +26,10 @@ importers:
         version: 4.0.60(zod@3.25.76)
       '@auth/core':
         specifier: ^0.41.3
-        version: 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.1.0)
+        version: 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@10.0.1)
       '@auth/drizzle-adapter':
         specifier: ^1.11.3
-        version: 1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.1.0)
+        version: 1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@10.0.1)
       '@clerk/nextjs':
         specifier: ^7.8.3
         version: 7.8.4(next@16.3.2(@babel/core@7.29.7)(@types/node@26.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -235,8 +235,8 @@ importers:
         specifier: ^16.2.10
         version: 16.3.2(@babel/core@7.29.7)(@types/node@26.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       nodemailer:
-        specifier: ^9.0.5
-        version: 9.1.0
+        specifier: ^10.0.1
+        version: 10.0.1
       openai:
         specifier: ^7.8.0
         version: 7.8.0(undici@8.10.1)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@3.25.76)
@@ -534,8 +534,8 @@ importers:
         specifier: ^5.6.0
         version: 5.6.0(@babel/core@7.29.7)(@types/babel__core@7.20.5)(esbuild@0.28.2)(lightningcss@1.32.0)(next@15.5.21(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postcss@8.5.26)(webpack@5.110.3(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26))
       nodemailer:
-        specifier: ^9.0.1
-        version: 9.1.0
+        specifier: ^10.0.1
+        version: 10.0.1
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
@@ -9882,9 +9882,9 @@ packages:
     resolution: {integrity: sha512-lWflzDW9xLuOOvR6mTJ9efbDtO/iSCH6rEGjxFxTV0vGgz5XjoZlW2BkNCCZib0B6Y23tCOiYhYJaMQYB8FKIQ==}
     engines: {node: '>=14', npm: '>=8'}
 
-  nodemailer@9.1.0:
-    resolution: {integrity: sha512-xj1Ri5Sau3qpPffHJwi2bY0oWVVWYq62Ph17l+2v1xXpxjqTls3YPc3L8dub9mcJpxj+1ucNnuYVqLlgh4pmDA==}
-    engines: {node: '>=6.0.0'}
+  nodemailer@10.0.1:
+    resolution: {integrity: sha512-c+gU9cL9HLDax3vjxL88kW+6NOgdtEUWaZ+AUtxdJR6LLhf0kGdCLExof7yiKW7zdO9EfXCSIgmhGyFmUM0mYQ==}
+    engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -12783,7 +12783,7 @@ snapshots:
       is-potential-custom-element-name: 1.0.1
       lru-cache: 11.5.2
 
-  '@auth/core@0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.1.0)':
+  '@auth/core@0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@10.0.1)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.12
@@ -12792,11 +12792,11 @@ snapshots:
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
       '@simplewebauthn/browser': 13.3.0
-      nodemailer: 9.1.0
+      nodemailer: 10.0.1
 
-  '@auth/drizzle-adapter@1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.1.0)':
+  '@auth/drizzle-adapter@1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@10.0.1)':
     dependencies:
-      '@auth/core': 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.1.0)
+      '@auth/core': 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@10.0.1)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -24198,7 +24198,7 @@ snapshots:
       uuid: 11.1.1
       which: 5.0.0
 
-  nodemailer@9.1.0: {}
+  nodemailer@10.0.1: {}
 
   normalize-path@3.0.0: {}
 
