@@ -1,0 +1,73 @@
+version: 1
+name: competitive-moat-autopilot
+objective: compound defensible advantage while minimizing time-to-revenue
+
+weights:
+  customer_data_accumulation: 25
+  protocol_adoption: 20
+  recurring_revenue: 20
+  trust_reputation: 15
+  distribution_leverage: 10
+  execution_confidence: 10
+
+priority_gates:
+  first_revenue: true
+  protocol_ready: true
+  reference_implementation_ready: true
+  production_ready: true
+
+allowed_autonomous_actions:
+  - documentation
+  - deterministic conformance fixtures
+  - verifier tests
+  - compatibility examples
+  - telemetry and KPI reporting
+  - low-risk CI fixes
+  - public changelog maintenance
+  - prospect research and scoring
+  - internal pipeline prioritization
+
+approval_required:
+  - protocol_semantics
+  - production_secrets
+  - database_destruction
+  - billing_changes
+  - security_policy_changes
+  - irreversible_infrastructure
+  - external_high_impact_communication
+  - patent_filing
+  - licensing_commitments
+  - contractual_exclusivity
+  - customer_data_ownership_changes
+
+hard_constraints:
+  no_fabricated_traction: true
+  no_unverified_certifications: true
+  no_fake_customer_logos: true
+  no_synthetic_verification_activity: true
+  preserve_customer_data_portability: true
+  preserve_protocol_integrity: true
+  preserve_audit_trail: true
+
+revenue_sequence:
+  - attributed_traffic
+  - paid_stripe_checkout
+  - automatic_provisioning
+  - first_verified_object
+  - measurable_retention
+
+competitive_assets:
+  - attestation_spec
+  - public_verifier
+  - conformance_vectors
+  - verification_evidence_graph
+  - issuer_verifier_integrator_network
+  - usage_metering
+  - targeted_ip_disclosures
+
+stop_scaling_when:
+  - protocol_gate_failed
+  - production_health_degraded
+  - trust_claim_unsubstantiated
+  - deliverability_gate_failed
+  - revenue_signal_absent_and_action_only_increases_acquisition_volume

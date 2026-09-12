@@ -79,6 +79,7 @@ export const DYNAMIC_HANDLER_PATHS: Set<string> = new Set([
   "/s",
   "/p",
   "/brand/qron/artwork",
+  "/landing",
 ]);
 
 /** True iff `pathname` equals `prefix` or is nested under it (`prefix/...`). */
@@ -99,7 +100,7 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
  */
 export function resolveOwner(
   pathname: string,
-  marketingRoutes: Set<string>,
+  marketingRoutes: Set<string>
 ): "api" | "dynamic" | "spa" | "marketing" | "spa-fallback" {
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     return "api";

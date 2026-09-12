@@ -10,7 +10,14 @@ import { eq } from "drizzle-orm";
 import type { MissionTask as Task } from "../../drizzle/schema.js";
 import { leads } from "../../drizzle/schema.js";
 import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-import { createProposal, enqueueTask, getDb, logActivity } from "../db.js";
+import {
+  createProposal,
+  createSystemNotification,
+  enqueueTask,
+  getAllAdminIds,
+  getDb,
+  logActivity,
+} from "../db.js";
 import { checkThreadReplies, sendEmail } from "../email-service.js";
 import { getStripe } from "../stripe-service.js";
 
@@ -31,6 +38,54 @@ async function updateLeadStatus(email: string, status: string) {
     .update(leads)
     .set({ status, updatedAt: new Date() })
     .where(eq(leads.email, email.toLowerCase()));
+}
+
+/**
+ * Stripe checkout-session creation failing here previously degraded silently
+ * to "send the email without a payment link, follow up manually" — no log,
+ * no alert. That means the entire point of automating the close (a working
+ * payment link) could quietly go missing on every affected proposal/contract
+ * with no one ever finding out short of a customer complaining. This makes
+ * the same degrade visible: still non-fatal (the email still sends), but now
+ * logged and pushed to every admin as an alert instead of assumed away.
+ */
+async function notifyCheckoutLinkFailed(opts: {
+  context: "proposal" | "contract";
+  taskId: string;
+  missionId: string;
+  leadEmail: string;
+  segment: string;
+  error: unknown;
+}): Promise<void> {
+  const message =
+    opts.error instanceof Error ? opts.error.message : String(opts.error);
+
+  await logActivity({
+    userId: null,
+    action: "checkout_link_creation_failed",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: opts.taskId,
+      missionId: opts.missionId,
+      leadEmail: opts.leadEmail,
+      segment: opts.segment,
+      context: opts.context,
+      error: message,
+    },
+  });
+
+  const adminIds = await getAllAdminIds();
+  await Promise.all(
+    adminIds.map(adminId =>
+      createSystemNotification(
+        adminId,
+        "Payment link failed to generate",
+        `Stripe checkout session creation failed while sending a ${opts.context} to ${opts.leadEmail} (${opts.segment}). The email still sent, but without a payment link — it needs manual follow-up. Error: ${message}`,
+        "alert"
+      )
+    )
+  );
 }
 
 // ─── CHECK_REPLIES ─────────────────────────────────────────────────────────────
@@ -406,8 +461,17 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
       });
       paymentLink = session.url ?? undefined;
       checkoutSessionId = session.id;
-    } catch {
-      // Non-fatal — send proposal without link, follow up manually
+    } catch (error) {
+      // Non-fatal — send the proposal without a link, but make sure someone
+      // actually finds out (see notifyCheckoutLinkFailed's doc comment).
+      await notifyCheckoutLinkFailed({
+        context: "proposal",
+        taskId: task.id,
+        missionId: task.missionId,
+        leadEmail,
+        segment,
+        error,
+      });
     }
   }
 
@@ -532,8 +596,15 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
         expires_at: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days to sign
       });
       paymentLink = session.url ?? undefined;
-    } catch {
-      /* non-fatal */
+    } catch (error) {
+      await notifyCheckoutLinkFailed({
+        context: "contract",
+        taskId: task.id,
+        missionId: task.missionId,
+        leadEmail,
+        segment,
+        error,
+      });
     }
   }
 

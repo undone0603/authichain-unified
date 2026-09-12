@@ -2505,10 +2505,10 @@ function ecosystemFooter() {
     <div>
       <div class="footer-heading">Platform</div>
       <ul class="footer-links">
-        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
-        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
-        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
-        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
+        <li><a href="/authenticate">Get Started</a></li>
+        <li><a href="/subscriptions">Pricing</a></li>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/authenticate">Brand Onboarding</a></li>
       </ul>
     </div>
     <div>
@@ -2524,7 +2524,7 @@ function ecosystemFooter() {
       <div class="footer-heading">Company</div>
       <ul class="footer-links">
         <li><a href="mailto:hello@authichain.com">Contact</a></li>
-        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
+        <li><a href="/authenticate">Sign In</a></li>
       </ul>
     </div>
   </div>
@@ -2564,8 +2564,8 @@ const HTML = `<!DOCTYPE html>
       <a class="nav-link" href="#community">$QRON</a>
       <a class="nav-link" href="#technology">Technology</a>
       <a class="nav-link" href="/digital-product-passport" style="color:var(--accent)">EU DPP</a>
-      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
+      <a class="nav-link" href="/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="/authenticate">Get Started</a>
       <a class="nav-link" href="/anchor" style="color:var(--primary)">Anchor</a>
       <a class="nav-link" href="https://app.authichain.com/pricing">Pricing</a>
       <a class="btn btn-primary btn-sm" href="https://app.authichain.com/login">Get Started</a>
@@ -2577,7 +2577,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
-        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="/authenticate">Start Free Trial</a>
         <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
       </div>
     </div>
@@ -3122,7 +3122,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     </a>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
-      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="nav-link" href="/subscriptions">Pricing</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/api/checkout/dpp">Start DPP Audit — $299</a>
     </div>
   </nav>
@@ -3282,7 +3282,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://authichain-unified.vercel.app/onboard">Start Free — Get DPP Compliant</a>
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/authenticate">Start Free — Get DPP Compliant</a>
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
     </div>
@@ -3372,14 +3372,8 @@ export default {
       }
     }
     // Landing pages: /landing/:brandId — dynamic brand landing pages.
-    // TODO(follow-up): worker-app (authichain-edge-router) has no dedicated
-    // /landing handler yet (see worker-app/route-manifest.ts and
-    // worker-app/dynamic-pages.ts — neither lists "/landing"), so this
-    // currently falls through to the SPA shell's spa-fallback, which likely
-    // does NOT reproduce the old per-brand landing page content/logic.
-    // Don't fabricate that logic here — build a real /landing dynamic-pages.ts
-    // handler (same pattern as its existing /verify handler) before relying
-    // on this route in production.
+    // Handled by worker-app's renderLanding (worker-app/dynamic-pages.ts),
+    // registered in DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
     if (p === '/landing' || p.startsWith('/landing/')) {
       if (env.APP_WORKER) {
         return env.APP_WORKER.fetch(request);

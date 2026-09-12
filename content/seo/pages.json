@@ -7363,27 +7363,27 @@
     }
   },
   {
-    "slug": "eu-csddd-omnibus-supply-chain-due-diligence-delay",
-    "keyword": "eu csddd omnibus supply chain due diligence delay",
+    "slug": "eu-falsified-medicines-directive-verification",
+    "keyword": "eu falsified medicines directive verification",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "EU CSDDD Omnibus Supply Chain Due Diligence | AuthiChain",
-    "metaDescription": "Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26.",
-    "h1": "EU CSDDD Omnibus Supply Chain Due Diligence Delay",
-    "bodyHtml": "<p>Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26, 2029, with first reports covering financial year 2030 — the deadline moved and the scope narrowed, but the underlying question a covered company still has to answer is unchanged: can you show where a material actually came from.</p><h2>Why AuthiChain</h2><ul><li>Scope narrowed to EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with over €1.5 billion turnover generated in the EU — smaller suppliers feeding those companies still get asked for the same sourcing evidence</li><li>Signed, per-batch provenance records are the kind of checkable supply-chain evidence a due-diligence file needs, independent of which exact reporting deadline applies to the company assembling it</li><li>A signature proves who issued a sourcing claim, not that the claim itself is true — the same distinction protocol/SPEC.md §8 draws about any signed record, and one a due-diligence auditor draws too</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Omnibus I delay mean supply-chain due diligence is no longer required?</h3><p>No — CSDDD still applies, just later and to a narrower group: transposition by July 26, 2028, substantive obligations from July 26, 2029. Omnibus I also removed the EU-wide civil liability regime and the mandatory climate transition plan requirement, but the core due-diligence duty for in-scope companies stands.</p><h3>Which companies are in scope after Omnibus I?</h3><p>EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with more than €1.5 billion turnover generated in the EU — a much narrower group than the original 2024 text covered.</p>",
+    "title": "EU Falsified Medicines Directive Verification | AuthiChain",
+    "metaDescription": "Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once.",
+    "h1": "EU Falsified Medicines Directive Verification",
+    "bodyHtml": "<p>Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once against a national hub and decommissioned the moment a pharmacist dispenses it — a single-use verification model, distinct from the offline, repeatable check a signed AuthiChain record is built to give a downstream party.</p><h2>Why AuthiChain</h2><ul><li>The FMD unique identifier packs a product code, batch number, expiry date, and serial number into one 2D data matrix code — the same fields a DSCSA unit-level record carries for the US market, on a separate EU system with its own national verification hubs</li><li>FMD verification is a live lookup against the European Medicines Verification System at the point of dispensing; a signed AuthiChain record verifies offline against the record itself, with no hub, portal, or account required</li><li>The anti-tampering device is a physical seal, not a data field — a broken seal fails FMD compliance regardless of what the barcode reports, the same way protocol/SPEC.md §8 states a signature proves authorship, not that the physical item in hand matches the record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed AuthiChain record replace the FMD unique identifier?</h3><p>No — the FMD unique identifier and its decommissioning in the national verification system is a separate legal requirement for EU prescription medicines. A signed record can carry the same product code, batch, and serial data, but it doesn’t satisfy that decommissioning step on its own.</p><h3>What happens if a pack’s code is scanned after it has already been decommissioned?</h3><p>The national verification system flags it — a decommissioned code scanning again reads as already dispensed, which is exactly the signal an FMD check is built to raise. That’s different from an AuthiChain record, which a buyer can verify offline as many times as they want without changing its status.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Service",
-          "name": "AuthiChain — EU CSDDD Omnibus Supply Chain Due Diligence Delay",
+          "name": "AuthiChain — EU Falsified Medicines Directive Verification",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26, 2029, with first reports covering financial year 2030 — the deadline moved and the scope narrowed, but the underlying question a covered company still has to answer is unchanged: can you show where a material actually came from.",
-          "url": "https://authichain.com/p/eu-csddd-omnibus-supply-chain-due-diligence-delay"
+          "description": "Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once against a national hub and decommissioned the moment a pharmacist dispenses it — a single-use verification model, distinct from the offline, repeatable check a signed AuthiChain record is built to give a downstream party.",
+          "url": "https://authichain.com/p/eu-falsified-medicines-directive-verification"
         },
         {
           "@type": "BreadcrumbList",
@@ -7397,8 +7397,8 @@
             {
               "@type": "ListItem",
               "position": 2,
-              "name": "EU CSDDD Omnibus Supply Chain Due Diligence Delay",
-              "item": "https://authichain.com/p/eu-csddd-omnibus-supply-chain-due-diligence-delay"
+              "name": "EU Falsified Medicines Directive Verification",
+              "item": "https://authichain.com/p/eu-falsified-medicines-directive-verification"
             }
           ]
         },
@@ -7407,18 +7407,18 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Does the Omnibus I delay mean supply-chain due diligence is no longer required?",
+              "name": "Does a signed AuthiChain record replace the FMD unique identifier?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — CSDDD still applies, just later and to a narrower group: transposition by July 26, 2028, substantive obligations from July 26, 2029. Omnibus I also removed the EU-wide civil liability regime and the mandatory climate transition plan requirement, but the core due-diligence duty for in-scope companies stands."
+                "text": "No — the FMD unique identifier and its decommissioning in the national verification system is a separate legal requirement for EU prescription medicines. A signed record can carry the same product code, batch, and serial data, but it doesn’t satisfy that decommissioning step on its own."
               }
             },
             {
               "@type": "Question",
-              "name": "Which companies are in scope after Omnibus I?",
+              "name": "What happens if a pack’s code is scanned after it has already been decommissioned?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with more than €1.5 billion turnover generated in the EU — a much narrower group than the original 2024 text covered."
+                "text": "The national verification system flags it — a decommissioned code scanning again reads as already dispensed, which is exactly the signal an FMD check is built to raise. That’s different from an AuthiChain record, which a buyer can verify offline as many times as they want without changing its status."
               }
             }
           ]
@@ -7427,27 +7427,27 @@
     }
   },
   {
-    "slug": "eu-catch-digital-certificate-iuu-fishing-traceability",
-    "keyword": "eu catch digital certificate iuu fishing traceability",
+    "slug": "eu-ai-act-product-authentication-classification",
+    "keyword": "eu ai act product authentication classification",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "EU Catch Digital Certificate IUU Fishing | AuthiChain",
-    "metaDescription": "The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of.",
-    "h1": "EU Catch Digital Certificate IUU Fishing Traceability",
-    "bodyHtml": "<p>The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of per-shipment, checkable chain-of-custody record AuthiChain already signs and anchors for other regulated goods, now applied to the roughly 70% of EU seafood consumption that arrives as imports.</p><h2>Why AuthiChain</h2><ul><li>CATCH is mandatory for EU-side processing of catch certificates; use by non-EU exporting countries stays voluntary, so a signed catch-to-import record still has to interoperate with partners who haven’t adopted it</li><li>About 80% of EU seafood imports fall under the IUU Regulation CATCH enforces — a large share of the trade this replaces paper documentation for, not an edge case</li><li>A signed, hashed catch-to-shipment record gives an importer or authority a way to check chain of custody independent of whichever national system originated the paper before January 2026</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the CATCH system the same as the EU Digital Product Passport?</h3><p>No — CATCH is a fisheries-control system for IUU catch certificates, run through TRACES. It’s a separate legal instrument from the ESPR’s Digital Product Passport, though both replace paper documentation with a record a downstream party can check digitally.</p><h3>Do non-EU exporting countries have to use CATCH?</h3><p>Not yet — CATCH is mandatory for the EU side of catch-certificate processing, but the regulation leaves participation voluntary for non-EU countries and their operators submitting certificates.</p>",
+    "title": "EU AI Act Product Authentication Classification | AuthiChain",
+    "metaDescription": "The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment.",
+    "h1": "EU AI Act Product Authentication Classification",
+    "bodyHtml": "<p>The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment, access to essential services, law enforcement, migration and border management, and the administration of justice — and AI that checks whether a physical product is genuine is not one of them.</p><h2>Why AuthiChain</h2><ul><li>Annex III’s own list stays about people and public systems: biometric identification, critical infrastructure, education, employment, essential services, law enforcement, migration, and justice — scoring whether an item is authentic sits outside every category</li><li>The European Commission’s draft High-Risk Classification Guidelines, published 19 May 2026, treat biometric verification — confirming a specific person is who they claim to be — as explicitly excluded from high-risk status; AI that checks a physical item rather than a person sits even further outside Annex III’s named use cases</li><li>Annex III’s compliance deadline itself moved to 2 December 2027, extended from the original 2 August 2026 date — a schedule change for systems already inside Annex III, not a signal that product-authentication AI has been added to it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is AI-based authenticity scoring a high-risk AI system under the EU AI Act?</h3><p>Annex III’s eight high-risk categories cover biometric identification of people, critical infrastructure, employment, education, migration, law enforcement, essential services, and justice. AI that scores whether a physical item is genuine doesn’t fall into any of them as of this writing — worth confirming with counsel for your specific deployment, not a blanket exemption this page can grant.</p><h3>Did the Annex III deadline extension change anything for anti-counterfeiting AI?</h3><p>The 2 December 2027 date applies to systems already inside Annex III’s eight categories. Product-authentication AI was outside Annex III before the extension and remains outside it after — the schedule moved, not the scope.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Service",
-          "name": "AuthiChain — EU Catch Digital Certificate IUU Fishing Traceability",
+          "name": "AuthiChain — EU AI Act Product Authentication Classification",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of per-shipment, checkable chain-of-custody record AuthiChain already signs and anchors for other regulated goods, now applied to the roughly 70% of EU seafood consumption that arrives as imports.",
-          "url": "https://authichain.com/p/eu-catch-digital-certificate-iuu-fishing-traceability"
+          "description": "The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment, access to essential services, law enforcement, migration and border management, and the administration of justice — and AI that checks whether a physical product is genuine is not one of them.",
+          "url": "https://authichain.com/p/eu-ai-act-product-authentication-classification"
         },
         {
           "@type": "BreadcrumbList",
@@ -7461,8 +7461,8 @@
             {
               "@type": "ListItem",
               "position": 2,
-              "name": "EU Catch Digital Certificate IUU Fishing Traceability",
-              "item": "https://authichain.com/p/eu-catch-digital-certificate-iuu-fishing-traceability"
+              "name": "EU AI Act Product Authentication Classification",
+              "item": "https://authichain.com/p/eu-ai-act-product-authentication-classification"
             }
           ]
         },
@@ -7471,18 +7471,18 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Is the CATCH system the same as the EU Digital Product Passport?",
+              "name": "Is AI-based authenticity scoring a high-risk AI system under the EU AI Act?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — CATCH is a fisheries-control system for IUU catch certificates, run through TRACES. It’s a separate legal instrument from the ESPR’s Digital Product Passport, though both replace paper documentation with a record a downstream party can check digitally."
+                "text": "Annex III’s eight high-risk categories cover biometric identification of people, critical infrastructure, employment, education, migration, law enforcement, essential services, and justice. AI that scores whether a physical item is genuine doesn’t fall into any of them as of this writing — worth confirming with counsel for your specific deployment, not a blanket exemption this page can grant."
               }
             },
             {
               "@type": "Question",
-              "name": "Do non-EU exporting countries have to use CATCH?",
+              "name": "Did the Annex III deadline extension change anything for anti-counterfeiting AI?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Not yet — CATCH is mandatory for the EU side of catch-certificate processing, but the regulation leaves participation voluntary for non-EU countries and their operators submitting certificates."
+                "text": "The 2 December 2027 date applies to systems already inside Annex III’s eight categories. Product-authentication AI was outside Annex III before the extension and remains outside it after — the schedule moved, not the scope."
               }
             }
           ]
@@ -7491,155 +7491,27 @@
     }
   },
   {
-    "slug": "cmmc-phase-2-certification-suspended-defense-contractors",
-    "keyword": "cmmc phase 2 certification suspended defense contractors",
-    "brand": "GovChain",
-    "domain": "govchain.us",
-    "title": "CMMC Phase 2 Certification Suspended Defense | GovChain",
-    "metaDescription": "CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment.",
-    "h1": "CMMC Phase 2 Certification Suspended Defense Contractors",
-    "bodyHtml": "<p>CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment requirements and the DFARS 252.204-7012 data-protection clause were not suspended and remain fully in effect through the current Phase 1 window ending November 10, 2026.</p><h2>Why GovChain</h2><ul><li>DFARS 252.204-7021 still flows CMMC requirements down through subcontractors regardless of the Phase 2 pause — a prime’s obligation to check subcontractor posture didn’t go away because third-party certification did</li><li>A contractor storing or processing CUI still needs to show, self-assessed today and third-party-certified once Phase 2 resumes, that a specific control was actually implemented — not just that a policy document says it should be</li><li>GovChain issues that evidence as a signed, per-control record an auditor checks independently, so readiness work done during the pause carries over once Phase 2 restarts rather than waiting on the review’s outcome</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Does the Phase 2 suspension mean CMMC compliance is on hold?</h3><p>No — only third-party Level 2 certification (Phase 2) is suspended, as of July 13, 2026, pending a 60-day Department of War review. Phase 1 self-assessment requirements and the underlying DFARS 252.204-7012 data-protection obligations remain in effect.</p><h3>When does the current Phase 1 window end?</h3><p>November 10, 2026 — one year after CMMC 2.0 was formalized in DFARS in November 2025. Whether Phase 2 resumes on schedule after that depends on the outcome of the suspended review.</p>",
-    "jsonLd": {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "Service",
-          "name": "GovChain — CMMC Phase 2 Certification Suspended Defense Contractors",
-          "provider": {
-            "@type": "Organization",
-            "name": "GovChain",
-            "url": "https://govchain.us"
-          },
-          "description": "CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment requirements and the DFARS 252.204-7012 data-protection clause were not suspended and remain fully in effect through the current Phase 1 window ending November 10, 2026.",
-          "url": "https://govchain.us/p/cmmc-phase-2-certification-suspended-defense-contractors"
-        },
-        {
-          "@type": "BreadcrumbList",
-          "itemListElement": [
-            {
-              "@type": "ListItem",
-              "position": 1,
-              "name": "GovChain",
-              "item": "https://govchain.us"
-            },
-            {
-              "@type": "ListItem",
-              "position": 2,
-              "name": "CMMC Phase 2 Certification Suspended Defense Contractors",
-              "item": "https://govchain.us/p/cmmc-phase-2-certification-suspended-defense-contractors"
-            }
-          ]
-        },
-        {
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "Does the Phase 2 suspension mean CMMC compliance is on hold?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "No — only third-party Level 2 certification (Phase 2) is suspended, as of July 13, 2026, pending a 60-day Department of War review. Phase 1 self-assessment requirements and the underlying DFARS 252.204-7012 data-protection obligations remain in effect."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "When does the current Phase 1 window end?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "November 10, 2026 — one year after CMMC 2.0 was formalized in DFARS in November 2025. Whether Phase 2 resumes on schedule after that depends on the outcome of the suspended review."
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "slug": "marijuana-rescheduling-schedule-iii-state-license-verification",
-    "keyword": "marijuana rescheduling schedule iii state license verification",
-    "brand": "StrainChain",
-    "domain": "strainchain.io",
-    "title": "Marijuana Rescheduling Schedule III State | StrainChain",
-    "metaDescription": "DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under.",
-    "h1": "Marijuana Rescheduling Schedule III State License Verification",
-    "bodyHtml": "<p>DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under a state medical license — while anything outside those two categories stays Schedule I, which means whether a specific product qualifies now turns on a state license record a scanner can actually check.</p><h2>Why StrainChain</h2><ul><li>Rescheduling applies to marijuana “subject to a qualifying state-issued license,” not to cannabis generally — a batch’s link to a verified METRC/BioTrack license record is what determines which side of the Schedule I/III line it falls on, not the product itself</li><li>A DEA hearing to consider broader rescheduling of all cannabis ran June 29 through July 15, 2026; until that process concludes, non-FDA-approved, non-state-licensed marijuana remains Schedule I regardless of state law</li><li>Section 280E tax relief follows the same state-license distinction — a dispensary’s tax position depends on the same license record its compliance system already tracks, not on a separate filing</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does the April 2026 order reschedule all marijuana to Schedule III?</h3><p>No — it covers only marijuana in an FDA-approved drug product and marijuana subject to a state-issued medical license. Marijuana outside those two categories, including most recreational-market product, remains Schedule I as of this writing.</p><h3>Could broader rescheduling still happen?</h3><p>DEA held a hearing from June 29 to July 15, 2026 on rescheduling all cannabis from Schedule I to Schedule III. The outcome decides whether the narrower April 2026 order becomes the permanent rule or a broader one replaces it.</p>",
-    "jsonLd": {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "Service",
-          "name": "StrainChain — Marijuana Rescheduling Schedule III State License Verification",
-          "provider": {
-            "@type": "Organization",
-            "name": "StrainChain",
-            "url": "https://strainchain.io"
-          },
-          "description": "DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under a state medical license — while anything outside those two categories stays Schedule I, which means whether a specific product qualifies now turns on a state license record a scanner can actually check.",
-          "url": "https://strainchain.io/p/marijuana-rescheduling-schedule-iii-state-license-verification"
-        },
-        {
-          "@type": "BreadcrumbList",
-          "itemListElement": [
-            {
-              "@type": "ListItem",
-              "position": 1,
-              "name": "StrainChain",
-              "item": "https://strainchain.io"
-            },
-            {
-              "@type": "ListItem",
-              "position": 2,
-              "name": "Marijuana Rescheduling Schedule III State License Verification",
-              "item": "https://strainchain.io/p/marijuana-rescheduling-schedule-iii-state-license-verification"
-            }
-          ]
-        },
-        {
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "Does the April 2026 order reschedule all marijuana to Schedule III?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "No — it covers only marijuana in an FDA-approved drug product and marijuana subject to a state-issued medical license. Marijuana outside those two categories, including most recreational-market product, remains Schedule I as of this writing."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Could broader rescheduling still happen?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "DEA held a hearing from June 29 to July 15, 2026 on rescheduling all cannabis from Schedule I to Schedule III. The outcome decides whether the narrower April 2026 order becomes the permanent rule or a broader one replaces it."
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "slug": "digital-omnibus-dpp-espr-timelines-unchanged",
-    "keyword": "digital omnibus dpp espr timelines unchanged",
+    "slug": "csddd-omnibus-supply-chain-due-diligence-2026",
+    "keyword": "csddd omnibus supply chain due diligence 2026",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "Digital Omnibus DPP ESPR Timelines Unchanged | AuthiChain",
-    "metaDescription": "Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make.",
-    "h1": "Digital Omnibus DPP ESPR Timelines Unchanged",
-    "bodyHtml": "<p>Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make digital records the default for compliance documentation, but it does not touch the Digital Product Passport’s own delegated-act timelines: those are set separately, category by category, and sit exactly where they were before Omnibus IV started.</p><h2>Why AuthiChain</h2><ul><li>Omnibus IV is a different package from Omnibus I, which delayed CSDDD and CSRD substantively — conflating the two is the most common mistake in coverage of “the omnibus and the DPP”</li><li>The EU Central DPP Registry went live with a testing environment on July 19, 2026 on schedule, and as of this writing no product-specific ESPR delegated act had entered into force — the registry opening did not wait on Omnibus IV, and neither does a category’s deadline once its delegated act adopts</li><li>A record built as a W3C Verifiable Credential today does not need restructuring if Omnibus IV’s “digital by default” language changes which documents a market-surveillance authority accepts electronically — the passport format and the accepted-format rule are separate layers</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Digital Omnibus delay the Digital Product Passport?</h3><p>No — Omnibus IV digitalizes how compliance documentation is submitted and accepted, amending regulations including 765/2008 on market surveillance and the ESPR itself, but it doesn’t change any category’s DPP delegated-act timeline. Those delays came from Omnibus I, a separate package that affected CSDDD and CSRD, not the DPP.</p><h3>What did Omnibus IV actually agree to on June 9, 2026?</h3><p>Provisional political agreement on the digitalisation strand, with committee approval following on July 14, 2026 and an indicative plenary first reading targeted for November 11, 2026 — text that had not been finally adopted as of this writing.</p>",
+    "title": "CSDDD Omnibus Supply Chain Due Diligence 2026 | AuthiChain",
+    "metaDescription": "The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion.",
+    "h1": "CSDDD Omnibus Supply Chain Due Diligence 2026",
+    "bodyHtml": "<p>The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion in turnover, and narrowed the obligation from the full chain of activities to direct, tier-1 business partners — exactly the layer a signed provenance record already covers.</p><h2>Why AuthiChain</h2><ul><li>The amended CSDDD focuses due diligence on tier-1 business partners rather than every upstream and downstream link in the chain of activities</li><li>A W3C Verifiable Credential from a direct supplier is a tier-1 record a compliance team can check for authorship without asking that supplier to vouch for it a second time</li><li>National transposition is due by 26 July 2028, with application from 26 July 2029 for companies meeting the raised thresholds — a longer runway, not a lower bar</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does Omnibus I cancel CSDDD?</h3><p>No — it narrows the scope (roughly to companies above 5,000 employees and €1.5bn turnover), narrows the due-diligence layer to tier-1 partners, and pushes the timeline out. The underlying obligation still stands for companies that meet the new thresholds.</p><h3>Does a signed record satisfy CSDDD due diligence by itself?</h3><p>No — CSDDD requires a due-diligence process, not a single artifact. A signed provenance record documents what a tier-1 partner asserted and when; that is one input to the process, not a substitute for running it.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Service",
-          "name": "AuthiChain — Digital Omnibus DPP ESPR Timelines Unchanged",
+          "name": "AuthiChain — CSDDD Omnibus Supply Chain Due Diligence 2026",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make digital records the default for compliance documentation, but it does not touch the Digital Product Passport’s own delegated-act timelines: those are set separately, category by category, and sit exactly where they were before Omnibus IV started.",
-          "url": "https://authichain.com/p/digital-omnibus-dpp-espr-timelines-unchanged"
+          "description": "The EU’s Omnibus I package, in force since 18 March 2026, cut CSDDD’s due-diligence scope to companies with more than 5,000 employees and over €1.5 billion in turnover, and narrowed the obligation from the full chain of activities to direct, tier-1 business partners — exactly the layer a signed provenance record already covers.",
+          "url": "https://authichain.com/p/csddd-omnibus-supply-chain-due-diligence-2026"
         },
         {
           "@type": "BreadcrumbList",
@@ -7653,8 +7525,8 @@
             {
               "@type": "ListItem",
               "position": 2,
-              "name": "Digital Omnibus DPP ESPR Timelines Unchanged",
-              "item": "https://authichain.com/p/digital-omnibus-dpp-espr-timelines-unchanged"
+              "name": "CSDDD Omnibus Supply Chain Due Diligence 2026",
+              "item": "https://authichain.com/p/csddd-omnibus-supply-chain-due-diligence-2026"
             }
           ]
         },
@@ -7663,18 +7535,337 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Does the Digital Omnibus delay the Digital Product Passport?",
+              "name": "Does Omnibus I cancel CSDDD?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "No — Omnibus IV digitalizes how compliance documentation is submitted and accepted, amending regulations including 765/2008 on market surveillance and the ESPR itself, but it doesn’t change any category’s DPP delegated-act timeline. Those delays came from Omnibus I, a separate package that affected CSDDD and CSRD, not the DPP."
+                "text": "No — it narrows the scope (roughly to companies above 5,000 employees and €1.5bn turnover), narrows the due-diligence layer to tier-1 partners, and pushes the timeline out. The underlying obligation still stands for companies that meet the new thresholds."
               }
             },
             {
               "@type": "Question",
-              "name": "What did Omnibus IV actually agree to on June 9, 2026?",
+              "name": "Does a signed record satisfy CSDDD due diligence by itself?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Provisional political agreement on the digitalisation strand, with committee approval following on July 14, 2026 and an indicative plenary first reading targeted for November 11, 2026 — text that had not been finally adopted as of this writing."
+                "text": "No — CSDDD requires a due-diligence process, not a single artifact. A signed provenance record documents what a tier-1 partner asserted and when; that is one input to the process, not a substitute for running it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "california-sb-253-scope-3-supplier-emissions-verification",
+    "keyword": "california sb 253 scope 3 supplier emissions verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "California SB 253 Scope 3 Supplier Emissions | AuthiChain",
+    "metaDescription": "California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in.",
+    "h1": "California SB 253 Scope 3 Supplier Emissions Verification",
+    "bodyHtml": "<p>California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in revenue — CARB’s extension from the statute’s original 10 August 2026 date — with Scope 3 supplier emissions, the figures a reporting company can’t measure itself, required in 2027 and later years.</p><h2>Why AuthiChain</h2><ul><li>Scope 3 numbers come from suppliers, not the reporting company’s own meters — a figure a compliance team can’t independently remeasure, only check who reported it and when</li><li>A signed emissions record ties a Scope 3 figure to a specific supplier, batch, and timestamp; a spreadsheet forwarded by email ties it to nothing checkable later</li><li>AuthiChain signs and anchors whatever figure a supplier reports — it does not calculate emissions, the same distinction the protocol draws between what a record proves and what it merely carries</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does SB 253 require Scope 3 reporting yet?</h3><p>The near-term deadline — 10 November 2026, per CARB’s extension — covers Scope 1 and Scope 2 only. Scope 3 disclosure follows in the 2027 reporting year and beyond.</p><h3>Can a signed record make a false emissions figure verified?</h3><p>No — signing proves who reported the figure and that it hasn’t changed since, not that the figure is accurate. protocol/SPEC.md §8 states this plainly: a signature proves authorship, not truth.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — California SB 253 Scope 3 Supplier Emissions Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "California’s Climate Corporate Data Accountability Act (SB 253) pushes Scope 1 and Scope 2 disclosure to 10 November 2026 for companies over $1 billion in revenue — CARB’s extension from the statute’s original 10 August 2026 date — with Scope 3 supplier emissions, the figures a reporting company can’t measure itself, required in 2027 and later years.",
+          "url": "https://authichain.com/p/california-sb-253-scope-3-supplier-emissions-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "California SB 253 Scope 3 Supplier Emissions Verification",
+              "item": "https://authichain.com/p/california-sb-253-scope-3-supplier-emissions-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does SB 253 require Scope 3 reporting yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The near-term deadline — 10 November 2026, per CARB’s extension — covers Scope 1 and Scope 2 only. Scope 3 disclosure follows in the 2027 reporting year and beyond."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a signed record make a false emissions figure verified?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — signing proves who reported the figure and that it hasn’t changed since, not that the figure is accurate. protocol/SPEC.md §8 states this plainly: a signature proves authorship, not truth."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ftc-made-in-usa-labeling-verification",
+    "keyword": "ftc made in usa labeling verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "FTC Made In USA Labeling Verification | AuthiChain",
+    "metaDescription": "A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case.",
+    "h1": "FTC Made In USA Labeling Verification",
+    "bodyHtml": "<p>A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.</p><h2>Why AuthiChain</h2><ul><li>The FTC’s “all or virtually all” standard requires final assembly, all significant processing, and all or virtually all components to originate in the US — components a supply-chain record can trace, not just a label can assert</li><li>A signed record ties a specific batch or serial to the sourcing data behind a USA claim, evidence that outlasts a label printed once at the factory</li><li>This is a separate rule from USDA’s “Product of USA” standard, which applies only to meat, poultry, and egg products under a different agency</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed record satisfy the FTC’s substantiation requirement?</h3><p>The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard.</p><h3>What’s the penalty for a false Made in USA claim?</h3><p>Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — FTC Made In USA Labeling Verification",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.",
+          "url": "https://authichain.com/p/ftc-made-in-usa-labeling-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "FTC Made In USA Labeling Verification",
+              "item": "https://authichain.com/p/ftc-made-in-usa-labeling-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy the FTC’s substantiation requirement?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s the penalty for a false Made in USA claim?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-product-passport-paints-lubricants-detergents-timeline",
+    "keyword": "digital product passport paints lubricants detergents timeline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Product Passport Paints Lubricants | AuthiChain",
+    "metaDescription": "The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints.",
+    "h1": "Digital Product Passport Paints Lubricants Detergents Timeline",
+    "bodyHtml": "<p>The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints, lubricants, detergents, and chemicals are still under study, with no delegated act or passport deadline assigned as of this writing.</p><h2>Why AuthiChain</h2><ul><li>The April 2025 working plan lists paints, lubricants, detergents, and chemicals as categories the Commission is still assessing for a future working plan, not ones with a delegated act already in progress</li><li>A category outside the current priority list isn’t exempt from ESPR forever — it’s a schedule gap, and the same passport infrastructure AuthiChain runs for batteries and textiles today ports over once a delegated act lands</li><li>Waiting for the delegated act before building the passport means starting from zero against a compliance deadline; the record format doesn’t have to wait for the regulation to name the product</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is there a DPP deadline for paints or detergents yet?</h3><p>No — as of the 2025–2030 ESPR working plan, these categories are under study for a future prioritization decision, with no delegated act or compliance date assigned.</p><h3>Should a paints or detergents manufacturer prepare before a deadline exists?</h3><p>The underlying record format — W3C Verifiable Credentials, GS1 Digital Link identifiers — is the same across every ESPR category. Issuing it early costs nothing to reverse and saves a scramble once a delegated act sets the clock running.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Product Passport Paints Lubricants Detergents Timeline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s 2025–2030 ESPR working plan names iron and steel, textiles, furniture, tyres, and electronics as priority categories — paints, lubricants, detergents, and chemicals are still under study, with no delegated act or passport deadline assigned as of this writing.",
+          "url": "https://authichain.com/p/digital-product-passport-paints-lubricants-detergents-timeline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Product Passport Paints Lubricants Detergents Timeline",
+              "item": "https://authichain.com/p/digital-product-passport-paints-lubricants-detergents-timeline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is there a DPP deadline for paints or detergents yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — as of the 2025–2030 ESPR working plan, these categories are under study for a future prioritization decision, with no delegated act or compliance date assigned."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Should a paints or detergents manufacturer prepare before a deadline exists?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The underlying record format — W3C Verifiable Credentials, GS1 Digital Link identifiers — is the same across every ESPR category. Issuing it early costs nothing to reverse and saves a scramble once a delegated act sets the clock running."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "oid4vci-credential-issuance-vs-did-key-offline-verification",
+    "keyword": "oid4vci credential issuance vs did key offline verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "OID4VCI Credential Issuance Vs DID Key Offline | AuthiChain",
+    "metaDescription": "OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from.",
+    "h1": "OID4VCI Credential Issuance Vs DID Key Offline Verification",
+    "bodyHtml": "<p>OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from the offline verification AuthiChain’s protocol spec is built around once that credential exists.</p><h2>Why AuthiChain</h2><ul><li>OID4VCI v1.0 is referenced in the EU’s implementing regulation for wallet interoperability and governs how a credential gets into a wallet, not how a third party checks it afterward</li><li>protocol/SPEC.md §5 verifies a record’s signature with zero network access once issued — OID4VCI and this protocol solve different steps of the same credential’s lifecycle, not competing ones</li><li>A record issued over OID4VCI into a wallet and a record served directly by AuthiChain’s reference verifier can be the same W3C Verifiable Credential 2.0 payload underneath</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain implement OID4VCI?</h3><p>No — the protocol spec issues and verifies Verifiable Credentials directly. OID4VCI is a wallet-issuance transport layer that a EUDI Wallet integration could put in front of the same record format.</p><h3>Why does AuthiChain use did:key instead of a wallet-issuance flow?</h3><p>did:key lets a verifier resolve the issuer’s public key with zero network access, which is the offline-verification property the spec is built around. A wallet-issuance flow answers a different question — how the credential reached the holder’s device in the first place.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — OID4VCI Credential Issuance Vs DID Key Offline Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "OID4VCI is the OAuth-protected protocol EUDI Wallets use to pull a credential from an issuer’s server at issuance time — a live-network step distinct from the offline verification AuthiChain’s protocol spec is built around once that credential exists.",
+          "url": "https://authichain.com/p/oid4vci-credential-issuance-vs-did-key-offline-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "OID4VCI Credential Issuance Vs DID Key Offline Verification",
+              "item": "https://authichain.com/p/oid4vci-credential-issuance-vs-did-key-offline-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain implement OID4VCI?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the protocol spec issues and verifies Verifiable Credentials directly. OID4VCI is a wallet-issuance transport layer that a EUDI Wallet integration could put in front of the same record format."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why does AuthiChain use did:key instead of a wallet-issuance flow?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "did:key lets a verifier resolve the issuer’s public key with zero network access, which is the offline-verification property the spec is built around. A wallet-issuance flow answers a different question — how the credential reached the holder’s device in the first place."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "global-battery-alliance-battery-passport-vs-eu-regulation",
+    "keyword": "global battery alliance battery passport vs eu regulation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Global Battery Alliance Battery Passport Vs EU | AuthiChain",
+    "metaDescription": "The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers.",
+    "h1": "Global Battery Alliance Battery Passport Vs EU Regulation",
+    "bodyHtml": "<p>The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers representing most of global production — running alongside, not instead of, the EU Battery Regulation’s separate legal mandate arriving 18 February 2027.</p><h2>Why AuthiChain</h2><ul><li>GBA’s passport is a voluntary industry scheme with its own verification handbook for third-party verifiers; the EU Battery Regulation is a legal requirement enforced by market-surveillance authorities</li><li>Both converge on the same underlying data — carbon footprint, material composition, state-of-health — so a record built to the EU Battery Regulation’s required fields covers most of what a GBA-aligned passport asks for</li><li>GBA’s certification scheme is planned to launch in early 2027, close to but distinct from the EU mandate’s own 18 February 2027 date — two deadlines from two different bodies, not one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does complying with the EU Battery Regulation satisfy GBA certification?</h3><p>They overlap heavily on data fields but are separate programs — GBA certification is a voluntary industry scheme with its own verification process, run independently of EU market-surveillance enforcement.</p><h3>Is GBA certification mandatory?</h3><p>No — participation in GBA’s Battery Passport framework is voluntary industry certification. The EU Battery Regulation’s passport mandate, arriving 18 February 2027, is the legal requirement.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Global Battery Alliance Battery Passport Vs EU Regulation",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Global Battery Alliance’s Battery Passport is a voluntary industry certification framework — its 2026 operational trials cover cell manufacturers representing most of global production — running alongside, not instead of, the EU Battery Regulation’s separate legal mandate arriving 18 February 2027.",
+          "url": "https://authichain.com/p/global-battery-alliance-battery-passport-vs-eu-regulation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Global Battery Alliance Battery Passport Vs EU Regulation",
+              "item": "https://authichain.com/p/global-battery-alliance-battery-passport-vs-eu-regulation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does complying with the EU Battery Regulation satisfy GBA certification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They overlap heavily on data fields but are separate programs — GBA certification is a voluntary industry scheme with its own verification process, run independently of EU market-surveillance enforcement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is GBA certification mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — participation in GBA’s Battery Passport framework is voluntary industry certification. The EU Battery Regulation’s passport mandate, arriving 18 February 2027, is the legal requirement."
               }
             }
           ]

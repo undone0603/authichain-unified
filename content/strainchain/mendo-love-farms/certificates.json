@@ -1,0 +1,578 @@
+{
+  "updated": "2026-09-11",
+  "note": "Structured record of the Mendo Love Farms THCV genetics reconciliation, extracted from the DPP prototype passports published 2026-09-10/11. Source of record for any StrainChain passport surface. Every numeric field here is transcribed from an SC Labs certificate of analysis; every prose claim is tagged with its provenance. Discrepancies are recorded, never silently resolved — see reconciliation.md.",
+  "provenance_warning": "Transcribed from the published prototype passports, which are themselves a reconciliation of the source CoA PDFs. The original SC Labs PDFs have NOT been re-read against this file. Treat every value as 'verified against the prototype', not 'verified against the certificate', until that pass is done.",
+  "method": {
+    "decarboxylation_factor": 0.877,
+    "decarboxylation_note": "Molar ratio of THC (314.46) to THCA (358.47) = 0.8772. total_thcv = THCV + THCVA * 0.877; total_thc = d9_THC + THCA * 0.877.",
+    "verification": "All eight certificate rows were recomputed from raw mg/g. Every published total and ratio reproduces exactly except LT-35 #10 — see discrepancies.",
+    "moisture_note": "Breeder, email \"VT 26\" 2026-09-06: \"you will see high moisture on our COA's because we test fresh leaf/ flower since gauging THCV levels for harvest. The California State fair entry is at the proper moisture levels.\" This explains moisture of 70-86% across the set against 11.6% on the State Fair flower entry — the samples are deliberately fresh-tested, not mishandled. Analysis is dry-weight, so totals remain comparable."
+  },
+  "laboratory": {
+    "name": "SC Laboratories California LLC",
+    "address": "100 Pioneer Street, Suite E, Santa Cruz, CA 95060",
+    "license": "C8-0000013-LIC",
+    "accreditation": "ISO/IES 17025:2017, PJLA #87168",
+    "method": "HPLC-DAD, dry weight"
+  },
+  "party_of_record": {
+    "role": "distributor",
+    "name": "Mendo Love Farms",
+    "address": "44911 North Highway 101 PMB 215, Laytonville CA 95454",
+    "contact_name": "Mike",
+    "cultivator_disclosure": "Cultivator business name and license are withheld on the source CoAs. These passports are distributor-verified, NOT cultivator-verified.",
+    "relationship": "warm — replied in writing 2026-09-10 confirming the VT-26 x VT-41 lineage"
+  },
+  "certificates": [
+    {
+      "coa_id": "260320S005-001",
+      "cultivar": "VT-26",
+      "sample_name_on_coa": "CA State Fair entry",
+      "collected": "2026-03-20",
+      "sample_mass_g": 7.0,
+      "moisture_pct": 11.6,
+      "matrix": "flower",
+      "cannabinoids_pct": {
+        "THCVA": 7.721,
+        "THCA": 5.002,
+        "THCV": 4.847,
+        "d9_THC": 2.93,
+        "CBGA": 0.89,
+        "CBG": 0.18,
+        "CBCA": 0.07,
+        "CBDVA": 0.05
+      },
+      "totals_pct": {
+        "thcv": 11.618,
+        "thc": 7.317,
+        "cannabinoids": 20.0
+      },
+      "ratio_thcv_thc": 1.59,
+      "terpenes_total_pct": 1.737,
+      "terpenes_tested_count": 39,
+      "terpenes_pct": {
+        "terpinolene": 0.629,
+        "b_caryophyllene": 0.172,
+        "myrcene": 0.138,
+        "trans_b_farnesene": 0.125,
+        "limonene": 0.118,
+        "b_ocimene": 0.083,
+        "a_pinene": 0.074,
+        "b_pinene": 0.067,
+        "a_humulene": 0.059,
+        "terpineol": 0.045
+      },
+      "arithmetic_check": "pass"
+    },
+    {
+      "coa_id": "251104R041-001",
+      "cultivar": "VT-26",
+      "sample_name_on_coa": "Clone 11-3",
+      "collected": "2025-11-04",
+      "matrix": "flower",
+      "cannabinoids_pct": null,
+      "cannabinoids_note": "Per-compound breakdown not carried onto the prototype passport; only totals were published. Recover from the source PDF.",
+      "totals_pct": {
+        "thcv": 11.373,
+        "thc": 6.863
+      },
+      "ratio_thcv_thc": 1.66,
+      "arithmetic_check": "not_possible_without_raw_values"
+    },
+    {
+      "coa_id": "240823Q009-001",
+      "cultivar": "VT-41",
+      "sample_name_on_coa": "VT-41 N9 x 6.75 #3",
+      "collected": "2024-08-23",
+      "sample_mass_g": 6.0,
+      "moisture_pct": 72.2,
+      "matrix": "leaf",
+      "cannabinoids_pct": {
+        "THCVA": 7.05,
+        "THCA": 1.572,
+        "THCV": 0.417,
+        "CBCA": 0.18
+      },
+      "totals_pct": {
+        "thcv": 6.6,
+        "thc": 1.379
+      },
+      "ratio_thcv_thc": 4.79,
+      "arithmetic_check": "pass",
+      "open_question": "unexplained_x675_code"
+    },
+    {
+      "coa_id": "240807R036-001",
+      "cultivar": "VT-41",
+      "sample_name_on_coa": "VT-26 Skel x V#17 X 6.75 #3",
+      "collected": "2024-08-07",
+      "sample_mass_g": 6.0,
+      "moisture_pct": 73.9,
+      "matrix": "leaf",
+      "cannabinoids_pct": {
+        "THCVA": 7.648,
+        "THCA": 1.563,
+        "THCV": 0.192
+      },
+      "totals_pct": {
+        "thcv": 6.899,
+        "thc": 1.371
+      },
+      "ratio_thcv_thc": 5.03,
+      "arithmetic_check": "pass",
+      "open_question": "sample_named_vt26_filed_under_vt41"
+    },
+    {
+      "coa_id": "250707R019-002",
+      "cultivar": "LT-11",
+      "sample_name_on_coa": "VT 26 x 41 #11",
+      "batch": "LT #11",
+      "collected": "2025-07-07",
+      "moisture_pct": 85.6,
+      "amendment_of": "250707R019-001",
+      "cannabinoids_pct": {
+        "THCVA": 5.861,
+        "THCV": 1.104,
+        "THCA": 0.951
+      },
+      "totals_pct": {
+        "thcv": 6.244,
+        "thc": 0.834
+      },
+      "ratio_thcv_thc": 7.49,
+      "arithmetic_check": "pass"
+    },
+    {
+      "coa_id": "250707R025-002",
+      "cultivar": "LT-17",
+      "sample_name_on_coa": "VT 26 x 41 #17",
+      "batch": "LT #17",
+      "collected": "2025-07-07",
+      "moisture_pct": 80.4,
+      "amendment_of": "250707R025-001",
+      "cannabinoids_pct": {
+        "THCVA": 8.423,
+        "THCA": 1.444,
+        "THCV": 0.327,
+        "CBGA": 0.31,
+        "CBCA": 0.31
+      },
+      "totals_pct": {
+        "thcv": 7.714,
+        "thc": 1.266,
+        "cbg": 0.27,
+        "cbc": 0.27
+      },
+      "ratio_thcv_thc": 6.09,
+      "arithmetic_check": "pass",
+      "breeder_claimed_ratio": 6.28,
+      "open_question": "ratio_claimed_vs_verified"
+    },
+    {
+      "coa_id": "250812V069-001",
+      "cultivar": "LT-57",
+      "sample_name_on_coa": "VT 26 x 41 #57",
+      "batch": "LT #57",
+      "collected": "2025-08-12",
+      "sample_mass_g": 6.0,
+      "moisture_pct": 74.5,
+      "cannabinoids_pct": {
+        "THCVA": 8.886,
+        "THCA": 2.086,
+        "THCV": 0.184,
+        "CBCA": 0.16
+      },
+      "totals_pct": {
+        "thcv": 7.977,
+        "thc": 1.829
+      },
+      "ratio_thcv_thc": 4.36,
+      "arithmetic_check": "pass"
+    },
+    {
+      "coa_id": "260715S011-001",
+      "cultivar": "LT-35",
+      "sample_name_on_coa": "LT-35 #10",
+      "batch": "TV-9",
+      "collected": "2026-07-15",
+      "moisture_pct": 74.0,
+      "cannabinoids_pct": {
+        "THCVA": 8.827,
+        "THCV": 3.492,
+        "THCA": 1.058
+      },
+      "totals_pct": {
+        "thcv": 11.233,
+        "thc": 1.31
+      },
+      "ratio_thcv_thc": 8.58,
+      "arithmetic_check": "fail",
+      "open_question": "missing_d9_thc_row"
+    },
+    {
+      "coa_id": "260715S005-001",
+      "cultivar": "LT-35",
+      "sample_name_on_coa": "LT-35 #4",
+      "batch": "TV-3",
+      "collected": "2026-07-15",
+      "moisture_pct": 79.6,
+      "cannabinoids_pct": {
+        "THCVA": 7.181,
+        "THCV": 4.603,
+        "THCA": 0.946,
+        "d9_THC": 0.54,
+        "CBCA": 0.2
+      },
+      "totals_pct": {
+        "thcv": 10.901,
+        "thc": 1.37
+      },
+      "ratio_thcv_thc": 7.96,
+      "arithmetic_check": "pass"
+    },
+    {
+      "coa_id": "260715S029-001",
+      "cultivar": "VT-26xLT-11",
+      "sample_name_on_coa": "#9",
+      "collected": "2026-07-15",
+      "moisture_pct": 75.6,
+      "cannabinoids_pct": null,
+      "cannabinoids_note": "Per-compound breakdown not published on the prototype; totals only.",
+      "totals_pct": {
+        "thcv": 7.133,
+        "thc": 0.93,
+        "cbd": null
+      },
+      "ratio_thcv_thc": 7.67,
+      "arithmetic_check": "not_possible_without_raw_values"
+    },
+    {
+      "coa_id": "260715S032-001",
+      "cultivar": "VT-26xLT-11",
+      "sample_name_on_coa": "#14",
+      "collected": "2026-07-15",
+      "moisture_pct": 72.7,
+      "cannabinoids_pct": null,
+      "cannabinoids_note": "Per-compound breakdown not published on the prototype; totals only.",
+      "totals_pct": {
+        "thcv": 8.393,
+        "thc": 1.121,
+        "cbd": 0.103
+      },
+      "ratio_thcv_thc": 7.49,
+      "arithmetic_check": "not_possible_without_raw_values"
+    },
+    {
+      "coa_id": "260715S028-001",
+      "cultivar": "VT-26xLT-11",
+      "sample_name_on_coa": "#6",
+      "collected": "2026-07-15",
+      "moisture_pct": 70.6,
+      "cannabinoids_pct": null,
+      "cannabinoids_note": "Per-compound breakdown not published on the prototype; totals only.",
+      "totals_pct": {
+        "thcv": 8.814,
+        "thc": 0.97,
+        "cbd": 0.092
+      },
+      "ratio_thcv_thc": 9.09,
+      "arithmetic_check": "not_possible_without_raw_values"
+    }
+  ],
+  "cultivars": [
+    {
+      "id": "VT-26",
+      "role": "flagship",
+      "description": "Terpinolene-dominant THCV chemovar, class TXX1T",
+      "coa_ids": ["260320S005-001", "251104R041-001"],
+      "peak_total_thcv_pct": 11.618,
+      "awards": [
+        {
+          "name": "California State Fair — Highest Terpinolene",
+          "year": 2026,
+          "provenance": "claimed",
+          "evidence": "Breeder correspondence and the CoA sample name 'CA State Fair entry'. No award certificate is on file."
+        }
+      ],
+      "chemotype_claim": {
+        "claim": "Terpinolene-dominant, unlike most THCV chemovars which are Myrcene-dominant, including Phylos and Pink Boost (Emerald Spirits).",
+        "provenance": "claimed",
+        "evidence": "Breeder, email \"VT 26\" 2026-09-06, verbatim. The terpinolene-over-myrcene ratio on VT-26's own certificate (0.629% vs 0.138%, 4.6x) is verified; the comparison to Phylos and Pink Boost is the breeder's and has not been checked against those chemovars' published data."
+      }
+    },
+    {
+      "id": "VT-41",
+      "role": "parent",
+      "description": "Father of VT-26",
+      "coa_ids": ["240823Q009-001", "240807R036-001"],
+      "peak_total_thcv_pct": 6.899
+    },
+    {
+      "id": "LT-11",
+      "role": "breeding_male_2025",
+      "coa_ids": ["250707R019-002"],
+      "peak_total_thcv_pct": 6.244
+    },
+    {
+      "id": "LT-17",
+      "role": "breeding_male_2025",
+      "coa_ids": ["250707R025-002"],
+      "peak_total_thcv_pct": 7.714
+    },
+    {
+      "id": "LT-57",
+      "role": "breeding_male_2025",
+      "coa_ids": ["250812V069-001"],
+      "peak_total_thcv_pct": 7.977
+    },
+    {
+      "id": "LT-35",
+      "role": "female_2025_retained",
+      "coa_ids": ["260715S011-001", "260715S005-001"],
+      "peak_total_thcv_pct": 11.233,
+      "description": "VT-26 x VT-41 female, retained for breeding",
+      "commercial_note": "Breeder states LT-35 is kept for breeding, not licensed."
+    },
+    {
+      "id": "VT-26xLT-11",
+      "role": "f1_selections_2026",
+      "description": "2026 selections #6, #9, #14",
+      "coa_ids": ["260715S029-001", "260715S032-001", "260715S028-001"],
+      "peak_total_thcv_pct": 8.814
+    },
+    {
+      "id": "LT-63",
+      "role": "female_2025_licensable",
+      "description": "VT-26 x VT-41 female, offered for licensing",
+      "coa_ids": [],
+      "peak_total_thcv_pct": null,
+      "commercial_note": "Breeder states LT-63 is available for licensing and LT-35 is retained for breeding."
+    }
+  ],
+  "lineage_edges": [
+    {
+      "parent": "VT-41",
+      "child": "VT-26",
+      "relation": "father_of",
+      "provenance": "claimed",
+      "evidence": "Breeder correspondence. No certificate states this relation directly."
+    },
+    {
+      "parents": ["VT-26", "VT-41"],
+      "child": "LT-11",
+      "relation": "offspring_of",
+      "provenance": "confirmed_in_writing",
+      "evidence": "CoA sample name 'VT 26 x 41 #11', plus Mike's email 2026-09-10: 'They are all male offspring of the VT 26 female and the VT 41 male. They were crossed in 2024 and grown out in 2025.'"
+    },
+    {
+      "parents": ["VT-26", "VT-41"],
+      "child": "LT-17",
+      "relation": "offspring_of",
+      "provenance": "confirmed_in_writing",
+      "evidence": "CoA sample name 'VT 26 x 41 #17'; same email 2026-09-10."
+    },
+    {
+      "parents": ["VT-26", "VT-41"],
+      "child": "LT-57",
+      "relation": "offspring_of",
+      "provenance": "confirmed_in_writing",
+      "evidence": "CoA sample name 'VT 26 x 41 #57'; same email 2026-09-10."
+    },
+    {
+      "parents": ["VT-26", "LT-11"],
+      "child": "VT-26xLT-11",
+      "relation": "backcross",
+      "provenance": "inferred",
+      "evidence": "Follows from the three confirmed LT edges: (VT-26) x (VT-26 x VT-41) is a backcross toward VT-26/VT-41, not a simple two-parent F1. The inference is sound; the breeder has not confirmed this framing directly."
+    },
+    {
+      "parents": ["VT-26", "VT-41"],
+      "child": "LT-35",
+      "relation": "offspring_of",
+      "provenance": "confirmed_in_writing",
+      "evidence": "Mike, email 2026-09-10 (subject \"Lineage\"): \"The VT 26 female and the VT 41 male were grown out in 2024, LT 11, LT 17 and LT 57 are there male offspring that were grown out in 2025 and used for breeding purposes. LT 35 and LT 63 are females from that cross, that we have clones of.\" LT-35 is therefore a full sibling of the LT males, not a separate line. Supersedes the earlier reading of \"no parentage on file\", which was correct only because this email had not yet been read."
+    },
+    {
+      "parents": ["VT-26", "VT-41"],
+      "child": "LT-63",
+      "relation": "offspring_of",
+      "provenance": "confirmed_in_writing",
+      "evidence": "Same email. \"LT 35 and LT 63 are females from that cross, that we have clones of. The LT 63 is available for licenscing.\" No SC Labs certificate for LT-63 is on file, so it has chemistry claims from nobody and no passport."
+    }
+  ],
+  "open_questions_for_breeder": [
+    {
+      "id": "unexplained_x675_code",
+      "question": "Both VT-41 certificates carry an 'x 6.75' suffix in the sample name. What line does 6.75 refer to?",
+      "blocks": "Any claim that VT-41 is a two-parent line."
+    },
+    {
+      "id": "unexplained_v17_code",
+      "question": "CoA 240807R036-001 carries 'V#17' in its sample name. What is V#17?",
+      "blocks": "VT-41 parentage."
+    },
+    {
+      "id": "sample_named_vt26_filed_under_vt41",
+      "question": "CoA 240807R036-001 is named 'VT-26 Skel x V#17 X 6.75 #3' but is presented as a VT-41 certificate. Which cultivar is this sample?",
+      "blocks": "The VT-41 certificate count and its peak-THCV figure."
+    },
+    {
+      "id": "ratio_claimed_vs_verified",
+      "question": "LT-17's reported ratio is 6.28:1; the certificate computes to 6.09:1. Likely a %-based vs mg/g calculation. Confirm which figure to publish.",
+      "blocks": "Nothing structural — but it is the one claimed-vs-verified numeric mismatch found."
+    },
+    {
+      "id": "missing_d9_thc_row",
+      "question": "LT-35 #10's published THC (1.31%) requires ~0.381% d9-THC that is absent from the transcribed compound table. Recover the full panel from CoA 260715S011-001.",
+      "blocks": "Arithmetic verification of LT-35 #10."
+    },
+    {
+      "id": "state_fair_award_evidence",
+      "question": "Is there an award certificate or official listing for the California State Fair Highest Terpinolene win?",
+      "blocks": "Publishing the award as verified rather than claimed."
+    },
+    {
+      "id": "lt63_certificates",
+      "question": "Are there SC Labs certificates for LT-63? It is the cultivar offered for licensing and currently has no chemistry on file at all.",
+      "blocks": "Any passport for LT-63, which is the one a licensee would ask to see."
+    },
+    {
+      "id": "lt35_lt63_sibling_chemistry",
+      "question": "LT-35 tests 11.233% THCV as a VT-26 x VT-41 female. Does LT-63 test comparably? The two are full siblings.",
+      "blocks": "Whether the licensable cultivar carries the chemistry the retained one does."
+    },
+    {
+      "id": "phytofacts_reports",
+      "question": "The two PhytoFacts reports have not been opened. Do they carry terpene data beyond what the certificates show?",
+      "blocks": "Terpene profiles for anything other than VT-26, which is the only cultivar with a terpene panel on file."
+    }
+  ],
+  "answered_questions": [
+    {
+      "id": "lt35_parentage",
+      "question": "What is LT-35's parentage?",
+      "answered": "2026-09-10",
+      "answer": "VT-26 female x VT-41 male — a full sibling of LT-11/17/57, not a separate line.",
+      "source": "Mike, email subject \"Lineage\", 2026-09-10T20:43Z."
+    },
+    {
+      "id": "certificate_count",
+      "question": "How many SC Labs certificates exist for this genetics family?",
+      "answered": "2026-09-11",
+      "answer": "14 PDF attachments across four emails, comprising 12 distinct certificates of analysis, one PhytoFacts chemotype report, and one second document for sample 251104R041. The proposal's '14' counted attachments; 12 is the certificate count. The '17' on the library index was never supportable.",
+      "source": "Gmail attachment manifests for the four 2026-09-06 emails from realthcv@gmail.com."
+    }
+  ],
+  "source_attachments": {
+    "note": "Inventory of every PDF the breeder actually sent, taken from the Gmail attachment manifests on 2026-09-11. Resolves the certificate-count question: 14 attachments, 12 distinct CoA IDs, plus one PhytoFacts report and one second document for sample 251104R041. The proposal's '14' counted attachments; '12 unique CoAs' is the correct certificate count. The library index's '17' was never supportable.",
+    "attachment_bytes_unavailable": "The Gmail tool surface exposes attachment IDs and filenames but not attachment content, so the certificates themselves still have not been opened. Filenames carry the CoA ID, which is what makes this inventory possible.",
+    "emails": [
+      {
+        "subject": "VT 26",
+        "date": "2026-09-06",
+        "attachments": [
+          "251104R041-001 CoA (17) (2).pdf",
+          "240823Q009-001 CoA (12) (2).pdf",
+          "251104R041 (3) (2).pdf",
+          "240807R036-001 CoA (14) (3).pdf",
+          "VT-26-California-State-Fair-CoA-1 (3) (1).pdf",
+          "VT-26-California-State-Fair-PhytoFacts (1) (2).pdf"
+        ]
+      },
+      {
+        "subject": "2025 breeding males",
+        "date": "2026-09-06",
+        "attachments": [
+          "250707R019-002 CoA (8) (2) (1).pdf",
+          "250707R025-002 CoA (11) (2) (1).pdf",
+          "250812V069-001 CoA (10) (1) (1) (1).pdf"
+        ]
+      },
+      {
+        "subject": "2026 leaf females",
+        "date": "2026-09-06",
+        "attachments": [
+          "260715S029-001 CoA (2) (1).pdf",
+          "260715S032-001 CoA (1) (1).pdf"
+        ]
+      },
+      {
+        "subject": "2026 breeding males",
+        "date": "2026-09-06",
+        "attachments": [
+          "260715S005-001 CoA (2) (1).pdf",
+          "260715S011-001 CoA (4) (1).pdf",
+          "260715S028-001 CoA (3) (1).pdf"
+        ]
+      }
+    ],
+    "unrecorded": [
+      {
+        "filename": "VT-26-California-State-Fair-PhytoFacts (1) (2).pdf",
+        "what": "A PhytoFacts chemotype report, not a certificate of analysis. Different document class; no CoA ID. Breeder: \"There are two flower/phyto facts COA's of the VT 26.\""
+      },
+      {
+        "filename": "251104R041 (3) (2).pdf",
+        "what": "Second document for sample 251104R041, without the -001 suffix the certificate carries. Likely the PhytoFacts companion to 251104R041-001. Unopened."
+      }
+    ],
+    "filename_without_id": [
+      {
+        "filename": "VT-26-California-State-Fair-CoA-1 (3) (1).pdf",
+        "assumed_coa_id": "260320S005-001",
+        "caution": "The only certificate whose filename does not carry its CoA ID. The mapping to 260320S005-001 is inferred from it being the State Fair entry, not read off the document."
+      }
+    ]
+  },
+  "claimed_vs_derived": {
+    "note": "Figures the breeder stated in email, against values recomputed from the transcribed panels. All are small except LT-17. None is resolvable without opening the certificates.",
+    "rows": [
+      {
+        "cultivar": "LT-11",
+        "claimed_ratio": 7.48,
+        "derived_ratio": 7.49,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "LT-17",
+        "claimed_ratio": 6.28,
+        "derived_ratio": 6.09,
+        "delta": 0.19,
+        "assessment": "the one material mismatch; likely a %-based calculation against the lab's mg/g method"
+      },
+      {
+        "cultivar": "LT-57",
+        "claimed_ratio": 4.37,
+        "derived_ratio": 4.36,
+        "claimed_thcv_pct": 7.997,
+        "derived_thcv_pct": 7.977,
+        "delta": 0.02,
+        "assessment": "breeder's pair is internally consistent (7.997/1.829=4.37), so the certificate's printed total may differ slightly from recomputation off rounded mg/g"
+      },
+      {
+        "cultivar": "LT-35 #10",
+        "claimed_ratio": 8.57,
+        "derived_ratio": 8.58,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "LT-35 #4",
+        "claimed_ratio": 7.95,
+        "derived_ratio": 7.96,
+        "claimed_thcv_pct": 10.9,
+        "derived_thcv_pct": 10.901,
+        "delta": 0.01,
+        "assessment": "rounding"
+      },
+      {
+        "cultivar": "VT-41 (leaf)",
+        "claimed_ratio": 4.75,
+        "derived_ratio": 4.79,
+        "delta": 0.04,
+        "assessment": "rounding or a different sample; breeder cites this as the father's leaf ratio"
+      }
+    ]
+  }
+}
