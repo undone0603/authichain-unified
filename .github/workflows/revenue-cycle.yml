@@ -24,6 +24,7 @@ on:
           - fix-provenance
           - checkout-links
           - proposals
+          - closer-proposals
           - dunning
       live:
         description: "Allow live side effects (requires REVENUE_CYCLE_ENABLED=true)"
@@ -107,6 +108,7 @@ jobs:
       - name: Run revenue cycle
         run: |
           export DRY_RUN=${{ steps.mode.outputs.dry_run }}
+          PHASE="${{ steps.mode.outputs.phase }}"
           # Live runs enable dunning unless DUNNING_ENABLED is explicitly "false".
           # Dry-runs always leave the job gated off inside runDunningEscalation.
           if [ "$DRY_RUN" = "false" ] && [ "${{ vars.DUNNING_ENABLED }}" != "false" ]; then
@@ -115,7 +117,19 @@ jobs:
             export DUNNING_ENABLED=false
           fi
           echo "DUNNING_ENABLED=$DUNNING_ENABLED"
-          pnpm exec tsx scripts/revenue-cycle.ts --phase=${{ steps.mode.outputs.phase }}
+
+          # Standalone closer-proposals live runs execute GENERATE_PROPOSAL
+          # unless vars.CLOSER_EXECUTE=false. phase=all stays enqueue-only.
+          if [ "$DRY_RUN" = "false" ] && [ "$PHASE" = "closer-proposals" ] && [ "${{ vars.CLOSER_EXECUTE }}" != "false" ]; then
+            export CLOSER_EXECUTE=true
+          elif [ "${{ vars.CLOSER_EXECUTE }}" = "true" ]; then
+            export CLOSER_EXECUTE=true
+          else
+            export CLOSER_EXECUTE=false
+          fi
+          echo "CLOSER_EXECUTE=$CLOSER_EXECUTE"
+
+          pnpm exec tsx scripts/revenue-cycle.ts --phase=$PHASE
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -123,5 +137,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          NODE_OPTIONS: --dns-result-order=ipv4first

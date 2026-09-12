@@ -457,7 +457,8 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
           "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: "https://authichain.com/pricing",
         customer_email: leadEmail,
-        expires_at: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days
+        // Stripe payment-mode checkout sessions expire within 24h.
+        expires_at: Math.floor(Date.now() / 1000) + 23 * 3600,
       });
       paymentLink = session.url ?? undefined;
       checkoutSessionId = session.id;
@@ -489,7 +490,7 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
 
   // ── Send email ────────────────────────────────────────────────────────────
   const paymentSection = paymentLink
-    ? `\n\n---\n🔒 Ready to proceed? Secure your pilot today:\n${paymentLink}\n(This link is valid for 30 days)`
+    ? `\n\n---\n🔒 Ready to proceed? Secure your pilot today:\n${paymentLink}\n(This link is valid for 24 hours)`
     : "";
 
   const sendResult = await sendEmail({

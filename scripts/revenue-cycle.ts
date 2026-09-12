@@ -12,6 +12,7 @@
  * Usage:
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=report
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=fix-provenance
+ *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=closer-proposals
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=all
  *   DRY_RUN=false pnpm exec tsx scripts/revenue-cycle.ts --phase=checkout-links
  */
@@ -23,6 +24,7 @@ import { PLANS } from "../src/lib/plans";
 type Phase =
   | "all"
   | "proposals"
+  | "closer-proposals"
   | "dunning"
   | "report"
   | "checkout-links"
@@ -31,6 +33,7 @@ type Phase =
 const PHASES: Phase[] = [
   "all",
   "proposals",
+  "closer-proposals",
   "dunning",
   "report",
   "checkout-links",
@@ -173,6 +176,38 @@ function hasVerifiedProvenance(lead: LeadProvenanceInput): boolean {
   const p = leadProvenance(lead);
   return !!p && VERIFIED_PROVENANCE.has(p);
 }
+
+/** Map lead.segment (or similar) onto closer PILOT_PRICE_USD keys. */
+function normalizeCloserSegment(seg?: string | null): string {
+  const s = (seg ?? "").toLowerCase();
+  if (s.startsWith("gov")) return "GOV";
+  if (s.includes("strain") || s.includes("cannab") || s.includes("retail")) {
+    return "RETAIL";
+  }
+  if (s.includes("partner")) return "PARTNER";
+  if (s.includes("press")) return "PRESS";
+  return "DEFAULT";
+}
+
+/**
+ * Live closer execute: standalone closer-proposals defaults ON unless
+ * CLOSER_EXECUTE=false; phase=all defaults OFF (enqueue only) unless
+ * CLOSER_EXECUTE=true so `all` never unexpectedly blasts proposal emails.
+ */
+function closerExecuteEnabled(): boolean {
+  if (isDryRun) return false;
+  if (process.env.CLOSER_EXECUTE === "true") return true;
+  if (process.env.CLOSER_EXECUTE === "false") return false;
+  return PHASE === "closer-proposals";
+}
+
+const CLOSER_BLOCKED_STATUSES = new Set([
+  "pilot_proposed",
+  "closed",
+  "closed_won",
+  "closed_lost",
+  "disqualified",
+]);
 
 function segmentPaymentCta(segment?: string | null): {
   name: string;
@@ -592,6 +627,218 @@ async function phaseProposals(db: SupabaseClient | null): Promise<number> {
   return planned;
 }
 
+async function phaseCloserProposals(
+  db: SupabaseClient | null
+): Promise<number> {
+  console.log("\n=== PHASE: closer-proposals ===");
+  if (!db) {
+    console.warn("  ⚠️  Supabase not configured — skipping");
+    return 0;
+  }
+
+  const { data: leads, error } = await db
+    .from("leads")
+    .select(
+      "id,email,name,company,title,status,segment,proposalsSent,metadata,emailReplied,repliesReceived,source"
+    )
+    .order("leadScore", { ascending: false })
+    .limit(80);
+
+  if (error) {
+    console.warn(`  ⚠️  leads query failed: ${error.message}`);
+    return 0;
+  }
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  let skippedUnverified = 0;
+  let skippedStatus = 0;
+  let skippedAlready = 0;
+  let skippedCooldown = 0;
+
+  const candidates = (leads ?? []).filter(l => {
+    const meta = (l.metadata ?? {}) as Record<string, unknown>;
+    if (meta.needsProposal !== true) return false;
+
+    if (
+      !l.email ||
+      !String(l.email).includes("@") ||
+      String(l.email).startsWith("[pending]")
+    ) {
+      return false;
+    }
+
+    if (!hasVerifiedProvenance(l)) {
+      skippedUnverified++;
+      return false;
+    }
+
+    const status = String(l.status ?? "").toLowerCase();
+    if (CLOSER_BLOCKED_STATUSES.has(status)) {
+      skippedStatus++;
+      return false;
+    }
+
+    const sent = l.proposalsSent;
+    if (sent != null && Number(sent) > 0) {
+      skippedAlready++;
+      return false;
+    }
+
+    const enq = meta.proposalEnqueuedAt;
+    if (typeof enq === "string" && enq) {
+      const t = Date.parse(enq);
+      if (!Number.isNaN(t) && t >= sevenDaysAgo) {
+        skippedCooldown++;
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const batch = candidates.slice(0, 5);
+  console.log(
+    `  Candidates for GENERATE_PROPOSAL: ${candidates.length} (capped ${batch.length})` +
+      ` skipped: unverified=${skippedUnverified} status=${skippedStatus}` +
+      ` alreadySent=${skippedAlready} cooldown=${skippedCooldown}`
+  );
+
+  const execute = closerExecuteEnabled();
+  console.log(
+    `  CLOSER_EXECUTE=${execute} (env=${process.env.CLOSER_EXECUTE ?? "unset"})`
+  );
+
+  let enqueued = 0;
+  let executed = 0;
+  const enqueuedRefs: { missionId: string; taskId: string }[] = [];
+
+  for (const lead of batch) {
+    const segment = normalizeCloserSegment(lead.segment);
+    const payload = {
+      leadEmail: String(lead.email),
+      leadName: lead.name ? String(lead.name) : undefined,
+      leadOrg: lead.company ? String(lead.company) : undefined,
+      leadTitle: lead.title ? String(lead.title) : undefined,
+      segment,
+    };
+
+    console.log(
+      `  • lead#${lead.id} ${lead.email} [${lead.segment ?? "n/a"}→${segment}]`
+    );
+
+    if (isDryRun) {
+      console.log(
+        `    WOULD createMission + enqueue GENERATE_PROPOSAL ` +
+          `payload=${JSON.stringify(payload)}`
+      );
+      enqueued++;
+      continue;
+    }
+
+    try {
+      const { createMission, enqueueTask } = await import("../server/db");
+      // No dedicated MissionType; cast until one is added.
+      const missionId = await createMission("REVENUE_CYCLE_PROPOSAL" as any);
+      const taskId = await enqueueTask(missionId, "GENERATE_PROPOSAL", payload);
+      enqueuedRefs.push({ missionId, taskId });
+
+      const meta = (lead.metadata ?? {}) as Record<string, unknown>;
+      const nextMeta = {
+        ...meta,
+        needsProposal: false,
+        proposalEnqueuedAt: new Date().toISOString(),
+        proposalMissionId: missionId,
+        proposalTaskId: taskId,
+      };
+
+      const updatePayload: Record<string, unknown> = {
+        metadata: nextMeta,
+        updatedAt: new Date().toISOString(),
+      };
+      // Increment proposalsSent when the column is present on the row shape.
+      if ("proposalsSent" in lead) {
+        updatePayload.proposalsSent = Number(lead.proposalsSent ?? 0) + 1;
+      }
+
+      const { error: updErr } = await db
+        .from("leads")
+        .update(updatePayload)
+        .eq("id", lead.id);
+      if (updErr) {
+        console.warn(`    ⚠️  lead metadata update failed: ${updErr.message}`);
+      }
+
+      enqueued++;
+      console.log(
+        `    ✅ mission=${missionId} task=${taskId} GENERATE_PROPOSAL`
+      );
+    } catch (err: any) {
+      console.warn(
+        `    ⚠️  enqueue failed (non-fatal): ${err.message?.slice(0, 160)}`
+      );
+    }
+  }
+
+  if (execute && enqueuedRefs.length > 0) {
+    try {
+      const { runTask } = await import("../server/jobs/task-runner");
+      const { getDueTasks, getTasksByMission } = await import("../server/db");
+      const wanted = new Set(enqueuedRefs.map(r => r.taskId));
+      const byId = new Map<string, any>();
+
+      for (const { missionId } of enqueuedRefs) {
+        try {
+          const tasks = await getTasksByMission(missionId);
+          for (const t of tasks) {
+            if (wanted.has(t.id) && t.kind === "GENERATE_PROPOSAL") {
+              byId.set(t.id, t);
+            }
+          }
+        } catch {
+          // fall through to getDueTasks
+        }
+      }
+
+      if (byId.size < wanted.size) {
+        const due = await getDueTasks(50);
+        for (const t of due) {
+          if (wanted.has(t.id) && t.kind === "GENERATE_PROPOSAL") {
+            byId.set(t.id, t);
+          }
+        }
+      }
+
+      const toRun = [...byId.values()].slice(0, 5);
+      for (const task of toRun) {
+        try {
+          console.log(`    ▶ runTask ${task.id}`);
+          const result = await runTask(task);
+          if (result.ok) {
+            executed++;
+            console.log(`    ✅ executed ${task.id}`);
+          } else {
+            console.warn(`    ⚠️  runTask ${task.id} returned ok=false`);
+          }
+        } catch (err: any) {
+          console.warn(
+            `    ⚠️  runTask ${task.id} failed (soft): ${err.message?.slice(0, 160)}`
+          );
+        }
+      }
+    } catch (err: any) {
+      console.warn(
+        `    ⚠️  closer execute setup failed (non-fatal): ${err.message?.slice(0, 160)}`
+      );
+    }
+  }
+
+  console.log(
+    `  Done. Enqueued/planned: ${enqueued}` +
+      (execute ? `, executed: ${executed}` : " (execute skipped)")
+  );
+  return enqueued;
+}
+
 async function phaseDunning(): Promise<boolean> {
   console.log("\n=== PHASE: dunning ===");
   // APP_URL/api/cron/dunning 404s: authichain.com is the marketing worker and
@@ -740,6 +987,15 @@ async function main() {
     }
     if (PHASE === "all" || PHASE === "proposals") {
       await phaseProposals(db);
+    }
+    if (PHASE === "all" || PHASE === "closer-proposals") {
+      try {
+        await phaseCloserProposals(db);
+      } catch (err: any) {
+        console.warn(
+          `  ⚠️  closer-proposals failed (non-fatal): ${err.message}`
+        );
+      }
     }
     if (PHASE === "all" || PHASE === "dunning") {
       try {
