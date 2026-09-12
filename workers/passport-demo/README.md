@@ -19,7 +19,8 @@ from query parameters, so one deployment serves every prospect:
 | `qr`      | override the art-QR image              | `/qr.png`                             |
 
 Routes: `/`, `/passport`, `/demo` (HTML) · `/qr.png`, `/authichain-qr.png`
-(inlined JPEGs) · `/health`.
+(inlined JPEGs) · `/health` · `/t/<slug>` (302 prospect short links — production only,
+see below).
 
 ## Why this file exists
 
@@ -189,6 +190,79 @@ Verified in Chromium against this file: the canonical demo still renders "Barrel
 No. 14" and "212 bottles"; `?b=Iron%20Fish%20Distillery` leaks none of the eight
 Copper & Rye specifics; supplied copy is used verbatim. Zero console errors in
 all three cases.
+
+## Short links (`/t/<slug>`) and trailing-punctuation tolerance
+
+**Sync gap — read first.** The live worker (as of 2026-09-12) also serves
+per-prospect short links: `/t/<slug>` looks up a `SLUGS` table of 18 Michigan
+outreach targets and 302-redirects to the fully parameterized passport. This
+directory's `src/index.js` was recovered from a deploy that predates both the
+short links and the path-cleaning below; both exist **only in the deployed
+script** and need a reconciliation pass before anything redeploys from here.
+
+### The bug
+
+Links shared in prose absorb punctuation. LinkedIn autolinks include a
+sentence-ending period in the URL (`/t/coppercraft.`); URLs copied out of
+quoted or angle-bracketed text arrive percent-encoded
+(`/t/coppercraft%22`). The original slug lookup only stripped trailing
+slashes, so every one of those missed the `SLUGS` table and hit the 404
+handler — on links sent to paying prospects.
+
+### The fix
+
+Clean the request path once, before any routing, in two passes:
+
+```js
+let p = u.pathname.replace(/[^\w\-\/]+$/, "");        // raw pass
+for (let i = 0; i < 8 && /%[0-9A-Fa-f]{2}$/.test(p); i++) {
+  const c = String.fromCharCode(parseInt(p.slice(-2), 16)); // decode pass
+  if (/[A-Za-z0-9\/]/.test(c)) break;   // decode-stop: %41 = "A" stays put
+  p = p.slice(0, -3).replace(/[^\w\-\/]+$/, "");
+}
+```
+
+Pass 1 strips raw trailing non-`[\w-/]` characters. Pass 2 unwraps up to 8
+percent-encoded trailing sequences — but only when each decodes to
+punctuation. An encoded letter or digit stops the loop, so encoded slug
+content is never eaten (`/t/coppercraft%41.` stays unknown and 404s, which
+is correct).
+
+### Test matrix (run against production 2026-09-12; all green)
+
+**Slug + trailing punctuation → 302:**
+
+`.`, `..`, `,`, `;`, `:`, `!`, `?`, `)`, `'`, `]`, `}`, `>`, `"`,
+stacked combos `).`, `.),`, `..`, trailing slash `/`, and slash+period `/.`
+
+**Percent-encoded trailing punctuation → 302:**
+
+`%22` quote · `%3E` angle bracket · `%5D` square bracket · `%7D` curly brace ·
+`%2E` period · `%29` close paren · `%2C` comma
+
+**Base path + punctuation → 200:** `/.` `/` `/;`
+
+**Must still 404 (cleaner does not over-match):**
+
+- `/t/coppercraftxyz.` — unknown slug, period stripped, still unknown
+- `/t/co.ppercraft.` — mid-slug dots are not trailing, not stripped
+- `/t/coppercraft%41.` — encoded letter `A` stops the decode loop
+
+**Clean routes unchanged:** `/`, `/health`, `/qr.png`, `/authichain-qr.png`,
+`/t/<valid-slug>` all behave exactly as before.
+
+### Two lessons worth keeping
+
+1. **Verify against what `fetch()` returns, never the source** — same rule as
+   the backslash trap above. A trailing `"` travels as `%22`, which ends in a
+   word character, so the raw-strip regex alone looks correct in a code read
+   and fails in production. The matrix only passed once percent-encoded cases
+   were tested explicitly.
+2. **Test harnesses fail too.** One verification round reported every request
+   as `000` — the checker function took `(path, expected)` but was called with
+   `(label, path, expected)`, so every curl hit a garbage URL. All-identical
+   failures across unrelated routes mean "check the harness," not "the worker
+   is down."
 
 ## Known gap
 
