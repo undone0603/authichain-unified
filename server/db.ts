@@ -160,6 +160,10 @@ function buildPoolerConfig(url: string): ConstructorParameters<typeof Pool>[0] {
       const ca = [...tls.rootCertificates, extra];
       return { connectionString: parsed.toString(), ssl: { ca } };
     }
+    // Local Docker/dev Postgres typically has no TLS.
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return { connectionString: url };
+    }
   } catch {
     // URL parsing failed — fall through to plain config
   }
@@ -1220,6 +1224,36 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
   if (!db) return undefined;
   const result = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.apiKey, apiKey)).limit(1);
   return result[0];
+}
+
+// ─── White Label Client Helpers ─────────────────────────────────────────────
+export async function getClientByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.userId, userId)).limit(1);
+  return result[0];
+}
+
+export async function createClientState(userId: number, state: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(whiteLabelClients).values({
+    userId,
+    companyName: "DPP Merchant",
+    apiKey: randomUUID(),
+    provisioningState: state,
+  }).returning();
+  return result;
+}
+
+export async function updateVendorState(userId: number, state: string, metadata: Record<string, unknown> = {}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(whiteLabelClients)
+    .set({ provisioningState: state, updatedAt: new Date() })
+    .where(eq(whiteLabelClients.userId, userId));
+  // Note: Drizzle doesn't support jsonb merging easily in this schema, 
+  // so for now just tracking state transitions.
 }
 
 // ─── Fraud Alert Helpers ─────────────────────────────────────────────────────

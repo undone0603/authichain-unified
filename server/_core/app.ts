@@ -13,6 +13,22 @@ function timingSafeEqual(a: string, b: string): boolean {
     return false;
   }
 }
+
+// Shared bearer-token check for the machine-to-machine endpoints below
+// (server/_core/app.ts's job-runner routes). The caller here is always the
+// Next.js app's tRPC layer or the cron trigger, which has already gated on
+// CRON_SECRET — a logged-in human's Clerk session never reaches this file
+// directly, so this is the right auth boundary, not a weaker one.
+function requireCronAuth(req: import("express").Request, res: import("express").Response): boolean {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.authorization ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : auth;
+  if (!secret || !timingSafeEqual(token, secret)) {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+  return true;
+}
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -171,8 +187,123 @@ export function createApp() {
     });
   });
 
+  // ─── Scheduled jobs runner (moved here from the Next.js app) ─────────────
+  // This used to live at src/app/api/cron/jobs/route.ts and run in-process
+  // on Vercel. server/scheduled-jobs.ts transitively imports
+  // server/agents/browser-vision.ts, which needs a real Chromium process via
+  // playwright-core — something Cloudflare Workers cannot run at all. Rather
+  // than fight the bundler, the job runner lives on this always-on Node
+  // service (Railway), and the Next.js route (now on Cloudflare) just proxies
+  // to it. Same CRON_SECRET bearer-token auth as before.
+  app.get("/api/cron/jobs", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+
+    const jobName = typeof req.query.job === "string" ? req.query.job : undefined;
+    const started = Date.now();
+
+    try {
+      const { initializeScheduler, runJobManually, getRegisteredJobs } = await import("../scheduled-jobs");
+
+      if (jobName) {
+        const success = await runJobManually(jobName);
+        if (!success) {
+          const available = getRegisteredJobs().map((j) => j.name);
+          return res.status(404).json({ error: `Job "${jobName}" not found`, available });
+        }
+        return res.json({ ok: true, job: jobName, durationMs: Date.now() - started });
+      }
+
+      await initializeScheduler();
+      const jobs = getRegisteredJobs();
+      res.json({
+        ok: true,
+        registeredJobs: jobs.length,
+        jobs: jobs.map((j) => ({ name: j.name, schedule: j.schedule, enabled: j.enabled })),
+        durationMs: Date.now() - started,
+      });
+    } catch (err) {
+      console.error("[CronJobs]", getErrorMessage(err));
+      res.status(500).json({ error: getErrorMessage(err), durationMs: Date.now() - started });
+    }
+  });
+
+  // ─── AgentZ pipeline tick (moved here from the Next.js app) ──────────────
+  // server/jobs/pipeline-tick.ts's executeTick() runs budget monitor, dunning,
+  // retention, weekly/quarterly digests, organic traffic, AND the UCB1-scored
+  // mission-task loop (runTask) plus runBrowserAgentJobs — both of the latter
+  // transitively import server/agents/browser.ts / browser-vision.ts, i.e.
+  // playwright-core, same reason as /api/cron/jobs above. The whole tick
+  // shares database state (due-task scoring, PMF mission creation) across
+  // those steps, so splitting "browser" from "non-browser" work across two
+  // runtimes would risk inconsistent reads — it runs here as one unit instead,
+  // and both src/app/api/cron/pipeline/route.ts and the pipelineTick step of
+  // src/app/api/automation/cron/route.ts proxy to this endpoint.
+  app.get("/api/pipeline-tick", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+    const started = Date.now();
+    try {
+      const { runPipelineTick } = await import("../jobs/pipeline-tick");
+      const force = req.query.force === "true";
+      const dryRun = req.query.dryRun === "true";
+      const result = await runPipelineTick({ force, dryRun });
+      res.json({ ok: true, durationMs: Date.now() - started, result, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error("[PipelineTick]", getErrorMessage(err));
+      res.status(500).json({ error: getErrorMessage(err), durationMs: Date.now() - started });
+    }
+  });
+
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
+
+  // ─── Scheduler admin API (backs server/routers/scheduler.ts on Cloudflare) ─
+  // schedulerRouter is part of the shared appRouter, mounted both here
+  // (Railway, direct calls below) and in the Cloudflare-deployed Next.js app
+  // (which proxies here instead, for the same playwright-core reason as
+  // /api/cron/jobs above). adminProcedure already verified the caller is a
+  // logged-in admin before the Next app ever reaches this endpoint.
+  app.get("/api/scheduler/jobs", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+    try {
+      const { getRegisteredJobs } = await import("../scheduled-jobs");
+      res.json(getRegisteredJobs());
+    } catch (err) {
+      res.status(500).json({ error: getErrorMessage(err) });
+    }
+  });
+
+  app.get("/api/scheduler/history", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+    try {
+      const { getJobHistory } = await import("../scheduled-jobs");
+      const jobName = typeof req.query.jobName === "string" ? req.query.jobName : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : 50;
+      res.json(await getJobHistory(jobName, limit));
+    } catch (err) {
+      res.status(500).json({ error: getErrorMessage(err) });
+    }
+  });
+
+  app.get("/api/scheduler/status", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+    try {
+      const { getSystemStatus } = await import("../scheduled-jobs");
+      res.json(getSystemStatus());
+    } catch (err) {
+      res.status(500).json({ error: getErrorMessage(err) });
+    }
+  });
+
+  app.post("/api/scheduler/toggle", async (req, res) => {
+    if (!requireCronAuth(req, res)) return;
+    try {
+      const { toggleKillSwitch } = await import("../scheduled-jobs");
+      const isActive = toggleKillSwitch(!!req.body?.active);
+      res.json({ success: true, isActive });
+    } catch (err) {
+      res.status(500).json({ error: getErrorMessage(err) });
+    }
+  });
 
   // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ───────────────
   app.get("/api/admin/ops", adminRateLimit, async (req, res) => {
@@ -212,3 +343,4 @@ export function createApp() {
 
   return app;
 }
+

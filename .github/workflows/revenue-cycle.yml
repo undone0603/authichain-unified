@@ -1,0 +1,115 @@
+# Revenue Cycle — warm-lead checkout CTAs, dunning ping, revenue health report.
+# Does NOT cold-email guessed addresses. See docs/growth-autopilot-runbook.md.
+name: Revenue Cycle
+
+on:
+  schedule:
+    # Weekly dry-run report only (Mondays 15:00 UTC)
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (default true — no Stripe writes / no dunning POST)"
+        required: false
+        default: true
+        type: boolean
+      phase:
+        description: "Which phase to run"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - report
+          - checkout-links
+          - proposals
+          - dunning
+      live:
+        description: "Allow live side effects (requires REVENUE_CYCLE_ENABLED=true)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: revenue-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
+
+jobs:
+  revenue-cycle:
+    name: Revenue Cycle — ${{ inputs.phase || 'report' }}
+    # Scheduled runs are always dry-run report. Manual live requires both
+    # inputs.live and the repository kill-switch variable.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Resolve dry-run / live mode
+        id: mode
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+            echo "phase=report" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run → forced dry-run report"
+            exit 0
+          fi
+
+          live="${{ inputs.live }}"
+          dry="${{ inputs.dry_run }}"
+          phase="${{ inputs.phase }}"
+
+          if [ "$live" = "true" ]; then
+            if [ "${{ vars.REVENUE_CYCLE_ENABLED }}" != "true" ]; then
+              echo "::warning::live=true but vars.REVENUE_CYCLE_ENABLED is not true — forcing dry-run"
+              dry=true
+            else
+              dry=false
+            fi
+          else
+            dry=true
+          fi
+
+          # Explicit dry_run input still wins when live is false
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            dry=true
+          fi
+
+          echo "dry_run=$dry" >> "$GITHUB_OUTPUT"
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+          echo "Resolved dry_run=$dry phase=$phase"
+
+      - name: Run revenue cycle
+        run: |
+          export DRY_RUN=${{ steps.mode.outputs.dry_run }}
+          pnpm exec tsx scripts/revenue-cycle.ts --phase=${{ steps.mode.outputs.phase }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

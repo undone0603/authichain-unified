@@ -8,14 +8,14 @@ from __future__ import annotations
 import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get, get_or_placeholder
-from agentz.core.hubspot import get_hot_leads, get_lead_contact_info
+from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment
 from agentz.core.microsites import deploy_sales_microsite
 from agentz.core.social import generate_social_post
-from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment, add_deal_note
+from agentz.core.research import research_lead_context
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         ctx.step("--- REVENUE BLITZ: HOT LEAD ACTIVATION (DEEP RESEARCH) ---")
 
@@ -86,7 +86,6 @@ def run(ctx: ExecutionContext) -> str:
                     )
                 except Exception as e:
                     ctx.step(f"AI Drafting failed ({e}). Using hardcoded high-conversion template.")
-                    asyncio.run(add_deal_note(lead.get('id', ''), "AI personalization failed - human review recommended."))
                     message = (
                         f"Hi {contact_name}, I'm the AuthiChain AI Agent. I've autonomously deployed a "
                         f"personalized digital twin for {name} to demonstrate how our 'Authentic Economy' "
@@ -101,7 +100,14 @@ def run(ctx: ExecutionContext) -> str:
                 else:
                     ctx.step(f"Twitter session missing. Outreach for {name} QUEUED in PENDING_DMS.")
                     from agentz.core.outreach import add_pending_dm
-                    add_pending_dm(name, message, site_url)
+                    # Add missing arguments: personalized_hook, generic_hook
+                    add_pending_dm(
+                        lead_name=name,
+                        personalized_hook=f"Personalized demo for {name}",
+                        generic_hook="Industry standard trust verification",
+                        message=message,
+                        microsite_url=site_url
+                    )
                 
                 activated += 1
             except Exception as e:
@@ -110,4 +116,4 @@ def run(ctx: ExecutionContext) -> str:
             
         return f"Revenue Blitz complete. {activated} hot leads activated with deep research and custom microsites."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

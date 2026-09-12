@@ -29,6 +29,11 @@ const CSP = [
 ].join("; ");
 
 const nextConfig = {
+  // Required for @opennextjs/cloudflare: it copies traced server files out of
+  // .next/standalone, which next build only emits in this mode. Vercel's own
+  // build pipeline ignores `output` and bundles its own serverless functions
+  // regardless, so this is safe to set unconditionally for both targets.
+  output: "standalone",
   outputFileTracingRoot: process.cwd(),
   // Messy multi-architecture codebase — type errors are gated in CI, not here.
   typescript: { ignoreBuildErrors: true },

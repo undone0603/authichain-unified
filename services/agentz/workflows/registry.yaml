@@ -211,6 +211,21 @@ workflows:
       Generates Stripe payment links for QRON Pro subscriptions ($49/mo) and
       simulates distribution via automated Twitter/Reddit DMs to warm leads.
 
+  - id: revenue_cycle
+    title: "Revenue Cycle — warm lead checkout + dunning + report"
+    priority: critical
+    blocks_revenue: true
+    handler: handlers.revenue_cycle
+    type: composite
+    estimated_minutes: 20
+    requires: [stripe_secret, supabase]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Converts qualified/warm leads into Stripe checkout links, optionally
+      triggers dunning for past-due subs, and prints a revenue health report.
+      Defaults to dry-run / confirm. Does not cold-email guessed addresses.
+
   - id: govchain_grant_proposal
     title: "Autonomously Draft SBIR/SVIP Grant Proposals for GovChain"
     priority: high
@@ -799,11 +814,11 @@ workflows:
     handler: handlers.reinvestment_handler
     type: api
     estimated_minutes: 5
-    requires: []
+    requires: [stripe_secret]
     prerequisites: []
     description: |
-      The AuthiChain Sovereign Flywheel: Autonomously scales outreach and
-      reinvests revenue into new market capability development.
+      Reads live Stripe charges (30d) when available and scales outreach /
+      capability work only when treasury clears the reinvestment threshold.
     confirm_before_run: true
   - id: grant_application
     title: "Blockchain Foundation Grant Application (Arbitrum/Polygon/Ethereum)"

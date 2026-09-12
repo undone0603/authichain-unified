@@ -11,26 +11,32 @@ from agentz.core.llm import get_llm
 logger = logging.getLogger("agentz.media")
 
 async def generate_narration(product_data: Dict[str, Any]) -> str:
-    """Uses Gemini to generate a professional StoryMode narration script."""
+    """Uses the automated failover LLM to generate structured StoryMode narrative chapters."""
     name = product_data.get("name", "this product")
     brand = product_data.get("brand", "our partner")
-    vertical = product_data.get("metadata", {}).get("vertical", "general")
-
+    
     prompt = (
-        f"Write a compelling 3-sentence StoryMode narration for a {vertical} product.\n"
-        f"Product Name: {name}\n"
-        f"Brand: {brand}\n"
-        f"Focus on authenticity, quality, and the emotional connection to the consumer.\n"
-        f"Output ONLY the script text."
+        f"Generate a 3-chapter StoryMode narrative for a product named '{name}' by '{brand}'.\n"
+        "Return the output strictly in the following JSON format:\n"
+        "{\n"
+        "  \"story_chapters\": [\n"
+        "    { \"id\": 1, \"title\": \"Origin\", \"content\": \"...\", \"mediaUrl\": \"/assets/c1.mp4\" },\n"
+        "    { \"id\": 2, \"title\": \"Journey\", \"content\": \"...\", \"mediaUrl\": \"/assets/c2.mp4\" },\n"
+        "    { \"id\": 3, \"title\": \"Utility\", \"content\": \"...\", \"mediaUrl\": \"/assets/c3.mp4\" }\n"
+        "  ]\n"
+        "}\n"
+        "Ensure the content is compelling and emotional."
     )
 
     try:
-        llm = get_llm(model="llama-3.3-70b-versatile")
+        # Using get_llm() without arguments enables the waterfall strategy (Gemini -> local)
+        llm = get_llm()
         response = llm.invoke(prompt)
         return response.content.strip()
     except Exception as e:
-        print(f"  [media] LLM narration failed: {e}. Using fallback.")
-        return f"Welcome to the StoryMode for {name}. Authentically crafted by {brand}."
+        logger.error(f"  [media] LLM generation failed: {e}")
+        # Fallback to a basic structure
+        return '{"story_chapters": [{"id": 1, "title": "Welcome", "content": "Welcome to the story of ' + name + '.", "mediaUrl": "/assets/placeholder.mp4"}]}'
 
 import httpx
 from agentz.core.credentials import get
