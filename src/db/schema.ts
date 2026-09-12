@@ -1247,11 +1247,18 @@ export const personalizationEvents = pgTable("personalization_events", {
 });
 
 // ─── Proposals ───────────────────────────────────────────────────────────────
+// Closer agent (GENERATE_PROPOSAL) stores pilot proposals + Stripe checkout.
+// Extra columns added 2026-09 — migration: drizzle/0007_proposals_closer_fields.sql
 export const proposals = pgTable("proposals", {
   id: uuid("id").primaryKey(),
   leadEmail: varchar("lead_email", { length: 320 }).notNull(),
   segment: varchar("segment", { length: 64 }).notNull(),
   content: text("content").notNull(),
+  missionId: varchar("mission_id", { length: 64 }),
+  taskId: varchar("task_id", { length: 64 }),
+  paymentLink: text("payment_link"),
+  checkoutSessionId: varchar("checkout_session_id", { length: 128 }),
+  pilotPriceUsd: integer("pilot_price_usd"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
