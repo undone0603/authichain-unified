@@ -11,6 +11,7 @@
  *
  * Usage:
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=report
+ *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=fix-provenance
  *   DRY_RUN=true  pnpm exec tsx scripts/revenue-cycle.ts --phase=all
  *   DRY_RUN=false pnpm exec tsx scripts/revenue-cycle.ts --phase=checkout-links
  */
@@ -19,16 +20,27 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import { PLANS } from "../src/lib/plans";
 
-type Phase = "all" | "proposals" | "dunning" | "report" | "checkout-links";
+type Phase =
+  | "all"
+  | "proposals"
+  | "dunning"
+  | "report"
+  | "checkout-links"
+  | "fix-provenance";
+
+const PHASES: Phase[] = [
+  "all",
+  "proposals",
+  "dunning",
+  "report",
+  "checkout-links",
+  "fix-provenance",
+];
 
 const PHASE_ARG =
   process.argv.find(a => a.startsWith("--phase="))?.split("=")[1] ?? "all";
 const PHASE = (
-  ["all", "proposals", "dunning", "report", "checkout-links"].includes(
-    PHASE_ARG
-  )
-    ? PHASE_ARG
-    : "all"
+  PHASES.includes(PHASE_ARG as Phase) ? PHASE_ARG : "all"
 ) as Phase;
 
 /** Missing DRY_RUN ⇒ dry-run (fail-safe). Only DRY_RUN=false is live. */
@@ -57,36 +69,107 @@ const WARM_STATUSES = new Set([
   "contacted",
 ]);
 
-/** Matches guardedSend allow-list — never attach pay links for guessed emails. */
+/** Matches guardedSend / send-guard TRUSTED_SOURCES — never attach pay links for guessed emails. */
 const VERIFIED_PROVENANCE = new Set([
   "apollo_verified",
   "reacher_verified",
   "inbound_optin",
   "confirmed_reply",
+  "published_contact",
 ]);
 
-function leadProvenance(lead: {
+const INBOUND_COLUMN_SOURCES = new Set([
+  "website",
+  "website_form",
+  "inbound",
+  "inbound_optin",
+  "roi_calculator",
+  "sales_funnel",
+  "try_for_free",
+  "chatbot",
+]);
+
+type LeadProvenanceInput = {
   emailReplied?: boolean | null;
+  repliesReceived?: number | null;
+  source?: string | null;
   metadata?: unknown;
-}): string | null {
-  const meta = (lead.metadata ?? {}) as Record<string, unknown>;
+};
+
+/** Read provenance already stamped in metadata (no column inference). */
+function metadataProvenance(meta: Record<string, unknown>): string | null {
   for (const key of [
-    "source",
-    "provenance",
-    "emailProvenance",
     "verification_source",
+    "emailProvenance",
+    "provenance",
+    "verificationSource",
   ]) {
     const v = meta[key];
     if (typeof v === "string" && v) return v;
   }
-  if (lead.emailReplied) return "confirmed_reply";
+  // metadata.source only counts when already a trusted VerificationSource
+  // (campaign names like b2b_outreach_* must not masquerade as provenance).
+  if (
+    typeof meta.source === "string" &&
+    meta.source &&
+    VERIFIED_PROVENANCE.has(meta.source)
+  ) {
+    return meta.source;
+  }
   return null;
 }
 
-function hasVerifiedProvenance(lead: {
-  emailReplied?: boolean | null;
-  metadata?: unknown;
-}): boolean {
+/** Never invent trust for these lead.source column values. */
+function isUntrustedColumnSource(col: string): boolean {
+  const lower = col.toLowerCase();
+  return (
+    lower.startsWith("mi_cra") ||
+    lower === "pattern_guess" ||
+    lower === "scraped" ||
+    lower === "unknown" ||
+    lower.startsWith("b2b_outreach") ||
+    lower === "seed"
+  );
+}
+
+/**
+ * Infer trusted provenance from reply signals or the leads.source column.
+ * Returns null when there is no safe signal (does not invent MI/guess trust).
+ */
+function inferProvenanceFromSignals(lead: LeadProvenanceInput): {
+  provenance: string;
+  signal: string;
+} | null {
+  if (lead.emailReplied) {
+    return { provenance: "confirmed_reply", signal: "emailReplied" };
+  }
+  if (typeof lead.repliesReceived === "number" && lead.repliesReceived > 0) {
+    return { provenance: "confirmed_reply", signal: "repliesReceived" };
+  }
+
+  const col = String(lead.source ?? "").trim();
+  if (!col || isUntrustedColumnSource(col)) return null;
+
+  if (col.startsWith("agentz_apollo") || col === "apollo") {
+    return { provenance: "apollo_verified", signal: `source=${col}` };
+  }
+  if (INBOUND_COLUMN_SOURCES.has(col)) {
+    return { provenance: "inbound_optin", signal: `source=${col}` };
+  }
+  if (col === "gov_engine") {
+    return { provenance: "published_contact", signal: `source=${col}` };
+  }
+  return null;
+}
+
+function leadProvenance(lead: LeadProvenanceInput): string | null {
+  const meta = (lead.metadata ?? {}) as Record<string, unknown>;
+  const fromMeta = metadataProvenance(meta);
+  if (fromMeta) return fromMeta;
+  return inferProvenanceFromSignals(lead)?.provenance ?? null;
+}
+
+function hasVerifiedProvenance(lead: LeadProvenanceInput): boolean {
   const p = leadProvenance(lead);
   return !!p && VERIFIED_PROVENANCE.has(p);
 }
@@ -215,6 +298,95 @@ async function createCheckoutSession(opts: {
 
 // ─── Phases ───────────────────────────────────────────────────────────────────
 
+async function phaseFixProvenance(db: SupabaseClient | null): Promise<number> {
+  console.log("\n=== PHASE: fix-provenance ===");
+  if (!db) {
+    console.warn("  ⚠️  Supabase not configured — skipping");
+    return 0;
+  }
+
+  const { data: leads, error } = await db
+    .from("leads")
+    .select(
+      "id,email,status,score,leadScore,metadata,emailReplied,repliesReceived,source"
+    )
+    .order("leadScore", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.warn(`  ⚠️  leads query failed: ${error.message}`);
+    return 0;
+  }
+
+  let fixed = 0;
+  let skippedNoSignal = 0;
+  let skippedAlready = 0;
+  let skippedNotWarm = 0;
+
+  for (const lead of leads ?? []) {
+    const status = String(lead.status ?? "").toLowerCase();
+    const score = Number(lead.leadScore ?? lead.score ?? 0);
+    if (
+      !lead.email ||
+      !String(lead.email).includes("@") ||
+      String(lead.email).startsWith("[pending]")
+    ) {
+      continue;
+    }
+    if (!(WARM_STATUSES.has(status) || score >= 70)) {
+      skippedNotWarm++;
+      continue;
+    }
+
+    const meta = (lead.metadata ?? {}) as Record<string, unknown>;
+    const existing = metadataProvenance(meta);
+    if (existing && VERIFIED_PROVENANCE.has(existing)) {
+      skippedAlready++;
+      continue;
+    }
+
+    const inferred = inferProvenanceFromSignals(lead);
+    if (!inferred || !VERIFIED_PROVENANCE.has(inferred.provenance)) {
+      skippedNoSignal++;
+      continue;
+    }
+
+    console.log(
+      `  • lead#${lead.id} ${lead.email} → ${inferred.provenance} (from ${inferred.signal})`
+    );
+
+    if (isDryRun) {
+      console.log(`    WOULD stamp verification_source=${inferred.provenance}`);
+      fixed++;
+      continue;
+    }
+
+    const nextMeta = {
+      ...meta,
+      verification_source: inferred.provenance,
+      provenance: inferred.provenance,
+      provenanceSetAt: new Date().toISOString(),
+      provenanceNote: `revenue-cycle backfill from ${inferred.signal}`,
+    };
+    const { error: updErr } = await db
+      .from("leads")
+      .update({ metadata: nextMeta, updatedAt: new Date().toISOString() })
+      .eq("id", lead.id);
+    if (updErr) {
+      console.warn(`    ⚠️  update failed: ${updErr.message}`);
+      continue;
+    }
+    fixed++;
+    console.log(`    ✅ stamped ${inferred.provenance}`);
+  }
+
+  console.log(
+    `  Done. Fixed/planned: ${fixed}` +
+      ` (already verified=${skippedAlready}, no signal=${skippedNoSignal}, not warm=${skippedNotWarm})`
+  );
+  return fixed;
+}
+
 async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
   console.log("\n=== PHASE: checkout-links ===");
   if (!db) {
@@ -225,7 +397,7 @@ async function phaseCheckoutLinks(db: SupabaseClient | null): Promise<number> {
   const { data: leads, error } = await db
     .from("leads")
     .select(
-      "id,email,name,company,status,segment,score,leadScore,metadata,proposalsSent,emailReplied"
+      "id,email,name,company,status,segment,score,leadScore,metadata,proposalsSent,emailReplied,repliesReceived,source"
     )
     .order("leadScore", { ascending: false })
     .limit(80);
@@ -557,6 +729,9 @@ async function main() {
   try {
     if (PHASE === "all" || PHASE === "report") {
       await phaseReport(db);
+    }
+    if (PHASE === "all" || PHASE === "fix-provenance") {
+      await phaseFixProvenance(db);
     }
     if (PHASE === "all" || PHASE === "checkout-links") {
       await phaseCheckoutLinks(db);

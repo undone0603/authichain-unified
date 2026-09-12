@@ -70,8 +70,9 @@ Required secrets/env (Cloudflare + GitHub Actions):
 ## 5. Revenue Cycle (warm lead → checkout)
 
 `revenue-cycle.yml` + `scripts/revenue-cycle.ts` attach Stripe payment CTAs to
-**already warm/qualified** leads, optionally ping `/api/cron/dunning`, and print
-a revenue health report. It does **not** cold-email guessed addresses.
+**already warm/qualified** leads, backfill trusted provenance when reply/column
+signals allow (`--phase=fix-provenance`), optionally ping `/api/cron/dunning`,
+and print a revenue health report. It does **not** cold-email guessed addresses.
 
 ```bash
 # Local dry-run (default)
