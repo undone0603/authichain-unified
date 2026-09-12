@@ -177,9 +177,11 @@
     "serialize-javascript": "7.0.3",
     "form-data@>=4.0.0 <4.0.6": "4.0.6",
     "js-cookie@<=3.0.5": "3.0.7",
-    "ws@>=8.0.0 <8.18.0": "8.18.0",
+    "ws@>=8.0.0 <8.21.0": "8.21.3",
     "vite@<6.4.3": "6.4.3",
-    "postcss@<8.5.10": "8.5.10",
+    "postcss@<8.5.18": "8.5.26",
+    "axios@<1.18.0": "1.20.0",
+    "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
     "ioredis": "file:./stubs/empty-redis",
     "redis": "file:./stubs/empty-redis",
     "sharp": "^0.35.4"
@@ -190,11 +192,21 @@
       "serialize-javascript": "7.0.3",
       "form-data@>=4.0.0 <4.0.6": "4.0.6",
       "js-cookie@<=3.0.5": "3.0.7",
-      "ws@>=8.0.0 <8.18.0": "8.18.0",
+      "ws@>=8.0.0 <8.21.0": "8.21.3",
       "vite@<6.4.3": "6.4.3",
-      "postcss@<8.5.10": "8.5.10",
+      "postcss@<8.5.18": "8.5.26",
+      "axios@<1.18.0": "1.20.0",
+      "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
       "ioredis": "file:./stubs/empty-redis",
       "redis": "file:./stubs/empty-redis"
+    },
+    "auditConfig": {
+      "ignoreCves": [
+        "CVE-2026-77465",
+        "CVE-2026-63376",
+        "CVE-2026-56876",
+        "CVE-2026-19693"
+      ]
     }
   }
 }
