@@ -69,7 +69,7 @@
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.52",
     "@changesets/cli": "^3.0.2",
-    "@types/node": "^20.10.0",
+    "@types/node": "^26.5.0",
     "@types/ws": "^8.18.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.0",
