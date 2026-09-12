@@ -3,23 +3,38 @@
 // Queries gov_proposals with email_status='unsent' and fit_score >= 70,
 // sends personalized HTML emails via Resend, updates delivery status.
 
-import { createClient } from '@supabase/supabase-js';
-import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
-import { guardedSend } from '../server/outreach/send-guard';
+import { createClient } from "@supabase/supabase-js";
+import {
+  checkSender,
+  reportSenderFailure,
+  CREDENTIAL_ENV_VARS,
+} from "./lib/resend-preflight";
+import { guardedSend } from "../server/outreach/send-guard";
 
-const isDryRun = process.env.DRY_RUN === 'true';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
+const isDryRun = process.env.DRY_RUN === "true";
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+const GOVCHAIN = process.env.GOVCHAIN_URL ?? "https://govchain.us";
 // authichain.com is verified on the second Resend account (RESEND_API_KEY2);
 // the preflight resolves which credential owns this sender at run time.
-const FROM_EMAIL = process.env.EMAIL_FROM ?? 'proposals@authichain.com';
-const CALENDAR_LINK = process.env.CALENDLY_LINK ?? 'https://calendly.com/authichain/discovery';
-const SALES_EMAIL = process.env.SALES_EMAIL ?? 'sales@authichain.com';
+const FROM_EMAIL = process.env.EMAIL_FROM ?? "proposals@authichain.com";
+const CALENDAR_LINK =
+  process.env.CALENDLY_LINK ?? "https://calendly.com/authichain/discovery";
+const SALES_EMAIL = process.env.SALES_EMAIL ?? "sales@authichain.com";
+// Soft self-serve CTA (DPP readiness / pilot) — live catalog link, not a guessed price.
+// Prefer env override so ops can swap without a code change.
+const PILOT_PAYMENT_LINK =
+  process.env.GOVCHAIN_PILOT_PAYMENT_LINK ??
+  "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"; // DPP Readiness Audit $299
 
 // Gracefully skip if no Resend credential is configured. The two accounts hold
 // different verified domains, so either may be the one that owns FROM_EMAIL.
 if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
-  console.warn(`⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(' / ')}) — skipping email delivery.`);
+  console.warn(
+    `⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(" / ")}) — skipping email delivery.`
+  );
   process.exit(0);
 }
 
@@ -44,15 +59,19 @@ interface Proposal {
  * Safely respects any query string the base URL already carries.
  */
 function withAttribution(url: string, prospectId: string): string {
-  const sep = url.includes('?') ? '&' : '?';
+  const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}prospect_id=${encodeURIComponent(prospectId)}&utm_source=email&utm_medium=gov_proposal&utm_campaign=govchain_outreach`;
 }
 
 function generateEmailHtml(proposal: Proposal): string {
   const fitReason = generateFitReason(proposal.fit_score);
   const opportunityId = proposal.notice_id;
-  const detailsUrl = withAttribution(`${GOVCHAIN}/${opportunityId}`, opportunityId);
+  const detailsUrl = withAttribution(
+    `${GOVCHAIN}/${opportunityId}`,
+    opportunityId
+  );
   const calendarUrl = withAttribution(CALENDAR_LINK, opportunityId);
+  const pilotUrl = withAttribution(PILOT_PAYMENT_LINK, opportunityId);
 
   return `
 <!DOCTYPE html>
@@ -211,14 +230,14 @@ function generateEmailHtml(proposal: Proposal): string {
 
     <div class="content">
       <div class="greeting">
-        <p>Dear ${proposal.contact_person || 'Government Affairs Team'},</p>
+        <p>Dear ${proposal.contact_person || "Government Affairs Team"},</p>
         <p>We've identified a government opportunity that aligns exceptionally well with your agency's mission and our blockchain authentication capabilities. See details below.</p>
       </div>
 
       <div class="opportunity">
         <h3>${proposal.title}</h3>
         <p><strong>Agency:</strong> ${proposal.agency}</p>
-        <p><strong>Deadline:</strong> ${proposal.deadline || 'Not specified'}</p>
+        <p><strong>Deadline:</strong> ${proposal.deadline || "Not specified"}</p>
         <div class="fit-score">${proposal.fit_score}/100 Match</div>
         <div class="fit-reason">${fitReason}</div>
       </div>
@@ -232,6 +251,11 @@ function generateEmailHtml(proposal: Proposal): string {
         <p style="margin-top: 0; font-size: 14px;"><strong>Ready to discuss this opportunity?</strong></p>
         <a href="${calendarUrl}" class="btn btn-primary">Schedule Discovery Call</a>
         <a href="${detailsUrl}" class="btn btn-secondary">View Full Details</a>
+        <p style="margin: 16px 0 0; font-size: 13px; color: #4b5563;">
+          Prefer self-serve? Start with a
+          <a href="${pilotUrl}">$299 EU DPP Readiness Audit</a>
+          — credited toward AuthiChain if you convert. No pressure either way.
+        </p>
       </div>
 
       <p style="font-size: 14px; color: #6b7280; text-align: center;">
@@ -256,29 +280,33 @@ function generateEmailHtml(proposal: Proposal): string {
 
 function generateFitReason(fitScore: number): string {
   if (fitScore >= 90) {
-    return 'Exceptional match: Your agency requires blockchain authentication for compliance and digital asset management, matching our core expertise in NFT-based government contracts and secure credential verification.';
+    return "Exceptional match: Your agency requires blockchain authentication for compliance and digital asset management, matching our core expertise in NFT-based government contracts and secure credential verification.";
   }
   if (fitScore >= 80) {
-    return 'Strong match: Your procurement priorities align with our blockchain authentication and smart contract capabilities for federal acquisition and transparency requirements.';
+    return "Strong match: Your procurement priorities align with our blockchain authentication and smart contract capabilities for federal acquisition and transparency requirements.";
   }
   if (fitScore >= 70) {
-    return 'Good match: Your agency\'s needs include authentication and record-keeping where our blockchain solutions provide immutable verification and auditability.';
+    return "Good match: Your agency's needs include authentication and record-keeping where our blockchain solutions provide immutable verification and auditability.";
   }
-  return 'Opportunity match: AuthiChain\'s authentication platform may support your agency\'s digital transformation goals.';
+  return "Opportunity match: AuthiChain's authentication platform may support your agency's digital transformation goals.";
 }
 
-async function emailProposals(): Promise<{ sent: number; failed: number; total: number }> {
+async function emailProposals(): Promise<{
+  sent: number;
+  failed: number;
+  total: number;
+}> {
   const { data: proposals, error } = await supabase
-    .from('gov_proposals')
-    .select('*')
-    .eq('email_status', 'unsent')
-    .gte('fit_score', 70)
-    .order('fit_score', { ascending: false })
+    .from("gov_proposals")
+    .select("*")
+    .eq("email_status", "unsent")
+    .gte("fit_score", 70)
+    .order("fit_score", { ascending: false })
     .limit(50);
 
   if (error) throw error;
   if (!proposals?.length) {
-    console.log('No proposals ready for email delivery.');
+    console.log("No proposals ready for email delivery.");
     return { sent: 0, failed: 0, total: 0 };
   }
 
@@ -289,8 +317,10 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
   if (!isDryRun) {
     const check = await checkSender(FROM_EMAIL);
     if (!check.ok) {
-      reportSenderFailure(check, 'gov-proposals');
-      throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
+      reportSenderFailure(check, "gov-proposals");
+      throw new Error(
+        `Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`
+      );
     }
     resendApiKey = process.env[check.credential!];
     console.log(`✅ Sender verified: ${FROM_EMAIL} (via ${check.credential})`);
@@ -302,7 +332,9 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
   for (const proposal of proposals) {
     // Validate required fields
     if (!proposal.contact_email) {
-      console.warn(`  ⚠️  Skipped ${proposal.notice_id}: no contact_email found`);
+      console.warn(
+        `  ⚠️  Skipped ${proposal.notice_id}: no contact_email found`
+      );
       continue;
     }
 
@@ -318,11 +350,11 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
         // published-by-the-owner rather than guessed.
         const response = await guardedSend({
           to: proposal.contact_email,
-          source: 'published_contact',
+          source: "published_contact",
           subject,
           html,
           from: FROM_EMAIL,
-          company: 'GovChain / AuthiChain',
+          company: "GovChain / AuthiChain",
           apiKey: resendApiKey,
         });
 
@@ -332,37 +364,43 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
 
         // Update proposal status to 'sent' and record timestamp
         await supabase
-          .from('gov_proposals')
+          .from("gov_proposals")
           .update({
-            status: 'sent',
-            email_status: 'sent',
+            status: "sent",
+            email_status: "sent",
             sent_at: new Date().toISOString(),
           })
-          .eq('notice_id', proposal.notice_id);
+          .eq("notice_id", proposal.notice_id);
 
-        console.log(`  ✉️  Email sent: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`);
+        console.log(
+          `  ✉️  Email sent: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`
+        );
         sent++;
       } else {
         // Dry run: log without sending
-        console.log(`  [DRY RUN] Would email: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`);
+        console.log(
+          `  [DRY RUN] Would email: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`
+        );
         console.log(`           Subject: ${subject}`);
         sent++;
       }
     } catch (err: any) {
       // Per-proposal failure: log and continue
       failed++;
-      const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
+      const shortMsg = (err?.message || String(err))
+        .split("\n")[0]
+        .slice(0, 200);
       console.warn(`  ⚠️  Failed to email ${proposal.notice_id}: ${shortMsg}`);
 
       // Record failure in database (even in dry-run we track the attempt)
       if (!isDryRun) {
         try {
           await supabase
-            .from('gov_proposals')
+            .from("gov_proposals")
             .update({
-              email_status: 'failed',
+              email_status: "failed",
             })
-            .eq('notice_id', proposal.notice_id);
+            .eq("notice_id", proposal.notice_id);
         } catch {
           // Silently ignore DB update errors during failure handling
         }
@@ -377,8 +415,10 @@ const { sent, failed, total } = await emailProposals();
 console.log(`✅ Sent ${sent}/${total} proposal emails (${failed} failed)`);
 
 if (total > 0 && sent === 0 && failed > 0) {
-    console.warn('⚠️  All email attempts failed — no contact emails found or all errored out. Add contact_email to gov_proposals table.');
-    // exit(0) - failed sends due to missing contacts is a data issue, not a code error
+  console.warn(
+    "⚠️  All email attempts failed — no contact emails found or all errored out. Add contact_email to gov_proposals table."
+  );
+  // exit(0) - failed sends due to missing contacts is a data issue, not a code error
   process.exit(0);
 }
 

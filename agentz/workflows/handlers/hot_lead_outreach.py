@@ -8,10 +8,10 @@ from __future__ import annotations
 import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get, get_or_placeholder
-from agentz.core.hubspot import get_hot_leads, get_lead_contact_info
+from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment
 from agentz.core.microsites import deploy_sales_microsite
 from agentz.core.social import generate_social_post
-from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment
+from agentz.core.research import research_lead_context
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:

@@ -9,20 +9,21 @@ rate-gated, human-approvable).
 
 ## 1. The engine at a glance
 
-| Layer | Workflow(s) | Cadence | Contacts people? | Spends? |
-| --- | --- | --- | --- | --- |
-| **Traffic — owned** | `gen-seo-pages.yml` | Fri 09:00 UTC | No | LLM |
-| | `ghost-traffic.yml` | daily 13:00 | No | small |
-| | `reddit-monitor.yml` | every 6 h | No (read) | LLM |
-| | `marketing-autonomous.yml` | Mon 14:00 | posts to owned social | LLM/social |
-| **Income — gov (public data)** | `gov-engine.yml` → ingest→score→proposals→mint→notify | daily 06:00 | drafts only | LLM |
-| **Income — outbound** | `agentz-orchestration.yml` | daily 08:00 | **yes** | LLM/email |
-| | `autonomous-business-cycle.yml` | daily 00:00 | **yes** | LLM/email |
-| | `b2b-outreach.yml` | Mon 14:00 | **yes** | email |
-| | `outreach-trigger.yml` | every 4 h | **yes** | email |
-| | `dpp-outreach-trigger.yml` | every 8 h | **yes** | email |
-| | `email-proposals.yml` | weekdays 15:00 | **yes** | email |
-| **Safety** | `guardrail-digest.yml`, `verify-integrations.yml`, `compliance-audit.yml`, `security-scan.yml` | daily/weekly | — | — |
+| Layer                          | Workflow(s)                                                                                    | Cadence                                | Contacts people?      | Spends?    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- | -------------------------------------- | --------------------- | ---------- |
+| **Traffic — owned**            | `gen-seo-pages.yml`                                                                            | Fri 09:00 UTC                          | No                    | LLM        |
+|                                | `ghost-traffic.yml`                                                                            | daily 13:00                            | No                    | small      |
+|                                | `reddit-monitor.yml`                                                                           | every 6 h                              | No (read)             | LLM        |
+|                                | `marketing-autonomous.yml`                                                                     | Mon 14:00                              | posts to owned social | LLM/social |
+| **Income — gov (public data)** | `gov-engine.yml` → ingest→score→proposals→mint→notify                                          | daily 06:00                            | drafts only           | LLM        |
+| **Income — outbound**          | `agentz-orchestration.yml`                                                                     | daily 08:00                            | **yes**               | LLM/email  |
+|                                | `autonomous-business-cycle.yml`                                                                | daily 00:00                            | **yes**               | LLM/email  |
+|                                | `b2b-outreach.yml`                                                                             | Mon 14:00                              | **yes**               | email      |
+|                                | `outreach-trigger.yml`                                                                         | every 4 h                              | **yes**               | email      |
+|                                | `dpp-outreach-trigger.yml`                                                                     | every 8 h                              | **yes**               | email      |
+|                                | `email-proposals.yml`                                                                          | weekdays 15:00                         | **yes**               | email      |
+| **Income — convert**           | `revenue-cycle.yml`                                                                            | weekly dry-run report; manual for live | no cold email         | Stripe     |
+| **Safety**                     | `guardrail-digest.yml`, `verify-integrations.yml`, `compliance-audit.yml`, `security-scan.yml` | daily/weekly                           | —                     | —          |
 
 Everything outbound is inert until the relevant GitHub Actions activation
 variable is turned on (`PIPELINE_TICK_ENABLED` for `pipeline-tick.yml`,
@@ -66,13 +67,34 @@ Required secrets/env (Cloudflare + GitHub Actions):
 5. **Flip to autosend.** Set `REQUIRE_OUTREACH_APPROVAL=false` once the drafts
    look right. Keep daily volume modest to protect domain reputation.
 
-## 5. Kill switch
+## 5. Revenue Cycle (warm lead → checkout)
+
+`revenue-cycle.yml` + `scripts/revenue-cycle.ts` attach Stripe payment CTAs to
+**already warm/qualified** leads, optionally ping `/api/cron/dunning`, and print
+a revenue health report. It does **not** cold-email guessed addresses.
+
+```bash
+# Local dry-run (default)
+DRY_RUN=true pnpm exec tsx scripts/revenue-cycle.ts --phase=report
+DRY_RUN=true pnpm exec tsx scripts/revenue-cycle.ts --phase=all
+
+# GitHub Actions dry-run
+gh workflow run revenue-cycle.yml -f dry_run=true -f live=false -f phase=all
+
+# Live (only after REVENUE_CYCLE_ENABLED=true repo variable)
+gh workflow run revenue-cycle.yml -f dry_run=false -f live=true -f phase=checkout-links
+```
+
+AgentZ: `python -m agentz.workflows.runner --handler revenue_cycle --mode dry-run`
+
+## 6. Kill switch
 
 - Set the relevant repository activation variable back to anything other than
-  `true` to halt the corresponding scheduled workflow immediately.
+  `true` to halt the corresponding scheduled workflow immediately
+  (`REVENUE_CYCLE_ENABLED`, `B2B_OUTREACH_ENABLED`, `AUTONOMOUS_BUSINESS_CYCLE_ENABLED`).
 - Revoke `RESEND_API_KEY` for a hard stop.
 
-## 6. Watch these KPIs
+## 7. Watch these KPIs
 
 - Traffic: indexed `/p/*` pages, organic sessions, scan→signup rate.
 - Revenue: checkout conversion, MRR, trial→paid.

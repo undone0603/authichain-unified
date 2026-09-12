@@ -682,6 +682,37 @@ workflows:
       Once Vercel fix is confirmed deployed, revoke the temporary
       GitHub PAT to close the access window.
 
+  - id: revenue_cycle
+    title: "Revenue Cycle — warm lead checkout + dunning + report"
+    priority: critical
+    blocks_revenue: true
+    handler: handlers.revenue_cycle
+    type: composite
+    estimated_minutes: 20
+    requires: [stripe_secret, supabase_url, supabase_service_key]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Converts qualified/warm leads into Stripe checkout links, optionally
+      triggers dunning for past-due subs, and prints a revenue health report.
+      Defaults to dry-run / confirm. Does not cold-email guessed addresses.
+      GH Action: .github/workflows/revenue-cycle.yml (kill-switch
+      REVENUE_CYCLE_ENABLED for live).
+
+  - id: reinvestment_handler
+    title: "Sovereign Flywheel — reinvest Stripe treasury into capacity"
+    priority: critical
+    blocks_revenue: false
+    handler: handlers.reinvestment_handler
+    type: api
+    estimated_minutes: 5
+    requires: [stripe_secret]
+    prerequisites: [revenue_cycle]
+    confirm_before_run: true
+    description: |
+      Reads live Stripe 30d paid volume. When above threshold ($2k default),
+      flags outreach/RFP capacity increases. No hardcoded revenue.
+
   - id: pipeline_health_report
     title: "Generate weekly pipeline health snapshot"
     priority: low
