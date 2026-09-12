@@ -3372,14 +3372,8 @@ export default {
       }
     }
     // Landing pages: /landing/:brandId — dynamic brand landing pages.
-    // TODO(follow-up): worker-app (authichain-edge-router) has no dedicated
-    // /landing handler yet (see worker-app/route-manifest.ts and
-    // worker-app/dynamic-pages.ts — neither lists "/landing"), so this
-    // currently falls through to the SPA shell's spa-fallback, which likely
-    // does NOT reproduce the old per-brand landing page content/logic.
-    // Don't fabricate that logic here — build a real /landing dynamic-pages.ts
-    // handler (same pattern as its existing /verify handler) before relying
-    // on this route in production.
+    // Handled by worker-app's renderLanding (worker-app/dynamic-pages.ts),
+    // registered in DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
     if (p === '/landing' || p.startsWith('/landing/')) {
       if (env.APP_WORKER) {
         return env.APP_WORKER.fetch(request);
