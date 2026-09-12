@@ -595,3 +595,160 @@ Noted here per instructions, not edited into `SPEC.md`:
   are building for the wider category of product data this protocol's records can live alongside.
 
 ---
+
+## 2026-09-11
+
+General web search again this week. `eprint.iacr.org` and `forkast.news` were both blocked by the
+network egress proxy on direct fetch attempts this session — same pattern as prior weeks for
+`eprint.iacr.org` specifically, now three weeks running unread in full. Items sourced from those
+two domains below are read via search-result summaries only, not the primary document, and flagged
+individually. Absence of a finding below means "not found by this search," not "did not happen."
+
+### What actually moved this week
+
+- **The EU DPP Registry published a concrete, current technical requirement for product
+  identifiers that lines up with our record's identity field.** The Registry's user guide
+  (v1.02, dated 24 August 2026, per search-result summaries — not fetched directly) requires the
+  unique product identifier submitted at registration to be a URL starting with `https://`,
+  compliant with CEN/CENELEC JTC 24, and no longer than 2000 characters. `SPEC.md` §3's example
+  `credentialSubject.id` is already an `https://id.gs1.org/...` GS1 Digital Link URL well under
+  that length — so this is a live regulatory data point confirming our identifier choice is
+  compatible with the EU's registry, not a gap. Worth reading the actual JTC 24 format
+  requirement directly once fetchable, since "CEN/CENELEC JTC 24 compliant" is a specific format
+  constraint this entry has not verified beyond the length/scheme rule.
+- **The W3C/GS1 "E-commerce for Humans and AI Agents" workshop (Zurich, 2026-09-08–09, covered as
+  upcoming in last week's entry) has its first substantive third-party writeup**, via Forkast
+  ([forkast.news](https://forkast.news/what-agent-commerce-needs-from-product-data-lessons-from-the-w3c-gs1-workshop/) —
+  fetch blocked, read via search-result summary only). Per that summary: the workshop framed a
+  "last meter" problem — an agent can search, compare, and pay, but still fail at checkout if it
+  cannot definitively identify the exact physical item a person intends to buy. Paola Di Maio
+  (W3C AI KR Community Group) is reported to have named a vocabulary-interoperability gap between
+  schema.org, GoodRelations, and the GS1 Web Vocabulary as a blocker to agent commerce scaling.
+  Sessions on agent identity are reported to be converging on signed-JWT protocols to let merchant
+  infrastructure distinguish human-authorized agents from malicious bots. None of this is
+  specifically about our narrow scope (signed, offline-verifiable item provenance), but it's the
+  clearest evidence yet that the room hosting both of our aligned standards bodies is actively
+  short on exactly the kind of interoperable, verifiable identity layer this protocol provides —
+  and per a separate search last week, the workshop concluded with no formal outcomes report, so
+  there is nothing to react to yet beyond watching for follow-on Community Group work.
+  Separately, Digital Link's own CEO, Paula Rivero, is reported to have spoken there on product
+  identity ([digital-link.com](https://digital-link.com/news/w3c-gs1-workshop-on-e-commerce-ai-agents)).
+- **The evidence on W3C Confidence Method / Render Method reaching Recommendation status this
+  month is now contradictory, not just unconfirmed.** One search this week returned a summary
+  stating both were "published as Recommendations" in September 2026. A second, more targeted
+  search found no Recommendation-dated page for either and instead found W3C calendar listings
+  for "VCWG Spec Refinement" calls explicitly described as "refining the W3C Recommendation Track
+  Render Method and Confidence Method specifications," scheduled on an ongoing basis into
+  **November and December 2026** ([w3.org calendar](https://www.w3.org/groups/wg/vc/calendar),
+  [meeting listing](https://www.w3.org/events/meetings/10fb1cba-4e48-4307-b3cc-5c6ea6ab6842/20261111T110000)).
+  Refinement calls running that far past a claimed publication date is inconsistent with "already
+  a Recommendation" — the more likely read is that "Recommendation Track" was compressed into
+  "Recommendation" somewhere upstream of the first search's summary. Correcting forward rather
+  than asserting either version: treat both specs as **still pre-Recommendation, actively being
+  refined, target unconfirmed**, not as shipped standards, until a primary `/TR/` page with a
+  Recommendation-track status header is actually read.
+- **FprEN 18246 is reported "at formal vote," still not confirmed published.** Consistent with,
+  not new beyond, the 2026-09-02 and 2026-09-09 entries: six of the eight DPP standards under
+  standardisation request M/604 published 2026-05-27; FprEN 18239 and FprEN 18246 remain the two
+  outstanding, with FprEN 18246 covering exactly our spec's problem (data authentication via
+  Electronically Signed Data Constructs referencing ISO/IEC 20248) and now described in one
+  catalog-summary source as at formal vote rather than merely drafted — a step closer to
+  publication than last week's "expected this month," but still not itself a publication.
+- **IACR eprint 2026/804 (the C2PA security-analysis paper) has firmer, more specific findings
+  available via search summary than any prior week, but the primary text is still unreadable
+  here.** Per those summaries: the paper is described as the first formal-methods analysis of
+  C2PA's core protocols, finding that claim generators and validators achieve strong agreement on
+  a claim's *assertions* but not on its *trusted timestamp* — a specific, named protocol gap, not
+  a vague "revocation is weak" claim. It also reports that C2PA v2.3 (January 2026) incorporated
+  some of the researchers' suggested fixes, while v2.4 (April 2026) is reported to address none of
+  the remaining concerns, and states the paper's own conclusion that C2PA "should not yet be
+  relied upon for high-stakes uses such as financial disclosures, journalism, or legal evidence."
+  This is a materially stronger claim than "certifies without technical review" (2026-09-02's
+  framing) — it's closer to "a maintained, shipping conformance program received a specific fix
+  request and a subsequent release didn't act on it." Still not independently verified against the
+  primary paper (`eprint.iacr.org` blocked again this session, third week running) — treat as
+  reported-by-search, not confirmed firsthand, and do not repeat the "should not be relied upon"
+  line publicly without reading the source first.
+- **Quiet this week, specifically:** no dated Spherity, Transmute, or OriginTrail news found for
+  this week (a broad combined search returned only older, previously-logged material). No IBM
+  TrustChain news found. Avery Dennison atma.io coverage found is about a ChatGPT/AI feature
+  addition, undated to this specific week and not verification-standard-related. No EPCIS/CBV
+  version change found. The UK GOV.UK digital product record call for evidence (below) had no
+  news beyond remaining open.
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged. The W3C/GS1 workshop's reported
+  "vocabulary interoperability gap" finding is a reminder that the wider agent-commerce ecosystem
+  is still working out basic shared vocabulary, let alone a verification model that doesn't
+  require a live call — the gap between "what the room is solving" and "what this protocol already
+  does" if anything widened this week, not narrowed.
+- **Three verdicts, no score** — unchanged; this week's Confidence Method status confusion (see
+  above) is a reason for more caution citing it as a comparator, not less — until its actual
+  Recommendation status is confirmed, don't describe it as a shipped extension point our verdict
+  layer contrasts against.
+- **Adversarial conformance suite validated against deliberately broken implementations** — the
+  sharper IACR summary this week (a named, specific protocol disagreement on timestamps; a
+  reported fix request a maintained spec release didn't act on) is the most concrete version of
+  this contrast found in any week so far, and it remains the single most valuable primary source
+  to actually read once the network egress proxy stops blocking it.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **No crypto-agility or post-quantum story** — unchanged.
+- **No bridging to the EU's ESDC/ISO-IEC-20248 vocabulary** — unchanged; FprEN 18246 is reported
+  closer (formal vote) but still not published.
+- **No access-tiering model** — unchanged from 2026-09-09's finding. This week's EU DPP Registry
+  identifier-format requirement is a confirmation of compatibility at the *identifier* layer, not
+  a resolution of the access-tiering gap at the *record* layer — those are separate questions and
+  this week's finding only closes the first one.
+
+### Named awareness targets
+
+- **UK GOV.UK digital product record call for evidence** —
+  [gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy).
+  Closes **11:59pm, 21 September 2026** — 10 days from today. Fourth straight entry flagging this
+  as the single most actionable, time-boxed item on the radar, and it remains unacted on. Stated
+  plainly per the honesty rules: repeating "most actionable" for a fourth week without a submission
+  is itself worth noticing — either act on it in the next 10 days or stop calling it the top
+  target, since a consultation window that closes unsubmitted stops being an opportunity and
+  starts being a missed one.
+- **EU DPP Registry technical documentation** —
+  [single-market-economy.ec.europa.eu/single-market/digital-product-passport_en](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en).
+  New this week as a named target rather than a general reference: the Registry now has a
+  concrete, versioned user guide with a specific identifier-format rule our spec already satisfies.
+  Reading the full user guide directly (blocked this session at the general DPP portal level in
+  earlier weeks; worth a direct retry) would let a future entry state precisely how our
+  `credentialSubject.id` requirement maps to the Registry's own field, rather than inferring
+  compatibility from a search summary.
+  W3C/GS1 workshop's own site remains
+  [w3.org/2026/ecommerce-agents](https://www.w3.org/2026/ecommerce-agents/) for watching future
+  outputs; no minutes or Community Group formation found yet.
+- **IACR 2026/804 / UMBC CISA group** —
+  [cisa.umbc.edu](https://cisa.umbc.edu/verifying-provenance-of-digital-media-security-analysis-of-c2pa-and-its-implementation/),
+  paper at [eprint.iacr.org/2026/804](https://eprint.iacr.org/2026/804) (blocked a third
+  consecutive week — if this session's network policy doesn't change, worth asking whether a
+  future run should fetch it from a different tool or have a human paste the abstract in). The
+  summarized findings are specific enough now (named timestamp-agreement gap, a dated fix request
+  a subsequent release didn't act on) that this is overdue for an actual read before citing it
+  any further in public-facing material.
+- **FprEN 18246 (CEN-CLC/JTC 24)** — unchanged from last week; reported at formal vote, still not
+  confirmed published.
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over, unresolved: `confidenceMethod`-style interaction with the §5.1 verdict; no named
+  mechanism for v0.2 `credentialStatus` revocation; Ed25519-only with no crypto-agility statement;
+  no bridging to the EU's emerging ESDC/ISO-IEC-20248 vocabulary; no stated scope boundary on the
+  §6 no-auth requirement relative to the EU's tiered access model for the wider product-data
+  category.
+- No new gap identified this week. This week's EU DPP Registry finding was a compatibility
+  confirmation, not a gap — noted above under differentiation rather than invented here to fill
+  the section.
+
+---
