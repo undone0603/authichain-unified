@@ -71,7 +71,10 @@ Required secrets/env (Cloudflare + GitHub Actions):
 
 `revenue-cycle.yml` + `scripts/revenue-cycle.ts` attach Stripe payment CTAs to
 **already warm/qualified** leads, backfill trusted provenance when reply/column
-signals allow (`--phase=fix-provenance`), optionally ping `/api/cron/dunning`,
+signals allow (`--phase=fix-provenance`), runs dunning **inline** via
+`server/jobs/dunning.ts` (the HTTP `/api/cron/dunning` route 404s on
+authichain.com — marketing worker, not Next). Requires `DATABASE_URL` +
+`DUNNING_ENABLED=true`,
 and print a revenue health report. It does **not** cold-email guessed addresses.
 
 ```bash
