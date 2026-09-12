@@ -594,37 +594,33 @@ async function phaseProposals(db: SupabaseClient | null): Promise<number> {
 
 async function phaseDunning(): Promise<boolean> {
   console.log("\n=== PHASE: dunning ===");
-  // APP_URL falls back to authichain.com above; still require an explicit
-  // CRON_SECRET before we hit the live endpoint.
-  if (!process.env.APP_URL && !process.env.CRON_SECRET) {
-    console.warn("  ⚠️  APP_URL and CRON_SECRET unset — skipping dunning ping");
-    return false;
-  }
-  if (!CRON_SECRET) {
-    console.warn("  ⚠️  CRON_SECRET unset — skipping dunning ping");
-    return false;
-  }
-  const url = `${APP_URL}/api/cron/dunning`;
+  // APP_URL/api/cron/dunning 404s: authichain.com is the marketing worker and
+  // does not host Next cron routes (Vercel app deleted 2026-09-08). Run the
+  // job inline the same way pipeline-tick does — no HTTP hop.
   if (isDryRun) {
-    console.log(`  WOULD POST ${url} (Authorization: Bearer CRON_SECRET)`);
+    console.log(
+      "  WOULD run server/jobs/dunning.runDunningEscalation() " +
+        `(DUNNING_ENABLED=${process.env.DUNNING_ENABLED ?? "unset"})`
+    );
     return true;
   }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${CRON_SECRET}` },
-  });
-  const body = await res.text().catch(() => "");
-  console.log(`  HTTP ${res.status}: ${body.slice(0, 300)}`);
-  if (!res.ok) {
-    // Soft-fail: dunning lives on APP_URL cron routes that may be retired
-    // (see autonomous-business-cycle.yml). Provenance/checkout/proposals
-    // already did the revenue work — don't fail the whole cycle on 404.
+
+  if (process.env.DUNNING_ENABLED !== "true") {
     console.warn(
-      `  ⚠️  Dunning endpoint returned ${res.status} — treating as non-fatal skip`
+      '  ⚠️  DUNNING_ENABLED is not "true" — skipping (set repo var to enable sends)'
     );
     return false;
   }
-  return true;
+
+  try {
+    const { runDunningEscalation } = await import("../server/jobs/dunning");
+    const result = await runDunningEscalation();
+    console.log(`  Result: ${JSON.stringify(result)}`);
+    return !result.skipped;
+  } catch (err: any) {
+    console.warn(`  ⚠️  Inline dunning failed (non-fatal): ${err.message}`);
+    return false;
+  }
 }
 
 async function phaseReport(db: SupabaseClient | null): Promise<void> {

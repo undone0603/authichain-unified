@@ -107,10 +107,21 @@ jobs:
       - name: Run revenue cycle
         run: |
           export DRY_RUN=${{ steps.mode.outputs.dry_run }}
+          # Live runs enable dunning unless DUNNING_ENABLED is explicitly "false".
+          # Dry-runs always leave the job gated off inside runDunningEscalation.
+          if [ "$DRY_RUN" = "false" ] && [ "${{ vars.DUNNING_ENABLED }}" != "false" ]; then
+            export DUNNING_ENABLED=true
+          else
+            export DUNNING_ENABLED=false
+          fi
+          echo "DUNNING_ENABLED=$DUNNING_ENABLED"
           pnpm exec tsx scripts/revenue-cycle.ts --phase=${{ steps.mode.outputs.phase }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
