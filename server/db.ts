@@ -703,21 +703,26 @@ export async function createProposal(data: {
 }): Promise<string> {
   const d = await getDb();
   const id = randomUUID();
+  // Live DB is CRM-shaped (title NOT NULL + optional closer cols). Prefer raw
+  // SQL so we satisfy title without requiring the Drizzle schema to mirror
+  // every production column.
+  const title = `AuthiChain ${data.segment} Pilot — ${data.leadEmail}`;
   try {
-    await d.insert(proposals).values({
-      id,
-      leadEmail: data.leadEmail,
-      segment: data.segment,
-      content: data.content,
-      missionId: data.missionId,
-      taskId: data.taskId,
-      paymentLink: data.paymentLink,
-      checkoutSessionId: data.checkoutSessionId,
-      pilotPriceUsd: data.pilotPriceUsd,
-    });
+    await d.execute(sql`
+      INSERT INTO proposals (
+        id, title, lead_email, segment, content,
+        mission_id, task_id, payment_link, checkout_session_id, pilot_price_usd,
+        status, value, currency, sent_at
+      ) VALUES (
+        ${id}::uuid, ${title}, ${data.leadEmail}, ${data.segment}, ${data.content},
+        ${data.missionId}, ${data.taskId ?? null}, ${data.paymentLink ?? null},
+        ${data.checkoutSessionId ?? null}, ${data.pilotPriceUsd ?? null},
+        'sent', ${data.pilotPriceUsd ?? null}, 'usd', NOW()
+      )
+    `);
   } catch (err) {
-    // Pre-migration DBs only have id/lead_email/segment/content/created_at —
-    // fold Stripe + mission metadata into content so the email path still works.
+    // Fold Stripe + mission metadata into content so the email path still works
+    // when closer columns or CRM extras are missing.
     console.warn(
       `[createProposal] full insert failed, falling back to core columns: ${
         err instanceof Error ? err.message : String(err)
@@ -736,12 +741,31 @@ export async function createProposal(data: {
     ]
       .filter(Boolean)
       .join("\n");
-    await d.insert(proposals).values({
-      id,
-      leadEmail: data.leadEmail,
-      segment: data.segment,
-      content: appendix ? `${data.content}\n\n---\n${appendix}` : data.content,
-    });
+    const content = appendix
+      ? `${data.content}\n\n---\n${appendix}`
+      : data.content;
+    try {
+      await d.execute(sql`
+        INSERT INTO proposals (id, title, lead_email, segment, content, status, sent_at)
+        VALUES (
+          ${id}::uuid, ${title}, ${data.leadEmail}, ${data.segment}, ${content},
+          'sent', NOW()
+        )
+      `);
+    } catch (err2) {
+      // Minimal Drizzle-shaped table (no title / CRM cols).
+      console.warn(
+        `[createProposal] titled insert failed, using drizzle core: ${
+          err2 instanceof Error ? err2.message : String(err2)
+        }`
+      );
+      await d.insert(proposals).values({
+        id,
+        leadEmail: data.leadEmail,
+        segment: data.segment,
+        content,
+      });
+    }
   }
   return id;
 }
