@@ -67,35 +67,52 @@ type RevenueRecordInsert = typeof revenueRecords.$inferInsert;
 export async function logActivity(
   db: Db,
   actionOrData: string | ActivityPayload,
-  details?: string,
+  details?: string
 ): Promise<void> {
   if (typeof actionOrData === "string") {
-    await db.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
+    await db
+      .insert(activityLog)
+      .values({
+        action: actionOrData,
+        details: details ? { text: details } : undefined,
+      });
   } else {
     await db.insert(activityLog).values({
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
+      entityId:
+        actionOrData.entityId == null
+          ? undefined
+          : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
 }
 
 export async function getRecentActivity(db: Db, limit = 20) {
-  return db.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(limit);
+  return db
+    .select()
+    .from(activityLog)
+    .orderBy(desc(activityLog.createdAt))
+    .limit(limit);
 }
 
 export async function logAutomationAudit(
   db: Db,
   action: string,
   data: Record<string, unknown>,
-  userId?: number,
+  userId?: number
 ): Promise<void> {
-  await db.insert(activityLog).values({ userId, action, details: { text: action, ...data } });
+  await db
+    .insert(activityLog)
+    .values({ userId, action, details: { text: action, ...data } });
 }
 
-export async function hasWebhookEventProcessed(db: Db, eventId: string): Promise<boolean> {
+export async function hasWebhookEventProcessed(
+  db: Db,
+  eventId: string
+): Promise<boolean> {
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(activityLog)
@@ -107,7 +124,10 @@ export async function hasWebhookEventProcessed(db: Db, eventId: string): Promise
 // NOTIFICATIONS
 // ─────────────────────────────────────────────────────────────
 
-export async function createNotification(db: Db, data: Omit<InsertNotification, "id" | "createdAt">) {
+export async function createNotification(
+  db: Db,
+  data: Omit<InsertNotification, "id" | "createdAt">
+) {
   const [result] = await db.insert(notifications).values(data).returning();
   return { id: result.id };
 }
@@ -118,16 +138,28 @@ export async function createSystemNotification(
   title: string,
   message: string,
   type: InsertNotification["type"],
-  actionUrl?: string,
+  actionUrl?: string
 ) {
-  return createNotification(db, { userId, type, title, message, isRead: false, actionUrl });
+  return createNotification(db, {
+    userId,
+    type,
+    title,
+    message,
+    isRead: false,
+    actionUrl,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
 // LEADS
 // ─────────────────────────────────────────────────────────────
 
-export async function createLead(db: Db, data: FlexibleInsert<Pick<LeadInsert, "email"> & Partial<Omit<LeadInsert, "email">>>) {
+export async function createLead(
+  db: Db,
+  data: FlexibleInsert<
+    Pick<LeadInsert, "email"> & Partial<Omit<LeadInsert, "email">>
+  >
+) {
   const values: LeadInsert = {
     email: data.email,
     name: data.name ?? null,
@@ -145,7 +177,11 @@ export async function createLead(db: Db, data: FlexibleInsert<Pick<LeadInsert, "
 }
 
 export async function getLeadByEmail(db: Db, email: string) {
-  const rows = await db.select().from(leads).where(eq(leads.email, email)).limit(1);
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.email, email))
+    .limit(1);
   return rows[0] ?? null;
 }
 
@@ -155,19 +191,73 @@ export async function getLeadById(db: Db, id: number) {
 }
 
 export async function incrementInteractionCount(db: Db, id: number) {
-  await db.update(leads).set({ interactionsCount: sql`coalesce(${leads.interactionsCount}, 0) + 1` }).where(eq(leads.id, id));
+  await db
+    .update(leads)
+    .set({
+      interactionsCount: sql`coalesce(${leads.interactionsCount}, 0) + 1`,
+    })
+    .where(eq(leads.id, id));
 }
 
 export async function updateLeadScore(db: Db, id: number, score: number) {
   await db.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
-export async function updateLead(db: Db, id: number, data: FlexibleUpdate<LeadInsert>) {
+export async function updateLead(
+  db: Db,
+  id: number,
+  data: FlexibleUpdate<LeadInsert>
+) {
   await db.update(leads).set(data).where(eq(leads.id, id));
 }
 
-export async function updateLeadStatus(db: Db, id: number, status: NonNullable<LeadInsert["status"]>) {
+export async function updateLeadStatus(
+  db: Db,
+  id: number,
+  status: NonNullable<LeadInsert["status"]>
+) {
   await db.update(leads).set({ status }).where(eq(leads.id, id));
+}
+
+function inboundProvenanceMeta(
+  source: string | undefined,
+  metadata?: Record<string, unknown>
+): Record<string, unknown> {
+  const src = (source || "website_form").toLowerCase();
+  const inboundSources = new Set([
+    "website",
+    "website_form",
+    "inbound",
+    "inbound_optin",
+    "roi_calculator",
+    "sales_funnel",
+    "try_for_free",
+    "chatbot",
+  ]);
+  const base = { ...(metadata ?? {}) };
+  const existing =
+    (typeof base.verification_source === "string" &&
+      base.verification_source) ||
+    (typeof base.provenance === "string" && base.provenance) ||
+    "";
+  if (
+    existing === "apollo_verified" ||
+    existing === "reacher_verified" ||
+    existing === "confirmed_reply" ||
+    existing === "published_contact" ||
+    existing === "inbound_optin"
+  ) {
+    return base;
+  }
+  if (inboundSources.has(src)) {
+    return {
+      ...base,
+      verification_source: "inbound_optin",
+      provenance: "inbound_optin",
+      provenanceNote: `upsertLeadByEmail: inbound source=${src}`,
+    };
+  }
+  return base;
 }
 
 export async function upsertLeadByEmail(
@@ -181,31 +271,46 @@ export async function upsertLeadByEmail(
     source?: string;
     industry?: string;
     metadata?: Record<string, unknown>;
-  },
+  }
 ): Promise<{ id: number; created: boolean }> {
-  const existing = await db.select({ id: leads.id }).from(leads).where(eq(leads.email, input.email)).limit(1);
+  const source = input.source || "website_form";
+  const existing = await db
+    .select({ id: leads.id, metadata: leads.metadata })
+    .from(leads)
+    .where(eq(leads.email, input.email))
+    .limit(1);
   if (existing[0]) {
-    await db.update(leads).set({
+    const merged = inboundProvenanceMeta(source, {
+      ...((existing[0].metadata as Record<string, unknown> | null) ?? {}),
+      ...(input.metadata ?? {}),
+    });
+    await db
+      .update(leads)
+      .set({
+        name: input.name,
+        company: input.company,
+        title: input.title,
+        phone: input.phone,
+        source,
+        industry: input.industry,
+        metadata: merged,
+      })
+      .where(eq(leads.id, existing[0].id));
+    return { id: existing[0].id, created: false };
+  }
+  const [result] = await db
+    .insert(leads)
+    .values({
+      email: input.email,
       name: input.name,
       company: input.company,
       title: input.title,
       phone: input.phone,
-      source: input.source,
+      source,
       industry: input.industry,
-      metadata: input.metadata,
-    }).where(eq(leads.id, existing[0].id));
-    return { id: existing[0].id, created: false };
-  }
-  const [result] = await db.insert(leads).values({
-    email: input.email,
-    name: input.name,
-    company: input.company,
-    title: input.title,
-    phone: input.phone,
-    source: input.source || "website_form",
-    industry: input.industry,
-    metadata: input.metadata,
-  }).returning();
+      metadata: inboundProvenanceMeta(source, input.metadata),
+    })
+    .returning();
   return { id: result.id, created: true };
 }
 
@@ -221,12 +326,18 @@ export function computeLeadScore(signals: {
   const w = { segmentFit: 0.3, intent: 0.35, urgency: 0.2, budgetProxy: 0.15 };
   const score = Math.round(
     (signals.segmentFit ?? 50) * w.segmentFit +
-    (signals.intent ?? 50) * w.intent +
-    (signals.urgency ?? 50) * w.urgency +
-    (signals.budgetProxy ?? 50) * w.budgetProxy,
+      (signals.intent ?? 50) * w.intent +
+      (signals.urgency ?? 50) * w.urgency +
+      (signals.budgetProxy ?? 50) * w.budgetProxy
   );
-  const band: "hot" | "warm" | "cold" = score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
-  const route = band === "hot" ? "sales_direct" : band === "warm" ? "nurture_sequence" : "newsletter";
+  const band: "hot" | "warm" | "cold" =
+    score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
+  const route =
+    band === "hot"
+      ? "sales_direct"
+      : band === "warm"
+        ? "nurture_sequence"
+        : "newsletter";
   return { score, band, route };
 }
 
@@ -249,7 +360,10 @@ export async function createMission(db: Db, type: MissionType) {
 
 export async function createTask(
   db: Db,
-  data: FlexibleInsert<Pick<MissionTaskInsert, "missionId" | "kind"> & Partial<Omit<MissionTaskInsert, "id" | "missionId" | "kind">>>,
+  data: FlexibleInsert<
+    Pick<MissionTaskInsert, "missionId" | "kind"> &
+      Partial<Omit<MissionTaskInsert, "id" | "missionId" | "kind">>
+  >
 ) {
   const id = randomUUID();
   await db.insert(missionTasks).values({
@@ -270,7 +384,7 @@ export async function enqueueTask(
   missionId: string,
   kind: string,
   payload: MissionTaskInsert["payload"],
-  scheduledAt?: Date,
+  scheduledAt?: Date
 ) {
   const id = randomUUID();
   await db.insert(missionTasks).values({
@@ -290,7 +404,11 @@ export async function enqueueTask(
 // ─────────────────────────────────────────────────────────────
 
 export async function getServiceOrderById(db: Db, id: number) {
-  const rows = await db.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+  const rows = await db
+    .select()
+    .from(serviceOrders)
+    .where(eq(serviceOrders.id, id))
+    .limit(1);
   return rows[0] ?? null;
 }
 
@@ -298,24 +416,38 @@ export async function updateServiceOrderStatus(
   db: Db,
   id: number,
   status: NonNullable<ServiceOrderInsert["status"]>,
-  extra?: FlexibleUpdate<ServiceOrderInsert>,
+  extra?: FlexibleUpdate<ServiceOrderInsert>
 ) {
-  await db.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
+  await db
+    .update(serviceOrders)
+    .set({ status, ...(extra ?? {}), updatedAt: new Date() })
+    .where(eq(serviceOrders.id, id));
 }
 
-export async function createServiceOrder(db: Db, data: FlexibleInsert<ServiceOrderInsert>) {
+export async function createServiceOrder(
+  db: Db,
+  data: FlexibleInsert<ServiceOrderInsert>
+) {
   const [result] = await db.insert(serviceOrders).values(data).returning();
   const id = result.id;
   return { id, ...data };
 }
 
 export async function getServiceOrderBySessionId(db: Db, sessionId: string) {
-  const rows = await db.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
+  const rows = await db
+    .select()
+    .from(serviceOrders)
+    .where(eq(serviceOrders.stripeSessionId, sessionId))
+    .limit(1);
   return rows[0] ?? null;
 }
 
 export async function getServiceOrdersByUser(db: Db, userId: number) {
-  return db.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+  return db
+    .select()
+    .from(serviceOrders)
+    .where(eq(serviceOrders.userId, userId))
+    .orderBy(desc(serviceOrders.createdAt));
 }
 
 export async function getAllServiceOrders(db: Db) {
@@ -327,65 +459,94 @@ export async function getAllServiceOrders(db: Db) {
 // ─────────────────────────────────────────────────────────────
 
 export async function getUserSubscription(db: Db, userId: number) {
-  const result = await db.select().from(subscriptions).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"))).limit(1);
+  const result = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"))
+    )
+    .limit(1);
   return result[0];
 }
 
-export async function createSubscription(db: Db, data: FlexibleInsert<SubscriptionInsert>) {
+export async function createSubscription(
+  db: Db,
+  data: FlexibleInsert<SubscriptionInsert>
+) {
   const [result] = await db.insert(subscriptions).values(data).returning();
   return { id: result.id };
 }
 
-export async function createInvoice(db: Db, data: FlexibleInsert<InvoiceInsert>) {
+export async function createInvoice(
+  db: Db,
+  data: FlexibleInsert<InvoiceInsert>
+) {
   const [result] = await db.insert(invoices).values(data).returning();
   return { id: result.id };
 }
 
 export async function getUserInvoices(db: Db, userId: number) {
-  return await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
+  return await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.userId, userId))
+    .orderBy(desc(invoices.createdAt));
 }
 
-export async function createPayment(db: Db, data: FlexibleInsert<PaymentInsert>) {
+export async function createPayment(
+  db: Db,
+  data: FlexibleInsert<PaymentInsert>
+) {
   const [result] = await db.insert(payments).values(data).returning();
   return { id: result.id };
 }
 
 export async function getUserPayments(db: Db, userId: number) {
-  return await db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
+  return await db
+    .select()
+    .from(payments)
+    .where(eq(payments.userId, userId))
+    .orderBy(desc(payments.createdAt));
 }
 
 // ─────────────────────────────────────────────────────────────
 // STRIPE SUBSCRIPTION HELPERS
 // ─────────────────────────────────────────────────────────────
 
-export async function upsertStripeSubscription(db: Db, data: {
-  userId: number;
-  plan: "starter" | "professional" | "enterprise" | "medtech";
-  status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
-  monthlyQuota: number;
-  billingCycle: "monthly" | "annual";
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  trialEndsAt: Date | null;
-}) {
+export async function upsertStripeSubscription(
+  db: Db,
+  data: {
+    userId: number;
+    plan: "starter" | "professional" | "enterprise" | "medtech";
+    status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
+    monthlyQuota: number;
+    billingCycle: "monthly" | "annual";
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    trialEndsAt: Date | null;
+  }
+) {
   const existing = await db
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId))
     .limit(1);
   if (existing[0]) {
-    await db.update(subscriptions).set({
-      plan: data.plan,
-      status: data.status,
-      monthlyQuota: data.monthlyQuota,
-      billingCycle: data.billingCycle,
-      stripeCustomerId: data.stripeCustomerId ?? undefined,
-      currentPeriodStart: data.currentPeriodStart,
-      currentPeriodEnd: data.currentPeriodEnd,
-      trialEndsAt: data.trialEndsAt ?? undefined,
-    }).where(eq(subscriptions.id, existing[0].id));
+    await db
+      .update(subscriptions)
+      .set({
+        plan: data.plan,
+        status: data.status,
+        monthlyQuota: data.monthlyQuota,
+        billingCycle: data.billingCycle,
+        stripeCustomerId: data.stripeCustomerId ?? undefined,
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+        trialEndsAt: data.trialEndsAt ?? undefined,
+      })
+      .where(eq(subscriptions.id, existing[0].id));
   } else {
     await db.insert(subscriptions).values({
       userId: data.userId,
@@ -406,14 +567,18 @@ export async function setSubscriptionStatusByStripeId(
   db: Db,
   stripeSubscriptionId: string,
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
-  cancelledAt?: Date,
+  cancelledAt?: Date
 ) {
-  await db.update(subscriptions)
+  await db
+    .update(subscriptions)
     .set({ status, cancelledAt: cancelledAt ?? undefined })
     .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
 }
 
-export async function getSubscriptionByStripeSubscriptionId(db: Db, stripeSubscriptionId: string) {
+export async function getSubscriptionByStripeSubscriptionId(
+  db: Db,
+  stripeSubscriptionId: string
+) {
   const result = await db
     .select()
     .from(subscriptions)
@@ -426,32 +591,38 @@ export async function getSubscriptionByStripeSubscriptionId(db: Db, stripeSubscr
 // PADDLE SUBSCRIPTION HELPERS
 // ─────────────────────────────────────────────────────────────
 
-export async function upsertPaddleSubscription(db: Db, data: {
-  userId: number;
-  plan: "starter" | "professional" | "enterprise" | "medtech";
-  status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
-  monthlyQuota: number;
-  billingCycle: "monthly" | "annual";
-  paddleCustomerId: string | null;
-  paddleSubscriptionId: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-}) {
+export async function upsertPaddleSubscription(
+  db: Db,
+  data: {
+    userId: number;
+    plan: "starter" | "professional" | "enterprise" | "medtech";
+    status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
+    monthlyQuota: number;
+    billingCycle: "monthly" | "annual";
+    paddleCustomerId: string | null;
+    paddleSubscriptionId: string;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+  }
+) {
   const existing = await db
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(eq(subscriptions.paddleSubscriptionId, data.paddleSubscriptionId))
     .limit(1);
   if (existing[0]) {
-    await db.update(subscriptions).set({
-      plan: data.plan,
-      status: data.status,
-      monthlyQuota: data.monthlyQuota,
-      billingCycle: data.billingCycle,
-      paddleCustomerId: data.paddleCustomerId ?? undefined,
-      currentPeriodStart: data.currentPeriodStart,
-      currentPeriodEnd: data.currentPeriodEnd,
-    }).where(eq(subscriptions.id, existing[0].id));
+    await db
+      .update(subscriptions)
+      .set({
+        plan: data.plan,
+        status: data.status,
+        monthlyQuota: data.monthlyQuota,
+        billingCycle: data.billingCycle,
+        paddleCustomerId: data.paddleCustomerId ?? undefined,
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+      })
+      .where(eq(subscriptions.id, existing[0].id));
   } else {
     await db.insert(subscriptions).values({
       userId: data.userId,
@@ -471,14 +642,18 @@ export async function setSubscriptionStatusByPaddleId(
   db: Db,
   paddleSubscriptionId: string,
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
-  cancelledAt?: Date,
+  cancelledAt?: Date
 ) {
-  await db.update(subscriptions)
+  await db
+    .update(subscriptions)
     .set({ status, cancelledAt: cancelledAt ?? undefined })
     .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
 }
 
-export async function getSubscriptionByPaddleSubscriptionId(db: Db, paddleSubscriptionId: string) {
+export async function getSubscriptionByPaddleSubscriptionId(
+  db: Db,
+  paddleSubscriptionId: string
+) {
   const result = await db
     .select()
     .from(subscriptions)
@@ -491,14 +666,26 @@ export async function getSubscriptionByPaddleSubscriptionId(db: Db, paddleSubscr
 // REVENUE
 // ─────────────────────────────────────────────────────────────
 
-export async function recordRevenue(db: Db, data: FlexibleInsert<RevenueRecordInsert>) {
+export async function recordRevenue(
+  db: Db,
+  data: FlexibleInsert<RevenueRecordInsert>
+) {
   await db.insert(revenueRecords).values(data);
 }
 
-export async function getRevenueAnalytics(db: Db, startDate?: Date, endDate?: Date) {
+export async function getRevenueAnalytics(
+  db: Db,
+  startDate?: Date,
+  endDate?: Date
+) {
   let query = db.select().from(revenueRecords);
   if (startDate && endDate) {
-    query = query.where(and(gte(revenueRecords.createdAt, startDate), lte(revenueRecords.createdAt, endDate))) as typeof query;
+    query = query.where(
+      and(
+        gte(revenueRecords.createdAt, startDate),
+        lte(revenueRecords.createdAt, endDate)
+      )
+    ) as typeof query;
   }
   return await query.orderBy(desc(revenueRecords.createdAt)).limit(2000);
 }
@@ -508,13 +695,22 @@ export async function getRevenueAnalytics(db: Db, startDate?: Date, endDate?: Da
 // ─────────────────────────────────────────────────────────────
 
 export async function getAdminDashboardMetrics(db: Db) {
-  const [[userCount], [prodCount], [authCount], [leadCount], [nftCount], [revenue]] = await Promise.all([
+  const [
+    [userCount],
+    [prodCount],
+    [authCount],
+    [leadCount],
+    [nftCount],
+    [revenue],
+  ] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(users),
     db.select({ count: sql<number>`count(*)` }).from(products),
     db.select({ count: sql<number>`count(*)` }).from(authentications),
     db.select({ count: sql<number>`count(*)` }).from(leads),
     db.select({ count: sql<number>`count(*)` }).from(nfts),
-    db.select({ total: sql<string>`COALESCE(SUM(amount), 0)` }).from(revenueRecords),
+    db
+      .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+      .from(revenueRecords),
   ]);
   return {
     totalUsers: userCount?.count || 0,
@@ -527,17 +723,33 @@ export async function getAdminDashboardMetrics(db: Db) {
 }
 
 export async function getAllUsers(db: Db) {
-  return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
+  return await db
+    .select()
+    .from(users)
+    .orderBy(desc(users.createdAt))
+    .limit(1000);
 }
 
 export async function getSubscriptionAnalytics(db: Db) {
-  return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(5000);
+  return await db
+    .select()
+    .from(subscriptions)
+    .orderBy(desc(subscriptions.createdAt))
+    .limit(5000);
 }
 
 export async function getOpenFraudAlerts(db: Db) {
-  return await db.select().from(fraudAlerts).where(eq(fraudAlerts.status, "open")).orderBy(desc(fraudAlerts.createdAt));
+  return await db
+    .select()
+    .from(fraudAlerts)
+    .where(eq(fraudAlerts.status, "open"))
+    .orderBy(desc(fraudAlerts.createdAt));
 }
 
 export async function getAllHealthScores(db: Db) {
-  return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score)).limit(500);
+  return await db
+    .select()
+    .from(customerHealthScores)
+    .orderBy(desc(customerHealthScores.score))
+    .limit(500);
 }
