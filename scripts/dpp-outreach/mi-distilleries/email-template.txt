@@ -1,0 +1,18 @@
+Subject: A digital product passport mockup for {{company}}
+
+Hi {{name}},
+
+I put together a one-page digital product passport demo personalized with {{company}}'s name — meant as a sales/storytelling mockup for tasting-room and packaging QR flows, not a claim about your batch data:
+
+{{passport_url}}
+
+What it shows: brand header, provenance placeholders you can fill, a short origin story, and a scannable QR. When we have real batch / origin / chapter copy from you, those replace the placeholders.
+
+If product storytelling / packaging / brand protection isn't your desk, a redirect to the right owner is just as helpful.
+
+Worth a 10-minute look?
+
+— Zac
+Zachary Kietzman
+AuthiChain / QRON
+authichain.com | passport-demo.undone-k.workers.dev

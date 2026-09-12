@@ -647,6 +647,7 @@ export const whiteLabelClients = pgTable("white_label_clients", {
   apiKey: varchar("api_key", { length: 128 }).notNull().unique(),
   apiSecret: varchar("api_secret", { length: 256 }),
   status: varchar("status", { length: 50 }).default("pending"),
+  provisioningState: text("provisioning_state").notNull().default("PENDING"),
   monthlyApiCalls: integer("monthly_api_calls").default(0),
   apiCallLimit: integer("api_call_limit").default(10000),
   features: json("features"),

@@ -1,0 +1,19 @@
+Subject: EU DPP readiness for {{company}} — $299 audit (credited to AuthiChain)
+
+Hi {{contact_name}},
+
+If {{company}} sells into the EU, Digital Product Passport requirements are moving from "roadmap" to buyer/compliance pressure.
+
+We built a one-time EU DPP Readiness Audit ($299) that:
+- maps your current labeling/passport gaps
+- activates a self-serve AuthiChain workspace
+- credits the $299 toward AuthiChain Basic if you continue
+
+Start here (tracked):
+https://authichain.com/dpp?utm_source=email&utm_medium=warm&utm_campaign={{utm_campaign}}&email={{email}}
+
+Reply to this email with a good 15-minute window this week if you'd rather walk through it live.
+
+— Zac
+AuthiChain
+Reply-To: undone.k@gmail.com

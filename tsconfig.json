@@ -23,7 +23,6 @@
     ],
     "paths": {
       "@/*": ["./src/*", "./client/src/*"],
-      "@/protocol/*": ["./protocol/*"],
       "@shared/*": ["./shared/*"],
       "@server/*": ["./server/*"],
       "@authichain/verifier": ["./packages/verifier/src/index.ts"],

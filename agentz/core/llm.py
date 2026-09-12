@@ -114,6 +114,7 @@ class LimitProofLLM:
         self._bind_kwargs = {}
 
         self.providers = [
+            ("groq", self._get_groq),
             ("local-lmstudio", self._get_lmstudio),
             ("local-lmstudio-fallback", self._get_lmstudio_fallback),
             ("local-ollama", self._get_ollama),
@@ -132,6 +133,13 @@ class LimitProofLLM:
     @property
     def provider(self):
         return "openai"
+
+    def _get_groq(self):
+        from langchain_groq import ChatGroq
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key or "INVALID" in api_key: raise RuntimeError("Missing Groq Key")
+        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=self.temperature, api_key=api_key)
+        return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _should_skip(self, name: str) -> bool:
         health = _PROVIDER_HEALTH.get(name, {"ok": True})
@@ -226,7 +234,7 @@ class LimitProofLLM:
         from langchain_google_genai import ChatGoogleGenerativeAI
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key or "INVALID" in api_key: raise RuntimeError("Missing Gemini Key")
-        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=self.temperature, google_api_key=api_key)
+        llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=self.temperature, google_api_key=api_key)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_ollama(self):
