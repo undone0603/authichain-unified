@@ -8,6 +8,34 @@ import { executeCommand } from './actions.js';
 vi.unmock('playwright-core');
 const { chromium } = await vi.importActual<typeof import('playwright-core')>('playwright-core');
 
+const EXAMPLE_URL = 'https://example.com/';
+
+const EXAMPLE_HTML = `
+  <!doctype html>
+  <html>
+    <head>
+      <title>Example Domain</title>
+    </head>
+    <body>
+      <main>
+        <h1>Example Domain</h1>
+        <p>This domain is for use in illustrative examples.</p>
+      </main>
+    </body>
+  </html>
+`;
+
+async function loadExamplePage(page: import('playwright-core').Page) {
+  await page.route('https://example.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: EXAMPLE_HTML,
+    });
+  });
+
+  await loadExamplePage(page);
+}
 // This suite launches a real browser, so it needs the Playwright browser
 // binaries installed (CI does this via `playwright install --with-deps
 // chromium` before running tests, see .github/workflows/main.yml). In
@@ -28,10 +56,11 @@ if (!canLaunchRealBrowser) {
 describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   let browser: BrowserManager;
 
-  beforeAll(async () => {
-    browser = new BrowserManager();
-    await browser.launch({ headless: true });
-  });
+ beforeAll(async () => {
+  browser = new BrowserManager();
+  await browser.launch({ headless: true });
+  await loadExamplePage(browser.getPage());
+});
 
   afterAll(async () => {
     await browser.close();
@@ -290,7 +319,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('navigation', () => {
     it('should navigate to URL', async () => {
       const page = browser.getPage();
-      await page.goto('https://example.com');
+      
       expect(page.url()).toBe('https://example.com/');
     });
 
@@ -302,24 +331,25 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   });
 
   describe('element interaction', () => {
-    it('should find element by selector', async () => {
-      const page = browser.getPage();
-      const heading = await page.locator('h1').textContent();
-      expect(heading).toBe('Example Domain');
-    });
-
-    it('should check element visibility', async () => {
-      const page = browser.getPage();
-      const isVisible = await page.locator('h1').isVisible();
-      expect(isVisible).toBe(true);
-    });
-
-    it('should count elements', async () => {
-      const page = browser.getPage();
-      const count = await page.locator('p').count();
-      expect(count).toBeGreaterThan(0);
-    });
+  beforeEach(async () => {
+    await loadExamplePage(browser.getPage());
   });
+
+  it('should find element by selector', async () => {
+    const page = browser.getPage();
+    await expect(page.locator('h1')).toHaveText('Example Domain');
+  });
+
+  it('should check element visibility', async () => {
+    const page = browser.getPage();
+    await expect(page.locator('h1')).toBeVisible();
+  });
+
+  it('should count elements', async () => {
+    const page = browser.getPage();
+    await expect(page.locator('p')).toHaveCount(1);
+  });
+});
 
   describe('screenshots', () => {
     it('should take screenshot as buffer', async () => {
@@ -332,7 +362,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
 
   describe('annotated screenshots', () => {
     afterAll(async () => {
-      await browser.getPage().goto('https://example.com');
+      await loadExamplePage(page);
     });
 
     it('should return annotations with correct shape', async () => {
@@ -573,7 +603,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('localStorage operations', () => {
     it('should set and get localStorage item', async () => {
       const page = browser.getPage();
-      await page.goto('https://example.com');
+      
       await page.evaluate(() => localStorage.setItem('testKey', 'testValue'));
       const value = await page.evaluate(() => localStorage.getItem('testKey'));
       expect(value).toBe('testValue');
@@ -616,7 +646,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('sessionStorage operations', () => {
     it('should set and get sessionStorage item', async () => {
       const page = browser.getPage();
-      await page.goto('https://example.com');
+      
       await page.evaluate(() => sessionStorage.setItem('sessionKey', 'sessionValue'));
       const value = await page.evaluate(() => sessionStorage.getItem('sessionKey'));
       expect(value).toBe('sessionValue');
@@ -698,7 +728,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('snapshot', () => {
     it('should get snapshot with refs', async () => {
       const page = browser.getPage();
-      await page.goto('https://example.com');
+      
       const { tree, refs } = await browser.getSnapshot();
       expect(tree).toContain('heading');
       expect(tree).toContain('Example Domain');
@@ -812,7 +842,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('locator resolution', () => {
     it('should resolve CSS selector', async () => {
       const page = browser.getPage();
-      await page.goto('https://example.com');
+      
       const locator = browser.getLocator('h1');
       const text = await locator.textContent();
       expect(text).toBe('Example Domain');
