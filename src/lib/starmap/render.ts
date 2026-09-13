@@ -40,20 +40,14 @@ function project(ra: number, dec: number, lat: number, lon: number, jd: number) 
   return { altitude, azimuth: (azimuth + TAU) % TAU };
 }
 
-function catalogHash(): string {
+export async function catalogHash(): Promise<string> {
   const source = JSON.stringify({ stars: BRIGHT_STARS, constellations: CONSTELLATIONS });
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < source.length; i++) {
-    const c = source.charCodeAt(i);
-    h1 ^= c; h1 = Math.imul(h1, 0x01000193);
-    h2 ^= c + i; h2 = Math.imul(h2, 0x85ebca6b);
-  }
-  return `${(h1 >>> 0).toString(16).padStart(8, "0")}${(h2 >>> 0).toString(16).padStart(8, "0")}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function makePayload(id: string, eventAt: string): NightstampPayload {
-  return { id, url: `https://qron.space/sky/${id}`, eventAt, catalogHash: catalogHash() };
+export async function makePayload(id: string, eventAt: string): Promise<NightstampPayload> {
+  return { id, url: `https://qron.space/sky/${id}`, eventAt, catalogHash: await catalogHash() };
 }
 
 export async function renderNightstamp(input: NightstampInput, payload: NightstampPayload, watermark = false): Promise<Buffer> {
@@ -89,8 +83,6 @@ export async function renderNightstamp(input: NightstampInput, payload: Nightsta
       const x = clamp(cx + xx * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.width - 1);
       const y = clamp(cy + yy * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.height - 1);
       const idx = (y * bitmap.width + x) * 4;
-      // Only restyle existing dark QR modules. This is the hard scan-safety
-      // boundary: the astronomical layer can never introduce new QR modules.
       if (bitmap.data[idx] < 80 && bitmap.data[idx + 1] < 80 && bitmap.data[idx + 2] < 80) {
         bitmap.data[idx] = star.mag <= 3 ? 12 : 48;
         bitmap.data[idx + 1] = star.mag <= 3 ? 12 : 48;
