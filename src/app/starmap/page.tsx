@@ -23,21 +23,26 @@ export default function StarmapPage() {
   const [busy, setBusy] = useState(false);
 
   const caption = useMemo(() => `The sky over ${placeLabel} · ${dateISO}`, [placeLabel, dateISO]);
+  const payload = () => ({ dateISO, time, lat, lon, tz, placeLabel, dedication, style: "navy-gold" as const });
 
   async function generatePreview() {
     setBusy(true);
     try {
-      const res = await fetch("/api/starmap/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ dateISO, time, lat, lon, tz, placeLabel, dedication, style: "navy-gold", sku: "preview" }),
-      });
+      const res = await fetch("/api/starmap/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...payload(), sku: "preview" }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Preview failed");
       setPreview(data.png);
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
+  }
+
+  async function checkout(sku: "digital" | "portal" | "certified") {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/starmap/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...payload(), sku }) });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed");
+      window.location.href = data.url;
+    } finally { setBusy(false); }
   }
 
   function selectCity(value: string) {
@@ -65,10 +70,11 @@ export default function StarmapPage() {
         <div className="rounded-[2rem] border border-amber-200/10 bg-gradient-to-b from-[#0c152a] to-[#02040a] p-6 shadow-2xl">
           {preview ? <img src={preview} alt={caption} className="mx-auto w-full max-w-[760px] rounded-2xl" /> : <div className="flex aspect-square items-center justify-center rounded-2xl border border-white/10 text-center text-slate-500">Your star-map QR preview appears here.</div>}
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <a href={process.env.NEXT_PUBLIC_NIGHTSTAMP_PAYMENT_LINK_9 || "/order?preset=starmap&sku=digital"} className="rounded-xl bg-white px-4 py-3 text-center font-semibold text-black">Unlock 4K · $9</a>
-            <a href="/order?preset=starmap&sku=portal" className="rounded-xl border border-white/15 px-4 py-3 text-center">Portal · $29</a>
-            <a href="/order?preset=starmap&sku=certified" className="rounded-xl border border-white/15 px-4 py-3 text-center">Certified · $49</a>
+            <button disabled={busy} onClick={() => checkout("digital")} className="rounded-xl bg-white px-4 py-3 text-center font-semibold text-black disabled:opacity-50">Unlock 4K · $9</button>
+            <button disabled={busy} onClick={() => checkout("portal")} className="rounded-xl border border-white/15 px-4 py-3 text-center disabled:opacity-50">Portal · $29</button>
+            <button disabled={busy} onClick={() => checkout("certified")} className="rounded-xl border border-white/15 px-4 py-3 text-center disabled:opacity-50">Certified · $49</button>
           </div>
+          <p className="mt-4 text-center text-xs text-slate-500">Print is a separate $39 unframed / $79 foil add-on after digital unlock.</p>
         </div>
       </section>
     </main>
