@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { renderNightstamp } from "@/lib/starmap/render";
@@ -31,6 +32,7 @@ export default async function NightstampPortal({ params }: { params: Promise<{ i
             <p className="mt-4 text-lg">{row.dedication || "A moment worth keeping under this sky."}</p>
             <div className="mt-8 border-t border-white/10 pt-6 text-sm text-slate-400">Scans: {Number(row.scan_count ?? 0) + 1}</div>
             <p className="mt-3 text-xs text-slate-500">Catalog hash: {String(row.catalog_hash).slice(0, 16)}…</p>
+            <Link href={`/starmap?ref=portal_${encodeURIComponent(id)}`} className="mt-8 block rounded-2xl bg-amber-300 px-5 py-3 text-center font-semibold text-black transition hover:bg-amber-200">Create your own Nightstamp</Link>
           </aside>
         </div>
       </div>
