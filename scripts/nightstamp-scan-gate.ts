@@ -21,12 +21,10 @@ const fixtures: NightstampInput[] = [
 
 for (let i = 0; i < fixtures.length; i++) {
   const input = fixtures[i];
-  const payload = makePayload(`gate-${i + 1}`, `${input.dateISO}T${input.time}:00.000Z`);
+  const payload = await makePayload(`gate-${i + 1}`, `${input.dateISO}T${input.time}:00.000Z`);
   const png = await renderNightstamp(input, payload, true);
   const result = await validateQRScannability(png);
-  if (!result.isScannable || result.content !== payload.url) {
-    throw new Error(`Nightstamp scan gate failed fixture ${i + 1}: ${result.error ?? result.content ?? "no decode"}`);
-  }
+  if (!result.isScannable || result.content !== payload.url) throw new Error(`Nightstamp scan gate failed fixture ${i + 1}: ${result.error ?? result.content ?? "no decode"}`);
 }
 
 console.log(`Nightstamp scan gate passed: ${fixtures.length} fixtures`);
