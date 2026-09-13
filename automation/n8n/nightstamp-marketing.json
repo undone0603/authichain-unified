@@ -1,0 +1,55 @@
+{
+  "name": "QRON Nightstamp Marketing Factory",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "qron/nightstamp/purchased", "responseMode": "responseNode" },
+      "id": "nightstamp-webhook",
+      "name": "Nightstamp Purchased",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "qron-nightstamp-purchased"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.QRON_BASE_URL || 'https://qron.space'}}/api/starmap/marketing",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "build-manifest",
+      "name": "Build Marketing Manifest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const manifest = $json;\nreturn manifest.variants.map(v => ({ json: { ...v, hashtags: manifest.hashtags, campaign: manifest.campaign, referralUrl: manifest.referralUrl, imageUrl: manifest.imageUrl } }));"
+      },
+      "id": "fanout",
+      "name": "Fan Out Channel Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { status: 'queued', posts: $input.all().map(i => i.json) } }}", "options": {} },
+      "id": "respond",
+      "name": "Return Queue",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "Nightstamp Purchased": { "main": [[{ "node": "Build Marketing Manifest", "type": "main", "index": 0 }]] },
+    "Build Marketing Manifest": { "main": [[{ "node": "Fan Out Channel Posts", "type": "main", "index": 0 }]] },
+    "Fan Out Channel Posts": { "main": [[{ "node": "Return Queue", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "nightstamp-v1"
+}
