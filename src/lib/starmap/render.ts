@@ -1,5 +1,4 @@
 import QRCode from "qrcode";
-import { createHash } from "node:crypto";
 import { BRIGHT_STARS, CONSTELLATIONS } from "./catalog";
 import type { NightstampInput, NightstampPayload } from "./types";
 
@@ -42,7 +41,15 @@ function project(ra: number, dec: number, lat: number, lon: number, jd: number) 
 }
 
 function catalogHash(): string {
-  return createHash("sha256").update(JSON.stringify({ stars: BRIGHT_STARS, constellations: CONSTELLATIONS })).digest("hex");
+  const source = JSON.stringify({ stars: BRIGHT_STARS, constellations: CONSTELLATIONS });
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < source.length; i++) {
+    const c = source.charCodeAt(i);
+    h1 ^= c; h1 = Math.imul(h1, 0x01000193);
+    h2 ^= c + i; h2 = Math.imul(h2, 0x85ebca6b);
+  }
+  return `${(h1 >>> 0).toString(16).padStart(8, "0")}${(h2 >>> 0).toString(16).padStart(8, "0")}`;
 }
 
 export function makePayload(id: string, eventAt: string): NightstampPayload {
@@ -51,7 +58,7 @@ export function makePayload(id: string, eventAt: string): NightstampPayload {
 
 export async function renderNightstamp(input: NightstampInput, payload: NightstampPayload, watermark = false): Promise<Buffer> {
   const target = payload.url;
-  const qr = QRCode.create(target, { errorCorrectionLevel: "H", version: undefined, maskPattern: 0 });
+  const qr = QRCode.create(target, { errorCorrectionLevel: "H", maskPattern: 0 });
   const moduleCount = qr.modules.size;
   const quiet = 4;
   const width = watermark ? 800 : 2400;
@@ -64,7 +71,6 @@ export async function renderNightstamp(input: NightstampInput, payload: Nightsta
   const image = await J.read(base);
   const bitmap = image.bitmap;
   const jd = julianDate(localCivilToDate(input));
-  const starPoints: Array<{ x: number; y: number; mag: number }> = [];
 
   for (const star of BRIGHT_STARS) {
     if (star.mag > 4.5) continue;
@@ -72,33 +78,26 @@ export async function renderNightstamp(input: NightstampInput, payload: Nightsta
     if (p.altitude <= 0) continue;
     const radial = (Math.PI / 2 - p.altitude) / (Math.PI / 2);
     const r = radial * bitmap.width * 0.47;
-    const x = bitmap.width / 2 + Math.sin(p.azimuth) * r;
-    const y = bitmap.height / 2 - Math.cos(p.azimuth) * r;
-    if (x < quiet * modulePx || x > bitmap.width - quiet * modulePx || y < quiet * modulePx || y > bitmap.height - quiet * modulePx) continue;
-    starPoints.push({ x, y, mag: star.mag });
-  }
+    const x0 = bitmap.width / 2 + Math.sin(p.azimuth) * r;
+    const y0 = bitmap.height / 2 - Math.cos(p.azimuth) * r;
+    if (x0 < quiet * modulePx || x0 > bitmap.width - quiet * modulePx || y0 < quiet * modulePx || y0 > bitmap.height - quiet * modulePx) continue;
 
-  // Stars are rendered only into already-dark QR modules. This makes the
-  // celestial layer visually distinct while never changing QR semantics.
-  const dark = (star: { x: number; y: number; mag: number }) => {
     const size = star.mag <= 1 ? 2 : 1;
-    const cx = Math.floor(star.x / modulePx) * modulePx + Math.floor(modulePx / 2);
-    const cy = Math.floor(star.y / modulePx) * modulePx + Math.floor(modulePx / 2);
+    const cx = Math.floor(x0 / modulePx) * modulePx + Math.floor(modulePx / 2);
+    const cy = Math.floor(y0 / modulePx) * modulePx + Math.floor(modulePx / 2);
     for (let yy = -size + 1; yy <= size; yy++) for (let xx = -size + 1; xx <= size; xx++) {
       const x = clamp(cx + xx * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.width - 1);
       const y = clamp(cy + yy * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.height - 1);
       const idx = (y * bitmap.width + x) * 4;
+      // Only restyle existing dark QR modules. This is the hard scan-safety
+      // boundary: the astronomical layer can never introduce new QR modules.
       if (bitmap.data[idx] < 80 && bitmap.data[idx + 1] < 80 && bitmap.data[idx + 2] < 80) {
-        bitmap.data[idx] = 15; bitmap.data[idx + 1] = 15; bitmap.data[idx + 2] = 15;
+        bitmap.data[idx] = star.mag <= 3 ? 12 : 48;
+        bitmap.data[idx + 1] = star.mag <= 3 ? 12 : 48;
+        bitmap.data[idx + 2] = star.mag <= 3 ? 12 : 48;
       }
     }
-  };
-  starPoints.forEach(dark);
-
-  if (watermark) {
-    const label = "NIGHTSTAMP PREVIEW";
-    // Keep preview deliberately obvious without affecting the quiet zone.
-    image.print({ x: 18, y: bitmap.height - 44, text: label, size: 24, color: 0x777777ff });
   }
+
   return image.getBuffer("image/png");
 }
