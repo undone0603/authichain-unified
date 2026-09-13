@@ -6,6 +6,14 @@ const TAU = Math.PI * 2;
 const deg = (v: number) => (v * Math.PI) / 180;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
+type Palette = { bg: number; qr: number; star: number; starBright: number };
+
+const PALETTES: Record<NightstampInput["style"], Palette> = {
+  "navy-gold": { bg: 0x0b1220ff, qr: 0xf8f5ecff, star: 0x9f8a58ff, starBright: 0xf5d98aff },
+  parchment: { bg: 0xf3ead7ff, qr: 0x211d18ff, star: 0x8a6b3fff, starBright: 0x4b3924ff },
+  glow: { bg: 0x05070bff, qr: 0xf5f7ffff, star: 0x8cb7ffff, starBright: 0xdceaffff },
+};
+
 function tzOffsetMinutes(localISO: string, tz: string): number {
   const guess = new Date(`${localISO}Z`);
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(guess);
@@ -50,6 +58,15 @@ export async function makePayload(id: string, eventAt: string): Promise<Nightsta
   return { id, url: `https://qron.space/sky/${id}`, eventAt, catalogHash: await catalogHash() };
 }
 
+function setPixel(bitmap: any, x: number, y: number, rgba: number) {
+  if (x < 0 || y < 0 || x >= bitmap.width || y >= bitmap.height) return;
+  const idx = (y * bitmap.width + x) * 4;
+  bitmap.data[idx] = (rgba >>> 24) & 255;
+  bitmap.data[idx + 1] = (rgba >>> 16) & 255;
+  bitmap.data[idx + 2] = (rgba >>> 8) & 255;
+  bitmap.data[idx + 3] = rgba & 255;
+}
+
 export async function renderNightstamp(input: NightstampInput, payload: NightstampPayload, watermark = false): Promise<Buffer> {
   const target = payload.url;
   const qr = QRCode.create(target, { errorCorrectionLevel: "H", maskPattern: 0 });
@@ -58,36 +75,44 @@ export async function renderNightstamp(input: NightstampInput, payload: Nightsta
   const width = watermark ? 800 : 2400;
   const modulePx = Math.max(4, Math.floor(width / (moduleCount + quiet * 2)));
   const qrPx = (moduleCount + quiet * 2) * modulePx;
-  const base = await QRCode.toBuffer(target, { errorCorrectionLevel: "H", width: qrPx, margin: quiet, color: { dark: "#0a0a0a", light: "#ffffff" } });
+  const base = await QRCode.toBuffer(target, {
+    errorCorrectionLevel: "H",
+    width: qrPx,
+    margin: quiet,
+    color: { dark: "#211d18", light: "#f8f5ec" },
+  });
 
   const mod = await import("jimp") as any;
   const J = mod.Jimp ?? mod.default;
-  const image = await J.read(base);
-  const bitmap = image.bitmap;
-  const jd = julianDate(localCivilToDate(input));
+  const qrImage = await J.read(base);
+  const canvasSize = Math.max(qrPx + modulePx * 16, width);
+  const palette = PALETTES[input.style];
+  const image = new J({ width: canvasSize, height: canvasSize, color: palette.bg });
+  image.composite(qrImage, Math.floor((canvasSize - qrPx) / 2), Math.floor((canvasSize - qrPx) / 2));
 
+  const bitmap = image.bitmap;
+  const center = bitmap.width / 2;
+  const jd = julianDate(localCivilToDate(input));
+  const qrLeft = (canvasSize - qrPx) / 2;
+  const qrRight = qrLeft + qrPx;
+  const qrTop = qrLeft;
+  const qrBottom = qrTop + qrPx;
+
+  // The QR itself is never modified. Stars and constellation lines live in the
+  // surrounding deterministic field, so scan safety does not depend on an AI model.
   for (const star of BRIGHT_STARS) {
     if (star.mag > 4.5) continue;
     const p = project(star.ra, star.dec, input.lat, input.lon, jd);
     if (p.altitude <= 0) continue;
     const radial = (Math.PI / 2 - p.altitude) / (Math.PI / 2);
     const r = radial * bitmap.width * 0.47;
-    const x0 = bitmap.width / 2 + Math.sin(p.azimuth) * r;
-    const y0 = bitmap.height / 2 - Math.cos(p.azimuth) * r;
-    if (x0 < quiet * modulePx || x0 > bitmap.width - quiet * modulePx || y0 < quiet * modulePx || y0 > bitmap.height - quiet * modulePx) continue;
-
-    const size = star.mag <= 1 ? 2 : 1;
-    const cx = Math.floor(x0 / modulePx) * modulePx + Math.floor(modulePx / 2);
-    const cy = Math.floor(y0 / modulePx) * modulePx + Math.floor(modulePx / 2);
-    for (let yy = -size + 1; yy <= size; yy++) for (let xx = -size + 1; xx <= size; xx++) {
-      const x = clamp(cx + xx * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.width - 1);
-      const y = clamp(cy + yy * Math.max(1, Math.floor(modulePx / 3)), 0, bitmap.height - 1);
-      const idx = (y * bitmap.width + x) * 4;
-      if (bitmap.data[idx] < 80 && bitmap.data[idx + 1] < 80 && bitmap.data[idx + 2] < 80) {
-        bitmap.data[idx] = star.mag <= 3 ? 12 : 48;
-        bitmap.data[idx + 1] = star.mag <= 3 ? 12 : 48;
-        bitmap.data[idx + 2] = star.mag <= 3 ? 12 : 48;
-      }
+    const x = center + Math.sin(p.azimuth) * r;
+    const y = center - Math.cos(p.azimuth) * r;
+    const radius = star.mag <= 1 ? 5 : star.mag <= 3 ? 3 : 2;
+    if (x > qrLeft - radius && x < qrRight + radius && y > qrTop - radius && y < qrBottom + radius) continue;
+    const color = star.mag <= 2 ? palette.starBright : palette.star;
+    for (let yy = -radius; yy <= radius; yy++) for (let xx = -radius; xx <= radius; xx++) {
+      if (xx * xx + yy * yy <= radius * radius) setPixel(bitmap, Math.round(x + xx), Math.round(y + yy), color);
     }
   }
 
