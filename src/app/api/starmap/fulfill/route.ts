@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { renderNightstamp, localCivilToDate, makePayload } from "@/lib/starmap/render";
+import { renderNightstamp, makePayload } from "@/lib/starmap/render";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { validateQRScannability } from "@/lib/vision";
 import { sendEmail } from "@/lib/email";
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       const get = (t: string) => local.find(p => p.type === t)?.value ?? "00";
       const dateISO = `${get("year")}-${get("month")}-${get("day")}`;
       const time = `${get("hour")}:${get("minute")}`;
-      const payload = makePayload(id, d.toISOString());
+      const payload = await makePayload(id, d.toISOString());
       const png = await renderNightstamp({ dateISO, time, lat, lon, tz, placeLabel, dedication: md.dedication || undefined, style: "navy-gold", sku: md.sku === "certified" ? "certified" : md.sku === "portal" ? "portal" : "digital" }, payload);
       const scan = await validateQRScannability(png);
       if (!scan.isScannable || scan.content !== payload.url) return NextResponse.json({ error: "SCAN_GATE_FAILED" }, { status: 422 });
