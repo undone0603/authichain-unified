@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price, quantity: 1 }],
-      success_url: `https://qron.space/order?preset=starmap&sku=${input.sku}&sky_id=${skyId}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://qron.space/api/starmap/fulfill?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: "https://qron.space/starmap",
       metadata: { product: "nightstamp", sky_id: skyId, event_at: `${input.dateISO}T${input.time}:00`, lat: String(input.lat), lon: String(input.lon), place_label: input.placeLabel, tz: input.tz, dedication: input.dedication ?? "", tenant: "qron", sku: input.sku },
     });
