@@ -15,11 +15,12 @@ export function buildNightstampMarketing(input: NightstampInput, payload: Nights
   const place = safeLabel(input.placeLabel) || "under this sky";
   const event = payload.eventAt.slice(0, 10);
   const referralUrl = `${payload.url}?ref=${encodeURIComponent(ref)}`;
+  const imageUrl = `https://qron.space/api/starmap/image/${encodeURIComponent(payload.id)}`;
   const hook = input.dedication ? `A moment for ${safeLabel(input.dedication)}.` : `A real sky, preserved for one real moment.`;
 
   return {
     skyUrl: payload.url,
-    imageUrl: payload.url,
+    imageUrl,
     referralUrl,
     campaign: `nightstamp-${event}`,
     variants: [
