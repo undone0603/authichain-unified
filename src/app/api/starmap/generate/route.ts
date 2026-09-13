@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const input = inputSchema.parse(await request.json());
     const eventDate = localCivilToDate(input);
     const id = nanoid(14);
-    const payload = makePayload(id, eventDate.toISOString());
+    const payload = await makePayload(id, eventDate.toISOString());
     const preview = input.sku === "preview";
     const png = await renderNightstamp(input, payload, preview);
 
@@ -51,12 +51,7 @@ export async function POST(request: Request) {
       if (error) throw error;
     }
 
-    return NextResponse.json({
-      skyId: preview ? undefined : id,
-      payload,
-      png: `data:image/png;base64,${png.toString("base64")}`,
-      preview,
-    });
+    return NextResponse.json({ skyId: preview ? undefined : id, payload, png: `data:image/png;base64,${png.toString("base64")}`, preview });
   } catch (error) {
     console.error("[Nightstamp] generation failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "GENERATION_FAILED" }, { status: 400 });
