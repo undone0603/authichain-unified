@@ -22,5 +22,5 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - run: pnpm exec tsx scripts/nightstamp-scan-gate.ts
