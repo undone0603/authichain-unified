@@ -2,10 +2,17 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request: Request) {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Email provider is not configured" },
+        { status: 503 }
+      );
+    }
+
+    const resend = new Resend(apiKey);
     const { to, firstName } = await request.json();
 
     if (!to || !to.includes("@")) {
