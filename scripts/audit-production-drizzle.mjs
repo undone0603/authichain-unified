@@ -14,6 +14,13 @@ const sql = postgres(databaseUrl, {
 
 const unquote = (value) => value.replace(/^"|"$/g, "");
 const cleanSql = (text) => text.replace(/--.*$/gm, "");
+const normalizeSql = (text) => text
+  .toLowerCase()
+  .replaceAll('"', "")
+  .replaceAll("public.", "")
+  .replace(/\s+/g, " ")
+  .replace(/\s*([(),;])\s*/g, "$1")
+  .trim();
 
 function extractExpectedObjects(text) {
   const source = cleanSql(text);
@@ -27,12 +34,16 @@ function extractExpectedObjects(text) {
       columns.push({ table, column: unquote(col[1]) });
     }
   }
-  const indexes = [...source.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w]+\.)?("[^"]+"|[A-Za-z_][\w$]*)/gi)]
-    .map((m) => unquote(m[1]));
+  const indexStatements = [...source.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w]+\.)?("[^"]+"|[A-Za-z_][\w$]*)\s+ON\s+[\s\S]*?(?=;|$)/gi)];
+  const indexes = indexStatements.map((m) => ({
+    name: unquote(m[1]),
+    statement: m[0].trim(),
+  }));
   return {
     tables: [...new Set(tables)],
     columns: [...new Map(columns.map((x) => [`${x.table}.${x.column}`, x])).values()],
-    indexes: [...new Set(indexes)],
+    indexes: [...new Map(indexes.map((x) => [x.name, x])).values()],
+    dataMutation: /\b(?:INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|DO\s+\$\$)/i.test(source),
   };
 }
 
@@ -97,30 +108,46 @@ try {
 
   const tableSet = new Set(tables.map((x) => `${x.table_schema}.${x.table_name}`));
   const columnSet = new Set(columns.map((x) => `${x.table_schema}.${x.table_name}.${x.column_name}`));
-  const indexSet = new Set(indexes.map((x) => `${x.table_schema}.${x.index_name}`));
+  const indexMap = new Map(indexes.map((x) => [`${x.table_schema}.${x.index_name}`, x]));
 
   const migrationDiffs = [];
   for (const file of files) {
     const expected = extractExpectedObjects(await fs.readFile(path.join(migrationDir, file), "utf8"));
     const missingTables = expected.tables.filter((name) => !tableSet.has(`public.${name}`));
     const missingColumns = expected.columns.filter(({ table, column }) => !columnSet.has(`public.${table}.${column}`));
-    const missingIndexes = expected.indexes.filter((name) => !indexSet.has(`public.${name}`));
+    const indexChecks = expected.indexes.map(({ name, statement }) => {
+      const actual = indexMap.get(`public.${name}`);
+      if (!actual) return { name, status: "missing", expected: statement };
+      const equivalent = normalizeSql(statement.replace(/;$/, ""))
+        .replace(/^create (unique )?index( if not exists)? /, "create $1index ")
+        === normalizeSql(actual.indexdef)
+          .replace(/^create (unique )?index /, "create $1index ");
+      return {
+        name,
+        status: equivalent ? "present_equivalent" : "present_definition_diff",
+        expected: statement,
+        actual: actual.indexdef,
+      };
+    });
     migrationDiffs.push({
       file,
       expectedTables: expected.tables,
       missingTables,
       expectedColumns: expected.columns,
       missingColumns,
-      expectedIndexes: expected.indexes,
-      missingIndexes,
-      indexVerification: "Indexes are compared by name against pg_indexes in production.",
-      status: missingTables.length || missingColumns.length || missingIndexes.length ? "partial_or_missing" : "structurally_present",
+      expectedIndexes: expected.indexes.map((x) => x.name),
+      indexChecks,
+      dataMutationDetected: expected.dataMutation,
+      status: missingTables.length || missingColumns.length || indexChecks.some((x) => x.status !== "present_equivalent")
+        ? "partial_or_missing"
+        : "structurally_present",
     });
   }
 
   const missingTables = migrationDiffs.reduce((n, x) => n + x.missingTables.length, 0);
   const missingColumns = migrationDiffs.reduce((n, x) => n + x.missingColumns.length, 0);
-  const missingIndexes = migrationDiffs.reduce((n, x) => n + x.missingIndexes.length, 0);
+  const missingIndexes = migrationDiffs.reduce((n, x) => n + x.indexChecks.filter((i) => i.status === "missing").length, 0);
+  const indexDefinitionDiffs = migrationDiffs.reduce((n, x) => n + x.indexChecks.filter((i) => i.status === "present_definition_diff").length, 0);
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -137,13 +164,15 @@ try {
       missingTableCount: missingTables,
       missingColumnCount: missingColumns,
       missingIndexCount: missingIndexes,
+      indexDefinitionDiffCount: indexDefinitionDiffs,
       structurallyPresentMigrationCount: migrationDiffs.filter((x) => x.status === "structurally_present").length,
       partialOrMissingMigrationCount: migrationDiffs.filter((x) => x.status !== "structurally_present").length,
+      dataMutationMigrationCount: migrationDiffs.filter((x) => x.dataMutationDetected).length,
     },
     conclusion: migrationRows.length === 0
-      ? "Production contains the Drizzle migration tracking table but no recorded migration rows; existing schema objects appear to have been created outside tracked Drizzle history or the history was reset. Do not mark migrations applied until each migration's effects are reconciled."
+      ? "Production contains the Drizzle migration tracking table but no recorded migration rows; existing schema objects appear to have been created outside tracked Drizzle history or the history was reset. Do not mark migrations applied until structural and data effects are reconciled."
       : "Migration tracking rows are present; reconcile their hashes/timestamps with the numbered files before changing the journal.",
-    note: "Read-only audit. No schema or data mutation is performed. Index verification is name-based; exact index definitions should be reviewed for migrations that matter to correctness or performance.",
+    note: "Read-only audit. No schema or data mutation is performed. Index definitions are normalized before comparison; data-producing migrations require separate state verification because schema inspection cannot prove whether their inserts/updates historically ran.",
   };
 
   await fs.mkdir("artifacts", { recursive: true });
@@ -155,7 +184,9 @@ try {
     missingTableCount: missingTables,
     missingColumnCount: missingColumns,
     missingIndexCount: missingIndexes,
+    indexDefinitionDiffCount: indexDefinitionDiffs,
     structurallyPresentMigrationCount: report.summary.structurallyPresentMigrationCount,
+    dataMutationMigrationCount: report.summary.dataMutationMigrationCount,
     migrationTableCandidates: migrationCandidates,
     artifact: "artifacts/production-drizzle-audit.json",
   }, null, 2));
