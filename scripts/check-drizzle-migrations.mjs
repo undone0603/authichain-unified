@@ -1,5 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 
+const migrationDir = 'drizzle/migrations';
+const journalPath = `${migrationDir}/meta/_journal.json`;
 const config = await readFile('drizzle.config.ts', 'utf8');
 if (!config.includes('dialect: "postgresql"') && !config.includes("dialect: 'postgresql'")) {
   throw new Error('drizzle.config.ts must use the PostgreSQL dialect');
@@ -8,22 +10,22 @@ if (!config.includes('out: "./drizzle/migrations"') && !config.includes("out: '.
   throw new Error('drizzle.config.ts must use ./drizzle/migrations as the migration output directory');
 }
 
-const entries = (await readdir('drizzle/migrations', { withFileTypes: true }))
+const entries = (await readdir(migrationDir, { withFileTypes: true }))
   .filter((entry) => entry.isFile() && /^\d+_.+\.sql$/.test(entry.name))
   .map((entry) => entry.name)
   .sort();
 
-if (entries.length === 0) throw new Error('No numbered SQL migrations found in drizzle/migrations');
+if (entries.length === 0) throw new Error(`No numbered SQL migrations found in ${migrationDir}`);
 
 for (const name of entries) {
-  const sql = await readFile(`drizzle/migrations/${name}`, 'utf8');
+  const sql = await readFile(`${migrationDir}/${name}`, 'utf8');
   const header = sql.match(/^--\s*drizzle\/migrations\/([^\r\n]+)$/m)?.[1]?.trim();
   if (header && header !== name) {
     console.warn(`${name}: migration header points to ${header}; preserving historical migration content until production state is verified.`);
   }
 }
 
-const journal = JSON.parse(await readFile('drizzle/meta/_journal.json', 'utf8'));
+const journal = JSON.parse(await readFile(journalPath, 'utf8'));
 if (journal.dialect !== 'postgresql') {
   console.warn(`Migration journal dialect is ${journal.dialect}; expected postgresql.`);
 }
@@ -36,4 +38,4 @@ if (missing.length > 0) {
   console.warn('Production state must be verified before rewriting the journal.');
 }
 
-console.log(`Checked ${entries.length} numbered migration files; journal drift is visible without blocking CI.`);
+console.log(`Checked ${entries.length} numbered migration files against ${journalPath}; journal drift is visible without blocking CI.`);
