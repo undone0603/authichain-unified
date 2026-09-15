@@ -12,6 +12,30 @@ const sql = postgres(databaseUrl, {
   idle_timeout: 5,
 });
 
+const unquote = (value) => value.replace(/^"|"$/g, "");
+const cleanSql = (text) => text.replace(/--.*$/gm, "");
+
+function extractExpectedObjects(text) {
+  const source = cleanSql(text);
+  const tables = [...source.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w]+\.)?("[^"]+"|[A-Za-z_][\w$]*)/gi)]
+    .map((m) => unquote(m[1]));
+  const columns = [];
+  const alterRe = /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:[\w]+\.)?("[^"]+"|[A-Za-z_][\w$]*)\s+([\s\S]*?)(?=;|$)/gi;
+  for (const match of source.matchAll(alterRe)) {
+    const table = unquote(match[1]);
+    for (const col of match[2].matchAll(/ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?("[^"]+"|[A-Za-z_][\w$]*)/gi)) {
+      columns.push({ table, column: unquote(col[1]) });
+    }
+  }
+  const indexes = [...source.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w]+\.)?("[^"]+"|[A-Za-z_][\w$]*)/gi)]
+    .map((m) => unquote(m[1]));
+  return {
+    tables: [...new Set(tables)],
+    columns: [...new Map(columns.map((x) => [`${x.table}.${x.column}`, x])).values()],
+    indexes: [...new Set(indexes)],
+  };
+}
+
 try {
   const tables = await sql`
     select table_schema, table_name
@@ -52,9 +76,7 @@ try {
       );
       migrationRows = migrationRows.map((row) => {
         const out = {};
-        for (const [key, value] of Object.entries(row)) {
-          out[key] = typeof value === "bigint" ? Number(value) : value;
-        }
+        for (const [key, value] of Object.entries(row)) out[key] = typeof value === "bigint" ? Number(value) : value;
         return out;
       });
       break;
@@ -66,6 +88,25 @@ try {
     .filter((name) => /^\d+_.*\.sql$/.test(name))
     .sort();
 
+  const tableSet = new Set(tables.map((x) => `${x.table_schema}.${x.table_name}`));
+  const columnSet = new Set(columns.map((x) => `${x.table_schema}.${x.table_name}.${x.column_name}`));
+
+  const migrationDiffs = [];
+  for (const file of files) {
+    const expected = extractExpectedObjects(await fs.readFile(path.join(migrationDir, file), "utf8"));
+    const missingTables = expected.tables.filter((name) => !tableSet.has(`public.${name}`));
+    const missingColumns = expected.columns.filter(({ table, column }) => !columnSet.has(`public.${table}.${column}`));
+    migrationDiffs.push({
+      file,
+      expectedTables: expected.tables,
+      missingTables,
+      expectedColumns: expected.columns,
+      missingColumns,
+      expectedIndexes: expected.indexes,
+      indexVerification: "Indexes are recorded from migration SQL; this audit does not yet query pg_indexes for per-index comparison.",
+    });
+  }
+
   const report = {
     generatedAt: new Date().toISOString(),
     migrationDirectory: "drizzle/migrations",
@@ -75,6 +116,10 @@ try {
     appliedMigrationRows: migrationRows,
     databaseTables: tables,
     databaseColumns: columns,
+    migrationDiffs,
+    conclusion: migrationRows.length === 0
+      ? "Production contains the Drizzle migration tracking table but no recorded migration rows; existing schema objects appear to have been created outside tracked Drizzle history or the history was reset. Do not mark migrations applied until each migration's effects are reconciled."
+      : "Migration tracking rows are present; reconcile their hashes/timestamps with the numbered files before changing the journal.",
     note: "Read-only audit. No schema or data mutation is performed.",
   };
 
@@ -83,6 +128,9 @@ try {
   console.log(JSON.stringify({
     migrationFileCount: files.length,
     appliedMigrationCount: migrationRows.length,
+    migrationDiffCount: migrationDiffs.length,
+    missingTableCount: migrationDiffs.reduce((n, x) => n + x.missingTables.length, 0),
+    missingColumnCount: migrationDiffs.reduce((n, x) => n + x.missingColumns.length, 0),
     migrationTableCandidates: migrationCandidates,
     artifact: "artifacts/production-drizzle-audit.json",
   }, null, 2));
