@@ -17,7 +17,7 @@
     "lint": "pnpm run _lint",
     "_lint": "turbo lint --single-package",
     "format": "turbo format --single-package",
-    "test": "turbo test --single-package",
+    "test": "turbo test --filter=!.",
     "verify": "node scripts/verify-all.js",
     "test:client": "vitest -c client/vitest.config.ts",
     "test:contracts": "hardhat test",
