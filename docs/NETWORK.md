@@ -32,8 +32,7 @@ _Verified against the Vercel API 2026-07-15. All six team projects are linked to
 | Brand site sources | `apps/brand-sites/{authichain,govchain,strainchain}/` | static `public/` snapshots from `/home/zac/<Brand>/` |
 | Contracts | `contracts/` | AuthiChainNFT.sol + test infra |
 | Ops scripts | `scripts/ops/` (+ `scripts/ops/home/` June-2026 session archive) | one-shot helpers, unmaintained |
-| Strategy docs | `docs/strategy/` | proposals, checklists, briefs, grant applications |
-| DB | Supabase `nhdnkzhtadfkkluiulhs` (Postgres, pooler `aws-1-us-east-2`, port 5432/6543) | real + populated; additive migrations only |
+| DB | Supabase `nhdnkzhtadfkkluiulhs` (Postgres, pooler `aws-1-us-east-2`, port 5432/6543) | real + populated; **Drizzle `drizzle/migrations` is the authoritative schema migration path going forward** |
 
 ## Build & deploy mechanics
 
@@ -44,7 +43,7 @@ _Verified against the Vercel API 2026-07-15. All six team projects are linked to
 ## Follow-ups owed
 
 - ~~Re-point Vercel `qron-platform` to the monorepo~~ — MOOT: it already builds this repo's root (since 2026-06-19) and serves ALL principal domains. `apps/qron-platform/` is the archival source of the old standalone app; do NOT set it as rootDirectory (that would replace the live network app). The old undone0603/qron-platform GitHub repo can be archived.
-- ~~Reputation migration~~ — DONE 2026-07-15 (owner-approved): `user_reputation` + `reputation_events` created on live; `scheduled_job_runs` already existed. Runner: `scripts/ops/apply-reputation-migration.cjs`.
+- ~~Reputation migration~~ — DONE 2026-07-15 (owner-approved): `user_reputation` + `reputation_events` created on live; `scheduled_job_runs` already existed. The schema is now represented by `drizzle/migrations/023_reputation_tables.sql`; the former one-shot runner has been retired.
 - ~~`/api/admin/ops`~~ — DONE 2026-07-15: admin-gated endpoint aggregating `scheduled_job_runs`; `/admin/ops` is live.
 - Vercel spares `govchain-us`, `strainchain-io`, `authichain-portfolio` have no domains — confirm and delete to free slots (owner call).
 - Owner: review + delete `/home/zac/_absorbed-*` folders; review `_absorbed-agentz_backup-HAS-KEY-FILES/{live_keys,backup_keys}.txt` and the excluded `_setenv_oauth.sh` (contains a live Google OAuth client secret — consider rotating it).
