@@ -52,6 +52,13 @@ try {
     order by table_schema, table_name, ordinal_position
   `;
 
+  const indexes = await sql`
+    select schemaname as table_schema, tablename as table_name, indexname as index_name, indexdef
+    from pg_indexes
+    where schemaname not in ('pg_catalog', 'information_schema')
+    order by schemaname, tablename, indexname
+  `;
+
   const migrationCandidates = await sql`
     select table_schema, table_name
     from information_schema.tables
@@ -90,12 +97,14 @@ try {
 
   const tableSet = new Set(tables.map((x) => `${x.table_schema}.${x.table_name}`));
   const columnSet = new Set(columns.map((x) => `${x.table_schema}.${x.table_name}.${x.column_name}`));
+  const indexSet = new Set(indexes.map((x) => `${x.table_schema}.${x.index_name}`));
 
   const migrationDiffs = [];
   for (const file of files) {
     const expected = extractExpectedObjects(await fs.readFile(path.join(migrationDir, file), "utf8"));
     const missingTables = expected.tables.filter((name) => !tableSet.has(`public.${name}`));
     const missingColumns = expected.columns.filter(({ table, column }) => !columnSet.has(`public.${table}.${column}`));
+    const missingIndexes = expected.indexes.filter((name) => !indexSet.has(`public.${name}`));
     migrationDiffs.push({
       file,
       expectedTables: expected.tables,
@@ -103,9 +112,15 @@ try {
       expectedColumns: expected.columns,
       missingColumns,
       expectedIndexes: expected.indexes,
-      indexVerification: "Indexes are recorded from migration SQL; this audit does not yet query pg_indexes for per-index comparison.",
+      missingIndexes,
+      indexVerification: "Indexes are compared by name against pg_indexes in production.",
+      status: missingTables.length || missingColumns.length || missingIndexes.length ? "partial_or_missing" : "structurally_present",
     });
   }
+
+  const missingTables = migrationDiffs.reduce((n, x) => n + x.missingTables.length, 0);
+  const missingColumns = migrationDiffs.reduce((n, x) => n + x.missingColumns.length, 0);
+  const missingIndexes = migrationDiffs.reduce((n, x) => n + x.missingIndexes.length, 0);
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -116,11 +131,19 @@ try {
     appliedMigrationRows: migrationRows,
     databaseTables: tables,
     databaseColumns: columns,
+    databaseIndexes: indexes,
     migrationDiffs,
+    summary: {
+      missingTableCount: missingTables,
+      missingColumnCount: missingColumns,
+      missingIndexCount: missingIndexes,
+      structurallyPresentMigrationCount: migrationDiffs.filter((x) => x.status === "structurally_present").length,
+      partialOrMissingMigrationCount: migrationDiffs.filter((x) => x.status !== "structurally_present").length,
+    },
     conclusion: migrationRows.length === 0
       ? "Production contains the Drizzle migration tracking table but no recorded migration rows; existing schema objects appear to have been created outside tracked Drizzle history or the history was reset. Do not mark migrations applied until each migration's effects are reconciled."
       : "Migration tracking rows are present; reconcile their hashes/timestamps with the numbered files before changing the journal.",
-    note: "Read-only audit. No schema or data mutation is performed.",
+    note: "Read-only audit. No schema or data mutation is performed. Index verification is name-based; exact index definitions should be reviewed for migrations that matter to correctness or performance.",
   };
 
   await fs.mkdir("artifacts", { recursive: true });
@@ -129,8 +152,10 @@ try {
     migrationFileCount: files.length,
     appliedMigrationCount: migrationRows.length,
     migrationDiffCount: migrationDiffs.length,
-    missingTableCount: migrationDiffs.reduce((n, x) => n + x.missingTables.length, 0),
-    missingColumnCount: migrationDiffs.reduce((n, x) => n + x.missingColumns.length, 0),
+    missingTableCount: missingTables,
+    missingColumnCount: missingColumns,
+    missingIndexCount: missingIndexes,
+    structurallyPresentMigrationCount: report.summary.structurallyPresentMigrationCount,
     migrationTableCandidates: migrationCandidates,
     artifact: "artifacts/production-drizzle-audit.json",
   }, null, 2));
