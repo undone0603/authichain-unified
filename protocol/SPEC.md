@@ -40,7 +40,8 @@ compatibility.
 | Record format | [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/) |
 | Signature suite | Ed25519 (RFC 8032) over JCS-canonicalised JSON (RFC 8785) |
 | Item identity in URLs | [GS1 Digital Link](https://www.gs1.org/standards/gs1-digital-link) |
-| Hashing | SHA-256 (FIPS 180-4) |
+| Hashing | SHA-256 (FIPS 180-4); SHA-512 dual digest in the QFS-ready profile |
+| Settlement carriage | ISO 20022 `pacs.008.001.08` JSON — see `qfs/SPEC.md`. Not a live rail. |
 
 A record is a Verifiable Credential. A conforming verifier for VC 2.0 with
 Ed25519 support will validate the signature without knowing anything about this
@@ -176,3 +177,14 @@ it has no dependencies and can be run against any record by anyone.
   this specification, not in it.
 - **Anchor ≠ existence.** An anchor proves a hash was committed at a point in
   time. It does not prove the physical item exists or matches the record.
+
+## 9. QFS-ready profile (optional)
+
+An implementation MAY wrap a record in the AuthiChain QFS-ready envelope
+(`qfs/SPEC.md`): ISO 20022 `pacs.008` JSON with the VC in `SplmtryData` and a
+dual SHA-256/SHA-512 digest. That profile is carriage for banks and ISO 20022
+gateways. It is **not** membership in any external “quantum financial system,”
+and a verifier MUST NOT contact a purported QFS host to reach a §5 verdict.
+Production signatures remain Ed25519 until `digest.pqcStatus` is `bound` with
+NIST FIPS 204 ML-DSA-65.
+
