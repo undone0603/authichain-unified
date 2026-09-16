@@ -1,0 +1,42 @@
+name: Production Drizzle Audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Read-only production schema audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: "10.28.2"
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Audit production database
+        run: node scripts/audit-production-drizzle.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Upload audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-drizzle-audit
+          path: artifacts/production-drizzle-audit.json
+          retention-days: 7
