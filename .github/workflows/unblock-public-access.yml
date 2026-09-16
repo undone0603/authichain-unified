@@ -1,0 +1,122 @@
+name: Unblock public Access
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Set true to DELETE matching Access apps. false = list only."
+        required: true
+        default: "false"
+        type: boolean
+
+jobs:
+  unblock:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID missing"
+            exit 1
+          fi
+
+      - name: List and optionally delete public Access apps
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          BASE="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access/apps"
+          page=1
+          echo "[]" > /tmp/apps.json
+          while true; do
+            code=$(curl -sS -o /tmp/page.json -w "%{http_code}" -H "$AUTH" \
+              "${BASE}?page=${page}&per_page=100")
+            echo "list page ${page} HTTP ${code}"
+            if [ "$code" != "200" ]; then
+              echo "::error::Access list failed. Token likely lacks Access: Apps and Policies Read/Write"
+              cat /tmp/page.json
+              exit 1
+            fi
+            jq -e '.success == true' /tmp/page.json >/dev/null
+            count=$(jq '.result | length' /tmp/page.json)
+            jq -s '.[0] + .[1]' /tmp/apps.json <(jq '.result' /tmp/page.json) > /tmp/apps2.json
+            mv /tmp/apps2.json /tmp/apps.json
+            [ "$count" -lt 100 ] && break
+            page=$((page + 1))
+          done
+
+          echo "=== Access applications ==="
+          jq -r '.[] | "\(.id)\t\(.type // "?")\t\(.domain // .name // "")\t\(.name)"' /tmp/apps.json
+
+          python3 - <<'PY'
+          import json, os, urllib.request
+
+          apps = json.load(open("/tmp/apps.json"))
+          apply = os.environ.get("APPLY", "false").lower() == "true"
+          token = os.environ["CLOUDFLARE_API_TOKEN"]
+          account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+
+          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.")
+          PUBLIC_HOSTS = (
+              "authichain.com",
+              "qron.space",
+              "govchain.us",
+              "strainchain.io",
+              "workers.dev",
+          )
+
+          def domain_of(app):
+              parts = [app.get("domain") or ""]
+              for d in app.get("self_hosted_domains") or []:
+                  parts.append(d if isinstance(d, str) else str(d))
+              for d in app.get("destinations") or []:
+                  if isinstance(d, dict):
+                      parts.append(str(d.get("uri") or d.get("hostname") or ""))
+              return " ".join(parts).lower() + " " + str(app.get("name") or "").lower()
+
+          def is_keep(blob):
+              return any(k in blob for k in KEEP_SUBSTR)
+
+          def is_public(blob):
+              return any(h in blob for h in PUBLIC_HOSTS)
+
+          deleted = kept = skipped = 0
+          for app in apps:
+              blob = domain_of(app)
+              aid = app.get("id")
+              label = f"{aid} {blob.strip()[:160]}"
+              if is_keep(blob):
+                  print(f"KEEP   {label}")
+                  kept += 1
+                  continue
+              if not is_public(blob):
+                  print(f"SKIP   {label}")
+                  skipped += 1
+                  continue
+              if not apply:
+                  print(f"WOULD  {label}")
+                  continue
+              req = urllib.request.Request(
+                  f"https://api.cloudflare.com/client/v4/accounts/{account}/access/apps/{aid}",
+                  method="DELETE",
+                  headers={"Authorization": f"Bearer {token}"},
+              )
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      body = resp.read().decode()
+                  print(f"DELETE {label} -> {body[:200]}")
+                  deleted += 1
+              except Exception as e:
+                  print(f"FAIL   {label} -> {e}")
+                  raise
+
+          print(f"summary keep={kept} skip={skipped} deleted_or_would={deleted}")
+          PY
