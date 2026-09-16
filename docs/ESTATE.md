@@ -49,6 +49,10 @@ Until those CNAMEs exist, CTAs must use the matching apex path (`https://govchai
 
 Already archived: `qron-starter-v2`, `authichain-os` (user), `authichain-unified-revenue-engine`, `Validation-key`, `strainchain-telegram-app`, `nextjs-boilerplate`.
 
+Archived 2026-09-16 (public-loop freeze): undone0603 `authichain-com`, `qron-space`, `govchain.us`, `strainchain-io`, `qron-platform`, `authichain_premium`, `authichain`, `authichain-protocol`, `authichain-archive`, `qron-webapp`.
+
+AuthiChain2026 snapshots still need a dashboard archive (org API 403). Repo homepage set to https://authichain.com. Freeze runbook: `docs/operations/PUBLIC_LOOP_FREEZE.md`.
+
 ## Maison Élite
 
 `cf-workers` and dropship experiments are a separate company. Keep off AuthiChain topics.
