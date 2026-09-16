@@ -83,6 +83,7 @@ jobs:
           - watchchain-io
           - passport-demo
           - qfs-adapter
+          - authichain-bridge
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
