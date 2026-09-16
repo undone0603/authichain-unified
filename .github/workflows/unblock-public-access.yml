@@ -15,108 +15,109 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require Cloudflare secrets
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID missing"
-            exit 1
-          fi
-
-      - name: List and optionally delete public Access apps
+      - name: Discover accounts, zones, Access apps
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           APPLY: ${{ inputs.apply }}
         run: |
           set -euo pipefail
-          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
-          BASE="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access/apps"
-          page=1
-          echo "[]" > /tmp/apps.json
-          while true; do
-            code=$(curl -sS -o /tmp/page.json -w "%{http_code}" -H "$AUTH" \
-              "${BASE}?page=${page}&per_page=100")
-            echo "list page ${page} HTTP ${code}"
-            if [ "$code" != "200" ]; then
-              echo "::error::Access list failed. Token likely lacks Access: Apps and Policies Read/Write"
-              cat /tmp/page.json
-              exit 1
-            fi
-            jq -e '.success == true' /tmp/page.json >/dev/null
-            count=$(jq '.result | length' /tmp/page.json)
-            jq -s '.[0] + .[1]' /tmp/apps.json <(jq '.result' /tmp/page.json) > /tmp/apps2.json
-            mv /tmp/apps2.json /tmp/apps.json
-            [ "$count" -lt 100 ] && break
-            page=$((page + 1))
-          done
-
-          echo "=== Access applications ==="
-          jq -r '.[] | "\(.id)\t\(.type // "?")\t\(.domain // .name // "")\t\(.name)"' /tmp/apps.json
-
           python3 - <<'PY'
-          import json, os, urllib.request
+          import json, os, urllib.error, urllib.parse, urllib.request
 
-          apps = json.load(open("/tmp/apps.json"))
-          apply = os.environ.get("APPLY", "false").lower() == "true"
           token = os.environ["CLOUDFLARE_API_TOKEN"]
-          account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          default_account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          apply = os.environ.get("APPLY", "false").lower() == "true"
 
-          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.")
-          PUBLIC_HOSTS = (
-              "authichain.com",
-              "qron.space",
-              "govchain.us",
-              "strainchain.io",
-              "workers.dev",
-          )
-
-          def domain_of(app):
-              parts = [app.get("domain") or ""]
-              for d in app.get("self_hosted_domains") or []:
-                  parts.append(d if isinstance(d, str) else str(d))
-              for d in app.get("destinations") or []:
-                  if isinstance(d, dict):
-                      parts.append(str(d.get("uri") or d.get("hostname") or ""))
-              return " ".join(parts).lower() + " " + str(app.get("name") or "").lower()
-
-          def is_keep(blob):
-              return any(k in blob for k in KEEP_SUBSTR)
-
-          def is_public(blob):
-              return any(h in blob for h in PUBLIC_HOSTS)
-
-          deleted = kept = skipped = 0
-          for app in apps:
-              blob = domain_of(app)
-              aid = app.get("id")
-              label = f"{aid} {blob.strip()[:160]}"
-              if is_keep(blob):
-                  print(f"KEEP   {label}")
-                  kept += 1
-                  continue
-              if not is_public(blob):
-                  print(f"SKIP   {label}")
-                  skipped += 1
-                  continue
-              if not apply:
-                  print(f"WOULD  {label}")
-                  continue
+          def cf(path, method="GET", account=None):
+              url = "https://api.cloudflare.com/client/v4" + path
               req = urllib.request.Request(
-                  f"https://api.cloudflare.com/client/v4/accounts/{account}/access/apps/{aid}",
-                  method="DELETE",
-                  headers={"Authorization": f"Bearer {token}"},
+                  url,
+                  method=method,
+                  headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
               )
               try:
                   with urllib.request.urlopen(req) as resp:
-                      body = resp.read().decode()
-                  print(f"DELETE {label} -> {body[:200]}")
-                  deleted += 1
-              except Exception as e:
-                  print(f"FAIL   {label} -> {e}")
-                  raise
+                      raw = resp.read().decode()
+                      return resp.status, json.loads(raw)
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode()
+                  try:
+                      parsed = json.loads(body)
+                  except Exception:
+                      parsed = {"raw": body[:500]}
+                  return e.code, parsed
 
-          print(f"summary keep={kept} skip={skipped} deleted_or_would={deleted}")
+          def paginate(path):
+              items = []
+              page = 1
+              while True:
+                  sep = "&" if "?" in path else "?"
+                  code, data = cf(f"{path}{sep}page={page}&per_page=100")
+                  if code != 200 or not data.get("success"):
+                      return code, data, items
+                  chunk = data.get("result") or []
+                  if isinstance(chunk, dict):
+                      items.append(chunk)
+                      return code, data, items
+                  items.extend(chunk)
+                  if len(chunk) < 100:
+                      return code, data, items
+                  page += 1
+
+          print("default_account", default_account)
+          code, data, accounts = paginate("/accounts")
+          print("GET /accounts", code, "count", len(accounts))
+          if code != 200:
+              print(json.dumps(data)[:800])
+          if not accounts:
+              accounts = [{"id": default_account, "name": "secret-account"}]
+
+          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.")
+          PUBLIC_HOSTS = (
+              "authichain.com", "qron.space", "govchain.us",
+              "strainchain.io", "workers.dev",
+          )
+
+          def blob_of(app):
+              parts = [str(app.get("domain") or ""), str(app.get("name") or "")]
+              for d in app.get("self_hosted_domains") or []:
+                  parts.append(d if isinstance(d, str) else json.dumps(d))
+              for d in app.get("destinations") or []:
+                  parts.append(json.dumps(d) if not isinstance(d, str) else d)
+              return " ".join(parts).lower()
+
+          total_deleted = 0
+          for acct in accounts:
+              aid = acct.get("id")
+              print(f"\n=== account {aid} {acct.get('name')} ===")
+              code, org, _ = paginate(f"/accounts/{aid}/access/organizations")
+              print("access/organizations", code, json.dumps(org.get("result") if isinstance(org, dict) else org)[:300] if isinstance(org, dict) else org)
+              code, _, apps = paginate(f"/accounts/{aid}/access/apps")
+              print("access/apps", code, "count", len(apps))
+              for app in apps:
+                  blob = blob_of(app)
+                  keep = any(k in blob for k in KEEP_SUBSTR)
+                  public = any(h in blob for h in PUBLIC_HOSTS)
+                  tag = "KEEP" if keep else ("PUBLIC" if public else "OTHER")
+                  print(f"  {tag} {app.get('id')} {blob[:180]}")
+                  if apply and public and not keep:
+                      dcode, dbody = cf(f"/accounts/{aid}/access/apps/{app.get('id')}", method="DELETE")
+                      print("  DELETE", dcode, json.dumps(dbody)[:200])
+                      if dcode in (200, 204):
+                          total_deleted += 1
+
+              zcode, _, zones = paginate(f"/zones?account.id={aid}")
+              print("zones", zcode, "count", len(zones))
+              for z in zones[:40]:
+                  zid, name = z.get("id"), z.get("name")
+                  print(f"  zone {name} {zid}")
+                  zc, _, zapps = paginate(f"/zones/{zid}/access/apps")
+                  if zapps or zc != 200:
+                      print("    zone access/apps", zc, len(zapps))
+                  for app in zapps:
+                      blob = blob_of(app)
+                      print("    APP", app.get("id"), blob[:160])
+
+          print(f"\nsummary deleted={total_deleted} apply={apply}")
           PY
