@@ -1,34 +1,25 @@
-# Status: SCAFFOLDED — not deployed, not maintained
+# Status: READY-TO-DEPLOY (secrets gate only)
 
-Decided 2026-04-27 in ecosystem-consolidation Task 0.6.
+Updated 2026-09-16. Originally scaffolded 2026-04-27 (ecosystem-consolidation Task 0.6).
 
-## Origin
+## What's done
 
-Code was found at top-level `src/index.ts` during Phase 0 of the
-consolidation effort. It's a Hono Cloudflare Worker that:
+- `src/index.ts` — Hono worker: JWT auth, Supabase bridge, RapidAPI passthrough
+- `src/qron-bridge.ts` — supplementary bridge logic
+- `wrangler.toml` — Worker config with `nodejs_compat`, observability on
+- `package.json` — added 2026-09-16; declares `hono`, `@tsndr/cloudflare-worker-jwt`, `@cloudflare/workers-types`
 
-- Authenticates Bearer-token JWTs via `@tsndr/cloudflare-worker-jwt`
-- Forwards POSTs to `${SUPABASE_URL}/functions/v1/strain-bridge`
-- Exposes `/health` (check) and `/rapid/:endpoint` (RapidAPI passthrough)
+## To deploy
 
-It was never deployed (verified by `wrangler deployments list`
-against the candidate names `authichain-bridge`, `strain-bridge`,
-`qron-bridge`, `authichain-strain-bridge`).
-
-## Disposition
-
-Relocated under `workers/<name>/` to remove top-level structural
-ambiguity, while preserving the code for recovery. Deleting it
-outright was the alternative; chose to keep because it's working
-code that may want to come back as a real bridge worker.
-
-## To deploy this for real
-
-1. Set the four secrets listed in `wrangler.toml`
-2. From this dir: `wrangler deploy`
-3. Add a route in `wrangler.toml` if exposing on a brand domain
-4. Add to `.github/workflows/deploy-workers.yml` matrix
-5. Remove this STATUS.md
+1. Set the four secrets (from this dir):
+   ```
+   wrangler secret put JWT_SECRET --name authichain-bridge
+   wrangler secret put SUPABASE_URL --name authichain-bridge
+   wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-bridge
+   wrangler secret put RAPIDAPI_KEY --name authichain-bridge
+   ```
+2. Add `authichain-bridge` to `.github/workflows/deploy-workers.yml` matrix
+3. Delete this STATUS.md on first successful deploy
 
 ## Refs
 
