@@ -1,6 +1,8 @@
 # Cloudflare routing contract
 
-Last updated 2026-09-16. Complements `docs/NETWORK.md` and `docs/ESTATE.md`.
+Last updated 2026-09-16. Complements `docs/NETWORK.md`, `docs/ESTATE.md`, and `docs/ACCESS.md`.
+
+**First:** if `curl -sI https://authichain.com/` 302s to `strainchainexecutiveteam.cloudflareaccess.com`, stop. Workers never see the request. Fix Access per `docs/ACCESS.md`.
 
 ## Rule
 
@@ -15,12 +17,14 @@ Never send customers to `*.vercel.app`.
 | Pattern | Worker |
 |---|---|
 | `/` (landing assets only) | `authichain-com` |
-| `/verify*`, `/dapp*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing) |
+| `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing) |
 | `/api/qron-register*` | `authichain-qron-provenance` |
 | `/api/*` (rest) | `authichain-api-gateway` |
 | `api.authichain.com/*` | `authichain-api-gateway` |
 | `dashboard.authichain.com/*` | `authichain-dashboard` |
 | `claw.authichain.com/*` | `authichain-openclaw` |
+
+`/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
 Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED`), do **not** cut `authichain.com/*` to a landing worker that cannot proxy. Prefer specific globs.
 
@@ -52,9 +56,10 @@ Has **no `[[routes]]`**. Treat as library/stub until a hostname is attached. Do 
 ## Probe
 
 ```
-curl -sI https://authichain.com/onboard
+curl -sI https://authichain.com/verify
 curl -sI https://govchain.us/onboard
 curl -sI https://strainchain.io/onboard
 ```
 
-`cf-worker` header names the script that answered.
+Fail = `location: …cloudflareaccess.com…`.
+Pass = 200 (or app 404). Then read `cf-worker` for which script answered.
