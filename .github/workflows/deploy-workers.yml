@@ -81,6 +81,8 @@ jobs:
           - rxchain-io
           - threadchain-io
           - watchchain-io
+          - passport-demo
+          - qfs-adapter
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
