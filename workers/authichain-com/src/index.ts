@@ -34,6 +34,10 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // Landing HTML must not be stored as /api/* (CF cache HIT was serving the
+  // homepage for checkout and cron, so DPP-SMOKE-E2E never reached Stripe).
+  'Cache-Control': 'private, no-store',
+  'CDN-Cache-Control': 'no-store',
 };
 
 const BRANDS = {
