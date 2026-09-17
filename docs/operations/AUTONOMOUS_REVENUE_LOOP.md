@@ -74,12 +74,12 @@ Use the existing `DPP-SMOKE-E2E` promotion for a no-cost end-to-end test. The sm
 
 ## Current implementation anchors
 
-- `workers/authichain-com`: DPP landing surface (`/dpp`) with attributed CTA → `/api/checkout/dpp`.
+- `workers/authichain-com`: DPP landing surface (`/dpp`) with attributed CTA → `/api/checkout/dpp`. Thanks/activate HTML is served here. Checkout, funnel, webhook, and activate POST fall through to `APP_PREFIXES` → `APP_WORKER`.
 - `src/app/api/checkout/dpp/route.ts`: creates attributed Stripe Checkout Session (`client_reference_id` + offer metadata); allows `DPP-SMOKE-E2E`.
 - `src/app/api/stripe/webhook/route.ts`: canonical payment → `provisionPurchase` → DPP activate email.
 - `src/app/dpp/thanks` + `src/app/dpp/activate` + `src/app/api/dpp/activate`: self-serve merchant activation (no human handoff).
 - `src/lib/dpp-loop.ts`: records observable loop stages onto `funnel_events` (`metadata.loop_stage`); `stallOf` / `summarizeDppLoop` reconstruct stalls without inferring missing stages.
-- `src/app/api/cron/dpp-exceptions`: paginated exception report (no `limit(5000)` cap).
+- `src/app/api/cron/dpp-exceptions`: paginated exception report (no `limit(5000)` cap). The same exceptions print in `scripts/revenue-cycle.ts --phase=report` (inline — do not HTTP the marketing worker).
 - `workers/dpp-fulfillment`: CRM / recovery / daily report only — not the access-grant path.
 
 ## Success metric

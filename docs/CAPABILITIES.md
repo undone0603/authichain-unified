@@ -29,7 +29,7 @@ REST surface alongside tRPC. Notable live/critical ones:
 
 - **Money in:** `/api/stripe/webhook` (signature-verified, provisions guests by email + welcome email), `/api/webhooks/stripe`, `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (agent micropayments)
 - **Admin ops:** `/api/admin/ops` (admin-gated, aggregates `scheduled_job_runs` → OpsDashboard) ← wired 2026-07-15
-- **Autonomous cron endpoints** (CRON_SECRET-bearer gated, driven by GitHub Actions — see §5): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies}`, `/api/automation/cron`, `/api/trial-reminder`
+- **Autonomous cron endpoints** (CRON_SECRET-bearer gated): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies,dpp-exceptions}`, `/api/automation/cron`, `/api/trial-reminder`. GitHub `autonomous-business-cycle.yml` schedules are retired; DPP stalls also print from `scripts/revenue-cycle.ts --phase=report`.
 - **Lead capture / outreach:** `/api/lead-capture`, `/api/leads`, `/api/crm`, `/api/agentz/webhook` (logs to Supabase + upserts leads — a heartbeat, NOT an agent executor), `/api/social-proof`, `/api/waitlist`, `/api/testimonials`
 - **Product surface:** `/api/verify`, `/api/certificate`, `/api/seal`, `/api/generate` (QR art), `/api/provenance`, `/api/qron`, `/api/industrial`, `/api/governance`, `/api/strainchain`, `/api/govchain`
 - **Integrations:** `/api/telegram`, `/api/gpt` (GPT plugin), `/api/mcp`, `/api/keys` (API key mgmt), `/api/usage`, `/api/team`, `/api/x402`

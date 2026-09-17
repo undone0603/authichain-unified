@@ -2,6 +2,7 @@
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
+import { tryHandleDppRoute } from "./dpp-routes";
 import {
   listMilestones,
   milestoneStatus,
@@ -3352,13 +3353,8 @@ export default {
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
-    // Self-serve thanks/activate live on the app; keep /dpp marketing here.
-    if (p === '/dpp/thanks' || p.startsWith('/dpp/thanks/') || p === '/dpp/activate' || p.startsWith('/dpp/activate/')) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
-    }
+    const dppPage = tryHandleDppRoute(request);
+    if (dppPage) return dppPage;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
