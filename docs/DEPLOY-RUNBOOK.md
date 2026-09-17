@@ -5,7 +5,8 @@ is the only active deploy target; nothing here stores secrets in the repo.
 
 ## 0. Get a Cloudflare API token
 https://dash.cloudflare.com/profile/api-tokens → Create Token. Permissions:
-`Workers Scripts:Edit`, `D1:Edit`, `Workers KV Storage:Edit`, `Workers Routes:Edit`.
+`Workers Scripts:Edit`, `D1:Edit`, `Workers KV Storage:Edit`, `Workers Routes:Edit`,
+`Zone.Cache Purge` (zone `authichain.com` — required for Actions → Purge Cloudflare cache).
 
 ```bash
 export CLOUDFLARE_API_TOKEN="..."
@@ -54,10 +55,31 @@ For the root Cloudflare deploy workflow, also set the repository variable
 cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
 `CRON_SECRET`; no Vercel secrets are required.
 
+`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`.
+`pnpm run build` is Next (`next build --webpack`) and does **not** emit repo-root
+`dist/`; the workflow stubs `dist/` so wrangler `assets.directory` exists. JWKS
+is served by the Worker script, not those assets.
+
 ## 3. Remaining founder-only items
 See `docs/operations/LAUNCH-READINESS-2026-06-23.md` §"Founder-only":
 Stripe production keys + email creds in the deploy env, and an SBIR.gov account
 for the NSF pitch.
+
+Bind `AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` on `authichain-edge-router` after
+that worker publishes, or `GET /.well-known/jwks.json` returns 503.
+
+## 4. Purge Cloudflare cache (HIT homepage on /api and JWKS)
+After edge-router + landing publish, stale `cf-cache-status: HIT` HTML still
+serves `/api/checkout/dpp` and `/.well-known/jwks.json` until purged.
+
+**Actions:** [Purge Cloudflare cache](https://github.com/undone0603/authichain-unified/actions/workflows/purge-cloudflare-cache.yml) → Run workflow → zone `authichain.com`.
+Needs `Zone.Cache Purge` on `CLOUDFLARE_API_TOKEN`. A 403 means add that
+permission, or dashboard **Caching → Configuration → Custom Purge**:
+
+- URLs: `https://authichain.com/.well-known/jwks.json`, `https://authichain.com/api/checkout/dpp`
+- Prefixes: `authichain.com/api`, `authichain.com/.well-known`
+
+Pass: `curl -sI https://authichain.com/.well-known/jwks.json` is not `HIT` + `text/html`.
 
 ## Per-worker secret reference
 | Worker | Secrets |
