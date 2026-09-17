@@ -19,6 +19,14 @@ describe("registerJwksRoute", () => {
     });
   });
 
+  it("serves the uncached /protocol/jwks.json alias", async () => {
+    const app = new Hono();
+    registerJwksRoute(app);
+    const res = await app.request("/protocol/jwks.json");
+    expect(res.status).toBe(503);
+    expect(res.headers.get("cache-control") ?? "").toMatch(/no-store/);
+  });
+
   it("returns a public Ed25519 JWK and never the private d", async () => {
     const { privateKey } = await generateKeyPair("EdDSA", {
       crv: "Ed25519",
@@ -47,5 +55,12 @@ describe("registerJwksRoute", () => {
     expect(body.keys[0].kid).toBe("test-kid");
     expect(body.keys[0].d).toBeUndefined();
     expect(typeof body.keys[0].x).toBe("string");
+
+    const alias = await app.request("/protocol/jwks.json");
+    expect(alias.status).toBe(200);
+    expect(alias.headers.get("cache-control") ?? "").toMatch(/no-store/);
+    const aliasBody = (await alias.json()) as typeof body;
+    expect(aliasBody.keys[0].kid).toBe("test-kid");
+    expect(aliasBody.keys[0].d).toBeUndefined();
   });
 });
