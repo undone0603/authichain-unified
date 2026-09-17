@@ -13,4 +13,5 @@ export const APP_PREFIXES = [
   "/onboard",
   "/admin",
   "/.well-known/jwks.json",
+  "/protocol",
 ] as const;
