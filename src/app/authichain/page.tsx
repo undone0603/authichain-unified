@@ -243,6 +243,7 @@ export default function AuthichainEnterprise() {
                 <ul className="space-y-4 text-xs font-bold uppercase tracking-tighter text-zinc-400">
                   <li><Link href="/governance" className="hover:text-gold transition-colors">GovChain.us</Link></li>
                   <li><Link href="/status" className="hover:text-gold transition-colors">Network Status</Link></li>
+                  <li><Link href="/transparency" className="hover:text-gold transition-colors">Transparency</Link></li>
                   <li><Link href="/explorers" className="hover:text-gold transition-colors">Chain Explorer</Link></li>
                 </ul>
               </div>
