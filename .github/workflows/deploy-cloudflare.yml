@@ -115,6 +115,33 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Bind attestation private key
+        if: steps.secrets_check.outputs.skip != 'true'
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ATTESTATION_KEY: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          NAME=authichain-edge-router
+          bind() {
+            printf '%s' "$1" | npx wrangler secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 --name "$NAME"
+          }
+          if [ -n "${ATTESTATION_KEY:-}" ]; then
+            bind "$ATTESTATION_KEY"
+            echo "bound GitHub secret AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64"
+            exit 0
+          fi
+          if npx wrangler secret list --name "$NAME" 2>/dev/null | grep -q AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64; then
+            echo "already bound on worker; GitHub secret empty — leaving in place"
+            exit 0
+          fi
+          echo "No GitHub secret and none on worker — generating v0.1 Ed25519 launch key"
+          pem=$(openssl genpkey -algorithm ED25519 2>/dev/null)
+          b64=$(printf '%s' "$pem" | base64 -w0)
+          bind "$b64"
+          echo "generated launch key bound on $NAME (private key is only on Cloudflare)"
       - name: Deploy authichain-scan-validate
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: workers/authichain-scan-validate
