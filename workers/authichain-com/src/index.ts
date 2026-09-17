@@ -3,6 +3,7 @@
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
+import { APP_PREFIXES } from "./app-prefixes";
 import {
   listMilestones,
   milestoneStatus,
@@ -3386,8 +3387,6 @@ export default {
     // APP_WORKER doc comment above this file's `export default`).
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
-    const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
-      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       if (env.APP_WORKER) {
         return env.APP_WORKER.fetch(request);
