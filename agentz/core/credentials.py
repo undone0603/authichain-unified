@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 import httpx
 from dotenv import load_dotenv, set_key
@@ -185,11 +185,13 @@ def get(key: str, required: bool = True) -> Optional[str]:
             raise KeyError(f"Unknown credential key: {key}")
         return None
     value = os.environ.get(env_name)
-    if not value and required:
-        raise RuntimeError(
-            f"Missing credential '{key}' (env var {env_name}). "
-            f"Add it to your .env file."
-        )
+    if is_unset_or_placeholder(value):
+        if required:
+            raise RuntimeError(
+                f"Missing credential '{key}' (env var {env_name}). "
+                f"Add it to your .env file."
+            )
+        return None
     return value
 
 
@@ -237,6 +239,37 @@ _PLACEHOLDER_VALUES = frozenset({
 
 _VERIFIABLE_KEYS = {"hubspot_token", "vercel_session", "stripe_secret"}
 
+# Launch-gate production keys. Scoring the full CRED_KEY_TO_ENV map green
+# pressures stuffing unused secrets. Missing Resend must not block these.
+CRITICAL_CREDS = (
+    "supabase_url",
+    "supabase_service_key",
+    "stripe_secret",
+    "agent_secret",
+)
+
+# CRITICAL_CREDS plus mail for the $299 DPP revenue loop.
+DPP_LOOP_CREDS = (
+    *CRITICAL_CREDS,
+    "resend_api_key",
+)
+
+
+def is_unset_or_placeholder(value: Optional[str]) -> bool:
+    """True when a credential is absent, blank, or a known placeholder."""
+    if value is None:
+        return True
+    stripped = value.strip().strip("'\"")
+    if not stripped:
+        return True
+    if stripped in _PLACEHOLDER_VALUES:
+        return True
+    if stripped.upper().startswith("TODO_"):
+        return True
+    if stripped.lower() in {"changeme", "xxx", "replace_me", "your_key_here"}:
+        return True
+    return False
+
 
 def audit_all() -> dict:
     """Check presence and API validity of all registered credentials.
@@ -253,11 +286,11 @@ def audit_all() -> dict:
     }
     for key, env_name in CRED_KEY_TO_ENV.items():
         val = os.environ.get(env_name)
-        if not val or val in _PLACEHOLDER_VALUES:
+        if is_unset_or_placeholder(val):
             report["missing"].append({
                 "key": key,
                 "env": env_name,
-                "reason": "placeholder" if val else "not set",
+                "reason": "placeholder" if val and val.strip() else "not set",
             })
             continue
         report["present"].append(key)
@@ -270,17 +303,85 @@ def audit_all() -> dict:
     return report
 
 
+def credential_snapshot(
+    *,
+    extra_required: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Critical-key preflight plus optional workflow-required keys.
+
+    `secrets_present` is the four CRITICAL_CREDS only. Workflow gaps live in
+    `missing_workflow_credentials` so unused keys cannot fail the launch gate.
+    """
+    _, missing_critical = check_all(list(CRITICAL_CREDS))
+    wanted = set(CRITICAL_CREDS)
+    wanted.update(extra_required)
+    _, missing_workflow = check_all(sorted(wanted))
+    return {
+        "secrets_present": len(missing_critical) == 0,
+        "missing_credentials": missing_critical,
+        "missing_workflow_credentials": missing_workflow,
+    }
+
+
 def check_all(keys: list[str]) -> tuple[list[str], list[str]]:
-    """Return (present, missing) credential keys."""
+    """Return (present, missing) credential keys.
+
+    Empty strings and known placeholders count as missing so preflight
+    cannot pass a TODO_PASTE value through to live side-effects.
+    """
     _ensure_loaded()
     present, missing = [], []
     for k in keys:
         env_name = CRED_KEY_TO_ENV.get(k)
-        if env_name and os.environ.get(env_name):
+        val = os.environ.get(env_name) if env_name else None
+        if env_name and not is_unset_or_placeholder(val):
             present.append(k)
         else:
             missing.append(k)
     return present, missing
+
+
+def inventory(
+    *,
+    missing_only: bool = False,
+    keys: Optional[Iterable[str]] = None,
+) -> dict[str, Any]:
+    """Safe credential inventory: names, env vars, status, length.
+
+    Never includes secret values. Does not perform live API checks
+    (see audit_all for those).
+    """
+    _ensure_loaded()
+    wanted = list(keys) if keys is not None else list(CRED_KEY_TO_ENV.keys())
+    items: list[dict[str, Any]] = []
+    present_count = 0
+    missing_count = 0
+    for key in wanted:
+        env_name = CRED_KEY_TO_ENV.get(key, key.upper())
+        val = os.environ.get(env_name)
+        unset = is_unset_or_placeholder(val)
+        if unset:
+            reason = "placeholder" if val and val.strip() else "not set"
+            length = 0
+            missing_count += 1
+        else:
+            reason = "present"
+            length = len(val or "")
+            present_count += 1
+        if missing_only and not unset:
+            continue
+        items.append({
+            "key": key,
+            "env": env_name,
+            "present": not unset,
+            "length": length,
+            "reason": reason,
+        })
+    return {
+        "present_count": present_count,
+        "missing_count": missing_count,
+        "items": items,
+    }
 
 
 def verify_credential(key: str) -> tuple[bool, str]:
