@@ -477,6 +477,41 @@ export function evaluateRetention(
   };
 }
 
+/** Adapter used by `scripts/revenue-cycle.ts --phase=report`. */
+export type LoopStall = {
+  visitId: string;
+  furthest: DppLoopStage | null;
+  nextExpected: DppLoopStage | null;
+  hoursStalled: number;
+};
+
+export function groupLoopEventsByVisit(
+  rows: LoopEventRow[]
+): Record<string, LoopEventRow[]> {
+  const out: Record<string, LoopEventRow[]> = {};
+  for (const row of rows || []) {
+    const id = (row.prospect_id || "").trim();
+    if (!id) continue;
+    (out[id] ||= []).push(row);
+  }
+  return out;
+}
+
+/** Paid exceptions only — bounce/abandon and demos are omitted. */
+export function findStalledLoops(
+  visits: Record<string, LoopEventRow[]>,
+  now: Date = new Date()
+): LoopStall[] {
+  return summarizeDppLoop(Object.values(visits).flat(), now)
+    .exceptions.map(e => ({
+      visitId: e.visitId,
+      furthest: e.furthest,
+      nextExpected: e.stall.nextExpected,
+      hoursStalled: Math.round((e.stall.hours ?? 0) * 10) / 10,
+    }))
+    .sort((a, b) => b.hoursStalled - a.hoursStalled);
+}
+
 /** Live Stripe price for EU DPP Readiness Audit ($299). */
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 
