@@ -47,7 +47,6 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-
       - name: Setup PNPM
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
@@ -73,6 +72,23 @@ jobs:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
+
+      - name: Inspect build output
+        if: steps.secrets_check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          echo "=== root listing ==="
+          ls -la
+          echo "=== root package.json scripts ==="
+          node -p "JSON.stringify(require('./package.json').scripts, null, 2)"
+          echo "=== candidate output dirs ==="
+          find . -maxdepth 4 -type d \
+            \( -name dist -o -name out -o -name build -o -name .open-next \
+               -o -name dist_production -o -name public \) \
+            -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null
+          echo "=== dirs created/modified in last 15 min ==="
+          find . -maxdepth 4 -type d -mmin -15 \
+            -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -50
 
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
