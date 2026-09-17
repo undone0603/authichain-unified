@@ -3,6 +3,7 @@
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
+import { tryHandleProtocolCheckout } from "./protocol-checkout";
 import { APP_PREFIXES } from "./app-prefixes";
 import {
   listMilestones,
@@ -3129,7 +3130,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/api/checkout/dpp">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3143,7 +3144,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" id="dpp-checkout-cta" href="/api/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
+        <a class="btn btn-primary" id="dpp-checkout-cta" href="/protocol/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
@@ -3171,7 +3172,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
-      var checkout = '/api/checkout/dpp?' + q.toString();
+      var checkout = '/protocol/checkout/dpp?' + q.toString();
       ['dpp-checkout-cta','nav-dpp-cta'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.setAttribute('href', checkout);
@@ -3318,6 +3319,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
  */
 interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PRICE_ID?: string;
 }
 
 export default {
@@ -3360,6 +3363,8 @@ export default {
     }
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
+    const checkout = await tryHandleProtocolCheckout(request, env);
+    if (checkout) return checkout;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
