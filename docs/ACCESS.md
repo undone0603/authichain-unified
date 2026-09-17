@@ -1,6 +1,7 @@
 # Cloudflare Access contract
 
-Probed 2026-09-16 07:54 EDT.
+Probed 2026-09-16 07:54 EDT. Access lift confirmed 2026-09-17 (~21:44 UTC): apexes return 200, not Access 302.
+Remaining protocol gap: `/.well-known/jwks.json` must be `application/json`, not landing HTML.
 
 All four apexes currently 302 to:
 

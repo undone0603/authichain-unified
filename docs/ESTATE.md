@@ -1,7 +1,7 @@
 # AuthiChain estate map
 
 Canonical product code lives in **this repository** (`undone0603/authichain-unified`).
-Target public home: transfer to `AuthiChain2026/authichain-unified` (manual GitHub UI — connector cannot transfer).
+Target public home: `AuthiChain2026/authichain-unified` if/when you want org ownership. **Transfer is optional hygiene, not a launch gate** — `undone0603/authichain-unified` already builds and deploys production. Manual GitHub UI only; connector cannot transfer.
 
 ## Runtime
 
