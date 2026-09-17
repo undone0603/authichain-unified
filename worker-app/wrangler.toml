@@ -16,7 +16,7 @@ compatibility_flags = ["nodejs_compat"]
 playwright-core = "./playwright-unavailable.ts"
 
 [assets]
-directory = "../dist/public"
+directory = "../dist"
 binding = "ASSETS"
 html_handling = "none"
 not_found_handling = "single-page-application"
