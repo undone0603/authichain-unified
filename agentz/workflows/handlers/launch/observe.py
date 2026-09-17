@@ -31,14 +31,17 @@ def run(ctx: ExecutionContext) -> str:
     if total_workflows > 0:
         findings.append(f"{total_workflows} workflows tracked, {failing} failing")
 
-    # Credential preflight — check all known credential keys
-    from agentz.core.credentials import check_all, CRED_KEY_TO_ENV
-    all_keys = list(CRED_KEY_TO_ENV.keys())
-    _, missing = check_all(all_keys)
+    # Credential preflight — critical launch-gate keys only
+    from agentz.core.credentials import CRITICAL_CREDS, credential_snapshot
+    snap = credential_snapshot()
+    missing = snap["missing_credentials"]
     if missing:
-        findings.append(f"Missing credentials: {len(missing)} of {len(all_keys)} ({', '.join(missing[:3])}...)")
+        findings.append(
+            f"Missing critical credentials: {len(missing)} of {len(CRITICAL_CREDS)}"
+            f" ({', '.join(missing)})"
+        )
     else:
-        findings.append(f"All {len(all_keys)} credentials present")
+        findings.append(f"All {len(CRITICAL_CREDS)} critical credentials present")
 
     # Health checks (non-blocking)
     if ctx.mode != Mode.DRY_RUN:

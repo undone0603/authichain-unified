@@ -28,6 +28,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from agentz.core.credentials import CRITICAL_CREDS
+
 logger = logging.getLogger("agentz.launch_gates")
 
 # Repo root: agentz/core/launch_gates.py → agentz/core → agentz → repo root
@@ -41,14 +43,6 @@ DOCS_PROTOCOL = REPO_ROOT / "docs" / "protocol"
 DEFAULT_API_HEALTH_URL = os.environ.get(
     "AUTHICHAIN_API_URL", "https://api.authichain.com/health"
 )
-
-# Critical credentials that must be present for production
-CRITICAL_CREDS = [
-    "supabase_url",
-    "supabase_service_key",
-    "stripe_secret",
-    "agent_secret",
-]
 
 # Subprocess timeout for gate checks (seconds)
 GATE_TIMEOUT_S = 30

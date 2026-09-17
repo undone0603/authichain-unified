@@ -84,7 +84,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
-**⚠ Safety-critical:** the CLI `run` command **defaults to `--mode auto`** (executes all side-effects without prompting). Only **1 of 53** workflows (`reinvestment_handler`) carries `confirm_before_run: true`. Global safety comes from: (a) credential preflight blocks live execution when secrets are missing, (b) the GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so the 53 workflows fire **only when run manually** (`python -m agentz.cli run <id> --mode dry-run`). **Anyone running the CLI without `--mode dry-run` fires live outbound.** Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
+**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so registry workflows fire **only when run manually**. Prefer `--mode dry-run` until the DPP revenue loop is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
 
 ## 7. Money surface
 
