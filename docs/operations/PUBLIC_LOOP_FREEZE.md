@@ -1,12 +1,14 @@
-# Public-loop freeze — 2026-09-16
+# Public-loop freeze — 2026-09-16 (reconfirmed 2026-09-17 08:33 EDT)
 
 Autonomous scale is paused until a stranger can finish one path without a login code.
 
 ## Why
 
-- `authichain.com`, `qron.space`, `govchain.us`, `strainchain.io` were wrapping every request in Cloudflare Access (`strainchainexecutiveteam.cloudflareaccess.com`, app name "All Workers", kid `53cc38df…`).
-- GitHub Actions `Unblock public Access` ran with `apply=true` and deleted **0** apps. Token sees 5 zones but `GET /accounts/{id}/access/apps` is empty and zone Access is **403**. The Zero Trust team is not writable with `CLOUDFLARE_API_TOKEN` as stored today (needs Access: Apps Read+Edit on the team that owns `strainchainexecutiveteam`).
+- `authichain.com`, `qron.space`, `govchain.us`, `strainchain.io` wrap every request in Cloudflare Access (`strainchainexecutiveteam.cloudflareaccess.com`, app name "All Workers", kid `53cc38df…`).
+- Reconfirmed 2026-09-17: `curl -sI https://authichain.com/` → **302** `location: https://strainchainexecutiveteam.cloudflareaccess.com/cdn-cgi/access/login/authichain.com?...` `cf-ray` IAD. `www-authenticate: Cloudflare-Access`.
+- GitHub Actions `Unblock public Access` ran with `apply=true` and deleted **0** apps. Token sees 5 zones but `GET /accounts/{id}/access/apps` is empty and zone Access is **403**. Needs Access: Apps Read+Edit on the team that owns `strainchainexecutiveteam`.
 - Until `/verify` is 200 without Access, marketing crons, Copilot CI loops, and content-bundle PRs are noise.
+- Base ops EOA is funded (0.002 ETH, nonce 0) but `gov-mint.yml` has **zero runs**. Do not dispatch mint until Access is lifted **and** `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453.
 
 ## Live workstream (only)
 
@@ -18,6 +20,7 @@ Judge progress on:
 1. Unauthenticated `GET https://authichain.com/verify` (no `cloudflareaccess.com` redirect)
 2. One paid certificate issued
 3. One `/onboard` that is not Access and not 404
+4. One signed Base deploy from ops EOA (see `base-chain-integration.md`)
 
 ## Frozen (Actions disabled 2026-09-16)
 

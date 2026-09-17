@@ -312,11 +312,13 @@ class LaunchGovernor:
         ctx["stage"] = self.state_machine.current_stage.value
 
         # ── Credential preflight ───────────────────────────────────────────
-        # PRODUCTION_READY is the four critical keys, not the full ~97-key
-        # map. Scoring the whole map green-pressures stuffing unused keys.
-        from agentz.core.credentials import credential_snapshot
-        extra = [key for wf in registry.values() for key in wf.requires]
-        ctx.update(credential_snapshot(extra_required=extra))
+        from agentz.core.credentials import check_all, CRED_KEY_TO_ENV
+        from agentz.core.launch_gates import CRITICAL_CREDS
+        _, missing_critical = check_all(list(CRITICAL_CREDS))
+        _, missing_workflow = check_all(list(CRED_KEY_TO_ENV.keys()))
+        ctx["secrets_present"] = len(missing_critical) == 0
+        ctx["missing_credentials"] = missing_critical
+        ctx["missing_workflow_credentials"] = missing_workflow
 
         # ── Protocol conformance (real check) ──────────────────────────────
         # Only run if we're at or past PROTOCOL_READY — in early BOOT
