@@ -33,10 +33,9 @@ export class AttestationEngine {
     const publicKeyPem = this.publicKeyPem || process.env.AUTHICHAIN_PUBLIC_KEY;
     if (publicKeyPem) return jose.importSPKI(publicKeyPem, "EdDSA");
 
-    const privateKey = await this.getPrivateKey();
-    return jose.exportJWK(await jose.exportSPKI(privateKey).catch(() => {
-      throw new Error("Unable to derive AuthiChain public key from private key");
-    }) as never) as never;
+    const privateJwk = await jose.exportJWK(await this.getPrivateKey());
+    const { d: _private, ...publicJwk } = privateJwk as jose.JWK;
+    return jose.importJWK(publicJwk, "EdDSA");
   }
 
   async createAttestation(
@@ -77,18 +76,7 @@ export class AttestationEngine {
     jwt: string
   ): Promise<{ verified: boolean; payload?: any; error?: string }> {
     try {
-      const publicKeyPem = this.publicKeyPem || process.env.AUTHICHAIN_PUBLIC_KEY;
-      const publicKey = publicKeyPem
-        ? await jose.importSPKI(publicKeyPem, "EdDSA")
-        : await jose.importJWK(
-            await jose.exportJWK(
-              await jose.exportJWK(await this.getPrivateKey()).then((jwk) => {
-                const { d: _private, ...publicJwk } = jwk as jose.JWK;
-                return publicJwk;
-              })
-            ),
-            "EdDSA"
-          );
+      const publicKey = await this.getPublicKey();
       const { payload } = await jose.jwtVerify(jwt, publicKey, {
         issuer: "Authichain-Core",
       });
