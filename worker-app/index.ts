@@ -12,12 +12,15 @@ import { eq } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
+import { registerJwksRoute } from "./jwks";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
+  AUTHICHAIN_ATTESTATION_KEY_ID?: string;
 };
 
 type Variables = {
@@ -1120,6 +1123,8 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
+registerJwksRoute(app);
+
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
   const body = `User-agent: *\nAllow: /\nSitemap: https://${brand.domain}/sitemap.xml\n`;

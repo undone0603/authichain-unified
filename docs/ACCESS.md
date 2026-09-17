@@ -1,33 +1,27 @@
 # Cloudflare Access contract
 
-Probed 2026-09-16 07:54 EDT.
+Status 2026-09-17: apex Access is **lifted**. `authichain.com`, `qron.space`, `govchain.us`, and `strainchain.io` return 200, not a 302 to `strainchainexecutiveteam.cloudflareaccess.com`.
 
-All four apexes currently 302 to:
+Remaining protocol gap: `https://authichain.com/.well-known/jwks.json` must be `application/json` (public Ed25519 JWK set), not landing HTML. That is a Worker routing + secret bind, not an Access problem.
 
-`https://strainchainexecutiveteam.cloudflareaccess.com/cdn-cgi/access/login/<host>`
-
-That includes `/`, `/verify`, `/onboard` on authichain.com, qron.space, govchain.us, strainchain.io.
-
-Access runs **before** Workers. No wrangler change, CTA fix, or monorepo transfer unblocks a phone scan while this policy is on the apex.
+Historical note: on 2026-09-16 those apexes 302ed to
+`https://strainchainexecutiveteam.cloudflareaccess.com/cdn-cgi/access/login/<host>`.
+Access runs **before** Workers. If that 302 returns, stop and fix Access first.
 
 ## Target
 
 Zero Trust team: `strainchainexecutiveteam`.
 
-### Delete or disable
+### Keep deleted on apexes
 
-Any Access application whose domain is the bare hostname:
+Do not recreate Access apps on:
 
-- `authichain.com`
-- `www.authichain.com`
-- `qron.space`
-- `www.qron.space`
-- `govchain.us`
-- `www.govchain.us`
-- `strainchain.io`
-- `www.strainchain.io`
+- `authichain.com` / `www.authichain.com`
+- `qron.space` / `www.qron.space`
+- `govchain.us` / `www.govchain.us`
+- `strainchain.io` / `www.strainchain.io`
 
-Do not replace them with a “bypass for everyone” app on `*`. Delete the app so the zone is public.
+Do not add a “bypass for everyone” app on `*`. Leave the zone public.
 
 ### Keep Access on
 
@@ -47,20 +41,20 @@ Policy on those: email allowlist (founder + operators). Not “everyone”.
 |---|---|
 | `https://authichain.com/` | landing HTML |
 | `https://authichain.com/verify` | verify UI or 404 from app, **not** 302 to Access |
-| `https://authichain.com/.well-known/jwks.json` | JWKS JSON |
+| `https://authichain.com/.well-known/jwks.json` | `application/json` JWKS |
 | `https://govchain.us/onboard` | onboard form |
 | `https://strainchain.io/onboard` | onboard form |
 | `https://qron.space/` | studio landing |
 
-Probe after the change:
-
 ```
-curl -sI https://authichain.com/verify | head
+curl -sI https://authichain.com/verify
+curl -sI https://authichain.com/.well-known/jwks.json
 ```
 
-Pass = HTTP 200 or app 404. Fail = `location: …cloudflareaccess.com…`.
+Access fail = `location: …cloudflareaccess.com…`.
+JWKS pass = `content-type: application/json` (or 503 `attestation key unavailable` if the route is live and the secret is not bound).
 
-## Dashboard path (4 minutes)
+## Dashboard path (only if Access 302s return)
 
 1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → team `strainchainexecutiveteam`
 2. Access → Applications

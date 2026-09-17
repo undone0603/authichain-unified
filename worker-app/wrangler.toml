@@ -29,6 +29,13 @@ not_found_handling = "single-page-application"
 # speed - correctness for those paths does not depend on the manifest.
 run_worker_first = ["/*", "!/_next/*", "!/assets/*"]
 
+# More specific than authichain-com's authichain.com/* glob so JWKS is not
+# swallowed by landing HTML. Requires AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64
+# (and optional AUTHICHAIN_ATTESTATION_KEY_ID) as Worker secrets.
+[[routes]]
+pattern = "authichain.com/.well-known/jwks.json"
+zone_name = "authichain.com"
+
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
@@ -45,7 +52,7 @@ class_name = "RateLimiter"
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
-# ─── Cron Triggers ────────────────────────────────────────────────────────────
+# ─── Cron Triggers ────────────────────────────────────
 # The scheduled() handler in index.ts is wired and ready. Triggers are split
 # into two groups by an explicit enablement DECISION (see below). BOTH groups
 # are still commented out here, on purpose: the live Vercel deployment is
@@ -58,7 +65,7 @@ new_sqlite_classes = ["RateLimiter"]
 # index.ts dispatches it to the job whose `schedule` equals it. All 18
 # schedules are distinct, so each line maps to exactly one job.
 #
-# ── GROUP A — CLEARED to enable at cutover ──────────────────────────────────
+# ── GROUP A — CLEARED to enable at cutover ──────────────────
 # Internal maintenance, read-only monitoring, and transactional notifications
 # to existing customers about their OWN accounts. No autonomous outreach, no
 # money movement, no on-chain writes. At cutover, uncomment [triggers] + this
