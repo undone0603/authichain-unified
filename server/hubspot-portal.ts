@@ -1,29 +1,45 @@
 /**
  * Canonical HubSpot portal binding for AuthiChain.
  *
- * The Grok HubSpot connector (2026-09-17) is portal 245112265 ("Authichain")
- * on NA2. AgentZ, lead-sync scripts, and CRM helpers should import this module
- * instead of hard-coding portal IDs or UI hosts.
+ * Source of truth for humans: config/hubspot-portal.json
+ * The Grok HubSpot connector (2026-09-17) is portal 245112265 ("Authichain") on NA2.
  */
-import portalJson from "../config/hubspot-portal.json";
 
 export const HUBSPOT_PORTAL = {
-  id: Number(process.env.HUBSPOT_PORTAL_ID ?? portalJson.portalId),
-  name: portalJson.name,
-  uiDomain: portalJson.uiDomain,
-  apiBase: portalJson.apiBase,
-  accountType: portalJson.accountType,
-  timezone: portalJson.timezone,
-  currency: portalJson.currency,
-  ownerId: portalJson.ownerId,
-  pipelineId: portalJson.pipelineId,
-  pipelineLabel: portalJson.pipelineLabel,
-  grokConnector: portalJson.grokConnector,
-  recordTypeIds: portalJson.recordTypeIds,
-  stages: portalJson.stages,
+  id: Number(process.env.HUBSPOT_PORTAL_ID ?? 245112265),
+  name: "Authichain",
+  uiDomain: "app-na2.hubspot.com",
+  apiBase: "https://api.hubapi.com",
+  accountType: "STANDARD",
+  timezone: "US/Eastern",
+  currency: "USD",
+  ownerId: 87978084,
+  pipelineId: "default",
+  pipelineLabel: "Sales Pipeline",
+  grokConnector: {
+    connected: true,
+    connectedAt: "2026-09-17",
+    source: "Grok HubSpot connector",
+  },
+  recordTypeIds: {
+    contact: "0-1",
+    company: "0-2",
+    deal: "0-3",
+    ticket: "0-5",
+    task: "0-27",
+  },
+  stages: [
+    { id: "appointmentscheduled", label: "Appointment Scheduled" },
+    { id: "qualifiedtobuy", label: "Qualified To Buy" },
+    { id: "presentationscheduled", label: "Presentation Scheduled" },
+    { id: "decisionmakerboughtin", label: "Decision Maker Bought-In" },
+    { id: "contractsent", label: "Contract Sent" },
+    { id: "closedwon", label: "Closed Won" },
+    { id: "closedlost", label: "Closed Lost" },
+  ],
 } as const;
 
-export type HubSpotObject = keyof typeof portalJson.recordTypeIds;
+export type HubSpotObject = keyof typeof HUBSPOT_PORTAL.recordTypeIds;
 
 export type Vertical =
   | "strainchain"
