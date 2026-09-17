@@ -126,6 +126,7 @@ export default function EnterprisePage() {
               </div>
               <div className="flex gap-12 text-[10px] font-black uppercase tracking-widest text-zinc-600">
                   <Link href="/status" className="hover:text-gold transition-colors">Status</Link>
+                  <Link href="/transparency" className="hover:text-gold transition-colors">Transparency</Link>
                   <Link href="/explorers" className="hover:text-gold transition-colors">Explorers</Link>
                   <Link href="/legal" className="hover:text-gold transition-colors">Legal</Link>
                   <Link href="/docs" className="hover:text-gold transition-colors">Docs</Link>
