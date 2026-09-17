@@ -25,6 +25,13 @@ const PROTOCOL_JWKS_HEADERS = {
 export function attestationPkcs8Pem(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.includes("BEGIN PRIVATE KEY")) return trimmed;
+  // Docs/CI store base64(PEM). Also accept raw PKCS#8 DER base64.
+  try {
+    const decoded = atob(trimmed.replace(/\s+/g, ""));
+    if (decoded.includes("BEGIN PRIVATE KEY")) return decoded.trim();
+  } catch {
+    /* not utf8 PEM */
+  }
   const der = trimmed.replace(/\s+/g, "");
   const wrapped = der.match(/.{1,64}/g)?.join("\n") ?? der;
   return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
