@@ -131,21 +131,223 @@ export const DPP_LOOP_ORDER: readonly DppLoopStage[] = [
 export const RETENTION_HORIZON_DAYS = 7;
 
 export type LoopEventRow = {
+  prospect_id?: string | null;
   event_type?: string | null;
   timestamp?: string | null;
   metadata?: Record<string, unknown> | null;
 };
 
+/** Page size for reconstructing the loop. Never use a single hard cap. */
+export const LOOP_EVENT_PAGE_SIZE = 1000;
+
+const PAID_INDEX = DPP_LOOP_ORDER.indexOf("payment_succeeded");
+
+/**
+ * How long a paid stage may sit without the next event before it is an
+ * exception. Bounce/abandon stages have no threshold: they are funnel counts.
+ */
+export const STALL_THRESHOLDS_MS: Partial<Record<DppLoopStage, number>> = {
+  payment_succeeded: 2 * 3_600_000,
+  provisioned: 24 * 3_600_000,
+  merchant_activated: 72 * 3_600_000,
+  dpp_published: 24 * 3_600_000,
+  verification: RETENTION_HORIZON_DAYS * 86_400_000,
+};
+
+export type StallReport = {
+  kind: "funnel" | "exception" | null;
+  stalledAt: DppLoopStage | null;
+  nextExpected: DppLoopStage | null;
+  hours: number | null;
+  reason: string;
+  holes: DppLoopStage[];
+};
+
+function hoursSince(iso: string | undefined, now: Date): number | null {
+  if (!iso) return null;
+  return (now.getTime() - new Date(iso).getTime()) / 3_600_000;
+}
+
+/**
+ * Decide whether a reconstructed loop is a bounce (funnel), a paid stall
+ * (founder exception), or still in-flight.
+ *
+ * Holes (a later stage without a prior required stage) are exceptions once
+ * payment has succeeded — they mean an event is not being recorded.
+ */
+export function stallOf(
+  loop: LoopReconstruction,
+  now: Date = new Date()
+): StallReport {
+  if (loop.complete) {
+    return {
+      kind: null,
+      stalledAt: null,
+      nextExpected: null,
+      hours: null,
+      reason: "complete",
+      holes: [],
+    };
+  }
+
+  if (!loop.furthest) {
+    return {
+      kind: null,
+      stalledAt: null,
+      nextExpected: "attributed_visit",
+      hours: null,
+      reason: "no_events",
+      holes: [],
+    };
+  }
+
+  const furthestIdx = DPP_LOOP_ORDER.indexOf(loop.furthest);
+  const paid = furthestIdx >= PAID_INDEX;
+  const holes = loop.missing.filter(s => {
+    const i = DPP_LOOP_ORDER.indexOf(s);
+    // Only paid-chain gaps are holes. Missing visit/checkout is bounce, not a stall.
+    return i < furthestIdx && i >= PAID_INDEX;
+  });
+  const hours = hoursSince(loop.firstSeen[loop.furthest], now);
+  const ageMs = hours === null ? 0 : hours * 3_600_000;
+  const nextAfterFurthest = DPP_LOOP_ORDER[furthestIdx + 1] ?? null;
+
+  if (holes.length) {
+    return {
+      kind: paid ? "exception" : "funnel",
+      stalledAt: holes[0],
+      nextExpected: holes[0],
+      hours,
+      reason: "missing_prior_stage",
+      holes,
+    };
+  }
+
+  const threshold = STALL_THRESHOLDS_MS[loop.furthest];
+  if (threshold == null) {
+    return {
+      kind: "funnel",
+      stalledAt: loop.furthest,
+      nextExpected: nextAfterFurthest,
+      hours,
+      reason: "awaiting_next",
+      holes: [],
+    };
+  }
+
+  if (ageMs >= threshold) {
+    return {
+      kind: paid ? "exception" : "funnel",
+      stalledAt: loop.furthest,
+      nextExpected: nextAfterFurthest,
+      hours,
+      reason: "threshold_exceeded",
+      holes: [],
+    };
+  }
+
+  return {
+    kind: null,
+    stalledAt: null,
+    nextExpected: nextAfterFurthest,
+    hours,
+    reason: "within_threshold",
+    holes: [],
+  };
+}
+
+export function isDemoVisit(rows: LoopEventRow[]): boolean {
+  return rows.some(row => {
+    const meta = row.metadata;
+    return meta?.is_demo === true || meta?.demo === true;
+  });
+}
+
+export type DppException = {
+  visitId: string;
+  furthest: DppLoopStage | null;
+  stall: StallReport;
+};
+
+export type DppLoopSummary = {
+  visits: number;
+  demoVisits: number;
+  funnel: Partial<Record<DppLoopStage | "none", number>>;
+  exceptions: DppException[];
+};
+
+export function summarizeDppLoop(
+  rows: LoopEventRow[],
+  now: Date = new Date()
+): DppLoopSummary {
+  const byVisit = new Map<string, LoopEventRow[]>();
+  for (const row of rows || []) {
+    const id = row.prospect_id?.trim();
+    if (!id) continue;
+    const list = byVisit.get(id) || [];
+    list.push(row);
+    byVisit.set(id, list);
+  }
+
+  const funnel: Partial<Record<DppLoopStage | "none", number>> = {};
+  const exceptions: DppException[] = [];
+  let visits = 0;
+  let demoVisits = 0;
+
+  for (const [visitId, visitRows] of byVisit) {
+    if (isDemoVisit(visitRows)) {
+      demoVisits += 1;
+      continue;
+    }
+    visits += 1;
+    const loop = reconstructLoop(visitRows);
+    const stall = stallOf(loop, now);
+    const bucket = loop.furthest ?? "none";
+    funnel[bucket] = (funnel[bucket] || 0) + 1;
+    if (stall.kind === "exception") {
+      exceptions.push({ visitId, furthest: loop.furthest, stall });
+    }
+  }
+
+  return { visits, demoVisits, funnel, exceptions };
+}
+
+export async function fetchAllLoopEvents(
+  supabase: SupabaseLike
+): Promise<LoopEventRow[]> {
+  const all: LoopEventRow[] = [];
+  let from = 0;
+  for (;;) {
+    const to = from + LOOP_EVENT_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("funnel_events")
+      .select("prospect_id, event_type, timestamp, metadata")
+      .like("event_type", "dpp_loop:%")
+      .order("timestamp", { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+    const batch = Array.isArray(data) ? data : [];
+    all.push(...batch);
+    if (batch.length < LOOP_EVENT_PAGE_SIZE) break;
+    from += LOOP_EVENT_PAGE_SIZE;
+  }
+  return all;
+}
+
 /** Stage recorded on a funnel_events row, or null if it is not a loop event. */
 export function stageOf(row: LoopEventRow): DppLoopStage | null {
   const fromMeta = row?.metadata?.loop_stage;
-  if (typeof fromMeta === "string" && DPP_LOOP_ORDER.includes(fromMeta as DppLoopStage)) {
+  if (
+    typeof fromMeta === "string" &&
+    DPP_LOOP_ORDER.includes(fromMeta as DppLoopStage)
+  ) {
     return fromMeta as DppLoopStage;
   }
   const type = row?.event_type || "";
   if (type.startsWith("dpp_loop:")) {
     const candidate = type.slice("dpp_loop:".length);
-    if (DPP_LOOP_ORDER.includes(candidate as DppLoopStage)) return candidate as DppLoopStage;
+    if (DPP_LOOP_ORDER.includes(candidate as DppLoopStage))
+      return candidate as DppLoopStage;
   }
   return null;
 }
@@ -175,8 +377,8 @@ export function reconstructLoop(rows: LoopEventRow[]): LoopReconstruction {
     const prior = firstSeen[stage];
     if (!prior || (ts && ts < prior)) firstSeen[stage] = ts;
   }
-  const reached = DPP_LOOP_ORDER.filter((s) => firstSeen[s] !== undefined);
-  const missing = DPP_LOOP_ORDER.filter((s) => firstSeen[s] === undefined);
+  const reached = DPP_LOOP_ORDER.filter(s => firstSeen[s] !== undefined);
+  const missing = DPP_LOOP_ORDER.filter(s => firstSeen[s] === undefined);
   return {
     reached,
     missing,
@@ -194,7 +396,7 @@ export function reconstructLoop(rows: LoopEventRow[]): LoopReconstruction {
  */
 export async function recordDppLoopEventOnce(
   supabase: SupabaseLike,
-  input: RecordDppLoopEventInput & { dedupeKey?: string },
+  input: RecordDppLoopEventInput & { dedupeKey?: string }
 ): Promise<{ recorded: boolean; reason?: string }> {
   const visitId = input.visitId?.trim();
   if (!visitId) return { recorded: false, reason: "no_visit_id" };
@@ -210,7 +412,7 @@ export async function recordDppLoopEventOnce(
     const key = input.dedupeKey;
     const duplicate = Array.isArray(data)
       ? data.some((row: { metadata?: Record<string, unknown> }) =>
-          key ? row?.metadata?.dedupe_key === key : true,
+          key ? row?.metadata?.dedupe_key === key : true
         )
       : false;
 
@@ -223,7 +425,10 @@ export async function recordDppLoopEventOnce(
 
   await recordDppLoopEvent(supabase, {
     ...input,
-    metadata: { ...(input.metadata || {}), ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}) },
+    metadata: {
+      ...(input.metadata || {}),
+      ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
+    },
   });
   return { recorded: true };
 }
@@ -239,23 +444,37 @@ export function evaluateRetention(
   rows: LoopEventRow[],
   usageTimestamps: string[],
   now: Date = new Date(),
-  horizonDays: number = RETENTION_HORIZON_DAYS,
-): { retained: boolean; reason: string; horizonAt?: string; qualifyingUsageAt?: string } {
+  horizonDays: number = RETENTION_HORIZON_DAYS
+): {
+  retained: boolean;
+  reason: string;
+  horizonAt?: string;
+  qualifyingUsageAt?: string;
+} {
   const loop = reconstructLoop(rows);
   const activatedAt = loop.firstSeen.merchant_activated;
   if (!activatedAt) return { retained: false, reason: "not_activated" };
 
-  const horizon = new Date(new Date(activatedAt).getTime() + horizonDays * 86_400_000);
+  const horizon = new Date(
+    new Date(activatedAt).getTime() + horizonDays * 86_400_000
+  );
   const horizonAt = horizon.toISOString();
 
-  if (now < horizon) return { retained: false, reason: "horizon_not_reached", horizonAt };
+  if (now < horizon)
+    return { retained: false, reason: "horizon_not_reached", horizonAt };
 
   const qualifying = (usageTimestamps || [])
-    .filter((t) => t && new Date(t) >= horizon)
+    .filter(t => t && new Date(t) >= horizon)
     .sort()[0];
 
-  if (!qualifying) return { retained: false, reason: "no_usage_after_horizon", horizonAt };
-  return { retained: true, reason: "usage_after_horizon", horizonAt, qualifyingUsageAt: qualifying };
+  if (!qualifying)
+    return { retained: false, reason: "no_usage_after_horizon", horizonAt };
+  return {
+    retained: true,
+    reason: "usage_after_horizon",
+    horizonAt,
+    qualifyingUsageAt: qualifying,
+  };
 }
 
 /** Live Stripe price for EU DPP Readiness Audit ($299). */
