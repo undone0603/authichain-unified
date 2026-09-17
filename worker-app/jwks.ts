@@ -10,6 +10,12 @@ export type AttestationEnv = {
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
 };
 
+const JWKS_HEADERS = {
+  "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET",
+};
+
 export function attestationPkcs8Pem(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.includes("BEGIN PRIVATE KEY")) return trimmed;
@@ -44,19 +50,13 @@ export function registerJwksRoute<
       const jwk = await exportJWK(key);
       const { d: _d, ...publicJwk } = jwk;
       const kid = configuredKid || (await calculateJwkThumbprint(publicJwk));
-      return c.json({
-        keys: [{ ...publicJwk, kid, use: "sig", alg: "EdDSA" }],
-      });
-    } catch (error) {
       return c.json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "attestation key unavailable",
-        },
-        503
+        { keys: [{ ...publicJwk, kid, use: "sig", alg: "EdDSA" }] },
+        200,
+        JWKS_HEADERS
       );
+    } catch {
+      return c.json({ error: "attestation key unavailable" }, 503);
     }
   });
 }

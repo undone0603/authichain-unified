@@ -34,6 +34,8 @@ describe("registerJwksRoute", () => {
     const res = await app.request("/.well-known/jwks.json");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type") ?? "").toMatch(/json/);
+    expect(res.headers.get("cache-control") ?? "").toMatch(/max-age=300/);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const body = (await res.json()) as {
       keys: Array<Record<string, unknown>>;
     };
