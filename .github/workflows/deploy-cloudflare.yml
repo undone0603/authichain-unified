@@ -93,6 +93,20 @@ jobs:
             -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null \
             | head -50 || true
 
+      - name: Ensure worker-app assets directory
+        if: steps.secrets_check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          # worker-app wrangler.toml assets.directory = ../dist.
+          # `pnpm run build` is `next build --webpack` and does not emit repo-root dist
+          # (run 35283267115). JWKS lives in the Worker script; empty assets unblocks publish.
+          mkdir -p dist
+          if [ -d .next/static ]; then cp -a .next/static dist/ || true; fi
+          if [ ! -f dist/index.html ]; then
+            printf '%s\n' '<!doctype html><title>AuthiChain</title>' > dist/index.html
+          fi
+          ls -la dist | head
+
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app

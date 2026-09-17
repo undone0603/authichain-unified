@@ -1,0 +1,113 @@
+name: Purge Cloudflare cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      zone:
+        description: Zone to purge
+        required: true
+        type: choice
+        default: authichain.com
+        options:
+          - authichain.com
+          - qron.space
+          - govchain.us
+          - strainchain.io
+      everything:
+        description: Purge everything on the zone (avoid unless prefix/URL 403)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    name: Purge cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Purge files then prefixes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE: ${{ inputs.zone }}
+          EVERYTHING: ${{ inputs.everything }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.error, urllib.request
+
+          token = os.environ.get("CLOUDFLARE_API_TOKEN") or ""
+          zone_name = os.environ["ZONE"]
+          everything = os.environ.get("EVERYTHING", "false").lower() == "true"
+          zones = {
+              "authichain.com": "6580df4e35d347c94fef88b33784a514",
+              "qron.space": "40768f8e504b51cab01e48f636fc73b5",
+              "govchain.us": "e011a098212bea70c8c05d52277e388c",
+              "strainchain.io": "9bfee753ef15d3b57621d31bae912895",
+          }
+          zone_id = zones[zone_name]
+          if not token:
+              raise SystemExit("CLOUDFLARE_API_TOKEN missing")
+
+          def post(body):
+              req = urllib.request.Request(
+                  f"https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache",
+                  data=json.dumps(body).encode(),
+                  method="POST",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      return resp.status, json.loads(resp.read().decode())
+              except urllib.error.HTTPError as e:
+                  raw = e.read().decode()
+                  try:
+                      parsed = json.loads(raw)
+                  except Exception:
+                      parsed = {"raw": raw[:800]}
+                  return e.code, parsed
+
+          print(f"zone {zone_name} {zone_id}")
+          if everything:
+              code, data = post({"purge_everything": True})
+              print("purge_everything", code, json.dumps(data)[:600])
+              if code != 200 or not data.get("success"):
+                  raise SystemExit(
+                      "Cache Purge failed. Add Zone.Cache Purge on CLOUDFLARE_API_TOKEN "
+                      "or Custom Purge in the dashboard."
+                  )
+          else:
+              files = [
+                  f"https://{zone_name}/.well-known/jwks.json",
+                  f"https://www.{zone_name}/.well-known/jwks.json",
+                  f"https://{zone_name}/api/checkout/dpp",
+                  f"https://www.{zone_name}/api/checkout/dpp",
+                  f"https://{zone_name}/api/cron/dpp-exceptions",
+                  f"https://www.{zone_name}/api/cron/dpp-exceptions",
+              ]
+              prefixes = [
+                  f"{zone_name}/api",
+                  f"www.{zone_name}/api",
+                  f"{zone_name}/.well-known",
+                  f"www.{zone_name}/.well-known",
+              ]
+              code, data = post({"files": files})
+              print("files", code, json.dumps(data)[:600])
+              if code != 200 or not data.get("success"):
+                  raise SystemExit(
+                      "URL purge failed (need Cache Purge on the token). "
+                      "Dashboard: Caching → Configuration → Custom Purge."
+                  )
+              code, data = post({"prefixes": prefixes})
+              print("prefixes", code, json.dumps(data)[:600])
+              if code != 200 or not data.get("success"):
+                  print(
+                      "::warning::Prefix purge failed (plan or permission). "
+                      "URL purge already ran."
+                  )
+          PY
