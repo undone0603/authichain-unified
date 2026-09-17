@@ -57,7 +57,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md](strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md)
 - [strategy/AUTHENTICITY_INDEX.md](strategy/AUTHENTICITY_INDEX.md)
 - [strategy/DELIVERABLES.md](strategy/DELIVERABLES.md) · [strategy/IMPLEMENTATION_MANIFEST.md](strategy/IMPLEMENTATION_MANIFEST.md) · [strategy/LEAD_SCORING_SUMMARY.md](strategy/LEAD_SCORING_SUMMARY.md)
-- Grants: [strategy/DHS_SVIP_Grant_Application.md](strategy/DHS_SVIP_GRANT_APPLICATION.md) · [strategy/NSF_SBIR_Project_Pitch.md](strategy/NSF_SBIR_Project_Pitch.md)
+- Grants: [strategy/DHS_SVIP_Grant_Application.md](strategy/DHS_SVIP_Grant_Application.md) · [strategy/NSF_SBIR_Project_Pitch.md](strategy/NSF_SBIR_Project_Pitch.md)
 - Partnerships: [strategy/MI_CRA](strategy/MI_CRA_Partnership_Proposal.md) · [strategy/NY_OCM](strategy/NY_OCM_Partnership_Proposal.md) · [strategy/OH_DCC](strategy/OH_DCC_Partnership_Proposal.md)
 - More in `docs/strategy/` (DEMO_PROMPTS, DEPLOYMENT_LOG, FUNNEL_TRACKING_SUMMARY, MONUMENTAL_RELEASE, POSTAL_STRATEGY, SERIES_A_BOARDROOM_BRIEFING, SIGNATURE_MANIFEST, SIGNWELL_MIGRATION, STRATEGIC_EXPANSION, STRIPE_WEBHOOK_*, WORKSPACE, notes-progress, research-findings)
 
