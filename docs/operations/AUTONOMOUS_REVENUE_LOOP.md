@@ -52,6 +52,13 @@ A state must be derived from an observable event, never inferred from an email b
 5. Failed retries create an exception record and founder alert.
 6. Email/CRM failure must not roll back a successful payment or provisioning result.
 7. Daily reporting exposes both funnel counts and unresolved exceptions.
+   Founder exceptions start at `payment_succeeded`. `attributed_visit` and
+   `checkout_started` are bounce/abandon funnel counts. Demo rows
+   (`metadata.is_demo`) are excluded from customer counts.
+   Endpoint: `GET /api/cron/dpp-exceptions` (Bearer `CRON_SECRET`), dispatched
+   as `dpp-exceptions` on `autonomous-business-cycle.yml`. The workflow's
+   schedule is retired; dispatch it (or a Worker cron) for a daily report —
+   an unscheduled route is a page, not a loop.
 
 ## Smoke path
 
@@ -71,7 +78,8 @@ Use the existing `DPP-SMOKE-E2E` promotion for a no-cost end-to-end test. The sm
 - `src/app/api/checkout/dpp/route.ts`: creates attributed Stripe Checkout Session (`client_reference_id` + offer metadata); allows `DPP-SMOKE-E2E`.
 - `src/app/api/stripe/webhook/route.ts`: canonical payment → `provisionPurchase` → DPP activate email.
 - `src/app/dpp/thanks` + `src/app/dpp/activate` + `src/app/api/dpp/activate`: self-serve merchant activation (no human handoff).
-- `src/lib/dpp-loop.ts`: records observable loop stages onto `funnel_events` (`metadata.loop_stage`).
+- `src/lib/dpp-loop.ts`: records observable loop stages onto `funnel_events` (`metadata.loop_stage`); `stallOf` / `summarizeDppLoop` reconstruct stalls without inferring missing stages.
+- `src/app/api/cron/dpp-exceptions`: paginated exception report (no `limit(5000)` cap).
 - `workers/dpp-fulfillment`: CRM / recovery / daily report only — not the access-grant path.
 
 ## Success metric
