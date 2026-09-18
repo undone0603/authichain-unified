@@ -95,7 +95,7 @@ describe("tryHandleProtocolCheckout", () => {
     const init = fetchMock.mock.calls[0][1] as { body: URLSearchParams };
     const body = decodeURIComponent(String(init.body));
     expect(body).toContain("unit_amount]=0");
-    expect(body).toContain("if_required");
+    expect(body).not.toContain("if_required");
     expect(body).toContain("is_demo");
     expect(body).toContain("DPP-SMOKE-E2E");
     expect(body).not.toContain("price_1TwmD8GqTruSqV8TpAF8dfyA");

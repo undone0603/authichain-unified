@@ -112,7 +112,6 @@ export async function createDppCheckoutSession(opts: {
       success_url: successUrl,
       cancel_url: cancelUrl,
       allow_promotion_codes: smoke ? undefined : true,
-      ...(smoke ? { payment_method_collection: "if_required" as const } : {}),
       client_reference_id: visitId.slice(0, 200),
       ...(email ? { customer_email: email } : {}),
       metadata: {
