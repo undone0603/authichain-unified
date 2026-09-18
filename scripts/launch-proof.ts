@@ -84,7 +84,7 @@ const fixturePayload = fixture.payload as {
 // The repository fixture is retained as the payload contract, but the proof
 // must exercise the current production signing key. Generate a fresh JWS from
 // the live signing endpoint rather than trusting a rotated historical kid.
-const signingResponse = await fetch("https://app.authichain.com/api/v1/attestation", {
+const signingResponse = await fetch("https://qron-platform.vercel.app/api/v1/attestation", {
   method: "POST",
   headers: { "content-type": "application/json", accept: "application/json" },
   body: JSON.stringify(fixturePayload),
