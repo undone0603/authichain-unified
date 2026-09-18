@@ -84,6 +84,26 @@ const fixturePayload = fixture.payload as {
 const fixtureKid = String(fixture.protected.kid || "");
 if (!fixtureKid) throw new Error("fixture JWS does not contain kid");
 
+// The repository fixture is retained as the payload contract, but the proof
+// must exercise the current production signing key. Generate a fresh JWS from
+// the live signing endpoint rather than trusting a rotated historical kid.
+const signingResponse = await fetch("https://authichain.com/api/v1/attestation", {
+  method: "POST",
+  headers: { "content-type": "application/json", accept: "application/json" },
+  body: JSON.stringify(fixturePayload),
+});
+if (!signingResponse.ok) {
+  throw new Error(`production attestation signer returned HTTP ${signingResponse.status}: ${(await signingResponse.text()).slice(0, 500)}`);
+}
+const signingBody = (await signingResponse.json()) as { jws?: unknown; kid?: unknown };
+if (typeof signingBody.jws !== "string" || typeof signingBody.kid !== "string") {
+  throw new Error("production attestation signer returned no usable JWS/kid");
+}
+const productionJws = signingBody.jws;
+const production = parseJws(productionJws);
+const productionKid = String(production.protected.kid || signingBody.kid || "");
+if (!productionKid) throw new Error("production JWS does not contain kid");
+
 const jwksResponse = await fetch(jwksUrl, {
   headers: { accept: "application/json" },
 });
@@ -94,18 +114,18 @@ const liveJwks = (await jwksResponse.json()) as {
   keys?: Array<Record<string, unknown>>;
 };
 const publicJwk = liveJwks.keys?.find(
-  (key) => key.kid === fixtureKid,
+  (key) => key.kid === productionKid,
 );
 if (!publicJwk) {
   const liveKids = (liveJwks.keys || []).map((key) => ({ kid: key.kid, x: key.x, alg: key.alg, crv: key.crv }));
-  throw new Error(`live JWKS does not expose fixture kid ${fixtureKid}; live keys=${JSON.stringify(liveKids)}`);
+  throw new Error(`live JWKS does not expose production kid ${productionKid}; live keys=${JSON.stringify(liveKids)}`);
 }
 
-const verifiedFixture = await verifyAttestationJws(fixtureJws, publicJwk, {
+const verifiedFixture = await verifyAttestationJws(productionJws, publicJwk, {
   expectedObjectId: fixturePayload.subject.object_id,
 });
 
-const alteredPayload = fixtureJws.split(".");
+const alteredPayload = productionJws.split(".");
 const payload = JSON.parse(
   Buffer.from(alteredPayload[1], "base64url").toString("utf8"),
 );
@@ -119,7 +139,7 @@ await verifyExpectedFailure("altered payload", () =>
   }),
 );
 
-const alteredSignature = fixtureJws.split(".");
+const alteredSignature = productionJws.split(".");
 alteredSignature[2] =
   alteredSignature[2].slice(0, -1) +
   (alteredSignature[2].endsWith("A") ? "B" : "A");
@@ -195,13 +215,13 @@ await verifyExpectedFailure("stale attestation", () =>
 
 const objectId = fixturePayload.subject.object_id;
 const serial = fixturePayload.subject.serial || "SN-001";
-const seed = sha256(`QRON|${objectId}|${serial}|${fixtureKid}`);
+const seed = sha256(`QRON|${objectId}|${serial}|${productionKid}`);
 const launchProof = {
   objectId,
   sourceObjectId: fixturePayload.subject.object_id,
   attestationId: verifiedFixture.attestation_id,
   kid: fixtureKid,
-  jws: fixtureJws,
+  jws: productionJws,
   jwksUrl,
   qronId,
   qronSeed: seed,
@@ -274,7 +294,7 @@ await supabaseUpsert("qr_codes", [
         seed,
         object_id: objectId,
         attestation_id: verifiedFixture.attestation_id,
-        kid: fixtureKid,
+        kid: productionKid,
         jwks_url: jwksUrl,
       },
     },
@@ -291,7 +311,7 @@ await supabaseUpsert("certification_events", [
       object_id: objectId,
       qron_id: qronId,
       attestation_id: verifiedFixture.attestation_id,
-      kid: fixtureKid,
+      kid: productionKid,
       storymode_url: storyUrl,
       cryptographic_verification: "verified",
       tamper_tests: launchProof.tamperTests,
@@ -328,7 +348,7 @@ const report = {
   cryptography: {
     contract: "AuthiChain Attestation Contract v0.1",
     alg: String(fixture.protected.alg),
-    kid: fixtureKid,
+    kid: productionKid,
     jwksUrl,
     liveJwksResolved: true,
     independentVerification: "passed",
