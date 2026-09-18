@@ -109,6 +109,7 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      # A [pipeline-proof] push is the explicit one-shot launch verification path.
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
@@ -129,3 +130,30 @@ jobs:
           else
             pnpm tsx server/jobs/pipeline-tick.ts
           fi
+
+      - name: Produce launch proof
+        if: steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+          AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: pnpm tsx scripts/launch-proof.ts
+
+      - name: Upload launch proof artifacts
+        if: always() && steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        uses: actions/upload-artifact@v4
+        with:
+          name: authichain-launch-proof
+          path: artifacts/production-launch-proof.json
+          if-no-files-found: warn
+
+      - name: Upload QRON launch artifact
+        if: always() && steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        uses: actions/upload-artifact@v4
+        with:
+          name: authichain-launch-proof-qron
+          path: artifacts/launch-proof-qron.png
+          if-no-files-found: warn
