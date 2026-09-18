@@ -13,6 +13,7 @@ import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
+import { scheduled } from "./cron-dispatch";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -148,6 +149,11 @@ app.get("/api/health", c => c.json({ status: "ok" }));
 // Same session create as Next src/app/api/checkout/dpp. Registered here so
 // authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
 app.get("/api/checkout/dpp", async c => {
+  if (c.req.method === "HEAD") {
+    c.header("Cache-Control", "private, no-store");
+    c.header("CDN-Cache-Control", "no-store");
+    return c.body(null, 204);
+  }
   try {
     hydrateProcessEnv(c.env);
     const { createDppCheckoutSession } =
@@ -223,7 +229,8 @@ app.post("/api/dpp/activate", async c => {
     const supabaseUrl =
       c.env?.NEXT_PUBLIC_SUPABASE_URL ||
       c.env?.SUPABASE_URL ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
     const serviceKey =
       c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (supabaseUrl && serviceKey) {
@@ -1362,4 +1369,9 @@ app.get("*", async c => {
 
 export { RateLimiter } from "./rate-limiter";
 
-export default { fetch: app.fetch };
+// A single hourly cron trigger fans out to the ten cleared GROUP A jobs — the
+// account is capped at five cron triggers, so ten separate schedules were never
+// registrable. See cron-dispatch.ts for the reasoning and the dispatch rules.
+// NOTE: the trigger itself is still commented out in wrangler.toml; wiring the
+// handler here does not by itself schedule anything.
+export default { fetch: app.fetch, scheduled };

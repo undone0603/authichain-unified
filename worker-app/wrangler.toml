@@ -63,25 +63,42 @@ tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
 # ─── Cron Triggers ────────────────────────────────────
-# The scheduled() handler in index.ts is wired and ready. Triggers are split
-# into two groups by an explicit enablement DECISION (see below). BOTH groups
-# are still commented out here, on purpose: the live Vercel deployment is
-# ALREADY running these jobs via its own node-cron, so uncommenting these
-# before Vercel is turned off would DOUBLE-FIRE every job (double emails,
-# double cleanup, etc.) against the same production database. Enable a group
-# only at the FINAL Vercel cutover, not on a parity/test deployment.
+# ONE trigger, ten jobs. Cloudflare caps cron triggers PER ACCOUNT at five on
+# the free plan, and three are already spent (qron-automation,
+# authichain-autopilot, authichain-infra), so the ten GROUP A schedules below
+# could never each have had their own trigger. Rather than dropping five jobs,
+# the worker registers a single hourly trigger and worker-app/cron-dispatch.ts
+# decides which jobs that hour is due for.
 #
-# Workers fires scheduled() with event.cron = the matched schedule string;
-# index.ts dispatches it to the job whose `schedule` equals it. All 18
-# schedules are distinct, so each line maps to exactly one job.
+# This replaces the previous plan of one trigger per job. The old note here said
+# scheduled() "dispatches it to the job whose `schedule` equals it" — that was
+# aspirational: index.ts had no scheduled() handler at all until cron-dispatch.ts
+# added one. It does now, but the handler alone schedules nothing; the trigger
+# below is what would.
 #
-# ── GROUP A — CLEARED to enable at cutover ──────────────────
+# STILL COMMENTED OUT — enabling is a deliberate production decision, not a
+# side effect of merging this file. Uncommenting starts all ten GROUP A jobs on
+# the next deploy, including transactional customer email (dunning-escalation,
+# certificate-expiry-check).
+#
+# Note for whoever enables it: the prior reason for holding these back was that
+# "the live Vercel deployment is ALREADY running these jobs via its own
+# node-cron", so enabling would DOUBLE-FIRE against the same production
+# database. That reasoning looks stale — authichain-unified.vercel.app no longer
+# exists (see the APP_WORKER doc comment in
+# workers/authichain-com/src/index.ts). Confirm no second runner survives
+# anywhere before uncommenting; if one does, this stays off.
+#
+# [triggers]
+# crons = ["0 * * * *"]
+#
+# ── GROUP A — the ten jobs the hourly dispatcher would fire ──────────────────
 # Internal maintenance, read-only monitoring, and transactional notifications
 # to existing customers about their OWN accounts. No autonomous outreach, no
-# money movement, no on-chain writes. At cutover, uncomment [triggers] + this
-# `crons` array to activate exactly these 10.
-# [triggers]
-# crons = [
+# money movement, no on-chain writes. This list is documentation; the array that
+# actually decides is CLEARED_JOBS in cron-dispatch.ts, and
+# cron-dispatch.test.ts asserts the two agree with server/scheduled-jobs.ts.
+# dispatched_group_a = [
 #   "0 3 * * *",   # database-cleanup — deletes old job-run/notification/session rows (internal)
 #   "0 5 * * *",   # customer-health-score — recomputes health scores in DB (no external calls)
 #   "0 6 * * *",   # subscription-health-check — in-app expiry notices, marks past-due, resets quotas (internal)

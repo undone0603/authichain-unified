@@ -18,6 +18,16 @@ describe("tryHandleProtocolCheckout", () => {
     ).toBeNull();
   });
 
+  it("HEAD does not create a Stripe session", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const res = await tryHandleProtocolCheckout(
+      req("/protocol/checkout/dpp", { method: "HEAD" }),
+      { STRIPE_SECRET_KEY: "sk_live_x" }
+    );
+    expect(res!.status).toBe(204);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("returns 500 JSON when Stripe is not bound", async () => {
     const res = await tryHandleProtocolCheckout(
       req("/protocol/checkout/dpp?visit_id=dpp_abc"),
