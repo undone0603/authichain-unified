@@ -64,12 +64,15 @@ async function restGet(
   env: SupabaseEnv,
   path: string,
   query: string,
-  extraHeaders: Record<string, string> = {},
+  extraHeaders: Record<string, string> = {}
 ): Promise<Response> {
   if (!configured(env)) {
-    throw new SupabaseUnavailable("SUPABASE_URL / SUPABASE_ANON_KEY are not set");
+    throw new SupabaseUnavailable(
+      "SUPABASE_URL / SUPABASE_ANON_KEY are not set"
+    );
   }
-  const base = env.SUPABASE_URL!.replace(/\/+$/, "");
+  let base = env.SUPABASE_URL!;
+  while (base.endsWith("/")) base = base.slice(0, -1);
   const key = env.SUPABASE_ANON_KEY!;
   const res = await fetch(`${base}/rest/v1/${path}?${query}`, {
     headers: {
@@ -94,7 +97,7 @@ async function restGet(
  */
 export async function fetchOpportunities(
   env: SupabaseEnv,
-  opts: { minFit?: number; limit?: number } = {},
+  opts: { minFit?: number; limit?: number } = {}
 ): Promise<GovOpportunity[]> {
   const minFit = Number.isFinite(opts.minFit) ? Number(opts.minFit) : 70;
   const limit = Math.min(Math.max(Number(opts.limit) || 12, 1), 100);
@@ -112,7 +115,7 @@ export async function fetchOpportunities(
 /** A single opportunity by its SAM notice id, or null when there is no such row. */
 export async function fetchOpportunity(
   env: SupabaseEnv,
-  noticeId: string,
+  noticeId: string
 ): Promise<GovOpportunity | null> {
   const query = [
     `select=${DETAIL_COLUMNS}`,
@@ -131,8 +134,14 @@ export async function fetchOpportunity(
  * match count in Content-Range (`0-0/123`), so a count of 40,000 rows costs one
  * row of body.
  */
-async function countRows(env: SupabaseEnv, table: string, filter?: string): Promise<number> {
-  const query = ["select=notice_id", filter, "limit=1"].filter(Boolean).join("&");
+async function countRows(
+  env: SupabaseEnv,
+  table: string,
+  filter?: string
+): Promise<number> {
+  const query = ["select=notice_id", filter, "limit=1"]
+    .filter(Boolean)
+    .join("&");
   const res = await restGet(env, table, query, {
     Prefer: "count=exact",
     Range: "0-0",

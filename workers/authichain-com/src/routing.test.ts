@@ -24,7 +24,13 @@ async function get(path: string, env: Env = ENV) {
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
-  for (const path of ["/nope-xyz123", "/about", "/book", "/authichain/pilots", "/deep/unknown"]) {
+  for (const path of [
+    "/nope-xyz123",
+    "/about",
+    "/book",
+    "/authichain/pilots",
+    "/deep/unknown",
+  ]) {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} should 404`);
   }
@@ -73,35 +79,51 @@ test("a malformed certificate id is a 404", async () => {
 test("/authenticate is proxied to the app rather than answered with marketing", async () => {
   const res = await get("/authenticate");
   assert.equal(res.status, 200);
-  assert.equal(await res.text(), "app", "should come from APP_WORKER, not the homepage");
+  assert.equal(
+    await res.text(),
+    "app",
+    "should come from APP_WORKER, not the homepage"
+  );
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {
   const res = await get("/%3Cscript%3Ealert(1)%3C/script%3E");
   assert.equal(res.status, 404);
   const html = await res.text();
-  assert.ok(!html.includes("<script>alert(1)</script>"), "path must be escaped");
+  assert.ok(
+    !html.includes("<script>alert(1)</script>"),
+    "path must be escaped"
+  );
 });
 
 test("the sitemap no longer lists pages that do not exist", async () => {
   const xml = await (await get("/sitemap.xml")).text();
-  for (const gone of ["/about", "/book", "/authichain", "/authichain/technology", "/authichain/pilots"]) {
-    assert.ok(!xml.includes(`<loc>https://authichain.com${gone}</loc>`), `${gone} should be gone`);
+  for (const gone of [
+    "/about",
+    "/book",
+    "/authichain",
+    "/authichain/technology",
+    "/authichain/pilots",
+  ]) {
+    assert.ok(
+      !xml.includes(`<loc>https://authichain.com${gone}</loc>`),
+      `${gone} should be gone`
+    );
   }
-  assert.match(xml, /https:\/\/authichain\.com\/contact/);
-  assert.match(xml, /https:\/\/authichain\.com\/vs\/everledger/);
+  assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 
 test("every URL the sitemap claims actually resolves", async () => {
   const xml = await (await get("/sitemap.xml")).text();
-  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
   assert.ok(locs.length > 0, "sitemap should not be empty");
   for (const loc of locs) {
     const path = new URL(loc).pathname;
     const res = await get(path);
     assert.ok(
       res.status >= 200 && res.status < 400,
-      `sitemap lists ${path} but it answered ${res.status}`,
+      `sitemap lists ${path} but it answered ${res.status}`
     );
   }
 });
