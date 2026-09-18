@@ -93,7 +93,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
           AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_RUN_ID: ${{ github.run_id }}
