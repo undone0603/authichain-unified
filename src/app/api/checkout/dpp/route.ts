@@ -22,6 +22,16 @@ async function getServiceSupabase() {
   return createClient(url, key);
 }
 
+export async function HEAD() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Cache-Control": "private, no-store",
+      "CDN-Cache-Control": "no-store",
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const result = await createDppCheckoutSession({
