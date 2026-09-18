@@ -13,6 +13,7 @@ import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
+import { scheduled } from "./cron-dispatch";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -1368,4 +1369,9 @@ app.get("*", async c => {
 
 export { RateLimiter } from "./rate-limiter";
 
-export default { fetch: app.fetch };
+// A single hourly cron trigger fans out to the ten cleared GROUP A jobs — the
+// account is capped at five cron triggers, so ten separate schedules were never
+// registrable. See cron-dispatch.ts for the reasoning and the dispatch rules.
+// NOTE: the trigger itself is still commented out in wrangler.toml; wiring the
+// handler here does not by itself schedule anything.
+export default { fetch: app.fetch, scheduled };

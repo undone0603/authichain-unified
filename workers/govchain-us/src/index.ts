@@ -1,3 +1,13 @@
+import {
+  configured as supabaseConfigured,
+  fetchOpportunities,
+  fetchOpportunity,
+  fetchStats,
+  SupabaseUnavailable,
+  type GovOpportunity,
+  type SupabaseEnv,
+} from "./supabase.ts";
+
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect x="2" y="2" width="60" height="60" rx="8" fill="#05060b" stroke="#3b82f6" stroke-width="1.5"/>
   <rect x="16" y="38" width="6" height="16" fill="#3b82f6" opacity="0.7"/>
@@ -1972,8 +1982,203 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
+/** Escapes text interpolated into server-rendered HTML. */
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[<>&"']/g, (c) =>
+    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c] as string,
+  );
+}
+
+/** Formats an ISO timestamp as a plain date, or "Deadline TBD" when absent. */
+function formatDeadline(value: string | null): string {
+  if (!value) return "Deadline TBD";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Deadline TBD";
+  return `Due ${d.toISOString().slice(0, 10)}`;
+}
+
+/** Only https SAM links are rendered as links; anything else becomes plain text. */
+function safeSamUrl(value: string | null): string | null {
+  return typeof value === "string" && value.startsWith("https://") ? value : null;
+}
+
+const PAGE_CSS = `
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#05060b;--surface:#0a0c14;--border:#1e2d4a;--blue:#3b82f6;--gold:#facc15;--text:#f0f9ff;--muted:#7e93b8}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.6}
+a{color:var(--blue);text-decoration:none}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 2rem;border-bottom:1px solid var(--border)}
+.logo{font-size:1.3rem;font-weight:800;letter-spacing:.05em;background:linear-gradient(135deg,var(--blue),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+main{max-width:1100px;margin:0 auto;padding:3rem 2rem 5rem}
+h1{font-size:clamp(1.9rem,4vw,2.75rem);font-weight:800;margin-bottom:.75rem}
+.sub{color:var(--muted);margin-bottom:2.5rem;max-width:640px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.5rem}
+.card h2{font-size:1.05rem;font-weight:700;margin:.4rem 0 .5rem;line-height:1.35}
+.card p{color:var(--muted);font-size:.9rem}
+.row{display:flex;justify-content:space-between;align-items:center;gap:1rem}
+.fit{background:rgba(59,130,246,.12);border:1px solid var(--blue);color:var(--blue);border-radius:2rem;padding:.15rem .7rem;font-size:.75rem;font-weight:700}
+.naics{font-size:.72rem;color:var(--muted)}
+.empty{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2.5rem;text-align:center;color:var(--muted)}
+.back{display:inline-block;margin-bottom:1.5rem;font-size:.85rem;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.25rem 0 2rem}
+.meta span{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.4rem .8rem;font-size:.8rem;color:var(--muted)}
+.body{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.75rem;white-space:pre-wrap;color:var(--muted);font-size:.92rem}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--muted);font-size:.85rem}
+`;
+
+function pageShell(title: string, robots: string, body: string): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<meta name="robots" content="${escapeHtml(robots)}">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>${PAGE_CSS}</style></head><body>
+<div class="nav"><a href="/" class="logo">GovChain</a><a href="/opportunities">Opportunities</a></div>
+${body}
+<footer>&copy; 2026 GovChain &middot; Powered by AuthiChain Protocol &middot; <a href="https://authichain.com">authichain.com</a></footer>
+</body></html>`;
+}
+
+function htmlResponse(html: string, status = 200, cache = "public,max-age=300"): Response {
+  return new Response(html, {
+    status,
+    headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": cache },
+  });
+}
+
+function jsonResponse(data: unknown, status = 200, cache = "public,max-age=60"): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json;charset=UTF-8", "Cache-Control": cache },
+  });
+}
+
+/**
+ * Answers an unknown path with a real 404.
+ *
+ * Every unmatched URL used to fall through to the marketing page at HTTP 200,
+ * so `/opportunities/<a notice id that was never ingested>` — the URL shape the
+ * ingest script writes into `gov_opportunities.govchain_url` for every row —
+ * looked to a crawler exactly like a live opportunity.
+ */
+function notFound(pathname: string): Response {
+  return htmlResponse(
+    pageShell(
+      "404 — Not Found · GovChain",
+      "noindex",
+      `<main><h1>This page does not exist</h1>
+<p class="sub"><code>${escapeHtml(pathname)}</code> is not a page on govchain.us.</p>
+<a href="/opportunities">Browse open opportunities &rarr;</a></main>`,
+    ),
+    404,
+    "no-store",
+  );
+}
+
+/** Renders one opportunity as a card in the list. */
+function opportunityCard(o: GovOpportunity): string {
+  const samUrl = safeSamUrl(o.sam_url);
+  const title = escapeHtml(o.title || "Untitled federal opportunity");
+  const heading = `<a href="/opportunities/${encodeURIComponent(o.notice_id)}">${title}</a>`;
+  const fit = o.fit_score == null ? "" : `<span class="fit">Fit ${escapeHtml(o.fit_score)}</span>`;
+  const naics = o.naics_code ? `<span class="naics">NAICS ${escapeHtml(o.naics_code)}</span>` : "";
+  const samLink = samUrl
+    ? ` &middot; <a href="${escapeHtml(samUrl)}" rel="noopener nofollow" target="_blank">SAM.gov</a>`
+    : "";
+  return `<div class="card"><div class="row">${fit}${naics}</div>
+<h2>${heading}</h2>
+<p>${escapeHtml(o.agency || "Federal agency")} &middot; ${escapeHtml(formatDeadline(o.deadline))}${samLink}</p></div>`;
+}
+
+/**
+ * The /opportunities index, rendered server-side.
+ *
+ * The homepage's equivalent list is built client-side and silently degrades to
+ * "temporarily unavailable" whenever the fetch fails. This page renders on the
+ * server, so the rows are in the HTML a crawler sees and a misconfiguration
+ * surfaces as a 503 with a reason rather than as an empty box.
+ */
+async function opportunitiesPage(env: SupabaseEnv, url: URL): Promise<Response> {
+  const minFit = Number(url.searchParams.get("min_fit") ?? 70);
+  let rows: GovOpportunity[];
+  try {
+    rows = await fetchOpportunities(env, { minFit, limit: 48 });
+  } catch (err) {
+    const detail = err instanceof SupabaseUnavailable ? err.message : "Supabase request failed";
+    return htmlResponse(
+      pageShell(
+        "Opportunities unavailable · GovChain",
+        "noindex",
+        `<main><h1>Opportunities are temporarily unavailable</h1>
+<p class="sub">${escapeHtml(detail)}</p></main>`,
+      ),
+      503,
+      "no-store",
+    );
+  }
+
+  const body = rows.length
+    ? `<div class="grid">${rows.map(opportunityCard).join("")}</div>`
+    : `<div class="empty">No opportunities are scored at or above fit ${escapeHtml(minFit)} right now. Ingest runs on a schedule &mdash; check back shortly.</div>`;
+
+  return htmlResponse(
+    pageShell(
+      "Open Federal Opportunities · GovChain",
+      "index,follow",
+      `<main><h1>Open federal opportunities</h1>
+<p class="sub">Live from the GovChain pipeline: SAM.gov notices scored at or above fit ${escapeHtml(minFit)}, soonest deadline first.</p>
+${body}</main>`,
+    ),
+  );
+}
+
+/** A single opportunity — the page `gov_opportunities.govchain_url` points at. */
+async function opportunityDetailPage(env: SupabaseEnv, noticeId: string): Promise<Response> {
+  let row: GovOpportunity | null;
+  try {
+    row = await fetchOpportunity(env, noticeId);
+  } catch {
+    return htmlResponse(
+      pageShell(
+        "Opportunity unavailable · GovChain",
+        "noindex",
+        `<main><h1>This opportunity is temporarily unavailable</h1>
+<p class="sub">The opportunity store could not be reached.</p></main>`,
+      ),
+      503,
+      "no-store",
+    );
+  }
+  if (!row) return notFound(`/opportunities/${noticeId}`);
+
+  const samUrl = safeSamUrl(row.sam_url);
+  const meta = [
+    row.fit_score == null ? null : `Fit ${escapeHtml(row.fit_score)}`,
+    row.naics_code ? `NAICS ${escapeHtml(row.naics_code)}` : null,
+    escapeHtml(formatDeadline(row.deadline)),
+    row.estimated_value == null ? null : `Est. $${escapeHtml(row.estimated_value)}`,
+  ]
+    .filter(Boolean)
+    .map((m) => `<span>${m}</span>`)
+    .join("");
+
+  return htmlResponse(
+    pageShell(
+      `${row.title || "Federal opportunity"} · GovChain`,
+      "index,follow",
+      `<main><a class="back" href="/opportunities">&larr; All opportunities</a>
+<h1>${escapeHtml(row.title || "Federal opportunity")}</h1>
+<p class="sub">${escapeHtml(row.agency || "Federal agency")}</p>
+<div class="meta">${meta}</div>
+${samUrl ? `<p style="margin-bottom:1.5rem"><a href="${escapeHtml(samUrl)}" rel="noopener nofollow" target="_blank">View the original notice on SAM.gov &rarr;</a></p>` : ""}
+<div class="body">${escapeHtml(row.ai_reasoning || row.description || "No description was captured for this notice.")}</div></main>`,
+    ),
+  );
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: SupabaseEnv): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
@@ -1985,11 +2190,8 @@ export default {
     if (p === '/sitemap.xml') {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://govchain.us/</loc></url>
-  <url><loc>https://govchain.us/#how</loc></url>
-  <url><loc>https://govchain.us/#pros</loc></url>
-  <url><loc>https://govchain.us/#compliance</loc></url>
-  <url><loc>https://govchain.us/#pricing</loc></url>
+  <url><loc>https://govchain.us/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://govchain.us/opportunities</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
@@ -1999,6 +2201,44 @@ export default {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
+    // The homepage already fetches both of these endpoints; until now they fell
+    // through to the marketing HTML, so the live feed's JSON.parse always threw
+    // and the stats bar always read "temporarily unavailable".
+    if (p === '/api/govchain/opportunities') {
+      if (!supabaseConfigured(env)) {
+        return jsonResponse({ error: 'supabase_not_configured', opportunities: [] }, 503, 'no-store');
+      }
+      try {
+        const opportunities = await fetchOpportunities(env, {
+          minFit: Number(url.searchParams.get('min_fit') ?? 70),
+          limit: Number(url.searchParams.get('limit') ?? 12),
+        });
+        return jsonResponse({ opportunities });
+      } catch {
+        return jsonResponse({ error: 'supabase_unavailable', opportunities: [] }, 502, 'no-store');
+      }
+    }
+    if (p === '/api/govchain/stats') {
+      if (!supabaseConfigured(env)) {
+        return jsonResponse({ error: 'supabase_not_configured' }, 503, 'no-store');
+      }
+      try {
+        return jsonResponse(await fetchStats(env));
+      } catch {
+        return jsonResponse({ error: 'supabase_unavailable' }, 502, 'no-store');
+      }
+    }
+    if (p === '/opportunities' || p === '/opportunities/') {
+      return opportunitiesPage(env, url);
+    }
+    if (p.startsWith('/opportunities/')) {
+      const noticeId = decodeURIComponent(p.slice('/opportunities/'.length)).trim();
+      if (noticeId) return opportunityDetailPage(env, noticeId);
+    }
+
+    // Only the apex renders the marketing page. Everything unmatched is a 404.
+    if (p !== '/') return notFound(p);
+
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GovChain — Federal Contract Intelligence & Public Provenance</title>

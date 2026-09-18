@@ -3,7 +3,7 @@ name: Government Lead-Gen Engine
 
 on:
   schedule:
-    - cron: "0 6 * * *" # Daily 6 AM UTC — dry-run unless dispatched live
+    - cron: "0 6 * * *" # Daily 6 AM UTC — ingest runs live; everything downstream stays dry
   workflow_dispatch:
     inputs:
       dry_run:
@@ -56,11 +56,20 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
+  # Ingest is the one stage cleared to write on the schedule. It reads SAM.gov
+  # and upserts gov_opportunities — no email, no chain writes, no money. Until
+  # now the nightly run ingested in dry-run, so the table only ever filled when
+  # somebody remembered to dispatch manually, and everything downstream had
+  # nothing current to work from.
+  #
+  # The stages below stay dry on the schedule deliberately: score spends model
+  # credits, proposals drafts outbound content, mint writes on-chain, notify
+  # sends mail. Each needs its own decision and its own manual dispatch.
   ingest:
     needs: preflight
     uses: ./.github/workflows/gov-ingest.yml
     with:
-      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
     secrets: inherit
 
   score:
