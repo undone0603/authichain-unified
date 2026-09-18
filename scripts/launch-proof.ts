@@ -81,9 +81,6 @@ const fixturePayload = fixture.payload as {
   expires_at?: string;
 };
 
-const fixtureKid = String(fixture.protected.kid || "");
-if (!fixtureKid) throw new Error("fixture JWS does not contain kid");
-
 // The repository fixture is retained as the payload contract, but the proof
 // must exercise the current production signing key. Generate a fresh JWS from
 // the live signing endpoint rather than trusting a rotated historical kid.
@@ -150,7 +147,7 @@ await verifyExpectedFailure("altered signature", () =>
 );
 
 await verifyExpectedFailure("wrong subject", () =>
-  verifyAttestationJws(fixtureJws, publicJwk, {
+  verifyAttestationJws(productionJws, publicJwk, {
     expectedObjectId: "authi:wrong-subject",
   }),
 );
@@ -220,7 +217,7 @@ const launchProof = {
   objectId,
   sourceObjectId: fixturePayload.subject.object_id,
   attestationId: verifiedFixture.attestation_id,
-  kid: fixtureKid,
+  kid: productionKid,
   jws: productionJws,
   jwksUrl,
   qronId,
