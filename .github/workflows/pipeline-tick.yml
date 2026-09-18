@@ -110,6 +110,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       # A [pipeline-proof] push is the explicit one-shot launch verification path.
+      # This commit intentionally carries the marker so the proof workflow runs once.
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
