@@ -68,18 +68,22 @@ for the NSF pitch.
 Bind `AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` on `authichain-edge-router` after
 that worker publishes, or `GET /.well-known/jwks.json` returns 503.
 
-## 4. Purge Cloudflare cache (HIT homepage on /api and JWKS)
-After edge-router + landing publish, stale `cf-cache-status: HIT` HTML still
-serves `/api/checkout/dpp` and `/.well-known/jwks.json` until purged.
+## 4. Cache Purge is a 401 — do not wait on it
 
-**Actions:** [Purge Cloudflare cache](https://github.com/undone0603/authichain-unified/actions/workflows/purge-cloudflare-cache.yml) → Run workflow → zone `authichain.com`.
-Needs `Zone.Cache Purge` on `CLOUDFLARE_API_TOKEN`. A 403 means add that
-permission, or dashboard **Caching → Configuration → Custom Purge**:
+`CLOUDFLARE_API_TOKEN` returns `10000 Authentication error` on
+`POST /zones/.../purge_cache`. Do **not** block launch on Zone.Cache Purge.
 
-- URLs: `https://authichain.com/.well-known/jwks.json`, `https://authichain.com/api/checkout/dpp`
-- Prefixes: `authichain.com/api`, `authichain.com/.well-known`
+Live JWKS (never cached as landing HTML):
 
-Pass: `curl -sI https://authichain.com/.well-known/jwks.json` is not `HIT` + `text/html`.
+`GET https://authichain.com/protocol/jwks.json`
+
+Canonical `/.well-known/jwks.json` stays HIT HTML until someone Custom-Purges
+in the dashboard. Same for `/api/checkout/dpp`.
+
+Attestation key: `deploy-cloudflare.yml` runs `wrangler secret put
+AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` after publish (Workers Scripts:Edit
+already works). If the GitHub secret is set, that value is used; otherwise a
+v0.1 Ed25519 key is generated once and stored only on the worker.
 
 ## Per-worker secret reference
 | Worker | Secrets |
