@@ -120,7 +120,7 @@ jobs:
             echo "GitHub secret empty and JWKS is $JWKS_CODE — generating Ed25519 v0.1 key"
             KEY_B64="$(node --input-type=module -e '
               import { generateKeyPair, exportPKCS8 } from "jose";
-              const { privateKey } = await generateKeyPair("EdDSA");
+              const { privateKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
               const pem = await exportPKCS8(privateKey);
               process.stdout.write(Buffer.from(pem).toString("base64"));
             ')"
@@ -132,9 +132,22 @@ jobs:
               AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
           fi
           echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 on $WORKER_NAME"
+          for i in 1 2 3 4 5 6; do
+            sleep 5
+            AFTER="$(curl -sS -o /tmp/jwks-after.json -w '%{http_code}' \
+              https://authichain.com/protocol/jwks.json || echo 000)"
+            if [ "$AFTER" = "200" ]; then
+              echo "JWKS live after bind ($AFTER)"
+              exit 0
+            fi
+            echo "JWKS $AFTER after bind, retry $i"
+          done
+          echo "JWKS still not 200 after bind"
+          cat /tmp/jwks-after.json || true
+          exit 1
 
       - name: Deploy authichain-scan-validate
-        if: steps.secrets_check.outputs.skip != 'true'
+        if: ${{ always() && steps.secrets_check.outputs.skip != 'true' }}
         working-directory: workers/authichain-scan-validate
         run: npx wrangler deploy --minify --config wrangler.toml
         env:
