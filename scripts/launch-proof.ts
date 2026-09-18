@@ -55,7 +55,6 @@ async function loadProductionPrivateKey() {
   return importPKCS8(pemFromSecret(raw), "EdDSA");
 }
 
-
 const ISSUER_URL = "https://authichain.com/protocol/issuer.json";
 const LAUNCH_PROOF_URL = "https://authichain.com/protocol/launch-proof";
 const OIDC_AUDIENCE = "https://authichain.com";
@@ -174,7 +173,6 @@ async function requestProductionSignedJws(input: {
     source: "production-issuer signed against live JWKS",
   };
 }
-
 
 async function supabaseUpsert(
   table: string,
@@ -345,8 +343,11 @@ await verifyExpectedFailure("wrong subject", () =>
   }),
 );
 
-const { privateKey: testKey } = await generateKeyPair("Ed25519");
-const testPublicJwk = await exportJWK(testKey);
+const { privateKey: testKey, publicKey: testPublicKey } = await generateKeyPair(
+  "Ed25519",
+  { extractable: true },
+);
+const testPublicJwk = await exportJWK(testPublicKey);
 testPublicJwk.kid = "proof-negative-kid";
 
 const revokedJws = await signAttestation(
