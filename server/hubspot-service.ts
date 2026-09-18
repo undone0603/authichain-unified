@@ -1,7 +1,14 @@
 import { Client } from "@hubspot/api-client";
 import { ENV } from "./_core/env";
 
-// ─── Client ──────────────────────────────────────────────────────────────────
+export {
+  HUBSPOT_PORTAL,
+  classifyVertical,
+  hubspotRecordUrl,
+  hubspotPortalHome,
+} from "./hubspot-portal";
+
+// ─── Client ──────────────────────────────────────────────────────────
 let _client: Client | null = null;
 
 function getErrorMessage(err: unknown): string {
@@ -27,7 +34,7 @@ export function isHubSpotConfigured(): boolean {
   return !!ENV.hubspotServiceKey;
 }
 
-// ─── Contacts ────────────────────────────────────────────────────────────────
+// ─── Contacts ────────────────────────────────────────────────────────
 export async function listContacts(limit = 50) {
   const client = getClient();
   try {
@@ -78,7 +85,7 @@ export async function createContact(data: {
   }
 }
 
-// ─── Companies ───────────────────────────────────────────────────────────────
+// ─── Companies ───────────────────────────────────────────────────────
 export async function listCompanies(limit = 50) {
   const client = getClient();
   try {
@@ -110,7 +117,7 @@ export async function createCompany(data: {
   }
 }
 
-// ─── Deals ───────────────────────────────────────────────────────────────────
+// ─── Deals ───────────────────────────────────────────────────────────
 export async function createDeal(data: {
   dealname: string; amount?: string; pipeline?: string;
   dealstage?: string; closedate?: string;
@@ -143,7 +150,7 @@ export async function listDeals(limit = 50) {
   }
 }
 
-// ─── CRM Stats ────────────────────────────────────────────────────────────────
+// ─── CRM Stats ────────────────────────────────────────────────────────
 export async function getCRMStats() {
   try {
     const client = getClient();
@@ -180,7 +187,7 @@ export async function getCRMStats() {
   }
 }
 
-// ─── Sync Helpers ─────────────────────────────────────────────────────────────
+// ─── Sync Helpers ───────────────────────────────────────────────────────
 export async function syncLeadToHubSpot(lead: {
   email: string; name?: string; company?: string; source?: string;
 }) {
