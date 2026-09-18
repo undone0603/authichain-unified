@@ -2172,7 +2172,7 @@ async function opportunityDetailPage(env: SupabaseEnv, noticeId: string): Promis
 <p class="sub">${escapeHtml(row.agency || "Federal agency")}</p>
 <div class="meta">${meta}</div>
 ${samUrl ? `<p style="margin-bottom:1.5rem"><a href="${escapeHtml(samUrl)}" rel="noopener nofollow" target="_blank">View the original notice on SAM.gov &rarr;</a></p>` : ""}
-<div class="body">${escapeHtml(row.ai_reasoning || row.description || "No description was captured for this notice.")}</div></main>`,
+<div class="body">${escapeHtml(row.description || "No description was captured for this notice.")}</div></main>`,
     ),
   );
 }
