@@ -77,7 +77,7 @@ async function jwksResponse(
     };
   } catch {
     return {
-      body: { error: "attestation key unavailable" },
+      body: { error: "attestation key unavailable", reason: "invalid" },
       status: 503,
       headers: { "Cache-Control": "private, no-store" },
     };

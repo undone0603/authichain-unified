@@ -41,6 +41,8 @@ function hydrateProcessEnv(env?: Env) {
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
+    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;
@@ -1374,4 +1376,10 @@ export { RateLimiter } from "./rate-limiter";
 // registrable. See cron-dispatch.ts for the reasoning and the dispatch rules.
 // NOTE: the trigger itself is still commented out in wrangler.toml; wiring the
 // handler here does not by itself schedule anything.
-export default { fetch: app.fetch, scheduled };
+export default {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    hydrateProcessEnv(env);
+    return app.fetch(request, env, ctx);
+  },
+  scheduled,
+};
