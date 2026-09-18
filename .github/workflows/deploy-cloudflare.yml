@@ -118,20 +118,20 @@ jobs:
           KEY_B64="${AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64:-}"
           if [ -z "$KEY_B64" ]; then
             echo "GitHub secret empty and JWKS is $JWKS_CODE — generating Ed25519 v0.1 key"
-            KEY_B64="$(node --input-type=module -e '
-              import { generateKeyPairSync } from "node:crypto";
-              const { privateKey } = generateKeyPairSync("ed25519");
-              const pem = privateKey.export({ type: "pkcs8", format: "pem" });
-              process.stdout.write(Buffer.from(pem).toString("base64"));
-            ')"
+          else
+            echo "Deriving public JWK from the GitHub-stored PKCS#8"
           fi
+          EXISTING_KEY_B64="$KEY_B64" node ../scripts/bind-attestation-jwks.mjs
+          KEY_B64="$(cat /tmp/attest-pkcs8.b64)"
           printf '%s' "$KEY_B64" | npx wrangler secret put \
             AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 --name "$WORKER_NAME"
+          printf '%s' "$(cat /tmp/attest-pub.jwk)" | npx wrangler secret put \
+            AUTHICHAIN_ATTESTATION_PUBLIC_JWK --name "$WORKER_NAME"
           if [ -n "${AUTHICHAIN_ATTESTATION_KEY_ID:-}" ]; then
             printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
               AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
           fi
-          echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 on $WORKER_NAME"
+          echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 + PUBLIC_JWK on $WORKER_NAME"
           echo "re-deploying so custom routes attach to the version that has the secret"
           npx wrangler deploy --minify --config wrangler.toml
           for i in 1 2 3 4 5 6 7 8; do
