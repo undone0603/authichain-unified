@@ -89,9 +89,13 @@ jobs:
           echo "=== dirs created/modified in last 15 min ==="
           # GHA bash uses pipefail; find|head SIGPIPEs and used to fail this
           # step (run 35272825980) before wrangler deploy of APP_WORKER.
+          # Temporarily drop pipefail so the diagnostic truncate cannot fail
+          # the job — do not use `|| true` (blocked by check-workflow-cannot-fail).
+          set +o pipefail
           find . -maxdepth 4 -type d -mmin -15 \
             -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null \
-            | head -50 || true
+            | head -50
+          set -o pipefail
 
       - name: Ensure worker-app assets directory
         if: steps.secrets_check.outputs.skip != 'true'
