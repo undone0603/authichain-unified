@@ -1,43 +1,41 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { importPKCS8 } from "jose";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { generateKeyPair, exportJWK } from "jose";
 import QRCode from "qrcode";
 import {
+  parseJws,
   signAttestation,
   verifyAttestationJws,
-  getKeyId,
 } from "../packages/verifier/src/index";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const PRIVATE_KEY_B64 = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
-const EXPLICIT_KID = process.env.AUTHICHAIN_ATTESTATION_KEY_ID || "";
 const GIT_SHA = process.env.GITHUB_SHA || "unknown";
 const RUN_ID = process.env.GITHUB_RUN_ID || "unknown";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
 }
-if (!PRIVATE_KEY_B64) {
-  throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is required");
-}
 
 const productId = "00000000-0000-4000-8000-000000000001";
 const qrCodeId = "00000000-0000-4000-8000-000000000002";
 const eventId = "00000000-0000-4000-8000-000000000003";
-const objectId = "authi:launch-proof:2026-09-18";
-const attestationId = "ac_launch_proof_2026_09_18";
 const qronId = "qron-launch-proof-2026-09-18";
 const serial = "AC-LAUNCH-001";
-const issuedAt = "2026-09-18T00:00:00.000Z";
 const storyUrl = `https://authichain.com/story/${productId}`;
 const jwksUrl = "https://authichain.com/.well-known/jwks.json";
+const fixtureJws = (
+  await readFile("fixtures/attestation-v0.1-valid.jws", "utf8")
+).trim();
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-async function supabaseUpsert(table: string, rows: Record<string, unknown>[]) {
+async function supabaseUpsert(
+  table: string,
+  rows: Record<string, unknown>[],
+) {
   const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`;
   const response = await fetch(url, {
     method: "POST",
@@ -50,12 +48,17 @@ async function supabaseUpsert(table: string, rows: Record<string, unknown>[]) {
     body: JSON.stringify(rows),
   });
   if (!response.ok) {
-    throw new Error(`${table} upsert failed: ${response.status} ${await response.text()}`);
+    throw new Error(
+      `${table} upsert failed: ${response.status} ${await response.text()}`,
+    );
   }
   return response.json();
 }
 
-async function verifyExpectedFailure(label: string, fn: () => Promise<unknown>) {
+async function verifyExpectedFailure(
+  label: string,
+  fn: () => Promise<unknown>,
+) {
   try {
     await fn();
   } catch {
@@ -64,37 +67,23 @@ async function verifyExpectedFailure(label: string, fn: () => Promise<unknown>) 
   throw new Error(`${label} unexpectedly verified`);
 }
 
-const privateKey = await importPKCS8(
-  Buffer.from(PRIVATE_KEY_B64, "base64").toString("utf8"),
-  "EdDSA",
-);
-const keyId = EXPLICIT_KID || (await getKeyId(privateKey));
-
-const baseAttestation = {
-  version: "0.1" as const,
-  attestation_id: attestationId,
-  issuer: { id: "https://authichain.com", name: "AuthiChain" },
+const fixture = parseJws(fixtureJws);
+const fixturePayload = fixture.payload as {
+  attestation_id: string;
+  issuer: { id: string; name: string };
   subject: {
-    object_id: objectId,
-    product_class: "generic-provenance",
-    gtin: "00012345678905",
-    serial,
-    lot: "LAUNCH-PROOF",
-  },
-  decision: "verified" as const,
-  status: "active" as const,
-  issued_at: issuedAt,
-  evidence: [
-    {
-      id: "ev_launch_object",
-      type: "registry-record",
-      digest: `sha256:${sha256(`${objectId}|${serial}|qron|${qronId}`)}`,
-      uri: storyUrl,
-    },
-  ],
+    object_id: string;
+    gtin?: string;
+    serial?: string;
+  };
+  decision: "verified" | "warning" | "blocked";
+  status: "active" | "revoked" | "unknown";
+  issued_at: string;
+  expires_at?: string;
 };
 
-const jws = await signAttestation(baseAttestation, privateKey, keyId);
+const fixtureKid = String(fixture.protected.kid || "");
+if (!fixtureKid) throw new Error("fixture JWS does not contain kid");
 
 const jwksResponse = await fetch(jwksUrl, {
   headers: { accept: "application/json" },
@@ -102,76 +91,116 @@ const jwksResponse = await fetch(jwksUrl, {
 if (!jwksResponse.ok) {
   throw new Error(`JWKS endpoint returned HTTP ${jwksResponse.status}`);
 }
-const liveJwks = await jwksResponse.json();
-const publicJwk = liveJwks.keys?.find((key: any) => key.kid === keyId);
-if (!publicJwk) throw new Error(`live JWKS does not expose kid ${keyId}`);
+const liveJwks = (await jwksResponse.json()) as {
+  keys?: Array<Record<string, unknown>>;
+};
+const publicJwk = liveJwks.keys?.find(
+  (key) => key.kid === fixtureKid,
+);
+if (!publicJwk) {
+  throw new Error(`live JWKS does not expose fixture kid ${fixtureKid}`);
+}
 
-await verifyAttestationJws(jws, publicJwk, { expectedObjectId: objectId });
+const verifiedFixture = await verifyAttestationJws(fixtureJws, publicJwk, {
+  expectedObjectId: fixturePayload.subject.object_id,
+});
 
-const alteredPayload = jws.split(".");
+const alteredPayload = fixtureJws.split(".");
 const payload = JSON.parse(
   Buffer.from(alteredPayload[1], "base64url").toString("utf8"),
 );
 payload.subject.object_id = "authi:altered-subject";
-alteredPayload[1] = Buffer.from(JSON.stringify(payload)).toString("base64url");
+alteredPayload[1] = Buffer.from(
+  JSON.stringify(payload),
+).toString("base64url");
 await verifyExpectedFailure("altered payload", () =>
   verifyAttestationJws(alteredPayload.join("."), publicJwk, {
-    expectedObjectId: objectId,
+    expectedObjectId: fixturePayload.subject.object_id,
   }),
 );
 
-const alteredSignature = jws.split(".");
+const alteredSignature = fixtureJws.split(".");
 alteredSignature[2] =
   alteredSignature[2].slice(0, -1) +
   (alteredSignature[2].endsWith("A") ? "B" : "A");
 await verifyExpectedFailure("altered signature", () =>
   verifyAttestationJws(alteredSignature.join("."), publicJwk, {
-    expectedObjectId: objectId,
+    expectedObjectId: fixturePayload.subject.object_id,
   }),
 );
 
-const wrongSubject = {
-  ...baseAttestation,
-  subject: { ...baseAttestation.subject, object_id: "authi:wrong-subject" },
-};
-const wrongSubjectJws = await signAttestation(wrongSubject, privateKey, keyId);
 await verifyExpectedFailure("wrong subject", () =>
-  verifyAttestationJws(wrongSubjectJws, publicJwk, {
-    expectedObjectId: objectId,
+  verifyAttestationJws(fixtureJws, publicJwk, {
+    expectedObjectId: "authi:wrong-subject",
   }),
 );
+
+const { privateKey: testKey } = await generateKeyPair("Ed25519");
+const testPublicJwk = await exportJWK(testKey);
+testPublicJwk.kid = "proof-negative-kid";
 
 const revokedJws = await signAttestation(
-  { ...baseAttestation, status: "revoked" },
-  privateKey,
-  keyId,
+  {
+    version: "0.1",
+    attestation_id: "ac_negative_revoked",
+    issuer: { id: "https://authichain.com", name: "AuthiChain" },
+    subject: { object_id: fixturePayload.subject.object_id },
+    decision: "verified",
+    status: "revoked",
+    issued_at: "2026-08-20T16:00:00Z",
+    evidence: [
+      {
+        id: "negative",
+        type: "negative-test",
+        digest: `sha256:${"0".repeat(64)}`,
+      },
+    ],
+  },
+  testKey,
+  "proof-negative-kid",
 );
 await verifyExpectedFailure("revoked attestation", () =>
-  verifyAttestationJws(revokedJws, publicJwk, { expectedObjectId: objectId }),
+  verifyAttestationJws(revokedJws, testPublicJwk, {
+    expectedObjectId: fixturePayload.subject.object_id,
+  }),
 );
 
 const staleJws = await signAttestation(
   {
-    ...baseAttestation,
+    version: "0.1",
+    attestation_id: "ac_negative_stale",
+    issuer: { id: "https://authichain.com", name: "AuthiChain" },
+    subject: { object_id: fixturePayload.subject.object_id },
+    decision: "verified",
+    status: "active",
     issued_at: "2024-01-01T00:00:00.000Z",
     expires_at: "2024-01-02T00:00:00.000Z",
+    evidence: [
+      {
+        id: "negative",
+        type: "negative-test",
+        digest: `sha256:${"1".repeat(64)}`,
+      },
+    ],
   },
-  privateKey,
-  keyId,
+  testKey,
+  "proof-negative-kid",
 );
 await verifyExpectedFailure("stale attestation", () =>
-  verifyAttestationJws(staleJws, publicJwk, {
-    expectedObjectId: objectId,
+  verifyAttestationJws(staleJws, testPublicJwk, {
+    expectedObjectId: fixturePayload.subject.object_id,
     now: Date.parse("2024-01-03T00:00:00.000Z"),
   }),
 );
 
-const seed = sha256(`QRON|${objectId}|${serial}`);
+const objectId = `authichain:${fixturePayload.subject.object_id}`;
+const seed = sha256(`QRON|${objectId}|${serial}|${fixtureKid}`);
 const launchProof = {
   objectId,
-  attestationId,
-  kid: keyId,
-  jws,
+  sourceObjectId: fixturePayload.subject.object_id,
+  attestationId: verifiedFixture.attestation_id,
+  kid: fixtureKid,
+  jws: fixtureJws,
   jwksUrl,
   qronId,
   qronSeed: seed,
@@ -179,6 +208,7 @@ const launchProof = {
   verifiedAt: new Date().toISOString(),
   gitSha: GIT_SHA,
   workflowRunId: RUN_ID,
+  source: "fixtures/attestation-v0.1-valid.jws",
   tamperTests: {
     alteredPayload: "rejected",
     alteredSignature: "rejected",
@@ -192,19 +222,19 @@ const storymode = {
   title: "The AuthiChain Reference Object",
   chapters: [
     {
-      title: "Birth",
+      title: "Identity",
       content:
-        "A deterministic product identity is bound to a provider-scoped AuthiChain object and a QRON seed.",
+        "A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.",
     },
     {
       title: "Proof",
       content:
-        "The object is covered by an Ed25519 AuthiChain Attestation Contract v0.1 whose kid resolves through the live public JWKS.",
+        "The production-signed fixture is independently verified against the live public JWKS using its kid.",
     },
     {
       title: "Reveal",
       content:
-        "Scanning the QRON launch code opens this StoryMode page, which independently checks the signed attestation before presenting the provenance narrative.",
+        "Scanning the QRON launch code opens StoryMode, where the signed attestation is checked before the provenance narrative is presented.",
     },
   ],
 };
@@ -214,13 +244,13 @@ await supabaseUpsert("products", [
     id: productId,
     name: "AuthiChain Launch Proof — QRON / StoryMode",
     brand: "AuthiChain",
-    description: "Deterministic production reference object for the AuthiChain cryptographic truth layer.",
+    description:
+      "Deterministic production reference object for the AuthiChain cryptographic truth layer.",
     category: "authentication",
     serial_number: serial,
     status: "active",
     data_origin: "launch-proof",
-    created_at: issuedAt,
-    updated_at: issuedAt,
+    updated_at: new Date().toISOString(),
     metadata: {
       launchProof,
       storymode,
@@ -242,8 +272,8 @@ await supabaseUpsert("qr_codes", [
         id: qronId,
         seed,
         object_id: objectId,
-        attestation_id: attestationId,
-        kid: keyId,
+        attestation_id: verifiedFixture.attestation_id,
+        kid: fixtureKid,
         jwks_url: jwksUrl,
       },
     },
@@ -254,18 +284,19 @@ await supabaseUpsert("certification_events", [
   {
     id: eventId,
     event_type: "launch_proof_created",
-    created_at: issuedAt,
+    created_at: new Date().toISOString(),
     payload: {
       product_id: productId,
       object_id: objectId,
       qron_id: qronId,
-      attestation_id: attestationId,
-      kid: keyId,
+      attestation_id: verifiedFixture.attestation_id,
+      kid: fixtureKid,
       storymode_url: storyUrl,
       cryptographic_verification: "verified",
       tamper_tests: launchProof.tamperTests,
     },
-    notes: "Deterministic AuthiChain production launch proof. This is a provenance event, not a physical scan.",
+    notes:
+      "Deterministic AuthiChain production launch proof. This is a provenance event, not a physical scan.",
   },
 ]);
 
@@ -288,17 +319,19 @@ const report = {
   referenceObject: {
     productId,
     objectId,
+    sourceObjectId: fixturePayload.subject.object_id,
     serial,
     qronId,
     storyUrl,
   },
   cryptography: {
     contract: "AuthiChain Attestation Contract v0.1",
-    alg: "EdDSA",
-    kid: keyId,
+    alg: String(fixture.protected.alg),
+    kid: fixtureKid,
     jwksUrl,
-    jwksResolved: true,
+    liveJwksResolved: true,
     independentVerification: "passed",
+    productionSignedFixture: true,
   },
   tamperTests: launchProof.tamperTests,
   provenance: {
