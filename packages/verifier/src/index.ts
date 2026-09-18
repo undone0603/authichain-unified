@@ -5,6 +5,7 @@ import {
   decodeProtectedHeader,
   exportJWK,
   importJWK,
+  importPKCS8,
 } from "jose";
 
 export type KeyLike = any;
@@ -12,7 +13,18 @@ export type KeyLike = any;
 export const AUTHICHAIN_ATTESTATION_V01 = "0.1" as const;
 export const AUTHICHAIN_ATTESTATION_TYP = "AC-ATTESTATION+JWS";
 
-export async function getKeyId(key: KeyLike): Promise<string> {
+async function resolvePrivateKey(key?: KeyLike): Promise<KeyLike> {
+  if (key) return key;
+  const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
+  if (!raw) {
+    throw new Error(
+      "AuthiChain attestation private key is not configured; set AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64"
+    );
+  }
+  return importPKCS8(Buffer.from(raw, "base64").toString("utf8"), "EdDSA");
+}
+
+export async function getKeyId(key?: KeyLike): Promise<string> {
   return calculateJwkThumbprint(await publicJwkFromPrivateKey(key));
 }
 
@@ -194,8 +206,8 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
   return input as AuthiChainAttestationV01;
 }
 
-export async function publicJwkFromPrivateKey(key: KeyLike) {
-  const jwk = await exportJWK(key);
+export async function publicJwkFromPrivateKey(key?: KeyLike) {
+  const jwk = await exportJWK(await resolvePrivateKey(key));
   const { d: _d, ...publicJwk } = jwk;
   return publicJwk;
 }
