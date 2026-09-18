@@ -1,0 +1,32 @@
+name: AuthiChain on-chain ledger reconstruction
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/onchain-authichain-ledger
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Reconstruct production AuthiChain NFT ledger
+        run: pnpm ledger:authichain-nft
+        env:
+          POLYGON_RPC_URL: https://polygon-rpc.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: authichain-nft-ledger
+          path: artifacts/onchain/
+          if-no-files-found: error
