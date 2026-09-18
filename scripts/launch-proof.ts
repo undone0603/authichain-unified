@@ -198,12 +198,12 @@ await verifyExpectedFailure("stale attestation", () =>
 
 const objectId = fixturePayload.subject.object_id;
 const serial = fixturePayload.subject.serial || "SN-001";
-const seed = sha256(`QRON|${objectId}|${serial}|${productionKid}`);
+const seed = sha256(`QRON|${objectId}|${serial}|${fixtureKid}`);
 const launchProof = {
   objectId,
   sourceObjectId: fixturePayload.subject.object_id,
   attestationId: verifiedFixture.attestation_id,
-  kid: productionKid,
+  kid: fixtureKid,
   jws: productionJws,
   jwksUrl,
   qronId,
@@ -212,7 +212,7 @@ const launchProof = {
   verifiedAt: new Date().toISOString(),
   gitSha: GIT_SHA,
   workflowRunId: RUN_ID,
-  source: "fixtures/attestation-v0.1-valid.jws",
+  source: "fixtures/attestation-v0.1-valid.jws; verified against live JWKS",
   tamperTests: {
     alteredPayload: "rejected",
     alteredSignature: "rejected",
@@ -233,7 +233,7 @@ const storymode = {
     {
       title: "Proof",
       content:
-        "The production-signed fixture is independently verified against the live public JWKS using its kid.",
+        "The fixture attestation is independently verified against the live public JWKS using its kid.",
     },
     {
       title: "Reveal",
@@ -277,7 +277,7 @@ await supabaseUpsert("qr_codes", [
         seed,
         object_id: objectId,
         attestation_id: verifiedFixture.attestation_id,
-        kid: productionKid,
+        kid: fixtureKid,
         jwks_url: jwksUrl,
       },
     },
@@ -294,7 +294,7 @@ await supabaseUpsert("certification_events", [
       object_id: objectId,
       qron_id: qronId,
       attestation_id: verifiedFixture.attestation_id,
-      kid: productionKid,
+      kid: fixtureKid,
       storymode_url: storyUrl,
       cryptographic_verification: "verified",
       tamper_tests: launchProof.tamperTests,
@@ -331,7 +331,7 @@ const report = {
   cryptography: {
     contract: "AuthiChain Attestation Contract v0.1",
     alg: String(fixture.protected.alg),
-    kid: productionKid,
+    kid: fixtureKid,
     jwksUrl,
     liveJwksResolved: true,
     independentVerification: "passed",
