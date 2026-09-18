@@ -22,7 +22,7 @@ const qrCodeId = "00000000-0000-4000-8000-000000000002";
 const eventId = "00000000-0000-4000-8000-000000000003";
 const qronId = "qron-launch-proof-2026-09-18";
 const storyUrl = `https://authichain.com/story/${productId}`;
-const jwksUrl = "https://authichain.com/.well-known/jwks.json";
+const jwksUrl = "https://authichain.com/protocol/jwks.json";
 const fixtureJws = (
   await readFile("fixtures/attestation-v0.1-valid.jws", "utf8")
 ).trim();
