@@ -97,7 +97,7 @@ const liveJwks = (await jwksResponse.json()) as {
   keys?: Array<Record<string, unknown>>;
 };
 const publicJwk = liveJwks.keys?.find(
-  (key) => key.kid === productionKid,
+  (key) => key.kid === fixtureKid,
 );
 if (!publicJwk) {
   const liveKids = (liveJwks.keys || []).map((key) => ({ kid: key.kid, x: key.x, alg: key.alg, crv: key.crv }));
