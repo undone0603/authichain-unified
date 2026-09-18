@@ -5,9 +5,11 @@ vi.mock("../server/webhooks/stripe", () => ({
 }));
 
 vi.mock("../server/paddle/webhook", () => ({
-  handlePaddleWebhook: vi.fn().mockImplementation(async (_db: unknown, _req: unknown, res: any) => {
-    res.json({ received: true });
-  }),
+  handlePaddleWebhook: vi
+    .fn()
+    .mockImplementation(async (_db: unknown, _req: unknown, res: any) => {
+      res.json({ received: true });
+    }),
 }));
 
 vi.mock("../server/webhooks/instantly", () => ({
@@ -37,6 +39,49 @@ const indexModule = await import("./index");
 const app = indexModule.app;
 const __resetMarketingRoutesCache = indexModule.__resetMarketingRoutesCache;
 
+const { dppCreate } = vi.hoisted(() => ({ dppCreate: vi.fn() }));
+vi.mock("stripe", () => ({
+  default: class Stripe {
+    checkout = {
+      sessions: { create: (...args: unknown[]) => dppCreate(...args) },
+    };
+  },
+}));
+
+describe("GET /api/checkout/dpp", () => {
+  beforeEach(() => {
+    dppCreate.mockReset();
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  it("returns 500 JSON when Stripe is not configured", async () => {
+    const res = await app.request("/api/checkout/dpp");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/Stripe is not configured/);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("303s to Stripe Checkout with the DPP price and visit id", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_worker",
+    });
+    const res = await app.request(
+      "/api/checkout/dpp?visit_id=dpp_worker_1&utm_source=seo"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_worker"
+    );
+    expect(dppCreate).toHaveBeenCalledOnce();
+    const arg = dppCreate.mock.calls[0][0];
+    expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
+    expect(arg.client_reference_id).toBe("dpp_worker_1");
+    expect(arg.metadata.plan).toBe("dpp_readiness");
+  });
+});
+
 describe("POST /api/stripe/webhook", () => {
   it("passes the raw body and signature header through unchanged", async () => {
     const res = await app.request("/api/stripe/webhook", {
@@ -48,8 +93,8 @@ describe("POST /api/stripe/webhook", () => {
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
     expect(handleStripeWebhook).toHaveBeenCalled();
     const args = (handleStripeWebhook as any).mock.calls[0];
-    expect(Buffer.from(args[1]).toString()).toBe("raw-stripe-payload");
-    expect(args[2]).toBe("t=123,v1=fake");
+    expect(Buffer.from(args[0]).toString()).toBe("raw-stripe-payload");
+    expect(args[1]).toBe("t=123,v1=fake");
   });
 
   it("returns 400 when the stripe-signature header is missing", async () => {
@@ -60,6 +105,35 @@ describe("POST /api/stripe/webhook", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/stripe-signature/i);
+  });
+});
+
+describe("POST /api/dpp/activate", () => {
+  it("returns 400 JSON without session_id", async () => {
+    const res = await app.request("/api/dpp/activate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        categories: "sku",
+        markets: "EU",
+        labeling: "none",
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/session_id/);
+  });
+});
+
+describe("GET /api/cron/dpp-exceptions", () => {
+  it("returns 401 JSON without a bearer token, never HTML", async () => {
+    const res = await app.request("/api/cron/dpp-exceptions");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toMatch(/Unauthorized/i);
   });
 });
 
@@ -80,7 +154,10 @@ describe("POST /api/paddle/webhook", () => {
   });
 
   it("returns 400 when the paddle-signature header is missing", async () => {
-    const res = await app.request("/api/paddle/webhook", { method: "POST", body: "x" });
+    const res = await app.request("/api/paddle/webhook", {
+      method: "POST",
+      body: "x",
+    });
     expect(res.status).toBe(400);
   });
 });
@@ -93,7 +170,8 @@ describe("POST /api/webhooks/instantly", () => {
       body: JSON.stringify({ event: "email_opened", email: "a@b.com" }),
     });
     expect(res.status).toBe(200);
-    const { handleInstantlyWebhook } = await import("../server/webhooks/instantly");
+    const { handleInstantlyWebhook } =
+      await import("../server/webhooks/instantly");
     const args = (handleInstantlyWebhook as any).mock.calls.at(-1);
     expect(args[1]).toEqual({ event: "email_opened", email: "a@b.com" });
   });
@@ -104,12 +182,19 @@ describe("POST /api/webhooks/docusign", () => {
     const res = await app.request("/api/webhooks/docusign", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ event: "envelope-sent", recipientEmail: "a@b.com" }),
+      body: JSON.stringify({
+        event: "envelope-sent",
+        recipientEmail: "a@b.com",
+      }),
     });
     expect(res.status).toBe(200);
-    const { handleDocuSignWebhook } = await import("../server/webhooks/docusign");
+    const { handleDocuSignWebhook } =
+      await import("../server/webhooks/docusign");
     const args = (handleDocuSignWebhook as any).mock.calls.at(-1);
-    expect(args[1]).toEqual({ event: "envelope-sent", recipientEmail: "a@b.com" });
+    expect(args[1]).toEqual({
+      event: "envelope-sent",
+      recipientEmail: "a@b.com",
+    });
   });
 });
 
@@ -120,7 +205,9 @@ describe("GET /api/admin/ops", () => {
 
   it("returns 401 when there is no session", async () => {
     const { sdk } = await import("../server/_core/sdk");
-    (sdk.authenticateRequest as any).mockRejectedValueOnce(new Error("no session"));
+    (sdk.authenticateRequest as any).mockRejectedValueOnce(
+      new Error("no session")
+    );
     const res = await app.request("/api/admin/ops");
     expect(res.status).toBe(401);
   });
@@ -165,7 +252,11 @@ describe("POST /api/contact", () => {
     const res = await app.request("/api/contact", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Zac", email: "not-an-email", message: "hi" }),
+      body: JSON.stringify({
+        name: "Zac",
+        email: "not-an-email",
+        message: "hi",
+      }),
     });
     expect(res.status).toBe(400);
   });
@@ -174,7 +265,11 @@ describe("POST /api/contact", () => {
     const res = await app.request("/api/contact", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Zac", email: "zac@example.com", message: "hi" }),
+      body: JSON.stringify({
+        name: "Zac",
+        email: "zac@example.com",
+        message: "hi",
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -215,7 +310,6 @@ describe("Internal gateway API auth guard", () => {
     expect(res.status).toBe(401);
   });
 });
-
 
 // __STATIC_ROUTING_TESTS__
 // Task 3.2: manifest-driven static + SPA routing in the "*" fallback handler.
@@ -342,7 +436,7 @@ describe("manifest-driven static + SPA routing", () => {
     const res = await app.request(
       "/robots.txt",
       { headers: { "x-forwarded-host": "qron.space" } },
-      makeEnv() as any,
+      makeEnv() as any
     );
     expect(res.status).toBe(200);
     const body = await res.text();
@@ -354,7 +448,7 @@ describe("manifest-driven static + SPA routing", () => {
     const res = await app.request(
       "/sitemap.xml",
       { headers: { "x-forwarded-host": "qron.space" } },
-      makeEnv() as any,
+      makeEnv() as any
     );
     expect(res.status).toBe(200);
     const body = await res.text();
@@ -369,7 +463,7 @@ describe("manifest-driven static + SPA routing", () => {
       "<!doctype html><html><head>" +
       "<title>AuthiChain \u2013 Blockchain Product Authentication Platform</title>" +
       '<meta name="description" content="old default description" />' +
-      "</head><body><div id=\"root\"></div></body></html>";
+      '</head><body><div id="root"></div></body></html>';
     const htmlEnv = {
       ASSETS: {
         fetch: async (input: Request | string) => {
@@ -391,7 +485,7 @@ describe("manifest-driven static + SPA routing", () => {
     const res = await app.request(
       "/",
       { headers: { "x-forwarded-host": "qron.space" } },
-      htmlEnv as any,
+      htmlEnv as any
     );
     expect(res.status).toBe(200);
     const html = await res.text();
@@ -458,8 +552,14 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
 
   it("GET /api/trpc/system.health returns a tRPC-shaped JSON response, never the SPA shell", async () => {
     const { env, indexHtmlFetch } = makeTrpcEnv();
-    const input = encodeURIComponent(JSON.stringify({ json: { timestamp: Date.now() } }));
-    const res = await app.request(`/api/trpc/system.health?input=${input}`, {}, env as any);
+    const input = encodeURIComponent(
+      JSON.stringify({ json: { timestamp: Date.now() } })
+    );
+    const res = await app.request(
+      `/api/trpc/system.health?input=${input}`,
+      {},
+      env as any
+    );
 
     // Never falls through to the "*" SPA-shell branch: /index.html is never
     // fetched from ASSETS for a /api/trpc/* request.
@@ -473,7 +573,7 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
     // ({ error: { ... } }) -- either proves the tRPC middleware (not the SPA
     // fallback) handled the request.
     expect(body).toSatisfy(
-      (b: any) => (b && typeof b === "object" && ("result" in b || "error" in b)),
+      (b: any) => b && typeof b === "object" && ("result" in b || "error" in b)
     );
     if (body.result) {
       expect(body.result.data.json).toEqual({ ok: true });

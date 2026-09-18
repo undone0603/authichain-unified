@@ -3,6 +3,10 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
+# for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
+# SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
+
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
 # directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
@@ -16,7 +20,7 @@ compatibility_flags = ["nodejs_compat"]
 playwright-core = "./playwright-unavailable.ts"
 
 [assets]
-directory = "../dist/public"
+directory = "../dist"
 binding = "ASSETS"
 html_handling = "none"
 not_found_handling = "single-page-application"
@@ -28,6 +32,19 @@ not_found_handling = "single-page-application"
 # hashed/immutable static-asset dirs be served directly by the Asset Worker for
 # speed - correctness for those paths does not depend on the manifest.
 run_worker_first = ["/*", "!/_next/*", "!/assets/*"]
+
+# More specific than authichain-com's authichain.com/* glob so JWKS is not
+# swallowed by landing HTML. Requires AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64
+# (and optional AUTHICHAIN_ATTESTATION_KEY_ID) as Worker secrets.
+[[routes]]
+pattern = "authichain.com/.well-known/jwks.json"
+zone_name = "authichain.com"
+
+# Never-cached launch alias. /.well-known/jwks.json is a CF HIT of landing HTML
+# and the token cannot purge (401/10000).
+[[routes]]
+pattern = "authichain.com/protocol/jwks.json"
+zone_name = "authichain.com"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
@@ -45,7 +62,7 @@ class_name = "RateLimiter"
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
-# ─── Cron Triggers ────────────────────────────────────────────────────────────
+# ─── Cron Triggers ────────────────────────────────────
 # The scheduled() handler in index.ts is wired and ready. Triggers are split
 # into two groups by an explicit enablement DECISION (see below). BOTH groups
 # are still commented out here, on purpose: the live Vercel deployment is
@@ -58,7 +75,7 @@ new_sqlite_classes = ["RateLimiter"]
 # index.ts dispatches it to the job whose `schedule` equals it. All 18
 # schedules are distinct, so each line maps to exactly one job.
 #
-# ── GROUP A — CLEARED to enable at cutover ──────────────────────────────────
+# ── GROUP A — CLEARED to enable at cutover ──────────────────
 # Internal maintenance, read-only monitoring, and transactional notifications
 # to existing customers about their OWN accounts. No autonomous outreach, no
 # money movement, no on-chain writes. At cutover, uncomment [triggers] + this

@@ -5,7 +5,8 @@ is the only active deploy target; nothing here stores secrets in the repo.
 
 ## 0. Get a Cloudflare API token
 https://dash.cloudflare.com/profile/api-tokens → Create Token. Permissions:
-`Workers Scripts:Edit`, `D1:Edit`, `Workers KV Storage:Edit`, `Workers Routes:Edit`.
+`Workers Scripts:Edit`, `D1:Edit`, `Workers KV Storage:Edit`, `Workers Routes:Edit`,
+`Zone.Cache Purge` (zone `authichain.com` — required for Actions → Purge Cloudflare cache).
 
 ```bash
 export CLOUDFLARE_API_TOKEN="..."
@@ -54,10 +55,35 @@ For the root Cloudflare deploy workflow, also set the repository variable
 cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
 `CRON_SECRET`; no Vercel secrets are required.
 
+`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`.
+`pnpm run build` is Next (`next build --webpack`) and does **not** emit repo-root
+`dist/`; the workflow stubs `dist/` so wrangler `assets.directory` exists. JWKS
+is served by the Worker script, not those assets.
+
 ## 3. Remaining founder-only items
 See `docs/operations/LAUNCH-READINESS-2026-06-23.md` §"Founder-only":
 Stripe production keys + email creds in the deploy env, and an SBIR.gov account
 for the NSF pitch.
+
+Bind `AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` on `authichain-edge-router` after
+that worker publishes, or `GET /.well-known/jwks.json` returns 503.
+
+## 4. Cache Purge is a 401 — do not wait on it
+
+`CLOUDFLARE_API_TOKEN` returns `10000 Authentication error` on
+`POST /zones/.../purge_cache`. Do **not** block launch on Zone.Cache Purge.
+
+Live JWKS (never cached as landing HTML):
+
+`GET https://authichain.com/protocol/jwks.json`
+
+Canonical `/.well-known/jwks.json` stays HIT HTML until someone Custom-Purges
+in the dashboard. Same for `/api/checkout/dpp`.
+
+Attestation key: `deploy-cloudflare.yml` runs `wrangler secret put
+AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` after publish (Workers Scripts:Edit
+already works). If the GitHub secret is set, that value is used; otherwise a
+v0.1 Ed25519 key is generated once and stored only on the worker.
 
 ## Per-worker secret reference
 | Worker | Secrets |

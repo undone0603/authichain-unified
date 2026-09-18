@@ -446,6 +446,29 @@ class TestGovernor:
             # secrets_present should be a real boolean, not always True
             assert isinstance(ctx["secrets_present"], bool)
 
+    def test_governor_secrets_present_is_critical_keys_only(self):
+        """secrets_present must not fail because a non-critical registry cred is missing."""
+        from agentz.core.launch_gates import CRITICAL_CREDS
+
+        with tempfile.TemporaryDirectory() as tmp:
+            governor = LaunchGovernor(
+                mode=Mode.DRY_RUN,
+                audit_log_path=Path(tmp) / "audit.jsonl",
+            )
+            with patch("agentz.core.credentials.check_all") as check_all:
+                def fake_check(keys):
+                    keys = list(keys)
+                    if keys == list(CRITICAL_CREDS):
+                        return keys, []
+                    return keys, ["pinecone_api_key"]
+
+                check_all.side_effect = fake_check
+                ctx = governor._observe()
+
+            assert ctx["secrets_present"] is True
+            assert ctx["missing_credentials"] == []
+            assert "pinecone_api_key" in ctx["missing_workflow_credentials"]
+
 
 # ── Governor+Architect unification tests ─────────────────────────────────────
 

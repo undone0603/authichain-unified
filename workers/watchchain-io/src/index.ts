@@ -103,7 +103,7 @@ const HTML = `<!DOCTYPE html>
 <body>
   <nav>
     <a href="/" class="logo">${BRAND.name.toUpperCase()}</a>
-    <a href="https://authichain-unified.vercel.app/login" class="btn-sq" style="padding: 10px 20px; font-size: 9px">Console</a>
+    <a href="https://authichain.com/dapp" class="btn-sq" style="padding: 10px 20px; font-size: 9px">Console</a>
   </nav>
 
   <div class="bento-grid">
@@ -112,7 +112,7 @@ const HTML = `<!DOCTYPE html>
         <div class="tile-tag">${BRAND.name} Vertical</div>
         <h1 class="tile-title" style="font-size: 84px;">${BRAND.tagline}</h1>
         <p class="tile-desc" style="font-size: 18px;">Powered by the AuthiChain Truth Layer. Industry-specific cryptographic verification.</p>
-        <a href="https://authichain-unified.vercel.app/dashboard" class="btn-sq" style="width: fit-content;">Launch Platform</a>
+        <a href="https://authichain.com/dapp" class="btn-sq" style="width: fit-content;">Launch Platform</a>
       </div>
       <div style="position: absolute; bottom: -20px; right: -20px; width: 300px; height: 300px; background: radial-gradient(circle, var(--primary) 0%, transparent 70%); opacity: 0.1; filter: blur(40px);"></div>
     </div>

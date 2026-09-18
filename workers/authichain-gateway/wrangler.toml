@@ -18,5 +18,5 @@ binding = "USAGE_BUFFER"
 id = "6d148fb5083c4c72a85571be154de0e0"
 
 [vars]
-BACKEND_URL = "https://authichain-unified.vercel.app"
+BACKEND_URL = "https://authichain.com"
 WORKER_VERSION = "2.0.0"

@@ -27,6 +27,7 @@ on:
           - live-systems-check
           - token-metrics
           - ecosystem-health
+          - dpp-exceptions
       live:
         description: "Allow the selected task to make live requests"
         required: true
@@ -88,6 +89,7 @@ jobs:
             "0 11 * * *"|live-systems-check) path="/api/cron/jobs?job=live-systems-check" ;;
             "0 12 * * *"|token-metrics) path="/api/cron/jobs?job=token-metrics" ;;
             "0 13 * * *"|ecosystem-health) path="/api/cron/jobs?job=ecosystem-health" ;;
+            "0 14 * * *"|dpp-exceptions) path="/api/cron/dpp-exceptions" ;;
             *)
               echo "::error::No cron route configured for '$task'."
               exit 1

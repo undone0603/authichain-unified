@@ -296,8 +296,12 @@ python -m agentz.core.governor --mode auto --budget 50
 ### Via the workflow registry
 
 ```bash
+python -m agentz.cli list
+python -m agentz.cli creds --critical          # names/length only; exit 1 if the DPP-loop keys are missing
 python -m agentz.cli run launch_governor --mode dry-run
 ```
+
+`secrets_present` on the Governor is the four production keys in `CRITICAL_CREDS`, not the full credential map.
 
 ### Via the API
 

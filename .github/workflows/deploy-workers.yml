@@ -81,6 +81,9 @@ jobs:
           - rxchain-io
           - threadchain-io
           - watchchain-io
+          - passport-demo
+          - qfs-adapter
+          - authichain-bridge
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -105,3 +108,26 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           COMPATIBILITY_DATE: "2026-06-29"
+
+      - name: Bind Stripe secret on authichain-com
+        if: |
+          matrix.worker == 'authichain-com' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-com')
+        working-directory: workers/authichain-com
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STRIPE_SECRET_KEY:-}" ]; then
+            echo "::error::GitHub secret STRIPE_SECRET_KEY is empty — checkout will 500"
+            exit 1
+          fi
+          printf '%s' "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY --name authichain-com
+          if [ -n "${STRIPE_PRICE_ID:-}" ]; then
+            printf '%s' "$STRIPE_PRICE_ID" | npx wrangler secret put STRIPE_PRICE_ID --name authichain-com
+          fi
+          echo "bound STRIPE_SECRET_KEY on authichain-com from GitHub secrets"

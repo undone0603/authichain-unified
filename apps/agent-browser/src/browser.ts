@@ -47,6 +47,19 @@ export function getDefaultTimeout(): number {
   return 25000;
 }
 
+/** Dead local CDP ports should fail fast instead of hanging until the suite timeout. */
+export const LOCAL_CDP_CONNECT_TIMEOUT_MS = 5_000;
+
+function isLocalCdpEndpoint(endpoint: string): boolean {
+  if (/^\d+$/.test(endpoint)) return true;
+  try {
+    const url = new URL(endpoint.includes('://') ? endpoint : `http://${endpoint}`);
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
 // Screencast frame data from CDP
 export interface ScreencastFrame {
   data: string; // base64 encoded image
@@ -1266,7 +1279,9 @@ export class BrowserManager {
     }
 
     if (cdpEndpoint) {
-      await this.connectViaCDP(cdpEndpoint);
+      await this.connectViaCDP(cdpEndpoint, {
+        timeout: isLocalCdpEndpoint(cdpEndpoint) ? LOCAL_CDP_CONNECT_TIMEOUT_MS : undefined,
+      });
       return;
     }
 

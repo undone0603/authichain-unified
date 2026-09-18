@@ -1,13 +1,18 @@
 name: CI
 
+# Full install/typecheck/lint/test/build lives in CI Main ("Main quality gate").
+# This job keeps the extras that workflow does not run: drizzle source-of-truth
+# and AgentZ pytest. Restricting push to main avoids a duplicate run on every
+# PR branch (push + pull_request used to fire two copies of this workflow).
 on:
   push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  quality-gate:
-    name: Install, typecheck, lint, test, build
+  extras:
+    name: Schema and AgentZ checks
     runs-on: ubuntu-latest
 
     steps:
@@ -37,15 +42,6 @@ jobs:
       - name: Check migration source of truth
         run: node scripts/check-drizzle-migrations.mjs
 
-      - name: Type check
-        run: pnpm check
-
-      - name: Lint
-        run: pnpm lint:ci
-
-      - name: Install Playwright browsers
-        run: pnpm --filter agent-browser exec playwright install --with-deps chromium
-
       - name: Set up Python (AgentZ)
         if: hashFiles('requirements-agentz.txt') != ''
         uses: actions/setup-python@v7
@@ -60,23 +56,18 @@ jobs:
           ./.venv/bin/pip install --upgrade pip
           ./.venv/bin/pip install -r requirements-agentz.txt
 
-      - name: Run tests
+      - name: Run AgentZ tests
+        if: hashFiles('requirements-agentz.txt') != ''
         run: |
-          pnpm -w test
-          if [ -f "requirements-agentz.txt" ] && [ -f ".venv/bin/activate" ]; then
-            source .venv/bin/activate
-            # Scoped to agentz/tests -- the only real pytest suite; the test_*.py
-            # files under ops/scripts/ are scripts and collect zero tests.
-            # Failures here fail the job -- the JUnit step below is for
-            # reporting, not gating.
-            python -m pytest agentz/tests --junitxml=test-results/pytest.xml
-          fi
+          source .venv/bin/activate
+          # Scoped to agentz/tests -- the only real pytest suite; the test_*.py
+          # files under ops/scripts/ are scripts and collect zero tests.
+          # Failures here fail the job -- the JUnit step below is for
+          # reporting, not gating.
+          python -m pytest agentz/tests --junitxml=test-results/pytest.xml
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v6
-        if: always() # always run even if tests fail
+        if: always()
         with:
           report_paths: "**/test-results/*.xml"
-
-      - name: Production build
-        run: pnpm build

@@ -34,3 +34,5 @@ enabled = true
 [[services]]
 binding = "APP_WORKER"
 service = "authichain-edge-router"
+
+# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID

@@ -1,0 +1,6 @@
+name = "authichain-qfs-adapter"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = true
+# Offline mapper only. Not a bank rail. Do not git-connect this to Workers Builds
+# for the whole monorepo (see #952).
