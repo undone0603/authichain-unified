@@ -75,7 +75,7 @@ describe("createDppCheckoutSession", () => {
     const arg = create.mock.calls[0][0];
     expect(arg.line_items[0].price).toBeUndefined();
     expect(arg.line_items[0].price_data.unit_amount).toBe(0);
-    expect(arg.payment_method_collection).toBe("if_required");
+    expect(arg.payment_method_collection).toBeUndefined();
     expect(arg.metadata.is_demo).toBe("true");
     expect(arg.metadata.promo).toBe("DPP-SMOKE-E2E");
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);

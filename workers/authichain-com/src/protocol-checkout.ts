@@ -2,7 +2,7 @@
  * Edge checkout for the $299 DPP audit.
  * GET /protocol/checkout/dpp — never cached as landing HTML (unlike /api/checkout/dpp).
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
- * Promo DPP-SMOKE-E2E creates a $0 session (payment_method_collection=if_required).
+ * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
@@ -79,7 +79,6 @@ export async function tryHandleProtocolCheckout(
     );
     body.set("line_items[0][price_data][unit_amount]", "0");
     body.set("line_items[0][quantity]", "1");
-    body.set("payment_method_collection", "if_required");
   } else {
     body.set("line_items[0][price]", priceId);
     body.set("line_items[0][quantity]", "1");
