@@ -7,9 +7,14 @@
  */
 
 import { DPP_OFFER_KEY, PLANS } from "./plans";
-import { recordDppLoopEvent } from "./dpp-loop";
+import {
+  DPP_SMOKE_PROMO,
+  isDppSmokePromo,
+  recordDppLoopEvent,
+} from "./dpp-loop";
 
 export const DPP_CHECKOUT_ORIGIN = "https://authichain.com";
+export { DPP_SMOKE_PROMO, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");
 
@@ -63,6 +68,7 @@ export async function createDppCheckoutSession(opts: {
   const utmTerm = pick(searchParams, "utm_term", 128);
   const referrer = pick(searchParams, "referrer", 512);
   const source = utmSource || pick(searchParams, "source", 64) || "direct";
+  const smoke = isDppSmokePromo(pick(searchParams, "promo", 32));
 
   if (supabase) {
     await recordDppLoopEvent(supabase, {
@@ -91,11 +97,21 @@ export async function createDppCheckoutSession(opts: {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [{ price: PLAN.stripe_price_id, quantity: 1 }],
+      line_items: smoke
+        ? [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: { name: "EU DPP Readiness Audit (smoke)" },
+                unit_amount: 0,
+              },
+              quantity: 1,
+            },
+          ]
+        : [{ price: PLAN.stripe_price_id, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: true,
+      allow_promotion_codes: smoke ? undefined : true,
       client_reference_id: visitId.slice(0, 200),
       ...(email ? { customer_email: email } : {}),
       metadata: {
@@ -105,6 +121,7 @@ export async function createDppCheckoutSession(opts: {
         prospect_id: visitId,
         visit_id: visitId,
         source,
+        ...(smoke ? { is_demo: "true", promo: DPP_SMOKE_PROMO } : {}),
         ...(utmSource ? { utm_source: utmSource } : {}),
         ...(utmMedium ? { utm_medium: utmMedium } : {}),
         ...(utmCampaign ? { utm_campaign: utmCampaign } : {}),

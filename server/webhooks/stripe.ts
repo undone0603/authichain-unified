@@ -522,6 +522,28 @@ export async function handleStripeWebhook(
         });
       }
 
+      try {
+        const { isDppOffer } = await import("../../src/lib/dpp-loop");
+        if (isDppOffer(session.metadata || {})) {
+          const url =
+            process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+          const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (url && key) {
+            const { createClient } = await import("@supabase/supabase-js");
+            const { fulfillDppPaidSession } =
+              await import("../../src/lib/dpp-fulfill-checkout");
+            await fulfillDppPaidSession(createClient(url, key), session);
+          } else {
+            console.error(
+              "[stripe-webhook] DPP session paid but Supabase is not configured"
+            );
+          }
+        }
+      } catch (dppErr) {
+        console.error("[stripe-webhook] DPP fulfill failed", dppErr);
+        throw dppErr;
+      }
+
       console.log(
         `[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`
       );
