@@ -21,7 +21,6 @@ const productId = "00000000-0000-4000-8000-000000000001";
 const qrCodeId = "00000000-0000-4000-8000-000000000002";
 const eventId = "00000000-0000-4000-8000-000000000003";
 const qronId = "qron-launch-proof-2026-09-18";
-const serial = "AC-LAUNCH-001";
 const storyUrl = `https://authichain.com/story/${productId}`;
 const jwksUrl = "https://authichain.com/.well-known/jwks.json";
 const fixtureJws = (
@@ -193,7 +192,8 @@ await verifyExpectedFailure("stale attestation", () =>
   }),
 );
 
-const objectId = `authichain:${fixturePayload.subject.object_id}`;
+const objectId = fixturePayload.subject.object_id;
+const serial = fixturePayload.subject.serial || "SN-001";
 const seed = sha256(`QRON|${objectId}|${serial}|${fixtureKid}`);
 const launchProof = {
   objectId,
