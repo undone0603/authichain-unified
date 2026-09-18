@@ -85,6 +85,16 @@ AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` after publish (Workers Scripts:Edit
 already works). If the GitHub secret is set, that value is used; otherwise a
 v0.1 Ed25519 key is generated once and stored only on the worker.
 
+## 5. Production launch proof (no private key in Actions)
+
+The Worker private key is never copied into GitHub Actions. Launch proof:
+
+1. `GET https://authichain.com/protocol/issuer.json` — public readiness (`ready`, `signing`, `kid`).
+2. `POST https://authichain.com/protocol/launch-proof` — constrained v0.1 JWS. Auth is a GitHub Actions OIDC token (`aud=https://authichain.com`, repo `undone0603/authichain-unified`) or `Authorization: Bearer $CRON_SECRET`.
+3. CI independently verifies the compact JWS against live JWKS. Tamper tests stay local.
+
+`AUTHICHAIN_ATTESTATION_KEY_ID` must match the live JWKS kid. `AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64` in Actions is optional.
+
 ## Per-worker secret reference
 | Worker | Secrets |
 |--------|---------|
