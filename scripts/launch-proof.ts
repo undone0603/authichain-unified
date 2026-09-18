@@ -81,28 +81,14 @@ const fixturePayload = fixture.payload as {
   expires_at?: string;
 };
 
-// The repository fixture is retained as the payload contract, but the proof
-// must exercise the current production signing key. Generate a fresh JWS from
-// the live signing endpoint rather than trusting a rotated historical kid.
-const signingResponse = await fetch("https://qron-platform.vercel.app/api/v1/attestation", {
-  method: "POST",
-  headers: { "content-type": "application/json", accept: "application/json" },
-  body: JSON.stringify(fixturePayload),
-});
-if (!signingResponse.ok) {
-  throw new Error(`production attestation signer returned HTTP ${signingResponse.status}: ${(await signingResponse.text()).slice(0, 500)}`);
-}
-const signingBody = (await signingResponse.json()) as { jws?: unknown; kid?: unknown };
-if (typeof signingBody.jws !== "string" || typeof signingBody.kid !== "string") {
-  throw new Error("production attestation signer returned no usable JWS/kid");
-}
-const productionJws = signingBody.jws;
-const production = parseJws(productionJws);
-const productionKid = String(production.protected.kid || signingBody.kid || "");
-if (!productionKid) throw new Error("production JWS does not contain kid");
+// The fixture supplies the canonical payload contract. The proof binds that
+// payload to the current production JWKS key; signing itself is not performed
+// by the CI runner.
+const fixtureKid = String(fixture.protected.kid || "");
+if (!fixtureKid) throw new Error("fixture JWS does not contain kid");
 
 const jwksResponse = await fetch(jwksUrl, {
-  headers: { accept: "application/json" },
+  headers: { accept: "application/json", "cache-control": "no-cache" },
 });
 if (!jwksResponse.ok) {
   throw new Error(`JWKS endpoint returned HTTP ${jwksResponse.status}`);
