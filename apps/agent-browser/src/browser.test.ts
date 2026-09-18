@@ -33,8 +33,7 @@ async function loadExamplePage(page: import('playwright-core').Page) {
       body: EXAMPLE_HTML,
     });
   });
-
-  await loadExamplePage(page);
+  await page.goto(EXAMPLE_URL);
 }
 // This suite launches a real browser, so it needs the Playwright browser
 // binaries installed (CI does this via `playwright install --with-deps
@@ -56,11 +55,11 @@ if (!canLaunchRealBrowser) {
 describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   let browser: BrowserManager;
 
- beforeAll(async () => {
-  browser = new BrowserManager();
-  await browser.launch({ headless: true });
-  await loadExamplePage(browser.getPage());
-});
+  beforeAll(async () => {
+    browser = new BrowserManager();
+    await browser.launch({ headless: true });
+    await loadExamplePage(browser.getPage());
+  });
 
   afterAll(async () => {
     await browser.close();
@@ -319,7 +318,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('navigation', () => {
     it('should navigate to URL', async () => {
       const page = browser.getPage();
-      
+
       expect(page.url()).toBe('https://example.com/');
     });
 
@@ -331,25 +330,25 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   });
 
   describe('element interaction', () => {
-  beforeEach(async () => {
-    await loadExamplePage(browser.getPage());
-  });
+    beforeEach(async () => {
+      await loadExamplePage(browser.getPage());
+    });
 
-  it('should find element by selector', async () => {
-    const page = browser.getPage();
-    await expect(page.locator('h1')).toHaveText('Example Domain');
-  });
+    it('should find element by selector', async () => {
+      const page = browser.getPage();
+      await expect(page.locator('h1')).toHaveText('Example Domain');
+    });
 
-  it('should check element visibility', async () => {
-    const page = browser.getPage();
-    await expect(page.locator('h1')).toBeVisible();
-  });
+    it('should check element visibility', async () => {
+      const page = browser.getPage();
+      await expect(page.locator('h1')).toBeVisible();
+    });
 
-  it('should count elements', async () => {
-    const page = browser.getPage();
-    await expect(page.locator('p')).toHaveCount(1);
+    it('should count elements', async () => {
+      const page = browser.getPage();
+      await expect(page.locator('p')).toHaveCount(1);
+    });
   });
-});
 
   describe('screenshots', () => {
     it('should take screenshot as buffer', async () => {
@@ -362,7 +361,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
 
   describe('annotated screenshots', () => {
     afterAll(async () => {
-      await loadExamplePage(page);
+      await loadExamplePage(browser.getPage());
     });
 
     it('should return annotations with correct shape', async () => {
@@ -603,7 +602,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('localStorage operations', () => {
     it('should set and get localStorage item', async () => {
       const page = browser.getPage();
-      
+
       await page.evaluate(() => localStorage.setItem('testKey', 'testValue'));
       const value = await page.evaluate(() => localStorage.getItem('testKey'));
       expect(value).toBe('testValue');
@@ -646,7 +645,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('sessionStorage operations', () => {
     it('should set and get sessionStorage item', async () => {
       const page = browser.getPage();
-      
+
       await page.evaluate(() => sessionStorage.setItem('sessionKey', 'sessionValue'));
       const value = await page.evaluate(() => sessionStorage.getItem('sessionKey'));
       expect(value).toBe('sessionValue');
@@ -728,7 +727,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('snapshot', () => {
     it('should get snapshot with refs', async () => {
       const page = browser.getPage();
-      
+
       const { tree, refs } = await browser.getSnapshot();
       expect(tree).toContain('heading');
       expect(tree).toContain('Example Domain');
@@ -842,7 +841,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('locator resolution', () => {
     it('should resolve CSS selector', async () => {
       const page = browser.getPage();
-      
+
       const locator = browser.getLocator('h1');
       const text = await locator.textContent();
       expect(text).toBe('Example Domain');
