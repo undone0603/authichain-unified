@@ -22,6 +22,7 @@ type Env = {
   RATE_LIMITER: DurableObjectNamespace;
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
+  AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
@@ -43,6 +44,7 @@ function hydrateProcessEnv(env?: Env) {
     ["CRON_SECRET", env.CRON_SECRET],
     ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
     ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
+    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;

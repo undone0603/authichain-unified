@@ -1,13 +1,19 @@
 import type { Hono } from "hono";
-import {
-  calculateJwkThumbprint,
-  exportJWK,
-  importPKCS8,
-} from "jose";
+import { calculateJwkThumbprint } from "jose";
 
 export type AttestationEnv = {
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
+  AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
+};
+
+type PublicOkp = {
+  kty: string;
+  crv?: string;
+  x?: string;
+  kid?: string;
+  use?: string;
+  alg?: string;
 };
 
 const JWKS_HEADERS = {
@@ -40,13 +46,53 @@ export function attestationPkcs8Pem(raw: string): string {
 function readKeyMaterial(env: AttestationEnv): {
   raw?: string;
   kid?: string;
+  publicJwk?: string;
 } {
   const proc =
     typeof process !== "undefined" ? process.env : undefined;
   return {
     raw: env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 || proc?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
     kid: env.AUTHICHAIN_ATTESTATION_KEY_ID || proc?.AUTHICHAIN_ATTESTATION_KEY_ID,
+    publicJwk: env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK || proc?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
   };
+}
+
+function parsePublicJwk(raw: string): PublicOkp | null {
+  try {
+    const jwk = JSON.parse(raw) as PublicOkp & { d?: unknown };
+    if (jwk && jwk.kty === "OKP" && typeof jwk.x === "string") {
+      const { d: _d, ...pub } = jwk;
+      return pub;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function pemToPkcs8Der(pem: string): Uint8Array {
+  const body = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s+/g, "");
+  const bin = atob(body);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function publicJwkFromPem(pem: string): Promise<PublicOkp> {
+  // Workers WebCrypto (and Node 22) accept Ed25519, not the JWS name EdDSA.
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToPkcs8Der(pem),
+    { name: "Ed25519" },
+    true,
+    ["sign"],
+  );
+  const jwk = await crypto.subtle.exportKey("jwk", key);
+  const { d: _d, key_ops: _ops, ext: _ext, ...pub } = jwk as JsonWebKey;
+  return pub as PublicOkp;
 }
 
 async function jwksResponse(
@@ -57,8 +103,9 @@ async function jwksResponse(
   status: 200 | 503;
   headers: Record<string, string>;
 }> {
-  const { raw, kid: configuredKid } = readKeyMaterial(env);
-  if (!raw) {
+  const { raw, kid: configuredKid, publicJwk } = readKeyMaterial(env);
+  const fromSecret = publicJwk ? parsePublicJwk(publicJwk) : null;
+  if (!fromSecret && !raw) {
     return {
       body: { error: "attestation key unavailable" },
       status: 503,
@@ -66,18 +113,21 @@ async function jwksResponse(
     };
   }
   try {
-    const key = await importPKCS8(attestationPkcs8Pem(raw), "EdDSA");
-    const jwk = await exportJWK(key);
-    const { d: _d, ...publicJwk } = jwk;
-    const kid = configuredKid || (await calculateJwkThumbprint(publicJwk));
+    const pub = fromSecret || (await publicJwkFromPem(attestationPkcs8Pem(raw as string)));
+    if (pub.kty !== "OKP" || typeof pub.x !== "string") {
+      throw new Error("not an OKP public JWK");
+    }
+    const { d: _d, ...safe } = pub as PublicOkp & { d?: unknown };
+    const kid = configuredKid || safe.kid || (await calculateJwkThumbprint(safe));
     return {
-      body: { keys: [{ ...publicJwk, kid, use: "sig", alg: "EdDSA" }] },
+      body: { keys: [{ ...safe, kid, use: "sig", alg: "EdDSA" }] },
       status: 200,
       headers,
     };
-  } catch {
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "Error";
     return {
-      body: { error: "attestation key unavailable", reason: "invalid" },
+      body: { error: "attestation key unavailable", reason: "invalid", via: name },
       status: 503,
       headers: { "Cache-Control": "private, no-store" },
     };
