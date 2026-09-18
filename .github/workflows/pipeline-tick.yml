@@ -16,15 +16,14 @@ name: Pipeline Tick (direct runner)
 # database successfully on every run, IPv4 pin included.
 #
 # ── Activation ───────────────────────────────────────────────────────────────
-# This workflow is SAFE TO SCHEDULE AS-IS. runPipelineTick() returns
-# {enabled: false, skipped: true} unless AUTONOMOUS_PIPELINE_ENABLED === "true"
-# in the process environment (server/_core/env.ts:33), so until the repository
-# variable below is set every run is a no-op that says so in the log.
+# Main autonomous launch is active by default. PIPELINE_TICK_ENABLED remains
+# the emergency stop switch: set it to "false" to halt the live tick; an unset
+# variable is treated as "true" for the main branch.
 #
-# To activate: set the repository variable PIPELINE_TICK_ENABLED to "true". To
-# stop: unset it. No code change, no deploy, effective on the next run. That is
-# deliberately the whole switch — a variable a human sets, not a default this
-# workflow assumes.
+# This turns on lead discovery, research browsing, and outbound email drafting.
+# Actual delivery remains fail-closed behind server/outreach/send-guard.ts:
+# only trusted provenance sources, non-role inboxes, MX, Resend credentials,
+# and a configured physical mailing address can reach the network.
 #
 # Note what activation turns on: lead discovery, research browsing, and
 # outbound email drafting. Email still passes server/outreach/send-guard.ts,
@@ -72,15 +71,14 @@ jobs:
         env:
           CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
         run: |
-          # Say plainly which of the two outcomes this run is going to be, so a
-          # green check never reads as "the pipeline ran" when it did not, and
-          # name the variable that decided it.
-          if [ "$CURRENT" = "true" ]; then
-            echo "::notice::PIPELINE_TICK_ENABLED=true — this run will execute the pipeline."
-          elif [ -n "$CURRENT" ]; then
-            echo "::notice::Pipeline switch is set but not to \"true\" — this run is a no-op."
+          # Unset = launched; explicit false = emergency stop.
+          if [ "$CURRENT" = "false" ]; then
+            echo "::warning::PIPELINE_TICK_ENABLED=false — this run will be a no-op."
+          elif [ -z "$CURRENT" ] || [ "$CURRENT" = "true" ]; then
+            echo "::notice::Autonomous launch active — PIPELINE_TICK_ENABLED=${CURRENT:-true}."
           else
-            echo "::notice::PIPELINE_TICK_ENABLED is unset — this run is a no-op. Set the repository variable to \"true\" to activate."
+            echo "::error::PIPELINE_TICK_ENABLED must be true, false, or unset."
+            exit 1
           fi
 
       # The runner has no IPv6 route, and the Supabase pooler resolves to both.
@@ -144,11 +142,10 @@ jobs:
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
-          # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED from the
-          # process environment. PIPELINE_TICK_ENABLED is the single GitHub-side
-          # activation switch, and anything other than "true" makes the tick a
-          # no-op.
-          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED }}
+          # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED. An unset
+          # repository variable means the launch is active; only an explicit
+          # "false" disables the pipeline.
+          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
