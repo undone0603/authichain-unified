@@ -1,5 +1,8 @@
 name: CI Main
 
+# Required quality gate: install, typecheck, lint, test, production build.
+# Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+
 on:
   push:
     branches: [main]
