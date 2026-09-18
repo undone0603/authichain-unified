@@ -148,6 +148,11 @@ app.get("/api/health", c => c.json({ status: "ok" }));
 // Same session create as Next src/app/api/checkout/dpp. Registered here so
 // authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
 app.get("/api/checkout/dpp", async c => {
+  if (c.req.method === "HEAD") {
+    c.header("Cache-Control", "private, no-store");
+    c.header("CDN-Cache-Control", "no-store");
+    return c.body(null, 204);
+  }
   try {
     hydrateProcessEnv(c.env);
     const { createDppCheckoutSession } =
