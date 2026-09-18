@@ -97,7 +97,8 @@ const publicJwk = liveJwks.keys?.find(
   (key) => key.kid === fixtureKid,
 );
 if (!publicJwk) {
-  throw new Error(`live JWKS does not expose fixture kid ${fixtureKid}`);
+  const liveKids = (liveJwks.keys || []).map((key) => ({ kid: key.kid, x: key.x, alg: key.alg, crv: key.crv }));
+  throw new Error(`live JWKS does not expose fixture kid ${fixtureKid}; live keys=${JSON.stringify(liveKids)}`);
 }
 
 const verifiedFixture = await verifyAttestationJws(fixtureJws, publicJwk, {
