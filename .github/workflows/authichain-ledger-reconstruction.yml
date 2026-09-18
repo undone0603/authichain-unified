@@ -2,13 +2,11 @@ name: AuthiChain on-chain ledger reconstruction
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/onchain-authichain-ledger
 
 jobs:
   reconstruct:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
