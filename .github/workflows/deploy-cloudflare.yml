@@ -1,13 +1,16 @@
 name: Deploy to Cloudflare
 
+
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
+
 permissions:
   contents: read
+
 
 jobs:
   secret-scan:
@@ -20,12 +23,14 @@ jobs:
         with:
           fetch-depth: 0
 
+
       - name: Scan for secrets
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_CONFIG: .gitleaks.toml
+
 
   deploy:
     name: Deploy to Cloudflare
@@ -36,6 +41,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
 
       - name: Check required secrets
         id: secrets_check
@@ -54,6 +60,7 @@ jobs:
           version: 10.28.2
           run_install: false
 
+
       - name: Setup Node 22
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
@@ -61,9 +68,11 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
 
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
@@ -73,44 +82,23 @@ jobs:
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
+
       - name: Inspect build output
         if: steps.secrets_check.outputs.skip != 'true'
         shell: bash
         run: |
-          echo "=== root listing ==="
-          ls -la
-          echo "=== root package.json scripts ==="
-          node -p "JSON.stringify(require('./package.json').scripts, null, 2)"
-          echo "=== candidate output dirs ==="
-          find . -maxdepth 4 -type d \
-            \( -name dist -o -name out -o -name build -o -name .open-next \
-               -o -name dist_production -o -name public \) \
-            -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null
-          echo "=== dirs created/modified in last 15 min ==="
-          # GHA bash uses pipefail; find|head SIGPIPEs and used to fail this
-          # step (run 35272825980) before wrangler deploy of APP_WORKER.
-          # Temporarily drop pipefail so the diagnostic truncate cannot fail
-          # the job — do not use `|| true` (blocked by check-workflow-cannot-fail).
-          set +o pipefail
-          find . -maxdepth 4 -type d -mmin -15 \
-            -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null \
-            | head -50
-          set -o pipefail
-
-      - name: Ensure worker-app assets directory
-        if: steps.secrets_check.outputs.skip != 'true'
-        shell: bash
-        run: |
-          # worker-app wrangler.toml assets.directory = ../dist.
-          # `pnpm run build` is `next build --webpack` and does not emit repo-root dist
-          # (run 35283267115). JWKS lives in the Worker script; empty assets unblocks publish.
-          mkdir -p dist
-          if [ -d .next/static ]; then cp -a .next/static dist/ || true; fi
-          if [ ! -f dist/index.html ]; then
-            printf '%s\n' '<!doctype html><title>AuthiChain</title>' > dist/index.html
-          fi
-          ls -la dist | head
-
+          set -euxo pipefail
+          echo "=== cwd ==="
+          pwd
+          echo "=== package.json scripts ==="
+          node -e "const p=require('./package.json'); console.log(JSON.stringify(p.scripts||{},null,2))"
+          echo "=== wrangler configs ==="
+          find . -name 'wrangler.toml' -o -name 'wrangler.json' -o -name 'wrangler.jsonc' | head -50
+          echo "=== deep artifact search ==="
+          find . \( -path './.git' -o -path './node_modules' \) -prune -o \
+            \( -name dist -o -name out -o -name .open-next -o -name .next -o -name build \) -print
+          echo "=== next.config output ==="
+          find . -name 'next.config.*' -print
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app
@@ -119,67 +107,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Bind APP_WORKER payment secrets
-        if: steps.secrets_check.outputs.skip != 'true'
-        working-directory: worker-app
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          STRIPE_WEBHOOK_AUTHICHAIN_SECRET: ${{ secrets.STRIPE_WEBHOOK_AUTHICHAIN_SECRET }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          set -euo pipefail
-          NAME=authichain-edge-router
-          put() {
-            local key="$1" val="$2"
-            if [ -n "$val" ]; then
-              printf '%s' "$val" | npx wrangler secret put "$key" --name "$NAME"
-              echo "bound $key on $NAME"
-            else
-              echo "::warning::$key GitHub secret empty — not bound"
-            fi
-          }
-          put STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
-          put STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
-          put STRIPE_WEBHOOK_AUTHICHAIN_SECRET "$STRIPE_WEBHOOK_AUTHICHAIN_SECRET"
-          supabase_url="${NEXT_PUBLIC_SUPABASE_URL:-$SUPABASE_URL}"
-          put NEXT_PUBLIC_SUPABASE_URL "$supabase_url"
-          put SUPABASE_URL "$supabase_url"
-          put SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
-          put CRON_SECRET "$CRON_SECRET"
 
-      - name: Bind attestation private key
-        if: steps.secrets_check.outputs.skip != 'true'
-        working-directory: worker-app
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          ATTESTATION_KEY: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
-        run: |
-          set -euo pipefail
-          NAME=authichain-edge-router
-          bind() {
-            printf '%s' "$1" | npx wrangler secret put AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 --name "$NAME"
-          }
-          if [ -n "${ATTESTATION_KEY:-}" ]; then
-            bind "$ATTESTATION_KEY"
-            echo "bound GitHub secret AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64"
-            exit 0
-          fi
-          if npx wrangler secret list --name "$NAME" 2>/dev/null | grep -q AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64; then
-            echo "already bound on worker; GitHub secret empty — leaving in place"
-            exit 0
-          fi
-          echo "No GitHub secret and none on worker — generating v0.1 Ed25519 launch key"
-          pem=$(openssl genpkey -algorithm ED25519 2>/dev/null)
-          b64=$(printf '%s' "$pem" | base64 -w0)
-          bind "$b64"
-          echo "generated launch key bound on $NAME (private key is only on Cloudflare)"
       - name: Deploy authichain-scan-validate
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: workers/authichain-scan-validate
@@ -187,6 +115,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
 
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
