@@ -1,36 +1,21 @@
 name: Pipeline Tick (direct runner)
 
 # Runs the AgentZ pipeline tick by invoking runPipelineTick() directly on the
-# runner, instead of calling https://authichain.com/api/cron/pipeline with a
-# bearer token as autonomous-business-cycle.yml does.
+# runner. The normal schedule remains daily; a push with [pipeline-proof] is
+# an explicit one-shot production proof trigger.
 #
-# The HTTP hop bought nothing and cost three failure modes. The first live
-# activation attempt (run 32337392873) died on a bare 401 because CRON_SECRET
-# in this repository does not match CRON_SECRET in the deployed environment —
-# a mismatch nothing can detect until someone dispatches the job, and which
-# only a dashboard action can fix. Calling the function directly removes that
-# dependency on a separate deploy target and turns an opaque 401 into a real
-# stack trace.
-#
-# This is the same shape as browser-vision-tasks.yml, which reaches the
-# database successfully on every run, IPv4 pin included.
-#
-# ── Activation ───────────────────────────────────────────────────────────────
 # Main autonomous launch is active by default. PIPELINE_TICK_ENABLED remains
 # the emergency stop switch: set it to "false" to halt the live tick; an unset
 # variable is treated as "true" for the main branch.
 #
-# This turns on lead discovery, research browsing, and outbound email drafting.
-# Actual delivery remains fail-closed behind server/outreach/send-guard.ts:
-# only trusted provenance sources, non-role inboxes, MX, Resend credentials,
-# and a configured physical mailing address can reach the network.
-#
-# Note what activation turns on: lead discovery, research browsing, and
-# outbound email drafting. Email still passes server/outreach/send-guard.ts,
-# which sends only to addresses Apollo itself reports as `verified` and never
-# to role inboxes.
+# Actual outbound delivery remains fail-closed behind
+# server/outreach/send-guard.ts: only trusted provenance sources, non-role
+# inboxes, MX, Resend credentials, and a physical mailing address can reach
+# the network.
 
 on:
+  push:
+    branches: [main]
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -51,6 +36,7 @@ permissions:
 jobs:
   run:
     name: Run pipeline tick
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[pipeline-proof]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -71,7 +57,6 @@ jobs:
         env:
           CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
         run: |
-          # Unset = launched; explicit false = emergency stop.
           if [ "$CURRENT" = "false" ]; then
             echo "::warning::PIPELINE_TICK_ENABLED=false — this run will be a no-op."
           elif [ -z "$CURRENT" ] || [ "$CURRENT" = "true" ]; then
@@ -81,8 +66,6 @@ jobs:
             exit 1
           fi
 
-      # The runner has no IPv6 route, and the Supabase pooler resolves to both.
-      # Same pin as browser-vision-tasks.yml.
       - name: Force IPv4 for Supabase pooler
         if: steps.db-check.outputs.skip != 'true'
         env:
@@ -115,19 +98,6 @@ jobs:
         with:
           node-version: "22"
 
-      # pnpm comes from corepack, which ships with Node, rather than from
-      # pnpm/action-setup. CodeQL flags that action as an unpinned third-party
-      # dependency (`@v4` is a mutable tag that can be repointed at any commit),
-      # and pinning it would mean hardcoding a SHA. Corepack removes the
-      # third-party dependency altogether instead of pinning it.
-      #
-      # The version is stated explicitly because package.json has no
-      # `packageManager` field; it matches the 10.28.2 the other workflows use,
-      # so the lockfile is read by the same resolver everywhere.
-      #
-      # Trade-off: this drops `cache: pnpm` from setup-node, which needs pnpm on
-      # PATH before it runs. Installs are slower by roughly the download time.
-      # For a once-daily job that is not worth reintroducing the dependency for.
       - name: Enable pnpm via corepack
         if: steps.db-check.outputs.skip != 'true'
         run: |
@@ -142,33 +112,17 @@ jobs:
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
-          # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED. An unset
-          # repository variable means the launch is active; only an explicit
-          # "false" disables the pipeline.
           AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # The content agent needs this, and this workflow was not passing it:
-          # the first dry run failed all three due DRAFT_LAUNCH_EMAIL tasks with
-          # "ANTHROPIC_API_KEY is not configured". gov-proposals.yml and
-          # gov-score.yml already pass the same secret.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Absent means apolloSearchLeads() returns [] and no leads are found —
-          # the tick still runs its other stages rather than failing.
           APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
           NODE_OPTIONS: --dns-result-order=ipv4first
-          # Through env rather than spliced into the run line: an input
-          # interpolated directly into a shell command is a command-injection
-          # sink, and boolean-today is string-tomorrow.
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # A dry run bypasses the activation switch on purpose — the whole
-          # point is to see what a live tick would do while it is still off.
-          # sendEmail() records instead of dispatching, so nothing is mailed.
-          # Everything else runs for real, database writes included.
           if [ "$DRY_RUN" = "true" ]; then
             echo "::notice::Dry run — email is recorded, not sent. Database writes still happen."
             pnpm tsx server/jobs/pipeline-tick.ts --dry-run
