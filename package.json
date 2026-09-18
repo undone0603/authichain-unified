@@ -39,7 +39,7 @@
     "ledger:authichain-nft": "tsx scripts/ledger/reconstruct-authichain-nft-ledger.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.51",
+    "@ai-sdk/openai": "^4.0.66",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@clerk/nextjs": "^7.8.3",
