@@ -12,11 +12,16 @@ import worker from "./index.ts";
 /** The homepage fetches a YouTube RSS feed; tests must not reach the network. */
 function stubFetch() {
   const real = globalThis.fetch;
-  globalThis.fetch = (async () => new Response("<feed></feed>", {
-    status: 200,
-    headers: { "content-type": "application/xml" },
-  })) as typeof fetch;
-  return { restore: () => { globalThis.fetch = real; } };
+  globalThis.fetch = (async () =>
+    new Response("<feed></feed>", {
+      status: 200,
+      headers: { "content-type": "application/xml" },
+    })) as typeof fetch;
+  return {
+    restore: () => {
+      globalThis.fetch = real;
+    },
+  };
 }
 
 async function get(path: string) {
@@ -58,10 +63,13 @@ test("/health still answers", async () => {
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.match(xml, /<loc>https:\/\/qron\.space\/<\/loc>/);
+  assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {
   const html = await (await get("/%3Cscript%3Ealert(1)%3C/script%3E")).text();
-  assert.ok(!html.includes("<script>alert(1)</script>"), "path must be escaped");
+  assert.ok(
+    !html.includes("<script>alert(1)</script>"),
+    "path must be escaped"
+  );
 });

@@ -33,11 +33,19 @@ function stubSupabase(rows: StubRow[], count = rows.length) {
       },
     });
   }) as typeof fetch;
-  return { calls, restore: () => { globalThis.fetch = real; } };
+  return {
+    calls,
+    restore: () => {
+      globalThis.fetch = real;
+    },
+  };
 }
 
 async function get(path: string, env: Partial<typeof ENV> = ENV) {
-  return worker.fetch(new Request(`https://govchain.us${path}`), env as typeof ENV);
+  return worker.fetch(
+    new Request(`https://govchain.us${path}`),
+    env as typeof ENV
+  );
 }
 
 const ROW = {
@@ -72,7 +80,7 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await res.text();
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.match(xml, /https:\/\/govchain\.us\/opportunities/);
+  assert.ok(xml.includes("https://govchain.us/opportunities"));
 });
 
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {
@@ -84,7 +92,10 @@ test("/api/govchain/opportunities returns JSON the homepage can parse", async ()
     const body = (await res.json()) as { opportunities: StubRow[] };
     assert.equal(body.opportunities.length, 1);
     assert.equal(body.opportunities[0].notice_id, "ABC123");
-    assert.ok(f.calls[0].includes("fit_score=gte.70"), "min_fit reaches PostgREST");
+    assert.ok(
+      f.calls[0].includes("fit_score=gte.70"),
+      "min_fit reaches PostgREST"
+    );
     assert.ok(f.calls[0].includes("limit=6"), "limit reaches PostgREST");
   } finally {
     f.restore();
@@ -140,10 +151,13 @@ test("an unconfigured Supabase surfaces as 503, never as marketing HTML", async 
 });
 
 test("row text is escaped, so a hostile title cannot inject markup", async () => {
-  const f = stubSupabase([{ ...ROW, title: '<script>alert(1)</script>' }]);
+  const f = stubSupabase([{ ...ROW, title: "<script>alert(1)</script>" }]);
   try {
     const html = await (await get("/opportunities")).text();
-    assert.ok(!html.includes("<script>alert(1)</script>"), "title must be escaped");
+    assert.ok(
+      !html.includes("<script>alert(1)</script>"),
+      "title must be escaped"
+    );
     assert.match(html, /&lt;script&gt;/);
   } finally {
     f.restore();
@@ -151,10 +165,13 @@ test("row text is escaped, so a hostile title cannot inject markup", async () =>
 });
 
 test("a non-https sam_url is not rendered as a link", async () => {
-  const f = stubSupabase([{ ...ROW, sam_url: 'javascript:alert(1)' }]);
+  const f = stubSupabase([{ ...ROW, sam_url: "javascript:alert(1)" }]);
   try {
     const html = await (await get("/opportunities")).text();
-    assert.ok(!html.includes("javascript:alert(1)"), "only https links are rendered");
+    assert.ok(
+      !html.includes("javascript:alert(1)"),
+      "only https links are rendered"
+    );
   } finally {
     f.restore();
   }

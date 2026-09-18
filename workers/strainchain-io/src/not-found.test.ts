@@ -33,10 +33,13 @@ test("the apex still renders the marketing page", async () => {
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.match(xml, /genetics\/mendo-love-farms/);
+  assert.ok(xml.includes("genetics/mendo-love-farms"));
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {
   const html = await (await get("/%3Cscript%3Ealert(1)%3C/script%3E")).text();
-  assert.ok(!html.includes("<script>alert(1)</script>"), "path must be escaped");
+  assert.ok(
+    !html.includes("<script>alert(1)</script>"),
+    "path must be escaped"
+  );
 });
