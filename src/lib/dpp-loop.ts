@@ -515,6 +515,13 @@ export function findStalledLoops(
 /** Live Stripe price for EU DPP Readiness Audit ($299). */
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 
+/** Query/promo code that creates a $0 Checkout session (no live charge). */
+export const DPP_SMOKE_PROMO = "DPP-SMOKE-E2E";
+
+export function isDppSmokePromo(value: string | null | undefined): boolean {
+  return (value || "").trim().toUpperCase() === DPP_SMOKE_PROMO;
+}
+
 export function isDppOffer(
   metadata: Record<string, unknown> | null | undefined,
   priceId?: string | null

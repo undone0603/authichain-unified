@@ -93,8 +93,8 @@ describe("POST /api/stripe/webhook", () => {
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
     expect(handleStripeWebhook).toHaveBeenCalled();
     const args = (handleStripeWebhook as any).mock.calls[0];
-    expect(Buffer.from(args[1]).toString()).toBe("raw-stripe-payload");
-    expect(args[2]).toBe("t=123,v1=fake");
+    expect(Buffer.from(args[0]).toString()).toBe("raw-stripe-payload");
+    expect(args[1]).toBe("t=123,v1=fake");
   });
 
   it("returns 400 when the stripe-signature header is missing", async () => {
@@ -105,6 +105,35 @@ describe("POST /api/stripe/webhook", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/stripe-signature/i);
+  });
+});
+
+describe("POST /api/dpp/activate", () => {
+  it("returns 400 JSON without session_id", async () => {
+    const res = await app.request("/api/dpp/activate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        categories: "sku",
+        markets: "EU",
+        labeling: "none",
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/session_id/);
+  });
+});
+
+describe("GET /api/cron/dpp-exceptions", () => {
+  it("returns 401 JSON without a bearer token, never HTML", async () => {
+    const res = await app.request("/api/cron/dpp-exceptions");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toMatch(/Unauthorized/i);
   });
 });
 
