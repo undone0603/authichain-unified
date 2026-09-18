@@ -7,13 +7,19 @@ export type AttestationEnv = {
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
 };
 
-type PublicOkp = {
+export type PublicOkp = {
   kty: string;
   crv?: string;
   x?: string;
   kid?: string;
   use?: string;
   alg?: string;
+};
+
+export type ResolvedAttestationKey = {
+  kid: string;
+  publicJwk: PublicOkp;
+  privatePem: string | null;
 };
 
 const JWKS_HEADERS = {
@@ -43,7 +49,7 @@ export function attestationPkcs8Pem(raw: string): string {
   return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
 }
 
-function readKeyMaterial(env: AttestationEnv): {
+function readKeyMaterial(env?: AttestationEnv): {
   raw?: string;
   kid?: string;
   publicJwk?: string;
@@ -51,9 +57,9 @@ function readKeyMaterial(env: AttestationEnv): {
   const proc =
     typeof process !== "undefined" ? process.env : undefined;
   return {
-    raw: env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 || proc?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
-    kid: env.AUTHICHAIN_ATTESTATION_KEY_ID || proc?.AUTHICHAIN_ATTESTATION_KEY_ID,
-    publicJwk: env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK || proc?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
+    raw: env?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 || proc?.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
+    kid: env?.AUTHICHAIN_ATTESTATION_KEY_ID || proc?.AUTHICHAIN_ATTESTATION_KEY_ID,
+    publicJwk: env?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK || proc?.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
   };
 }
 
@@ -95,6 +101,46 @@ async function publicJwkFromPem(pem: string): Promise<PublicOkp> {
   return pub as PublicOkp;
 }
 
+export async function resolveAttestationKey(
+  env?: AttestationEnv,
+): Promise<
+  | { ok: true; key: ResolvedAttestationKey }
+  | { ok: false; error: string; reason?: string; via?: string }
+> {
+  const { raw, kid: configuredKid, publicJwk } = readKeyMaterial(env);
+  const fromSecret = publicJwk ? parsePublicJwk(publicJwk) : null;
+  const privatePem = raw ? attestationPkcs8Pem(raw) : null;
+  if (!fromSecret && !privatePem) {
+    return { ok: false, error: "attestation key unavailable" };
+  }
+  try {
+    const pub =
+      fromSecret || (await publicJwkFromPem(privatePem as string));
+    if (pub.kty !== "OKP" || typeof pub.x !== "string") {
+      throw new Error("not an OKP public JWK");
+    }
+    const { d: _d, ...safe } = pub as PublicOkp & { d?: unknown };
+    const kid =
+      configuredKid || safe.kid || (await calculateJwkThumbprint(safe));
+    return {
+      ok: true,
+      key: {
+        kid,
+        publicJwk: { ...safe, kid, use: "sig", alg: "EdDSA" },
+        privatePem,
+      },
+    };
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "Error";
+    return {
+      ok: false,
+      error: "attestation key unavailable",
+      reason: "invalid",
+      via: name,
+    };
+  }
+}
+
 async function jwksResponse(
   env: AttestationEnv,
   headers: Record<string, string>
@@ -103,35 +149,23 @@ async function jwksResponse(
   status: 200 | 503;
   headers: Record<string, string>;
 }> {
-  const { raw, kid: configuredKid, publicJwk } = readKeyMaterial(env);
-  const fromSecret = publicJwk ? parsePublicJwk(publicJwk) : null;
-  if (!fromSecret && !raw) {
+  const resolved = await resolveAttestationKey(env);
+  if (!resolved.ok) {
     return {
-      body: { error: "attestation key unavailable" },
+      body: {
+        error: resolved.error,
+        ...(resolved.reason ? { reason: resolved.reason } : {}),
+        ...(resolved.via ? { via: resolved.via } : {}),
+      },
       status: 503,
       headers: { "Cache-Control": "private, no-store" },
     };
   }
-  try {
-    const pub = fromSecret || (await publicJwkFromPem(attestationPkcs8Pem(raw as string)));
-    if (pub.kty !== "OKP" || typeof pub.x !== "string") {
-      throw new Error("not an OKP public JWK");
-    }
-    const { d: _d, ...safe } = pub as PublicOkp & { d?: unknown };
-    const kid = configuredKid || safe.kid || (await calculateJwkThumbprint(safe));
-    return {
-      body: { keys: [{ ...safe, kid, use: "sig", alg: "EdDSA" }] },
-      status: 200,
-      headers,
-    };
-  } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    return {
-      body: { error: "attestation key unavailable", reason: "invalid", via: name },
-      status: 503,
-      headers: { "Cache-Control": "private, no-store" },
-    };
-  }
+  return {
+    body: { keys: [resolved.key.publicJwk] },
+    status: 200,
+    headers,
+  };
 }
 
 export function registerJwksRoute<

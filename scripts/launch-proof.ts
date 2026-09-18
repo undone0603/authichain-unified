@@ -55,6 +55,127 @@ async function loadProductionPrivateKey() {
   return importPKCS8(pemFromSecret(raw), "EdDSA");
 }
 
+
+const ISSUER_URL = "https://authichain.com/protocol/issuer.json";
+const LAUNCH_PROOF_URL = "https://authichain.com/protocol/launch-proof";
+const OIDC_AUDIENCE = "https://authichain.com";
+
+async function githubOidcToken(audience: string): Promise<string | null> {
+  const reqUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  const reqToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  if (!reqUrl || !reqToken) return null;
+  const url = new URL(reqUrl);
+  url.searchParams.set("audience", audience);
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${reqToken}`,
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub OIDC token request failed: HTTP ${response.status}`);
+  }
+  const body = (await response.json()) as { value?: string };
+  return body.value?.trim() || null;
+}
+
+async function waitForProductionIssuer(
+  expectedKid: string,
+  timeoutMs = 10 * 60 * 1000,
+) {
+  const started = Date.now();
+  let delay = 5000;
+  let last = "unreachable";
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const response = await fetch(ISSUER_URL, {
+        headers: { accept: "application/json", "cache-control": "no-cache" },
+      });
+      last = `HTTP ${response.status}`;
+      if (response.ok) {
+        const body = (await response.json()) as {
+          ready?: boolean;
+          signing?: boolean;
+          kid?: string;
+        };
+        if (body.ready && body.kid && body.kid !== expectedKid) {
+          throw new Error(
+            `Production issuer kid ${body.kid} != live JWKS kid ${expectedKid}`,
+          );
+        }
+        if (body.ready && body.signing && body.kid === expectedKid) {
+          return body;
+        }
+        last = `ready=${body.ready} signing=${body.signing} kid=${body.kid || "none"}`;
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("Production issuer kid")) {
+        throw err;
+      }
+      last = err instanceof Error ? err.message : "issuer fetch failed";
+    }
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay = Math.min(delay + 5000, 20000);
+  }
+  throw new Error(
+    `Production issuer at ${ISSUER_URL} did not become ready (${last}). Wait for authichain-edge-router deploy, then re-run [pipeline-proof].`,
+  );
+}
+
+async function requestProductionSignedJws(input: {
+  liveKid: string;
+  objectId: string;
+  gtin?: string;
+  serial?: string;
+}): Promise<{ jws: string; source: string }> {
+  const oidc = await githubOidcToken(OIDC_AUDIENCE);
+  const cron = process.env.CRON_SECRET?.trim();
+  const token = oidc || cron;
+  if (!token) {
+    throw new Error(
+      `Cannot bind launch proof: fixture kid does not match live kid ${input.liveKid}, AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is empty, and neither GitHub OIDC nor CRON_SECRET is available to request a production-signed JWS (AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID || "unset"}).`,
+    );
+  }
+  await waitForProductionIssuer(input.liveKid);
+  const response = await fetch(LAUNCH_PROOF_URL, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      runId: RUN_ID,
+      gitSha: GIT_SHA,
+      subject: {
+        object_id: input.objectId,
+        gtin: input.gtin,
+        serial: input.serial,
+      },
+    }),
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `Production launch-proof sign failed: HTTP ${response.status} ${raw.slice(0, 500)}`,
+    );
+  }
+  const body = JSON.parse(raw) as { jws?: string; kid?: string; source?: string };
+  if (typeof body.jws !== "string" || body.jws.split(".").length !== 3) {
+    throw new Error("production issuer returned no compact JWS");
+  }
+  if (body.kid && body.kid !== input.liveKid) {
+    throw new Error(
+      `production issuer signed with kid ${body.kid} != live kid ${input.liveKid}`,
+    );
+  }
+  return {
+    jws: body.jws,
+    source: "production-issuer signed against live JWKS",
+  };
+}
+
+
 async function supabaseUpsert(
   table: string,
   rows: Record<string, unknown>[],
@@ -177,9 +298,14 @@ if (productionKey) {
   productionJws = fixtureJws;
   source = "fixtures/attestation-v0.1-valid.jws; verified against live JWKS";
 } else {
-  throw new Error(
-    `Cannot bind launch proof: fixture kid ${fixtureKid} != live kid ${liveKid}. Set AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 so CI can sign with the production key (AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID || "unset"}).`,
-  );
+  const signed = await requestProductionSignedJws({
+    liveKid,
+    objectId: fixturePayload.subject.object_id,
+    gtin: fixturePayload.subject.gtin,
+    serial: fixturePayload.subject.serial,
+  });
+  productionJws = signed.jws;
+  source = signed.source;
 }
 
 const publicJwk = liveKeys.find((key) => key.kid === liveKid);
@@ -417,7 +543,7 @@ const report = {
     jwksUrl,
     liveJwksResolved: true,
     independentVerification: "passed",
-    productionSigned: Boolean(productionKey),
+    productionSigned: source.startsWith("production"),
     source,
   },
   tamperTests: launchProof.tamperTests,
