@@ -26,14 +26,15 @@ const EXAMPLE_HTML = `
 `;
 
 async function loadExamplePage(page: import('playwright-core').Page) {
-  await page.route('https://example.com/**', async (route) => {
+  // Glob `https://example.com/**` does not match the origin URL with only `/`.
+  await page.route(/https?:\/\/example\.com\/?.*/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
       body: EXAMPLE_HTML,
     });
   });
-  await page.goto(EXAMPLE_URL);
+  await page.goto(EXAMPLE_URL, { waitUntil: 'domcontentloaded' });
 }
 // This suite launches a real browser, so it needs the Playwright browser
 // binaries installed (CI does this via `playwright install --with-deps
@@ -318,7 +319,7 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   describe('navigation', () => {
     it('should navigate to URL', async () => {
       const page = browser.getPage();
-
+      await loadExamplePage(page);
       expect(page.url()).toBe('https://example.com/');
     });
 
@@ -336,17 +337,20 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
 
     it('should find element by selector', async () => {
       const page = browser.getPage();
-      await expect(page.locator('h1')).toHaveText('Example Domain');
+      const heading = await page.locator('h1').textContent();
+      expect(heading).toBe('Example Domain');
     });
 
     it('should check element visibility', async () => {
       const page = browser.getPage();
-      await expect(page.locator('h1')).toBeVisible();
+      const isVisible = await page.locator('h1').isVisible();
+      expect(isVisible).toBe(true);
     });
 
     it('should count elements', async () => {
       const page = browser.getPage();
-      await expect(page.locator('p')).toHaveCount(1);
+      const count = await page.locator('p').count();
+      expect(count).toBe(1);
     });
   });
 
