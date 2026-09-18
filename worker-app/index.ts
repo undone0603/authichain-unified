@@ -223,7 +223,8 @@ app.post("/api/dpp/activate", async c => {
     const supabaseUrl =
       c.env?.NEXT_PUBLIC_SUPABASE_URL ||
       c.env?.SUPABASE_URL ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
     const serviceKey =
       c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (supabaseUrl && serviceKey) {
