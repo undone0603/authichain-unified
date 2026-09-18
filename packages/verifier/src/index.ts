@@ -46,6 +46,11 @@ export interface AuthiChainAttestationV01 {
   evidence: AuthiChainEvidence[];
 }
 
+export interface AttestationVerificationOptions {
+  expectedObjectId?: string;
+  now?: number;
+}
+
 const ISO_DATE_TIME = (value: unknown) =>
   typeof value === "string" && !Number.isNaN(Date.parse(value));
 
@@ -220,7 +225,8 @@ export async function signAttestation(
 
 export async function verifyAttestationJws(
   jws: string,
-  publicJwk: Record<string, unknown>
+  publicJwk: Record<string, unknown>,
+  options: AttestationVerificationOptions = {}
 ) {
   const header = decodeProtectedHeader(jws);
   if (header.typ !== AUTHICHAIN_ATTESTATION_TYP || header.alg !== "EdDSA") {
@@ -240,8 +246,29 @@ export async function verifyAttestationJws(
 
   const key = await importJWK(publicJwk, "EdDSA");
   const { payload } = await compactVerify(jws, key);
-  const parsed = JSON.parse(new TextDecoder().decode(payload));
-  return validateAttestation(parsed);
+  const parsed = validateAttestation(
+    JSON.parse(new TextDecoder().decode(payload))
+  );
+
+  if (
+    options.expectedObjectId !== undefined &&
+    parsed.subject.object_id !== options.expectedObjectId
+  ) {
+    throw new Error("attestation subject object_id does not match expected object");
+  }
+
+  if (parsed.status !== "active") {
+    throw new Error(`attestation status is ${parsed.status}`);
+  }
+
+  if (
+    parsed.expires_at !== undefined &&
+    Date.parse(parsed.expires_at) <= (options.now ?? Date.now())
+  ) {
+    throw new Error("attestation has expired");
+  }
+
+  return parsed;
 }
 
 export function parseJws(jws: string) {
