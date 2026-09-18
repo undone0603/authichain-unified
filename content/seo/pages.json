@@ -7872,5 +7872,324 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-dpp-access-rights-management-standard-en-18239",
+    "keyword": "eu dpp access rights management standard en 18239",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU DPP Access Rights Management Standard En | AuthiChain",
+    "metaDescription": "FprEN 18239, the CEN-CENELEC standard defining Digital Product Passport access rights management, IT security, and business confidentiality, was expected to.",
+    "h1": "EU DPP Access Rights Management Standard En 18239",
+    "bodyHtml": "<p>FprEN 18239, the CEN-CENELEC standard defining Digital Product Passport access rights management, IT security, and business confidentiality, was expected to publish in September 2026 alongside FprEN 18246 — completing the package of eight DPP system standards the European Commission requested under mandate M/604.</p><h2>Why AuthiChain</h2><ul><li>EN 18239 sets out which roles — authorities, repairers, recyclers, a person with a legitimate interest — read which passport data, and how that access is enforced and documented, the mechanism Article 77(9)’s tiered-access rule leaves to a harmonised standard to define</li><li>protocol/SPEC.md §6 already implements the one tier every DPP has to serve regardless of what EN 18239 adds for the others: a permanent URL, no authentication required, and a 404 for an unknown item rather than a synthesized response</li><li>Until FprEN 18239 is cited in the Official Journal, it carries no presumption of conformity with ESPR — a real gap between a standard being published and a standard a manufacturer can point to as proof of compliance</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is EN 18239 published yet?</h3><p>It was expected to publish in September 2026, alongside FprEN 18246, completing the eight-standard DPP package CEN-CENELEC’s Joint Technical Committee 24 developed under Commission mandate M/604. Whether it has since been formally cited in the Official Journal — the step that grants presumption of conformity — is worth checking directly before relying on it for compliance.</p><h3>Does AuthiChain implement EN 18239’s access tiers today?</h3><p>No — v0.1.0 issues one record with one visibility level, the public tier. Tiered access for repairers, recyclers, and authorities is a real requirement the standard and each category’s delegated act define, and it isn’t built here yet.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU DPP Access Rights Management Standard En 18239",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "FprEN 18239, the CEN-CENELEC standard defining Digital Product Passport access rights management, IT security, and business confidentiality, was expected to publish in September 2026 alongside FprEN 18246 — completing the package of eight DPP system standards the European Commission requested under mandate M/604.",
+          "url": "https://authichain.com/p/eu-dpp-access-rights-management-standard-en-18239"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU DPP Access Rights Management Standard En 18239",
+              "item": "https://authichain.com/p/eu-dpp-access-rights-management-standard-en-18239"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is EN 18239 published yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It was expected to publish in September 2026, alongside FprEN 18246, completing the eight-standard DPP package CEN-CENELEC’s Joint Technical Committee 24 developed under Commission mandate M/604. Whether it has since been formally cited in the Official Journal — the step that grants presumption of conformity — is worth checking directly before relying on it for compliance."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain implement EN 18239’s access tiers today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — v0.1.0 issues one record with one visibility level, the public tier. Tiered access for repairers, recyclers, and authorities is a real requirement the standard and each category’s delegated act define, and it isn’t built here yet."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-forgery-defense-key-compromise",
+    "keyword": "verifiable credential forgery defense key compromise",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Forgery Defense Key | AuthiChain",
+    "metaDescription": "W3C’s Verifiable Credential Forgery Defense reached First Public Working Draft status in 2026, giving an issuer a way to prove which of its credentials are.",
+    "h1": "Verifiable Credential Forgery Defense Key Compromise",
+    "bodyHtml": "<p>W3C’s Verifiable Credential Forgery Defense reached First Public Working Draft status in 2026, giving an issuer a way to prove which of its credentials are genuine after a signing key is compromised — exactly the gap protocol/SPEC.md §8 names as unsolved: a record signed by a compromised key stays cryptographically valid.</p><h2>Why AuthiChain</h2><ul><li>The mechanism is a signed, indexed witness list an issuer publishes separately from the credential itself — a verifier checks a record against that list instead of trusting the compromised key’s signature alone</li><li>It answers a different question than revocation: Bitstring Status List says a specific credential was revoked; forgery defense says whether a credential claiming genuine issuance actually matches what the issuer’s witness list attests to</li><li>A witness list can be signed with a different algorithm than the credential it protects, including a post-quantum signature — the same store-now-decrypt-later exposure protocol/SPEC.md §8 already discloses about today’s Ed25519 signatures</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this replace the revocation AuthiChain’s spec says is missing until v0.2?</h3><p>No — forgery defense and revocation solve different problems. Revocation, planned via credentialStatus, says a specific known credential should no longer be trusted. Forgery defense detects credentials forged after a key compromise that a revocation list was never told to watch for.</p><h3>Is Forgery Defense a finished W3C standard?</h3><p>No — the Verifiable Credentials Working Group published it as a First Public Working Draft in 2026, not a Recommendation. It isn’t implemented in this protocol’s reference verifier today.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Forgery Defense Key Compromise",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s Verifiable Credential Forgery Defense reached First Public Working Draft status in 2026, giving an issuer a way to prove which of its credentials are genuine after a signing key is compromised — exactly the gap protocol/SPEC.md §8 names as unsolved: a record signed by a compromised key stays cryptographically valid.",
+          "url": "https://authichain.com/p/verifiable-credential-forgery-defense-key-compromise"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Forgery Defense Key Compromise",
+              "item": "https://authichain.com/p/verifiable-credential-forgery-defense-key-compromise"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this replace the revocation AuthiChain’s spec says is missing until v0.2?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — forgery defense and revocation solve different problems. Revocation, planned via credentialStatus, says a specific known credential should no longer be trusted. Forgery defense detects credentials forged after a key compromise that a revocation list was never told to watch for."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Forgery Defense a finished W3C standard?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the Verifiable Credentials Working Group published it as a First Public Working Draft in 2026, not a Recommendation. It isn’t implemented in this protocol’s reference verifier today."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gs1-sunrise-2027-mandatory-for-brands",
+    "keyword": "gs1 sunrise 2027 mandatory for brands",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "GS1 Sunrise 2027 Mandatory For Brands | QRON",
+    "metaDescription": "GS1 Sunrise 2027 sets a retailer deadline, not a brand mandate: by the end of 2027, point-of-sale systems are expected to scan GS1 Digital Link QR codes and.",
+    "h1": "GS1 Sunrise 2027 Mandatory For Brands",
+    "bodyHtml": "<p>GS1 Sunrise 2027 sets a retailer deadline, not a brand mandate: by the end of 2027, point-of-sale systems are expected to scan GS1 Digital Link QR codes and DataMatrix alongside legacy barcodes, but no GS1 rule requires a brand to print one by that date — which is why Tesco switching its own-label sausage range to 2D codes in April 2026 was a retailer-led rollout, not a supplier compliance deadline.</p><h2>Why QRON</h2><ul><li>GS1 Sunrise 2027 is an industry initiative, not a statute — the December 2027 date is when major retailers commit to reading 2D codes at checkout, and nothing in it fines a brand for still shipping a linear barcode after that date</li><li>A GS1 Digital Link QR code does double duty once printed: it satisfies retail scanning and carries a QRON-signed, Ed25519-verifiable record from the same identifier, so a brand switching for Sunrise 2027 adds verification in the same packaging change, not a second one</li><li>Dual marking — the legacy linear barcode alongside the new 2D code — is the standard transition path, so a brand’s existing GTINs and retailer relationships keep working while 2D adoption phases in around it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Do we have to switch to GS1 Digital Link QR codes by 2027?</h3><p>Not under any GS1 rule — Sunrise 2027 obligates retailer point-of-sale systems to be able to scan 2D codes by the end of 2027. Whether and when a brand prints one is a business decision driven by which retailers it sells through, not a GS1 mandate on suppliers.</p><h3>Has a major retailer actually made the switch?</h3><p>Tesco moved its own-label core sausage range to QR and DataMatrix codes in April 2026, described by GS1 UK as a shift from pilot to everyday retail use — one concrete rollout, not evidence every retailer’s point of sale is ready yet.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — GS1 Sunrise 2027 Mandatory For Brands",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "GS1 Sunrise 2027 sets a retailer deadline, not a brand mandate: by the end of 2027, point-of-sale systems are expected to scan GS1 Digital Link QR codes and DataMatrix alongside legacy barcodes, but no GS1 rule requires a brand to print one by that date — which is why Tesco switching its own-label sausage range to 2D codes in April 2026 was a retailer-led rollout, not a supplier compliance deadline.",
+          "url": "https://qron.space/p/gs1-sunrise-2027-mandatory-for-brands"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "GS1 Sunrise 2027 Mandatory For Brands",
+              "item": "https://qron.space/p/gs1-sunrise-2027-mandatory-for-brands"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we have to switch to GS1 Digital Link QR codes by 2027?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not under any GS1 rule — Sunrise 2027 obligates retailer point-of-sale systems to be able to scan 2D codes by the end of 2027. Whether and when a brand prints one is a business decision driven by which retailers it sells through, not a GS1 mandate on suppliers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Has a major retailer actually made the switch?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Tesco moved its own-label core sausage range to QR and DataMatrix codes in April 2026, described by GS1 UK as a shift from pilot to everyday retail use — one concrete rollout, not evidence every retailer’s point of sale is ready yet."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ai-shopping-agent-product-authenticity-verification",
+    "keyword": "ai shopping agent product authenticity verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "AI Shopping Agent Product Authenticity | AuthiChain",
+    "metaDescription": "An AI shopping agent buying on someone’s behalf can’t call a brand’s support line to ask whether an item is genuine, and frameworks like Visa’s Trusted Agent.",
+    "h1": "AI Shopping Agent Product Authenticity Verification",
+    "bodyHtml": "<p>An AI shopping agent buying on someone’s behalf can’t call a brand’s support line to ask whether an item is genuine, and frameworks like Visa’s Trusted Agent Protocol are being built to let a merchant verify the agent — but nothing in that layer checks whether the specific product the agent is about to buy is real, which is what an offline, no-account verification check is for.</p><h2>Why AuthiChain</h2><ul><li>protocol/SPEC.md §5 verification needs no network call to AuthiChain and no account — properties that matter as much to an autonomous agent checking a listing in milliseconds as to a person scanning a box by hand</li><li>Trusted Agent Protocol and similar Know Your Agent efforts verify who is shopping and on whose authority; a signed provenance record verifies what is being sold — complementary checks, not substitutes for each other</li><li>A verdict of verified, valid-unanchored, or invalid is a machine-parseable answer an agent’s own code can branch on directly, with no partial-credit score for it to interpret</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain integrate with Visa’s Trusted Agent Protocol or similar frameworks?</h3><p>Not today — those protocols authenticate the agent and its purchasing authority to a merchant. AuthiChain’s verifier checks a signed provenance record about the item itself; a merchant or agent system would call both checks, not one instead of the other.</p><h3>Can an AI agent verify a product without an AuthiChain account?</h3><p>Yes — the same offline verification a person gets. The reference verifier runs against the record and its signature with no API key and no relationship with AuthiChain required.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — AI Shopping Agent Product Authenticity Verification",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "An AI shopping agent buying on someone’s behalf can’t call a brand’s support line to ask whether an item is genuine, and frameworks like Visa’s Trusted Agent Protocol are being built to let a merchant verify the agent — but nothing in that layer checks whether the specific product the agent is about to buy is real, which is what an offline, no-account verification check is for.",
+          "url": "https://authichain.com/p/ai-shopping-agent-product-authenticity-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "AI Shopping Agent Product Authenticity Verification",
+              "item": "https://authichain.com/p/ai-shopping-agent-product-authenticity-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain integrate with Visa’s Trusted Agent Protocol or similar frameworks?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not today — those protocols authenticate the agent and its purchasing authority to a merchant. AuthiChain’s verifier checks a signed provenance record about the item itself; a merchant or agent system would call both checks, not one instead of the other."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can an AI agent verify a product without an AuthiChain account?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the same offline verification a person gets. The reference verifier runs against the record and its signature with no API key and no relationship with AuthiChain required."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "uk-product-regulation-metrology-act-digital-labelling",
+    "keyword": "uk product regulation metrology act digital labelling",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "UK Product Regulation Metrology Act Digital | AuthiChain",
+    "metaDescription": "The UK’s Product Regulation and Metrology Act, which received Royal Assent on 21 July 2025, gives ministers delegated power to set new labelling rules — and.",
+    "h1": "UK Product Regulation Metrology Act Digital Labelling",
+    "bodyHtml": "<p>The UK’s Product Regulation and Metrology Act, which received Royal Assent on 21 July 2025, gives ministers delegated power to set new labelling rules — and a March–June 2026 consultation on a “digital by default” core product safety framework is the first sign of where those powers might point, though nothing has been decided yet.</p><h2>Why AuthiChain</h2><ul><li>The Act itself sets no digital-labelling requirement — it creates the power for ministers to make one by secondary legislation, which is why the 2026 consultation exists: to test proposals before any rule is drafted</li><li>The consultation closed 23 June 2026 with no published outcome as of this writing — a business building toward UK “digital by default” labelling today is preparing for a plausible direction, not a confirmed deadline</li><li>A W3C Verifiable Credential resolving from a GS1 Digital Link URL, the same record this protocol already issues for EU DPP categories, doesn’t need a second format if a UK rule lands close to the EU’s own carrier requirements — only a UK-specific field set to slot into the same credentialSubject</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is digital product labelling mandatory in the UK yet?</h3><p>No — the Product Regulation and Metrology Act 2025 grants ministers the power to make labelling rules, including digital ones, but no such rule has been made yet. The Department for Business and Trade’s 2026 consultation on a “digital by default” framework closed 23 June 2026 with no rule published as of this writing.</p><h3>Will a UK digital label just mirror the EU Digital Product Passport?</h3><p>Unknown — the Act lets the UK choose whether to recognize EU product requirements, but the consultation doesn’t commit to mirroring ESPR. A record built on open standards, GS1 Digital Link and W3C Verifiable Credentials, ports to whichever specific fields a UK rule ends up requiring.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — UK Product Regulation Metrology Act Digital Labelling",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The UK’s Product Regulation and Metrology Act, which received Royal Assent on 21 July 2025, gives ministers delegated power to set new labelling rules — and a March–June 2026 consultation on a “digital by default” core product safety framework is the first sign of where those powers might point, though nothing has been decided yet.",
+          "url": "https://authichain.com/p/uk-product-regulation-metrology-act-digital-labelling"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "UK Product Regulation Metrology Act Digital Labelling",
+              "item": "https://authichain.com/p/uk-product-regulation-metrology-act-digital-labelling"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is digital product labelling mandatory in the UK yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the Product Regulation and Metrology Act 2025 grants ministers the power to make labelling rules, including digital ones, but no such rule has been made yet. The Department for Business and Trade’s 2026 consultation on a “digital by default” framework closed 23 June 2026 with no rule published as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will a UK digital label just mirror the EU Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Unknown — the Act lets the UK choose whether to recognize EU product requirements, but the consultation doesn’t commit to mirroring ESPR. A record built on open standards, GS1 Digital Link and W3C Verifiable Credentials, ports to whichever specific fields a UK rule ends up requiring."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
