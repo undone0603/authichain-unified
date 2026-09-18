@@ -21,6 +21,9 @@ type Env = {
   RATE_LIMITER: DurableObjectNamespace;
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
+  STRIPE_SECRET_KEY?: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
 };
 
 type Variables = {
@@ -120,6 +123,48 @@ app.use(
 );
 
 app.get("/api/health", c => c.json({ status: "ok" }));
+
+// ─── DPP $299 Checkout ──────────────────────────────────────────────────────
+// Same session create as Next src/app/api/checkout/dpp. Registered here so
+// authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
+app.get("/api/checkout/dpp", async c => {
+  try {
+    const { createDppCheckoutSession } =
+      await import("../src/lib/dpp-checkout");
+    const stripeSecretKey =
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "";
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const result = await createDppCheckoutSession({
+      searchParams: new URL(c.req.url).searchParams,
+      stripeSecretKey,
+      supabase,
+    });
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.redirect(result.url, 303);
+  } catch (err: any) {
+    console.error("[checkout/dpp] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start DPP checkout", detail: err?.message },
+      500
+    );
+  }
+});
 
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain

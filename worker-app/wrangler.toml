@@ -3,6 +3,10 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
+# for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
+# SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
+
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
 # directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
