@@ -1,16 +1,13 @@
 name: Deploy to Cloudflare
 
-
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
-
 permissions:
   contents: read
-
 
 jobs:
   secret-scan:
@@ -23,14 +20,12 @@ jobs:
         with:
           fetch-depth: 0
 
-
       - name: Scan for secrets
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_CONFIG: .gitleaks.toml
-
 
   deploy:
     name: Deploy to Cloudflare
@@ -41,7 +36,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
 
       - name: Check required secrets
         id: secrets_check
@@ -60,7 +54,6 @@ jobs:
           version: 10.28.2
           run_install: false
 
-
       - name: Setup Node 22
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
@@ -68,11 +61,9 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
-
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
-
 
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
@@ -81,7 +72,6 @@ jobs:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
-
 
       - name: Inspect build output
         if: steps.secrets_check.outputs.skip != 'true'
@@ -107,6 +97,41 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Bind attestation key on authichain-edge-router
+        if: steps.secrets_check.outputs.skip != 'true'
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+          AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKER_NAME="authichain-edge-router"
+          JWKS_CODE="$(curl -sS -o /tmp/jwks-probe.json -w '%{http_code}' \
+            https://authichain.com/protocol/jwks.json || echo 000)"
+          if [ "$JWKS_CODE" = "200" ]; then
+            echo "JWKS already live ($JWKS_CODE) — leaving bound key in place"
+            exit 0
+          fi
+          KEY_B64="${AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64:-}"
+          if [ -z "$KEY_B64" ]; then
+            echo "GitHub secret empty and JWKS is $JWKS_CODE — generating Ed25519 v0.1 key"
+            KEY_B64="$(node --input-type=module -e '
+              import { generateKeyPair, exportPKCS8 } from "jose";
+              const { privateKey } = await generateKeyPair("EdDSA");
+              const pem = await exportPKCS8(privateKey);
+              process.stdout.write(Buffer.from(pem).toString("base64"));
+            ')"
+          fi
+          printf '%s' "$KEY_B64" | npx wrangler secret put \
+            AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 --name "$WORKER_NAME"
+          if [ -n "${AUTHICHAIN_ATTESTATION_KEY_ID:-}" ]; then
+            printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
+              AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
+          fi
+          echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 on $WORKER_NAME"
 
       - name: Deploy authichain-scan-validate
         if: steps.secrets_check.outputs.skip != 'true'
@@ -115,7 +140,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
 
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
