@@ -1,3 +1,3 @@
 # Production launch proof
 
-Explicit `[pipeline-proof]` verification trigger for the current production JWKS binding.
+Explicit `[pipeline-proof]` verification trigger for the corrected current-JWKS proof implementation.
