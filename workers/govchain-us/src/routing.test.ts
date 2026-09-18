@@ -80,7 +80,7 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await res.text();
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(xml.includes("https://govchain.us/opportunities"));
+  assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
 });
 
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {
