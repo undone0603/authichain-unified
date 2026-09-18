@@ -112,7 +112,18 @@ jobs:
           JWKS_CODE="$(curl -sS -o /tmp/jwks-probe.json -w '%{http_code}' \
             https://authichain.com/protocol/jwks.json || echo 000)"
           if [ "$JWKS_CODE" = "200" ]; then
-            echo "JWKS already live ($JWKS_CODE) — leaving bound key in place"
+            echo "JWKS already live ($JWKS_CODE)"
+            # A key ID can be added or rotated independently of the private key.
+            # Do not short-circuit before propagating a newly-added
+            # AUTHICHAIN_ATTESTATION_KEY_ID secret to the Worker.
+            if [ -n "${AUTHICHAIN_ATTESTATION_KEY_ID:-}" ]; then
+              printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
+                AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
+              echo "bound AUTHICHAIN_ATTESTATION_KEY_ID on $WORKER_NAME"
+              npx wrangler deploy --minify --config wrangler.toml
+            else
+              echo "AUTHICHAIN_ATTESTATION_KEY_ID not supplied — leaving existing binding in place"
+            fi
             exit 0
           fi
           KEY_B64="${AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64:-}"
