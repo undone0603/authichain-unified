@@ -1,17 +1,19 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { generateKeyPair, exportJWK } from "jose";
+import { generateKeyPair, exportJWK, importPKCS8 } from "jose";
 import QRCode from "qrcode";
 import {
   parseJws,
   signAttestation,
   verifyAttestationJws,
+  type AuthiChainAttestationV01,
 } from "../packages/verifier/src/index";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GIT_SHA = process.env.GITHUB_SHA || "unknown";
 const RUN_ID = process.env.GITHUB_RUN_ID || "unknown";
+const CONFIGURED_KID = process.env.AUTHICHAIN_ATTESTATION_KEY_ID?.trim();
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
@@ -29,6 +31,28 @@ const fixtureJws = (
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function pemFromSecret(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.includes("BEGIN PRIVATE KEY")) return trimmed;
+  try {
+    const decoded = Buffer.from(trimmed.replace(/\s+/g, ""), "base64").toString(
+      "utf8",
+    );
+    if (decoded.includes("BEGIN PRIVATE KEY")) return decoded.trim();
+  } catch {
+    /* not utf8 PEM */
+  }
+  const der = trimmed.replace(/\s+/g, "");
+  const wrapped = der.match(/.{1,64}/g)?.join("\n") ?? der;
+  return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
+}
+
+async function loadProductionPrivateKey() {
+  const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
+  if (!raw?.trim()) return null;
+  return importPKCS8(pemFromSecret(raw), "EdDSA");
 }
 
 async function supabaseUpsert(
@@ -79,11 +103,9 @@ const fixturePayload = fixture.payload as {
   status: "active" | "revoked" | "unknown";
   issued_at: string;
   expires_at?: string;
+  evidence: AuthiChainAttestationV01["evidence"];
 };
 
-// The fixture supplies the canonical payload contract. The proof binds that
-// payload to the current production JWKS key; signing itself is not performed
-// by the CI runner.
 const fixtureKid = String(fixture.protected.kid || "");
 if (!fixtureKid) throw new Error("fixture JWS does not contain kid");
 
@@ -96,12 +118,73 @@ if (!jwksResponse.ok) {
 const liveJwks = (await jwksResponse.json()) as {
   keys?: Array<Record<string, unknown>>;
 };
-const publicJwk = liveJwks.keys?.find(
-  (key) => key.kid === fixtureKid,
-);
+const liveKeys = liveJwks.keys || [];
+if (liveKeys.length === 0) {
+  throw new Error("live JWKS published zero keys");
+}
+
+if (
+  CONFIGURED_KID &&
+  !liveKeys.some((key) => key.kid === CONFIGURED_KID)
+) {
+  throw new Error(
+    `AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID} is not in live JWKS; live keys=${JSON.stringify(
+      liveKeys.map((key) => ({ kid: key.kid, alg: key.alg, crv: key.crv })),
+    )}`,
+  );
+}
+
+const liveKey =
+  liveKeys.find((key) => key.kid === CONFIGURED_KID) || liveKeys[0];
+const liveKid = String(liveKey.kid || "");
+if (!liveKid) throw new Error("live JWKS key is missing kid");
+
+const productionKey = await loadProductionPrivateKey();
+let productionJws: string;
+let source: string;
+
+if (productionKey) {
+  const launchAttestation: AuthiChainAttestationV01 = {
+    version: "0.1",
+    attestation_id: `urn:authichain:attestation:v01:launch-${RUN_ID}`,
+    issuer: fixturePayload.issuer,
+    subject: {
+      object_id: fixturePayload.subject.object_id,
+      gtin: fixturePayload.subject.gtin,
+      serial: fixturePayload.subject.serial,
+    },
+    decision: "verified",
+    status: "active",
+    issued_at: new Date().toISOString(),
+    expires_at: "2027-12-31T00:00:00Z",
+    evidence: fixturePayload.evidence?.length
+      ? fixturePayload.evidence
+      : [
+          {
+            id: "launch-proof",
+            type: "production-launch",
+            digest: `sha256:${sha256(fixturePayload.subject.object_id)}`,
+          },
+        ],
+  };
+  productionJws = await signAttestation(
+    launchAttestation,
+    productionKey,
+    liveKid,
+  );
+  source = "production-signed against live JWKS";
+} else if (fixtureKid === liveKid) {
+  productionJws = fixtureJws;
+  source = "fixtures/attestation-v0.1-valid.jws; verified against live JWKS";
+} else {
+  throw new Error(
+    `Cannot bind launch proof: fixture kid ${fixtureKid} != live kid ${liveKid}. Set AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 so CI can sign with the production key (AUTHICHAIN_ATTESTATION_KEY_ID=${CONFIGURED_KID || "unset"}).`,
+  );
+}
+
+const publicJwk = liveKeys.find((key) => key.kid === liveKid);
 if (!publicJwk) {
-  const liveKids = (liveJwks.keys || []).map((key) => ({ kid: key.kid, x: key.x, alg: key.alg, crv: key.crv }));
-  throw new Error(`live JWKS does not expose fixture kid ${fixtureKid}; live keys=${JSON.stringify(liveKids)}`);
+  throw new Error(`live JWKS does not expose kid ${liveKid}`);
 }
 
 const verifiedFixture = await verifyAttestationJws(productionJws, publicJwk, {
@@ -113,9 +196,7 @@ const payload = JSON.parse(
   Buffer.from(alteredPayload[1], "base64url").toString("utf8"),
 );
 payload.subject.object_id = "authi:altered-subject";
-alteredPayload[1] = Buffer.from(
-  JSON.stringify(payload),
-).toString("base64url");
+alteredPayload[1] = Buffer.from(JSON.stringify(payload)).toString("base64url");
 await verifyExpectedFailure("altered payload", () =>
   verifyAttestationJws(alteredPayload.join("."), publicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
@@ -198,12 +279,12 @@ await verifyExpectedFailure("stale attestation", () =>
 
 const objectId = fixturePayload.subject.object_id;
 const serial = fixturePayload.subject.serial || "SN-001";
-const seed = sha256(`QRON|${objectId}|${serial}|${fixtureKid}`);
+const seed = sha256(`QRON|${objectId}|${serial}|${liveKid}`);
 const launchProof = {
   objectId,
   sourceObjectId: fixturePayload.subject.object_id,
   attestationId: verifiedFixture.attestation_id,
-  kid: fixtureKid,
+  kid: liveKid,
   jws: productionJws,
   jwksUrl,
   qronId,
@@ -212,7 +293,7 @@ const launchProof = {
   verifiedAt: new Date().toISOString(),
   gitSha: GIT_SHA,
   workflowRunId: RUN_ID,
-  source: "fixtures/attestation-v0.1-valid.jws; verified against live JWKS",
+  source,
   tamperTests: {
     alteredPayload: "rejected",
     alteredSignature: "rejected",
@@ -233,7 +314,7 @@ const storymode = {
     {
       title: "Proof",
       content:
-        "The fixture attestation is independently verified against the live public JWKS using its kid.",
+        "The production attestation is independently verified against the live public JWKS using its kid.",
     },
     {
       title: "Reveal",
@@ -277,7 +358,7 @@ await supabaseUpsert("qr_codes", [
         seed,
         object_id: objectId,
         attestation_id: verifiedFixture.attestation_id,
-        kid: fixtureKid,
+        kid: liveKid,
         jwks_url: jwksUrl,
       },
     },
@@ -294,7 +375,7 @@ await supabaseUpsert("certification_events", [
       object_id: objectId,
       qron_id: qronId,
       attestation_id: verifiedFixture.attestation_id,
-      kid: fixtureKid,
+      kid: liveKid,
       storymode_url: storyUrl,
       cryptographic_verification: "verified",
       tamper_tests: launchProof.tamperTests,
@@ -331,11 +412,13 @@ const report = {
   cryptography: {
     contract: "AuthiChain Attestation Contract v0.1",
     alg: String(fixture.protected.alg),
-    kid: fixtureKid,
+    kid: liveKid,
+    configuredKid: CONFIGURED_KID || null,
     jwksUrl,
     liveJwksResolved: true,
     independentVerification: "passed",
-    productionSignedFixture: true,
+    productionSigned: Boolean(productionKey),
+    source,
   },
   tamperTests: launchProof.tamperTests,
   provenance: {
