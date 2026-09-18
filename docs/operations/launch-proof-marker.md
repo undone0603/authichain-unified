@@ -1,3 +1,3 @@
 # Production launch proof
 
-Explicit `[pipeline-proof]` verification trigger for the current production signing key.
+Explicit `[pipeline-proof]` verification trigger for the production app signing endpoint.
