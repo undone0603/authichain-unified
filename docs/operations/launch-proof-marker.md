@@ -1,3 +1,3 @@
 # Production launch proof
 
-Explicit `[pipeline-proof]` verification trigger after live-JWKS diagnostics.
+Explicit `[pipeline-proof]` verification trigger for the current production signing key.
