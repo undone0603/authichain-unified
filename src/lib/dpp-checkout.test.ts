@@ -35,27 +35,50 @@ describe("createDppCheckoutSession", () => {
     const { createDppCheckoutSession } = await import("./dpp-checkout");
     const result = await createDppCheckoutSession({
       searchParams: new URLSearchParams({
-        visit_id: "dpp_smoke_1",
+        visit_id: "dpp_paid_1",
         utm_source: "seo",
-        promo: "DPP-SMOKE-E2E",
       }),
       stripeSecretKey: "sk_test_x",
     });
     expect(result).toEqual({
       ok: true,
       url: "https://checkout.stripe.com/c/pay/cs_test_dpp",
-      visitId: "dpp_smoke_1",
+      visitId: "dpp_paid_1",
     });
     expect(create).toHaveBeenCalledOnce();
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("payment");
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
-    expect(arg.client_reference_id).toBe("dpp_smoke_1");
+    expect(arg.client_reference_id).toBe("dpp_paid_1");
     expect(arg.allow_promotion_codes).toBe(true);
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
     expect(arg.metadata.plan).toBe("dpp_readiness");
     expect(arg.success_url).toContain(
       "/dpp/thanks?session_id={CHECKOUT_SESSION_ID}"
     );
+    expect(arg.payment_method_types).toBeUndefined();
+  });
+
+  it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_smoke_2",
+        promo: "DPP-SMOKE-E2E",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.line_items[0].price).toBeUndefined();
+    expect(arg.line_items[0].price_data.unit_amount).toBe(0);
+    expect(arg.payment_method_collection).toBe("if_required");
+    expect(arg.metadata.is_demo).toBe("true");
+    expect(arg.metadata.promo).toBe("DPP-SMOKE-E2E");
+    expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
+    expect(arg.payment_method_types).toBeUndefined();
   });
 });

@@ -17,21 +17,38 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      {
+        status: 401,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "CDN-Cache-Control": "no-store",
+        },
+      }
+    );
   }
 
   try {
     const rows = await fetchAllLoopEvents(supabaseAdmin);
     const summary = summarizeDppLoop(rows);
-    return NextResponse.json({
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      visits: summary.visits,
-      demoVisits: summary.demoVisits,
-      funnel: summary.funnel,
-      exceptionCount: summary.exceptions.length,
-      exceptions: summary.exceptions,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        visits: summary.visits,
+        demoVisits: summary.demoVisits,
+        funnel: summary.funnel,
+        exceptionCount: summary.exceptions.length,
+        exceptions: summary.exceptions,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+          "CDN-Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (err) {
     console.error("[cron/dpp-exceptions] failed:", err);
     return NextResponse.json(

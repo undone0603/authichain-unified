@@ -2,7 +2,11 @@
  * Edge checkout for the $299 DPP audit.
  * GET /protocol/checkout/dpp — never cached as landing HTML (unlike /api/checkout/dpp).
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
+ * Promo DPP-SMOKE-E2E creates a $0 session (payment_method_collection=if_required).
  */
+import { DPP_OFFER_KEY } from "../../../src/lib/plans";
+import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
+
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 export const APP_ORIGIN = "https://authichain.com";
 
@@ -38,7 +42,7 @@ export function isProtocolCheckoutPath(pathname: string): boolean {
 
 export async function tryHandleProtocolCheckout(
   request: Request,
-  env: CheckoutEnv,
+  env: CheckoutEnv
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isProtocolCheckoutPath(url.pathname)) return null;
@@ -62,30 +66,45 @@ export async function tryHandleProtocolCheckout(
   const utmTerm = pick(params, "utm_term", 128);
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
+  const smoke = isDppSmokePromo(pick(params, "promo", 32));
   const priceId = (env.STRIPE_PRICE_ID || DPP_PRICE_ID).trim();
 
   const body = new URLSearchParams();
   body.set("mode", "payment");
-  body.set("payment_method_types[0]", "card");
-  body.set("line_items[0][price]", priceId);
-  body.set("line_items[0][quantity]", "1");
+  if (smoke) {
+    body.set("line_items[0][price_data][currency]", "usd");
+    body.set(
+      "line_items[0][price_data][product_data][name]",
+      "EU DPP Readiness Audit (smoke)"
+    );
+    body.set("line_items[0][price_data][unit_amount]", "0");
+    body.set("line_items[0][quantity]", "1");
+    body.set("payment_method_collection", "if_required");
+  } else {
+    body.set("line_items[0][price]", priceId);
+    body.set("line_items[0][quantity]", "1");
+    body.set("allow_promotion_codes", "true");
+  }
   body.set(
     "success_url",
-    `${APP_ORIGIN}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`,
+    `${APP_ORIGIN}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
   );
   body.set(
     "cancel_url",
-    `${APP_ORIGIN}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`,
+    `${APP_ORIGIN}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
   );
-  body.set("allow_promotion_codes", "true");
   body.set("client_reference_id", visitId.slice(0, 200));
   if (email) body.set("customer_email", email);
   body.set("metadata[plan]", "dpp_readiness");
   body.set("metadata[brand]", "authichain");
-  body.set("metadata[offer]", "dpp_readiness");
+  body.set("metadata[offer]", DPP_OFFER_KEY);
   body.set("metadata[prospect_id]", visitId);
   body.set("metadata[visit_id]", visitId);
   body.set("metadata[source]", source);
+  if (smoke) {
+    body.set("metadata[is_demo]", "true");
+    body.set("metadata[promo]", DPP_SMOKE_PROMO);
+  }
   if (utmSource) body.set("metadata[utm_source]", utmSource);
   if (utmMedium) body.set("metadata[utm_medium]", utmMedium);
   if (utmCampaign) body.set("metadata[utm_campaign]", utmCampaign);
