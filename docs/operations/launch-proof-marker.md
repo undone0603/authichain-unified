@@ -1,3 +1,3 @@
 # Production launch proof
 
-Explicit `[pipeline-proof]` verification trigger for the canonical production signer origin.
+Explicit `[pipeline-proof]` verification trigger for the current production JWKS binding.
