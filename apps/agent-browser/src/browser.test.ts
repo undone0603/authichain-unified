@@ -843,6 +843,12 @@ describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   });
 
   describe('locator resolution', () => {
+    // Earlier tests replace the shared page via setContent(); restore the
+    // example fixture so these assertions do not wait 25s for a missing h1.
+    beforeEach(async () => {
+      await browser.getPage().setContent(EXAMPLE_HTML);
+    });
+
     it('should resolve CSS selector', async () => {
       const page = browser.getPage();
 
