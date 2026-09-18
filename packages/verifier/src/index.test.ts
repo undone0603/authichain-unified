@@ -6,7 +6,6 @@ import {
   validateAttestation,
   canonicalize,
   signAttestation,
-  getKeyId,
 } from ".";
 import fixture from "../../../fixtures/attestation-v0.1-valid.json";
 import jwks from "../../../fixtures/attestation-v0.1-jwks.json";
@@ -14,10 +13,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 const validJws = fs
-  .readFileSync(path.join(process.cwd(), "fixtures/attestation-v0.1-valid.jws"), "utf8")
+  .readFileSync(
+    path.join(process.cwd(), "fixtures/attestation-v0.1-valid.jws"),
+    "utf8"
+  )
   .trim();
 const tamperedJws = fs
-  .readFileSync(path.join(process.cwd(), "fixtures/attestation-v0.1-tampered.jws"), "utf8")
+  .readFileSync(
+    path.join(process.cwd(), "fixtures/attestation-v0.1-tampered.jws"),
+    "utf8"
+  )
   .trim();
 
 async function signVariant(
@@ -46,13 +51,18 @@ describe("AuthiChain Attestation Contract v0.1", () => {
   });
 
   it("rejects a tampered payload", async () => {
-    await expect(verifyAttestationJws(tamperedJws, jwks.keys[0])).rejects.toThrow();
+    await expect(
+      verifyAttestationJws(tamperedJws, jwks.keys[0])
+    ).rejects.toThrow();
   });
 
   it("rejects an altered signature", async () => {
     const parts = validJws.split(".");
-    parts[2] = parts[2].slice(0, -1) + (parts[2].endsWith("A") ? "B" : "A");
-    await expect(verifyAttestationJws(parts.join("."), jwks.keys[0])).rejects.toThrow();
+    parts[2] =
+      parts[2].slice(0, -1) + (parts[2].endsWith("A") ? "B" : "A");
+    await expect(
+      verifyAttestationJws(parts.join("."), jwks.keys[0])
+    ).rejects.toThrow();
   });
 
   it("rejects a valid signature paired with the wrong key id", async () => {
@@ -67,7 +77,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
       subject: { ...fixture.subject, object_id: "authi_wrong_object" },
     });
     await expect(
-      verifyAttestationJws(jws, publicJwk, { expectedObjectId: fixture.subject.object_id })
+      verifyAttestationJws(jws, publicJwk, {
+        expectedObjectId: fixture.subject.object_id,
+      })
     ).rejects.toThrow(/subject object_id/);
   });
 
@@ -76,7 +88,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
       ...fixture,
       status: "revoked",
     });
-    await expect(verifyAttestationJws(jws, publicJwk)).rejects.toThrow(/status is revoked/);
+    await expect(verifyAttestationJws(jws, publicJwk)).rejects.toThrow(
+      /status is revoked/
+    );
   });
 
   it("rejects a stale/expired attestation", async () => {
@@ -85,8 +99,11 @@ describe("AuthiChain Attestation Contract v0.1", () => {
       issued_at: "2024-01-01T00:00:00.000Z",
       expires_at: "2024-01-02T00:00:00.000Z",
     });
-    await expect(verifyAttestationJws(jws, publicJwk, { now: Date.parse("2024-01-03T00:00:00.000Z") }))
-      .rejects.toThrow(/expired/);
+    await expect(
+      verifyAttestationJws(jws, publicJwk, {
+        now: Date.parse("2024-01-03T00:00:00.000Z"),
+      })
+    ).rejects.toThrow(/expired/);
   });
 
   it("rejects malformed compact JWS values", () => {
@@ -100,9 +117,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
       JSON.stringify({ ...parsed.protected, alg: "HS256" })
     ).toString("base64url");
     const candidate = `${header}.${validJws.split(".")[1]}.${validJws.split(".")[2]}`;
-    await expect(verifyAttestationJws(candidate, jwks.keys[0])).rejects.toThrow(
-      /unsupported attestation JWS header/
-    );
+    await expect(
+      verifyAttestationJws(candidate, jwks.keys[0])
+    ).rejects.toThrow(/unsupported attestation JWS header/);
   });
 
   it("requires issuer identity fields", () => {
@@ -157,7 +174,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
     expect(() =>
       validateAttestation({
         ...fixture,
-        evidence: [{ ...fixture.evidence[0], digest: "sha256:not-a-digest" },
+        evidence: [
+          { ...fixture.evidence[0], digest: "sha256:not-a-digest" },
+        ],
       })
     ).toThrow(/digest/);
   });
