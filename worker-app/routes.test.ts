@@ -54,6 +54,13 @@ describe("GET /api/checkout/dpp", () => {
     delete process.env.STRIPE_SECRET_KEY;
   });
 
+  it("HEAD does not create a Stripe session", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    const res = await app.request("/api/checkout/dpp", { method: "HEAD" });
+    expect(res.status).toBe(204);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
   it("returns 500 JSON when Stripe is not configured", async () => {
     const res = await app.request("/api/checkout/dpp");
     expect(res.status).toBe(500);

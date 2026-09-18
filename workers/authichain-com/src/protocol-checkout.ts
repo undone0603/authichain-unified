@@ -46,7 +46,16 @@ export async function tryHandleProtocolCheckout(
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isProtocolCheckoutPath(url.pathname)) return null;
-  if (request.method !== "GET" && request.method !== "HEAD") {
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "CDN-Cache-Control": "no-store",
+      },
+    });
+  }
+  if (request.method !== "GET") {
     return json(405, { error: "method not allowed" });
   }
 
