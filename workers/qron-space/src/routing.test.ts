@@ -48,7 +48,10 @@ test("the apex still renders the marketing page", async () => {
   try {
     const res = await get("/");
     assert.equal(res.status, 200);
-    assert.match(await res.text(), /QRON/);
+    const html = await res.text();
+    assert.match(html, /QRON/);
+    assert.match(html, /href="\/generate"/);
+    assert.match(html, /--bg: #ffffff/);
   } finally {
     f.restore();
   }

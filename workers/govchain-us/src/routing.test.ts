@@ -73,7 +73,10 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
 test("the apex still renders the marketing page", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /Federal Contract Intelligence/);
+  const html = await res.text();
+  assert.match(html, /Federal Contract Intelligence/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /--bg: #ffffff/);
 });
 
 test("the sitemap lists only real URLs and no fragments", async () => {

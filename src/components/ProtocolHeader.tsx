@@ -1,5 +1,13 @@
 import Link from 'next/link';
 import { BRAND_IDS, BRANDS, type BrandId } from '@shared/brands';
+import { LIGHT_ACCENT } from '@/lib/estate-accents';
+
+const HEADER_CTA: Record<BrandId, { href: string; label: string }> = {
+  authichain: { href: '/dashboard', label: 'Dashboard' },
+  qron: { href: '/generate', label: 'Generate' },
+  strainchain: { href: '/onboard', label: 'Onboard' },
+  govchain: { href: '/onboard', label: 'Onboard' },
+};
 
 /**
  * ProtocolHeader
@@ -19,16 +27,17 @@ export interface ProtocolHeaderProps {
 
 export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
   const brand = BRANDS[brandId];
-  const accent = brand.accentHex;
+  const accent = LIGHT_ACCENT[brandId];
+  const cta = HEADER_CTA[brandId];
 
   return (
     <header
       className="fixed inset-x-0 top-0 z-50 h-16"
       style={{
-        background: 'rgba(0,0,0,0.75)',
+        background: 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid #e2e8f0',
       }}
     >
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -38,14 +47,13 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
           className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
         >
           <span
-            className="h-6 w-6 rounded flex items-center justify-center text-black text-[10px] font-black"
+            className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
             style={{ background: accent }}
           >
             {brand.displayName.charAt(0)}
           </span>
           <span
-            className="text-sm font-black uppercase tracking-widest"
-            style={{ color: accent }}
+            className="text-sm font-semibold tracking-tight text-slate-950"
           >
             {brand.displayName}
           </span>
@@ -68,7 +76,7 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
                 className={
                   isActive
                     ? 'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider'
-                    : 'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-500 transition-colors hover:text-zinc-300'
+                    : 'rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-900'
                 }
                 style={isActive ? { color: b.accentHex, background: `${b.accentHex}14` } : undefined}
               >
@@ -82,17 +90,16 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/pricing"
-            className="hidden sm:inline-flex items-center justify-center rounded-lg border px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors hover:bg-white/5"
-            style={{ borderColor: `${accent}50`, color: accent }}
+            className="hidden sm:inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-800 hover:border-slate-400"
           >
             Pricing
           </Link>
           <Link
-            href="/dashboard"
-            className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-px active:translate-y-0"
+            href={cta.href}
+            className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-white transition-transform hover:-translate-y-px active:translate-y-0"
             style={{ background: accent }}
           >
-            Sign In
+            {cta.label}
           </Link>
         </div>
       </div>

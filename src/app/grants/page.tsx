@@ -15,8 +15,8 @@ export default function GrantsPage() {
       eyebrow="Federal Opportunities"
       headline="Win More Government Contracts."
       subhead="Automated SAM.gov ingestion, AI win-probability scoring, draft proposals, and verifiable on-chain proof-of-win — your full capture pipeline."
-      primaryCta={{ label: 'See Plans', href: '/pricing' }}
-      secondaryCta={{ label: 'Open Dashboard', href: '/dashboard' }}
+      primaryCta={{ label: 'Request access', href: '/onboard' }}
+      secondaryCta={{ label: 'Browse opportunities', href: '/opportunities' }}
       stats={[
         { value: 'SAM.gov', label: 'Auto-ingest' },
         { value: 'AI', label: 'Scored bids' },

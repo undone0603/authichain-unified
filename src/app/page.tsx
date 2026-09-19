@@ -6,7 +6,7 @@ import {
   organizationSchema,
   softwareApplicationSchema,
 } from '@/lib/structured-data';
-import { QronHome } from './_home/QronHome';
+import { QronMarketingHome } from './_home/QronMarketingHome';
 import { AuthichainHome } from './_home/AuthichainHome';
 import { StrainchainHome } from './_home/StrainchainHome';
 import { GovchainHome } from './_home/GovchainHome';
@@ -78,7 +78,7 @@ export default async function HomePage() {
         return <GovchainHome />;
       case 'qron':
       default:
-        return <QronHome />;
+        return <QronMarketingHome />;
     }
   })();
 
