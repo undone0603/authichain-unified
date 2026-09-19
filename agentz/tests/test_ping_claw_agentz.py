@@ -137,3 +137,17 @@ def test_orchestration_workflow_wires_live_hosts_and_dry_run():
     assert "ws://localhost" not in yml
     assert "Does not thaw content-publish" in yml
     assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in yml
+
+
+def test_scheduled_dry_run_is_fail_closed():
+    """Schedule must never inherit inputs.dry_run || 'false' (that was live)."""
+    yml = (REPO / ".github" / "workflows" / "agentz-orchestration.yml").read_text()
+    assert "${{ inputs.dry_run || 'false' }}" not in yml
+    assert "${{ inputs.dry_run || 'true' }}" not in yml
+    assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' in yml
+    schedule_block = yml.split('if [ "${{ github.event_name }}" = "schedule" ]; then', 1)[1]
+    schedule_block = schedule_block.split("fi", 1)[0]
+    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in schedule_block
+    assert 'echo "dry_run=false"' not in schedule_block
+    assert "OWNER_LIVE_SEND" not in schedule_block
+    assert "DRY_RUN: ${{ needs.resolve-mode.outputs.dry_run }}" in yml
