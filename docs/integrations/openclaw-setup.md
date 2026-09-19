@@ -165,7 +165,7 @@ npx wrangler secret put OPENCLAW_GATEWAY_URL
 # API key for the webhook auth
 npx wrangler secret put OPENCLAW_API_KEY
 
-# AgentZ Tunnel host (named DNS). Also the wrangler [vars] default.
+# AgentZ host (named tunnel or trycloudflare). Secret-only — not a [vars] entry.
 npx wrangler secret put AGENTZ_API_URL
 # Enter: https://agentz.authichain.com
 # (or the free subdomain you routed; not a trycloudflare.com smoke URL)

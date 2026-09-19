@@ -206,7 +206,7 @@ jobs:
           AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
         run: |
           set -euo pipefail
-          # AGENTZ_API_URL is also a [vars] default; secret put overrides for consistency.
+          # AGENTZ_API_URL is secret-only (not [vars]; a plaintext var makes put fail 10053).
           printf '%s' 'https://agentz.authichain.com' | npx wrangler secret put AGENTZ_API_URL --name authichain-openclaw
           if [ -z "${AGENT_SECRET:-}" ]; then
             echo "::error::GitHub secret AGENT_SECRET is empty — cannot bind AGENTZ_API_KEY on authichain-openclaw"
