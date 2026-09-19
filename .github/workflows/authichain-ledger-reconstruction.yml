@@ -1,12 +1,39 @@
 name: AuthiChain on-chain ledger reconstruction
 
+# Scans the AuthiChain NFT contract from its deploy block to chain head and
+# writes artifacts/onchain/*.json. Read-only: it makes no transaction and holds
+# no key, so a long run costs nothing but runner minutes.
+#
+# Run 4 (35396610355) was cancelled at 20.8 min against a 20-minute cap, mid
+# scan — `pnpm install --frozen-lockfile` passed, so the budget was the only
+# problem. At the 8,000-block default the range needs ~900 sequential getLogs
+# calls against the public RPC, which does not fit.
+#
+# Hence: a bigger default chunk and a bigger budget. chunk_size is a dispatch
+# input rather than a constant so a range limit can be retried without another
+# commit — public RPCs cap getLogs ranges and the cap is not documented
+# consistently. If 50000 is rejected, re-dispatch with 25000, then 10000. A
+# range rejection fails fast and loudly, which is a better signal than a
+# timeout.
+
 on:
   workflow_dispatch:
+    inputs:
+      chunk_size:
+        description: "Blocks per getLogs call. Lower this if the RPC rejects the range."
+        required: false
+        default: "50000"
+        type: string
+      rpc_url:
+        description: "Polygon RPC. A dedicated endpoint finishes far faster than the public one."
+        required: false
+        default: "https://polygon-rpc.com"
+        type: string
 
 jobs:
   reconstruct:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -22,7 +49,8 @@ jobs:
       - name: Reconstruct production AuthiChain NFT ledger
         run: pnpm ledger:authichain-nft
         env:
-          POLYGON_RPC_URL: https://polygon-rpc.com
+          POLYGON_RPC_URL: ${{ inputs.rpc_url || 'https://polygon-rpc.com' }}
+          AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '50000' }}
       - uses: actions/upload-artifact@v4
         with:
           name: authichain-nft-ledger

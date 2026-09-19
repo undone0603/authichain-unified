@@ -46,6 +46,14 @@ zone_name = "authichain.com"
 pattern = "authichain.com/protocol/jwks.json"
 zone_name = "authichain.com"
 
+[[routes]]
+pattern = "authichain.com/protocol/issuer.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/protocol/launch-proof"
+zone_name = "authichain.com"
+
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
