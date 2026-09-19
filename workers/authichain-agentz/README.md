@@ -33,6 +33,8 @@ npx wrangler deploy --config wrangler.jsonc
 CI: **Actions → Deploy Workers → Run workflow** with `worker=authichain-agentz`.  
 Requires Docker on the runner (Containers image build) plus `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts edit **and** Containers / registry push.
 
+CI installs **Docker Buildx** automatically for any worker whose wrangler config declares `containers` (see `.github/workflows/deploy-workers.yml`). After deploy, the same workflow binds `AGENT_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` from GitHub secrets. Re-bind without redeploy: **Actions → Set agentz/claw secrets**.
+
 ## After deploy
 
 First request can take a minute while the container boots. Access stays on — unauthenticated curl 302s to `strainchainexecutiveteam.cloudflareaccess.com`. That is correct.
