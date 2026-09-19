@@ -46,7 +46,7 @@ for (const test of negatives.cases) {
     delegate_id: "agent:negative",
     capabilities: test.authorization.capabilities ?? ["support"],
     effective_from: "2026-09-19T00:00:00Z",
-    expires_at: test.authorization.expires_at ?? "2026-09-20T00:00:00Z",
+    expires_at: Object.prototype.hasOwnProperty.call(test.authorization, "expires_at") ? test.authorization.expires_at : "2026-09-20T00:00:00Z",
     status: test.authorization.status ?? "pending"
   });
 
