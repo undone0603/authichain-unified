@@ -6,13 +6,19 @@
  * rule), and the client library pulls in far more than two GETs need.
  *
  * The key used here is the ANON key, which is public by design — it is shipped
- * in browsers on every Supabase project. That makes row-level security the only
- * thing standing between these queries and the table, so `gov_opportunities`
- * and `gov_proposals` must have an RLS policy granting `anon` SELECT on the
- * columns below. Without one PostgREST answers 200 with an empty array, not an
- * error, so an empty feed here means "no policy" at least as often as it means
- * "no rows" — hence `configured()` and the explicit 503 at the call sites,
- * which at least separate "not wired up" from "nothing to show".
+ * in browsers on every Supabase project. Reads therefore go through the
+ * column-scoped views `gov_opportunities_public` and `gov_proposals_public`
+ * (migration 20260918000001) rather than the base tables, which stay deny-all
+ * for anon. The views omit contact_email, raw, key_requirements and
+ * recommended_action, so a `select=*` with the public key cannot reach
+ * third-party PII, the full SAM payload, or the internal pursue/skip verdict.
+ *
+ * Reading the base tables directly is what this code used to do, and it always
+ * returned an empty array with HTTP 200 — RLS was enabled with no policies, so
+ * anon saw nothing while thousands of rows sat behind it. PostgREST reports
+ * that denial as success, so an empty feed still cannot be distinguished from
+ * "no rows" here; `configured()` and the 503 at the call sites only separate
+ * "not wired up" from "nothing to show".
  */
 
 export interface SupabaseEnv {
@@ -38,7 +44,6 @@ export interface GovOpportunity {
   fit_score: number | null;
   sam_url: string | null;
   status: string | null;
-  ai_reasoning: string | null;
   estimated_value: number | null;
   description: string | null;
 }
@@ -49,9 +54,22 @@ export interface GovStats {
   proposals_drafted: number;
 }
 
+/**
+ * The public views this Worker reads, never the base tables.
+ *
+ * Defined in supabase/migrations/20260918000001_govchain_public_opportunities_views.sql.
+ * Adding a column here means adding it to that view first, or PostgREST answers
+ * 400 for the unknown column.
+ */
+const OPPORTUNITIES_VIEW = "gov_opportunities_public";
+const PROPOSALS_VIEW = "gov_proposals_public";
+
 const LIST_COLUMNS =
   "notice_id,title,agency,deadline,naics_code,fit_score,sam_url,status";
-const DETAIL_COLUMNS = `${LIST_COLUMNS},ai_reasoning,estimated_value,description`;
+// ai_reasoning is deliberately absent from gov_opportunities_public — it is the
+// engine's scoring rationale, and the view has never exposed it. The detail
+// page renders `description` (the public SAM.gov text) instead.
+const DETAIL_COLUMNS = `${LIST_COLUMNS},estimated_value,description`;
 
 /** True when both vars are present, i.e. a query is worth attempting. */
 export function configured(env: SupabaseEnv): boolean {
@@ -107,7 +125,7 @@ export async function fetchOpportunities(
     "order=deadline.asc.nullslast",
     `limit=${limit}`,
   ].join("&");
-  const res = await restGet(env, "gov_opportunities", query);
+  const res = await restGet(env, OPPORTUNITIES_VIEW, query);
   const rows = (await res.json()) as GovOpportunity[];
   return Array.isArray(rows) ? rows : [];
 }
@@ -122,7 +140,7 @@ export async function fetchOpportunity(
     `notice_id=eq.${encodeURIComponent(noticeId)}`,
     "limit=1",
   ].join("&");
-  const res = await restGet(env, "gov_opportunities", query);
+  const res = await restGet(env, OPPORTUNITIES_VIEW, query);
   const rows = (await res.json()) as GovOpportunity[];
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
@@ -154,9 +172,9 @@ async function countRows(
 /** The three counters the homepage stats bar reads. */
 export async function fetchStats(env: SupabaseEnv): Promise<GovStats> {
   const [scored, highFit, proposals] = await Promise.all([
-    countRows(env, "gov_opportunities", "fit_score=not.is.null"),
-    countRows(env, "gov_opportunities", "fit_score=gte.70"),
-    countRows(env, "gov_proposals"),
+    countRows(env, OPPORTUNITIES_VIEW, "fit_score=not.is.null"),
+    countRows(env, OPPORTUNITIES_VIEW, "fit_score=gte.70"),
+    countRows(env, PROPOSALS_VIEW),
   ]);
   return {
     opportunities_scored: scored,

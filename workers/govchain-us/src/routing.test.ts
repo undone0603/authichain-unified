@@ -176,3 +176,24 @@ test("a non-https sam_url is not rendered as a link", async () => {
     f.restore();
   }
 });
+
+test("reads go through the public views, never the base tables", async () => {
+  // The base tables are deny-all for anon and hold contact_email, raw and
+  // recommended_action. Querying them directly is both broken (empty 200) and
+  // a PII exposure if a policy were ever added to "fix" the emptiness.
+  const f = stubSupabase([ROW], 7);
+  try {
+    await get("/api/govchain/opportunities");
+    await get("/api/govchain/stats");
+    assert.ok(f.calls.length > 0, "should have queried Supabase");
+    for (const url of f.calls) {
+      const table = new URL(url).pathname.split("/rest/v1/")[1] ?? "";
+      assert.ok(
+        table.startsWith("gov_opportunities_public") || table.startsWith("gov_proposals_public"),
+        `query hit ${table}, expected a *_public view`,
+      );
+    }
+  } finally {
+    f.restore();
+  }
+});
