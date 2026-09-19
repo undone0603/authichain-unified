@@ -1,0 +1,9 @@
+{
+  "cases":[
+    {"name":"sensitive-data","reason":"sensitive personal data cannot enter the public fixture","expected":"reject","claim":{"sensitive":true}},
+    {"name":"trust-score","reason":"person-level reputation scoring is outside the protocol","expected":"reject","claim":{"predicate":"trust_score"}},
+    {"name":"impersonation","reason":"AI delegation cannot authorize impersonation","expected":"reject","authorization":{"capabilities":["impersonate_human"]}},
+    {"name":"unbounded-agent","reason":"active delegation requires explicit expiry","expected":"reject","authorization":{"status":"active","expires_at":null}},
+    {"name":"unattributed-claim","reason":"claims require provenance","expected":"reject","claim":{"source_ids":[]}}
+  ]
+}

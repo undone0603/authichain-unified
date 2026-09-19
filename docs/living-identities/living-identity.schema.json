@@ -1,0 +1,21 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://authichain.com/schemas/living-identity/v0.1",
+  "title":"AuthiChain Living Identity",
+  "type":"object",
+  "required":["schema_version","identity","claims","sources","authorizations","attestation_subject"],
+  "properties":{
+    "schema_version":{"const":"living-identity.v0.1"},
+    "identity":{"type":"object","required":["identity_id","canonical_name","status"],"properties":{"identity_id":{"type":"string","pattern":"^person:[a-z0-9-]+$"},"canonical_name":{"type":"string","minLength":1},"status":{"const":"living_person"},"description":{"type":"string"}},"additionalProperties":false},
+    "claims":{"type":"array","items":{"$ref":"#/$defs/claim"}},
+    "sources":{"type":"array","items":{"$ref":"#/$defs/source"}},
+    "authorizations":{"type":"array","items":{"$ref":"#/$defs/authorization"}},
+    "attestation_subject":{"type":"object","required":["subject_type","canonicalization"],"properties":{"subject_type":{"const":"living_identity_manifest"},"canonicalization":{"const":"jcs-rfc8785"}},"additionalProperties":false}
+  },
+  "$defs":{
+    "claim":{"type":"object","required":["claim_id","predicate","object","state"],"properties":{"claim_id":{"type":"string","pattern":"^claim:[a-z0-9-]+$"},"predicate":{"type":"string","minLength":1},"object":{},"state":{"enum":["self_attested","issuer_attested","source_attested","public_record","third_party_claim","disputed","unknown"]},"valid_from":{"type":"string"},"valid_to":{"type":"string"},"sensitive":{"type":"boolean","default":false},"source_ids":{"type":"array","items":{"type":"string","pattern":"^src:[a-z0-9-]+$"}}},"additionalProperties":false},
+    "source":{"type":"object","required":["source_id","title","source_type"],"properties":{"source_id":{"type":"string","pattern":"^src:[a-z0-9-]+$"},"title":{"type":"string"},"source_type":{"enum":["self_attestation","issuer","government_record","court_record","publication","public_profile","other"]},"url":{"type":"string","format":"uri"},"retrieved_at":{"type":"string","format":"date-time"},"content_hash":{"type":"string"}},"additionalProperties":false},
+    "authorization":{"type":"object","required":["authorization_id","principal_identity_id","delegate_id","capabilities","effective_from","expires_at","status"],"properties":{"authorization_id":{"type":"string","pattern":"^authz:[a-z0-9-]+$"},"principal_identity_id":{"type":"string","pattern":"^person:[a-z0-9-]+$"},"delegate_id":{"type":"string","minLength":1},"capabilities":{"type":"array","items":{"type":"string"},"minItems":1},"prohibited_capabilities":{"type":"array","items":{"type":"string"}},"audience":{"type":"string"},"effective_from":{"type":"string"},"expires_at":{"type":"string"},"transaction_limit":{"type":"number","minimum":0},"status":{"enum":["active","revoked","expired","pending"]}},"additionalProperties":false}
+  },
+  "additionalProperties":false
+}
