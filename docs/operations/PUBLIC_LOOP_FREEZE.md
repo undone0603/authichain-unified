@@ -22,21 +22,21 @@ Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generat
 
 ### What to run now (traffic → checkout)
 
-| Lane                        | Status                                                                                                     | Workflows                                                                                     |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Revenue (LIVE)**          | Do not disable                                                                                             | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers                            |
-| **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume)            |
-| **Cold outbound (dry-run)** | Enable after this PR is on `main`                                                                          | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false |
+| Lane                        | Status                                                                                                     | Workflows                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Revenue (LIVE)**          | Do not disable                                                                                             | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers                             |
+| **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume)             |
+| **Cold outbound (dry-run)** | Enable after this PR is on `main`                                                                          | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false  |
 | **AgentZ orchestration**    | Enable after this PR is on `main` (dry-run)                                                                | `agentz-orchestration` — schedule always dry-run; claw + AgentZ health; architect dry-run only |
-| **Spend / mint (FROZEN)**   | Leave disabled                                                                                             | `content-publish`, `gov-mint`, other `gov-*`                                                  |
+| **Spend / mint (FROZEN)**   | Leave disabled                                                                                             | `content-publish`, `gov-mint`, other `gov-*`                                                   |
 
 ### Streamlined timeline
 
-| Day       | What happens                                                                                         | What must not happen                                                              |
-| --------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only.   | No live cold email. No social publish. No gov-mint.                               |
+| Day       | What happens                                                                                                                                | What must not happen                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only.                                          | No live cold email. No social publish. No gov-mint.                                           |
 | **Day 1** | Enable `content-routine-pr`, then `email-proposals` + `b2b-outreach` (dry-run). Enable `agentz-orchestration` dry-run. Review one log each. | Do **not** uncheck AgentZ `dry_run` until that log is green. Do not enable `content-publish`. |
-| **Day 3** | After dry-run review: **one-click live flip** below (email only).                                    | Still frozen: `content-publish`, all `gov-*` until item 5. AgentZ architect stays dry-run.    |
+| **Day 3** | After dry-run review: **one-click live flip** below (email only).                                                                           | Still frozen: `content-publish`, all `gov-*` until item 5. AgentZ architect stays dry-run.    |
 
 ### Enable traffic + dry-run outbound (`gh` or Actions UI)
 
@@ -78,7 +78,7 @@ Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. 
 
 ### One live B2B dispatch (after a clean dry-run)
 
-`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live.
+`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only **cold** segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live. `--segment=partners` is a channel-partner load (dry-run by default; live requires `ALLOW_PARTNER_SENDS=true`) and is never folded into govchain/strainchain/qron/`all`.
 
 ```bash
 # 1. Dry-run first — must exit 0 and log [DRY RUN] (no Resend)
