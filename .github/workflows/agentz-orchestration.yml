@@ -226,7 +226,15 @@ jobs:
   notify-webhook:
     name: Notify AgentZ Webhook
     runs-on: ubuntu-latest
-    needs: [resolve-mode, ping-claw-agentz, preflight, qualify-leads, sync-mi-leads, funnel-report]
+    needs:
+      [
+        resolve-mode,
+        ping-claw-agentz,
+        preflight,
+        qualify-leads,
+        sync-mi-leads,
+        funnel-report,
+      ]
     if: always()
     steps:
       - name: Post orchestration summary to webhook
