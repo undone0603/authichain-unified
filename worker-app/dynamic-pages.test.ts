@@ -27,7 +27,7 @@ const { getQronById } = await import("../server/identity-db-helpers");
 // real Hono Context (c.redirect/c.html/c.env) instead of a hand-rolled fake,
 // same spirit as routes.test.ts's `app.request(path, {}, env)`.
 const app = new Hono();
-app.get("*", c => renderDynamicPage(c));
+app.all("*", c => renderDynamicPage(c));
 
 function makeEnv(dbOverrides?: Record<string, any>) {
   return {
@@ -294,5 +294,96 @@ describe("renderDynamicPage: stub routes serve the SPA shell", () => {
 
     expect(res.status).toBe(200);
     expect(body).toBe("SPA-SHELL");
+  });
+});
+
+describe("renderDynamicPage: /onboard pilot intake", () => {
+  it("returns 200 HTML with a real form", async () => {
+    const res = await app.request("/onboard", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("Onboard a Pilot");
+    expect(body).toContain('<form action="/onboard" method="post">');
+    expect(body).toContain('name="email"');
+    expect(body).toContain('name="company"');
+  });
+
+  it("returns 400 when required fields are missing", async () => {
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Acme",
+      },
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(400);
+    expect(body).toContain("required");
+  });
+
+  it("303s a valid intake to /onboard/received", async () => {
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    expect(res.status).toBe(303);
+    const location = res.headers.get("location") || "";
+    expect(location).toContain("/onboard/received");
+    expect(location).toContain("ref=");
+    expect(location).toContain("vertical=strainchain");
+  });
+
+  it("renders the received confirmation when a ref is present", async () => {
+    const res = await app.request(
+      "/onboard/received?ref=abcd1234&company=Trulieve&vertical=strainchain",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Pilot request received");
+    expect(body).toContain("abcd1234");
+    expect(body).toContain("Trulieve");
+  });
+});
+
+describe("renderDynamicPage: /story StoryMode", () => {
+  it("returns 200 HTML for the launch-proof object", async () => {
+    const res = await app.request(
+      "/story/00000000-0000-4000-8000-000000000001",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("AuthiChain Launch Proof");
+    expect(body).toContain("lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE");
+    expect(body).toContain("StoryMode");
+  });
+
+  it("returns 404 HTML for an unknown story id", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    (getProductById as any).mockResolvedValue(undefined);
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/story/does-not-exist", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("Story not found");
   });
 });

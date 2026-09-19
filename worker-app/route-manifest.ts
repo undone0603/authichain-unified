@@ -80,6 +80,8 @@ export const DYNAMIC_HANDLER_PATHS: Set<string> = new Set([
   "/p",
   "/brand/qron/artwork",
   "/landing",
+  "/onboard",
+  "/story",
 ]);
 
 /** True iff `pathname` equals `prefix` or is nested under it (`prefix/...`). */

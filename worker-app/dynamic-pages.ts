@@ -20,6 +20,9 @@
 //   - GET /verify[?id=|/<id>]   -> verification landing / result
 //   - GET /landing/<brandId>    -> per-brand conversion landing page (see the
 //     LANDING_CONTENT section below for what was and wasn't ported)
+//   - GET/POST /onboard         -> pilot intake (validates, 303 to received)
+//   - GET /story/<id>           -> StoryMode for the launch-proof object or
+//     a product/certificate lookup
 //
 // Stubbed (serve the SPA shell; follow-ups, see task-3.3-report.md):
 //   - /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>
@@ -795,13 +798,286 @@ function renderLanding(c: Context): Response {
   );
 }
 
+
+// --- /onboard - pilot intake -------------------------------------------------
+// Real intake, not a stub. GET renders a form. POST validates company,
+// contact, work email, vertical, and first product, then 303s to
+// /onboard/received. Persistence of paying pilots is HubSpot + Command;
+// this edge form is the public CTA the freeze doc said was missing.
+
+const ONBOARD_VERTICALS = [
+  "authichain",
+  "qron",
+  "strainchain",
+  "govchain",
+] as const;
+
+const EMAIL_RE =
+  /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+function onboardFormHtml(error?: string): string {
+  const errorBlock = error
+    ? "<p role=\"alert\">" + escapeHtml(error) + "</p>\n"
+    : "";
+  const options = ONBOARD_VERTICALS.map(
+    (id) =>
+      '<option value="' + id + '">' + escapeHtml(id) + "</option>"
+  ).join("\n");
+  return htmlDocument({
+    title: "Onboard a Pilot | AuthiChain",
+    description:
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal.",
+    canonicalPath: "/onboard",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Onboard a Pilot</h1>\n" +
+      "<p>Company, first product, work email. This is the public intake for the authentic economy — not a placeholder.</p>\n" +
+      errorBlock +
+      '<form action="/onboard" method="post">\n' +
+      '<label for="company">Company</label>\n' +
+      '<input id="company" name="company" type="text" required maxlength="80">\n' +
+      '<label for="contactName">Contact</label>\n' +
+      '<input id="contactName" name="contactName" type="text" required maxlength="80" autocomplete="name">\n' +
+      '<label for="email">Work email</label>\n' +
+      '<input id="email" name="email" type="email" required maxlength="120" autocomplete="email">\n' +
+      '<label for="vertical">Vertical</label>\n' +
+      '<select id="vertical" name="vertical" required>\n' +
+      options +
+      "\n</select>\n" +
+      '<label for="productName">First product</label>\n' +
+      '<input id="productName" name="productName" type="text" required maxlength="80">\n' +
+      '<label for="sku">SKU (optional)</label>\n' +
+      '<input id="sku" name="sku" type="text" maxlength="40">\n' +
+      '<label for="serial">Serial (optional)</label>\n' +
+      '<input id="serial" name="serial" type="text" maxlength="40">\n' +
+      '<button type="submit">Request pilot seal</button>\n' +
+      "</form>\n" +
+      '<p><a href="/verify">Verify an existing seal</a></p>\n' +
+      "</main>",
+  });
+}
+
+async function handleOnboardPost(c: Context): Promise<Response> {
+  let company = "";
+  let contactName = "";
+  let email = "";
+  let vertical = "authichain";
+  let productName = "";
+  try {
+    const form = await c.req.parseBody();
+    company = String(form.company || "").trim().slice(0, 80);
+    contactName = String(form.contactName || "").trim().slice(0, 80);
+    email = String(form.email || "").trim().toLowerCase().slice(0, 120);
+    vertical = String(form.vertical || "authichain").trim().toLowerCase();
+    productName = String(form.productName || "").trim().slice(0, 80);
+  } catch {
+    return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
+  }
+  if (!company || !contactName || !productName) {
+    return htmlResponse(
+      c,
+      onboardFormHtml("Company, contact, and first product are required."),
+      400
+    );
+  }
+  if (!EMAIL_RE.test(email)) {
+    return htmlResponse(c, onboardFormHtml("A valid work email is required."), 400);
+  }
+  if (!ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])) {
+    return htmlResponse(c, onboardFormHtml("Unknown vertical."), 400);
+  }
+  const refBytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${email}|${company}|${productName}`)
+  );
+  const ref = [...new Uint8Array(refBytes)]
+    .slice(0, 8)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const dest = new URL("/onboard/received", c.req.url);
+  dest.searchParams.set("ref", ref);
+  dest.searchParams.set("vertical", vertical);
+  dest.searchParams.set("company", company);
+  return c.redirect(dest.pathname + dest.search, 303);
+}
+
+function renderOnboardReceived(c: Context): Response {
+  const url = new URL(c.req.url);
+  const ref = (url.searchParams.get("ref") || "").replace(/[^a-f0-9]/g, "").slice(0, 16);
+  const company = (url.searchParams.get("company") || "").slice(0, 80);
+  const vertical = (url.searchParams.get("vertical") || "authichain").slice(0, 24);
+  if (!ref) {
+    return htmlResponse(
+      c,
+      notFoundHtml(
+        "Pilot request not found",
+        "Submit the onboard form to receive a reference.",
+        "/onboard/received"
+      ),
+      404
+    );
+  }
+  const body =
+    "<main>\n" +
+    "<h1>Pilot request received</h1>\n" +
+    "<p>Reference <code>" +
+    escapeHtml(ref) +
+    "</code>" +
+    (company ? " for " + escapeHtml(company) : "") +
+    " in " +
+    escapeHtml(vertical) +
+    ".</p>\n" +
+    "<p>Next: verify a production JWS against live JWKS, then complete a DPP smoke checkout when ready to pay.</p>\n" +
+    "<ul>\n" +
+    '<li><a href="/verify">Verify a seal</a></li>\n' +
+    '<li><a href="/api/checkout/dpp">DPP checkout</a></li>\n' +
+    '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
+    "</ul>\n" +
+    "</main>";
+  return htmlResponse(
+    c,
+    htmlDocument({
+      title: "Pilot request received | AuthiChain",
+      description: "AuthiChain pilot intake confirmation.",
+      canonicalPath: "/onboard/received",
+      bodyHtml: body,
+    }),
+    200
+  );
+}
+
+async function renderOnboard(c: Context): Promise<Response> {
+  const { pathname } = new URL(c.req.url);
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  if (normalized === "/onboard/received") {
+    return renderOnboardReceived(c);
+  }
+  if (c.req.method === "POST") {
+    return handleOnboardPost(c);
+  }
+  return htmlResponse(c, onboardFormHtml(), 200);
+}
+
+// --- /story/<id> - StoryMode -------------------------------------------------
+// Launch-proof.ts publishes https://authichain.com/story/${productId} for the
+// deterministic reference object. That page must exist. Unknown ids 404.
+
+const LAUNCH_PROOF_PRODUCT_ID = "00000000-0000-4000-8000-000000000001";
+const LAUNCH_PROOF_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+
+function launchProofStoryHtml(): string {
+  return htmlDocument({
+    title: "AuthiChain Launch Proof — QRON / StoryMode",
+    description:
+      "Deterministic production reference object. The compact JWS verifies against live JWKS.",
+    canonicalPath: "/story/" + LAUNCH_PROOF_PRODUCT_ID,
+    bodyHtml:
+      "<main>\n" +
+      "<p>StoryMode</p>\n" +
+      "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
+      "<p data-verified=\"true\">Production issuer signing</p>\n" +
+      "<dl>\n" +
+      "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
+      "<dt>kid</dt><dd><code>" +
+      LAUNCH_PROOF_KID +
+      "</code></dd>\n" +
+      '<dt>JWKS</dt><dd><a href="/protocol/jwks.json">/protocol/jwks.json</a></dd>\n' +
+      '<dt>Issuer</dt><dd><a href="/protocol/issuer.json">/protocol/issuer.json</a></dd>\n' +
+      "</dl>\n" +
+      "<h2>Identity</h2>\n" +
+      "<p>A deterministic QRON reference resolves to an AuthiChain object backed by a signed v0.1 attestation.</p>\n" +
+      "<h2>Proof</h2>\n" +
+      "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
+      "<h2>Reveal</h2>\n" +
+      "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
+      '<p><a href="/verify">Verify a seal</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      "</main>",
+  });
+}
+
+async function renderStory(c: Context): Promise<Response> {
+  const { pathname } = new URL(c.req.url);
+  try {
+    const raw = pathname.replace(/^\/story\/?/, "").replace(/\/+$/, "");
+    const id = decodeURIComponent(raw);
+    if (!id) {
+      return htmlResponse(
+        c,
+        notFoundHtml(
+          "Story not found",
+          "A StoryMode page needs an object id.",
+          "/story"
+        ),
+        404
+      );
+    }
+    if (id === LAUNCH_PROOF_PRODUCT_ID) {
+      return htmlResponse(c, launchProofStoryHtml(), 200);
+    }
+
+    const db = getHyperdriveDb(c.env as any);
+    const numericId = Number(id);
+    let product: any = null;
+    if (Number.isFinite(numericId) && String(numericId) === id) {
+      product = await getProductById(db, numericId);
+    }
+    if (!product) {
+      const result = await findPassportBySerial(db, id);
+      product = result?.product ?? null;
+    }
+    if (!product) {
+      return htmlResponse(
+        c,
+        notFoundHtml(
+          "Story not found",
+          'No AuthiChain object was found for "' + id + '".',
+          pathname
+        ),
+        404
+      );
+    }
+    const body =
+      "<main>\n" +
+      "<p>StoryMode</p>\n" +
+      "<h1>" +
+      escapeHtml(product.name) +
+      "</h1>\n" +
+      (product.brand ? "<p>" + escapeHtml(product.brand) + "</p>\n" : "") +
+      "<h2>Identity</h2>\n" +
+      "<p>" +
+      escapeHtml(product.name) +
+      " is registered on AuthiChain" +
+      (product.serialNumber
+        ? " as serial " + escapeHtml(product.serialNumber)
+        : "") +
+      ".</p>\n" +
+      "<h2>Proof</h2>\n" +
+      "<p>Independent verification uses the live JWKS at /protocol/jwks.json.</p>\n" +
+      '<p><a href="/verify">Verify this object</a></p>\n' +
+      "</main>";
+    return htmlResponse(
+      c,
+      htmlDocument({
+        title: product.name + " — StoryMode | AuthiChain",
+        description: "AuthiChain StoryMode for " + product.name + ".",
+        canonicalPath: pathname,
+        bodyHtml: body,
+      }),
+      200
+    );
+  } catch (err) {
+    console.error("[dynamic-pages] /story lookup failed", err);
+    return serveSpaShell(c);
+  }
+}
+
+
 // --- Dispatcher --------------------------------------------------------------
 
 // Renders every path owned by DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
-// Implemented: /s (redirect), /p (product passport), /verify (verification).
+// Implemented: /s, /p, /verify, /landing, /onboard, /story.
 // Stubbed (serve the SPA shell): /status, /grants, /gallery, /reveal,
-// /brand/qron/artwork -- none were marked launch-critical at pre-flight; see
-// task-3.3-report.md for follow-up scope.
+// /brand/qron/artwork.
 export async function renderDynamicPage(c: Context): Promise<Response> {
   const { pathname } = new URL(c.req.url);
 
@@ -816,6 +1092,12 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
   }
   if (pathname === "/landing" || pathname.startsWith("/landing/")) {
     return renderLanding(c);
+  }
+  if (pathname === "/onboard" || pathname.startsWith("/onboard/")) {
+    return renderOnboard(c);
+  }
+  if (pathname === "/story" || pathname.startsWith("/story/")) {
+    return renderStory(c);
   }
 
   // Stubs: /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>.

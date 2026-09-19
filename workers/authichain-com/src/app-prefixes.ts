@@ -19,4 +19,5 @@ export const APP_PREFIXES = [
   "/authenticate",
   "/.well-known/jwks.json",
   "/protocol",
+  "/story",
 ] as const;
