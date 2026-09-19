@@ -108,6 +108,32 @@ test("/dapp redirects to /dashboard (estate CTA)", async () => {
   assert.equal(res.headers.get("location"), "https://authichain.com/dashboard");
 });
 
+test("GET /api/x402 and /health are answered here, not proxied", async () => {
+  for (const path of ["/api/x402", "/api/x402/health"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as { status: string };
+    assert.equal(body.status, "not_configured", path);
+  }
+});
+
+test("other /api paths still proxy to the app", async () => {
+  const res = await get("/api/automation/cron");
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "app");
+});
+
+test("app.authichain.com/ 302s to /dashboard", async () => {
+  const res = await worker.fetch(
+    new Request("https://app.authichain.com/", {
+      headers: { host: "app.authichain.com" },
+    }),
+    ENV
+  );
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "/dashboard");
+});
+
 test("/dashboard and /generate are proxied to the app", async () => {
   for (const path of ["/dashboard", "/generate", "/api/automation/cron"]) {
     const res = await get(path);

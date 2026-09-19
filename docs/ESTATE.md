@@ -23,17 +23,17 @@ BD   undone0603/authichain-ai-business-manager (private, API-only)
 
 ## Domains (do not use *.vercel.app in customer CTAs)
 
-| Host | Job | App path |
-|---|---|---|
+| Host           | Job                              | App path              |
+| -------------- | -------------------------------- | --------------------- |
 | authichain.com | protocol, verify, certs, billing | /verify /anchor /dapp |
-| qron.space | generate Living QR | /generate |
-| govchain.us | contractor pursue + seals | /onboard |
-| strainchain.io | cannabis jar pack | /onboard |
+| qron.space     | generate Living QR               | /generate             |
+| govchain.us    | contractor pursue + seals        | /onboard              |
+| strainchain.io | cannabis jar pack                | /onboard              |
 
 Preferred app hosts: `app.authichain.com`, `app.govchain.us`, `app.strainchain.io`.
 Until those CNAMEs exist **and** a Worker route answers them, CTAs must use the matching apex path (`https://govchain.us/onboard`, `https://strainchain.io/onboard`, `https://qron.space/generate`, `https://authichain.com/dapp` → `/dashboard`), never `authichain-unified.vercel.app`.
 
-`app.authichain.com` 522 (2026-09-19) is a dead origin, not an Access problem. In-repo route is on `authichain-edge-router`; owner DNS/CF steps are in `docs/ROUTING.md`.
+`app.authichain.com/dashboard` is live on `authichain-edge-router`. `GET /` on that host has no SPA index and 404s until landing's more-specific `app.authichain.com/` 302s it to `/dashboard` (Deploy authichain-com). Owner DNS/CF steps are in `docs/ROUTING.md`.
 
 ## Keep live
 

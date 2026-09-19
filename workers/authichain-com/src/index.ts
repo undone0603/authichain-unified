@@ -4,6 +4,7 @@
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { APP_PREFIXES } from "./app-prefixes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
@@ -3063,6 +3064,13 @@ interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 }
 
 /** Escapes text interpolated into the 404 document. */
@@ -3116,6 +3124,8 @@ export default {
       url.hostname = 'authichain.com';
       return Response.redirect(url.toString(), 301);
     }
+    const appHost = tryHandleAppHost(request);
+    if (appHost) return appHost;
     const p = url.pathname;
     if (p === '/og-image.png' || p === '/og.png') {
       return pngResponse(OG_IMAGE_PNG_B64);
@@ -3168,6 +3178,10 @@ export default {
     if (dppPage) return dppPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
+    // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
+    // and unmounted GET /api/x402 answers an empty ASSETS 404.
+    const x402 = await tryHandleX402(request, env);
+    if (x402) return x402;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
