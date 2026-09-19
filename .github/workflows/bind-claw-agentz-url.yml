@@ -1,0 +1,45 @@
+name: Bind claw AgentZ URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      agentz_url:
+        description: "Public AgentZ base URL (https, no trailing slash)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install wrangler
+        run: npm install -g wrangler
+      - name: Bind AGENTZ_API_URL + AGENTZ_API_KEY
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          EXISTING: ${{ secrets.AGENT_SECRET }}
+          AGENTZ_URL: ${{ github.event.inputs.agentz_url }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AGENTZ_URL:-}"
+          if [ -n "${EXISTING:-}" ]; then
+            AGENT_SECRET="$EXISTING"
+          else
+            AGENT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+          fi
+          printf '%s' "$AGENT_SECRET" > agent_secret.value
+          printf '%s' "$AGENTZ_URL" | wrangler secret put AGENTZ_API_URL --name authichain-openclaw
+          printf '%s' "$AGENT_SECRET" | wrangler secret put AGENTZ_API_KEY --name authichain-openclaw
+          echo "bound claw to ${AGENTZ_URL} (secret values not logged)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agentz-agent-secret
+          path: agent_secret.value
+          retention-days: 1
