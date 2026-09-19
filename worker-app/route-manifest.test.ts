@@ -42,6 +42,9 @@ describe("resolveOwner", () => {
     expect(resolveOwner("/brand/qron/artwork", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/onboard", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/story", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/dashboard", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/dapp", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/generate", marketingRoutes)).toBe("dynamic");
   });
 
   it("routes nested paths under a dynamic-handler path to dynamic (prefix match)", () => {
@@ -53,7 +56,6 @@ describe("resolveOwner", () => {
   });
 
   it("routes SPA-owned prefixes to spa", () => {
-    expect(resolveOwner("/dashboard", marketingRoutes)).toBe("spa");
     expect(resolveOwner("/admin/products", marketingRoutes)).toBe("spa");
     expect(resolveOwner("/qr-gallery", marketingRoutes)).toBe("spa");
   });

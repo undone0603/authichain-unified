@@ -113,7 +113,7 @@ the mechanism is now available.
   over `CLAUDE.md`; if the two still disagree on a specific number/tier
   when you look, that's a real bug worth fixing or flagging, not a
   standing ambiguity to work around.
-- **`/onboard` has no implementation**: no route, page, or API endpoint
-  named `/onboard` exists anywhere in this repo (confirmed via
-  `worker-app/route-manifest.ts` and `client/src/App.tsx`). Building one is
-  a product decision, not a link fix -- see PR #936's discussion.
+- **`/onboard` is live**: worker-app dynamic intake (GET form, POST 303).
+ Estate landings must proxy `/onboard` and `/generate` to `APP_ORIGIN`.
+ Do not treat a 404 on `govchain.us/onboard` as “product decision” — it is
+ a missing landing-worker prefix.

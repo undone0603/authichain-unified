@@ -144,6 +144,31 @@ describe("GET /api/cron/dpp-exceptions", () => {
   });
 });
 
+describe("GET /api/automation/cron", () => {
+  it("returns 401 JSON without a bearer token, never HTML", async () => {
+    const res = await app.request("/api/automation/cron");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toMatch(/Unauthorized/i);
+  });
+});
+
+describe("POST /api/v1/attestation", () => {
+  it("returns JSON (not HTML) when the signing key is missing", async () => {
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ version: "0.1" }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toBeTruthy();
+  });
+});
+
 describe("POST /api/paddle/webhook", () => {
   it("shims a req/res pair for the Express-shaped handler and returns its response", async () => {
     const res = await app.request("/api/paddle/webhook", {
@@ -395,10 +420,13 @@ describe("manifest-driven static + SPA routing", () => {
     expect(body).not.toContain("MARKETING");
   });
 
-  it("serves the SPA shell for /dashboard", async () => {
+  it("serves the authentic-economy console for /dashboard, not a 404 SPA miss", async () => {
     const res = await app.request("/dashboard", {}, makeEnv() as any);
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe("SPA-SHELL");
+    const body = await res.text();
+    expect(body).toContain("QRON Dashboard");
+    expect(body).toContain("/onboard");
+    expect(body).not.toBe("SPA-SHELL");
   });
 
   it("passes /_next/static/x.js through to ASSETS raw", async () => {

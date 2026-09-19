@@ -23,6 +23,8 @@
 //   - GET/POST /onboard         -> pilot intake (validates, 303 to received)
 //   - GET /story/<id>           -> StoryMode for the launch-proof object or
 //     a product/certificate lookup
+//   - GET /dashboard|/dapp      -> authentic-economy console (not SPA 404)
+//   - GET/POST /generate        -> Living QR intake (qron.space CTA)
 //
 // Stubbed (serve the SPA shell; follow-ups, see task-3.3-report.md):
 //   - /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>
@@ -97,7 +99,7 @@ function htmlDocument(opts: {
   );
 }
 
-function htmlResponse(c: Context, body: string, status: 200 | 404): Response {
+function htmlResponse(c: Context, body: string, status: 200 | 400 | 404): Response {
   return c.html(body, status);
 }
 
@@ -1072,10 +1074,96 @@ async function renderStory(c: Context): Promise<Response> {
 }
 
 
+// --- /dashboard and /dapp — authentic-economy console ----------------------
+// The Vite SPA shell is not in the edge ASSETS bundle (client/public has no
+// index.html), so treating /dashboard as SPA produced a live 404 after the
+// landing worker's /dapp → /dashboard redirect.
+
+function dashboardHtml(): string {
+  return htmlDocument({
+    title: "Dashboard | AuthiChain",
+    description:
+      "Authentic-economy console: onboard a pilot, verify a seal, generate a Living QR.",
+    canonicalPath: "/dashboard",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>QRON Dashboard</h1>\n" +
+      "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
+      "<ul>\n" +
+      '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
+      '<li><a href="/verify">Verify a seal</a></li>\n' +
+      '<li><a href="/generate">Generate a Living QR</a></li>\n' +
+      '<li><a href="/protocol">Protocol</a></li>\n' +
+      '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
+      "</ul>\n" +
+      "</main>",
+  });
+}
+
+function renderDashboard(c: Context): Response {
+  return htmlResponse(c, dashboardHtml(), 200);
+}
+
+// --- /generate — Living QR intake (qron.space CTA) -------------------------
+
+function generateFormHtml(error?: string): string {
+  const errorBlock = error
+    ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
+    : "";
+  return htmlDocument({
+    title: "Generate a Living QR | $QRON",
+    description:
+      "Create a Living QR for a product URL. Public generate CTA for qron.space.",
+    canonicalPath: "/generate",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Generate a Living QR</h1>\n" +
+      "<p>Target URL and a short prompt. This queues a QRON generate request and hands you the onboard intake for a pilot seal.</p>\n" +
+      errorBlock +
+      '<form action="/generate" method="post">\n' +
+      '<label for="targetUrl">Product or verify URL</label>\n' +
+      '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
+      '<label for="prompt">Style prompt (optional)</label>\n' +
+      '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
+      '<button type="submit">Queue Living QR</button>\n' +
+      "</form>\n" +
+      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a></p>\n' +
+      "</main>",
+  });
+}
+
+async function handleGeneratePost(c: Context): Promise<Response> {
+  let targetUrl = "";
+  let prompt = "";
+  try {
+    const form = await c.req.parseBody();
+    targetUrl = String(form.targetUrl || "").trim();
+    prompt = String(form.prompt || "").trim().slice(0, 200);
+  } catch {
+    return htmlResponse(c, generateFormHtml("Could not read the form."), 400);
+  }
+  if (!/^https?:\/\//i.test(targetUrl) || targetUrl.length > 500) {
+    return htmlResponse(c, generateFormHtml("A valid http(s) URL is required."), 400);
+  }
+  const dest = new URL("/onboard", c.req.url);
+  dest.searchParams.set("vertical", "qron");
+  dest.searchParams.set("productName", "Living QR");
+  dest.searchParams.set("sku", prompt || "generate");
+  dest.searchParams.set("serial", targetUrl.slice(0, 40));
+  return c.redirect(dest.pathname + dest.search, 303);
+}
+
+async function renderGenerate(c: Context): Promise<Response> {
+  if (c.req.method === "POST") {
+    return handleGeneratePost(c);
+  }
+  return htmlResponse(c, generateFormHtml(), 200);
+}
+
 // --- Dispatcher --------------------------------------------------------------
 
 // Renders every path owned by DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
-// Implemented: /s, /p, /verify, /landing, /onboard, /story.
+// Implemented: /s, /p, /verify, /landing, /onboard, /story, /dashboard, /dapp, /generate.
 // Stubbed (serve the SPA shell): /status, /grants, /gallery, /reveal,
 // /brand/qron/artwork.
 export async function renderDynamicPage(c: Context): Promise<Response> {
@@ -1098,6 +1186,15 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
   }
   if (pathname === "/story" || pathname.startsWith("/story/")) {
     return renderStory(c);
+  }
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+    return renderDashboard(c);
+  }
+  if (pathname === "/dapp" || pathname.startsWith("/dapp/")) {
+    return renderDashboard(c);
+  }
+  if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+    return renderGenerate(c);
   }
 
   // Stubs: /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>.

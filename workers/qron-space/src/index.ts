@@ -2084,11 +2084,52 @@ a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:60
   });
 }
 
+type Env = {
+  APP_ORIGIN?: string;
+};
+
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
+  return value.slice(0, end);
+}
+
+async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
+  const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
+  const proxied = new Request(upstream, {
+    method: request.method,
+    headers: request.headers,
+    body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
+    redirect: "manual",
+  });
+  proxied.headers.set("Host", upstream.host);
+  proxied.headers.set("X-Forwarded-Host", url.host);
+  proxied.headers.set("X-Forwarded-Proto", "https");
+  const res = await fetch(proxied);
+  const headers = new Headers(res.headers);
+  headers.set("x-served-by", "qron-space-proxy");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env?: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
+    }
+    if (/^\/generate(?:\/|$)/.test(url.pathname)) {
+      if (!env?.APP_ORIGIN) {
+        return Response.json(
+          {
+            error: "app_origin_not_configured",
+            detail:
+              "qron.space cannot reach the generate form. Set APP_ORIGIN in workers/qron-space/wrangler.toml.",
+            path: url.pathname,
+          },
+          { status: 503, headers: { "cache-control": "no-store" } },
+        );
+      }
+      return proxyToApp(request, url, env.APP_ORIGIN);
     }
     const p = url.pathname;
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
@@ -2098,6 +2139,7 @@ export default {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://qron.space/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://qron.space/generate</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
@@ -2216,7 +2258,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <li><a href="#videos">Videos</a></li>
     <li><a href="#pricing">Pricing</a></li>
   </ul>
-  <a href="https://authichain.com/dapp" class="btn btn-primary">Connect Wallet</a>
+  <a href="/generate" class="btn btn-primary">Generate Living QR</a>
 </nav>
 
 <div class="hero">
@@ -2264,7 +2306,7 @@ fetch('https://qron.space/api/qron/stats')
   <div class="staking-panel">
     <div class="staking-header">
       <div><strong>Active Staking Pool</strong><div style="color:var(--muted);font-size:.85rem">Contract: 0xAebf...E437 · Verified on Polygonscan</div></div>
-      <a href="https://authichain.com/dapp" class="btn btn-primary">Stake Now</a>
+      <a href="/generate" class="btn btn-primary">Stake Now</a>
     </div>
     <div class="staking-tiers">
       <div class="tier"><div class="tier-name">Flexible</div><div class="tier-apy">18.7%</div><div class="tier-lock">30-day lock · No penalty</div></div>
@@ -2334,7 +2376,7 @@ ${videosHtml}
 <div class="cta-section">
   <h2>Ready to stake $QRON?</h2>
   <p style="color:var(--muted);margin:1rem 0 2rem">Connect your wallet and start earning yield on Polygon today.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Launch dApp</a>
+  <a href="/generate" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Generate Living QR</a>
 </div>
 
 <footer>

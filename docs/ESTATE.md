@@ -31,7 +31,9 @@ BD   undone0603/authichain-ai-business-manager (private, API-only)
 | strainchain.io | cannabis jar pack | /onboard |
 
 Preferred app hosts: `app.authichain.com`, `app.govchain.us`, `app.strainchain.io`.
-Until those CNAMEs exist, CTAs must use the matching apex path (`https://govchain.us/onboard`), never `authichain-unified.vercel.app`.
+Until those CNAMEs exist **and** a Worker route answers them, CTAs must use the matching apex path (`https://govchain.us/onboard`, `https://strainchain.io/onboard`, `https://qron.space/generate`, `https://authichain.com/dapp` → `/dashboard`), never `authichain-unified.vercel.app`.
+
+`app.authichain.com` 522 (2026-09-19) is a dead origin, not an Access problem. In-repo route is on `authichain-edge-router`; owner DNS/CF steps are in `docs/ROUTING.md`.
 
 ## Keep live
 

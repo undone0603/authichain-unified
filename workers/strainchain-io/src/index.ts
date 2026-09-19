@@ -1983,7 +1983,11 @@ type Env = {
  * the homepage and the scan dead-ended. That is the same fault the GS1
  * resolver documented on authichain.com/passport/{certId}.
  */
-const APP_PATHS = [/^\/genetics(?:\/|$)/, /^\/passport(?:\/|$)/];
+const APP_PATHS = [
+  /^\/genetics(?:\/|$)/,
+  /^\/passport(?:\/|$)/,
+  /^\/onboard(?:\/|$)/,
+];
 
 /**
  * Proxies a request to the Next app.
@@ -2103,6 +2107,7 @@ export default {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://strainchain.io/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://strainchain.io/genetics/mendo-love-farms</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://strainchain.io/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
@@ -2207,7 +2212,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <li><a href="#audit">Audit Trail</a></li>
     <li><a href="#pricing">Pricing</a></li>
   </ul>
-  <a href="https://authichain.com/dapp" class="btn btn-primary">Request Demo</a>
+  <a href="/onboard" class="btn btn-primary">Request Demo</a>
 </nav>
 
 <div class="hero">
@@ -2316,16 +2321,16 @@ fetch('https://strainchain.io/api/strainchain/stats')
   <h2>Pricing</h2>
   <p class="section-sub">Per-location pricing. No per-transaction fees. Unlimited batches.</p>
   <div class="pricing-grid">
-    <div class="price-card"><h3>Grower</h3><div class="price-amount">$199</div><div class="price-period">per location / month</div><ul class="price-features"><li>Up to 500 strain NFTs/mo</li><li>METRC + BioTrack sync</li><li>4-layer audit trail</li><li>Basic compliance reports</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Start Free Trial</a></div>
-    <div class="price-card featured"><h3>Operator</h3><div class="price-amount">$499</div><div class="price-period">per location / month</div><ul class="price-features"><li>Unlimited strain NFTs</li><li>All compliance integrations</li><li>IoT sensor integration</li><li>Real-time regulator dashboard</li><li>API access</li></ul><a href="https://authichain.com/dapp" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
-    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$999</div><div class="price-period">per location / month</div><ul class="price-features"><li>Multi-state management</li><li>White-label portal</li><li>Custom compliance workflows</li><li>Dedicated compliance officer</li><li>SLA guarantee</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
+    <div class="price-card"><h3>Grower</h3><div class="price-amount">$199</div><div class="price-period">per location / month</div><ul class="price-features"><li>Up to 500 strain NFTs/mo</li><li>METRC + BioTrack sync</li><li>4-layer audit trail</li><li>Basic compliance reports</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Start Free Trial</a></div>
+    <div class="price-card featured"><h3>Operator</h3><div class="price-amount">$499</div><div class="price-period">per location / month</div><ul class="price-features"><li>Unlimited strain NFTs</li><li>All compliance integrations</li><li>IoT sensor integration</li><li>Real-time regulator dashboard</li><li>API access</li></ul><a href="/onboard" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
+    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$999</div><div class="price-period">per location / month</div><ul class="price-features"><li>Multi-state management</li><li>White-label portal</li><li>Custom compliance workflows</li><li>Dedicated compliance officer</li><li>SLA guarantee</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
   </div>
 </section>
 
 <div class="cta-section">
   <h2>Ready for Regulator-Proof Tracking?</h2>
   <p style="color:var(--muted);margin:1rem 0 2rem">Join 847+ cannabis operators using StrainChain across 38 legal markets.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Demo</a>
+  <a href="/onboard" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Demo</a>
 </div>
 
 <footer>

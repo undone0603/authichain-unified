@@ -199,6 +199,7 @@ export const brands = pgTable(
     stakingTier: text("staking_tier").default("none").notNull(),
     qronStaked: numeric("qron_staked").default("0").notNull(),
     walletAddress: text("wallet_address"),
+    stakingWalletAddress: text("staking_wallet_address"),
     unitCostDiscount: numeric("unit_cost_discount").default("0").notNull(),
     baseUnitCost: numeric("base_unit_cost").default("0.05").notNull(),
     isVerified: boolean("is_verified").default(false).notNull(),
@@ -208,8 +209,41 @@ export const brands = pgTable(
   },
   table => ({
     brandsDomainIdx: index("idx_brands_domain").on(table.domain),
+    brandsTierIdx: index("idx_brands_tier").on(table.stakingTier),
   })
 );
+
+// ─── Fee flows (authentic economy) ───────────────────────────────────────────
+// Authoritative columns match prod QRON-v2 and drizzle/migrations/025_economy_align.sql.
+// Amounts stay text so existing rows are not rewritten.
+export const feeFlows = pgTable(
+  "fee_flows",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    brandId: uuid("brand_id"),
+    userId: uuid("user_id"),
+    flowType: text("flow_type").notNull(),
+    grossAmount: text("gross_amount").default("0").notNull(),
+    discountAmount: text("discount_amount").default("0").notNull(),
+    netAmount: text("net_amount").default("0").notNull(),
+    stakerRewardAmount: text("staker_reward_amount").default("0"),
+    treasuryAmount: text("treasury_amount").default("0"),
+    burnAmount: text("burn_amount").default("0"),
+    txHash: text("tx_hash"),
+    status: text("status").default("pending").notNull(),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    confirmedAt: timestamp("confirmed_at"),
+  },
+  table => ({
+    feeBrandIdx: index("idx_fee_brand").on(table.brandId),
+    feeTypeIdx: index("idx_fee_type").on(table.flowType),
+    feeCreatedIdx: index("idx_fee_created").on(table.createdAt),
+  })
+);
+
+export type FeeFlow = typeof feeFlows.$inferSelect;
+export type InsertFeeFlow = typeof feeFlows.$inferInsert;
 
 // ─── Telemetry Events (Phase 2 & Theater 1) ──────────────────────────────────
 export const telemetryEvents = pgTable(

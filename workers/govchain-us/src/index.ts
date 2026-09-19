@@ -2177,11 +2177,48 @@ ${samUrl ? `<p style="margin-bottom:1.5rem"><a href="${escapeHtml(samUrl)}" rel=
   );
 }
 
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
+  return value.slice(0, end);
+}
+
+async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
+  const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
+  const proxied = new Request(upstream, {
+    method: request.method,
+    headers: request.headers,
+    body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
+    redirect: "manual",
+  });
+  proxied.headers.set("Host", upstream.host);
+  proxied.headers.set("X-Forwarded-Host", url.host);
+  proxied.headers.set("X-Forwarded-Proto", "https");
+  const res = await fetch(proxied);
+  const headers = new Headers(res.headers);
+  headers.set("x-served-by", "govchain-us-proxy");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
   async fetch(request: Request, env: SupabaseEnv): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
+    }
+    if (/^\/onboard(?:\/|$)/.test(url.pathname)) {
+      if (!env?.APP_ORIGIN) {
+        return Response.json(
+          {
+            error: "app_origin_not_configured",
+            detail:
+              "govchain.us cannot reach the onboard form. Set APP_ORIGIN in workers/govchain-us/wrangler.toml.",
+            path: url.pathname,
+          },
+          { status: 503, headers: { "cache-control": "no-store" } },
+        );
+      }
+      return proxyToApp(request, url, env.APP_ORIGIN);
     }
     const p = url.pathname;
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
@@ -2192,6 +2229,7 @@ export default {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://govchain.us/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://govchain.us/opportunities</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://govchain.us/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
