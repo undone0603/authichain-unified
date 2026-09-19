@@ -1,10 +1,9 @@
 # Supabase remote migration baseline manifest
 
-Captured from the live QRON-v2 Supabase project `nhdnkzhtadfkkluiulhs` on 2026-09-19.
+Captured from live QRON-v2 project `nhdnkzhtadfkkluiulhs` on 2026-09-19.
+Remote migration rows: 123.
 
-Remote migration rows: 122.
-
-These are the actual remote version values and MUST be used for `supabase migration repair --status reverted`; local filenames are not substitutes.
+These are the actual remote version values. Use these values—not local filenames—for `supabase migration repair --status reverted`.
 
 ## Remote versions
 
@@ -78,6 +77,7 @@ These are the actual remote version values and MUST be used for `supabase migrat
 20260610160712
 20260617044147
 20260621153235
+20260621160327
 20260622235835
 20260625010143
 20260625010150
@@ -134,6 +134,6 @@ These are the actual remote version values and MUST be used for `supabase migrat
 ## Safety boundary
 
 - Do not delete rows directly from `supabase_migrations.schema_migrations`.
-- Repair the remote migration history with the supported Supabase CLI command.
+- Use the supported Supabase CLI migration repair operation.
 - Only after repair succeeds should the live schema be pulled as the new baseline.
 - Never run `supabase db reset --linked` against production.
