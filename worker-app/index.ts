@@ -13,6 +13,7 @@ import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
+import { registerIssuerRoutes } from "./issuer";
 import { scheduled } from "./cron-dispatch";
 
 type Env = {
@@ -1281,7 +1282,9 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
+app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
 registerJwksRoute(app);
+registerIssuerRoutes(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
