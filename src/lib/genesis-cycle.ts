@@ -4,7 +4,9 @@ import { isCronAuthorized } from "./cron-auth";
  * Shared genesis / daily-economy runner.
  *
  * PUBLIC_LOOP_FREEZE: do not call AutonomousController (outbound email),
- * pipeline-tick (AgentZ), programmatic SEO, or gov-mint from this path.
+ * pipeline-tick, programmatic SEO, or gov-mint from this path.
+ * AgentZ orchestration is .github/workflows/agentz-orchestration.yml
+ * (claw + AgentZ dry-run) — not this cron.
  * Maintenance + a read of fee_flows / brands staking is enough to prove
  * the authentic economy can run once CRON_SECRET is bound.
  */

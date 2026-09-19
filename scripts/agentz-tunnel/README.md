@@ -12,8 +12,8 @@ Hostname: `agentz.authichain.com` →
 `08378b03-f6a2-46cf-aab8-a2754bad869f.cfargotunnel.com` (proxied CNAME).
 
 Full setup: `docs/integrations/openclaw-setup.md` § AgentZ via free Cloudflare
-Tunnel. Routing note: `docs/ROUTING.md`. This is not a thaw of
-`agentz-orchestration` and not social publish.
+Tunnel. Routing note: `docs/ROUTING.md`. Orchestration dry-run enablement is
+`docs/operations/AGENTZ_ORCHESTRATION.md`. This is not social publish.
 
 Do not invent `OPENCLAW_GATEWAY_URL`. That stays an owner-set reachable
 OpenClaw Node.

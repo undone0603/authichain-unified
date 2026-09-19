@@ -16,7 +16,7 @@ rate-gated, human-approvable).
 |                                | `reddit-monitor.yml`                                                                           | every 6 h                              | No (read)             | LLM        |
 |                                | `marketing-autonomous.yml`                                                                     | Mon 14:00                              | posts to owned social | LLM/social |
 | **Income — gov (public data)** | `gov-engine.yml` → ingest→score→proposals→mint→notify                                          | daily 06:00                            | drafts only           | LLM        |
-| **Income — outbound**          | `agentz-orchestration.yml`                                                                     | daily 08:00                            | **yes**               | LLM/email  |
+| **Income — outbound**          | `agentz-orchestration.yml`                                                                     | daily 08:00                            | dry-run first         | LLM only   |
 |                                | `autonomous-business-cycle.yml`                                                                | daily 00:00                            | **yes**               | LLM/email  |
 |                                | `b2b-outreach.yml`                                                                             | Mon 14:00                              | **yes**               | email      |
 |                                | `outreach-trigger.yml`                                                                         | every 4 h                              | **yes**               | email      |

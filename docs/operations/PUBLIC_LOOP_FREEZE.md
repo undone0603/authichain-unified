@@ -6,7 +6,9 @@ This freeze blocked **autonomous cold outbound** (Resend/social spam) and **gov-
 
 **First-dollar path (LIVE):** traffic → onboard → `GET /api/checkout/dpp` (**303** to `checkout.stripe.com`) → provision → activate. Use the owner's existing assets here. Do not wait on outreach or AgentZ to take a payment.
 
-**Still frozen (spend / mint):** live cold email, live social publish (`content-publish`), full `agentz-orchestration`, and all `gov-*` until `GOVCHAIN_NFT_CONTRACT` has bytecode on Base 8453.
+**Still frozen (spend / mint):** live cold email from `email-proposals` / `b2b-outreach` unless `OWNER_LIVE_SEND=true` **and** dispatch unchecks `dry_run`, live social publish (`content-publish`), and all `gov-*` until `GOVCHAIN_NFT_CONTRACT` has bytecode on Base 8453.
+
+**AgentZ orchestration (dry-run, 2026-09-19):** `agentz-orchestration.yml` may be enabled now that AgentZ is live at `https://agentz.authichain.com` (named Tunnel → uvicorn) and claw at `https://claw.authichain.com` reports `agentz_api: configured`. Schedule is dry-run only (claw/AgentZ health + architect `dry-run`; no AgentZ cold email). See `docs/operations/AGENTZ_ORCHESTRATION.md`. This is **not** a thaw of `content-publish` or genesis outbound.
 
 **Safe tick (does not thaw cold send):** weekday `genesis-cron.yml` hits `GET /api/automation/cron` only. See `docs/operations/GENESIS_CRON.md`. Do not uncomment `worker-app/wrangler.toml` GROUP B crons.
 
@@ -14,9 +16,9 @@ This freeze blocked **autonomous cold outbound** (Resend/social spam) and **gov-
 
 Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generate` return 200. Frustration that "everything is frozen" is a docs problem: the revenue path was already on; only cold-send spend and gov-mint stayed off.
 
-`gov-mint` / `gov-engine` stay frozen until bytecode on 8453. Do not enable `agentz-orchestration` until a dry-run outbound log is proven. Do not enable `content-publish`.
+`gov-mint` / `gov-engine` stay frozen until bytecode on 8453. Enable `agentz-orchestration` in **dry-run** now (live AgentZ host is up). Do not enable `content-publish`.
 
-**AgentZ hosting on the $0 path** is a free Cloudflare Tunnel to local uvicorn (`docs/integrations/openclaw-setup.md`, `scripts/agentz-tunnel/`). That is not a thaw of `agentz-orchestration` and not social publish. Do **not** enable Workers Paid or Containers until there is revenue.
+**AgentZ hosting on the $0 path** is a free Cloudflare Tunnel to local uvicorn (`docs/integrations/openclaw-setup.md`, `scripts/agentz-tunnel/`). Orchestration dry-run is `docs/operations/AGENTZ_ORCHESTRATION.md`. That is not social publish. Do **not** enable Workers Paid or Containers until there is revenue.
 
 ### What to run now (traffic → checkout)
 
@@ -25,15 +27,16 @@ Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generat
 | **Revenue (LIVE)**          | Do not disable                                                                                             | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers                            |
 | **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume)            |
 | **Cold outbound (dry-run)** | Enable after this PR is on `main`                                                                          | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false |
-| **Spend / mint (FROZEN)**   | Leave disabled                                                                                             | `content-publish`, `agentz-orchestration`, `gov-mint`, other `gov-*`                          |
+| **AgentZ orchestration**    | Enable after this PR is on `main` (dry-run)                                                                | `agentz-orchestration` — schedule always dry-run; claw + AgentZ health; architect dry-run only |
+| **Spend / mint (FROZEN)**   | Leave disabled                                                                                             | `content-publish`, `gov-mint`, other `gov-*`                                                  |
 
 ### Streamlined timeline
 
 | Day       | What happens                                                                                         | What must not happen                                                              |
 | --------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only.   | No live cold email. No social publish. No gov-mint.                               |
-| **Day 1** | Enable `content-routine-pr`, then `email-proposals` + `b2b-outreach` (dry-run). Review one log each. | Do **not** set `OWNER_LIVE_SEND=true`. Do not enable `content-publish` or AgentZ. |
-| **Day 3** | After dry-run review: **one-click live flip** below.                                                 | Still frozen: AgentZ, `content-publish`, all `gov-*` until item 5.                |
+| **Day 1** | Enable `content-routine-pr`, then `email-proposals` + `b2b-outreach` (dry-run). Enable `agentz-orchestration` dry-run. Review one log each. | Do **not** uncheck AgentZ `dry_run` until that log is green. Do not enable `content-publish`. |
+| **Day 3** | After dry-run review: **one-click live flip** below (email only).                                    | Still frozen: `content-publish`, all `gov-*` until item 5. AgentZ architect stays dry-run.    |
 
 ### Enable traffic + dry-run outbound (`gh` or Actions UI)
 
@@ -49,9 +52,12 @@ gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/300250832/en
 # Dry-run cold outbound — AFTER this PR is on main (b2b dry_run default was false on old main)
 gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/302131163/enable  # email-proposals
 gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/305529641/enable  # b2b-outreach
+
+# AgentZ orchestration (dry-run schedule; claw + AgentZ health). See AGENTZ_ORCHESTRATION.md
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/307144845/enable  # agentz-orchestration
 ```
 
-**Do not enable** `261329391` (gov-engine), `304825951` (gov-mint), `307144845` (agentz-orchestration), or `332964370` (content-publish).
+**Do not enable** `261329391` (gov-engine), `304825951` (gov-mint), or `332964370` (content-publish).
 
 ### One-click live flip (`OWNER_LIVE_SEND`)
 
@@ -100,7 +106,7 @@ If the run still prints `guardrail check HTTP 404`, the edge-router mount is not
 | `marketing-autonomous`    | **disabled_manually** | last success 2026-09-14 schedule                                                                                       | Scheduled = IndexNow + GSC only. Enable as Day 0/1 inbound.                                                                                                                     |
 | `b2b-outreach`            | **disabled_manually** | scheduled runs skipped (var gate); last real failure 2026-08-31                                                        | Enable on Day 1 **after** dry-run defaults land on main.                                                                                                                        |
 | `email-proposals`         | **disabled_manually** | success 2026-09-15 schedule                                                                                            | Already defaulted dry-run on main. Enable on Day 1.                                                                                                                             |
-| `agentz-orchestration`    | **disabled_manually** | success 2026-09-16 schedule                                                                                            | **Stay frozen.**                                                                                                                                                                |
+| `agentz-orchestration`    | **enable (dry-run)**  | success 2026-09-16 schedule                                                                                            | Host blocker cleared (Tunnel + claw `agentz_api: configured`). Enable + dispatch `dry_run=true` `ping_agentz=true`.                                                             |
 | `gov-engine` / `gov-mint` | **disabled_manually** | —                                                                                                                      | **Stay frozen** until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453.                                                                                                             |
 
 ### Live vs frozen after this pass
@@ -109,9 +115,9 @@ If the run still prints `guardrail check HTTP 404`, the edge-router mount is not
 
 **Inbound live:** `gen-seo-pages`, `ghost-traffic` (stub), `seo-regression`, `reddit-monitor`, `pipeline-tick`, Stage 1–2 verifiers (`verify-scheduled-jobs`, `verify-integrations`, `verify-outreach-secrets`, `schema-drift`, `guardrail-digest`, `social-credentials-check`).
 
-**Day 1 enable (dry-run / PR-only):** `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`.
+**Day 1 enable (dry-run / PR-only):** `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`, `agentz-orchestration`.
 
-**Still frozen (spend / mint):** `agentz-orchestration`, `content-publish`, `weekly-video`, `browser-vision-tasks`, `automerge-dependabot`, `dependabot-auto-merge`, all `gov-*`, and **live** cold send until `OWNER_LIVE_SEND=true`.
+**Still frozen (spend / mint):** `content-publish`, `weekly-video`, `browser-vision-tasks`, `automerge-dependabot`, `dependabot-auto-merge`, all `gov-*`. `agentz-orchestration` is the dry-run enable in `docs/operations/AGENTZ_ORCHESTRATION.md`. **Live** cold email still waits for `OWNER_LIVE_SEND=true` **and** dispatch `dry_run=false` on `email-proposals` / `b2b-outreach`.
 
 ## Update - 2026-09-19 GovChain NFT deploy path (item 5)
 
@@ -131,7 +137,7 @@ Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This ove
 
 **Live (enabled):** verify-scheduled-jobs, verify-integrations, verify-outreach-secrets, schema-drift, seo-regression, guardrail-digest, reddit-monitor, pipeline-tick, social-credentials-check.
 
-**Outbound-spend still off (see top of this doc):** content-publish, weekly-video, browser-vision-tasks, agentz-orchestration, automerge-dependabot, dependabot-auto-merge. Dry-run enable list is `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`. Revenue / checkout is **not** in this list. `gen-seo-pages` and `ghost-traffic` are already **active**.
+**Outbound-spend still off (see top of this doc):** content-publish, weekly-video, browser-vision-tasks, automerge-dependabot, dependabot-auto-merge. Dry-run enable list is `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`, **`agentz-orchestration`** (claw/AgentZ health + architect dry-run; no AgentZ cold email). Revenue / checkout is **not** in this list. `gen-seo-pages` and `ghost-traffic` are already **active**.
 
 **Frozen until item 5 (still open — no Base bytecode as of 2026-09-19):** gov-engine, gov-ingest, gov-mint, gov-notify, gov-proposals, gov-score. Deploy workflow is ready; `GOVCHAIN_NFT_CONTRACT` still needs bytecode on 8453.
 
@@ -186,7 +192,7 @@ Judge progress on:
 
 The 2026-09-16 disable list is superseded by the 2026-09-18 Stage 1–2 re-enable and the 2026-09-19 streamlining at the top of this doc. Do not treat `gen-seo-pages`, `ghost-traffic`, or the Stage 1–2 verifiers as frozen.
 
-**Remain disabled (spend / mint only):** AgentZ, automerge-dependabot, browser-vision, content-publish, weekly-video, all `gov-*`. Checkout / Stripe / DPP are not in this list. Dry-run enables (`content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`) use the commands at the top of this doc.
+**Remain disabled (spend / mint only):** automerge-dependabot, browser-vision, content-publish, weekly-video, all `gov-*`. AgentZ orchestration is the dry-run enable above. Checkout / Stripe / DPP are not in this list. Dry-run enables (`content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`, `agentz-orchestration`) use the commands at the top of this doc.
 
 Still on: CI, lint, main, CodeQL, security-scan, compliance-audit, deploy-cloudflare / deploy-workers / deploy-edge-worker, nightstamp-scan-gate, revenue-cycle, production-drizzle-audit, unblock-public-access, outreach/DPP **manual** triggers, genesis-cron.
 

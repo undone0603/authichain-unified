@@ -74,7 +74,7 @@ A large automation layer invisible to repo code search. Key clusters:
 - `ghost-traffic.yml` (9am ET) → agentz ghost_traffic_engine
 - `marketing-autonomous.yml` (Mon/Wed/Fri — LinkedIn/Reddit/Twitter/SEO)
 - `email-proposals.yml` (weekdays 15:00)
-- `agentz-orchestration.yml` (8am) → POSTs `/api/agentz/webhook` (logging heartbeat only)
+- `agentz-orchestration.yml` (8am) → Phase 0 pings `https://claw.authichain.com/health` + `https://agentz.authichain.com/health` (architect dry-run via claw if a bearer secret exists); then qualify/funnel; POSTs `/api/agentz/webhook` (logging). Schedule is dry-run. See `docs/operations/AGENTZ_ORCHESTRATION.md`.
 
 **Supabase pg_cron (6 jobs — shadow scheduler):** `agentZ-growth-engine` (30m), `agentZ-ph-tracker` (30m), `strainchain-mi-blast` (00:05), `strainchain-day25` (09:00), `automation-orchestrator` (14:00 — the daily drip sender), `stripe-sync-worker` (EVERY MINUTE).
 
@@ -84,7 +84,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
-**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so registry workflows fire **only when run manually**. Prefer `--mode dry-run` until the DPP revenue loop is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
+**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) pings live claw/AgentZ and may POST claw `/architect/cycle` in **dry-run only**. It does **not** run the CLI registry (no `hot_lead_outreach_blitz` / AgentZ cold email). Prefer `--mode dry-run` until a dry-run orchestration log is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
 
 ## 7. Money surface
 
