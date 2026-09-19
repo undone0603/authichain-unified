@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://authichain.com/schemas/historical-identity/v0.1",
+  "title": "AuthiChain Historical Identity",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "identity",
+    "sources",
+    "claims",
+    "temporal_states",
+    "evidence_edges",
+    "attestation_subject"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "historical-identity.v0.1"
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "identity_id",
+        "canonical_name",
+        "birth",
+        "death",
+        "identity_status"
+      ],
+      "properties": {
+        "identity_id": {
+          "type": "string",
+          "pattern": "^hist:[a-z0-9-]+$"
+        },
+        "canonical_name": {
+          "type": "string"
+        },
+        "alternate_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "birth": {
+          "$ref": "#/$defs/date_place"
+        },
+        "death": {
+          "$ref": "#/$defs/date_place"
+        },
+        "identity_status": {
+          "const": "deceased_historical_figure"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "temporal_states": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/temporal_state"
+      }
+    },
+    "evidence_edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_edge"
+      }
+    },
+    "attestation_subject": {
+      "type": "object",
+      "required": [
+        "subject_type",
+        "canonicalization",
+        "manifest_hash_input"
+      ],
+      "properties": {
+        "subject_type": {
+          "const": "historical_identity_manifest"
+        },
+        "canonicalization": {
+          "const": "jcs-rfc8785"
+        },
+        "manifest_hash_input": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "date_place": {
+      "type": "object",
+      "required": [
+        "date"
+      ],
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "place": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "title",
+        "publisher",
+        "source_type",
+        "url",
+        "retrieved_at",
+        "rights"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "pattern": "^src:[a-z0-9-]+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "source_type": {
+          "enum": [
+            "primary",
+            "archival_record",
+            "editorial_edition",
+            "secondary"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rights": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "public_domain",
+                "cc0",
+                "repository_terms",
+                "unknown",
+                "mixed"
+              ]
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "locator": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "claim": {
+      "type": "object",
+      "required": [
+        "claim_id",
+        "subject",
+        "predicate",
+        "object",
+        "evidence_class"
+      ],
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^claim:[a-z0-9-]+$"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "predicate": {
+          "type": "string"
+        },
+        "object": {},
+        "valid_from": {
+          "type": "string"
+        },
+        "valid_to": {
+          "type": "string"
+        },
+        "evidence_class": {
+          "enum": [
+            "direct",
+            "contextual",
+            "inferred",
+            "unknown"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "temporal_state": {
+      "type": "object",
+      "required": [
+        "state_id",
+        "as_of",
+        "knowledge_cutoff",
+        "location",
+        "known_claim_ids",
+        "unknown_topics"
+      ],
+      "properties": {
+        "state_id": {
+          "type": "string",
+          "pattern": "^state:[a-z0-9-]+$"
+        },
+        "as_of": {
+          "type": "string"
+        },
+        "knowledge_cutoff": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "known_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unknown_topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "persona_constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_edge": {
+      "type": "object",
+      "required": [
+        "edge_id",
+        "from",
+        "to",
+        "relation",
+        "evidence_class"
+      ],
+      "properties": {
+        "edge_id": {
+          "type": "string",
+          "pattern": "^edge:[a-z0-9-]+$"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "supports",
+            "contextualizes",
+            "contradicts",
+            "derived_from",
+            "bounded_by"
+          ]
+        },
+        "evidence_class": {
+          "enum": [
+            "direct",
+            "contextual",
+            "inferred",
+            "unknown"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
