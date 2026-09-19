@@ -113,44 +113,69 @@ export async function processFeeFlow(params: {
 
 /**
  * Executes the autonomous part of the tokenomics: Fiat -> QRON swap and burn.
+ *
+ * A flow is marked 'confirmed' only once both calls have actually succeeded.
+ * Previously this always marked 'confirmed' after the calls were attempted —
+ * including when AUTHICHAIN_API_URL/_SECRET were unset (no calls made at
+ * all) and when fetch resolved with a non-2xx status (fetch does not throw
+ * on HTTP error responses), so a failed or never-attempted burn/treasury
+ * swap still read as 'confirmed' on the admin revenue dashboard.
  */
 async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution) {
+  const authichainApi = process.env.AUTHICHAIN_API_URL;
+  const apiKey = process.env.AUTHICHAIN_API_SECRET;
+
+  if (!authichainApi || !apiKey) {
+    // No swap/burn backend configured — leave the flow 'pending' rather
+    // than claiming an execution that never ran.
+    return;
+  }
+
   try {
-    // In a real environment, this would call the FiatSwap API / Bridge
-    const authichainApi = process.env.AUTHICHAIN_API_URL;
-    const apiKey = process.env.AUTHICHAIN_API_SECRET;
+    // Burn Execution
+    const burnRes = await fetch(`${authichainApi}/api/fiatswap/burn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+      body: JSON.stringify({
+        amount: dist.burn,
+        flowId,
+        token: 'QRON',
+      }),
+    });
 
-    if (authichainApi && apiKey) {
-      // Burn Execution
-      await fetch(`${authichainApi}/api/fiatswap/burn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
-        body: JSON.stringify({
-          amount: dist.burn,
-          flowId,
-          token: 'QRON',
-        }),
-      });
+    // Treasury Swap
+    const treasuryRes = await fetch(`${authichainApi}/api/fiatswap/convert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+      body: JSON.stringify({
+        amount: dist.treasury,
+        flowId,
+        action: 'swap',
+        target_token: 'QRON',
+      }),
+    });
 
-      // Treasury Swap
-      await fetch(`${authichainApi}/api/fiatswap/convert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
-        body: JSON.stringify({
-          amount: dist.treasury,
-          flowId,
-          action: 'swap',
-          target_token: 'QRON',
-        }),
-      });
+    if (!burnRes.ok || !treasuryRes.ok) {
+      await admin
+        .from('fee_flows')
+        .update({ status: 'failed' })
+        .eq('id', flowId);
+      console.warn(
+        '[autonomous] fiatswap call failed for flow:', flowId,
+        'burn:', burnRes.status, 'treasury:', treasuryRes.status,
+      );
+      return;
     }
 
-    // Mark confirmed
     await admin
       .from('fee_flows')
       .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
       .eq('id', flowId);
   } catch (err) {
+    await admin
+      .from('fee_flows')
+      .update({ status: 'failed' })
+      .eq('id', flowId);
     console.warn('[autonomous] Execution failed for flow:', flowId, err);
   }
 }
