@@ -1,0 +1,43 @@
+{
+  "schema_version":"accountability-identity.v0.1",
+  "identity":{
+    "identity_id":"acct:jeffrey-epstein",
+    "canonical_name":"Jeffrey Epstein",
+    "identity_status":"deceased_perpetrator_record",
+    "description":"Source-grounded accountability record. This fixture intentionally excludes survivor direct identifiers and does not infer wrongdoing from mere association."
+  },
+  "sources":[
+    {"source_id":"src:doj-epstein-library","title":"Epstein Library","publisher":"U.S. Department of Justice","source_type":"government_report","url":"https://www.justice.gov/epstein","retrieved_at":"2026-09-19T00:00:00Z","rights":{"status":"repository_terms"},"notes":"DOJ states victim names and identifying information are redacted and warns that some released material contains sensitive sexual content."},
+    {"source_id":"src:doj-2006-2008-opr","title":"Statement on DOJ Office of Professional Responsibility Report on Jeffrey Epstein 2006-2008 Investigation","publisher":"U.S. Department of Justice","source_type":"government_report","url":"https://www.justice.gov/archives/opa/pr/statement-doj-office-professional-responsibility-report-jeffrey-epstein-2006-2008","retrieved_at":"2026-09-19T00:00:00Z","rights":{"status":"repository_terms"},"notes":"DOJ reports OPR's conclusion that victims were not treated with the forthrightness and sensitivity expected by the Department."},
+    {"source_id":"src:doj-2026-production","title":"Epstein Files Transparency Act - Production of Department Materials","publisher":"U.S. Department of Justice","source_type":"government_report","url":"https://www.justice.gov/opa/media/1426091/dl","retrieved_at":"2026-09-19T00:00:00Z","rights":{"status":"repository_terms"},"notes":"DOJ describes review procedures and redaction of information that could identify victims."},
+    {"source_id":"src:doj-2026-section3","title":"Epstein Files Transparency Act - Section 3 Report to Congress","publisher":"U.S. Department of Justice","source_type":"government_report","url":"https://www.justice.gov/opa/media/1434856/dl?inline=","retrieved_at":"2026-09-19T00:00:00Z","rights":{"status":"repository_terms"},"notes":"DOJ describes victim-privacy redactions and categories of information withheld or redacted under the Act."}
+  ],
+  "claims":[
+    {"claim_id":"claim:victim-privacy-redactions","subject":"Jeffrey Epstein accountability record","predicate":"public_release_uses_victim_privacy_redactions","object":true,"valid_from":"2025-11-19","evidence_state":"documented","notes":"Use the redaction itself as provenance; do not attempt to reconstruct a redacted identity."},
+    {"claim_id":"claim:opr-victim-treatment","subject":"2006-2008 federal investigation","predicate":"DOJ_OPR_concluded_victims_were_not_treated_with_expected_forthrightness_and_sensitivity","object":true,"valid_from":"2020-11-12","evidence_state":"documented"},
+    {"claim_id":"claim:public-record-scope","subject":"Epstein documentary record","predicate":"DOJ_publication_contains_records_from_multiple_investigative_and_court_sources","object":true,"valid_from":"2026-01-30","evidence_state":"documented"},
+    {"claim_id":"claim:association-not-wrongdoing","subject":"Epstein documentary record","predicate":"association_alone_does_not_establish_criminal_conduct","object":true,"evidence_state":"unknown","notes":"Protocol invariant, not a claim about any individual."}
+  ],
+  "survivor_records":[
+    {"record_id":"survivor:redacted-aggregate","visibility":"excluded","identifier_policy":"no_direct_identifier","claim_ids":["claim:victim-privacy-redactions"],"consent_note":"No survivor identity is stored in this fixture. Public releases are treated as redacted records."}
+  ],
+  "institutional_records":[
+    {"record_id":"inst:doj","entity":"U.S. Department of Justice","relation":"oversight","notes":"Official source and accountability record custodian."},
+    {"record_id":"inst:investigations","entity":"Federal and state investigative records","relation":"investigation","notes":"Represented only at institutional level in this fixture."}
+  ],
+  "temporal_states":[
+    {"state_id":"state:2026-public-record","as_of":"2026-09-19","knowledge_cutoff":"2026-09-19","location":"United States","known_claim_ids":["claim:victim-privacy-redactions","claim:opr-victim-treatment","claim:public-record-scope","claim:association-not-wrongdoing"],"unknown_topics":["survivor identities","non-public evidence","claims not established by the cited sources"],"redaction_policy":"Do not reverse or infer victim redactions."}
+  ],
+  "evidence_edges":[
+    {"edge_id":"edge:redactions","from":"src:doj-epstein-library","to":"claim:victim-privacy-redactions","relation":"supports","notes":"Victim names and identifying information are redacted."},
+    {"edge_id":"edge:opr","from":"src:doj-2006-2008-opr","to":"claim:opr-victim-treatment","relation":"supports"},
+    {"edge_id":"edge:production","from":"src:doj-2026-production","to":"claim:public-record-scope","relation":"supports"},
+    {"edge_id":"edge:section3","from":"src:doj-2026-section3","to":"claim:victim-privacy-redactions","relation":"supports"},
+    {"edge_id":"edge:association-boundary","from":"claim:association-not-wrongdoing","to":"claim:association-not-wrongdoing","relation":"bounds","notes":"Protocol boundary preventing association from being rendered as misconduct."}
+  ],
+  "attestation_subject":{
+    "subject_type":"accountability_identity_manifest",
+    "canonicalization":"jcs-rfc8785",
+    "manifest_hash_input":"identity + sources + claims + survivor_records + institutional_records + temporal_states + evidence_edges"
+  }
+}
