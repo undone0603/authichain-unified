@@ -1,0 +1,34 @@
+{
+  "schema_version":"living-identity.v0.1",
+  "identity":{
+    "identity_id":"person:example-public-figure",
+    "canonical_name":"Example Public Figure",
+    "status":"living_person",
+    "description":"Illustrative non-real fixture for protocol validation."
+  },
+  "claims":[
+    {
+      "claim_id":"claim:role",
+      "predicate":"professional_role",
+      "object":"Founder",
+      "state":"self_attested",
+      "source_ids":["src:self-attestation"]
+    },
+    {
+      "claim_id":"claim:public-presence",
+      "predicate":"public_profile_exists",
+      "object":true,
+      "state":"public_record",
+      "source_ids":["src:public-profile"]
+    }
+  ],
+  "sources":[
+    {"source_id":"src:self-attestation","title":"Example self-attestation","source_type":"self_attestation"},
+    {"source_id":"src:public-profile","title":"Example public profile","source_type":"public_profile"}
+  ],
+  "authorizations":[],
+  "attestation_subject":{
+    "subject_type":"living_identity_manifest",
+    "canonicalization":"jcs-rfc8785"
+  }
+}
