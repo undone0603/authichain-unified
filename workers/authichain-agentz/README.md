@@ -1,6 +1,13 @@
 # authichain-agentz
 
-Cloudflare Containers host for the AgentZ FastAPI (`agentz.api.main:app`).
+**$0 path (owner mandate 2026-09-19):** do **not** deploy this Worker and do
+**not** enable Workers Paid / Containers. Host AgentZ with a free Cloudflare
+Tunnel — `docs/integrations/openclaw-setup.md` and `scripts/agentz-tunnel/`.
+Leave this worker undeployed so its `agentz.authichain.com/*` route cannot
+fight Tunnel DNS.
+
+In-repo Containers scaffold for the AgentZ FastAPI (`agentz.api.main:app`).
+Parked until revenue.
 
 Public URL: `https://agentz.authichain.com`  
 Keep **Cloudflare Access** on `agentz.authichain.com` (same policy family as `claw.authichain.com`).
@@ -32,6 +39,8 @@ npx wrangler deploy --config wrangler.jsonc
 
 CI: **Actions → Deploy Workers → Run workflow** with `worker=authichain-agentz`.  
 Requires Docker on the runner (Containers image build) plus `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts edit **and** Containers / registry push.
+
+CI installs **Docker Buildx** automatically for any worker whose wrangler config declares `containers` (see `.github/workflows/deploy-workers.yml`). After deploy, the same workflow binds `AGENT_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` from GitHub secrets. Re-bind without redeploy: **Actions → Set agentz/claw secrets**.
 
 ## After deploy
 

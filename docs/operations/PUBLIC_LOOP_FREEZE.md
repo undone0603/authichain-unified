@@ -16,6 +16,8 @@ Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generat
 
 `gov-mint` / `gov-engine` stay frozen until bytecode on 8453. Do not enable `agentz-orchestration` until a dry-run outbound log is proven. Do not enable `content-publish`.
 
+**AgentZ hosting on the $0 path** is a free Cloudflare Tunnel to local uvicorn (`docs/integrations/openclaw-setup.md`, `scripts/agentz-tunnel/`). That is not a thaw of `agentz-orchestration` and not social publish. Do **not** enable Workers Paid or Containers until there is revenue.
+
 ### What to run now (traffic → checkout)
 
 | Lane                        | Status                                                                                                     | Workflows                                                                                     |
@@ -67,6 +69,22 @@ gh variable set OWNER_LIVE_SEND --body true -R undone0603/authichain-unified
 To slam it shut again: `gh variable set OWNER_LIVE_SEND --body false -R undone0603/authichain-unified`.
 
 Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. One var flip is enough for scheduled runs. Do not set this until Day 3 review.
+
+### One live B2B dispatch (after a clean dry-run)
+
+`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live.
+
+```bash
+# 1. Dry-run first — must exit 0 and log [DRY RUN] (no Resend)
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=true
+
+# 2. Tiny live batch — requires vars.OWNER_LIVE_SEND=true
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=false
+```
+
+If the run still prints `guardrail check HTTP 404`, the edge-router mount is not deployed yet. The script falls back to the Supabase store when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present. Bind `INTERNAL_API_SECRET` on `authichain-edge-router` via `set-qron-outreach-guardrail-secret.yml` so the HTTP path works after `deploy-cloudflare.yml`.
 
 ### Audit — 2026-09-19 (Actions API)
 

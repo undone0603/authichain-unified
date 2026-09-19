@@ -11,6 +11,11 @@ on:
         description: "Specific worker dir to deploy (e.g. authichain-api). Leave blank for all."
         required: false
         type: string
+      deploy_agentz_containers:
+        description: "Deploy authichain-agentz (Cloudflare Containers / Workers Paid). Default off — $0 path uses Tunnel and leaves Containers undeployed."
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
   id-token: write
@@ -85,6 +90,11 @@ jobs:
           - passport-demo
           - qfs-adapter
           - authichain-bridge
+    # $0 path: do not auto-deploy Cloudflare Containers. authichain-agentz
+    # stays in the matrix for opt-in dispatch only (Workers Paid).
+    if: |
+      matrix.worker != 'authichain-agentz' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -99,6 +109,43 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
+      # builder on the runner. Without Buildx, authichain-agentz fails mid-deploy
+      # after the Worker script is created (script exists; image/build fails).
+      - name: Detect Containers config
+        id: containers
+        working-directory: workers/${{ matrix.worker }}
+        if: |
+          github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker
+        run: |
+          set -euo pipefail
+          NEEDS=false
+          for f in wrangler.jsonc wrangler.json wrangler.toml; do
+            if [ -f "$f" ] && grep -qE '"containers"|^\[\[containers\]\]' "$f"; then
+              NEEDS=true
+              break
+            fi
+          done
+          echo "needs=$NEEDS" >> "$GITHUB_OUTPUT"
+          echo "containers needed for ${{ matrix.worker }}: $NEEDS"
+
+      - name: Set up Docker Buildx
+        if: |
+          steps.containers.outputs.needs == 'true' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker info (Containers workers)
+        if: |
+          steps.containers.outputs.needs == 'true' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
+        run: |
+          set -euo pipefail
+          docker version
+          docker buildx version
+          docker buildx ls
+
       - name: Deploy Worker
         if: |
           env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != '' &&
@@ -117,6 +164,56 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           COMPATIBILITY_DATE: "2026-06-29"
+
+      - name: Bind agentz secrets
+        if: |
+          matrix.worker == 'authichain-agentz' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-agentz')
+        working-directory: workers/authichain-agentz
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in AGENT_SECRET SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::GitHub secret $name is empty — cannot bind on authichain-agentz"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          printf '%s' "$AGENT_SECRET" | npx wrangler secret put AGENT_SECRET --name authichain-agentz
+          printf '%s' "$SUPABASE_URL" | npx wrangler secret put SUPABASE_URL --name authichain-agentz
+          printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-agentz
+          echo "bound AGENT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY on authichain-agentz"
+
+      - name: Bind claw AGENTZ_* secrets
+        if: |
+          matrix.worker == 'authichain-openclaw' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-openclaw')
+        working-directory: workers/authichain-openclaw
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+        run: |
+          set -euo pipefail
+          # AGENTZ_API_URL is secret-only (not [vars]; a plaintext var makes put fail 10053).
+          printf '%s' 'https://agentz.authichain.com' | npx wrangler secret put AGENTZ_API_URL --name authichain-openclaw
+          if [ -z "${AGENT_SECRET:-}" ]; then
+            echo "::error::GitHub secret AGENT_SECRET is empty — cannot bind AGENTZ_API_KEY on authichain-openclaw"
+            exit 1
+          fi
+          printf '%s' "$AGENT_SECRET" | npx wrangler secret put AGENTZ_API_KEY --name authichain-openclaw
+          echo "bound AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw"
 
       - name: Bind Stripe secret on authichain-com
         if: |
