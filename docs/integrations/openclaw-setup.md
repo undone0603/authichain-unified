@@ -222,6 +222,28 @@ curl -X POST https://agentz.authichain.com/architect/cycle \
   -d '{"mode": "dry-run", "goal": "Fix all failing workflows"}'
 ```
 
+## AgentZ → OpenClaw (reverse client)
+
+AgentZ can call the bridge Worker as a client (status, notify, command) without a
+direct WebSocket to the OpenClaw Node gateway. Containers hosting and the claw
+`/api` path fix live in PR #1057 — this section covers the Python client only.
+
+```bash
+export CLAW_BRIDGE_URL=https://claw.authichain.com   # optional; this is the default
+export OPENCLAW_API_KEY=...                          # same secret as the Worker
+
+python -m agentz.cli openclaw status
+python -m agentz.cli openclaw notify "fleet check complete" --dry-run
+python -m agentz.cli openclaw notify "fleet check complete" --send
+python -m agentz.cli openclaw command agents
+```
+
+- `notify` defaults to dry-run (no channel delivery) unless `--send`.
+- Client module: `agentz.integrations.openclaw.OpenClawClient`.
+- Bridge reverse routes: `GET /gateway/status`, `GET /agents`, `GET /workflows`,
+  `POST /notify`, Bearer on `POST /command` (accepts `OPENCLAW_API_KEY` or
+  `AGENTZ_API_KEY`).
+
 ## Security
 
 - The OpenClaw webhook is authenticated with `OPENCLAW_API_KEY` (Bearer token)
