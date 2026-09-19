@@ -2,6 +2,18 @@
 
 Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and activate** without a login code. Access is no longer the gate.
 
+## Status - 2026-09-18 staged re-enable
+
+Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This overrides the Frozen list below for these nine only.
+
+**Live (enabled):** verify-scheduled-jobs, verify-integrations, verify-outreach-secrets, schema-drift, seo-regression, guardrail-digest, reddit-monitor, pipeline-tick, social-credentials-check.
+
+**Still frozen (no outbound until stage 1-2 runs are read and owner approves each):** b2b-outreach, email-proposals, content-publish, content-routine-pr, marketing-autonomous, gen-seo-pages, weekly-video, browser-vision-tasks, agentz-orchestration, automerge-dependabot, dependabot-auto-merge.
+
+**Frozen until item 5:** gov-engine, gov-ingest, gov-mint, gov-notify, gov-proposals, gov-score (`GOVCHAIN_NFT_CONTRACT` needs bytecode on 8453).
+
+**Gate before any outbound:** read at least one post-enable run of each live workflow. Last known runs before the freeze: schema-drift (PR run 2026-09-15) and seo-regression (2026-09-14) had **failed** and must be understood first; the other live workflows last succeeded.
+
 ## Update - 2026-09-18 smoke test (item 3)
 
 Owner-attested: the DPP smoke buyer (`visit_id=smoke_check_1789786486`, live Stripe checkout session) completed checkout and reached `/dpp/thanks` ("Payment received / DPP audit provisioned") with the `/dpp/activate` link. Workstream item 3 is treated as **met on owner attestation**. The agent confirmed the thanks page renders in production but did not independently verify the `provisionPurchase` webhook record or the activate step.
