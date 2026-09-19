@@ -32,8 +32,12 @@ That dispatch:
    `AGENTZ_API_URL=https://agentz.authichain.com` and
    `AGENTZ_API_KEY` from `secrets.AGENT_SECRET`. Skips `authichain-agentz`
    Containers secrets unless they already work. Does **not** set
-   `OPENCLAW_GATEWAY_URL`. If `AGENT_SECRET` is empty, claw bind fails with
-   an annotation; DNS + route cleanup still run.
+   `OPENCLAW_GATEWAY_URL`. If `AGENT_SECRET` is empty, claw bind fails
+   unless `DEV_TEAM_GITHUB_TOKEN` / `GH_PAT` can mint once and
+   `gh secret set AGENT_SECRET` (1-day artifact for local uvicorn — the
+   Actions UI cannot show secret values). DNS + route cleanup still run
+   without `AGENT_SECRET`. **Owner must set repo secret `AGENT_SECRET`**
+   (or allow that mint) before claw will answer AgentZ.
 2. `GET`s tunnel `08378b03-f6a2-46cf-aab8-a2754bad869f`.
 3. Ensures the proxied CNAME above.
 4. Deletes Worker route `agentz.authichain.com/*` on `authichain-agentz`
