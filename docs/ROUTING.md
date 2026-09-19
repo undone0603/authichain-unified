@@ -1,6 +1,6 @@
 # Cloudflare routing contract
 
-Last updated 2026-09-16. Complements `docs/NETWORK.md`, `docs/ESTATE.md`, and `docs/ACCESS.md`.
+Last updated 2026-09-19. Complements `docs/NETWORK.md`, `docs/ESTATE.md`, and `docs/ACCESS.md`.
 
 **First:** if `curl -sI https://authichain.com/` 302s to `strainchainexecutiveteam.cloudflareaccess.com`, stop. Workers never see the request. Fix Access per `docs/ACCESS.md`.
 
@@ -25,7 +25,7 @@ Never send customers to `*.vercel.app`.
 | `api.authichain.com/*`              | `authichain-api-gateway`                                |
 | `dashboard.authichain.com/*`        | `authichain-dashboard`                                  |
 | `claw.authichain.com/*`             | `authichain-openclaw`                                   |
-| `agentz.authichain.com/*`           | `authichain-agentz`                                     |
+| `agentz.authichain.com/*`           | **$0 path:** Cloudflare Tunnel → `127.0.0.1:8000` (`scripts/agentz-tunnel/`). Do **not** attach a Worker route while Tunnel DNS owns the hostname — delete `agentz.authichain.com/*` on `authichain-agentz` or leave that worker undeployed. |
 
 `/dapp` 302s to `/dashboard` on the landing worker. `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 

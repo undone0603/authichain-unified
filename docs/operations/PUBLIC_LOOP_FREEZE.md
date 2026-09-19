@@ -14,6 +14,8 @@ Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generat
 
 `gov-mint` / `gov-engine` stay frozen until bytecode on 8453. Do not enable `agentz-orchestration` until a dry-run outbound log is proven. Do not enable `content-publish`.
 
+**AgentZ hosting on the $0 path** is a free Cloudflare Tunnel to local uvicorn (`docs/integrations/openclaw-setup.md`, `scripts/agentz-tunnel/`). That is not a thaw of `agentz-orchestration` and not social publish. Do **not** enable Workers Paid or Containers until there is revenue.
+
 ### What to run now (traffic → checkout)
 
 | Lane                        | Status                                                                                                     | Workflows                                                                                     |

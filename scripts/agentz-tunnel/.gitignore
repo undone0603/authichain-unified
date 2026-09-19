@@ -1,0 +1,4 @@
+# Local named-tunnel config and credentials — never commit.
+config.yml
+*.json
+!.gitignore
