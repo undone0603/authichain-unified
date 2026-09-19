@@ -14,7 +14,8 @@
 //   DRY_RUN               anything except "false" is a dry run (default dry)
 //   GRANT_SMART_WALLET    "true" to also verifyManufacturer(GOVCHAIN_SIGNER)
 //   ARTIFACT_PATH         override compiled AuthiChainNFT.json
-//   GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS  — skip deploy, grant only
+//   GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS  — skip deploy, grant only when getCode != 0x.
+//                                               Empty bytecode is treated as unset (stale secret).
 //   WALLET_PRIVATE_KEY | MINTER_PRIVATE_KEY | POLYGON_PRIVATE_KEY  (ops EOA)
 //   ALCHEMY_API_KEY       optional; falls back to the chain public RPC
 //
@@ -153,6 +154,7 @@ async function main() {
   }
 
   let wallet: ethers.Wallet | null = null;
+  let balance = 0n;
   if (key) {
     wallet = new ethers.Wallet(key, provider);
     if (wallet.address.toLowerCase() === GOVCHAIN_SIGNER.toLowerCase()) {
@@ -160,24 +162,35 @@ async function main() {
         "This key resolves to the Coinbase Smart Wallet address. ethers.Wallet cannot operate that account. Use the Polygon deployer EOA or a new ops EOA."
       );
     }
-    const balance = await provider.getBalance(wallet.address);
+    balance = await provider.getBalance(wallet.address);
     console.log(
       `[deploy-nft] opsEOA=${wallet.address} balance=${ethers.formatEther(balance)} ${chain.currency}`
     );
-    if (!DRY_RUN && !existing && balance === 0n) {
-      fail(`ops EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`);
-    }
   }
 
   let address = existing;
+  if (address) {
+    const code = await provider.getCode(address);
+    if (isEmptyBytecode(code)) {
+      console.warn(
+        `[deploy-nft] GOVCHAIN_NFT_CONTRACT ${address} has no bytecode on ${chain.name} (getCode=0x). ` +
+          `Secret is stale or a placeholder — ignoring it and deploying fresh.`
+      );
+      address = "";
+    } else {
+      console.log(
+        `[deploy-nft] using existing ${address} getCode_bytes=${bytecodeByteLength(code)} ${chain.explorer}/address/${address}`
+      );
+    }
+  }
+
+  if (!DRY_RUN && !address && wallet && balance === 0n) {
+    fail(`ops EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`);
+  }
+
   let deployTxHash = "";
   let artifactBytes = 0;
-  if (address) {
-    const code = await requireCode(provider, address, "GOVCHAIN_NFT_CONTRACT");
-    console.log(
-      `[deploy-nft] using existing ${address} getCode_bytes=${bytecodeByteLength(code)} ${chain.explorer}/address/${address}`
-    );
-  } else {
+  if (!address) {
     const artifact = loadAuthiChainNftArtifact(artifactFile);
     artifactBytes = bytecodeByteLength(artifact.bytecode);
     console.log(`[deploy-nft] artifact ${artifactFile} bytecode_bytes=${artifactBytes} abi=${artifact.abi.length}`);
