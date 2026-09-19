@@ -14,6 +14,8 @@
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=strainchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
 //   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=high_leverage
+// high_leverage is dry-run only (Tier 1 buyer emails already in Supabase).
 
 import { createClient } from "@supabase/supabase-js";
 import { guardrailCheck, guardrailRecord } from "./lib/guardrail-client";
@@ -47,11 +49,22 @@ import {
   shouldLoadPartnerTargets,
   type ChannelPartnerTarget,
 } from "./lib/channel-partners";
+import {
+  HIGH_LEVERAGE_LEAD_SOURCE,
+  HIGH_LEVERAGE_TARGETS,
+  assertHighLeverageRunAllowed,
+  shouldLoadHighLeverageTargets,
+  type HighLeverageTarget,
+} from "./lib/high-leverage";
 
 export {
   CHANNEL_PARTNER_LEAD_SOURCE,
   CHANNEL_PARTNER_TARGETS,
 } from "./lib/channel-partners";
+export {
+  HIGH_LEVERAGE_LEAD_SOURCE,
+  HIGH_LEVERAGE_TARGETS,
+} from "./lib/high-leverage";
 
 const GUARDRAIL_CHANNEL = "email.b2b-cold";
 
@@ -105,8 +118,9 @@ const SEGMENT_FROM: Record<string, string> = {
   govchain: process.env.OUTREACH_FROM_GOVCHAIN ?? FALLBACK_FROM,
   strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? "hello@strainchain.io",
   qron: process.env.OUTREACH_FROM_QRON ?? FALLBACK_FROM,
-  // Partnership pitch uses the parent brand — not a product cold blast.
+  // Partnership / high-leverage pitches use the parent brand — not a product cold blast.
   partners: FALLBACK_FROM,
+  high_leverage: FALLBACK_FROM,
 };
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
@@ -534,6 +548,29 @@ function partnerEmail(t: ChannelPartnerTarget): {
   return { subject, html };
 }
 
+function highLeverageEmail(t: HighLeverageTarget): {
+  subject: string;
+  html: string;
+} {
+  const first = t.name.split(" ")[0] || t.company;
+  const product =
+    t.segment === "qron"
+      ? "QRON"
+      : t.segment === "govchain"
+        ? "GovChain"
+        : "StrainChain";
+  const subject = `${product} — ${t.company}`;
+  const html = `
+<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
+  <p>Hi ${first},</p>
+  <p>Draft only. This address is on the high-leverage shortlist already
+  stored in Supabase (${HIGH_LEVERAGE_LEAD_SOURCE}). It is not a live send.</p>
+  <p>${t.notes}</p>
+  <p>Best,<br>Zachary<br>AuthiChain</p>
+</div>`;
+  return { subject, html };
+}
+
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
 async function processTargets<
@@ -816,7 +853,9 @@ export async function flushQueuedLeads(): Promise<void> {
     // drain. Extra fail-closed if a row was ever tagged b2b_outreach_partners.
     if (
       lead.source === CHANNEL_PARTNER_LEAD_SOURCE ||
-      leadSegment === "partners"
+      lead.source === HIGH_LEVERAGE_LEAD_SOURCE ||
+      leadSegment === "partners" ||
+      leadSegment === "high_leverage"
     ) {
       console.log(
         `  ⏭️  Skipping partner lead ${lead.email} — partner sends are not flushed with cold queue`
@@ -952,6 +991,26 @@ if (shouldLoadPartnerTargets(segment)) {
   });
 }
 
+if (shouldLoadHighLeverageTargets(segment)) {
+  const hlGate = assertHighLeverageRunAllowed({ isDryRun });
+  if (!hlGate.ok) {
+    console.error(`\n::error::${hlGate.message}`);
+    process.exit(1);
+  }
+  console.log(
+    `\n🎯 HIGH LEVERAGE — ${HIGH_LEVERAGE_LEAD_SOURCE} (dry-run only; not a cold list dump)`
+  );
+  await processTargets(
+    [...HIGH_LEVERAGE_TARGETS],
+    highLeverageEmail,
+    "high_leverage",
+    {
+      leadSource: HIGH_LEVERAGE_LEAD_SOURCE,
+      trustListedEmail: true,
+    }
+  );
+}
+
 console.log("\n✅ OUTREACH COMPLETE");
 console.log(
   `Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`
@@ -972,7 +1031,7 @@ if (!process.env.APOLLO_API_KEY) {
 }
 console.log("  📅 Demo booking page (no Calendly needed): " + CALENDLY);
 console.log(
-  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' or source = 'channel_partner_web_scan_2026-09-19' order by created_at desc"
+  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' or source in ('channel_partner_web_scan_2026-09-19','high_leverage_scan_2026-09-19') order by created_at desc"
 );
 
 // ── Fail loudly on delivery problems ─────────────────────────────────────────

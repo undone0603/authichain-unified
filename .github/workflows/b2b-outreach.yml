@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       segment:
-        description: "Which segment to target (govchain | strainchain | qron | partners | all). partners is dry-run only unless ALLOW_PARTNER_SENDS=true; never folded into all."
+        description: "Which segment to target (govchain | strainchain | qron | partners | high_leverage | all). partners/high_leverage are not folded into all. high_leverage is dry-run only."
         required: false
         default: "all"
         type: choice
@@ -23,6 +23,7 @@ on:
           - strainchain
           - qron
           - partners
+          - high_leverage
       dry_run:
         # STAGED: default true. Live send also requires vars.OWNER_LIVE_SEND=true
         # (one-click flip — see PUBLIC_LOOP_FREEZE.md). Unset / false = no spam.
