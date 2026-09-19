@@ -3,12 +3,17 @@
 //   1. Defense contractors (GovChain — CMMC Nov 2026 deadline)
 //   2. Cannabis compliance managers (StrainChain — $499/mo Theater 1)
 //   3. Print shops / brand agencies (QRON — $29-99 quick wins)
+// Plus an opt-in channel-partner list (not folded into `all`):
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
+// Live partner sends also need ALLOW_PARTNER_SENDS=true (or --allow-partner-sends)
+// and stay under MAX_LIVE_SENDS. Do not mix partners into govchain/strainchain/qron.
 //
 // Usage:
 //   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=govchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=strainchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
 
 import { createClient } from "@supabase/supabase-js";
 import { guardrailCheck, guardrailRecord } from "./lib/guardrail-client";
@@ -34,6 +39,19 @@ import {
   resolveLeadEmail,
 } from "./lib/lead-email-resolver";
 import { ensureLiveB2bChannel } from "../shared/guardrail-store";
+import {
+  CHANNEL_PARTNER_LEAD_SOURCE,
+  CHANNEL_PARTNER_TARGETS,
+  allowPartnerLiveSends,
+  assertPartnerRunAllowed,
+  shouldLoadPartnerTargets,
+  type ChannelPartnerTarget,
+} from "./lib/channel-partners";
+
+export {
+  CHANNEL_PARTNER_LEAD_SOURCE,
+  CHANNEL_PARTNER_TARGETS,
+} from "./lib/channel-partners";
 
 const GUARDRAIL_CHANNEL = "email.b2b-cold";
 
@@ -87,6 +105,8 @@ const SEGMENT_FROM: Record<string, string> = {
   govchain: process.env.OUTREACH_FROM_GOVCHAIN ?? FALLBACK_FROM,
   strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? "hello@strainchain.io",
   qron: process.env.OUTREACH_FROM_QRON ?? FALLBACK_FROM,
+  // Partnership pitch uses the parent brand — not a product cold blast.
+  partners: FALLBACK_FROM,
 };
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
@@ -456,6 +476,64 @@ function qronEmail(t: (typeof QRON_TARGETS)[0]): {
   return { subject, html };
 }
 
+/**
+ * Channel-partner copy — referral / implementation / already-warm, not an
+ * end-buyer cold blast. Does not claim a custom demo or a pre-provisioned
+ * sandbox.
+ */
+function partnerEmail(t: ChannelPartnerTarget): {
+  subject: string;
+  html: string;
+} {
+  const first = t.name.split(" ")[0] || t.company;
+  const product =
+    t.segment === "govchain"
+      ? "GovChain"
+      : t.segment === "qron"
+        ? "QRON"
+        : "StrainChain";
+  const also =
+    t.also_segment === "qron"
+      ? " QRON white-label is the same conversation if you also place branded QR."
+      : "";
+  const relation = t.already_connected
+    ? `We're already connected — this is a partner upsell, not a first-touch blast.`
+    : t.inbound_warm
+      ? `CS forwarded your inbound in April 2026 — treating this as a warm follow-up, not cold outreach.`
+      : `You're on our channel-partner shortlist (consultants, accelerators, and implementation shops), not an end-buyer list.`;
+
+  const subject = t.already_connected
+    ? `Partner upsell — ${product} with ${t.company}`
+    : t.inbound_warm
+      ? `Following up — ${product} / AuthiChain and ${t.company}`
+      : `Channel partnership — ${product} / AuthiChain and ${t.company}`;
+
+  const html = `
+<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
+  <p>Hi ${first},</p>
+
+  <p>${relation}</p>
+
+  <p>${product} (<a href="https://authichain.com">authichain.com</a>) is the
+  product your clients would actually run. The ask here is a channel
+  conversation — referral, implementation, or white-label — not a
+  self-serve checkout pitch.${also}</p>
+
+  <p>${t.notes}</p>
+
+  <p>If that is still the wrong desk, say so and I'll close the thread.
+  Otherwise
+  <a href="${CALENDLY}?name=${encodeURIComponent(t.name)}&company=${encodeURIComponent(t.company)}">
+  book 15 minutes</a> or reply with the person who owns partnerships.</p>
+
+  <p>Best,<br>
+  Zachary<br>
+  AuthiChain<br>
+  <a href="https://authichain.com">authichain.com</a></p>
+</div>`;
+  return { subject, html };
+}
+
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
 async function processTargets<
@@ -463,7 +541,8 @@ async function processTargets<
 >(
   targets: T[],
   buildEmail: (t: T) => { subject: string; html: string },
-  segmentName: string
+  segmentName: string,
+  opts: { leadSource?: string; trustListedEmail?: boolean } = {}
 ) {
   let sent = 0;
   let saved = 0;
@@ -499,32 +578,41 @@ async function processTargets<
     }
   }
 
-  const crmRows = await loadCrmRowsForCompanies(
-    supabase,
-    targets.map(t => t.company)
-  );
+  const crmRows = opts.trustListedEmail
+    ? []
+    : await loadCrmRowsForCompanies(
+        supabase,
+        targets.map(t => t.company)
+      );
 
   for (const t of targets) {
-    const resolved = await resolveLeadEmail(
-      {
-        company: t.company,
-        name: (t as any).name ?? t.company,
-        website: t.website,
-        email: t.email,
-        source: (t as any).source ?? RESEARCHED_SOURCE,
-      },
-      {
-        crmRows,
-        hubspotContacts: t.email
-          ? undefined
-          : await loadHubSpotContactsForCompany(t.company, hubspotToken),
+    let email = t.email;
+    let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
+    // Partner rows already carry a published / inbound / connected address.
+    // Do not run them through usableEmail() — that strips role inboxes
+    // (contact@, info@, hello@) which are the desk these partners publish.
+    if (!opts.trustListedEmail) {
+      const resolved = await resolveLeadEmail(
+        {
+          company: t.company,
+          name: (t as any).name ?? t.company,
+          website: t.website,
+          email: t.email,
+          source: (t as any).source ?? RESEARCHED_SOURCE,
+        },
+        {
+          crmRows,
+          hubspotContacts: t.email
+            ? undefined
+            : await loadHubSpotContactsForCompany(t.company, hubspotToken),
+        }
+      );
+      email = resolved.email;
+      source = resolved.source;
+      if (email && resolved.via !== "already_set") {
+        (t as any).email = email;
+        console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
       }
-    );
-    let email = resolved.email;
-    let source: VerificationSource = resolved.source;
-    if (email && resolved.via !== "already_set") {
-      (t as any).email = email;
-      console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
     }
 
     const { subject, html } = buildEmail(t);
@@ -545,7 +633,7 @@ async function processTargets<
           `[pending]@${t.company.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
         name: (t as any).name ?? t.company,
         company: t.company,
-        source: `b2b_outreach_${segmentName}`,
+        source: opts.leadSource ?? `b2b_outreach_${segmentName}`,
         status: dbStatus,
         // `source` is persisted so a later flush re-applies the same provenance
         // decision instead of silently downgrading an Apollo-verified address.
@@ -724,6 +812,17 @@ export async function flushQueuedLeads(): Promise<void> {
     // the same brand the copy was written in. checkSender caches per address,
     // so this costs one probe per distinct sender across the whole flush.
     const leadSegment = String(lead.source ?? "").replace("b2b_outreach_", "");
+    // Partner drafts use a different source and are not part of the cold
+    // drain. Extra fail-closed if a row was ever tagged b2b_outreach_partners.
+    if (
+      lead.source === CHANNEL_PARTNER_LEAD_SOURCE ||
+      leadSegment === "partners"
+    ) {
+      console.log(
+        `  ⏭️  Skipping partner lead ${lead.email} — partner sends are not flushed with cold queue`
+      );
+      continue;
+    }
     const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
 
     const senderCheck = await checkSender(from);
@@ -830,6 +929,29 @@ if (segment === "all" || segment === "qron") {
   await processTargets(QRON_TARGETS, qronEmail, "qron");
 }
 
+if (shouldLoadPartnerTargets(segment)) {
+  const partnerGate = assertPartnerRunAllowed({
+    isDryRun,
+    allowLive: allowPartnerLiveSends(),
+  });
+  if (!partnerGate.ok) {
+    console.error(`\n::error::${partnerGate.message}`);
+    process.exit(1);
+  }
+  console.log(
+    `\n🤝 CHANNEL PARTNERS — ${CHANNEL_PARTNER_LEAD_SOURCE} (not a cold end-buyer blast)`
+  );
+  if (!isDryRun) {
+    console.log(
+      `  Live partner send is explicit (ALLOW_PARTNER_SENDS) and still capped by MAX_LIVE_SENDS=${maxLiveSends}`
+    );
+  }
+  await processTargets([...CHANNEL_PARTNER_TARGETS], partnerEmail, "partners", {
+    leadSource: CHANNEL_PARTNER_LEAD_SOURCE,
+    trustListedEmail: true,
+  });
+}
+
 console.log("\n✅ OUTREACH COMPLETE");
 console.log(
   `Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`
@@ -850,7 +972,7 @@ if (!process.env.APOLLO_API_KEY) {
 }
 console.log("  📅 Demo booking page (no Calendly needed): " + CALENDLY);
 console.log(
-  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' order by created_at desc"
+  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' or source = 'channel_partner_web_scan_2026-09-19' order by created_at desc"
 );
 
 // ── Fail loudly on delivery problems ─────────────────────────────────────────

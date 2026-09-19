@@ -1,0 +1,129 @@
+{
+  "source": "channel_partner_web_scan_2026-09-19",
+  "generated": "2026-09-19",
+  "role": "channel_partner",
+  "note": "Channel / referral / implementation partners — not end-buyer cold blasts. Loadable via --segment=partners. Not included in govchain/strainchain/qron/all.",
+  "skipped_not_auto_send": [
+    {
+      "name": "Canna Banana",
+      "reason": "URL-only agency — no emailable contact; research note only"
+    },
+    {
+      "name": "HighMinded",
+      "reason": "URL-only agency — no emailable contact; research note only"
+    },
+    {
+      "name": "Magic Plants",
+      "reason": "URL-only agency — no emailable contact; research note only"
+    },
+    {
+      "name": "GO TRACE",
+      "reason": "DPP consultancy — not an auto-send target"
+    },
+    {
+      "name": "Provenant",
+      "reason": "DPP consultancy — not an auto-send target"
+    },
+    {
+      "name": "DPP Agency",
+      "reason": "DPP consultancy — not an auto-send target"
+    }
+  ],
+  "partners": [
+    {
+      "company": "Existo Solutions",
+      "name": "Existo Solutions",
+      "email": "contact@existosolutions.com",
+      "website": "https://existosolutions.com",
+      "segment": "strainchain",
+      "role": "channel_partner",
+      "phone": "734-999-4010",
+      "notes": "Michigan Metrc / cannabis compliance consultancy (CaaS, VCO). Published contact@ and 734-999-4010 on existosolutions.com. Channel for StrainChain, not an MSO end-buyer.",
+      "source": "published_contact"
+    },
+    {
+      "company": "ICS Consulting",
+      "name": "ICS Consulting",
+      "email": "info@icsconsultingservice.com",
+      "website": "https://www.icsconsultingservice.com",
+      "segment": "strainchain",
+      "role": "channel_partner",
+      "phone": "303-630-9806",
+      "notes": "Cannabis compliance consultancy. Published Info@icsconsultingservice.com and 303-630-9806. Channel for StrainChain Theater 1, not a licensee blast.",
+      "source": "published_contact"
+    },
+    {
+      "company": "Oakley Signs",
+      "name": "Oakley Signs",
+      "email": "helpteam@oakleysign.com",
+      "website": "https://oakleysign.com",
+      "segment": "qron",
+      "role": "channel_partner",
+      "already_connected": true,
+      "notes": "Already CONNECTED. Partner upsell: white-label QRON on existing sign orders / brokerage QR workflow — not a first-touch cold blast.",
+      "source": "confirmed_reply"
+    },
+    {
+      "company": "PufCreativ",
+      "name": "PufCreativ",
+      "email": "hello@pufcreativ.com",
+      "website": "https://pufcreativ.com",
+      "segment": "strainchain",
+      "also_segment": "qron",
+      "role": "channel_partner",
+      "notes": "Cannabis creative studio — StrainChain primary, QRON white-label also fits. Published hello@pufcreativ.com.",
+      "source": "published_contact"
+    },
+    {
+      "company": "APEX Accelerator (NE/SW)",
+      "name": "APEX Accelerator",
+      "email": "apexaccelerator@nemcworks.org",
+      "website": "https://www.nemiapex.org",
+      "segment": "govchain",
+      "role": "channel_partner",
+      "notes": "NEMC APEX Accelerator intake. Channel to counsel DoD/SBIR clients on GovChain — not a SAM.gov contractor blast.",
+      "source": "published_contact"
+    },
+    {
+      "company": "APEX Accelerator (NE/SW)",
+      "name": "Susan Fitzpatrick",
+      "email": "fitzpatricks@nemcworks.org",
+      "website": "https://www.nemiapex.org",
+      "segment": "govchain",
+      "role": "channel_partner",
+      "notes": "Named APEX / NEMC staff contact. Same channel as the accelerator inbox.",
+      "source": "published_contact"
+    },
+    {
+      "company": "APEX Accelerator (NE/SW)",
+      "name": "Tammy Moore",
+      "email": "mooret@nemcworks.org",
+      "website": "https://www.nemiapex.org",
+      "segment": "govchain",
+      "role": "channel_partner",
+      "notes": "Named APEX / NEMC staff contact. Same channel as the accelerator inbox.",
+      "source": "published_contact"
+    },
+    {
+      "company": "APEX Accelerator (NE/SW)",
+      "name": "Shawna McManus",
+      "email": "mcmanuss@nemcworks.org",
+      "website": "https://www.nemiapex.org",
+      "segment": "govchain",
+      "role": "channel_partner",
+      "notes": "Named APEX / NEMC staff contact. Same channel as the accelerator inbox.",
+      "source": "published_contact"
+    },
+    {
+      "company": "Onnit",
+      "name": "Onnit",
+      "email": "info@onnit.com",
+      "website": "https://www.onnit.com",
+      "segment": "qron",
+      "role": "channel_partner",
+      "inbound_warm": true,
+      "notes": "inbound_warm — CS forwarded Apr 2026. Follow up as an inbound partner/brand, not a cold QRON print-shop blast.",
+      "source": "inbound_optin"
+    }
+  ]
+}
