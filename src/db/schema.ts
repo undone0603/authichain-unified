@@ -199,7 +199,10 @@ export const brands = pgTable(
     stakingTier: text("staking_tier").default("none").notNull(),
     qronStaked: numeric("qron_staked").default("0").notNull(),
     walletAddress: text("wallet_address"),
-    stakingWalletAddress: text("staking_wallet_address"),
+    // Prod QRON-v2 (nhdnkzhtadfkkluiulhs) has wallet_address + staking_locked_until.
+    // Do not declare staking_wallet_address here — it is not on prod and
+    // schema-drift fails the PR on missing-column (42703).
+    stakingLockedUntil: timestamp("staking_locked_until"),
     unitCostDiscount: numeric("unit_cost_discount").default("0").notNull(),
     baseUnitCost: numeric("base_unit_cost").default("0.05").notNull(),
     isVerified: boolean("is_verified").default(false).notNull(),
@@ -214,8 +217,9 @@ export const brands = pgTable(
 );
 
 // ─── Fee flows (authentic economy) ───────────────────────────────────────────
-// Authoritative columns match prod QRON-v2 and drizzle/migrations/025_economy_align.sql.
-// Amounts stay text so existing rows are not rewritten.
+// Declared columns all exist on prod QRON-v2. Amounts stay text so existing
+// rows are not rewritten. Extra prod columns (product_id, snapshots, notes)
+// stay untracked until a follow-up align.
 export const feeFlows = pgTable(
   "fee_flows",
   {
