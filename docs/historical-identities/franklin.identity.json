@@ -1,0 +1,93 @@
+{
+  "schema_version": "historical-identity.v0.1",
+  "identity": {
+    "identity_id": "hist:benjamin-franklin",
+    "canonical_name": "Benjamin Franklin",
+    "alternate_names": [],
+    "birth": {
+      "date": "1706"
+    },
+    "death": {
+      "date": "1790"
+    },
+    "identity_status": "deceased_historical_figure",
+    "description": "Historical identity grounded in the editorial and documentary record of The Papers of Benjamin Franklin."
+  },
+  "sources": [
+    {
+      "source_id": "src:franklin-papers-yale",
+      "title": "The Papers of Benjamin Franklin Online",
+      "publisher": "Yale University Library / Franklin Papers",
+      "source_type": "editorial_edition",
+      "url": "https://franklinpapers.yale.edu/papers-benjamin-franklin-online-two-different-resources",
+      "retrieved_at": "2026-09-19T12:00:00Z",
+      "rights": {
+        "status": "repository_terms",
+        "notes": "Evaluate rights at the individual document level."
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:franklin-corpus",
+      "subject": "hist:benjamin-franklin",
+      "predicate": "documentary_record",
+      "object": "The Digital Franklin Papers provides searchable texts of documents collected by the editorial team, with finalized and transcribed material across Franklin's life.",
+      "evidence_class": "direct"
+    },
+    {
+      "claim_id": "claim:franklin-editorial-context",
+      "subject": "hist:benjamin-franklin",
+      "predicate": "editorial_context_available",
+      "object": true,
+      "evidence_class": "direct"
+    }
+  ],
+  "temporal_states": [
+    {
+      "state_id": "state:franklin-1776-philadelphia",
+      "as_of": "1776",
+      "knowledge_cutoff": "1776-12-31",
+      "location": "Philadelphia, Pennsylvania, United States",
+      "known_claim_ids": [
+        "claim:franklin-corpus",
+        "claim:franklin-editorial-context"
+      ],
+      "unknown_topics": [
+        "Do not infer a specific 1776 statement without a document edge for that period."
+      ],
+      "persona_constraints": [
+        "Prefer primary text and surface editorial context separately.",
+        "Never invent a quotation."
+      ]
+    }
+  ],
+  "evidence_edges": [
+    {
+      "edge_id": "edge:franklin-corpus",
+      "from": "src:franklin-papers-yale",
+      "to": "claim:franklin-corpus",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:franklin-context",
+      "from": "src:franklin-papers-yale",
+      "to": "claim:franklin-editorial-context",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:franklin-boundary",
+      "from": "state:franklin-1776-philadelphia",
+      "to": "claim:franklin-corpus",
+      "relation": "bounded_by",
+      "evidence_class": "contextual"
+    }
+  ],
+  "attestation_subject": {
+    "subject_type": "historical_identity_manifest",
+    "canonicalization": "jcs-rfc8785",
+    "manifest_hash_input": "canonical(identity,sources,claims,temporal_states,evidence_edges)"
+  }
+}
