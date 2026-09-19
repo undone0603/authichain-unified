@@ -1,5 +1,6 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { Hono } from "hono";
+import { generateKeyPairSync } from "node:crypto";
 import { exportPKCS8, generateKeyPair } from "jose";
 import { registerJwksRoute } from "./jwks";
 
@@ -7,6 +8,7 @@ describe("registerJwksRoute", () => {
   afterEach(() => {
     delete process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
     delete process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
+    delete process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK;
   });
 
   it("returns 503 when the attestation key is missing", async () => {
@@ -42,6 +44,55 @@ describe("registerJwksRoute", () => {
     const body = (await res.json()) as { keys: Array<{ d?: string; x?: string }> };
     expect(body.keys[0].d).toBeUndefined();
     expect(typeof body.keys[0].x).toBe("string");
+  });
+
+  it("accepts Node generateKeyPairSync PKCS#8 (CI bind format)", async () => {
+    const { privateKey } = generateKeyPairSync("ed25519");
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" });
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(pem).toString(
+      "base64",
+    );
+    const app = new Hono();
+    registerJwksRoute(app);
+    const res = await app.request("/protocol/jwks.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      keys: Array<{ kty?: string; crv?: string; d?: string; x?: string }>;
+    };
+    expect(body.keys[0].kty).toBe("OKP");
+    expect(body.keys[0].crv).toBe("Ed25519");
+    expect(body.keys[0].d).toBeUndefined();
+    expect(typeof body.keys[0].x).toBe("string");
+  });
+
+  it("serves a precomputed public JWK without importing the private key", async () => {
+    const { publicKey } = generateKeyPairSync("ed25519");
+    const jwk = publicKey.export({ format: "jwk" });
+    process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK = JSON.stringify(jwk);
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "bound-kid";
+    const app = new Hono();
+    registerJwksRoute(app);
+    const res = await app.request("/protocol/jwks.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      keys: Array<Record<string, unknown>>;
+    };
+    expect(body.keys[0].kty).toBe("OKP");
+    expect(body.keys[0].x).toBe(jwk.x);
+    expect(body.keys[0].kid).toBe("bound-kid");
+    expect(body.keys[0].d).toBeUndefined();
+    expect(body.keys[0].alg).toBe("EdDSA");
+  });
+
+  it("returns reason invalid for unparsable PKCS#8", async () => {
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = "not-a-key";
+    const app = new Hono();
+    registerJwksRoute(app);
+    const res = await app.request("/protocol/jwks.json");
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; reason?: string };
+    expect(body.error).toBe("attestation key unavailable");
+    expect(body.reason).toBe("invalid");
   });
 
   it("returns a public Ed25519 JWK and never the private d", async () => {
