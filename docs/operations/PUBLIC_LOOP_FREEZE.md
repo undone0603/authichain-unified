@@ -66,6 +66,22 @@ To slam it shut again: `gh variable set OWNER_LIVE_SEND --body false -R undone06
 
 Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. One var flip is enough for scheduled runs. Do not set this until Day 3 review.
 
+### One live B2B dispatch (after a clean dry-run)
+
+`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live.
+
+```bash
+# 1. Dry-run first — must exit 0 and log [DRY RUN] (no Resend)
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=true
+
+# 2. Tiny live batch — requires vars.OWNER_LIVE_SEND=true
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=false
+```
+
+If the run still prints `guardrail check HTTP 404`, the edge-router mount is not deployed yet. The script falls back to the Supabase store when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present. Bind `INTERNAL_API_SECRET` on `authichain-edge-router` via `set-qron-outreach-guardrail-secret.yml` so the HTTP path works after `deploy-cloudflare.yml`.
+
 ### Audit — 2026-09-19 (Actions API)
 
 | Workflow                  | State                 | Last conclusion                                                                                                        | Notes                                                                                                                                                                           |

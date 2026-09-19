@@ -68,6 +68,12 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/v1/attestation/*"
 zone_name = "authichain.com"
 
+# More specific than the landing worker's /api/* glob so B2B/qron-outreach
+# check+record do not 404 on the apex if APP_WORKER is unbound.
+[[routes]]
+pattern = "authichain.com/api/guardrail/*"
+zone_name = "authichain.com"
+
 [[routes]]
 pattern = "authichain.com/dashboard*"
 zone_name = "authichain.com"
