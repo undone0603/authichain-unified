@@ -1,36 +1,29 @@
 # Base chain integration — GovChain pilots
 
-Date: 2026-09-04
+Date: 2026-09-17
 
-Sepolia skipped. Funding complete. Deploy is the next signed step.
+Funding complete since 2026-09-01. Deploy still unsigned. Public apex is a separate blocker (Cloudflare Access).
 
-## Live probe (2026-09-04 17:36 EDT)
+## Live probe (2026-09-17 08:33 EDT)
 
 | Account | Base 8453 ETH | Base 8453 USDC | nonce |
 |---|---|---|---|
-| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 | 1.0 | 1 (UserOp) |
+| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 | 1.0 | 1 |
 | Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | **0.002** | 0 | **0** |
 
-Fund tx: [`0x4c9ce401…b2145`](https://basescan.org/tx/0x4c9ce401ae191aa48a2703dc21a33638fe2e08a0922344638bcc0febeb2b2145) (block 50760586). Coinbase bundler → EntryPoint 0.6 → 0.002 ETH to ops EOA. Paymaster was `0x0`; gas paid from Smart Wallet ETH.
+Fund tx: [`0x4c9ce401…b2145`](https://basescan.org/tx/0x4c9ce401ae191aa48a2703dc21a33638fe2e08a0922344638bcc0febeb2b2145).
+No AuthiChainNFT on Base. `gov-mint.yml` has **zero runs** — do not dispatch until `GOVCHAIN_NFT_CONTRACT` has bytecode.
 
-No AuthiChainNFT bytecode on Base yet. Ops nonce 0 means the deploy key has never sent a Base tx.
-
-Compile path (PR #871): `scripts/compile-authichain-nft.cjs` writes the artifact `scripts/deploy-authichain-nft-base.ts` expects. Hardhat `paths.sources` is still `contracts/ledger` — do not use `npx hardhat compile` for this contract.
+`GET https://authichain.com/` is **302** to `strainchainexecutiveteam.cloudflareaccess.com` (kid `53cc38df…`). Edge-router origin cannot be confirmed from outside Access. See `docs/operations/PUBLIC_LOOP_FREEZE.md`.
 
 ## Deploy (signed, ops EOA)
-
-This sandbox cannot hold `WALLET_PRIVATE_KEY`. Run on the machine that has the ops key:
 
 ```bash
 pnpm exec node scripts/compile-authichain-nft.cjs
 CHAIN=base DRY_RUN=false GRANT_SMART_WALLET=true pnpm exec tsx scripts/deploy-authichain-nft-base.ts
 ```
 
-or `npx thirdweb deploy contracts/AuthiChainNFT.sol` → Base 8453.
-
-`verifyManufacturer(opsEOA)` is required. `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…`.
-
-Then set secrets and dry-run mint:
+Then:
 
 ```
 CHAIN=base
@@ -40,7 +33,9 @@ ALCHEMY_API_KEY=<Base app>
 DRY_RUN=true
 ```
 
-Success: `chain=Base (8453)` and non-empty `getCode`. Flip `DRY_RUN=false` for one `gov_proposals` row with `fit_score >= 75`.
+Success: `chain=Base (8453)` and non-empty `getCode`. One live mint only after that, `fit_score >= 75`.
+
+`verifyManufacturer(opsEOA)` is required. `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…`.
 
 ## Split unchanged
 

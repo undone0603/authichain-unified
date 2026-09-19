@@ -12,13 +12,45 @@ import { eq } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
+import { registerJwksRoute } from "./jwks";
+import { registerIssuerRoutes } from "./issuer";
+import { scheduled } from "./cron-dispatch";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
+  AUTHICHAIN_ATTESTATION_KEY_ID?: string;
+  AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  CRON_SECRET?: string;
 };
+
+function hydrateProcessEnv(env?: Env) {
+  if (!env) return;
+  const copy: Array<[string, string | undefined]> = [
+    ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
+    ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
+    ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
+    ["NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL],
+    ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
+    ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
+    ["CRON_SECRET", env.CRON_SECRET],
+    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
+    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
+  ];
+  for (const [name, value] of copy) {
+    if (value && !process.env[name]) process.env[name] = value;
+  }
+}
 
 type Variables = {
   brand: BrandId;
@@ -118,6 +150,55 @@ app.use(
 
 app.get("/api/health", c => c.json({ status: "ok" }));
 
+// ─── DPP $299 Checkout ──────────────────────────────────────────────────────
+// Same session create as Next src/app/api/checkout/dpp. Registered here so
+// authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
+app.get("/api/checkout/dpp", async c => {
+  if (c.req.method === "HEAD") {
+    c.header("Cache-Control", "private, no-store");
+    c.header("CDN-Cache-Control", "no-store");
+    return c.body(null, 204);
+  }
+  try {
+    hydrateProcessEnv(c.env);
+    const { createDppCheckoutSession } =
+      await import("../src/lib/dpp-checkout");
+    const stripeSecretKey =
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "";
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const result = await createDppCheckoutSession({
+      searchParams: new URL(c.req.url).searchParams,
+      stripeSecretKey,
+      supabase,
+    });
+    if (!result.ok) {
+      c.header("Cache-Control", "private, no-store");
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.redirect(result.url, 303);
+  } catch (err: any) {
+    console.error("[checkout/dpp] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start DPP checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
@@ -127,14 +208,95 @@ app.post("/api/stripe/webhook", async c => {
     return c.json({ error: "Missing stripe-signature header" }, 400);
   }
   try {
+    hydrateProcessEnv(c.env);
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
     const rawBody = Buffer.from(await c.req.arrayBuffer());
-    const db = getHyperdriveDb(c.env);
-    const result = await handleStripeWebhook(db, rawBody, sig);
+    const result = await handleStripeWebhook(rawBody, sig);
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
     return c.json({ error: err.message }, 400);
+  }
+});
+
+app.post("/api/dpp/activate", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, string>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const stripeSecretKey =
+      c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "";
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const { activateDppMerchant } = await import("../src/lib/dpp-activate");
+    const result = await activateDppMerchant({
+      body,
+      stripeSecretKey,
+      supabase,
+    });
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status as 400 | 402 | 500
+      );
+    }
+    return c.json(result);
+  } catch (err: any) {
+    console.error("[dpp/activate] Error:", err?.message || err);
+    return c.json({ error: "Activation failed", detail: err?.message }, 500);
+  }
+});
+
+app.get("/api/cron/dpp-exceptions", async c => {
+  hydrateProcessEnv(c.env);
+  c.header("Cache-Control", "private, no-store");
+  c.header("CDN-Cache-Control", "no-store");
+  const { isCronAuthorized } = await import("../src/lib/cron-auth");
+  if (!isCronAuthorized(c.req.raw)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  try {
+    const { fetchAllLoopEvents, summarizeDppLoop } =
+      await import("../src/lib/dpp-loop");
+    const { supabaseAdmin } = await import("../src/lib/supabase-admin");
+    const rows = await fetchAllLoopEvents(supabaseAdmin);
+    const summary = summarizeDppLoop(rows);
+    return c.json({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      visits: summary.visits,
+      demoVisits: summary.demoVisits,
+      funnel: summary.funnel,
+      exceptionCount: summary.exceptions.length,
+      exceptions: summary.exceptions,
+    });
+  } catch (err: any) {
+    console.error("[cron/dpp-exceptions] failed:", err);
+    return c.json(
+      {
+        error: "DPP exception cron failed",
+        details: err instanceof Error ? err.message : String(err),
+      },
+      500
+    );
   }
 });
 
@@ -1120,6 +1282,10 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
+app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
+registerJwksRoute(app);
+registerIssuerRoutes(app);
+
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
   const body = `User-agent: *\nAllow: /\nSitemap: https://${brand.domain}/sitemap.xml\n`;
@@ -1210,4 +1376,15 @@ app.get("*", async c => {
 
 export { RateLimiter } from "./rate-limiter";
 
-export default { fetch: app.fetch };
+// A single hourly cron trigger fans out to the ten cleared GROUP A jobs — the
+// account is capped at five cron triggers, so ten separate schedules were never
+// registrable. See cron-dispatch.ts for the reasoning and the dispatch rules.
+// NOTE: the trigger itself is still commented out in wrangler.toml; wiring the
+// handler here does not by itself schedule anything.
+export default {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    hydrateProcessEnv(env);
+    return app.fetch(request, env, ctx);
+  },
+  scheduled,
+};

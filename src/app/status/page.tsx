@@ -77,13 +77,22 @@ export default async function StatusPage() {
               </p>
             )}
           </div>
-          <Link
-            href="/studio"
-            className="flex items-center justify-between p-3 rounded-lg border border-gray-800 hover:border-[#FFD700]/40 transition-colors text-sm"
-          >
-            <Zap className="w-4 h-4 text-[#FFD700] mr-2" />
-            Launch Studio
-          </Link>
+          <div className="flex flex-col gap-3 w-full md:w-64">
+            <Link
+              href="/transparency"
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-800 hover:border-[#FFD700]/40 transition-colors text-sm"
+            >
+              Measured counts
+              <span className="text-[#FFD700] text-xs uppercase tracking-widest">Transparency</span>
+            </Link>
+            <Link
+              href="/studio"
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-800 hover:border-[#FFD700]/40 transition-colors text-sm"
+            >
+              <Zap className="w-4 h-4 text-[#FFD700] mr-2" />
+              Launch Studio
+            </Link>
+          </div>
         </header>
 
         <div className="space-y-3">

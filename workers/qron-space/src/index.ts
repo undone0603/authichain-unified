@@ -2049,6 +2049,41 @@ function renderVideosSection(videos: YtVideo[]): string {
 </section>`;
 }
 
+/**
+ * Answers an unknown path with a real 404.
+ *
+ * Every unmatched URL used to fall through to the marketing page at HTTP 200,
+ * so a typo, a stale inbound link and a live page were indistinguishable to
+ * crawlers, uptime checks and link checkers alike. The sitemap above can only
+ * be trusted if the paths outside it actually say no.
+ */
+function notFound(pathname: string): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>404 — Not Found · $QRON</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020817;--border:#1e2d4a;--cyan:#06b6d4;--purple:#8b5cf6;--text:#e2e8f0;--muted:#64748b}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+.code{font-size:clamp(3rem,12vw,6rem);font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+h1{font-size:1.25rem;font-weight:700;margin:.75rem 0 .5rem}
+p{color:var(--muted);margin-bottom:1.75rem}
+code{background:rgba(148,163,184,.12);border:1px solid var(--border);border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:var(--text);word-break:break-all}
+a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:600;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;text-decoration:none}
+</style></head><body><main>
+<div class="code">404</div>
+<h1>This page does not exist</h1>
+<p><code>${escapeHtml(pathname)}</code> is not a page on qron.space.</p>
+<a href="/">Back to the $QRON hub</a>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-store" },
+  });
+}
+
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -2062,12 +2097,7 @@ export default {
     if (p === '/sitemap.xml') {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://qron.space/</loc></url>
-  <url><loc>https://qron.space/#advantages</loc></url>
-  <url><loc>https://qron.space/#staking</loc></url>
-  <url><loc>https://qron.space/#governance</loc></url>
-  <url><loc>https://qron.space/#bridge</loc></url>
-  <url><loc>https://qron.space/#tokenomics</loc></url>
+  <url><loc>https://qron.space/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
@@ -2077,6 +2107,10 @@ export default {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
+    // Only the apex renders HTML here. Anything else is a 404 rather than a
+    // 200 homepage — see notFound above.
+    if (p !== '/') return notFound(p);
+
     const videosHtml = renderVideosSection(await fetchLatestVideos());
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">

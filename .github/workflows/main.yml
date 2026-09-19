@@ -1,5 +1,8 @@
 name: CI Main
 
+# Required quality gate: install, typecheck, lint, test, production build.
+# Schema/AgentZ extras live in ci.yml so this job is not duplicated there.
+
 on:
   push:
     branches: [main]
@@ -48,3 +51,65 @@ jobs:
 
       - name: Production build
         run: pnpm build
+
+  production-proof:
+    name: Production launch proof
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Run autonomous revenue pipeline
+        env:
+          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
+        run: pnpm tsx server/jobs/pipeline-tick.ts
+
+      - name: Produce cryptographic QRON + StoryMode proof
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
+          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: pnpm tsx scripts/launch-proof.ts
+
+      - name: Upload launch proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authichain-production-launch-proof
+          path: |
+            artifacts/production-launch-proof.json
+            artifacts/launch-proof-qron.png
+          if-no-files-found: warn

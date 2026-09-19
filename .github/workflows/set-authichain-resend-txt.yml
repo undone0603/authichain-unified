@@ -13,25 +13,57 @@ jobs:
     steps:
       - name: Look up zone and create record
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_KEY }}
+          # Same token wrangler uses. CLOUDFLARE_API_KEY is often a Global API
+          # Key, which cannot be sent as Authorization: Bearer.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TXT_NAME: "authichain.com"
+          TXT_CONTENT: "resend-domain-verification=5afa5cf8ec397b18c194291c5ca0d339"
         run: |
-          set -e
-          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=authichain.com" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[0].id')
-          if [ -z "$ZONE_ID" ] || [ "$ZONE_ID" = "null" ]; then
-            echo "Could not resolve zone id for authichain.com"
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN repo secret is empty. Set an API Token (not a Global API Key) with Zone.DNS Edit on authichain.com."
+            exit 1
+          fi
+
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          ZONE_JSON=$(curl -sS "https://api.cloudflare.com/client/v4/zones?name=authichain.com" -H "$AUTH")
+          ZONE_OK=$(echo "$ZONE_JSON" | jq -r '.success')
+          ZONE_ID=$(echo "$ZONE_JSON" | jq -r '.result[0].id // empty')
+          if [ "$ZONE_OK" != "true" ] || [ -z "$ZONE_ID" ]; then
+            echo "$ZONE_JSON" | jq .
+            echo "::error::Could not resolve zone id for authichain.com. Token needs Zone.Zone Read on that zone."
             exit 1
           fi
           echo "Zone ID: $ZONE_ID"
 
-          RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
-            --data '{"type":"TXT","name":"authichain.com","content":"resend-domain-verification=5afa5cf8ec397b18c194291c5ca0d339","ttl":1}')
+          EXISTING=$(curl -sS "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=TXT&name=${TXT_NAME}" -H "$AUTH")
+          if [ "$(echo "$EXISTING" | jq -r '.success')" = "true" ]; then
+            MATCH=$(echo "$EXISTING" | jq -r --arg c "$TXT_CONTENT" '.result[] | select(.content == $c) | .id' | head -n1)
+            if [ -n "$MATCH" ]; then
+              echo "TXT record already present (id $MATCH). Nothing to create."
+              exit 0
+            fi
+          fi
+
+          RESULT=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+            -H "$AUTH" -H "Content-Type: application/json" \
+            --data "$(jq -n --arg name "$TXT_NAME" --arg content "$TXT_CONTENT" '{type:"TXT",name:$name,content:$content,ttl:1}')")
 
           echo "$RESULT" | jq .
-          SUCCESS=$(echo "$RESULT" | jq -r '.success')
-          if [ "$SUCCESS" != "true" ]; then
-            echo "Failed to create DNS record"
-            exit 1
+          if [ "$(echo "$RESULT" | jq -r '.success')" = "true" ]; then
+            echo "TXT record created successfully"
+            exit 0
           fi
-          echo "TXT record created successfully"
+
+          CODE=$(echo "$RESULT" | jq -r '.errors[0].code // empty')
+          # 81057 = record already exists
+          if [ "$CODE" = "81057" ]; then
+            echo "TXT record already exists. Treating as success."
+            exit 0
+          fi
+          if [ "$CODE" = "10000" ]; then
+            echo "::error::Cloudflare 10000 on DNS create. The token can list the zone but lacks Zone.DNS Edit on authichain.com (or is a Global API Key used as Bearer). Grant DNS Edit, or add the TXT in the dashboard."
+          else
+            echo "::error::Failed to create DNS record (code ${CODE:-unknown})"
+          fi
+          exit 1

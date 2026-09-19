@@ -29,7 +29,7 @@ REST surface alongside tRPC. Notable live/critical ones:
 
 - **Money in:** `/api/stripe/webhook` (signature-verified, provisions guests by email + welcome email), `/api/webhooks/stripe`, `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (agent micropayments)
 - **Admin ops:** `/api/admin/ops` (admin-gated, aggregates `scheduled_job_runs` → OpsDashboard) ← wired 2026-07-15
-- **Autonomous cron endpoints** (CRON_SECRET-bearer gated, driven by GitHub Actions — see §5): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies}`, `/api/automation/cron`, `/api/trial-reminder`
+- **Autonomous cron endpoints** (CRON_SECRET-bearer gated): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies,dpp-exceptions}`, `/api/automation/cron`, `/api/trial-reminder`. GitHub `autonomous-business-cycle.yml` schedules are retired; DPP stalls also print from `scripts/revenue-cycle.ts --phase=report`.
 - **Lead capture / outreach:** `/api/lead-capture`, `/api/leads`, `/api/crm`, `/api/agentz/webhook` (logs to Supabase + upserts leads — a heartbeat, NOT an agent executor), `/api/social-proof`, `/api/waitlist`, `/api/testimonials`
 - **Product surface:** `/api/verify`, `/api/certificate`, `/api/seal`, `/api/generate` (QR art), `/api/provenance`, `/api/qron`, `/api/industrial`, `/api/governance`, `/api/strainchain`, `/api/govchain`
 - **Integrations:** `/api/telegram`, `/api/gpt` (GPT plugin), `/api/mcp`, `/api/keys` (API key mgmt), `/api/usage`, `/api/team`, `/api/x402`
@@ -84,7 +84,7 @@ A large automation layer invisible to repo code search. Key clusters:
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
-**⚠ Safety-critical:** the CLI `run` command **defaults to `--mode auto`** (executes all side-effects without prompting). Only **1 of 53** workflows (`reinvestment_handler`) carries `confirm_before_run: true`. Global safety comes from: (a) credential preflight blocks live execution when secrets are missing, (b) the GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so the 53 workflows fire **only when run manually** (`python -m agentz.cli run <id> --mode dry-run`). **Anyone running the CLI without `--mode dry-run` fires live outbound.** Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
+**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so registry workflows fire **only when run manually**. Prefer `--mode dry-run` until the DPP revenue loop is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
 
 ## 7. Money surface
 

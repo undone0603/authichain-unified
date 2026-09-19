@@ -1,13 +1,16 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { syncLeadToHubSpot, isHubSpotConfigured } from "../server/hubspot-service";
+import {
+  syncLeadToHubSpot,
+  isHubSpotConfigured,
+} from "../server/hubspot-service";
 import { ENV } from "../server/_core/env";
 
 /**
  * HubSpot CRM Sync Script - Michigan Cannabis leads
- * 
- * Takes the extracted leads from mi_cannabis_leads.csv and pushes them 
+ *
+ * Takes the extracted leads from mi_cannabis_leads.csv and pushes them
  * to HubSpot for tracking and automated follow-ups.
  */
 
@@ -23,7 +26,13 @@ if (fs.existsSync(envPath)) {
       const k = key.trim();
       const v = valueParts.join("=").trim();
       process.env[k] = v;
-      if (k === "HUBSPOT_SERVICE_KEY") (ENV as any).hubspotServiceKey = v;
+      if (
+        k === "HUBSPOT_SERVICE_KEY" ||
+        k === "HUBSPOT_ACCESS_TOKEN" ||
+        k === "HUBSPOT_TOKEN"
+      ) {
+        (ENV as any).hubspotServiceKey = v;
+      }
     }
   });
 }
@@ -35,7 +44,9 @@ async function runSync() {
   console.log("🟠 Starting HubSpot CRM Lead Sync...");
 
   if (!isHubSpotConfigured()) {
-    console.error("❌ HubSpot not configured. Check HUBSPOT_SERVICE_KEY in .env");
+    console.error(
+      "❌ HubSpot not configured. Set HUBSPOT_SERVICE_KEY (or HUBSPOT_ACCESS_TOKEN) for portal 245112265."
+    );
     return;
   }
 
@@ -50,16 +61,27 @@ async function runSync() {
   let syncedCount = 0;
   for (const line of lines) {
     if (!line.trim()) continue;
-    
+
     // email,first_name,company,dba,city,type,tax_vulnerability
-    const [email, first_name, company, dba, _unused_city_55, _unused_type_55, _unused_tax_vulnerability_55] = line.split(",");
+    const [
+      email,
+      first_name,
+      company,
+      dba,
+      _unused_city_55,
+      _unused_type_55,
+      _unused_tax_vulnerability_55,
+    ] = line.split(",");
 
     console.log(`📡 Syncing ${email} (${dba})...`);
-    
+
     try {
       const result = await syncLeadToHubSpot({
         email: email.trim(),
-        name: first_name === "Operations Director" ? `${dba} Operations` : first_name,
+        name:
+          first_name === "Operations Director"
+            ? `${dba} Operations`
+            : first_name,
         company: company.trim(),
       });
 
@@ -67,7 +89,9 @@ async function runSync() {
         syncedCount++;
         console.log(`✅ Synced: ${email}`);
       } else {
-        console.error(`✗ Failed: ${email} - ${result?.error || 'Unknown error'}`);
+        console.error(
+          `✗ Failed: ${email} - ${result?.error || "Unknown error"}`
+        );
       }
     } catch (e: any) {
       console.error(`✗ Error syncing ${email}: ${e.message}`);

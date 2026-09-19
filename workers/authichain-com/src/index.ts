@@ -2,6 +2,11 @@
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
+import { tryHandleDppRoute } from "./dpp-routes";
+import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import { APP_PREFIXES } from "./app-prefixes";
+import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
+import { renderContactPage } from "./contact-page.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -32,6 +37,10 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // Landing HTML must not be stored as /api/* (CF cache HIT was serving the
+  // homepage for checkout and cron, so DPP-SMOKE-E2E never reached Stripe).
+  'Cache-Control': 'private, no-store',
+  'CDN-Cache-Control': 'no-store',
 };
 
 const BRANDS = {
@@ -3123,7 +3132,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/api/checkout/dpp">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3137,7 +3146,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" id="dpp-checkout-cta" href="/api/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
+        <a class="btn btn-primary" id="dpp-checkout-cta" href="/protocol/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
@@ -3165,7 +3174,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
-      var checkout = '/api/checkout/dpp?' + q.toString();
+      var checkout = '/protocol/checkout/dpp?' + q.toString();
       ['dpp-checkout-cta','nav-dpp-cta'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.setAttribute('href', checkout);
@@ -3312,6 +3321,52 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
  */
 interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PRICE_ID?: string;
+}
+
+/** Escapes text interpolated into the 404 document. */
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[<>&"']/g, (c) =>
+    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c] as string,
+  );
+}
+
+/**
+ * Answers an unknown path with a real 404.
+ *
+ * This worker used to end with an unconditional `return new Response(HTML)`, so
+ * every unmatched URL — a typo, a retired campaign link, an invented /vs slug, a
+ * malformed /cert id — answered 200 with the homepage. Nothing downstream could
+ * tell a live page from a dead one: crawlers indexed phantom URLs, link checkers
+ * reported clean, and the sitemap could claim anything without being wrong.
+ */
+function notFound(pathname: string): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>404 — Not Found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+.code{font-size:clamp(3rem,12vw,6rem);font-weight:900;color:#00FFD1;line-height:1}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1.75rem}
+code{background:#09090b;border:1px solid #27272a;border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:#d4d4d8;word-break:break-all}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:#00FFD1;color:#000;text-decoration:none}
+a.btn.ghost{background:transparent;border:1px solid #27272a;color:#fff}
+</style></head><body><main>
+<div class="code">404</div>
+<h1>This page does not exist</h1>
+<p><code>${escapeHtml(pathname)}</code> is not a page on authichain.com.</p>
+<div class="links"><a class="btn" href="/">Home</a><a class="btn ghost" href="/anchor">Verify a product</a><a class="btn ghost" href="/contact">Contact</a></div>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
 }
 
 export default {
@@ -3335,7 +3390,22 @@ export default {
       return assetResponse(FAVICON_SVG);
     }
     if (p === '/sitemap.xml') {
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/anchor</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/protocol</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
+      // Only URLs this worker (or APP_WORKER) actually serves. /about, /book,
+      // /authichain, /authichain/technology and /authichain/pilots were listed
+      // here for months with no handler in this worker and no entry in
+      // worker-app/route-manifest.ts, so each one resolved to the homepage at
+      // 200 — a sitemap promising five pages that did not exist.
+      const staticUrls = [
+        { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
+        { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
+      ];
+      const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
+        .map((u) => `<url><loc>${u.loc}</loc><changefreq>${u.freq}</changefreq><priority>${u.pri}</priority></url>`)
+        .join('')}</urlset>`;
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
@@ -3352,13 +3422,10 @@ export default {
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
-    // Self-serve thanks/activate live on the app; keep /dpp marketing here.
-    if (p === '/dpp/thanks' || p.startsWith('/dpp/thanks/') || p === '/dpp/activate' || p.startsWith('/dpp/activate/')) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
-    }
+    const dppPage = tryHandleDppRoute(request);
+    if (dppPage) return dppPage;
+    const checkout = await tryHandleProtocolCheckout(request, env);
+    if (checkout) return checkout;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3386,14 +3453,28 @@ export default {
     // APP_WORKER doc comment above this file's `export default`).
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
-    const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
-      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
+    if (p === '/contact') {
+      return new Response(renderContactPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p === '/vs' || p === '/vs/') {
+      return new Response(renderVsIndex(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p.startsWith('/vs/')) {
+      const def = findVsPage(p.slice('/vs/'.length).replace(/\/$/, ''));
+      if (def) {
+        return new Response(renderVsPage(def), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      }
+      // An unknown competitor slug is a 404, not the /vs index — otherwise every
+      // invented slug would answer 200 and the sitemap would be unfalsifiable.
+      return notFound(p);
+    }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       if (env.APP_WORKER) {
         return env.APP_WORKER.fetch(request);
       }
       return new Response('App worker not bound (local dev)', { status: 502 });
     }
+    if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

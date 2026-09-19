@@ -939,6 +939,21 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
     } catch {
       lines.push("revenue_records: unavailable");
     }
+
+    try {
+      const { fetchAllLoopEvents, summarizeDppLoop } = await import(
+        "../src/lib/dpp-loop"
+      );
+      const summary = summarizeDppLoop(await fetchAllLoopEvents(db));
+      lines.push(`DPP exceptions: ${summary.exceptions.length}`);
+      for (const e of summary.exceptions.slice(0, 20)) {
+        lines.push(
+          `  ${e.visitId} ${e.furthest} → ${e.stall.nextExpected ?? "—"} (${e.stall.hours ?? 0}h)`
+        );
+      }
+    } catch (err: any) {
+      lines.push(`DPP exceptions: failed (${err.message})`);
+    }
   } else {
     lines.push("Supabase: not configured");
   }

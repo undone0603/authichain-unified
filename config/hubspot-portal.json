@@ -1,0 +1,37 @@
+{
+  "portalId": 245112265,
+  "name": "Authichain",
+  "uiDomain": "app-na2.hubspot.com",
+  "apiBase": "https://api.hubapi.com",
+  "accountType": "STANDARD",
+  "timezone": "US/Eastern",
+  "currency": "USD",
+  "ownerId": 87978084,
+  "pipelineId": "default",
+  "pipelineLabel": "Sales Pipeline",
+  "grokConnector": {
+    "connected": true,
+    "connectedAt": "2026-09-17",
+    "source": "Grok HubSpot connector"
+  },
+  "env": {
+    "serviceKey": "HUBSPOT_SERVICE_KEY",
+    "portalId": "HUBSPOT_PORTAL_ID"
+  },
+  "recordTypeIds": {
+    "contact": "0-1",
+    "company": "0-2",
+    "deal": "0-3",
+    "ticket": "0-5",
+    "task": "0-27"
+  },
+  "stages": [
+    { "id": "appointmentscheduled", "label": "Appointment Scheduled" },
+    { "id": "qualifiedtobuy", "label": "Qualified To Buy" },
+    { "id": "presentationscheduled", "label": "Presentation Scheduled" },
+    { "id": "decisionmakerboughtin", "label": "Decision Maker Bought-In" },
+    { "id": "contractsent", "label": "Contract Sent" },
+    { "id": "closedwon", "label": "Closed Won" },
+    { "id": "closedlost", "label": "Closed Lost" }
+  ]
+}

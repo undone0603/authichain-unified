@@ -6,6 +6,7 @@ import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
+import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
 import {
   anchorStripeReversal,
   anchorStripeSale,
@@ -238,15 +239,9 @@ export async function POST(req: NextRequest) {
         const visitId =
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
-        if (dppOffer && visitId) {
-          await recordDppLoopEvent(getSupabase(), {
-            visitId: String(visitId),
-            stage: "payment_succeeded",
-            source: md.source || "direct",
-            email,
-            stripeSessionId: session.id,
-            metadata: { plan, brand, amount_total: session.amount_total },
-          });
+        if (dppOffer) {
+          await fulfillDppPaidSession(getSupabase(), session);
+          break;
         }
 
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
