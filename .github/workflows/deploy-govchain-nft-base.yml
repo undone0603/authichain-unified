@@ -1,0 +1,213 @@
+# Signed AuthiChainNFT deploy for GovChain pilots (Base 8453).
+#
+# Default is dry_run=true (compile + RPC + artifact + optional gas estimate).
+# Live deploy only when the owner unchecks dry_run on workflow_dispatch.
+# Pull requests compile the artifact only — they never receive the ops key.
+#
+# Required secrets for a live deploy (already expected on this repo):
+#   WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY   ops EOA (0xbad4…), not the Smart Wallet
+#   ALCHEMY_API_KEY                             optional; public Base RPC is the fallback
+#   GOVCHAIN_NFT_CONTRACT                       optional; if set, grant-only (no new deploy)
+#
+# After a live run: copy address from the job summary / deployments artifact,
+# set secret GOVCHAIN_NFT_CONTRACT, verify getCode != 0x, then enable gov-mint.yml.
+
+name: Deploy AuthiChainNFT (GovChain) to Base
+
+on:
+  pull_request:
+    paths:
+      - contracts/AuthiChainNFT.sol
+      - scripts/compile-authichain-nft.cjs
+      - scripts/deploy-authichain-nft-base.ts
+      - scripts/lib/authichain-nft-artifact.ts
+      - scripts/lib/evm-chains.ts
+      - .github/workflows/deploy-govchain-nft-base.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no tx). Uncheck only for a signed Base deploy."
+        required: false
+        default: true
+        type: boolean
+      chain:
+        description: "Target chain (Base 8453 is the GovChain pilot)."
+        required: false
+        default: base
+        type: choice
+        options:
+          - base
+          - base-sepolia
+          - polygon
+      grant_smart_wallet:
+        description: "Also verifyManufacturer(Coinbase Smart Wallet 0xC0D26735…)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-govchain-nft-${{ github.event_name == 'workflow_dispatch' && inputs.chain || 'base' }}
+  cancel-in-progress: false
+
+jobs:
+  compile-nft:
+    name: Compile AuthiChainNFT artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "10.28.2" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "22", cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Compile AuthiChainNFT
+        run: node scripts/compile-authichain-nft.cjs
+
+      - name: Verify artifact bytecode and ABI
+        run: |
+          node -e '
+          const fs = require("fs");
+          const a = JSON.parse(fs.readFileSync("artifacts/contracts/AuthiChainNFT.sol/AuthiChainNFT.json", "utf8"));
+          if (!a.bytecode || a.bytecode === "0x") process.exit(1);
+          const names = new Set((a.abi || []).map((x) => x.name));
+          for (const n of ["mintProduct", "verifyManufacturer", "isManufacturerVerified", "MINTER_ROLE", "hasRole"]) {
+            if (!names.has(n)) { console.error("missing ABI", n); process.exit(1); }
+          }
+          console.log("artifact_ok bytecode_bytes=" + ((a.bytecode.length - 2) / 2) + " abi=" + a.abi.length);
+          '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: authichain-nft-artifact
+          path: artifacts/contracts/AuthiChainNFT.sol/AuthiChainNFT.json
+          if-no-files-found: error
+
+  deploy-nft:
+    name: Deploy or grant AuthiChainNFT
+    if: github.event_name == 'workflow_dispatch'
+    needs: compile-nft
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      contract_address: ${{ steps.deploy.outputs.contract_address }}
+      dry_run: ${{ steps.deploy.outputs.dry_run }}
+      explorer: ${{ steps.deploy.outputs.explorer }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "10.28.2" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "22", cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Compile AuthiChainNFT
+        run: node scripts/compile-authichain-nft.cjs
+
+      - name: Check deploy secrets (names only)
+        id: secrets
+        env:
+          HAS_WALLET: ${{ secrets.WALLET_PRIVATE_KEY != '' }}
+          HAS_POLYGON: ${{ secrets.POLYGON_PRIVATE_KEY != '' }}
+          HAS_ALCHEMY: ${{ secrets.ALCHEMY_API_KEY != '' }}
+          HAS_CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT != '' }}
+        run: |
+          echo "has_wallet=${HAS_WALLET}"
+          echo "has_polygon_key=${HAS_POLYGON}"
+          echo "has_alchemy=${HAS_ALCHEMY}"
+          echo "has_existing_contract=${HAS_CONTRACT}"
+          if [ "${HAS_WALLET}" != "true" ] && [ "${HAS_POLYGON}" != "true" ]; then
+            echo "::warning::No WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY secret"
+            if [ "${{ inputs.dry_run }}" = "false" ]; then
+              echo "::error::Live deploy needs WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY"
+              exit 1
+            fi
+          fi
+
+      - name: Deploy AuthiChainNFT
+        id: deploy
+        env:
+          CHAIN: ${{ inputs.chain || 'base' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          GRANT_SMART_WALLET: ${{ inputs.grant_smart_wallet }}
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          GOVCHAIN_NFT_CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          CONTRACT_ADDRESS: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+        run: pnpm exec tsx scripts/deploy-authichain-nft-base.ts
+
+      - name: Verify getCode on the target chain
+        if: steps.deploy.outputs.contract_address != ''
+        env:
+          CHAIN: ${{ inputs.chain || 'base' }}
+          CONTRACT: ${{ steps.deploy.outputs.contract_address }}
+        run: |
+          case "$CHAIN" in
+            polygon) RPC="https://polygon-rpc.com" ;;
+            base-sepolia) RPC="https://sepolia.base.org" ;;
+            *) RPC="https://mainnet.base.org" ;;
+          esac
+          echo "Checking getCode for $CONTRACT via $RPC"
+          BODY=$(printf '{"jsonrpc":"2.0","id":1,"method":"eth_getCode","params":["%s","latest"]}' "$CONTRACT")
+          RESP=$(curl -sS -X POST "$RPC" -H 'content-type: application/json' -d "$BODY")
+          echo "${RESP:0:160}"
+          CODE=$(printf '%s' "$RESP" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{process.stdout.write(String(JSON.parse(s).result||""))}catch{process.stdout.write("")}})')
+          if [ -z "$CODE" ] || [ "$CODE" = "0x" ] || [ "$CODE" = "0x0" ]; then
+            echo "::error::getCode is empty for $CONTRACT on $CHAIN"
+            exit 1
+          fi
+          BYTES=$(( (${#CODE} - 2) / 2 ))
+          echo "getCode_ok bytes=${BYTES}"
+          echo "### getCode proof" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- chain: \`$CHAIN\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- address: \`$CONTRACT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- bytecode bytes: \`${BYTES}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$CHAIN" = "base" ]; then
+            echo "- Basescan: https://basescan.org/address/${CONTRACT}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: authichain-nft-deploy-${{ inputs.chain || 'base' }}
+          path: deployments/AuthiChainNFT.*.json
+          if-no-files-found: warn
+
+      - name: Owner next steps
+        if: always()
+        env:
+          ADDR: ${{ steps.deploy.outputs.contract_address }}
+          DRY: ${{ steps.deploy.outputs.dry_run }}
+          EXPLORER: ${{ steps.deploy.outputs.explorer }}
+          CHAIN: ${{ inputs.chain || 'base' }}
+        run: |
+          {
+            echo "## Deploy AuthiChainNFT"
+            echo ""
+            echo "- dry_run: \`${DRY:-unknown}\`"
+            echo "- chain: \`${CHAIN}\`"
+            echo "- address: \`${ADDR:-not deployed (dry run or grant skipped)}\`"
+            echo "- explorer: ${EXPLORER:-n/a}"
+            echo ""
+            if [ "${DRY}" = "false" ] && [ -n "${ADDR}" ]; then
+              echo "### After this live run"
+              echo "1. Set Actions secret \`GOVCHAIN_NFT_CONTRACT=${ADDR}\`"
+              echo "2. Confirm getCode != \`0x\` (step above) and open ${EXPLORER}"
+              echo "3. Enable gov-mint dry-run only:"
+              echo ""
+              echo '```'
+              echo "gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/304825951/enable"
+              echo "gh workflow run gov-mint.yml --ref main -f dry_run=true -f chain=${CHAIN}"
+              echo '```'
+              echo ""
+              echo "Do **not** dispatch gov-mint with dry_run=false until getCode is proven."
+            else
+              echo "This was a dry run (or no address). Re-dispatch with **dry_run unchecked** to send the signed deploy."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

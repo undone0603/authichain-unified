@@ -10,8 +10,9 @@ import type { HardhatUserConfig } from "hardhat/config";
  *   npx hardhat test
  *   npx hardhat run scripts/ledger/deploy.ts --network amoy
  *
- * sources stay scoped to contracts/ledger. AuthiChainNFT is deployed with
- * thirdweb or scripts/deploy-authichain-nft-base.ts, not this compile path.
+ * sources stay scoped to contracts/ledger. AuthiChainNFT is compiled with
+ * scripts/compile-authichain-nft.cjs and deployed with
+ * scripts/deploy-authichain-nft-base.ts (Actions: deploy-govchain-nft-base.yml).
  */
 const accounts = process.env.MINTER_PRIVATE_KEY
   ? [process.env.MINTER_PRIVATE_KEY]
