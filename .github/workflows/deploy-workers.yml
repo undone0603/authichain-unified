@@ -11,6 +11,11 @@ on:
         description: "Specific worker dir to deploy (e.g. authichain-api). Leave blank for all."
         required: false
         type: string
+      deploy_agentz_containers:
+        description: "Deploy authichain-agentz (Cloudflare Containers / Workers Paid). Default off — $0 path uses Tunnel and leaves Containers undeployed."
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
   id-token: write
@@ -85,6 +90,11 @@ jobs:
           - passport-demo
           - qfs-adapter
           - authichain-bridge
+    # $0 path: do not auto-deploy Cloudflare Containers. authichain-agentz
+    # stays in the matrix for opt-in dispatch only (Workers Paid).
+    if: |
+      matrix.worker != 'authichain-agentz' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

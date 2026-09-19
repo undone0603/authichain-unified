@@ -20,3 +20,10 @@ a6fdb4d15ead69d327678f51c2c8025441cb8a7f:scripts/test-truth-layer-loop.ts:openai
 3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:91
 3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:scripts/mi-cannabis-extraction.ts:openai-key:25
 3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:scripts/test-truth-layer-loop.ts:openai-key:48
+# Same remediation doc after the 2026-08-31 docs/ move (Deploy Workers
+# workflow_dispatch 35471370150 failed on these historical fingerprints).
+b2f3be89163e96be7f7873677093ffac73670423:docs/technical-reference/docs-agentz/SECURITY-REMEDIATION-CRITICAL.md:groq-key:171
+b2f3be89163e96be7f7873677093ffac73670423:docs/technical-reference/docs-agentz/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:158
+b2f3be89163e96be7f7873677093ffac73670423:docs/technical-reference/docs-agentz/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:159
+b2f3be89163e96be7f7873677093ffac73670423:docs/technical-reference/docs-agentz/SECURITY-REMEDIATION-CRITICAL.md:stripe-live-key:47
+b2f3be89163e96be7f7873677093ffac73670423:docs/technical-reference/docs-agentz/SECURITY-REMEDIATION-CRITICAL.md:stripe-webhook-secret:60
