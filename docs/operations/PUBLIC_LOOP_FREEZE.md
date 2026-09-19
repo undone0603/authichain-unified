@@ -1,6 +1,8 @@
-# Public-loop freeze — updated 2026-09-17
+# Public-loop freeze — updated 2026-09-19
 
 Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and activate** without a login code. Access is no longer the gate.
+
+**Safe tick (does not thaw this freeze):** weekday `genesis-cron.yml` hits `GET /api/automation/cron` only. See `docs/operations/GENESIS_CRON.md`. Do not uncomment `worker-app/wrangler.toml` GROUP B crons or enable gov-mint / outreach from that path.
 
 ## Status - 2026-09-18 staged re-enable
 
