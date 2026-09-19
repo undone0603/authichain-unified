@@ -12,10 +12,13 @@
  * This Worker exposes:
  *   POST /webhook/openclaw   — receives inbound messages from OpenClaw
  *                              gateway (channel messages routed to AgentZ)
- *   POST /command            — sends a command to AgentZ and returns result
- *   GET  /health             — liveness check
- *   GET  /agents             — lists AgentZ agents (proxy to AgentZ API)
- *   POST /architect/cycle    — triggers the Unified Architect cycle
+ *   POST /command            — AgentZ/CLI command against AgentZ (Bearer)
+ *   POST /notify             — AgentZ → OpenClaw outbound notify (Bearer)
+ *   GET  /health             — liveness check (public)
+ *   GET  /gateway/status     — bridge config status (Bearer)
+ *   GET  /agents             — lists AgentZ agents (proxy, Bearer)
+ *   GET  /workflows          — lists AgentZ workflows (proxy, Bearer)
+ *   POST /architect/cycle    — triggers the Unified Architect cycle (Bearer)
  *
  * The OpenClaw gateway forwards messages it receives from connected
  * channels (WhatsApp, Telegram, etc.) to this webhook. The Worker parses
@@ -54,6 +57,49 @@ interface OpenClawMessage {
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
 
+
+// ── Auth helpers (AgentZ → bridge + CLI) ──────────────────────────────────────
+
+function bearerOk(c: {
+  req: { header: (n: string) => string | undefined };
+  env: Bindings;
+}): boolean {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader) return false;
+  const key = c.env.OPENCLAW_API_KEY;
+  const agentzKey = c.env.AGENTZ_API_KEY;
+  if (key && authHeader === `Bearer ${key}`) return true;
+  if (agentzKey && authHeader === `Bearer ${agentzKey}`) return true;
+  return false;
+}
+
+function unauthorized(c: any) {
+  return c.json({ error: "unauthorized" }, 401);
+}
+
+function isLocalUrl(url: string): boolean {
+  try {
+    const u = new URL(url.replace(/^ws/i, "http"));
+    return (
+      u.hostname === "localhost" ||
+      u.hostname === "127.0.0.1" ||
+      u.hostname === "0.0.0.0" ||
+      u.hostname.endsWith(".local")
+    );
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(url);
+  }
+}
+
+function redactUrl(url: string): string {
+  try {
+    const u = new URL(url.replace(/^ws/i, "http"));
+    return `${u.protocol}//${u.host}/…`;
+  } catch {
+    return "(unparseable)";
+  }
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
 app.get("/health", c => {
@@ -62,7 +108,30 @@ app.get("/health", c => {
     service: "authichain-openclaw",
     openclaw_gateway: c.env.OPENCLAW_GATEWAY_URL ? "configured" : "not_set",
     agentz_api: c.env.AGENTZ_API_URL ? "configured" : "not_set",
-    version: "1.0.0",
+    version: "1.1.0",
+  });
+});
+
+app.get("/gateway/status", c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  const gw = (c.env.OPENCLAW_GATEWAY_URL || "").trim();
+  const agentz = (c.env.AGENTZ_API_URL || "").trim();
+  return c.json({
+    status: "ok",
+    service: "authichain-openclaw",
+    version: "1.1.0",
+    openclaw_gateway: gw ? "configured" : "not_set",
+    agentz_api: agentz ? "configured" : "not_set",
+    openclaw_gateway_hint: gw ? redactUrl(gw) : null,
+    agentz_api_hint: agentz ? redactUrl(agentz) : null,
+    notes: [
+      gw && isLocalUrl(gw)
+        ? "OPENCLAW_GATEWAY_URL looks local — Cloudflare Workers cannot reach localhost. Use a public tunnel/VPS URL."
+        : null,
+      agentz && isLocalUrl(agentz)
+        ? "AGENTZ_API_URL looks local — Workers cannot reach localhost. Point at a reachable FastAPI host."
+        : null,
+    ].filter(Boolean),
   });
 });
 
@@ -92,6 +161,75 @@ async function agentzFetch(
   } finally {
     clearTimeout(timer);
   }
+}
+
+
+// ── OpenClaw gateway outbound (Worker → gateway hooks) ───────────────────────
+
+async function openclawNotify(
+  env: Bindings,
+  body: {
+    text: string;
+    mode?: string;
+    channel?: string;
+    to?: string;
+    idempotency_key?: string;
+  }
+): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const gw = (env.OPENCLAW_GATEWAY_URL || "").trim();
+  if (!gw) {
+    return { ok: false, status: 503, data: { error: "OPENCLAW_GATEWAY_URL not_set" } };
+  }
+  if (isLocalUrl(gw)) {
+    return {
+      ok: false,
+      status: 503,
+      data: {
+        error:
+          "OPENCLAW_GATEWAY_URL is local; Workers cannot reach localhost. Use a public tunnel/VPS.",
+      },
+    };
+  }
+
+  const httpBase = gw
+    .replace(/^wss:/i, "https:")
+    .replace(/^ws:/i, "http:")
+    .replace(/\/$/, "");
+
+  const wakeMode = body.mode === "next-heartbeat" ? "next-heartbeat" : "now";
+  const payload: Record<string, unknown> = {
+    text: body.text,
+    mode: wakeMode,
+  };
+  const useAgent = Boolean(body.channel || body.to);
+  const path = useAgent ? "/hooks/agent" : "/hooks/wake";
+  if (useAgent) {
+    payload.message = body.text;
+    payload.deliver = true;
+    if (body.channel) payload.channel = body.channel;
+    if (body.to) payload.to = body.to;
+    payload.wakeMode = wakeMode;
+    if (body.idempotency_key)
+      payload.sessionKey = `hook:agentz:${body.idempotency_key}`;
+  }
+
+  const res = await fetch(`${httpBase}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.OPENCLAW_API_KEY}`,
+      "x-openclaw-token": env.OPENCLAW_API_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+  const raw = await res.text();
+  let data: unknown = raw;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { raw };
+  }
+  return { ok: res.ok, status: res.status, data };
 }
 
 // ── OpenClaw webhook receiver ────────────────────────────────────────────────
@@ -287,7 +425,19 @@ async function listWorkflows(c: any) {
 
 // ── Direct command endpoint (for CLI / API calls, not OpenClaw) ───────────────
 
+app.get("/agents", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  return await listAgents(c);
+});
+
+app.get("/workflows", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  return await listWorkflows(c);
+});
+
 app.post("/command", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+
   const body = await c.req.json().catch(() => ({}));
   const { command, args } = body;
 
@@ -304,14 +454,60 @@ app.post("/command", async c => {
       return await listAgents(c);
     case "list_workflows":
       return await listWorkflows(c);
+    case "help":
+      return c.json({ response: formatHelp() });
     default:
       return c.json({ error: `unknown command: ${command}` }, 400);
+  }
+});
+
+app.post("/notify", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+
+  const body = await c.req.json().catch(() => ({}));
+  const text = (body as { text?: string }).text;
+  if (!text || typeof text !== "string") {
+    return c.json({ error: "text required" }, 400);
+  }
+
+  const dryRun = Boolean((body as { dry_run?: boolean }).dry_run);
+  const payload = {
+    text,
+    mode: (body as { mode?: string }).mode,
+    channel: (body as { channel?: string }).channel,
+    to: (body as { to?: string }).to,
+    idempotency_key: (body as { idempotency_key?: string }).idempotency_key,
+  };
+
+  if (dryRun) {
+    return c.json({
+      ok: true,
+      dry_run: true,
+      would_notify: {
+        ...payload,
+        gateway: c.env.OPENCLAW_GATEWAY_URL
+          ? redactUrl(c.env.OPENCLAW_GATEWAY_URL)
+          : "not_set",
+      },
+    });
+  }
+
+  try {
+    const result = await openclawNotify(c.env, payload);
+    return c.json(
+      { ok: result.ok, status: result.status, result: result.data },
+      result.ok ? 200 : (result.status as 502 | 503)
+    );
+  } catch (e: any) {
+    return c.json({ ok: false, error: e.message }, 502);
   }
 });
 
 // ── Architect cycle endpoint ──────────────────────────────────────────────────
 
 app.post("/architect/cycle", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+
   const body = await c.req.json().catch(() => ({}));
   const mode = body.mode || "dry-run";
   const goal =
@@ -344,6 +540,8 @@ function formatHelp(): string {
     "",
     "Messages from any connected channel (WhatsApp, Telegram, Slack, etc.)",
     "are routed here by the OpenClaw gateway.",
+    "",
+    "AgentZ can call back via POST /notify and POST /command on this Worker.",
   ].join("\n");
 }
 
