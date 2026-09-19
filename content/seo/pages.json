@@ -8191,5 +8191,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "textile-digital-product-passport-49-data-points-jrc",
+    "keyword": "textile digital product passport 49 data points jrc",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Textile Digital Product Passport 49 Data | AuthiChain",
+    "metaDescription": "The Joint Research Centre’s May 2026 content specification for textile and apparel passports sets out 49 data points across four categories — the clearest.",
+    "h1": "Textile Digital Product Passport 49 Data Points Jrc",
+    "bodyHtml": "<p>The Joint Research Centre’s May 2026 content specification for textile and apparel passports sets out 49 data points across four categories — the clearest signal yet of what the pending ESPR delegated act will require, though it is a technical proposal, not binding law.</p><h2>Why AuthiChain</h2><ul><li>The 49 fields split into product identification (GTIN, model and batch IDs, HS/TARIC codes), producer identification (GLN/EORI facility IDs), product information (fibre composition, recyclability score, substances of concern), and compliance documentation</li><li>Every field maps onto a property inside credentialSubject on a single W3C Verifiable Credential — a content proposal changes what a record carries, not the record format protocol/SPEC.md already defines</li><li>The specification feeds the textile delegated act rather than replacing it; the ESPR Working Plan still targets that act for around the end of 2027, with first obligations landing on Spring/Summer 2028 collections</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the 49-data-point specification legally binding today?</h3><p>No — it is JRC’s technical proposal, published May 2026 ahead of the textile delegated act the ESPR Working Plan targets for around the end of 2027. Binding requirements wait on that act adopting.</p><h3>Can we structure a passport around these fields before the delegated act adopts?</h3><p>Yes — the fields slot into credentialSubject on the same W3C Verifiable Credential model already issued for batteries and steel passports; the record format doesn’t change when the delegated act finalizes the exact field list.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Textile Digital Product Passport 49 Data Points Jrc",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Joint Research Centre’s May 2026 content specification for textile and apparel passports sets out 49 data points across four categories — the clearest signal yet of what the pending ESPR delegated act will require, though it is a technical proposal, not binding law.",
+          "url": "https://authichain.com/p/textile-digital-product-passport-49-data-points-jrc"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Textile Digital Product Passport 49 Data Points Jrc",
+              "item": "https://authichain.com/p/textile-digital-product-passport-49-data-points-jrc"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the 49-data-point specification legally binding today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it is JRC’s technical proposal, published May 2026 ahead of the textile delegated act the ESPR Working Plan targets for around the end of 2027. Binding requirements wait on that act adopting."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can we structure a passport around these fields before the delegated act adopts?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the fields slot into credentialSubject on the same W3C Verifiable Credential model already issued for batteries and steel passports; the record format doesn’t change when the delegated act finalizes the exact field list."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gs1-digital-link-uri-syntax-1-7-0-update",
+    "keyword": "gs1 digital link uri syntax 1.7.0 update",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "GS1 Digital Link Uri Syntax 1.7.0 Update | QRON",
+    "metaDescription": "GS1 ratified Digital Link URI Syntax 1.7.0 in August 2026 — a maintenance release that tightens how a resolver parses application-identifier values, not a.",
+    "h1": "GS1 Digital Link Uri Syntax 1.7.0 Update",
+    "bodyHtml": "<p>GS1 ratified Digital Link URI Syntax 1.7.0 in August 2026 — a maintenance release that tightens how a resolver parses application-identifier values, not a new feature with an adoption deadline attached.</p><h2>Why QRON</h2><ul><li>The primary identification key’s GTIN is now always expressed at 14 digits, so GTIN-8, GTIN-12, and GTIN-13 values carry leading-zero padding instead of varying by format</li><li>AI 8008 (harvest or production date-time) narrows from an open-ended digit count to exactly 8, 10, or 12 digits — a value built to the older, looser rule is the one case worth re-checking against strict 1.7.0 validation</li><li>The redundant locNoParameter was removed, since glnParameter already expresses the same thing, and data attributes were realigned with GS1 General Specifications 26.0</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Do existing GS1 Digital Link QR codes stop working under 1.7.0?</h3><p>For most identifiers, no — 1.7.0 tightens parsing rules a strict resolver or verifier checks against. AI 8008 date-time values built to the prior, looser digit count are the specific case worth re-validating; GTIN and most other identifiers are unaffected in practice.</p><h3>Does 1.7.0 change which URL format QRON issues records against?</h3><p>No — protocol/SPEC.md §2 already requires GS1 Digital Link identity. A syntax point release tightens validation rules underneath that requirement; it does not change the URL format the spec targets.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — GS1 Digital Link Uri Syntax 1.7.0 Update",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "GS1 ratified Digital Link URI Syntax 1.7.0 in August 2026 — a maintenance release that tightens how a resolver parses application-identifier values, not a new feature with an adoption deadline attached.",
+          "url": "https://qron.space/p/gs1-digital-link-uri-syntax-1-7-0-update"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "GS1 Digital Link Uri Syntax 1.7.0 Update",
+              "item": "https://qron.space/p/gs1-digital-link-uri-syntax-1-7-0-update"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do existing GS1 Digital Link QR codes stop working under 1.7.0?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "For most identifiers, no — 1.7.0 tightens parsing rules a strict resolver or verifier checks against. AI 8008 date-time values built to the prior, looser digit count are the specific case worth re-validating; GTIN and most other identifiers are unaffected in practice."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does 1.7.0 change which URL format QRON issues records against?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — protocol/SPEC.md §2 already requires GS1 Digital Link identity. A syntax point release tightens validation rules underneath that requirement; it does not change the URL format the spec targets."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "w3c-verifiable-credentials-data-model-2-1",
+    "keyword": "w3c verifiable credentials data model 2.1",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "W3C Verifiable Credentials Data Model 2.1 | AuthiChain",
+    "metaDescription": "W3C published a First Public Working Draft of Verifiable Credentials Data Model 2.1 in April 2026 — an early-stage revision of the 2.0 Recommendation.",
+    "h1": "W3C Verifiable Credentials Data Model 2.1",
+    "bodyHtml": "<p>W3C published a First Public Working Draft of Verifiable Credentials Data Model 2.1 in April 2026 — an early-stage revision of the 2.0 Recommendation protocol/SPEC.md §2 already targets, not a new base format a conforming implementation needs to chase yet.</p><h2>Why AuthiChain</h2><ul><li>VC Data Model 2.0 remains the published W3C Recommendation; 2.1 is a Working Draft on the Recommendation track, open to change before it reaches Recommendation status itself</li><li>A record built to 2.0’s required fields — @context, type, issuer, validFrom, credentialSubject.id, proof — needs no reissuing for 2.1 to exist; a Working Draft is not something a conforming verifier is expected to implement</li><li>protocol/SPEC.md pins to the finished Recommendation rather than a moving Working Draft, and revisits the question once 2.1 itself reaches Recommendation status</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Should records target VC Data Model 2.1 instead of 2.0 now?</h3><p>Not yet — 2.1 is a First Public Working Draft, the earliest stage of the W3C process, and its content can still change before Recommendation. protocol/SPEC.md targets VC 2.0, the finished Recommendation.</p><h3>Will a VC 2.0 record stop verifying once 2.1 exists?</h3><p>No — 2.0 stays a published W3C Recommendation regardless of 2.1’s progress. A conforming 2.0 verifier keeps validating 2.0 records; 2.1’s draft status changes nothing about them.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — W3C Verifiable Credentials Data Model 2.1",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C published a First Public Working Draft of Verifiable Credentials Data Model 2.1 in April 2026 — an early-stage revision of the 2.0 Recommendation protocol/SPEC.md §2 already targets, not a new base format a conforming implementation needs to chase yet.",
+          "url": "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Verifiable Credentials Data Model 2.1",
+              "item": "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Should records target VC Data Model 2.1 instead of 2.0 now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — 2.1 is a First Public Working Draft, the earliest stage of the W3C process, and its content can still change before Recommendation. protocol/SPEC.md targets VC 2.0, the finished Recommendation."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will a VC 2.0 record stop verifying once 2.1 exists?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — 2.0 stays a published W3C Recommendation regardless of 2.1’s progress. A conforming 2.0 verifier keeps validating 2.0 records; 2.1’s draft status changes nothing about them."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "vcalm-vc-api-credential-lifecycle-management-http",
+    "keyword": "vcalm vc-api credential lifecycle management http",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Vcalm Vc-API Credential Lifecycle Management | AuthiChain",
+    "metaDescription": "VCALM — an HTTP API for issuing, presenting, and verifying Verifiable Credentials — reached Working Draft status on the W3C Recommendation track in 2026.",
+    "h1": "Vcalm Vc-API Credential Lifecycle Management Http",
+    "bodyHtml": "<p>VCALM — an HTTP API for issuing, presenting, and verifying Verifiable Credentials — reached Working Draft status on the W3C Recommendation track in 2026, standardizing how an issuer’s own systems expose those operations over a network call, a different problem than the network-free verification protocol/SPEC.md §5 specifies.</p><h2>Why AuthiChain</h2><ul><li>VCALM defines REST endpoints a system acting as an issuer, holder, or verifier exposes to other systems inside its own security domain — it standardizes a service interface, not what an unrelated third party checks with no relationship to that service</li><li>protocol/SPEC.md §5 verifies a record’s signature with zero network access — no VCALM endpoint, issuer server, or account sits in the path a third party runs offline</li><li>The two do not compete: an issuer could run a VCALM-conformant service to manage credential issuance internally and still publish records that verify offline exactly as this protocol specifies, since VCALM governs the issuer’s own workflow, not the record format</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this protocol implement VCALM?</h3><p>No — VCALM standardizes HTTP endpoints for an issuer, holder, or verifier’s own systems to manage credentials. This protocol’s verification path needs no such API: a third party checks a record’s signature directly, with no network call to any service.</p><h3>Is VCALM a finished W3C standard?</h3><p>No — VCALM v1.0 is a Working Draft on the Recommendation track as of 2026, alongside a separate Community Group Report (v0.9) targeting completion around 2028. Neither is a finished Recommendation.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Vcalm Vc-API Credential Lifecycle Management Http",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "VCALM — an HTTP API for issuing, presenting, and verifying Verifiable Credentials — reached Working Draft status on the W3C Recommendation track in 2026, standardizing how an issuer’s own systems expose those operations over a network call, a different problem than the network-free verification protocol/SPEC.md §5 specifies.",
+          "url": "https://authichain.com/p/vcalm-vc-api-credential-lifecycle-management-http"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Vcalm Vc-API Credential Lifecycle Management Http",
+              "item": "https://authichain.com/p/vcalm-vc-api-credential-lifecycle-management-http"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this protocol implement VCALM?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — VCALM standardizes HTTP endpoints for an issuer, holder, or verifier’s own systems to manage credentials. This protocol’s verification path needs no such API: a third party checks a record’s signature directly, with no network call to any service."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is VCALM a finished W3C standard?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — VCALM v1.0 is a Working Draft on the Recommendation track as of 2026, alongside a separate Community Group Report (v0.9) targeting completion around 2028. Neither is a finished Recommendation."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-unsold-clothing-footwear-destruction-ban-traceability",
+    "keyword": "eu unsold clothing footwear destruction ban traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Unsold Clothing Footwear Destruction Ban | AuthiChain",
+    "metaDescription": "ESPR’s ban on destroying unsold clothing, footwear, and accessories took effect for large companies on 19 July 2026 — and showing what actually happened to.",
+    "h1": "EU Unsold Clothing Footwear Destruction Ban Traceability",
+    "bodyHtml": "<p>ESPR’s ban on destroying unsold clothing, footwear, and accessories took effect for large companies on 19 July 2026 — and showing what actually happened to unsold stock is a traceability question a signed, per-batch record answers more directly than an internal disposal log assembled after the fact.</p><h2>Why AuthiChain</h2><ul><li>The ban applies to large companies from 19 July 2026; medium-sized companies get a later compliance date under the same regulation, and micro and small enterprises are exempt from it entirely</li><li>A company must disclose the quantity of unsold goods it discards and why — a per-batch signed record gives that disclosure a checkable source instead of a year-end estimate reconciled from memory</li><li>The destruction ban is a standalone ESPR obligation already in force, running well ahead of the textile and footwear Digital Product Passport delegated acts the ESPR Working Plan still targets for around 2027</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the unsold-goods destruction ban apply to every clothing and footwear seller?</h3><p>No — it applies to large companies from 19 July 2026. Medium-sized companies have a later compliance date under the same regulation, and micro and small enterprises are exempt entirely.</p><h3>Does a signed record satisfy the disclosure requirement by itself?</h3><p>A signed, timestamped record documents what happened to a specific batch — sold, returned, discarded — evidence a company can point to. It does not replace filing whatever disclosure format the enforcing authority requires.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Unsold Clothing Footwear Destruction Ban Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR’s ban on destroying unsold clothing, footwear, and accessories took effect for large companies on 19 July 2026 — and showing what actually happened to unsold stock is a traceability question a signed, per-batch record answers more directly than an internal disposal log assembled after the fact.",
+          "url": "https://authichain.com/p/eu-unsold-clothing-footwear-destruction-ban-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Unsold Clothing Footwear Destruction Ban Traceability",
+              "item": "https://authichain.com/p/eu-unsold-clothing-footwear-destruction-ban-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the unsold-goods destruction ban apply to every clothing and footwear seller?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it applies to large companies from 19 July 2026. Medium-sized companies have a later compliance date under the same regulation, and micro and small enterprises are exempt entirely."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy the disclosure requirement by itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A signed, timestamped record documents what happened to a specific batch — sold, returned, discarded — evidence a company can point to. It does not replace filing whatever disclosure format the enforcing authority requires."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
