@@ -134,8 +134,59 @@ export async function runLeadFinder(task: Task): Promise<void> {
   const expectedRevenue = SEGMENT_REVENUE[segment] ?? SEGMENT_REVENUE.DEFAULT;
   const expectedValue = (conversionMean * expectedRevenue).toFixed(0);
 
-  // ── Apollo lead discovery ─────────────────────────────────────────────────
-  const apolloLeads = await apolloSearchLeads(segment, count);
+  // ── Lead discovery ────────────────────────────────────────────────────────
+  // Apollo's mixed-people endpoint is a paid-plan dependency. When it is
+  // unavailable, keep the autonomous loop moving with leads already present
+  // in our registry. Any fallback lead without explicit provenance remains
+  // blocked by send-guard downstream.
+  const db = await getDb();
+  let apolloLeads: ApolloLead[] = [];
+  let discoverySource = "apollo";
+  try {
+    apolloLeads = await apolloSearchLeads(segment, count);
+  } catch (error) {
+    discoverySource = "existing_registry_fallback";
+    if (db) {
+      const fallback = await db.select().from(leads).limit(count);
+      apolloLeads = fallback
+        .filter(lead => !!lead.email && !!lead.company)
+        .map(lead => {
+          const meta = (lead.metadata ?? {}) as Record<string, unknown>;
+          const provenance = meta.provenance;
+          const verificationSource =
+            provenance === "apollo_verified"
+              ? "apollo_verified"
+              : provenance === "reacher_verified"
+                ? "reacher_verified"
+                : provenance === "published_contact"
+                  ? "published_contact"
+                  : "unknown";
+          const parts = (lead.name ?? "").trim().split(/\\s+/).filter(Boolean);
+          return {
+            name: lead.name ?? "",
+            firstName: parts[0] ?? "",
+            lastName: parts.slice(1).join(" "),
+            email: lead.email,
+            title: lead.title ?? "",
+            org: lead.company ?? "",
+            verificationSource,
+          } satisfies ApolloLead;
+        });
+    }
+    await logActivity({
+      userId: null,
+      action: "lead_finder_fallback",
+      entityType: "task",
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        segment,
+        source: discoverySource,
+        error: error instanceof Error ? error.message : String(error),
+        fallbackFound: apolloLeads.length,
+      },
+    });
+  }
 
   // ── LLM Bayesian scoring ──────────────────────────────────────────────────
   const scored = await scoreleads(
@@ -151,7 +202,6 @@ export async function runLeadFinder(task: Task): Promise<void> {
   const selected = scored.slice(0, count);
 
   // ── Insert + enqueue ───────────────────────────────────────────────────────
-  const db = await getDb();
   let inserted = 0;
 
   for (const lead of selected) {

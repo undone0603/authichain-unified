@@ -111,16 +111,31 @@ Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
-  const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
-  });
+  let subject = subjectFallback;
+  let body = `Hi ${payload.leadName ?? 'there'},\\n\\nI’m reaching out because AuthiChain helps brands verify product authenticity with QR-based cryptographic provenance and AI-assisted counterfeit detection. For ${payload.leadOrg ?? 'your organization'}, I can show a concise StoryMode proof and a practical path from scan to verification.\\n\\n${segment === 'LUXURY' ? 'Would a 10-minute demonstration be useful?' : 'Reply with interest and I’ll send the reference proof.'}\\n\\nBest,\\nAuthiChain`;
 
-  const parsed_email = parseLLMContent<OutboundEmailDraft>(result.choices[0].message.content);
-  const subject = parsed_email.subject ?? subjectFallback;
-  const body = parsed_email.body ?? '';
-
-  if (!body) throw new Error('LLM returned empty email body');
+  try {
+    const result = await invokeLLM({
+      messages: [{ role: 'user', content: prompt }],
+      responseFormat: { type: 'json_object' },
+    });
+    const parsed_email = parseLLMContent<OutboundEmailDraft>(result.choices[0].message.content);
+    subject = parsed_email.subject ?? subjectFallback;
+    body = parsed_email.body ?? body;
+    if (!body) throw new Error('LLM returned empty email body');
+  } catch (error) {
+    await logActivity({
+      userId: null,
+      action: 'outbound_email_llm_fallback',
+      entityType: 'task',
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        segment,
+        reason: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
 
   if (ENV.requireOutreachApproval) {
     const db = await getDb();
