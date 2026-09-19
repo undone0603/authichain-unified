@@ -36,7 +36,10 @@
     "build:server": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start:server": "NODE_ENV=production tsx server/_core/index.ts",
     "dev:server": "tsx watch server/_core/index.ts",
-    "ledger:authichain-nft": "tsx scripts/ledger/reconstruct-authichain-nft-ledger.ts"
+    "ledger:authichain-nft": "tsx scripts/ledger/reconstruct-authichain-nft-ledger.ts",
+    "test:historical-identities": "node scripts/validate-historical-identities.mjs",
+    "test:accountability-identities": "node scripts/validate-accountability-identities.mjs",
+    "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.66",

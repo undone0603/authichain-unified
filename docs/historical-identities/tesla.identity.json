@@ -1,0 +1,128 @@
+{
+  "schema_version": "historical-identity.v0.1",
+  "identity": {
+    "identity_id": "hist:nikola-tesla",
+    "canonical_name": "Nikola Tesla",
+    "alternate_names": [
+      "Tesla, Nikola"
+    ],
+    "birth": {
+      "date": "1856"
+    },
+    "death": {
+      "date": "1943"
+    },
+    "identity_status": "deceased_historical_figure",
+    "description": "Inventor and electrical engineer with archival material covering correspondence and wireless power."
+  },
+  "sources": [
+    {
+      "source_id": "src:smithsonian-tesla-papers-1904",
+      "title": "Nikola Tesla papers",
+      "publisher": "Smithsonian Libraries and Archives",
+      "source_type": "primary",
+      "url": "https://www.si.edu/object/nikola-tesla-papers:siris_sil_1102446",
+      "retrieved_at": "2026-09-19T12:00:00Z",
+      "rights": {
+        "status": "cc0",
+        "notes": "Smithsonian record states metadata usage is CC0; the linked digital-library item is also marked CC0/public domain."
+      }
+    },
+    {
+      "source_id": "src:smithsonian-tesla-digital-book",
+      "title": "Nikola Tesla papers",
+      "publisher": "Smithsonian Libraries",
+      "source_type": "primary",
+      "url": "https://library.si.edu/digital-library/book/nikolateslapape00tesl",
+      "retrieved_at": "2026-09-19T12:00:00Z",
+      "rights": {
+        "status": "cc0",
+        "notes": "Digital library record marks the work CC0/public domain."
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:tesla-identity",
+      "subject": "hist:nikola-tesla",
+      "predicate": "profession",
+      "object": [
+        "inventor",
+        "electrical engineer"
+      ],
+      "evidence_class": "direct"
+    },
+    {
+      "claim_id": "claim:tesla-wireless-power",
+      "subject": "hist:nikola-tesla",
+      "predicate": "documented_work",
+      "object": "wireless power transmission",
+      "evidence_class": "direct",
+      "notes": "The Smithsonian record describes Tesla's article and manuscripts concerning wireless power transmission."
+    },
+    {
+      "claim_id": "claim:tesla-colorado-springs",
+      "subject": "hist:nikola-tesla",
+      "predicate": "documented_location_context",
+      "object": "Colorado Springs",
+      "valid_from": "1899",
+      "valid_to": "1900",
+      "evidence_class": "contextual"
+    }
+  ],
+  "temporal_states": [
+    {
+      "state_id": "state:tesla-1899-colorado-springs",
+      "as_of": "1899",
+      "knowledge_cutoff": "1899-12-31",
+      "location": "Colorado Springs, Colorado, United States",
+      "known_claim_ids": [
+        "claim:tesla-identity",
+        "claim:tesla-wireless-power",
+        "claim:tesla-colorado-springs"
+      ],
+      "unknown_topics": [
+        "Later developments must not be used as if Tesla knew them in 1899."
+      ],
+      "persona_constraints": [
+        "Generated dialogue is reconstruction, not an authentic quotation.",
+        "Separate documentary evidence from inferred motives."
+      ]
+    }
+  ],
+  "evidence_edges": [
+    {
+      "edge_id": "edge:tesla-identity",
+      "from": "src:smithsonian-tesla-papers-1904",
+      "to": "claim:tesla-identity",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:tesla-wireless",
+      "from": "src:smithsonian-tesla-papers-1904",
+      "to": "claim:tesla-wireless-power",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:tesla-colorado",
+      "from": "src:smithsonian-tesla-papers-1904",
+      "to": "claim:tesla-colorado-springs",
+      "relation": "contextualizes",
+      "evidence_class": "contextual"
+    },
+    {
+      "edge_id": "edge:tesla-boundary",
+      "from": "state:tesla-1899-colorado-springs",
+      "to": "claim:tesla-wireless-power",
+      "relation": "bounded_by",
+      "evidence_class": "contextual"
+    }
+  ],
+  "attestation_subject": {
+    "subject_type": "historical_identity_manifest",
+    "canonicalization": "jcs-rfc8785",
+    "manifest_hash_input": "canonical(identity,sources,claims,temporal_states,evidence_edges)"
+  }
+}
