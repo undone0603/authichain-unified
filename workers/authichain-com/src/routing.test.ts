@@ -39,6 +39,11 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
 test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /href="\/dashboard"/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /--bg: #ffffff/);
 });
 
 test("/contact is a real page, not the homepage", async () => {

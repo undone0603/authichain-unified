@@ -111,8 +111,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
       ],
       closingLine:
         'Start protecting your products today. First seal included. No credit card required.',
-      primaryCta: { label: 'Get Started Free', href: '/onboard' },
-      secondaryCta: { label: 'Book a Demo', href: 'mailto:hello@authichain.com' },
+      primaryCta: { label: 'Open dashboard', href: '/dashboard' },
+      secondaryCta: { label: 'Start DPP checkout', href: '/api/checkout/dpp' },
     },
     qron: {
       eyebrow: 'AI QR Art',
@@ -157,8 +157,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: '1000s', label: 'Per Batch' },
       ],
       closingLine: 'Turn your links into art. Free credits included with signup.',
-      primaryCta: { label: 'Generate QR Art', href: '/qr-codes' },
-      secondaryCta: { label: 'View Gallery', href: '/gallery' },
+      primaryCta: { label: 'Generate Living QR', href: '/generate' },
+      secondaryCta: { label: 'View pricing', href: '/pricing' },
     },
     strainchain: {
       eyebrow: 'Cannabis Compliance',
@@ -203,8 +203,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: '100%', label: 'Traceable' },
       ],
       closingLine: 'Get compliant without the complexity. No setup fees.',
-      primaryCta: { label: 'Start Tracking', href: '/dashboard' },
-      secondaryCta: { label: 'Schedule Demo', href: 'mailto:hello@strainchain.com' },
+      primaryCta: { label: 'Request demo', href: '/onboard' },
+      secondaryCta: { label: 'View genetics library', href: '/genetics/mendo-love-farms' },
     },
     govchain: {
       eyebrow: 'Government Blockchain',
@@ -249,8 +249,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: 'Blockchain', label: 'Immutable' },
       ],
       closingLine: 'Make government data public. Build trust with blockchain.',
-      primaryCta: { label: 'Get Started', href: '/dashboard' },
-      secondaryCta: { label: 'Contact Us', href: 'mailto:hello@govchain.us' },
+      primaryCta: { label: 'Request access', href: '/onboard' },
+      secondaryCta: { label: 'Browse opportunities', href: '/opportunities' },
     },
   };
 

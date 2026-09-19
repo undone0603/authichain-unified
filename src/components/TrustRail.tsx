@@ -32,21 +32,21 @@ export function TrustRail({
   return (
     <section
       aria-label="Trust indicators"
-      className="border-y border-zinc-900 bg-zinc-950/60 backdrop-blur-sm"
+      className="border-y border-slate-200 bg-slate-50"
     >
       <div className="mx-auto max-w-6xl px-6 py-5">
-        <p className="mb-4 text-center text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600">
-          Trusted infrastructure for regulated supply chains
+        <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Infrastructure for regulated supply chains
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
           {items.map((it, i) => (
             <div key={it.label} className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-zinc-300">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-700">
                 <span style={{ color: accent }}>{it.icon}</span>
                 {it.label}
               </div>
               {i < items.length - 1 && (
-                <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:inline-block" />
+                <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline-block" />
               )}
             </div>
           ))}

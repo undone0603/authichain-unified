@@ -15,8 +15,8 @@ export default function SupplyChainPage() {
       eyebrow="Supply-Chain Provenance"
       headline="Prove Every Hand-Off, On-Chain."
       subhead="Track products from origin to shelf with QR-anchored custody events, lab-certificate hashing, and verifiable digital product passports."
-      primaryCta={{ label: 'See Plans', href: '/pricing' }}
-      secondaryCta={{ label: 'Open Dashboard', href: '/dashboard' }}
+      primaryCta={{ label: 'Request demo', href: '/onboard' }}
+      secondaryCta={{ label: 'View genetics library', href: '/genetics/mendo-love-farms' }}
       stats={[
         { value: 'QR', label: 'Anchored events' },
         { value: 'METRC', label: 'Synced' },

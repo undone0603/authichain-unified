@@ -11,6 +11,8 @@ export function GovchainHome() {
       brandId="govchain"
       themeClass="theme-patriotic"
       eyebrow="Government Opportunities"
+      primaryCta={{ label: 'Request access', href: '/onboard' }}
+      secondaryCta={{ label: 'Browse opportunities', href: '/opportunities' }}
       stats={[
         { value: '$770B', label: 'Federal Market' },
         { value: '92', label: 'Max Fit Score' },

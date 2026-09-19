@@ -13,6 +13,8 @@ export function AuthichainHome() {
     <BrandLanding
       brandId="authichain"
       eyebrow="Enterprise Authentication"
+      primaryCta={{ label: 'Open dashboard', href: '/dashboard' }}
+      secondaryCta={{ label: 'Start DPP checkout', href: '/api/checkout/dpp' }}
       stats={[
         { value: 'Ed25519', label: 'Signed seals' },
         { value: 'Polygon', label: 'On-chain anchor' },
