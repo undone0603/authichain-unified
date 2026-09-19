@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { generateKeyPair, exportJWK } from "jose";
 import {
   parseJws,
   verifyAttestationJws,
   validateAttestation,
   canonicalize,
+  signAttestation,
 } from ".";
 import fixture from "../../../fixtures/attestation-v0.1-valid.json";
 import jwks from "../../../fixtures/attestation-v0.1-jwks.json";
@@ -23,6 +25,22 @@ const tamperedJws = fs
   )
   .trim();
 
+async function signVariant(
+  variant: Record<string, unknown>,
+  keyId = "proof-test-kid"
+) {
+  const { privateKey } = await generateKeyPair("Ed25519");
+  const jws = await signAttestation(
+    structuredClone(variant) as typeof fixture,
+    privateKey,
+    keyId
+  );
+  const publicJwk = await exportJWK(privateKey);
+  delete (publicJwk as Record<string, unknown>).d;
+  publicJwk.kid = keyId;
+  return { jws, publicJwk };
+}
+
 describe("AuthiChain Attestation Contract v0.1", () => {
   it("verifies the canonical signed fixture", async () => {
     const attestation = await verifyAttestationJws(validJws, jwks.keys[0]);
@@ -38,10 +56,54 @@ describe("AuthiChain Attestation Contract v0.1", () => {
     ).rejects.toThrow();
   });
 
+  it("rejects an altered signature", async () => {
+    const parts = validJws.split(".");
+    parts[2] =
+      parts[2].slice(0, -1) + (parts[2].endsWith("A") ? "B" : "A");
+    await expect(
+      verifyAttestationJws(parts.join("."), jwks.keys[0])
+    ).rejects.toThrow();
+  });
+
   it("rejects a valid signature paired with the wrong key id", async () => {
     await expect(
       verifyAttestationJws(validJws, { ...jwks.keys[0], kid: "wrong-key" })
     ).rejects.toThrow(/kid does not match/);
+  });
+
+  it("rejects a signed attestation with the wrong subject", async () => {
+    const { jws, publicJwk } = await signVariant({
+      ...fixture,
+      subject: { ...fixture.subject, object_id: "authi_wrong_object" },
+    });
+    await expect(
+      verifyAttestationJws(jws, publicJwk, {
+        expectedObjectId: fixture.subject.object_id,
+      })
+    ).rejects.toThrow(/subject object_id/);
+  });
+
+  it("rejects a revoked attestation", async () => {
+    const { jws, publicJwk } = await signVariant({
+      ...fixture,
+      status: "revoked",
+    });
+    await expect(verifyAttestationJws(jws, publicJwk)).rejects.toThrow(
+      /status is revoked/
+    );
+  });
+
+  it("rejects a stale/expired attestation", async () => {
+    const { jws, publicJwk } = await signVariant({
+      ...fixture,
+      issued_at: "2024-01-01T00:00:00.000Z",
+      expires_at: "2024-01-02T00:00:00.000Z",
+    });
+    await expect(
+      verifyAttestationJws(jws, publicJwk, {
+        now: Date.parse("2024-01-03T00:00:00.000Z"),
+      })
+    ).rejects.toThrow(/expired/);
   });
 
   it("rejects malformed compact JWS values", () => {
@@ -55,9 +117,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
       JSON.stringify({ ...parsed.protected, alg: "HS256" })
     ).toString("base64url");
     const candidate = `${header}.${validJws.split(".")[1]}.${validJws.split(".")[2]}`;
-    await expect(verifyAttestationJws(candidate, jwks.keys[0])).rejects.toThrow(
-      /unsupported attestation JWS header/
-    );
+    await expect(
+      verifyAttestationJws(candidate, jwks.keys[0])
+    ).rejects.toThrow(/unsupported attestation JWS header/);
   });
 
   it("requires issuer identity fields", () => {
@@ -112,7 +174,9 @@ describe("AuthiChain Attestation Contract v0.1", () => {
     expect(() =>
       validateAttestation({
         ...fixture,
-        evidence: [{ ...fixture.evidence[0], digest: "sha256:not-a-digest" }],
+        evidence: [
+          { ...fixture.evidence[0], digest: "sha256:not-a-digest" },
+        ],
       })
     ).toThrow(/digest/);
   });
@@ -141,24 +205,10 @@ describe("AuthiChain Attestation Contract v0.1", () => {
     ).toThrow(/expires_at/);
   });
 
-  it("allows explicit warning, blocked, revoked, and unknown states to remain inspectable", () => {
-    for (const decision of ["warning", "blocked"] as const) {
-      expect(validateAttestation({ ...fixture, decision }).decision).toBe(
-        decision
-      );
-    }
-    for (const status of ["revoked", "unknown"] as const) {
-      expect(validateAttestation({ ...fixture, status }).status).toBe(status);
-    }
-  });
-
   it("documents the boundary between cryptographic validity and physical identity continuity", async () => {
     const attestation = await verifyAttestationJws(validJws, jwks.keys[0]);
     expect(attestation.subject.object_id).toBe("ac_fixture_001");
     expect(attestation.subject.serial).toBe("SN-001");
     expect(attestation.subject.gtin).toBe("00012345678905");
-    // A verifier may cryptographically validate this statement, but a copied QR
-    // or transferred label still requires an external registry/evidence check to
-    // prove that the scanned physical item is the same subject.
   });
 });
