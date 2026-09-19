@@ -2,10 +2,10 @@ name: Genesis Cron (safe tick)
 
 # Weekday tick for GET /api/automation/cron on authichain-edge-router.
 #
-# This is the durable SAFE loop. It does not enable AgentZ, outreach,
-# gov-mint, or worker-app GROUP B wrangler crons. Those stay frozen /
-# commented (see docs/operations/PUBLIC_LOOP_FREEZE.md and
-# worker-app/wrangler.toml).
+# This is the durable SAFE loop. It does not enable outreach, gov-mint,
+# worker-app GROUP B wrangler crons, or AgentZ cold email. AgentZ
+# orchestration is a separate workflow (agentz-orchestration.yml).
+# See docs/operations/PUBLIC_LOOP_FREEZE.md and worker-app/wrangler.toml.
 #
 # autonomous-business-cycle.yml retired its schedule on 2026-09-08 and is
 # dispatch-only. Cloudflare hourly [triggers] in worker-app/wrangler.toml

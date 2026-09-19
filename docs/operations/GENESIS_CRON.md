@@ -1,6 +1,6 @@
 # Genesis cron — safe autonomous tick
 
-`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. That freeze is **outbound-spend + gov-mint**, not Stripe/DPP checkout — the revenue path is live. Dry-run outreach is a separate Actions enable; do not launch live cold send from this cron. See `PUBLIC_LOOP_FREEZE.md`.
+`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. That freeze is **outbound-spend + gov-mint**, not Stripe/DPP checkout — the revenue path is live. Dry-run outreach and AgentZ orchestration are **separate** Actions enables; do not launch live cold send from this cron. See `PUBLIC_LOOP_FREEZE.md` and `AGENTZ_ORCHESTRATION.md`.
 
 ## What fires it
 
@@ -14,4 +14,4 @@ The GitHub Actions secret `CRON_SECRET` must match the Cloudflare Worker secret 
 
 ## Freeze
 
-Do not use this workflow to enable frozen outreach, AgentZ, or `gov-mint.yml`. See `docs/operations/PUBLIC_LOOP_FREEZE.md`.
+Do not use this workflow to enable frozen outreach, AgentZ email, or `gov-mint.yml`. AgentZ orchestration lives in `agentz-orchestration.yml` (dry-run claw/AgentZ). Genesis outbound stays `skipped_public_loop_freeze`. See `docs/operations/PUBLIC_LOOP_FREEZE.md`.

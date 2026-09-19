@@ -34,8 +34,10 @@ WhatsApp / Telegram / Slack / Discord / ...
             └────────────────┘
 ```
 
-Keep **Cloudflare Access** on `agentz.authichain.com` and `claw.authichain.com`.
-Do not enable social publish from this bridge.
+Keep **Cloudflare Access** on `agentz.authichain.com` and `claw.authichain.com`
+except where `/health` is already public. Do not enable social publish from
+this bridge. AgentZ orchestration dry-run is
+`docs/operations/AGENTZ_ORCHESTRATION.md`.
 
 Owner mandate 2026-09-19: stay on **$0** until revenue. Host AgentZ with a
 **free Cloudflare Tunnel**. Do **not** enable Workers Paid. Do **not** deploy
@@ -270,6 +272,18 @@ python -m agentz.cli openclaw command agents
 - Bridge reverse routes: `GET /gateway/status`, `GET /agents`, `GET /workflows`,
   `POST /notify`, Bearer on `POST /command` (accepts `OPENCLAW_API_KEY` or
   `AGENTZ_API_KEY`).
+
+## GitHub Actions orchestration (dry-run)
+
+`.github/workflows/agentz-orchestration.yml` is the outbound AgentZ tick.
+It uses the public hosts above. It does **not** set `OPENCLAW_GATEWAY_URL`.
+
+```bash
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/307144845/enable
+gh workflow run agentz-orchestration.yml --ref main -f dry_run=true -f ping_agentz=true
+```
+
+See `docs/operations/AGENTZ_ORCHESTRATION.md`. Do not enable `content-publish`.
 
 ## Security
 

@@ -12,8 +12,9 @@ export const runtime = 'nodejs';
  * GET /api/automation/cron
  *
  * Genesis / daily economy tick. Bearer CRON_SECRET.
- * Outbound AgentZ, drip email, programmatic SEO, and gov-mint stay off
- * (docs/operations/PUBLIC_LOOP_FREEZE.md).
+ * Drip email, programmatic SEO, and gov-mint stay off.
+ * AgentZ orchestration is agentz-orchestration.yml, not this cron
+ * (docs/operations/PUBLIC_LOOP_FREEZE.md, AGENTZ_ORCHESTRATION.md).
  */
 export async function GET(request: Request) {
   if (!authorizeGenesis(request)) {
