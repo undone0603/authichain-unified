@@ -20,7 +20,7 @@ compatibility_flags = ["nodejs_compat"]
 playwright-core = "./playwright-unavailable.ts"
 
 [assets]
-directory = "../dist"
+directory = "../client/public"
 binding = "ASSETS"
 html_handling = "none"
 not_found_handling = "single-page-application"
@@ -44,6 +44,14 @@ zone_name = "authichain.com"
 # and the token cannot purge (401/10000).
 [[routes]]
 pattern = "authichain.com/protocol/jwks.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/protocol/issuer.json"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/protocol/launch-proof"
 zone_name = "authichain.com"
 
 [[kv_namespaces]]
