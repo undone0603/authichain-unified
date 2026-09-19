@@ -82,9 +82,11 @@ jobs:
     if: needs.resolve-mode.outputs.ping_agentz == 'true'
     outputs:
       status: ${{ job.status }}
+    # Job-level env cannot interpolate ${{ env.* }} (Actions parse error:
+    # "Unrecognized named-value: 'env'"). Literals match workflow-level env.
     env:
-      CLAW_URL: ${{ env.CLAW_URL }}
-      AGENTZ_API_URL: ${{ env.AGENTZ_API_URL }}
+      CLAW_URL: https://claw.authichain.com
+      AGENTZ_API_URL: https://agentz.authichain.com
       OPENCLAW_API_KEY: ${{ secrets.OPENCLAW_API_KEY }}
       AGENTZ_API_KEY: ${{ secrets.AGENTZ_API_KEY }}
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}

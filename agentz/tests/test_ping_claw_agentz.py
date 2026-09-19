@@ -151,3 +151,13 @@ def test_scheduled_dry_run_is_fail_closed():
     assert 'echo "dry_run=false"' not in schedule_block
     assert "OWNER_LIVE_SEND" not in schedule_block
     assert "DRY_RUN: ${{ needs.resolve-mode.outputs.dry_run }}" in yml
+
+
+def test_orchestration_workflow_does_not_use_env_context_for_urls():
+    """Job-level env cannot use ${{ env.* }}; that fails workflow parse."""
+    yml = (REPO / ".github" / "workflows" / "agentz-orchestration.yml").read_text()
+    assert "${{ env.CLAW_URL }}" not in yml
+    assert "${{ env.AGENTZ_API_URL }}" not in yml
+    # Public hosts stay literals (or step-level env / run), never env context.
+    assert yml.count("CLAW_URL: https://claw.authichain.com") >= 1
+    assert yml.count("AGENTZ_API_URL: https://agentz.authichain.com") >= 1
