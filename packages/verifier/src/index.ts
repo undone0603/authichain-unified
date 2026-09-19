@@ -5,6 +5,7 @@ import {
   decodeProtectedHeader,
   exportJWK,
   importJWK,
+  importPKCS8,
 } from "jose";
 
 export type KeyLike = any;
@@ -12,7 +13,18 @@ export type KeyLike = any;
 export const AUTHICHAIN_ATTESTATION_V01 = "0.1" as const;
 export const AUTHICHAIN_ATTESTATION_TYP = "AC-ATTESTATION+JWS";
 
-export async function getKeyId(key: KeyLike): Promise<string> {
+async function resolvePrivateKey(key?: KeyLike): Promise<KeyLike> {
+  if (key) return key;
+  const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
+  if (!raw) {
+    throw new Error(
+      "AuthiChain attestation private key is not configured; set AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64"
+    );
+  }
+  return importPKCS8(Buffer.from(raw, "base64").toString("utf8"), "EdDSA");
+}
+
+export async function getKeyId(key?: KeyLike): Promise<string> {
   return calculateJwkThumbprint(await publicJwkFromPrivateKey(key));
 }
 
@@ -44,6 +56,11 @@ export interface AuthiChainAttestationV01 {
   issued_at: string;
   expires_at?: string;
   evidence: AuthiChainEvidence[];
+}
+
+export interface AttestationVerificationOptions {
+  expectedObjectId?: string;
+  now?: number;
 }
 
 const ISO_DATE_TIME = (value: unknown) =>
@@ -189,8 +206,8 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
   return input as AuthiChainAttestationV01;
 }
 
-export async function publicJwkFromPrivateKey(key: KeyLike) {
-  const jwk = await exportJWK(key);
+export async function publicJwkFromPrivateKey(key?: KeyLike) {
+  const jwk = await exportJWK(await resolvePrivateKey(key));
   const { d: _d, ...publicJwk } = jwk;
   return publicJwk;
 }
@@ -220,7 +237,8 @@ export async function signAttestation(
 
 export async function verifyAttestationJws(
   jws: string,
-  publicJwk: Record<string, unknown>
+  publicJwk: Record<string, unknown>,
+  options: AttestationVerificationOptions = {}
 ) {
   const header = decodeProtectedHeader(jws);
   if (header.typ !== AUTHICHAIN_ATTESTATION_TYP || header.alg !== "EdDSA") {
@@ -240,8 +258,29 @@ export async function verifyAttestationJws(
 
   const key = await importJWK(publicJwk, "EdDSA");
   const { payload } = await compactVerify(jws, key);
-  const parsed = JSON.parse(new TextDecoder().decode(payload));
-  return validateAttestation(parsed);
+  const parsed = validateAttestation(
+    JSON.parse(new TextDecoder().decode(payload))
+  );
+
+  if (
+    options.expectedObjectId !== undefined &&
+    parsed.subject.object_id !== options.expectedObjectId
+  ) {
+    throw new Error("attestation subject object_id does not match expected object");
+  }
+
+  if (parsed.status !== "active") {
+    throw new Error(`attestation status is ${parsed.status}`);
+  }
+
+  if (
+    parsed.expires_at !== undefined &&
+    Date.parse(parsed.expires_at) <= (options.now ?? Date.now())
+  ) {
+    throw new Error("attestation has expired");
+  }
+
+  return parsed;
 }
 
 export function parseJws(jws: string) {

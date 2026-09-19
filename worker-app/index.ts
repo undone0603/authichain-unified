@@ -13,6 +13,7 @@ import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
+import { registerIssuerRoutes } from "./issuer";
 import { scheduled } from "./cron-dispatch";
 
 type Env = {
@@ -22,6 +23,7 @@ type Env = {
   RATE_LIMITER: DurableObjectNamespace;
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
+  AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_WEBHOOK_AUTHICHAIN_SECRET?: string;
@@ -41,6 +43,9 @@ function hydrateProcessEnv(env?: Env) {
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
+    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
+    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;
@@ -1277,7 +1282,9 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
+app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
 registerJwksRoute(app);
+registerIssuerRoutes(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
@@ -1374,4 +1381,10 @@ export { RateLimiter } from "./rate-limiter";
 // registrable. See cron-dispatch.ts for the reasoning and the dispatch rules.
 // NOTE: the trigger itself is still commented out in wrangler.toml; wiring the
 // handler here does not by itself schedule anything.
-export default { fetch: app.fetch, scheduled };
+export default {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    hydrateProcessEnv(env);
+    return app.fetch(request, env, ctx);
+  },
+  scheduled,
+};
