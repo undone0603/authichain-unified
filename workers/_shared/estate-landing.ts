@@ -629,3 +629,32 @@ export const ESTATE_SISTER_LINKS: EstateLink[] = [
   { href: "https://govchain.us", label: "GovChain" },
   { href: "https://strainchain.io", label: "StrainChain" },
 ];
+
+/**
+ * IndexNow ownership key. Public by design — matches
+ * `public/authichain2026indexnow.txt`. Search engines fetch
+ * `/{key}.txt` on each estate apex to verify submissions.
+ */
+export const ESTATE_INDEXNOW_KEY = "authichain2026indexnow";
+export const ESTATE_INDEXNOW_PATH = `/${ESTATE_INDEXNOW_KEY}.txt`;
+
+/** Short-cache text response used by all four estate landing workers. */
+export function estateIndexNowResponse(): Response {
+  return new Response(ESTATE_INDEXNOW_KEY, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
+}
+
+/**
+ * Serve GET `/authichain2026indexnow.txt` from every estate landing.
+ * Exact path only — a trailing slash or other method is left to the worker.
+ */
+export function tryHandleEstateIndexNow(request: Request): Response | null {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const pathname = new URL(request.url).pathname;
+  if (pathname !== ESTATE_INDEXNOW_PATH) return null;
+  return estateIndexNowResponse();
+}

@@ -3,12 +3,16 @@ import assert from "node:assert/strict";
 import {
   ESTATE_BASE_CSS,
   ESTATE_BRANDS,
+  ESTATE_INDEXNOW_KEY,
+  ESTATE_INDEXNOW_PATH,
   estateCtaBand,
   estateCssVars,
   estateFooter,
   estateHero,
+  estateIndexNowResponse,
   estateNav,
   estateTrust,
+  tryHandleEstateIndexNow,
 } from "./estate-landing.ts";
 
 test("light tokens stay on white for every estate brand", () => {
@@ -59,4 +63,44 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     "note",
   );
   assert.match(footer, /href="\/generate"/);
+});
+
+test("IndexNow key file is exact-path plain text with a short cache", async () => {
+  const res = estateIndexNowResponse();
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("Content-Type"), "text/plain; charset=utf-8");
+  assert.equal(res.headers.get("Cache-Control"), "public, max-age=3600");
+  assert.equal(await res.text(), ESTATE_INDEXNOW_KEY);
+  assert.equal(ESTATE_INDEXNOW_PATH, "/authichain2026indexnow.txt");
+  assert.equal(ESTATE_INDEXNOW_KEY, "authichain2026indexnow");
+
+  const hit = tryHandleEstateIndexNow(
+    new Request("https://authichain.com/authichain2026indexnow.txt"),
+  );
+  assert.ok(hit);
+  assert.equal(await hit.text(), ESTATE_INDEXNOW_KEY);
+
+  assert.equal(
+    tryHandleEstateIndexNow(
+      new Request("https://qron.space/authichain2026indexnow.txt/"),
+    ),
+    null,
+    "trailing slash is not the key file",
+  );
+  assert.equal(
+    tryHandleEstateIndexNow(
+      new Request("https://govchain.us/authichain2026indexnow"),
+    ),
+    null,
+    "extensionless path is not the key file",
+  );
+  assert.equal(
+    tryHandleEstateIndexNow(
+      new Request("https://strainchain.io/authichain2026indexnow.txt", {
+        method: "POST",
+      }),
+    ),
+    null,
+    "non-GET is left to the worker",
+  );
 });

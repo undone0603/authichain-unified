@@ -103,7 +103,7 @@ test("query strings survive the hop", async () => {
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {
-    for (const path of ["/", "/robots.txt", "/sitemap.xml", "/favicon.svg"]) {
+    for (const path of ["/", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/authichain2026indexnow.txt"]) {
       f.calls.length = 0;
       const res = await get(path);
       assert.equal(res.status, 200, path);
@@ -157,6 +157,24 @@ test("a path that merely starts with the same letters is not proxied", async () 
   } finally {
     f.restore();
   }
+});
+
+test("IndexNow key file is served as short-cache plain text", async () => {
+  const res = await get("/authichain2026indexnow.txt");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "text/plain; charset=utf-8");
+  assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(await res.text(), "authichain2026indexnow");
+  assert.equal((await get("/authichain2026indexnow.txt/")).status, 404);
+});
+
+test("robots and sitemap still answer after the IndexNow route", async () => {
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(await robots.text(), /Sitemap: https:\/\/strainchain.io\/sitemap.xml/);
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(await sitemap.text(), /<urlset/);
 });
 
 test("the sitemap advertises the genetics library", async () => {

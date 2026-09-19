@@ -9,6 +9,7 @@ import {
   estateNav,
   estateSkipLink,
   estateTrust,
+  tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
@@ -2130,6 +2131,8 @@ export default {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
+    const indexNow = tryHandleEstateIndexNow(request);
+    if (indexNow) return indexNow;
     // Only the apex renders marketing HTML. Passport and genetics paths were
     // already routed out above; everything left is a 404, not a 200 homepage.
     if (p !== '/') return notFound(p);

@@ -18,6 +18,7 @@ import {
   estateNav,
   estateSkipLink,
   estateTrust,
+  tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
@@ -2251,6 +2252,8 @@ export default {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
+    const indexNow = tryHandleEstateIndexNow(request);
+    if (indexNow) return indexNow;
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
