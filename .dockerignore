@@ -1,4 +1,5 @@
-# Shared by workers/authichain-agentz (repo-root build context) and Dockerfile.agentz.
+# Repo-root context for Dockerfile.agentz (compose `agentz` / `agentz-api`
+# and workers/authichain-agentz Cloudflare Containers).
 .git
 **/.git
 node_modules

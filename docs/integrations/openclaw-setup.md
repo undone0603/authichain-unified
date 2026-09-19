@@ -82,9 +82,14 @@ In the OpenClaw gateway config, add an outbound webhook to the bridge Worker:
 
 Owner decision 2026-09-19: **Cloudflare Containers** (not Tunnel).
 
-`workers/authichain-agentz/` runs `uvicorn agentz.api.main:app` on port 8000
-inside a Container Durable Object. The Worker proxies every request with
-`getContainer(env.AGENTZ).fetch(request)`.
+`workers/authichain-agentz/` builds the repo-root `Dockerfile.agentz` (same
+image as `docker-compose.yml` `agentz` / `agentz-api`, context `.`). The
+Dockerfile default CMD is `python3 -m agentz.cli`; the Container class
+overrides `entrypoint` to `uvicorn agentz.api.main:app` on port 8000.
+The Worker proxies every request with `getContainer(env.AGENTZ).fetch(request)`.
+
+Local stand-in: `docker compose --profile api up agentz-api` then
+`curl http://localhost:8000/health`.
 
 ```bash
 cd workers/authichain-agentz

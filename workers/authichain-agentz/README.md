@@ -7,6 +7,17 @@ Keep **Cloudflare Access** on `agentz.authichain.com` (same policy family as `cl
 
 This host does **not** set `OPENCLAW_GATEWAY_URL`. That stays an owner-set reachable OpenClaw Node. Do not enable social publish from this Worker.
 
+## Image
+
+Builds the existing repo-root `Dockerfile.agentz` (same as `docker-compose.yml` `agentz` / `agentz-api`). Context is the monorepo root. The Dockerfile default CMD is `python3 -m agentz.cli`; this Worker overrides `entrypoint` to uvicorn on port 8000.
+
+Local API stand-in:
+
+```bash
+docker compose --profile api up agentz-api
+# curl http://localhost:8000/health
+```
+
 ## Deploy
 
 ```bash

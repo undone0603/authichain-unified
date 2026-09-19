@@ -9,7 +9,7 @@
  */
 
 import { Container, getContainer } from "@cloudflare/containers";
-import { containerEnvFromBindings } from "./env";
+import { AGENTZ_API_ENTRYPOINT, containerEnvFromBindings } from "./env";
 
 export interface Env {
   AGENTZ: DurableObjectNamespace<AgentZContainer>;
@@ -24,6 +24,8 @@ export class AgentZContainer extends Container<Env> {
   sleepAfter = "10m";
   enableInternet = true;
   pingEndpoint = "localhost/health";
+  // Dockerfile.agentz default CMD is the CLI; Containers serve the API.
+  entrypoint = [...AGENTZ_API_ENTRYPOINT];
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);

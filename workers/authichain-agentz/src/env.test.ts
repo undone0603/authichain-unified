@@ -4,7 +4,10 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { containerEnvFromBindings } from "./env.ts";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { AGENTZ_API_ENTRYPOINT, containerEnvFromBindings } from "./env.ts";
 
 test("forwards AGENT_SECRET and SUPABASE_URL unchanged", () => {
   const env = containerEnvFromBindings({
@@ -34,4 +37,17 @@ test("SUPABASE_SERVICE_ROLE_KEY wins over the alias", () => {
 test("omits unset secrets so placeholders are not invented", () => {
   const env = containerEnvFromBindings({});
   assert.deepEqual(env, {});
+});
+
+test("API entrypoint is uvicorn on the Dockerfile.agentz image", () => {
+  assert.deepEqual(
+    [...AGENTZ_API_ENTRYPOINT],
+    ["uvicorn", "agentz.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+  );
+  const wrangler = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "wrangler.jsonc"),
+    "utf8"
+  );
+  assert.match(wrangler, /"image":\s*"\.\.\/\.\.\/Dockerfile\.agentz"/);
+  assert.match(wrangler, /"image_build_context":\s*"\.\.\/\.\."/);
 });

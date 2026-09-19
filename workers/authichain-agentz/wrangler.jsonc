@@ -24,7 +24,8 @@
   "containers": [
     {
       "class_name": "AgentZContainer",
-      "image": "./Dockerfile",
+      // Same image as docker-compose.yml `agentz` / `agentz-api`.
+      "image": "../../Dockerfile.agentz",
       "image_build_context": "../..",
       "max_instances": 2,
       "instance_type": "basic"
