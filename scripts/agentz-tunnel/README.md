@@ -4,6 +4,13 @@ Owner mandate 2026-09-19: stay on **$0** until revenue. Host AgentZ with a
 **named free Cloudflare Tunnel**. Do **not** enable Workers Paid. Do **not**
 deploy Cloudflare Containers (`authichain-agentz`).
 
+Named tunnel UUID (already created):
+
+`08378b03-f6a2-46cf-aab8-a2754bad869f`
+
+Hostname: `agentz.authichain.com` →
+`08378b03-f6a2-46cf-aab8-a2754bad869f.cfargotunnel.com` (proxied CNAME).
+
 Full setup: `docs/integrations/openclaw-setup.md` § AgentZ via free Cloudflare
 Tunnel. Routing note: `docs/ROUTING.md`. This is not a thaw of
 `agentz-orchestration` and not social publish.
@@ -11,24 +18,71 @@ Tunnel. Routing note: `docs/ROUTING.md`. This is not a thaw of
 Do not invent `OPENCLAW_GATEWAY_URL`. That stays an owner-set reachable
 OpenClaw Node.
 
-## Named free tunnel (prefer)
+## After merge: Actions configures Cloudflare
+
+**Actions → AgentZ tunnel bring-up ($0) → Run workflow.**
+
+Uses existing repo secrets only (`CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`, `AGENT_SECRET`, `SUPABASE_*` if present). Do not
+paste secrets into chat.
+
+That dispatch:
+
+1. Binds claw-only secrets on `authichain-openclaw`:
+   `AGENTZ_API_URL=https://agentz.authichain.com` and
+   `AGENTZ_API_KEY` from `secrets.AGENT_SECRET`. Skips `authichain-agentz`
+   Containers secrets unless they already work. Does **not** set
+   `OPENCLAW_GATEWAY_URL`. If `AGENT_SECRET` is empty, claw bind fails with
+   an annotation; DNS + route cleanup still run.
+2. `GET`s tunnel `08378b03-f6a2-46cf-aab8-a2754bad869f`.
+3. Ensures the proxied CNAME above.
+4. Deletes Worker route `agentz.authichain.com/*` on `authichain-agentz`
+   (and a Worker custom domain on that hostname if one exists).
+5. Mints a `cloudflared tunnel run --token` credential via the Cloudflare
+   API. Optionally uploads a **1-day** artifact. If `DEV_TEAM_GITHUB_TOKEN`
+   or `GH_PAT` exists, stores repo secret `AGENTZ_TUNNEL_TOKEN`. Actions
+   **does not** keep a connector running (ephemeral runners).
+
+`Set agentz/claw secrets` is the claw-only bind without the DNS work.
+
+## Owner box: run the connector
+
+Actions cannot hand a live token to your machine. Prefer minting locally
+with the same Cloudflare API token Actions uses (no `cloudflared login`
+cert):
 
 ```bash
-# One-time
-cloudflared tunnel login
-cloudflared tunnel create agentz
-cloudflared tunnel route dns agentz agentz.authichain.com
-# OR route a free subdomain you already own:
-# cloudflared tunnel route dns agentz <free-subdomain-you-own>
-```
+export CLOUDFLARE_API_TOKEN=...    # repo Actions secret; do not paste into chat
+export CLOUDFLARE_ACCOUNT_ID=...
 
-Copy `config.example.yml` to `config.yml` (gitignored). Set `tunnel` and
-`credentials-file` to the UUID `create` printed. Ingress is
-`agentz.authichain.com` → `http://127.0.0.1:8000`.
-
-```bash
 cd /path/to/authichain-unified
 PYTHONPATH=. python -m uvicorn agentz.api.main:app --host 127.0.0.1 --port 8000
+
+# GET tunnel token + exec: cloudflared tunnel run --token <token>
+# (token is not printed)
+./scripts/agentz-tunnel/run-with-api-token.sh
+```
+
+If you downloaded the 1-day Actions artifact instead:
+
+```bash
+cloudflared tunnel run --token "$(cat agentz-tunnel-token.txt)"
+```
+
+Local uvicorn env (not Worker secrets): `AGENT_SECRET`, `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` — the names `agentz.core.credentials.get()`
+reads.
+
+## Named tunnel + local config.yml (cert path)
+
+Only if you already have `~/.cloudflared/*.json` from `cloudflared tunnel
+login`. Prefer the API-token path above.
+
+```bash
+# Already created — do not create a second tunnel.
+# UUID: 08378b03-f6a2-46cf-aab8-a2754bad869f
+cp scripts/agentz-tunnel/config.example.yml scripts/agentz-tunnel/config.yml
+# set credentials-file to ~/.cloudflared/08378b03-f6a2-46cf-aab8-a2754bad869f.json
 
 cloudflared tunnel --config scripts/agentz-tunnel/config.yml run
 ```
@@ -36,12 +90,12 @@ cloudflared tunnel --config scripts/agentz-tunnel/config.yml run
 ### Worker route conflict
 
 When Tunnel DNS owns `agentz.authichain.com`, a Worker route on the same
-hostname fights the tunnel.
+hostname fights the tunnel (522). The bring-up workflow deletes
+`agentz.authichain.com/*` on `authichain-agentz`. Leave that worker
+**undeployed** (`deploy-workers.yml` gates it behind
+`deploy_agentz_containers`, default off).
 
-- Delete the `agentz.authichain.com/*` route on `authichain-agentz`, **or**
-- Leave `authichain-agentz` **undeployed**.
-
-Do not attach both.
+Do not attach both a Worker route and the tunnel CNAME.
 
 ## Quick tunnel (smoke only)
 
@@ -52,15 +106,17 @@ cloudflared tunnel --url http://127.0.0.1:8000
 Prints a `*.trycloudflare.com` URL. It **changes** every restart. **No SSE
 guarantee.** Smoke only — do not point claw at it.
 
-## Then set claw secrets
+## Claw secrets
+
+Handled by the bring-up workflow or **Set agentz/claw secrets**. Manual
+equivalent:
 
 ```bash
 cd workers/authichain-openclaw
 npx wrangler secret put AGENTZ_API_URL
 # Enter: https://agentz.authichain.com
-# (or the free subdomain you routed; not a trycloudflare.com smoke URL)
 npx wrangler secret put AGENTZ_API_KEY
-# Enter the same value as local AGENT_SECRET
+# Enter the same value as local AGENT_SECRET (GitHub secret AGENT_SECRET)
 ```
 
 `OPENCLAW_GATEWAY_URL` is owner-set only. Do not invent a URL. Do not enable
