@@ -4,8 +4,16 @@
  * Every automation channel must call guardrailCheck before an external-effect
  * action and guardrailRecord after. Fails closed: a missing secret, an
  * unreachable API, a non-ok HTTP response, or any response that isn't
- * exactly { allowed: true } is treated as denied.
+ * exactly { allowed: true } is treated as denied — unless the HTTP path
+ * is a 404 or any 5xx (deploy lag / missing Worker INTERNAL_API_SECRET),
+ * in which case we reserve against the same Supabase tables the edge
+ * route would have used.
  */
+
+/** 404 = route not mounted. 5xx = mounted but misconfigured (live: 503 INTERNAL_API_SECRET). */
+export function shouldUseStoreFallback(status: number): boolean {
+  return status === 404 || status >= 500;
+}
 
 const DEFAULT_BASE_URL = "https://app.authichain.com";
 const TIMEOUT_MS = 5000;
@@ -67,7 +75,7 @@ export async function guardrailCheck(
     });
 
     if (!res.ok) {
-      if (res.status === 404) {
+      if (shouldUseStoreFallback(res.status)) {
         const fallback = await fallbackCheck(channel, opts);
         if (fallback) return fallback;
       }
@@ -126,7 +134,7 @@ export async function guardrailRecord(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) {
-      if (res.status === 404) {
+      if (shouldUseStoreFallback(res.status)) {
         await fallbackRecord(input);
         return;
       }
@@ -153,8 +161,10 @@ async function supabaseAdmin() {
 
 /**
  * app.authichain.com/api/guardrail/* 404s until the edge-router mount
- * deploys. Actions already has the service-role key, so reserve against
- * the same tables directly rather than failing the live send.
+ * deploys, and 503s when the route is live but INTERNAL_API_SECRET is
+ * not bound on authichain-edge-router. Actions already has the
+ * service-role key, so reserve against the same tables directly rather
+ * than failing the live send on deploy/secret lag.
  */
 async function fallbackCheck(
   channel: string,
