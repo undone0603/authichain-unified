@@ -1,0 +1,47 @@
+# authichain-agentz — Cloudflare Containers host for AgentZ FastAPI
+# Route: agentz.authichain.com/*  (keep Cloudflare Access ON, same as claw.*)
+#
+# Deploy (Docker required on the machine running wrangler):
+#   cd workers/authichain-agentz && npm i && npx wrangler deploy
+#
+# Secrets (injected into the container via envVars):
+#   npx wrangler secret put AGENT_SECRET
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#
+# Point OpenClaw bridge here:
+#   cd ../authichain-openclaw
+#   npx wrangler secret put AGENTZ_API_URL   # https://agentz.authichain.com
+#   npx wrangler secret put AGENTZ_API_KEY   # same as AGENT_SECRET
+
+name = "authichain-agentz"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[[routes]]
+pattern = "agentz.authichain.com/*"
+zone_name = "authichain.com"
+
+[vars]
+SERVICE_NAME = "authichain-agentz"
+
+[[containers]]
+class_name = "AgentZContainer"
+image = "./Dockerfile"
+# Build from monorepo root so Dockerfile can COPY agentz/ + requirements-agentz-api.txt
+image_build_context = "../.."
+max_instances = 3
+instance_type = "basic"
+
+[[durable_objects.bindings]]
+name = "AGENTZ_CONTAINER"
+class_name = "AgentZContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AgentZContainer"]
+
+[observability]
+enabled = true
