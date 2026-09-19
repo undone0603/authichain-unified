@@ -1,8 +1,97 @@
-# Public-loop freeze — updated 2026-09-19
+# Outbound-spend freeze — revenue path is LIVE (2026-09-19)
 
-Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and activate** without a login code. Access is no longer the gate.
+This freeze blocked **autonomous cold outbound** (Resend/social spam) and **gov-mint**. It did **not** freeze Stripe or DPP checkout.
 
-**Safe tick (does not thaw this freeze):** weekday `genesis-cron.yml` hits `GET /api/automation/cron` only. See `docs/operations/GENESIS_CRON.md`. Do not uncomment `worker-app/wrangler.toml` GROUP B crons or enable gov-mint / outreach from that path.
+**First-dollar path (LIVE):** traffic → onboard → `GET /api/checkout/dpp` (**303** to `checkout.stripe.com`) → provision → activate. Use the owner's existing assets here. Do not wait on outreach or AgentZ to take a payment.
+
+**Still frozen (spend / mint):** live cold email, live social publish (`content-publish`), full `agentz-orchestration`, and all `gov-*` until `GOVCHAIN_NFT_CONTRACT` has bytecode on Base 8453.
+
+**Safe tick (does not thaw cold send):** weekday `genesis-cron.yml` hits `GET /api/automation/cron` only. See `docs/operations/GENESIS_CRON.md`. Do not uncomment `worker-app/wrangler.toml` GROUP B crons.
+
+## Owner directive — 2026-09-19 (first dollar, then staged outbound)
+
+Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generate` return 200. Frustration that "everything is frozen" is a docs problem: the revenue path was already on; only cold-send spend and gov-mint stayed off.
+
+`gov-mint` / `gov-engine` stay frozen until bytecode on 8453. Do not enable `agentz-orchestration` until a dry-run outbound log is proven. Do not enable `content-publish`.
+
+### What to run now (traffic → checkout)
+
+| Lane | Status | Workflows |
+| --- | --- | --- |
+| **Revenue (LIVE)** | Do not disable | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers |
+| **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume) |
+| **Cold outbound (dry-run)** | Enable after this PR is on `main` | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false |
+| **Spend / mint (FROZEN)** | Leave disabled | `content-publish`, `agentz-orchestration`, `gov-mint`, other `gov-*` |
+
+### Streamlined timeline
+
+| Day | What happens | What must not happen |
+| --- | --- | --- |
+| **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only. | No live cold email. No social publish. No gov-mint. |
+| **Day 1** | Enable `content-routine-pr`, then `email-proposals` + `b2b-outreach` (dry-run). Review one log each. | Do **not** set `OWNER_LIVE_SEND=true`. Do not enable `content-publish` or AgentZ. |
+| **Day 3** | After dry-run review: **one-click live flip** below. | Still frozen: AgentZ, `content-publish`, all `gov-*` until item 5. |
+
+### Enable traffic + dry-run outbound (`gh` or Actions UI)
+
+This cloud-agent token cannot `PUT .../enable` (Actions API 403). An owner token with `actions: write` runs:
+
+```bash
+# Traffic / inbound — re-run only if disabled
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/317153911/enable  # gen-seo-pages (already active)
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/276736651/enable  # ghost-traffic (already active)
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/332484969/enable  # content-routine-pr
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/300250832/enable  # marketing-autonomous (IndexNow/GSC)
+
+# Dry-run cold outbound — AFTER this PR is on main (b2b dry_run default was false on old main)
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/302131163/enable  # email-proposals
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/305529641/enable  # b2b-outreach
+```
+
+**Do not enable** `261329391` (gov-engine), `304825951` (gov-mint), `307144845` (agentz-orchestration), or `332964370` (content-publish).
+
+### One-click live flip (`OWNER_LIVE_SEND`)
+
+Unset or any value other than `true` means **no live send** (same as `OWNER_LIVE_SEND=false`). Scripts also fail closed: `DRY_RUN` unset ≠ live.
+
+After reading a dry-run log that queued/logged and did not call Resend for a real recipient:
+
+```bash
+# Allow live cold send on the next b2b-outreach / email-proposals cron
+gh variable set OWNER_LIVE_SEND --body true -R undone0603/authichain-unified
+
+# Or: Settings → Secrets and variables → Actions → Variables → OWNER_LIVE_SEND = true
+```
+
+To slam it shut again: `gh variable set OWNER_LIVE_SEND --body false -R undone0603/authichain-unified`.
+
+Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. One var flip is enough for scheduled runs. Do not set this until Day 3 review.
+
+### Audit — 2026-09-19 (Actions API)
+
+| Workflow | State | Last conclusion | Notes |
+| --- | --- | --- | --- |
+| `ghost-traffic` | **active** | success 2026-09-19 schedule ([35454152990](https://github.com/undone0603/authichain-unified/actions/runs/35454152990)) | Job ran (not skipped). Handler is still a **stub** — logs four targets, sends no browse traffic. Not a small in-repo unblock; do not treat a green check as real funnel volume. |
+| `gen-seo-pages` | **active** | success 2026-09-18 dispatch; last schedule 2026-09-11 | Weekly Friday 09:00 UTC. Writes `content/seo/pages.json` only. |
+| `seo-regression` | **active** | success 2026-09-19 after two earlier dispatch failures the same day | Brand homepages, sitemaps, robots all 200 as of this audit. |
+| `reddit-monitor` | **active** | success 2026-09-19 schedule | Intelligence only; no posts. |
+| `pipeline-tick` | **active** | last schedule success 2026-09-16; recent pushes skipped (no `[pipeline-proof]`) | Outbound still fail-closed in `server/outreach/send-guard.ts`. |
+| `content-routine-pr` | **disabled_manually** | last success 2026-09-14 (push) | PR-only. Enable on Day 1. |
+| `content-publish` | **disabled_manually** | last success 2026-09-14 | **Stay frozen** — live LinkedIn/Reddit/X. |
+| `marketing-autonomous` | **disabled_manually** | last success 2026-09-14 schedule | Scheduled = IndexNow + GSC only. Enable as Day 0/1 inbound. |
+| `b2b-outreach` | **disabled_manually** | scheduled runs skipped (var gate); last real failure 2026-08-31 | Enable on Day 1 **after** dry-run defaults land on main. |
+| `email-proposals` | **disabled_manually** | success 2026-09-15 schedule | Already defaulted dry-run on main. Enable on Day 1. |
+| `agentz-orchestration` | **disabled_manually** | success 2026-09-16 schedule | **Stay frozen.** |
+| `gov-engine` / `gov-mint` | **disabled_manually** | — | **Stay frozen** until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. |
+
+### Live vs frozen after this pass
+
+**Revenue LIVE (not part of this freeze):** `GET /api/checkout/dpp` → 303 Stripe, `/onboard`, estate CTAs, genesis cron.
+
+**Inbound live:** `gen-seo-pages`, `ghost-traffic` (stub), `seo-regression`, `reddit-monitor`, `pipeline-tick`, Stage 1–2 verifiers (`verify-scheduled-jobs`, `verify-integrations`, `verify-outreach-secrets`, `schema-drift`, `guardrail-digest`, `social-credentials-check`).
+
+**Day 1 enable (dry-run / PR-only):** `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`.
+
+**Still frozen (spend / mint):** `agentz-orchestration`, `content-publish`, `weekly-video`, `browser-vision-tasks`, `automerge-dependabot`, `dependabot-auto-merge`, all `gov-*`, and **live** cold send until `OWNER_LIVE_SEND=true`.
 
 ## Status - 2026-09-18 staged re-enable
 
@@ -10,7 +99,7 @@ Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This ove
 
 **Live (enabled):** verify-scheduled-jobs, verify-integrations, verify-outreach-secrets, schema-drift, seo-regression, guardrail-digest, reddit-monitor, pipeline-tick, social-credentials-check.
 
-**Still frozen (no outbound until stage 1-2 runs are read and owner approves each):** b2b-outreach, email-proposals, content-publish, content-routine-pr, marketing-autonomous, gen-seo-pages, weekly-video, browser-vision-tasks, agentz-orchestration, automerge-dependabot, dependabot-auto-merge.
+**Outbound-spend still off (see top of this doc):** content-publish, weekly-video, browser-vision-tasks, agentz-orchestration, automerge-dependabot, dependabot-auto-merge. Dry-run enable list is `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`. Revenue / checkout is **not** in this list. `gen-seo-pages` and `ghost-traffic` are already **active**.
 
 **Frozen until item 5:** gov-engine, gov-ingest, gov-mint, gov-notify, gov-proposals, gov-score (`GOVCHAIN_NFT_CONTRACT` needs bytecode on 8453).
 
@@ -31,7 +120,7 @@ Live production checks plus GitHub Actions job/step logs for the `deploy-cloudfl
 - `GET https://authichain.com/api/cron/dpp-exceptions` returns `401 {"error":"Unauthorized"}` (JSON, `no-store`) - correct for an unauthenticated call, not cached HTML.
 - The `find | head` SIGPIPE noted below did not reproduce locally and did not fire on this run - looks like a timing-dependent race, not a deterministic failure.
 
-Workstream items 2 and 4 below are now met. Item 3 (one smoke-test buyer completing the full flow) is still open - that needs an actual purchase, which was not attempted here. **Do not re-enable frozen workflows until that smoke test completes.**
+Workstream items 2 and 4 below are now met. Item 3 is **met on owner attestation** (see the 2026-09-18 smoke-test note). The revenue path is live. Staged (dry-run) outbound may proceed; live cold send waits for `OWNER_LIVE_SEND=true` after dry-run review.
 
 ## What changed
 
@@ -57,17 +146,19 @@ Judge progress on:
 
 1. ~~Unauthenticated `/verify` without Access~~ **done**
 2. ~~`GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML~~ **done (2026-09-19)**
-3. One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate
+3. ~~One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate~~ **met on owner attestation (2026-09-18)** — agent did not independently verify the webhook row or activate step
 4. ~~`GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live~~ **done (2026-09-19) - returns 401 JSON when unauthenticated, not cached HTML**
 5. One signed Base deploy from ops EOA — still blocked until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. Do not dispatch `gov-mint.yml`.
 
-## Frozen (Actions disabled 2026-09-16)
+## Frozen (historical — 2026-09-16 disable)
 
-AgentZ, automerge-dependabot, B2B outreach, browser-vision, content-publish, content-routine-pr, email-proposals, gen-seo-pages, ghost-traffic, gov-engine/ingest/mint/notify/proposals/score, guardrail-digest, marketing-autonomous, pipeline-tick, reddit-monitor, repo-maintenance, seo-regression, social-credentials-check, weekly-video, verify-scheduled-jobs, verify-integrations, verify-outreach-secrets, schema-drift.
+The 2026-09-16 disable list is superseded by the 2026-09-18 Stage 1–2 re-enable and the 2026-09-19 streamlining at the top of this doc. Do not treat `gen-seo-pages`, `ghost-traffic`, or the Stage 1–2 verifiers as frozen.
 
-Still on: CI, lint, main, CodeQL, security-scan, compliance-audit, deploy-cloudflare / deploy-workers / deploy-edge-worker, nightstamp-scan-gate, revenue-cycle, production-drizzle-audit, unblock-public-access, outreach/DPP **manual** triggers.
+**Remain disabled (spend / mint only):** AgentZ, automerge-dependabot, browser-vision, content-publish, weekly-video, all `gov-*`. Checkout / Stripe / DPP are not in this list. Dry-run enables (`content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`) use the commands at the top of this doc.
 
-Re-enable a frozen workflow only after checkout 303s and one smoke buyer completes: `gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/<id>/enable`.
+Still on: CI, lint, main, CodeQL, security-scan, compliance-audit, deploy-cloudflare / deploy-workers / deploy-edge-worker, nightstamp-scan-gate, revenue-cycle, production-drizzle-audit, unblock-public-access, outreach/DPP **manual** triggers, genesis-cron.
+
+Re-enable only from the Day 0 / Day 1 lists above: `gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/<id>/enable`.
 
 ## Deploy notes
 
