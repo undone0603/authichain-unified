@@ -64,8 +64,6 @@ def test_cli_openclaw_notify_dry_run(monkeypatch):
     env["CLAW_BRIDGE_URL"] = "https://claw.example.test"
     env["OPENCLAW_API_KEY"] = "k"
     env["PYTHONPATH"] = str(REPO)
-    # Avoid pulling full runner deps: invoke OpenClawClient path via -c that
-    # mirrors CLI dry-run contract.
     code = (
         "from agentz.integrations.openclaw import OpenClawClient; "
         "import json; "
