@@ -89,6 +89,64 @@ describe("GET /api/checkout/dpp", () => {
   });
 });
 
+describe("GET /api/checkout", () => {
+  it("returns route health JSON and does not create a Stripe session", async () => {
+    const res = await app.request("/api/checkout");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.smoke).toBe("GET /api/checkout/dpp");
+    expect(body.webhook).toBe("POST /api/stripe/webhook");
+  });
+});
+
+describe("POST /api/checkout", () => {
+  it("returns 400 without planId", async () => {
+    const res = await app.request("/api/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/planId/);
+  });
+});
+
+describe("GET /api/stripe/webhook", () => {
+  it("reports the handler is present without requiring a signature", async () => {
+    const res = await app.request("/api/stripe/webhook");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.handler).toBe("present");
+  });
+});
+
+describe("POST /api/webhooks/stripe", () => {
+  it("aliases to the canonical webhook handler", async () => {
+    const res = await app.request("/api/webhooks/stripe", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(200);
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    expect(handleStripeWebhook).toHaveBeenCalled();
+  });
+});
+
+describe("app host /", () => {
+  it("302s app.authichain.com/ to /dashboard", async () => {
+    const res = await app.request("/", {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/dashboard");
+  });
+});
+
 describe("POST /api/stripe/webhook", () => {
   it("passes the raw body and signature header through unchanged", async () => {
     const res = await app.request("/api/stripe/webhook", {

@@ -46,7 +46,7 @@ function thanksHtml(sessionId: string, visitId: string): string {
      <h1>DPP audit provisioned</h1>
      <p>Your workspace access is being granted automatically. Activate now to complete merchant setup — no need to wait for an email reply.</p>
      <a class="btn" href="/dpp/activate?${qs.toString()}">Activate merchant</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`,
+     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
   );
 }
 
@@ -56,7 +56,7 @@ function activateHtml(sessionId: string, visitId: string): string {
       "Missing checkout session | AuthiChain",
       `<h1>Missing checkout session</h1>
        <p>Open this page from your purchase confirmation email or the thank-you page.</p>
-       <a class="btn" href="/dpp">Back to DPP offer</a>`,
+       <a class="btn" href="/dpp">Back to DPP offer</a>`
     );
   }
   return pageShell(
@@ -103,7 +103,7 @@ function activateHtml(sessionId: string, visitId: string): string {
            msg.textContent = err.message || 'Activation failed';
          }
        });
-     </script>`,
+     </script>`
   );
 }
 
@@ -116,20 +116,27 @@ export function tryHandleDppRoute(request: Request): Response | null {
   const url = new URL(request.url);
   const p = url.pathname;
 
-  if (p === "/dpp/thanks" || p.startsWith("/dpp/thanks/")) {
+  if (
+    p === "/dpp/thanks" ||
+    p.startsWith("/dpp/thanks/") ||
+    p === "/thanks" ||
+    p.startsWith("/thanks/") ||
+    p === "/success" ||
+    p.startsWith("/success/")
+  ) {
     return html(
       thanksHtml(
         url.searchParams.get("session_id") || "",
-        url.searchParams.get("visit_id") || "",
-      ),
+        url.searchParams.get("visit_id") || ""
+      )
     );
   }
   if (p === "/dpp/activate" || p.startsWith("/dpp/activate/")) {
     return html(
       activateHtml(
         url.searchParams.get("session_id") || "",
-        url.searchParams.get("visit_id") || "",
-      ),
+        url.searchParams.get("visit_id") || ""
+      )
     );
   }
   return null;

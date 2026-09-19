@@ -27,7 +27,7 @@ Health (verified 2026-08-07): `pnpm check` 0 errors · `pnpm test` 704/704 · `p
 
 REST surface alongside tRPC. Notable live/critical ones:
 
-- **Money in:** `/api/stripe/webhook` (signature-verified, provisions guests by email + welcome email), `/api/webhooks/stripe`, `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (agent micropayments)
+- **Money in:** `/api/stripe/webhook` (canonical Stripe Dashboard URL; signature-verified, provisions guests by email + welcome email). Retired `/api/webhooks/stripe` is a 404 — do not register it in Dashboard. Also `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (agent micropayments)
 - **Admin ops:** `/api/admin/ops` (admin-gated, aggregates `scheduled_job_runs` → OpsDashboard) ← wired 2026-07-15
 - **Autonomous cron endpoints** (CRON_SECRET-bearer gated): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies,dpp-exceptions}`, `/api/automation/cron`, `/api/trial-reminder`. GitHub `autonomous-business-cycle.yml` schedules are retired; DPP stalls also print from `scripts/revenue-cycle.ts --phase=report`.
 - **Lead capture / outreach:** `/api/lead-capture`, `/api/leads`, `/api/crm`, `/api/agentz/webhook` (logs to Supabase + upserts leads — a heartbeat, NOT an agent executor), `/api/social-proof`, `/api/waitlist`, `/api/testimonials`
@@ -38,19 +38,19 @@ REST surface alongside tRPC. Notable live/critical ones:
 
 Repo-managed (`workers/*`, deployed by `.github/workflows/deploy-cloudflare.yml` + `deploy-workers.yml`):
 
-| Worker | Capability | Status |
-|---|---|---|
-| `authichain-com` | Apex marketing site + app-path proxy → app.authichain.com | LIVE (funnel fixed 2026-07-15) |
-| `qron-space`, `govchain-us`, `strainchain-io` | Brand landing + SEO layer | LIVE |
-| `authichain-api`, `authichain-api-gateway`, `authichain-gateway` | API edge routing | LIVE |
-| `authichain-scan-validate`, `authichain-qron-provenance` | QR scan validation + provenance (D1 `authichain-provenance` = 5a6672a7…) | LIVE |
-| `authichain-autopilot` | 6h cron automation | LIVE |
-| `qron-automation` | uptime (30m) / SEO ping (6h) / digest (12h) | LIVE |
-| `qron-outreach` | Cold-email sender (QRON 6/6 + DPP 4/4 queues **exhausted**) | GATED, queues empty |
-| `qron-image-gen` | QR art generation | ON-DEMAND |
-| `stripe-webhook`, `stripe-webhook-worker` | Stripe event handling | ON-DEMAND |
-| `resend-relay` | Email relay (3000/day verified) | ON-DEMAND |
-| `authichain-telegram`, `bitcoin-auth`, `blockchain`, `ai-classification`, `analytics`, `auth`, `authichain-chain-data`, `authichain-license-issuer`, `authichain-consensus-engine`, `authichain-infra`, `authichain-bridge`, `authichain-dashboard`, `watchchain-io` | Vertical/support services | ON-DEMAND |
+| Worker                                                                                                                                                                                                                                                               | Capability                                                               | Status                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------ |
+| `authichain-com`                                                                                                                                                                                                                                                     | Apex marketing site + app-path proxy → app.authichain.com                | LIVE (funnel fixed 2026-07-15) |
+| `qron-space`, `govchain-us`, `strainchain-io`                                                                                                                                                                                                                        | Brand landing + SEO layer                                                | LIVE                           |
+| `authichain-api`, `authichain-api-gateway`, `authichain-gateway`                                                                                                                                                                                                     | API edge routing                                                         | LIVE                           |
+| `authichain-scan-validate`, `authichain-qron-provenance`                                                                                                                                                                                                             | QR scan validation + provenance (D1 `authichain-provenance` = 5a6672a7…) | LIVE                           |
+| `authichain-autopilot`                                                                                                                                                                                                                                               | 6h cron automation                                                       | LIVE                           |
+| `qron-automation`                                                                                                                                                                                                                                                    | uptime (30m) / SEO ping (6h) / digest (12h)                              | LIVE                           |
+| `qron-outreach`                                                                                                                                                                                                                                                      | Cold-email sender (QRON 6/6 + DPP 4/4 queues **exhausted**)              | GATED, queues empty            |
+| `qron-image-gen`                                                                                                                                                                                                                                                     | QR art generation                                                        | ON-DEMAND                      |
+| `stripe-webhook`, `stripe-webhook-worker`                                                                                                                                                                                                                            | Stripe event handling                                                    | ON-DEMAND                      |
+| `resend-relay`                                                                                                                                                                                                                                                       | Email relay (3000/day verified)                                          | ON-DEMAND                      |
+| `authichain-telegram`, `bitcoin-auth`, `blockchain`, `ai-classification`, `analytics`, `auth`, `authichain-chain-data`, `authichain-license-issuer`, `authichain-consensus-engine`, `authichain-infra`, `authichain-bridge`, `authichain-dashboard`, `watchchain-io` | Vertical/support services                                                | ON-DEMAND                      |
 
 **Live-but-not-in-repo (drift — regrew 27→42 since June):** `authichain-revenue-worker` (new 07-07), `authichain-outreach-engine` (D1 cold-email, resurrected), `outreach-queue`, `qron-daily-ops` (6am health digest, has dead hardcoded keys), `qron-self-heal`, `qron-ai-api`, `qron-portfolio`, `gmail-relay-z`, `qron-edge`, `authichain-verify-worker`, `authichain-consensus-engine`, and others. **These deploy from nowhere in the repo — source lives only on Cloudflare.**
 
@@ -67,6 +67,7 @@ A large automation layer invisible to repo code search. Key clusters:
 ## 5. Schedulers — what actually fires, and when
 
 **GitHub Actions (the real cron layer — ~15 scheduled workflows):**
+
 - `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). **This is LIVE — the autonomous business cycle runs.**
 - `outreach-trigger.yml` (every 4h) + `dpp-outreach-trigger.yml` (every 8h) → qron-outreach worker. **Both hit exhausted queues — no-ops burning minutes.**
 - `b2b-outreach.yml` (Mondays 14:00) → `scripts/b2b-cold-outreach.ts` (Apollo-enriched)

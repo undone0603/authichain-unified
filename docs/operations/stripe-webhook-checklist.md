@@ -10,6 +10,7 @@
 ## Quick Setup (5 Steps)
 
 ### 1. Apply Supabase Migration
+
 ```bash
 cd supabase
 supabase migration up          # Local test
@@ -17,12 +18,15 @@ supabase db push              # Push to production
 ```
 
 **Verify:**
+
 ```bash
 supabase db list-tables
 ```
+
 Should show: `payments`, `subscriptions`, `alerts`, `audit_log`, `stripe_events`
 
 ### 2. Deploy Webhook Handler
+
 ```bash
 # Build and test locally
 pnpm build
@@ -35,13 +39,15 @@ git push origin main
 ```
 
 **Verify in Vercel:**
+
 - Deployment is green
 - New endpoint appears in logs
 
 ### 3. Get Webhook Secret from Stripe
+
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. Click **Add endpoint** (if new) or edit existing
-3. URL: `https://app.authichain.com/api/webhooks/stripe`
+3. URL: `https://authichain.com/api/stripe/webhook` (not the retired `/api/webhooks/stripe`)
 4. Events:
    - `checkout.session.completed`
    - `invoice.payment_succeeded`
@@ -51,6 +57,7 @@ git push origin main
 6. **Reveal signing secret** → Copy (starts with `whsec_`)
 
 ### 4. Set Environment Variable in Vercel
+
 1. [Vercel Dashboard → Settings → Environment Variables](https://vercel.com/dashboard/settings/environment-variables)
 2. Add:
    - **Name:** `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
@@ -59,6 +66,7 @@ git push origin main
 3. Click **Save**
 
 ### 5. Redeploy to Pick Up Environment Variable
+
 1. Go to Vercel → Deployments
 2. Click the latest deployment
 3. Click **Redeploy**
@@ -67,9 +75,11 @@ git push origin main
 ## Verification Tests
 
 ### Test 1: Webhook Signature Validation
+
 Make a POST request to the endpoint with an invalid signature:
+
 ```bash
-curl -X POST https://app.authichain.com/api/webhooks/stripe \
+curl -X POST https://authichain.com/api/stripe/webhook \
   -H "stripe-signature: invalid" \
   -d '{"id":"evt_test"}'
 
@@ -77,9 +87,10 @@ curl -X POST https://app.authichain.com/api/webhooks/stripe \
 ```
 
 ### Test 2: Stripe CLI Local Testing
+
 ```bash
 # Terminal 1: Start webhook forwarding
-stripe listen --forward-to localhost:3000/api/webhooks/stripe \
+stripe listen --forward-to localhost:3000/api/stripe/webhook \
   --events checkout.session.completed,invoice.payment_succeeded,invoice.payment_failed,customer.subscription.deleted
 
 # Copy the signing secret (whsec_test_...) to .env.local
@@ -94,7 +105,9 @@ stripe trigger checkout.session.completed
 ```
 
 ### Test 3: Database Inserts
+
 After a successful test, verify the data was written:
+
 ```sql
 -- Check payment was recorded
 SELECT * FROM payments ORDER BY created_at DESC LIMIT 1;
@@ -110,6 +123,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ```
 
 ### Test 4: Production Webhook Test (After Deployment)
+
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. Click your endpoint
 3. Scroll to **Recent events**
@@ -117,6 +131,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 5. Click it to see the request and response
 
 **Expected Response:**
+
 ```json
 {
   "received": true,
@@ -125,6 +140,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ```
 
 ### Test 5: Real Payment Flow
+
 1. Complete a real or test payment on the site
 2. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 3. Check the **Recent events** section
@@ -137,12 +153,14 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ## Troubleshooting Checklist
 
 ### Problem: Webhook returns 400 "Webhook Error"
+
 - [ ] Check Stripe Dashboard → Webhooks → Event details for error message
 - [ ] Verify `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is set in Vercel
 - [ ] Verify it matches the signing secret in Stripe Dashboard
 - [ ] Redeploy after adding env var
 
 ### Problem: Webhook returns 500 "Internal Server Error"
+
 - [ ] Check Vercel Logs for stack trace
 - [ ] Verify `STRIPE_SECRET_KEY` is still set
 - [ ] Verify `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set
@@ -150,6 +168,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 - [ ] Check if leads table has `status` column: `supabase db execute "SELECT status FROM lead_captures LIMIT 1"`
 
 ### Problem: Payments table is empty but Stripe shows successful payment
+
 - [ ] Check Stripe Dashboard → Webhooks → **Event deliveries**
 - [ ] Look for red ✗ status (failed delivery)
 - [ ] Click the event to see error response
@@ -157,22 +176,25 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 - [ ] If 400 error, check that webhook secret is correct
 
 ### Problem: Duplicate payments in database
+
 - [ ] This is expected! Stripe retries webhooks
 - [ ] Check `stripe_events` table to confirm dedup is working
 - [ ] If you see **duplicate rows**, run the cleanup query in the guide
 
 ### Problem: Leads not tagged as customers
+
 - [ ] Check if lead exists with payment's customer_email
 - [ ] Check `audit_log` for errors during the update
 - [ ] Verify `lead_captures` table has `status` column
 - [ ] Manually update if needed:
-     ```sql
-     UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com';
-     ```
+  ```sql
+  UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com';
+  ```
 
 ## Monitoring
 
 ### Daily Revenue Check
+
 ```sql
 SELECT
   DATE(created_at) as date,
@@ -186,16 +208,19 @@ LIMIT 7;
 ```
 
 ### Active Subscriptions
+
 ```sql
 SELECT COUNT(*) as active_subscriptions FROM subscriptions WHERE status = 'active';
 ```
 
 ### Failed Payments Alerting
+
 ```sql
 SELECT * FROM critical_alerts ORDER BY created_at DESC LIMIT 10;
 ```
 
 ### Recent Webhook Activity
+
 ```sql
 SELECT
   DATE(created_at),
@@ -213,7 +238,9 @@ ORDER BY DATE(created_at) DESC;
 ## Integration Points
 
 ### Lead Nurturing
+
 When a lead becomes a customer:
+
 ```sql
 -- Find all customers who need follow-up
 SELECT email, created_at FROM lead_captures WHERE status = 'customer' AND updated_at > NOW() - INTERVAL '24 hours';
@@ -222,7 +249,9 @@ SELECT email, created_at FROM lead_captures WHERE status = 'customer' AND update
 Use this in your HubSpot/Make.com automation to trigger win/upsell sequences.
 
 ### Dunning & Revenue Retention
+
 When a payment fails:
+
 ```sql
 -- Find subscriptions with failed payments
 SELECT customer_email, subscription_id FROM subscriptions WHERE status = 'payment_failed';
@@ -231,6 +260,7 @@ SELECT customer_email, subscription_id FROM subscriptions WHERE status = 'paymen
 Your dunning flow (`src/lib/dunning.ts`) can retry these automatically.
 
 ### Analytics & Reporting
+
 ```sql
 -- Customer Acquisition Cost (CAC) proxy
 SELECT COUNT(DISTINCT customer_email) as acquired_customers, SUM(amount_cents) / 100.0 / COUNT(DISTINCT customer_email) as cost_per_customer
@@ -257,6 +287,7 @@ WHERE DATE(created_at) >= DATE_TRUNC('month', NOW());
 ## Support
 
 For questions, check:
+
 1. `stripe-webhook-setup.md` → Troubleshooting section
 2. `src/app/api/webhooks/stripe/route.ts` → Inline comments
 3. Stripe API docs: https://docs.stripe.com/webhooks

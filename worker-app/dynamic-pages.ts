@@ -24,6 +24,7 @@
 //   - GET /story/<id>           -> StoryMode for the launch-proof object or
 //     a product/certificate lookup
 //   - GET /dashboard|/dapp      -> authentic-economy console (not SPA 404)
+//   - GET /login|/authenticate  -> public console (SPA auth is not in ASSETS)
 //   - GET/POST /generate        -> Living QR intake (qron.space CTA)
 //
 // Stubbed (serve the SPA shell; follow-ups, see task-3.3-report.md):
@@ -99,7 +100,11 @@ function htmlDocument(opts: {
   );
 }
 
-function htmlResponse(c: Context, body: string, status: 200 | 400 | 404): Response {
+function htmlResponse(
+  c: Context,
+  body: string,
+  status: 200 | 400 | 404
+): Response {
   return c.html(body, status);
 }
 
@@ -800,7 +805,6 @@ function renderLanding(c: Context): Response {
   );
 }
 
-
 // --- /onboard - pilot intake -------------------------------------------------
 // Real intake, not a stub. GET renders a form. POST validates company,
 // contact, work email, vertical, and first product, then 303s to
@@ -819,11 +823,10 @@ const EMAIL_RE =
 
 function onboardFormHtml(error?: string): string {
   const errorBlock = error
-    ? "<p role=\"alert\">" + escapeHtml(error) + "</p>\n"
+    ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
     : "";
   const options = ONBOARD_VERTICALS.map(
-    (id) =>
-      '<option value="' + id + '">' + escapeHtml(id) + "</option>"
+    id => '<option value="' + id + '">' + escapeHtml(id) + "</option>"
   ).join("\n");
   return htmlDocument({
     title: "Onboard a Pilot | AuthiChain",
@@ -867,11 +870,22 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let productName = "";
   try {
     const form = await c.req.parseBody();
-    company = String(form.company || "").trim().slice(0, 80);
-    contactName = String(form.contactName || "").trim().slice(0, 80);
-    email = String(form.email || "").trim().toLowerCase().slice(0, 120);
-    vertical = String(form.vertical || "authichain").trim().toLowerCase();
-    productName = String(form.productName || "").trim().slice(0, 80);
+    company = String(form.company || "")
+      .trim()
+      .slice(0, 80);
+    contactName = String(form.contactName || "")
+      .trim()
+      .slice(0, 80);
+    email = String(form.email || "")
+      .trim()
+      .toLowerCase()
+      .slice(0, 120);
+    vertical = String(form.vertical || "authichain")
+      .trim()
+      .toLowerCase();
+    productName = String(form.productName || "")
+      .trim()
+      .slice(0, 80);
   } catch {
     return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
   }
@@ -883,9 +897,15 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     );
   }
   if (!EMAIL_RE.test(email)) {
-    return htmlResponse(c, onboardFormHtml("A valid work email is required."), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("A valid work email is required."),
+      400
+    );
   }
-  if (!ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])) {
+  if (
+    !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
+  ) {
     return htmlResponse(c, onboardFormHtml("Unknown vertical."), 400);
   }
   const refBytes = await crypto.subtle.digest(
@@ -894,7 +914,7 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   );
   const ref = [...new Uint8Array(refBytes)]
     .slice(0, 8)
-    .map((b) => b.toString(16).padStart(2, "0"))
+    .map(b => b.toString(16).padStart(2, "0"))
     .join("");
   const dest = new URL("/onboard/received", c.req.url);
   dest.searchParams.set("ref", ref);
@@ -905,9 +925,14 @@ async function handleOnboardPost(c: Context): Promise<Response> {
 
 function renderOnboardReceived(c: Context): Response {
   const url = new URL(c.req.url);
-  const ref = (url.searchParams.get("ref") || "").replace(/[^a-f0-9]/g, "").slice(0, 16);
+  const ref = (url.searchParams.get("ref") || "")
+    .replace(/[^a-f0-9]/g, "")
+    .slice(0, 16);
   const company = (url.searchParams.get("company") || "").slice(0, 80);
-  const vertical = (url.searchParams.get("vertical") || "authichain").slice(0, 24);
+  const vertical = (url.searchParams.get("vertical") || "authichain").slice(
+    0,
+    24
+  );
   if (!ref) {
     return htmlResponse(
       c,
@@ -977,7 +1002,7 @@ function launchProofStoryHtml(): string {
       "<main>\n" +
       "<p>StoryMode</p>\n" +
       "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
-      "<p data-verified=\"true\">Production issuer signing</p>\n" +
+      '<p data-verified="true">Production issuer signing</p>\n' +
       "<dl>\n" +
       "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
       "<dt>kid</dt><dd><code>" +
@@ -1073,7 +1098,6 @@ async function renderStory(c: Context): Promise<Response> {
   }
 }
 
-
 // --- /dashboard and /dapp — authentic-economy console ----------------------
 // The Vite SPA shell is not in the edge ASSETS bundle (client/public has no
 // index.html), so treating /dashboard as SPA produced a live 404 after the
@@ -1102,6 +1126,30 @@ function dashboardHtml(): string {
 
 function renderDashboard(c: Context): Response {
   return htmlResponse(c, dashboardHtml(), 200);
+}
+
+function authenticateHtml(): string {
+  return htmlDocument({
+    title: "Sign in | AuthiChain",
+    description:
+      "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
+    canonicalPath: "/authenticate",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Sign in</h1>\n" +
+      "<p>The public console does not require a separate app host. Start a pilot or open the dashboard.</p>\n" +
+      "<ul>\n" +
+      '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
+      '<li><a href="/dashboard">Dashboard</a></li>\n' +
+      '<li><a href="/dpp">EU DPP audit</a></li>\n' +
+      '<li><a href="/api/checkout/dpp">Start DPP checkout</a></li>\n' +
+      "</ul>\n" +
+      "</main>",
+  });
+}
+
+function renderAuthenticate(c: Context): Response {
+  return htmlResponse(c, authenticateHtml(), 200);
 }
 
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
@@ -1138,12 +1186,18 @@ async function handleGeneratePost(c: Context): Promise<Response> {
   try {
     const form = await c.req.parseBody();
     targetUrl = String(form.targetUrl || "").trim();
-    prompt = String(form.prompt || "").trim().slice(0, 200);
+    prompt = String(form.prompt || "")
+      .trim()
+      .slice(0, 200);
   } catch {
     return htmlResponse(c, generateFormHtml("Could not read the form."), 400);
   }
   if (!/^https?:\/\//i.test(targetUrl) || targetUrl.length > 500) {
-    return htmlResponse(c, generateFormHtml("A valid http(s) URL is required."), 400);
+    return htmlResponse(
+      c,
+      generateFormHtml("A valid http(s) URL is required."),
+      400
+    );
   }
   const dest = new URL("/onboard", c.req.url);
   dest.searchParams.set("vertical", "qron");
@@ -1163,7 +1217,8 @@ async function renderGenerate(c: Context): Promise<Response> {
 // --- Dispatcher --------------------------------------------------------------
 
 // Renders every path owned by DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
-// Implemented: /s, /p, /verify, /landing, /onboard, /story, /dashboard, /dapp, /generate.
+// Implemented: /s, /p, /verify, /landing, /onboard, /story, /dashboard, /dapp,
+// /generate, /login, /authenticate.
 // Stubbed (serve the SPA shell): /status, /grants, /gallery, /reveal,
 // /brand/qron/artwork.
 export async function renderDynamicPage(c: Context): Promise<Response> {
@@ -1192,6 +1247,12 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
   }
   if (pathname === "/dapp" || pathname.startsWith("/dapp/")) {
     return renderDashboard(c);
+  }
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    return renderAuthenticate(c);
+  }
+  if (pathname === "/authenticate" || pathname.startsWith("/authenticate/")) {
+    return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
     return renderGenerate(c);

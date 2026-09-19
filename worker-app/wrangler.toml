@@ -6,6 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 # Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
 # for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
 # SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
+# Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
+# GET /api/x402/health returns 200 with status "not_configured".
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
@@ -72,6 +74,48 @@ zone_name = "authichain.com"
 # check+record do not 404 on the apex if APP_WORKER is unbound.
 [[routes]]
 pattern = "authichain.com/api/guardrail/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/checkout"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/checkout/*"
+zone_name = "authichain.com"
+
+# Canonical Stripe Dashboard endpoint. Live account we_1UGTCS… already
+# posts here. Do not register /api/webhooks/stripe in Dashboard (retired).
+[[routes]]
+pattern = "authichain.com/api/stripe/webhook"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/webhooks/stripe"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attest"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attest/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attestations"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attestations/*"
 zone_name = "authichain.com"
 
 [[routes]]

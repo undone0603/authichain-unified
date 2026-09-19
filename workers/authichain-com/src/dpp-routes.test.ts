@@ -6,20 +6,37 @@ function req(path: string, init?: RequestInit): Request {
 }
 
 describe("tryHandleDppRoute", () => {
+  it("aliases /thanks and /success to the DPP thanks page", async () => {
+    for (const path of [
+      "/thanks?session_id=cs_test_1&visit_id=dpp_abc",
+      "/success?session_id=cs_test_1&visit_id=dpp_abc",
+    ]) {
+      const res = await tryHandleDppRoute(req(path));
+      expect(res).not.toBeNull();
+      const html = await res!.text();
+      expect(html).toContain("Payment received");
+      expect(html).toContain(
+        "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+      );
+    }
+  });
+
   it("serves thanks HTML at the edge with the activate query string", async () => {
     const res = await tryHandleDppRoute(
-      req("/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc"),
+      req("/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc")
     );
     expect(res).not.toBeNull();
     expect(res!.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res!.text();
     expect(html).toContain("Payment received");
-    expect(html).toContain("/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc");
+    expect(html).toContain(
+      "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+    );
   });
 
   it("serves activate HTML that posts to /api/dpp/activate", async () => {
     const res = await tryHandleDppRoute(
-      req("/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"),
+      req("/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc")
     );
     expect(res).not.toBeNull();
     const html = await res!.text();
@@ -34,27 +51,32 @@ describe("tryHandleDppRoute", () => {
   });
 
   it("returns null for DPP money APIs so APP_PREFIXES proxy them", async () => {
-    const checkout = await tryHandleDppRoute(req("/api/checkout/dpp?visit_id=dpp_abc"));
+    const checkout = await tryHandleDppRoute(
+      req("/api/checkout/dpp?visit_id=dpp_abc")
+    );
     const activate = await tryHandleDppRoute(
       new Request("https://authichain.com/api/dpp/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: "cs_test_1" }),
-      }),
+      })
     );
     const webhook = await tryHandleDppRoute(
       new Request("https://authichain.com/api/stripe/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: '{"type":"checkout.session.completed"}',
-      }),
+      })
     );
     const funnel = await tryHandleDppRoute(
       new Request("https://authichain.com/api/funnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prospect_id: "dpp_abc", stage: "visit_landing_page" }),
-      }),
+        body: JSON.stringify({
+          prospect_id: "dpp_abc",
+          stage: "visit_landing_page",
+        }),
+      })
     );
     expect(checkout).toBeNull();
     expect(activate).toBeNull();

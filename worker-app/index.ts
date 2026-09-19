@@ -15,6 +15,7 @@ import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
+import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { scheduled } from "./cron-dispatch";
 
@@ -34,6 +35,13 @@ type Env = {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   CRON_SECRET?: string;
   INTERNAL_API_SECRET?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 };
 
 function hydrateProcessEnv(env?: Env) {
@@ -56,6 +64,13 @@ function hydrateProcessEnv(env?: Env) {
       "AUTHICHAIN_ATTESTATION_PUBLIC_JWK",
       env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
     ],
+    ["X402_PAY_TO", env.X402_PAY_TO],
+    ["X402_FACILITATOR_URL", env.X402_FACILITATOR_URL],
+    ["X402_NETWORK", env.X402_NETWORK],
+    ["X402_CHAIN_ID", env.X402_CHAIN_ID],
+    ["X402_USDC_ASSET", env.X402_USDC_ASSET],
+    ["X402_PRICE_USD", env.X402_PRICE_USD],
+    ["X402_DAILY_CAP_USD", env.X402_DAILY_CAP_USD],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;
@@ -160,6 +175,11 @@ app.use(
 
 app.get("/api/health", c => c.json({ status: "ok" }));
 
+function isAppHostname(host: string): boolean {
+  const h = host.split(":")[0].toLowerCase();
+  return h.startsWith("app.");
+}
+
 // ─── DPP $299 Checkout ──────────────────────────────────────────────────────
 // Same session create as Next src/app/api/checkout/dpp. Registered here so
 // authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
@@ -204,6 +224,56 @@ app.get("/api/checkout/dpp", async c => {
     console.error("[checkout/dpp] Error:", err?.message || err);
     return c.json(
       { error: "Failed to start DPP checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
+// Generic plan checkout (POST). GET is route-health only — never creates a
+// Stripe session, so CI/probes cannot start a live charge.
+app.get("/api/checkout", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json({
+    ok: true,
+    methods: ["POST"],
+    smoke: "GET /api/checkout/dpp",
+    webhook: "POST /api/stripe/webhook",
+    thanks: "/dpp/thanks",
+    activate: "/dpp/activate",
+  });
+});
+
+app.post("/api/checkout", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, string> = {};
+    try {
+      body = (await c.req.json()) as Record<string, string>;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { createPlanCheckoutSession } =
+      await import("../src/lib/plan-checkout");
+    const result = await createPlanCheckoutSession({
+      request: c.req.raw,
+      body,
+      stripeSecretKey:
+        c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+    });
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json({ url: result.url, planId: result.planId });
+  } catch (err: any) {
+    console.error("[checkout] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start checkout", detail: err?.message },
       500
     );
   }
@@ -267,7 +337,24 @@ app.post("/api/funnel", async c => {
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.post("/api/stripe/webhook", async c => {
+app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json({
+    ok: true,
+    handler: "present",
+    methods: ["POST"],
+    canonical: "/api/stripe/webhook",
+  });
+});
+
+async function stripeWebhookPost(c: {
+  env?: Env;
+  req: {
+    header: (name: string) => string | undefined;
+    arrayBuffer: () => Promise<ArrayBuffer>;
+  };
+  json: (body: unknown, status?: number) => Response;
+}) {
   const sig = c.req.header("stripe-signature");
   if (!sig) {
     return c.json({ error: "Missing stripe-signature header" }, 400);
@@ -282,7 +369,10 @@ app.post("/api/stripe/webhook", async c => {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
     return c.json({ error: err.message }, 400);
   }
-});
+}
+
+app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
+app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
 
 app.post("/api/dpp/activate", async c => {
   try {
@@ -1384,6 +1474,7 @@ app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
+registerX402Routes(app);
 registerGuardrailApi(app);
 
 app.get("/robots.txt", c => {
@@ -1413,6 +1504,11 @@ app.get("/sitemap.xml", async c => {
 
 app.get("*", async c => {
   const { pathname: rawPathname } = new URL(c.req.url);
+  const appHost =
+    c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
+  if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
+    return c.redirect("/dashboard", 302);
+  }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page
   // wrongly falls through to the SPA shell (an SEO regression for any
@@ -1431,10 +1527,10 @@ app.get("*", async c => {
 
   const owner = resolveOwner(pathname, await getMarketingRoutes(c.env));
 
-  // "api" should never reach here (real /api/* routes are registered above);
-  // handle defensively by passing the raw request through to ASSETS.
+  // "api" should never reach here (real /api/* routes are registered above).
+  // Return JSON 404 — ASSETS has no API files and used to emit an empty 404.
   if (owner === "api") {
-    return c.env.ASSETS.fetch(c.req.raw);
+    return c.json({ error: "Not found" }, 404);
   }
 
   // "dynamic": lean Hono-rendered pages (Task 3.3). /s, /p, /verify are real

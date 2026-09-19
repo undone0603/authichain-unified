@@ -18,7 +18,8 @@ const SAMPLE = {
     {
       id: "unit",
       type: "test",
-      digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
   ],
 };
@@ -36,8 +37,10 @@ describe("registerAttestationApi", () => {
       extractable: true,
     });
     const pem = await exportPKCS8(privateKey);
-    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 =
-      Buffer.from(pem, "utf8").toString("base64");
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
+      pem,
+      "utf8"
+    ).toString("base64");
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "attest-api-kid";
   }
 
@@ -56,7 +59,9 @@ describe("registerAttestationApi", () => {
     const body = (await signed.json()) as { jws: string; kid: string };
     expect(body.jws).toBeTruthy();
     expect(body.kid).toBe("attest-api-kid");
-    expect(validateAttestation(SAMPLE).attestation_id).toBe(SAMPLE.attestation_id);
+    expect(validateAttestation(SAMPLE).attestation_id).toBe(
+      SAMPLE.attestation_id
+    );
 
     const verified = await app.request("/api/v1/attestation", {
       method: "PUT",
@@ -66,6 +71,22 @@ describe("registerAttestationApi", () => {
     expect(verified.status).toBe(200);
     const check = (await verified.json()) as { valid: boolean };
     expect(check.valid).toBe(true);
+  });
+
+  it("GET /api/v1/attestation and aliases return the contract index", async () => {
+    const app = new Hono();
+    registerAttestationApi(app);
+    for (const path of [
+      "/api/v1/attestation",
+      "/api/attest",
+      "/api/attestations",
+    ]) {
+      const res = await app.request(path);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { ok: boolean; canonical: string };
+      expect(body.ok).toBe(true);
+      expect(body.canonical).toBe("/api/v1/attestation");
+    }
   });
 
   it("POST /api/v1/attestation/verify rejects a missing jws", async () => {

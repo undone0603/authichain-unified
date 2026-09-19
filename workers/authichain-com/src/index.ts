@@ -4,6 +4,7 @@
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { APP_PREFIXES } from "./app-prefixes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
@@ -2462,7 +2463,7 @@ textarea{resize:vertical;min-height:80px}
 <body>
 <nav class="nav">
   <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="https://app.authichain.com/login" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
+  <a href="/onboard" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
 </nav>
 <div class="wrap">
   <h1>Anchor a Product to the <span>Blockchain</span></h1>
@@ -2706,7 +2707,7 @@ a{color:#c9a227;text-decoration:none}
         +'</div>'
         +'<div class="actions">'
         +'<a class="btn-outline" href="/anchor">Anchor Another</a>'
-        +'<a class="btn-outline" href="https://app.authichain.com/login" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
+        +'<a class="btn-outline" href="/onboard" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
         +'</div>';
     })
     .catch(function(e){
@@ -3031,7 +3032,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/authenticate">Start Free — Get DPP Compliant</a>
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/onboard">Start Free — Get DPP Compliant</a>
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
     </div>
@@ -3063,6 +3064,13 @@ interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 }
 
 /** Escapes text interpolated into the 404 document. */
@@ -3116,6 +3124,8 @@ export default {
       url.hostname = 'authichain.com';
       return Response.redirect(url.toString(), 301);
     }
+    const appHost = tryHandleAppHost(request);
+    if (appHost) return appHost;
     const p = url.pathname;
     if (p === '/og-image.png' || p === '/og.png') {
       return pngResponse(OG_IMAGE_PNG_B64);
@@ -3168,6 +3178,10 @@ export default {
     if (dppPage) return dppPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
+    // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
+    // and unmounted GET /api/x402 answers an empty ASSETS 404.
+    const x402 = await tryHandleX402(request, env);
+    if (x402) return x402;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
