@@ -133,6 +133,24 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 
+test("IndexNow key file is served as short-cache plain text", async () => {
+  const res = await get("/authichain2026indexnow.txt");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "text/plain; charset=utf-8");
+  assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(await res.text(), "authichain2026indexnow");
+  assert.equal((await get("/authichain2026indexnow.txt/")).status, 404);
+});
+
+test("robots and sitemap still answer after the IndexNow route", async () => {
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(await robots.text(), /Sitemap: https:\/\/authichain.com\/sitemap.xml/);
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(await sitemap.text(), /<urlset/);
+});
+
 test("every URL the sitemap claims actually resolves", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);

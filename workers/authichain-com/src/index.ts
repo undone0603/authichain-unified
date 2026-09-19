@@ -27,6 +27,7 @@ import {
   estateNav,
   estateSkipLink,
   estateTrust,
+  tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
 
 /**
@@ -3150,6 +3151,8 @@ export default {
     if (p === '/robots.txt') {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
     }
+    const indexNow = tryHandleEstateIndexNow(request);
+    if (indexNow) return indexNow;
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       // Was a redirect to the Vercel deployment; the app now lives on this
       // same domain via the APP_WORKER service binding, so redirect same-origin.
