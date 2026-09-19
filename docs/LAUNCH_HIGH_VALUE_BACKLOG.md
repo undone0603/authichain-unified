@@ -42,6 +42,7 @@ Secret **names** only. No values.
 | Canonical Stripe webhook mount      | `POST https://authichain.com/api/stripe/webhook` → 400 JSON without `stripe-signature` (handler is live).                                                                                                                                                                                                                         |
 | DPP exceptions + genesis auth       | Unauthenticated calls return 401 JSON, not cached HTML.                                                                                                                                                                                                                                                                           |
 | Channel-partner shortlist           | `scripts/data/channel-partners-2026-09-19.json` + `--segment=partners` (dry-run default; not in `all`). Supabase leads seeded `source=channel_partner_web_scan_2026-09-19`. URL-only agencies (Canna Banana, HighMinded, Magic Plants) and DPP consultancies (GO TRACE, Provenant, DPP Agency) are research-only — not auto-send. |
+| High-leverage Tier 1 five           | `scripts/data/high-leverage-2026-09-19.json` + `--segment=high_leverage` (dry-run only; not in `all`). Supabase source `high_leverage_scan_2026-09-19`: scott.krupa@ / mark.jameson@ fastsigns.com, info@stashstock.com, wendy.linscott@curaleaf.com, klong@c3industries.com. No invented emails.                                 |
 
 ---
 
