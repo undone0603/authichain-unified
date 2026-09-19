@@ -11,10 +11,13 @@ pattern = "claw.authichain.com/*"
 zone_name = "authichain.com"
 
 # OpenClaw Gateway connection details (set as secrets):
-#   OPENCLAW_GATEWAY_URL  — ws://localhost:18789 or https://your-gateway
-#   OPENCLAW_API_KEY     — gateway auth token
-#   AGENTZ_API_URL       — http://localhost:8000 (AgentZ FastAPI)
-#   AGENTZ_API_KEY       — shared secret for AgentZ
+#   OPENCLAW_GATEWAY_URL  — PUBLIC https:// or wss:// gateway (tunnel/VPS).
+#                          NOT ws://localhost — Workers cannot reach your laptop.
+#   OPENCLAW_API_KEY     — shared Bearer for webhook + AgentZ client
+#   AGENTZ_API_URL       — https://agentz.authichain.com (authichain-agentz Containers).
+#                          Paths: /agents, /workflows, /architect/cycle (NO /api prefix).
+#                          NOT http://localhost:8000 from this Worker.
+#   AGENTZ_API_KEY       — shared secret (match AGENT_SECRET)
 #   SLACK_SIGNING_SECRET  — if using the Slack channel webhook
 #
 # Run: npx wrangler secret put OPENCLAW_GATEWAY_URL --name authichain-openclaw
