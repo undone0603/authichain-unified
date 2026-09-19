@@ -1283,6 +1283,9 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
 app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
+app.use("/onboard", rateLimitMiddleware("onboard", 20, 60_000));
+app.post("/onboard", (c) => renderDynamicPage(c));
+app.post("/onboard/", (c) => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 
@@ -1338,8 +1341,8 @@ app.get("*", async c => {
   }
 
   // "dynamic": lean Hono-rendered pages (Task 3.3). /s, /p, /verify are real
-  // handlers; /status, /grants, /gallery, /reveal, /brand/qron/artwork are
-  // stubbed to the SPA shell inside renderDynamicPage itself.
+  // handlers; /onboard and /story are live intake + StoryMode. /status,
+  // /grants, /gallery, /reveal, /brand/qron/artwork stay SPA-stubbed.
   if (owner === "dynamic") {
     return renderDynamicPage(c);
   }

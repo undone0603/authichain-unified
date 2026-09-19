@@ -40,12 +40,16 @@ describe("resolveOwner", () => {
     expect(resolveOwner("/s", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/p", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/brand/qron/artwork", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/onboard", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/story", marketingRoutes)).toBe("dynamic");
   });
 
   it("routes nested paths under a dynamic-handler path to dynamic (prefix match)", () => {
     expect(resolveOwner("/reveal/xyz", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/s/abc123", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/p/serial-1", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/onboard/received", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/story/00000000-0000-4000-8000-000000000001", marketingRoutes)).toBe("dynamic");
   });
 
   it("routes SPA-owned prefixes to spa", () => {
