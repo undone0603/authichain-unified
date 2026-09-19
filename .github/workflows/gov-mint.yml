@@ -1,10 +1,17 @@
+# Enable only after AuthiChainNFT has bytecode on the target chain
+# (item 5 / GOVCHAIN_NFT_CONTRACT). Default dry_run=true. Do not dispatch
+# dry_run=false until eth_getCode != 0x on Base 8453.
+#
+# Workflow id: 304825951
+# Enable: gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/304825951/enable
+
 name: GovChain – Mint Opportunity NFTs
 
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Dry run (no tx)
+        description: Dry run (no tx). Leave true until Base getCode is proven.
         required: false
         default: "true"
       chain:
@@ -37,6 +44,9 @@ on:
       GOVCHAIN_URL:
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   mint:
     runs-on: ubuntu-latest
@@ -49,8 +59,42 @@ jobs:
         with: { node-version: "22", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Preflight getCode (no keys)
+        env:
+          CHAIN: ${{ inputs.chain || 'base' }}
+          CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
+        run: |
+          if [ -z "$CONTRACT" ]; then
+            echo "GOVCHAIN_NFT_CONTRACT secret is not set"
+            if [ "$DRY_RUN" = "false" ]; then
+              echo "::error::Live mint requires GOVCHAIN_NFT_CONTRACT with bytecode"
+              exit 1
+            fi
+            echo "::warning::Dry-run mint will skip chain writes until the Base deploy lands"
+            exit 0
+          fi
+          case "$CHAIN" in
+            polygon) RPC="https://polygon-rpc.com" ;;
+            base-sepolia) RPC="https://sepolia.base.org" ;;
+            *) RPC="https://mainnet.base.org" ;;
+          esac
+          BODY=$(printf '{"jsonrpc":"2.0","id":1,"method":"eth_getCode","params":["%s","latest"]}' "$CONTRACT")
+          RESP=$(curl -sS -X POST "$RPC" -H 'content-type: application/json' -d "$BODY")
+          echo "${RESP:0:160}"
+          CODE=$(printf '%s' "$RESP" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{process.stdout.write(String(JSON.parse(s).result||""))}catch{process.stdout.write("")}})')
+          if [ -z "$CODE" ] || [ "$CODE" = "0x" ] || [ "$CODE" = "0x0" ]; then
+            echo "getCode is empty for $CONTRACT on $CHAIN"
+            if [ "$DRY_RUN" = "false" ]; then
+              echo "::error::Refusing live mint without bytecode"
+              exit 1
+            fi
+            echo "::warning::Item 5 is not met — mint script will skip"
+            exit 0
+          fi
+          echo "getCode_ok contract=$CONTRACT chain=$CHAIN"
+
       - name: Mint GovChain NFTs
-        continue-on-error: true
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
           CHAIN: ${{ inputs.chain || 'base' }}

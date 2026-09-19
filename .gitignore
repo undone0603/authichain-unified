@@ -96,6 +96,9 @@ qron/
 govchain.us/
 maison-elite-ai-dropship/
 
+# Local / Actions AuthiChainNFT deploy receipts (address is public; keep off main)
+/deployments/
+
 # Debug/lint output artifacts
 eslint_errors.txt
 *.errors.txt

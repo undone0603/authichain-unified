@@ -93,6 +93,18 @@ Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. 
 
 **Still frozen (spend / mint):** `agentz-orchestration`, `content-publish`, `weekly-video`, `browser-vision-tasks`, `automerge-dependabot`, `dependabot-auto-merge`, all `gov-*`, and **live** cold send until `OWNER_LIVE_SEND=true`.
 
+## Update - 2026-09-19 GovChain NFT deploy path (item 5)
+
+Item 5 is **not met yet**. Public Base RPC (`https://mainnet.base.org`) still returns `eth_getCode = 0x` for the Polygon AuthiChainNFT `0x4da4D2675e52374639C9c954f4f653887A9972BE` on chain 8453. No other AuthiChainNFT address is documented on Base. Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` remains funded (~0.002 ETH, nonce 0 as of 2026-09-19).
+
+What changed: the signed-deploy path is now in-repo and Actions-ready (`.github/workflows/deploy-govchain-nft-base.yml`). After this lands on `main`, the **only remaining human step** for item 5 is a `workflow_dispatch` with `dry_run=false` (ops key + likely Alchemy already in repo secrets). Until that run prints an address with `getCode != 0x`:
+
+- Do **not** set Actions secret `GOVCHAIN_NFT_CONTRACT` to a guessed address.
+- Do **not** enable `gov-mint.yml` (id `304825951`).
+- Do **not** dispatch mint with `dry_run=false`.
+
+After a live deploy: set `GOVCHAIN_NFT_CONTRACT` to the new Base address, confirm getCode (Basescan + RPC), then enable `gov-mint.yml` and dispatch **`dry_run=true`** only. Sibling enable order (lowest blast first): gov-ingest `304824543` → gov-score `304825517` → gov-proposals `304825758` → gov-mint `304825951` → gov-notify `304826125` → gov-engine `261329391`. See `docs/operations/base-chain-integration.md`.
+
 ## Status - 2026-09-18 staged re-enable
 
 Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This overrides the Frozen list below for these nine only.
@@ -101,7 +113,7 @@ Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This ove
 
 **Outbound-spend still off (see top of this doc):** content-publish, weekly-video, browser-vision-tasks, agentz-orchestration, automerge-dependabot, dependabot-auto-merge. Dry-run enable list is `content-routine-pr`, `marketing-autonomous`, `email-proposals`, `b2b-outreach`. Revenue / checkout is **not** in this list. `gen-seo-pages` and `ghost-traffic` are already **active**.
 
-**Frozen until item 5:** gov-engine, gov-ingest, gov-mint, gov-notify, gov-proposals, gov-score (`GOVCHAIN_NFT_CONTRACT` needs bytecode on 8453).
+**Frozen until item 5 (still open — no Base bytecode as of 2026-09-19):** gov-engine, gov-ingest, gov-mint, gov-notify, gov-proposals, gov-score. Deploy workflow is ready; `GOVCHAIN_NFT_CONTRACT` still needs bytecode on 8453.
 
 **Gate before any outbound:** read at least one post-enable run of each live workflow. Last known runs before the freeze: schema-drift (PR run 2026-09-15) and seo-regression (2026-09-14) had **failed** and must be understood first; the other live workflows last succeeded.
 
@@ -109,7 +121,7 @@ Stage 1 and 2 workflows were re-enabled 2026-09-18 with owner approval. This ove
 
 Owner-attested: the DPP smoke buyer (`visit_id=smoke_check_1789786486`, live Stripe checkout session) completed checkout and reached `/dpp/thanks` ("Payment received / DPP audit provisioned") with the `/dpp/activate` link. Workstream item 3 is treated as **met on owner attestation**. The agent confirmed the thanks page renders in production but did not independently verify the `provisionPurchase` webhook record or the activate step.
 
-Next: re-enable frozen workflows in staged order, lowest blast radius first, with owner approval before any outbound (outreach/publish) workflow. Keep `gov-mint.yml` disabled until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453 (item 5).
+Next: re-enable frozen workflows in staged order, lowest blast radius first, with owner approval before any outbound (outreach/publish) workflow. Keep `gov-mint.yml` disabled until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453 (item 5). The owner click is now `deploy-govchain-nft-base.yml` (`dry_run=false` on `main`), not a local unsigned script.
 
 ## Update - 2026-09-19 verification (checkout gate)
 
@@ -148,7 +160,7 @@ Judge progress on:
 2. ~~`GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML~~ **done (2026-09-19)**
 3. ~~One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate~~ **met on owner attestation (2026-09-18)** — agent did not independently verify the webhook row or activate step
 4. ~~`GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live~~ **done (2026-09-19) - returns 401 JSON when unauthenticated, not cached HTML**
-5. One signed Base deploy from ops EOA — still blocked until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. Do not dispatch `gov-mint.yml`.
+5. One signed Base deploy from ops EOA — **still open**. No AuthiChainNFT bytecode on 8453 yet. Path: merge the deploy workflow, dispatch `deploy-govchain-nft-base.yml` with `dry_run=false`, set secret `GOVCHAIN_NFT_CONTRACT`, prove `getCode != 0x`, then enable `gov-mint.yml` (`304825951`) with dry-run default true. Do not dispatch `gov-mint.yml` live (`dry_run=false`) until that proof exists.
 
 ## Frozen (historical — 2026-09-16 disable)
 
