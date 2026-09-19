@@ -4,10 +4,17 @@
 # Live deploy only when the owner unchecks dry_run on workflow_dispatch.
 # Pull requests compile the artifact only — they never receive the ops key.
 #
+# force_fresh (workflow_dispatch, default false): when true, do NOT pass
+# GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS into the deploy step env. A stale
+# placeholder secret then cannot poison a first live Base deploy. The deploy
+# script also ignores an existing address whose getCode is empty and deploys
+# fresh (same path as when the secret is unset). Only use the grant path when
+# bytecode is present.
+#
 # Required secrets for a live deploy (already expected on this repo):
 #   WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY   ops EOA (0xbad4…), not the Smart Wallet
 #   ALCHEMY_API_KEY                             optional; public Base RPC is the fallback
-#   GOVCHAIN_NFT_CONTRACT                       optional; if set, grant-only (no new deploy)
+#   GOVCHAIN_NFT_CONTRACT                       optional; grant-only if getCode != 0x
 #
 # After a live run: copy address from the job summary / deployments artifact,
 # set secret GOVCHAIN_NFT_CONTRACT, verify getCode != 0x, then enable gov-mint.yml.
@@ -43,6 +50,11 @@ on:
         description: "Also verifyManufacturer(Coinbase Smart Wallet 0xC0D26735…)"
         required: false
         default: true
+        type: boolean
+      force_fresh:
+        description: "Ignore GOVCHAIN_NFT_CONTRACT and deploy a new contract (stale/empty-address secret)."
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -119,13 +131,31 @@ jobs:
           echo "has_wallet=${HAS_WALLET}"
           echo "has_polygon_key=${HAS_POLYGON}"
           echo "has_alchemy=${HAS_ALCHEMY}"
-          echo "has_existing_contract=${HAS_CONTRACT}"
+          echo "force_fresh=${{ inputs.force_fresh }}"
+          if [ "${{ inputs.force_fresh }}" = "true" ]; then
+            echo "has_existing_contract=false"
+            echo "force_fresh=true — not passing GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS"
+          else
+            echo "has_existing_contract=${HAS_CONTRACT}"
+          fi
           if [ "${HAS_WALLET}" != "true" ] && [ "${HAS_POLYGON}" != "true" ]; then
             echo "::warning::No WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY secret"
             if [ "${{ inputs.dry_run }}" = "false" ]; then
               echo "::error::Live deploy needs WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY"
               exit 1
             fi
+          fi
+
+      - name: Contract env (omit when force_fresh)
+        env:
+          FORCE_FRESH: ${{ inputs.force_fresh }}
+          EXISTING: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+        run: |
+          if [ "${FORCE_FRESH}" = "true" ]; then
+            echo "force_fresh=true — leaving GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS unset"
+          elif [ -n "${EXISTING}" ]; then
+            echo "GOVCHAIN_NFT_CONTRACT=${EXISTING}" >> "$GITHUB_ENV"
+            echo "CONTRACT_ADDRESS=${EXISTING}" >> "$GITHUB_ENV"
           fi
 
       - name: Deploy AuthiChainNFT
@@ -137,8 +167,6 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
           WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
           POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
-          GOVCHAIN_NFT_CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
-          CONTRACT_ADDRESS: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
         run: pnpm exec tsx scripts/deploy-authichain-nft-base.ts
 
       - name: Verify getCode on the target chain
