@@ -328,9 +328,9 @@ await verifyExpectedFailure("altered payload", () =>
 );
 
 const alteredSignature = productionJws.split(".");
-alteredSignature[2] =
-  alteredSignature[2].slice(0, -1) +
-  (alteredSignature[2].endsWith("A") ? "B" : "A");
+alteredSignature[2] = [...alteredSignature[2]]
+  .map((ch, i) => (i % 2 === 0 ? (ch === "A" ? "B" : "A") : ch))
+  .join("");
 await verifyExpectedFailure("altered signature", () =>
   verifyAttestationJws(alteredSignature.join("."), publicJwk, {
     expectedObjectId: fixturePayload.subject.object_id,
