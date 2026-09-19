@@ -14,7 +14,13 @@ export const ENV = {
     "",
   thirdwebSecretKey:
     process.env.THIRDWEB_SECRET_KEY ?? process.env.thirdweb_api_key ?? "",
-  hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
+  // GitHub currently stores HUBSPOT_ACCESS_TOKEN / HUBSPOT_TOKEN, not
+  // HUBSPOT_SERVICE_KEY. Prefer the documented name, then the secrets that exist.
+  hubspotServiceKey:
+    process.env.HUBSPOT_SERVICE_KEY ??
+    process.env.HUBSPOT_ACCESS_TOKEN ??
+    process.env.HUBSPOT_TOKEN ??
+    "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",

@@ -17,6 +17,7 @@ Never send customers to `*.vercel.app`.
 | Pattern | Worker |
 |---|---|
 | `/` (landing assets only) | `authichain-com` |
+| `/.well-known/jwks.json` | `authichain-edge-router` via landing `APP_WORKER` proxy |
 | `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing) |
 | `/api/qron-register*` | `authichain-qron-provenance` |
 | `/api/*` (rest) | `authichain-api-gateway` |
@@ -57,6 +58,7 @@ Has **no `[[routes]]`**. Treat as library/stub until a hostname is attached. Do 
 
 ```
 curl -sI https://authichain.com/verify
+curl -sI https://authichain.com/.well-known/jwks.json
 curl -sI https://govchain.us/onboard
 curl -sI https://strainchain.io/onboard
 ```

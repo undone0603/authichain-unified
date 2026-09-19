@@ -7,8 +7,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const jwk = await publicJwkFromPrivateKey();
+    const kid =
+      process.env.AUTHICHAIN_ATTESTATION_KEY_ID || (await getKeyId());
     return NextResponse.json({
-      keys: [{ ...jwk, kid: await getKeyId(), use: "sig", alg: "EdDSA" }],
+      keys: [{ ...jwk, kid, use: "sig", alg: "EdDSA" }],
     });
   } catch (error) {
     return NextResponse.json(

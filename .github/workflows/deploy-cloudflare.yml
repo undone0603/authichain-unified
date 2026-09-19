@@ -47,7 +47,6 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-
       - name: Setup PNPM
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v6
@@ -74,6 +73,22 @@ jobs:
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
+      - name: Inspect build output
+        if: steps.secrets_check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "=== cwd ==="
+          pwd
+          echo "=== package.json scripts ==="
+          node -e "const p=require('./package.json'); console.log(JSON.stringify(p.scripts||{},null,2))"
+          echo "=== wrangler configs ==="
+          find . -name 'wrangler.toml' -o -name 'wrangler.json' -o -name 'wrangler.jsonc' | head -50
+          echo "=== deep artifact search ==="
+          find . \( -path './.git' -o -path './node_modules' \) -prune -o \
+            \( -name dist -o -name out -o -name .open-next -o -name .next -o -name build \) -print
+          echo "=== next.config output ==="
+          find . -name 'next.config.*' -print
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app
@@ -82,8 +97,72 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Deploy authichain-scan-validate
+      - name: Bind attestation key on authichain-edge-router
         if: steps.secrets_check.outputs.skip != 'true'
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+          AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKER_NAME="authichain-edge-router"
+          JWKS_CODE="$(curl -sS -o /tmp/jwks-probe.json -w '%{http_code}' \
+            https://authichain.com/protocol/jwks.json || echo 000)"
+          if [ "$JWKS_CODE" = "200" ]; then
+            echo "JWKS already live ($JWKS_CODE)"
+            # A key ID can be added or rotated independently of the private key.
+            # Do not short-circuit before propagating a newly-added
+            # AUTHICHAIN_ATTESTATION_KEY_ID secret to the Worker.
+            if [ -n "${AUTHICHAIN_ATTESTATION_KEY_ID:-}" ]; then
+              printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
+                AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
+              echo "bound AUTHICHAIN_ATTESTATION_KEY_ID on $WORKER_NAME"
+              npx wrangler deploy --minify --config wrangler.toml
+            else
+              echo "AUTHICHAIN_ATTESTATION_KEY_ID not supplied — leaving existing binding in place"
+            fi
+            exit 0
+          fi
+          KEY_B64="${AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64:-}"
+          if [ -z "$KEY_B64" ]; then
+            echo "GitHub secret empty and JWKS is $JWKS_CODE — generating Ed25519 v0.1 key"
+          else
+            echo "Deriving public JWK from the GitHub-stored PKCS#8"
+          fi
+          EXISTING_KEY_B64="$KEY_B64" node ../scripts/bind-attestation-jwks.mjs
+          KEY_B64="$(cat /tmp/attest-pkcs8.b64)"
+          printf '%s' "$KEY_B64" | npx wrangler secret put \
+            AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 --name "$WORKER_NAME"
+          printf '%s' "$(cat /tmp/attest-pub.jwk)" | npx wrangler secret put \
+            AUTHICHAIN_ATTESTATION_PUBLIC_JWK --name "$WORKER_NAME"
+          if [ -n "${AUTHICHAIN_ATTESTATION_KEY_ID:-}" ]; then
+            printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
+              AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
+          fi
+          echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 + PUBLIC_JWK on $WORKER_NAME"
+          echo "re-deploying so custom routes attach to the version that has the secret"
+          npx wrangler deploy --minify --config wrangler.toml
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 5
+            AFTER="$(curl -sS -o /tmp/jwks-after.json -w '%{http_code}' \
+              https://authichain.com/protocol/jwks.json || echo 000)"
+            if [ "$AFTER" = "200" ]; then
+              echo "JWKS live after bind ($AFTER)"
+              exit 0
+            fi
+            echo "JWKS $AFTER after bind, retry $i"
+            cat /tmp/jwks-after.json || true
+            echo
+          done
+          echo "JWKS still not 200 after bind"
+          cat /tmp/jwks-after.json || true
+          exit 1
+
+      - name: Deploy authichain-scan-validate
+        if: ${{ always() && steps.secrets_check.outputs.skip != 'true' }}
         working-directory: workers/authichain-scan-validate
         run: npx wrangler deploy --minify --config wrangler.toml
         env:

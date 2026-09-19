@@ -322,7 +322,9 @@ export default {
   async fetch(request) {
     if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
     const u = new URL(request.url);
-    const p = u.pathname.replace(/[^\w\-\/]+$/, "");
+    // Must be `let`: the percent-decode loop reassigns p. Wrangler minify
+    // (esbuild) rejects `const p` + reassignment and fails the whole deploy.
+    let p = u.pathname.replace(/[^\w\-\/]+$/, "");
     for (let i = 0; i < 8 && /%[0-9A-Fa-f]{2}$/.test(p); i++) {
       const c = String.fromCharCode(parseInt(p.slice(-2), 16));
       if (/[A-Za-z0-9\/]/.test(c)) break;

@@ -11,6 +11,10 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [project/todo.md](project/todo.md) — platform TODO / progress tracker
 - [project/SAM_PREP.md](project/SAM_PREP.md) — SAM.gov registration checklist
 
+## Integrations
+- [integrations/hubspot.md](integrations/hubspot.md) — Grok-connected HubSpot portal (Authichain `245112265`, NA2)
+- [integrations/openclaw-setup.md](integrations/openclaw-setup.md)
+
 ## Architecture & design
 - [NETWORK.md](NETWORK.md) — live deploy map (Vercel projects, CF workers, DB)
 - [CAPABILITIES.md](CAPABILITIES.md) — full capability catalog (tRPC routers, API routes, workers, schedulers, AgentZ)

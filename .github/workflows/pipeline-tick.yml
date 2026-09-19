@@ -1,37 +1,21 @@
 name: Pipeline Tick (direct runner)
 
 # Runs the AgentZ pipeline tick by invoking runPipelineTick() directly on the
-# runner, instead of calling https://authichain.com/api/cron/pipeline with a
-# bearer token as autonomous-business-cycle.yml does.
+# runner. The normal schedule remains daily; a push with [pipeline-proof] is
+# an explicit one-shot production proof trigger.
 #
-# The HTTP hop bought nothing and cost three failure modes. The first live
-# activation attempt (run 32337392873) died on a bare 401 because CRON_SECRET
-# in this repository does not match CRON_SECRET in the deployed environment —
-# a mismatch nothing can detect until someone dispatches the job, and which
-# only a dashboard action can fix. Calling the function directly removes that
-# dependency on a separate deploy target and turns an opaque 401 into a real
-# stack trace.
+# Main autonomous launch is active by default. PIPELINE_TICK_ENABLED remains
+# the emergency stop switch: set it to "false" to halt the live tick; an unset
+# variable is treated as "true" for the main branch.
 #
-# This is the same shape as browser-vision-tasks.yml, which reaches the
-# database successfully on every run, IPv4 pin included.
-#
-# ── Activation ───────────────────────────────────────────────────────────────
-# This workflow is SAFE TO SCHEDULE AS-IS. runPipelineTick() returns
-# {enabled: false, skipped: true} unless AUTONOMOUS_PIPELINE_ENABLED === "true"
-# in the process environment (server/_core/env.ts:33), so until the repository
-# variable below is set every run is a no-op that says so in the log.
-#
-# To activate: set the repository variable PIPELINE_TICK_ENABLED to "true". To
-# stop: unset it. No code change, no deploy, effective on the next run. That is
-# deliberately the whole switch — a variable a human sets, not a default this
-# workflow assumes.
-#
-# Note what activation turns on: lead discovery, research browsing, and
-# outbound email drafting. Email still passes server/outreach/send-guard.ts,
-# which sends only to addresses Apollo itself reports as `verified` and never
-# to role inboxes.
+# Actual outbound delivery remains fail-closed behind
+# server/outreach/send-guard.ts: only trusted provenance sources, non-role
+# inboxes, MX, Resend credentials, and a physical mailing address can reach
+# the network.
 
 on:
+  push:
+    branches: [main]
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -52,8 +36,12 @@ permissions:
 jobs:
   run:
     name: Run pipeline tick
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[pipeline-proof]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Skip if DATABASE_URL not configured
         id: db-check
@@ -72,19 +60,15 @@ jobs:
         env:
           CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
         run: |
-          # Say plainly which of the two outcomes this run is going to be, so a
-          # green check never reads as "the pipeline ran" when it did not, and
-          # name the variable that decided it.
-          if [ "$CURRENT" = "true" ]; then
-            echo "::notice::PIPELINE_TICK_ENABLED=true — this run will execute the pipeline."
-          elif [ -n "$CURRENT" ]; then
-            echo "::notice::Pipeline switch is set but not to \"true\" — this run is a no-op."
+          if [ "$CURRENT" = "false" ]; then
+            echo "::warning::PIPELINE_TICK_ENABLED=false — this run will be a no-op."
+          elif [ -z "$CURRENT" ] || [ "$CURRENT" = "true" ]; then
+            echo "::notice::Autonomous launch active — PIPELINE_TICK_ENABLED=${CURRENT:-true}."
           else
-            echo "::notice::PIPELINE_TICK_ENABLED is unset — this run is a no-op. Set the repository variable to \"true\" to activate."
+            echo "::error::PIPELINE_TICK_ENABLED must be true, false, or unset."
+            exit 1
           fi
 
-      # The runner has no IPv6 route, and the Supabase pooler resolves to both.
-      # Same pin as browser-vision-tasks.yml.
       - name: Force IPv4 for Supabase pooler
         if: steps.db-check.outputs.skip != 'true'
         env:
@@ -117,19 +101,6 @@ jobs:
         with:
           node-version: "22"
 
-      # pnpm comes from corepack, which ships with Node, rather than from
-      # pnpm/action-setup. CodeQL flags that action as an unpinned third-party
-      # dependency (`@v4` is a mutable tag that can be repointed at any commit),
-      # and pinning it would mean hardcoding a SHA. Corepack removes the
-      # third-party dependency altogether instead of pinning it.
-      #
-      # The version is stated explicitly because package.json has no
-      # `packageManager` field; it matches the 10.28.2 the other workflows use,
-      # so the lockfile is read by the same resolver everywhere.
-      #
-      # Trade-off: this drops `cache: pnpm` from setup-node, which needs pnpm on
-      # PATH before it runs. Installs are slower by roughly the download time.
-      # For a once-daily job that is not worth reintroducing the dependency for.
       - name: Enable pnpm via corepack
         if: steps.db-check.outputs.skip != 'true'
         run: |
@@ -141,40 +112,55 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      # A [pipeline-proof] push is the explicit one-shot launch verification path.
+      # This commit intentionally carries the marker so the proof workflow runs once.
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
-          # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED from the
-          # process environment. PIPELINE_TICK_ENABLED is the single GitHub-side
-          # activation switch, and anything other than "true" makes the tick a
-          # no-op.
-          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED }}
+          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # The content agent needs this, and this workflow was not passing it:
-          # the first dry run failed all three due DRAFT_LAUNCH_EMAIL tasks with
-          # "ANTHROPIC_API_KEY is not configured". gov-proposals.yml and
-          # gov-score.yml already pass the same secret.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Absent means apolloSearchLeads() returns [] and no leads are found —
-          # the tick still runs its other stages rather than failing.
           APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           NODE_OPTIONS: --dns-result-order=ipv4first
-          # Through env rather than spliced into the run line: an input
-          # interpolated directly into a shell command is a command-injection
-          # sink, and boolean-today is string-tomorrow.
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # A dry run bypasses the activation switch on purpose — the whole
-          # point is to see what a live tick would do while it is still off.
-          # sendEmail() records instead of dispatching, so nothing is mailed.
-          # Everything else runs for real, database writes included.
           if [ "$DRY_RUN" = "true" ]; then
             echo "::notice::Dry run — email is recorded, not sent. Database writes still happen."
             pnpm tsx server/jobs/pipeline-tick.ts --dry-run
           else
             pnpm tsx server/jobs/pipeline-tick.ts
           fi
+
+      - name: Produce launch proof
+        if: steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
+          AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: pnpm tsx scripts/launch-proof.ts
+
+      - name: Upload launch proof artifacts
+        if: always() && steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        uses: actions/upload-artifact@v4
+        with:
+          name: authichain-launch-proof
+          path: artifacts/production-launch-proof.json
+          if-no-files-found: warn
+
+      - name: Upload QRON launch artifact
+        if: always() && steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
+        uses: actions/upload-artifact@v4
+        with:
+          name: authichain-launch-proof-qron
+          path: artifacts/launch-proof-qron.png
+          if-no-files-found: warn

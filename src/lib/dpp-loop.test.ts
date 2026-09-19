@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DPP_PRICE_ID,
   dppActivateUrl,
+  fetchAllLoopEvents,
   isDppOffer,
+  isDemoVisit,
   recordDppLoopEvent,
+  stallOf,
+  summarizeDppLoop,
+  reconstructLoop,
 } from "./dpp-loop";
 import { DPP_OFFER_KEY } from "./plans";
 
@@ -52,5 +57,150 @@ describe("dpp-loop", () => {
         }),
       })
     );
+  });
+
+  it("does not treat bounce/abandon as founder exceptions", () => {
+    const visitOnly = reconstructLoop([
+      {
+        event_type: "dpp_loop:attributed_visit",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "attributed_visit" },
+      },
+    ]);
+    const visitStall = stallOf(visitOnly, new Date("2026-09-03T00:00:00.000Z"));
+    expect(visitStall.kind).toBe("funnel");
+    expect(visitStall.stalledAt).toBe("attributed_visit");
+
+    const checkout = reconstructLoop([
+      {
+        event_type: "dpp_loop:checkout_started",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "checkout_started" },
+      },
+    ]);
+    const checkoutStall = stallOf(
+      checkout,
+      new Date("2026-09-01T12:00:00.000Z")
+    );
+    expect(checkoutStall.kind).toBe("funnel");
+    expect(checkoutStall.stalledAt).toBe("checkout_started");
+  });
+
+  it("reports an exception after payment when provisioning never arrives", () => {
+    const loop = reconstructLoop([
+      {
+        event_type: "dpp_loop:payment_succeeded",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "payment_succeeded" },
+      },
+    ]);
+    const stall = stallOf(loop, new Date("2026-09-01T03:00:00.000Z"));
+    expect(stall.kind).toBe("exception");
+    expect(stall.stalledAt).toBe("payment_succeeded");
+    expect(stall.nextExpected).toBe("provisioned");
+    expect(stall.reason).toBe("threshold_exceeded");
+  });
+
+  it("flags a hole when a later stage is recorded without a prior required stage", () => {
+    const loop = reconstructLoop([
+      {
+        event_type: "dpp_loop:payment_succeeded",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "payment_succeeded" },
+      },
+      {
+        event_type: "dpp_loop:verification",
+        timestamp: "2026-09-02T00:00:00.000Z",
+        metadata: { loop_stage: "verification" },
+      },
+    ]);
+    const stall = stallOf(loop, new Date("2026-09-03T00:00:00.000Z"));
+    expect(stall.kind).toBe("exception");
+    expect(stall.reason).toBe("missing_prior_stage");
+    expect(stall.holes).toContain("dpp_published");
+    expect(stall.nextExpected).toBe("provisioned");
+  });
+
+  it("does not stall a paid visit still inside its threshold", () => {
+    const loop = reconstructLoop([
+      {
+        event_type: "dpp_loop:payment_succeeded",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "payment_succeeded" },
+      },
+    ]);
+    const stall = stallOf(loop, new Date("2026-09-01T00:30:00.000Z"));
+    expect(stall.kind).toBeNull();
+    expect(stall.reason).toBe("within_threshold");
+  });
+
+  it("excludes demo visits from exception and customer funnel counts", () => {
+    const rows = [
+      {
+        prospect_id: "demo_1",
+        event_type: "dpp_loop:payment_succeeded",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "payment_succeeded", is_demo: true },
+      },
+      {
+        prospect_id: "paid_1",
+        event_type: "dpp_loop:payment_succeeded",
+        timestamp: "2026-09-01T00:00:00.000Z",
+        metadata: { loop_stage: "payment_succeeded" },
+      },
+    ];
+    expect(isDemoVisit(rows.slice(0, 1))).toBe(true);
+    const summary = summarizeDppLoop(
+      rows,
+      new Date("2026-09-01T04:00:00.000Z")
+    );
+    expect(summary.visits).toBe(1);
+    expect(summary.exceptions).toHaveLength(1);
+    expect(summary.exceptions[0].visitId).toBe("paid_1");
+    expect(summary.demoVisits).toBe(1);
+  });
+
+  it("pages through funnel_events instead of a single limit(5000)", async () => {
+    const pages: number[] = [];
+    const supabase = {
+      from: () => ({
+        select: () => ({
+          like: () => ({
+            order: () => ({
+              range: async (from: number, to: number) => {
+                pages.push(to - from + 1);
+                if (from === 0) {
+                  return {
+                    data: Array.from({ length: 1000 }, (_, i) => ({
+                      prospect_id: `v${i}`,
+                      event_type: "dpp_loop:attributed_visit",
+                      timestamp: "2026-09-01T00:00:00.000Z",
+                      metadata: { loop_stage: "attributed_visit" },
+                    })),
+                    error: null,
+                  };
+                }
+                return {
+                  data: [
+                    {
+                      prospect_id: "v1000",
+                      event_type: "dpp_loop:attributed_visit",
+                      timestamp: "2026-09-01T00:00:00.000Z",
+                      metadata: { loop_stage: "attributed_visit" },
+                    },
+                  ],
+                  error: null,
+                };
+              },
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const rows = await fetchAllLoopEvents(supabase);
+    expect(rows).toHaveLength(1001);
+    expect(pages[0]).toBe(1000);
+    expect(pages.length).toBeGreaterThan(1);
   });
 });

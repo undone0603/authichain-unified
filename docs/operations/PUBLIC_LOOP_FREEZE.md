@@ -1,23 +1,32 @@
-# Public-loop freeze — 2026-09-16
+# Public-loop freeze — updated 2026-09-17
 
-Autonomous scale is paused until a stranger can finish one path without a login code.
+Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and activate** without a login code. Access is no longer the gate.
 
-## Why
+## What changed
 
-- `authichain.com`, `qron.space`, `govchain.us`, `strainchain.io` were wrapping every request in Cloudflare Access (`strainchainexecutiveteam.cloudflareaccess.com`, app name "All Workers", kid `53cc38df…`).
-- GitHub Actions `Unblock public Access` ran with `apply=true` and deleted **0** apps. Token sees 5 zones but `GET /accounts/{id}/access/apps` is empty and zone Access is **403**. The Zero Trust team is not writable with `CLOUDFLARE_API_TOKEN` as stored today (needs Access: Apps Read+Edit on the team that owns `strainchainexecutiveteam`).
-- Until `/verify` is 200 without Access, marketing crons, Copilot CI loops, and content-bundle PRs are noise.
+- Unauthenticated `GET https://authichain.com/verify` is **not** a 302 to `cloudflareaccess.com` (reconfirmed 2026-09-17). Apex, `qron.space`, `govchain.us`, `strainchain.io` likewise return 200 with no Access login.
+- GitHub `CLOUDFLARE_API_TOKEN` still **403s** Access org/apps (`unblock-public-access.yml` lists 0 apps). Do not treat a green Access workflow as proof of policy. Keep Access off public hosts in the dashboard; grant the token `Access: Apps` Read+Edit later so the workflow can enforce it.
+- Resend ownership TXT for `authichain.com` is **live** in public DNS (`resend-domain-verification=5afa5cf8ec397b18c194291c5ca0d339`). The GitHub DNS-create job still 10000s (token lacks Zone.DNS Edit). Verify the domain in the Resend UI (`RESEND_API_KEY2` is the authichain.com account per `scripts/lib/resend-preflight.ts`). Do not re-dispatch `set-authichain-resend-txt.yml`.
+
+## Current gate (not Access)
+
+`authichain-com` is routed as `authichain.com/*`. Thanks/activate HTML from #1001 is live. Product paths must go to `APP_WORKER` (`authichain-edge-router`).
+
+As of 2026-09-17 21:16 UTC, `GET /api/checkout/dpp` and `GET /api/cron/dpp-exceptions` return **cached homepage HTML** (`cf-cache-status: HIT`), not Stripe/JSON. The `dpp-exceptions` dispatch that printed `OK [200]` was that HTML, not the cron. **Purge `/api*`** (or everything on the zone) and get `deploy-cloudflare.yml` past the inspect step so `APP_WORKER` is the Next app, not a stale SPA index.
+
+`/onboard` has **no implementation** in this repo. That is a product decision, not an Access or 404-link fix (PR #936). Do not add a fake route to satisfy the old checklist.
 
 ## Live workstream (only)
 
 Issue #878 — traffic → checkout → provision → activate → retain.
-Closest product: Nightstamp / Telegram sell + scan gate (`nightstamp-scan-gate.yml`, revenue-cycle).
 
 Judge progress on:
 
-1. Unauthenticated `GET https://authichain.com/verify` (no `cloudflareaccess.com` redirect)
-2. One paid certificate issued
-3. One `/onboard` that is not Access and not 404
+1. ~~Unauthenticated `/verify` without Access~~ **done**
+2. `GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML
+3. One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate
+4. `GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live
+5. One signed Base deploy from ops EOA — still blocked until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. Do not dispatch `gov-mint.yml`.
 
 ## Frozen (Actions disabled 2026-09-16)
 
@@ -25,37 +34,18 @@ AgentZ, automerge-dependabot, B2B outreach, browser-vision, content-publish, con
 
 Still on: CI, lint, main, CodeQL, security-scan, compliance-audit, deploy-cloudflare / deploy-workers / deploy-edge-worker, nightstamp-scan-gate, revenue-cycle, production-drizzle-audit, unblock-public-access, outreach/DPP **manual** triggers.
 
-Re-enable a workflow only after `/verify` is public: `gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/<id>/enable`.
+Re-enable a frozen workflow only after checkout 303s and one smoke buyer completes: `gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/<id>/enable`.
 
-## Access lift (must be dashboard — token 403)
+## Deploy notes
 
-Zero Trust team: **strainchainexecutiveteam** (login host `strainchainexecutiveteam.cloudflareaccess.com`).
+- `deploy-workers.yml` on the #1001 merge **did deploy `authichain-com`**. The workflow is red because `passport-demo` failed (standing flake — do not widen a DPP PR to fix it).
+- `deploy-cloudflare.yml` failed at **Inspect build output** (`find | head` SIGPIPE under `pipefail`) before publishing `APP_WORKER`. That is what leaves `/api/*` on the wrong origin.
+- Dispatch `deploy-workers.yml` with `worker=authichain-com` only when the landing worker changes. Do not redeploy the full matrix for a cache purge.
 
-1. Cloudflare Dashboard → Zero Trust → Access → Applications
-2. Open **All Workers** (and any app whose domain is `authichain.com`, `qron.space`, `govchain.us`, `strainchain.io`, `*.workers.dev`)
-3. Delete those apps, **or** set include policy to Bypass / public
-4. Keep Access on `dashboard.*`, `admin.*`, `/admin`, claw/openclaw only
-5. Confirm: `curl -sI https://authichain.com/verify` is **not** 302 to `cloudflareaccess.com`
-6. Then grant the GitHub `CLOUDFLARE_API_TOKEN` `Access: Apps` Read+Edit so `unblock-public-access.yml` can enforce this
+## Access (dashboard, if it wraps again)
 
-Zones the token *can* see (account `Undone.k@gmail.com's Account`):
+Zero Trust team: **strainchainexecutiveteam**.
 
-| Zone | id |
-|---|---|
-| authichain.com | 6580df4e35d347c94fef88b33784a514 |
-| govchain.us | e011a098212bea70c8c05d52277e388c |
-| qron.space | 40768f8e504b51cab01e48f636fc73b5 |
-| strainchain.io | 9bfee753ef15d3b57621d31bae912895 |
-| strainchain.org | 023c1b55b4accdc3652c2f0b9515640e |
-
-## Estate (done vs blocked)
-
-Archived under `undone0603`: authichain-com, qron-space, govchain.us, strainchain-io, qron-platform, authichain_premium, authichain, authichain-protocol, authichain-archive, qron-webapp.
-
-Still need GitHub UI (org token 403, transfer API not available):
-
-- Archive AuthiChain2026/{AuthiChain, qron-app, qron.space, qron-starter-v2-1, authichain-os, authichain-os-1, express, qron-webapp, stable-diffusion-webui, qron-app-fresh}
-- Transfer this repo to `AuthiChain2026/authichain-unified`
-- Disconnect Cloudflare Workers Builds for `passport-demo` (and `qron-ai-api` if still failing) so they stop red-checking every PR (#952)
-
-Keep live: this repo, `authichain-ai-business-manager`, `qron-harvest`, `undone0603.github.io`, `AuthiChain2026/authichain-mcp-server`.
+1. Access → Applications → **All Workers** (and any app on public brand hosts)
+2. Delete or Bypass; keep Access on `dashboard.*`, `admin.*`, `/admin`, claw/openclaw
+3. Confirm: `curl -sI https://authichain.com/verify` is not 302 to `cloudflareaccess.com`

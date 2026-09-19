@@ -35,7 +35,8 @@
     "prepare": "husky install",
     "build:server": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start:server": "NODE_ENV=production tsx server/_core/index.ts",
-    "dev:server": "tsx watch server/_core/index.ts"
+    "dev:server": "tsx watch server/_core/index.ts",
+    "ledger:authichain-nft": "tsx scripts/ledger/reconstruct-authichain-nft-ledger.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.51",
@@ -122,7 +123,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.86.0",
-    "react-resizable-panels": "^4.12.3",
+    "react-resizable-panels": "^4.12.4",
     "recharts": "^3.10.1",
     "resend": "^6.25.0",
     "sanitize-html": "^2.13.0",
@@ -156,7 +157,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.9.1",
     "eslint-config-next": "16.2.10",
-    "hardhat": "^3.15.0",
+    "hardhat": "^3.16.0",
     "husky": "^9.1.7",
     "ioredis": "file:./stubs/empty-redis",
     "jsdom": "^30.0.1",
