@@ -10,7 +10,11 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({ from: () => ({}) }),
 }));
 
-import { guardrailCheck, guardrailRecord } from "./guardrail-client";
+import {
+  guardrailCheck,
+  guardrailRecord,
+  shouldUseStoreFallback,
+} from "./guardrail-client";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -110,6 +114,7 @@ describe("guardrailCheck", () => {
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/503/);
     expect(result.errored).toBe(true);
+    expect(storeMocks.checkAndReserveWithSupabase).not.toHaveBeenCalled();
   });
 
   it("falls back to the Supabase store when the HTTP path 404s (dead Vercel / unmounted worker)", async () => {
@@ -136,6 +141,68 @@ describe("guardrailCheck", () => {
       1,
       "inquiries@moo.com"
     );
+  });
+
+  it("falls back to the Supabase store on HTTP 503 (missing Worker INTERNAL_API_SECRET)", async () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: "INTERNAL_API_SECRET not configured" }),
+    });
+    storeMocks.checkAndReserveWithSupabase.mockResolvedValue({
+      allowed: true,
+      remaining: 23,
+    });
+
+    const result = await guardrailCheck("email.b2b-cold", {
+      recipient: "franchiseinfo@fastsigns.com",
+    });
+
+    expect(result).toEqual({ allowed: true, remaining: 23 });
+    expect(storeMocks.checkAndReserveWithSupabase).toHaveBeenCalledWith(
+      expect.anything(),
+      "email.b2b-cold",
+      1,
+      "franchiseinfo@fastsigns.com"
+    );
+  });
+
+  it("falls back to the Supabase store on HTTP 500", async () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    });
+    storeMocks.checkAndReserveWithSupabase.mockResolvedValue({
+      allowed: true,
+      remaining: 22,
+    });
+
+    const result = await guardrailCheck("email.b2b-cold");
+
+    expect(result).toEqual({ allowed: true, remaining: 22 });
+    expect(storeMocks.checkAndReserveWithSupabase).toHaveBeenCalled();
+  });
+
+  it("does not fall back on HTTP 401 (auth failure is not deploy lag)", async () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: "Unauthorized" }),
+    });
+
+    const result = await guardrailCheck("email.b2b-cold");
+
+    expect(result.allowed).toBe(false);
+    expect(result.errored).toBe(true);
+    expect(result.reason).toMatch(/401/);
+    expect(storeMocks.checkAndReserveWithSupabase).not.toHaveBeenCalled();
   });
 
   it("marks a network error as errored:true", async () => {
@@ -214,5 +281,51 @@ describe("guardrailRecord", () => {
       })
     ).resolves.toBeUndefined();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the Supabase store when record returns HTTP 503", async () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: "INTERNAL_API_SECRET not configured" }),
+    });
+    storeMocks.recordEventWithSupabase.mockResolvedValue(undefined);
+
+    await guardrailRecord({
+      channel: "email.b2b-cold",
+      action: "record",
+      allowed: true,
+      reason: "sent",
+    });
+
+    expect(storeMocks.recordEventWithSupabase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        channel: "email.b2b-cold",
+        action: "record",
+        allowed: true,
+        reason: "sent",
+      })
+    );
+  });
+});
+
+describe("shouldUseStoreFallback", () => {
+  it("treats 404 and any 5xx as store-fallback statuses", () => {
+    expect(shouldUseStoreFallback(404)).toBe(true);
+    expect(shouldUseStoreFallback(500)).toBe(true);
+    expect(shouldUseStoreFallback(502)).toBe(true);
+    expect(shouldUseStoreFallback(503)).toBe(true);
+    expect(shouldUseStoreFallback(504)).toBe(true);
+  });
+
+  it("does not treat 2xx or non-404 4xx as store-fallback statuses", () => {
+    expect(shouldUseStoreFallback(200)).toBe(false);
+    expect(shouldUseStoreFallback(400)).toBe(false);
+    expect(shouldUseStoreFallback(401)).toBe(false);
+    expect(shouldUseStoreFallback(403)).toBe(false);
+    expect(shouldUseStoreFallback(422)).toBe(false);
   });
 });

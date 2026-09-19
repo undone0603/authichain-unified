@@ -97,6 +97,30 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Guardrail routes are in this Worker (authichain.com/api/guardrail/* +
+      # app.authichain.com/*). Without INTERNAL_API_SECRET they return 503
+      # {"error":"INTERNAL_API_SECRET not configured"}. Reuse the existing
+      # repo secret name — do not invent a value. Dedicated re-run path:
+      # set-qron-outreach-guardrail-secret.yml
+      - name: Bind INTERNAL_API_SECRET on authichain-edge-router
+        if: steps.secrets_check.outputs.skip != 'true'
+        working-directory: worker-app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${INTERNAL_API_SECRET:-}" ]; then
+            echo "INTERNAL_API_SECRET repo secret is empty — skip bind (do not invent a value)."
+            echo "POST /api/guardrail/* will 503 until Actions → Set qron-outreach guardrail secret is dispatched."
+            exit 0
+          fi
+          printf '%s' "$INTERNAL_API_SECRET" | npx wrangler secret put \
+            INTERNAL_API_SECRET --name authichain-edge-router
+          echo "bound INTERNAL_API_SECRET on authichain-edge-router"
+
       - name: Bind attestation key on authichain-edge-router
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app

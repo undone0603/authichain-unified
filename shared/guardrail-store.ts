@@ -6,7 +6,7 @@
  * `https://app.authichain.com/api/guardrail/check` — that hostname is now
  * `authichain-edge-router` (worker-app), which must speak the same protocol
  * against the same tables. Actions can also call these helpers directly when
- * the HTTP path still 404s (deploy lag).
+ * the HTTP path 404s (deploy lag) or 5xxs (missing Worker INTERNAL_API_SECRET).
  */
 
 export type GuardrailCheckResult = {

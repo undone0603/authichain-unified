@@ -62,7 +62,23 @@ For the root Cloudflare deploy workflow, also set the repository variable
 cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
 `CRON_SECRET`; no Vercel secrets are required.
 
-`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`.
+`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`,
+including `POST /api/guardrail/{check,record,suppress}` (`authichain.com/api/guardrail/*`
+plus `app.authichain.com/*`). After publish it binds repo secret
+`INTERNAL_API_SECRET` on that Worker when the secret is set (same name as
+`b2b-outreach.yml` / `guardrail-digest.yml` — do not invent a value).
+One-shot / re-runnable bind for both `qron-outreach` and
+`authichain-edge-router`:
+
+```bash
+# Actions → "Set qron-outreach guardrail secret" → Run workflow
+gh workflow run set-qron-outreach-guardrail-secret.yml
+```
+
+Until that secret is bound, `POST /api/guardrail/check` returns 503
+`{"error":"INTERNAL_API_SECRET not configured"}`. B2B live send falls back
+to the Supabase store on 404 and any 5xx so deploy lag does not block send.
+
 `pnpm run build` is Next (`next build --webpack`) and does **not** emit repo-root
 `dist/`; the workflow stubs `dist/` so wrangler `assets.directory` exists. JWKS
 is served by the Worker script, not those assets.
