@@ -166,7 +166,7 @@
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "redis": "file:./stubs/empty-redis",
-    "solc": "0.8.24",
+    "solc": "0.8.37",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.0",
