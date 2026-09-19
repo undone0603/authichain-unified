@@ -1,0 +1,54 @@
+# Mint cloudflared connector token using Actions CLOUDFLARE_* secrets.
+# Uploads token as a private Actions artifact for the box connector (not logged).
+name: AgentZ mint tunnel token
+
+on:
+  workflow_dispatch:
+    inputs:
+      tunnel_id:
+        required: true
+        default: "08378b03-f6a2-46cf-aab8-a2754bad869f"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch tunnel token
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TUNNEL_ID: ${{ github.event.inputs.tunnel_id }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python3 <<'PY'
+          import json, os, urllib.request
+          token = os.environ["CLOUDFLARE_API_TOKEN"]
+          acct = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          tid = os.environ["TUNNEL_ID"]
+          req = urllib.request.Request(
+            f"https://api.cloudflare.com/client/v4/accounts/{acct}/cfd_tunnel/{tid}/token",
+            headers={"Authorization": f"Bearer {token}"},
+          )
+          with urllib.request.urlopen(req) as resp:
+            data = json.load(resp)
+          assert data.get("success"), data
+          raw = data["result"]
+          if isinstance(raw, dict):
+            raw = raw.get("token") or raw.get("value") or ""
+          assert raw and isinstance(raw, str)
+          open("tunnel.token", "w").write(raw)
+          print("wrote tunnel.token len", len(raw))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agentz-tunnel-token
+          path: tunnel.token
+          retention-days: 1
+          if-no-files-found: error
