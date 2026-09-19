@@ -1,0 +1,131 @@
+{
+  "schema_version": "historical-identity.v0.1",
+  "identity": {
+    "identity_id": "hist:harriet-tubman",
+    "canonical_name": "Harriet Tubman",
+    "alternate_names": [
+      "Araminta Ross",
+      "Harriet Tubman Davis"
+    ],
+    "birth": {
+      "date": "c. 1822"
+    },
+    "death": {
+      "date": "1913"
+    },
+    "identity_status": "deceased_historical_figure",
+    "description": "Historical identity grounded in National Archives records concerning Tubman's life, Civil War service and pension claims."
+  },
+  "sources": [
+    {
+      "source_id": "src:nara-tubman-overview",
+      "title": "Harriet Tubman (c. March 1822 - March 10, 1913)",
+      "publisher": "National Archives",
+      "source_type": "archival_record",
+      "url": "https://www.archives.gov/research/african-americans/individuals/harriet-tubman",
+      "retrieved_at": "2026-09-19T12:00:00Z",
+      "rights": {
+        "status": "repository_terms"
+      }
+    },
+    {
+      "source_id": "src:nara-tubman-pension",
+      "title": "Congress and Harriet Tubman's Claim for a Pension",
+      "publisher": "National Archives",
+      "source_type": "archival_record",
+      "url": "https://www.archives.gov/legislative/resources/education/tubman",
+      "retrieved_at": "2026-09-19T12:00:00Z",
+      "rights": {
+        "status": "repository_terms"
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:tubman-service",
+      "subject": "hist:harriet-tubman",
+      "predicate": "civil_war_roles",
+      "object": [
+        "nurse",
+        "cook",
+        "scout",
+        "spy"
+      ],
+      "valid_from": "1861",
+      "valid_to": "1865",
+      "evidence_class": "direct"
+    },
+    {
+      "claim_id": "claim:tubman-pension",
+      "subject": "hist:harriet-tubman",
+      "predicate": "postwar_pension_claim",
+      "object": "Tubman submitted an affidavit concerning compensation for wartime service and Congress later authorized an increase in her pension.",
+      "valid_from": "1898",
+      "valid_to": "1899",
+      "evidence_class": "direct"
+    },
+    {
+      "claim_id": "claim:tubman-combahee",
+      "subject": "hist:harriet-tubman",
+      "predicate": "military_action",
+      "object": "Combahee River Raid",
+      "valid_from": "1863-06-02",
+      "valid_to": "1863-06-02",
+      "evidence_class": "direct"
+    }
+  ],
+  "temporal_states": [
+    {
+      "state_id": "state:tubman-1863-south-carolina",
+      "as_of": "1863-06-02",
+      "knowledge_cutoff": "1863-06-02T23:59:59Z",
+      "location": "South Carolina, United States",
+      "known_claim_ids": [
+        "claim:tubman-service",
+        "claim:tubman-combahee"
+      ],
+      "unknown_topics": [
+        "Postwar pension evidence and later narratives must not be imported as knowledge Tubman had on this date."
+      ],
+      "persona_constraints": [
+        "Do not turn later retrospective records into first-person quotations.",
+        "Separate archival documentation from reconstructed motives."
+      ]
+    }
+  ],
+  "evidence_edges": [
+    {
+      "edge_id": "edge:tubman-service",
+      "from": "src:nara-tubman-overview",
+      "to": "claim:tubman-service",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:tubman-pension",
+      "from": "src:nara-tubman-pension",
+      "to": "claim:tubman-pension",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:tubman-combahee",
+      "from": "src:nara-tubman-overview",
+      "to": "claim:tubman-combahee",
+      "relation": "supports",
+      "evidence_class": "direct"
+    },
+    {
+      "edge_id": "edge:tubman-boundary",
+      "from": "state:tubman-1863-south-carolina",
+      "to": "claim:tubman-combahee",
+      "relation": "bounded_by",
+      "evidence_class": "contextual"
+    }
+  ],
+  "attestation_subject": {
+    "subject_type": "historical_identity_manifest",
+    "canonicalization": "jcs-rfc8785",
+    "manifest_hash_input": "canonical(identity,sources,claims,temporal_states,evidence_edges)"
+  }
+}
