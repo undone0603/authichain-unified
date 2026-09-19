@@ -24,6 +24,7 @@ Never send customers to `*.vercel.app`.
 | `api.authichain.com/*` | `authichain-api-gateway` |
 | `dashboard.authichain.com/*` | `authichain-dashboard` |
 | `claw.authichain.com/*` | `authichain-openclaw` |
+| `agentz.authichain.com/*` | `authichain-agentz` (Containers → AgentZ FastAPI :8000) |
 
 `/dapp` 302s to `/dashboard` on the landing worker. `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
