@@ -44,9 +44,15 @@ function hydrateProcessEnv(env?: Env) {
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
-    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    [
+      "AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64",
+      env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
+    ],
     ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
-    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
+    [
+      "AUTHICHAIN_ATTESTATION_PUBLIC_JWK",
+      env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
+    ],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;
@@ -195,6 +201,61 @@ app.get("/api/checkout/dpp", async c => {
     console.error("[checkout/dpp] Error:", err?.message || err);
     return c.json(
       { error: "Failed to start DPP checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
+// ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
+// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
+// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+app.post("/api/funnel", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const { recordFunnelEvent } = await import("../src/lib/funnel-record");
+    const result = await recordFunnelEvent(supabase, body);
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json(
+      {
+        success: true,
+        message: "Funnel event recorded",
+        prospect_id: result.prospect_id,
+        stage: result.stage,
+        source: result.source,
+      },
+      201
+    );
+  } catch (err: any) {
+    console.error("[funnel] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to record funnel event", detail: err?.message },
       500
     );
   }
@@ -1307,13 +1368,16 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
-app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
+app.use(
+  "/protocol/launch-proof",
+  rateLimitMiddleware("launch-proof", 20, 60_000)
+);
 app.use("/onboard", rateLimitMiddleware("onboard", 20, 60_000));
-app.post("/onboard", (c) => renderDynamicPage(c));
-app.post("/onboard/", (c) => renderDynamicPage(c));
+app.post("/onboard", c => renderDynamicPage(c));
+app.post("/onboard/", c => renderDynamicPage(c));
 app.use("/generate", rateLimitMiddleware("generate", 20, 60_000));
-app.post("/generate", (c) => renderDynamicPage(c));
-app.post("/generate/", (c) => renderDynamicPage(c));
+app.post("/generate", c => renderDynamicPage(c));
+app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);

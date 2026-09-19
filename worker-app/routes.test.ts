@@ -115,6 +115,36 @@ describe("POST /api/stripe/webhook", () => {
   });
 });
 
+describe("POST /api/funnel", () => {
+  it("returns 400 JSON when required fields are missing", async () => {
+    const res = await app.request("/api/funnel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ stage: "visit_landing_page" }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/prospect_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/funnel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        prospect_id: "dpp_worker_1",
+        stage: "visit_landing_page",
+        source: "seo",
+        event_type: "dpp_loop:attributed_visit",
+      }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
 describe("POST /api/dpp/activate", () => {
   it("returns 400 JSON without session_id", async () => {
     const res = await app.request("/api/dpp/activate", {

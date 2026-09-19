@@ -1,5 +1,12 @@
 # Stripe Webhook Integration Guide
 
+> **Canonical production endpoint (2026-09-19):**  
+> `POST https://authichain.com/api/stripe/webhook`  
+> Served by `authichain-edge-router` (`worker-app/index.ts` → `server/webhooks/stripe.ts`).  
+> Signing secrets (names only): `STRIPE_WEBHOOK_SECRET` and/or `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` on **that Worker**, not Vercel.  
+> The old path `https://app.authichain.com/api/webhooks/stripe` is **retired** (`src/app/api/webhooks/stripe` returns 410 in Next; apex currently 404s it). Pointing Stripe Dashboard there drops `provisionPurchase`.  
+> See `docs/LAUNCH_HIGH_VALUE_BACKLOG.md` for the live checkout/webhook score.
+
 ## Overview
 
 This guide covers the complete setup of Stripe webhook handlers for AuthiChain to track customer payments and reconcile subscriptions. The webhook receiver validates Stripe signatures, handles four key events, deduplicates retries, and logs everything to audit_log.
@@ -8,18 +15,18 @@ This guide covers the complete setup of Stripe webhook handlers for AuthiChain t
 
 ### Webhook Endpoint
 
-**URL:** `https://app.authichain.com/api/webhooks/stripe`  
+**URL:** `https://authichain.com/api/stripe/webhook`  
 **Method:** POST  
-**Secret:** `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (environment variable)
+**Secret:** `STRIPE_WEBHOOK_SECRET` and/or `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (Cloudflare Worker secrets on `authichain-edge-router`)
 
 ### Event Handlers
 
-| Event | Handler | Action |
-|-------|---------|--------|
-| `checkout.session.completed` | `handleCheckoutSessionCompleted` | Record payment in `payments` table; tag lead as `status='customer'` in `lead_captures` |
-| `invoice.payment_succeeded` | `handleInvoicePaymentSucceeded` | Update `subscriptions` table with `status='active'` and next billing date |
-| `invoice.payment_failed` | `handleInvoicePaymentFailed` | Update `subscriptions` table with `status='payment_failed'`; create alert for sales team |
-| `customer.subscription.deleted` | `handleCustomerSubscriptionDeleted` | Update `subscriptions` table with `status='canceled'` and timestamp |
+| Event                           | Handler                             | Action                                                                                   |
+| ------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `checkout.session.completed`    | `handleCheckoutSessionCompleted`    | Record payment in `payments` table; tag lead as `status='customer'` in `lead_captures`   |
+| `invoice.payment_succeeded`     | `handleInvoicePaymentSucceeded`     | Update `subscriptions` table with `status='active'` and next billing date                |
+| `invoice.payment_failed`        | `handleInvoicePaymentFailed`        | Update `subscriptions` table with `status='payment_failed'`; create alert for sales team |
+| `customer.subscription.deleted` | `handleCustomerSubscriptionDeleted` | Update `subscriptions` table with `status='canceled'` and timestamp                      |
 
 ### Idempotency
 
@@ -44,11 +51,13 @@ CREATE TABLE public.payments (
 ```
 
 **Indexes:**
+
 - `session_id` (primary key)
 - `customer_email` (fast lead matching)
 - `created_at DESC` (reporting)
 
 **Indexed Columns:**
+
 - `session_id`: Stripe checkout session ID
 - `customer_email`: Email from `checkout.session.customer_email`
 - `amount_cents`: Amount in cents (e.g., $19.99 = 1999)
@@ -73,11 +82,13 @@ CREATE TABLE public.subscriptions (
 ```
 
 **Indexes:**
+
 - `subscription_id` (primary key)
 - `customer_email` (fast customer lookups)
 - `status` (filtering by state)
 
 **Indexed Columns:**
+
 - `subscription_id`: Stripe subscription ID
 - `customer_email`: Billing email
 - `product_id`: Optional; links to your products table (nullable)
@@ -103,6 +114,7 @@ CREATE TABLE public.alerts (
 ```
 
 **Indexes:**
+
 - `id` (primary key)
 - `type` (filter by alert category)
 - `customer_email` (find alerts for a customer)
@@ -110,12 +122,14 @@ CREATE TABLE public.alerts (
 - `resolved_at` (show unresolved alerts)
 
 **Alert Types:**
+
 - `payment_failed`: Invoice payment failed
 - `subscription_issue`: Subscription lifecycle issue
 - `refund`: Refund processed
 - `chargeback`: Chargeback initiated
 
 **Metadata (JSONB):**
+
 ```json
 {
   "invoice_id": "in_1234567890",
@@ -140,12 +154,14 @@ CREATE TABLE public.audit_log (
 ```
 
 **Indexes:**
+
 - `id` (primary key)
 - `event_type` (filter by event category)
 - `event_id` (Stripe event ID reference)
 - `created_at DESC` (recent events first)
 
 **Status Values:**
+
 - `success`: Event processed successfully
 - `error`: Event processing failed
 - `duplicate`: Event was a retry (already seen)
@@ -175,6 +191,7 @@ ALTER TABLE public.lead_captures
 ```
 
 **Status Values:**
+
 - `prospect`: New lead, not yet engaged
 - `engaged`: Lead opened email, clicked link, etc.
 - `customer`: Lead made a payment (set by `checkout.session.completed`)
@@ -200,7 +217,7 @@ STRIPE_WEBHOOK_AUTHICHAIN_SECRET=whsec_live_... # or whsec_test_... for dev
 
 2. **STRIPE_WEBHOOK_AUTHICHAIN_SECRET**:
    - Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
-   - Find the endpoint for `https://app.authichain.com/api/webhooks/stripe`
+   - Find the endpoint for `https://authichain.com/api/stripe/webhook`
    - Click **Reveal signing secret**
    - Copy the secret starting with `whsec_`
 
@@ -222,11 +239,13 @@ supabase db push
 ```
 
 **Verify tables were created:**
+
 ```bash
 supabase db list-tables
 ```
 
 You should see:
+
 - `payments`
 - `subscriptions`
 - `alerts`
@@ -235,7 +254,7 @@ You should see:
 
 ### Step 2: Deploy Webhook Handler
 
-The webhook handler is at `src/app/api/webhooks/stripe/route.ts`.
+The live webhook handler is `POST /api/stripe/webhook` on `authichain-edge-router` (`server/webhooks/stripe.ts`). `src/app/api/webhooks/stripe/route.ts` is retired (410).
 
 ```bash
 # From repo root
@@ -256,7 +275,7 @@ Vercel will automatically deploy the new endpoint.
 
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. Click **Add endpoint**
-3. Enter endpoint URL: `https://app.authichain.com/api/webhooks/stripe`
+3. Enter endpoint URL: `https://authichain.com/api/stripe/webhook`
 4. Select events to listen for:
    - `checkout.session.completed`
    - `invoice.payment_succeeded`
@@ -314,16 +333,19 @@ stripe trigger checkout.session.completed
 **Symptom:** Payments are made in Stripe, but `payments` table is empty.
 
 **Diagnosis:**
+
 1. Check Stripe Dashboard → Webhooks → click endpoint → view **Event deliveries**
 2. Look for failed deliveries (red ✗)
 3. Click an event to see the error response
 
 **Common Causes:**
+
 - `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is not set in Vercel environment
-- Webhook URL is incorrect (should be `https://app.authichain.com/api/webhooks/stripe`)
+- Webhook URL is incorrect (should be `https://authichain.com/api/stripe/webhook`)
 - Your app is down or returning 5xx errors
 
 **Fix:**
+
 ```bash
 # 1. Verify env var is set
 vercel env ls
@@ -340,6 +362,7 @@ vercel deploy --prod
 **Symptom:** The same payment appears multiple times in `payments` table.
 
 **Diagnosis:**
+
 - Check `stripe_events` table for the event ID
 - Check `audit_log` for status = `duplicate`
 
@@ -366,10 +389,12 @@ WHERE id NOT IN (
 **Symptom:** Payment is recorded, but `lead_captures.status` is still `prospect`.
 
 **Diagnosis:**
+
 1. Check if a lead exists with the payment's `customer_email`
 2. Check `audit_log` for errors during the update
 
 **Fix:**
+
 ```sql
 -- Check if lead exists
 SELECT * FROM lead_captures WHERE email = 'customer@example.com';
@@ -386,10 +411,12 @@ UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com
 **Symptom:** An invoice fails to pay, but no alert is created in `alerts` table.
 
 **Diagnosis:**
+
 1. Check `audit_log` for the `invoice.payment_failed` event
 2. Verify the customer exists in Stripe
 
 **Fix:**
+
 ```sql
 -- Manually create an alert
 INSERT INTO alerts (type, message, customer_email, metadata) VALUES (
@@ -580,6 +607,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ### Lead Nurturing Pipeline
 
 When `checkout.session.completed` is received:
+
 1. Payment is recorded in `payments` table
 2. Lead is tagged `status = 'customer'` in `lead_captures`
 3. Your automation (HubSpot, Make.com, email) can now filter for `status = 'customer'` to trigger nurture campaigns
@@ -587,6 +615,7 @@ When `checkout.session.completed` is received:
 ### Dunning / Revenue Retention
 
 When `invoice.payment_failed` is received:
+
 1. Subscription is marked `status = 'payment_failed'`
 2. An alert is created in `alerts` table for the sales team
 3. Your dunning flow (see `src/lib/dunning.ts`) can query `subscriptions.status = 'payment_failed'` to retry or reach out

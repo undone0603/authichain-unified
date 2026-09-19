@@ -1,5 +1,7 @@
 # Outbound-spend freeze — revenue path is LIVE (2026-09-19)
 
+> **Coordinator:** workflow enable-state and owner-attested progress in this file lag GitHub as of 2026-09-19 evening. Do not re-audit from the tables below. Execute from `docs/LAUNCH_HIGH_VALUE_BACKLOG.md`. In particular: `OWNER_LIVE_SEND` is owner-attested true; `b2b-outreach` / `email-proposals` / `agentz-orchestration` / `gov-mint` are **active** in GitHub; first Base gov-mint and AgentZ tunnel (`https://agentz.authichain.com/health`) are owner-attested live. Historical “Day 1 / stay frozen” rows are archive.
+
 This freeze blocked **autonomous cold outbound** (Resend/social spam) and **gov-mint**. It did **not** freeze Stripe or DPP checkout.
 
 **First-dollar path (LIVE):** traffic → onboard → `GET /api/checkout/dpp` (**303** to `checkout.stripe.com`) → provision → activate. Use the owner's existing assets here. Do not wait on outreach or AgentZ to take a payment.
