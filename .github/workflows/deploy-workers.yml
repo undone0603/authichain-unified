@@ -66,6 +66,7 @@ jobs:
           - authichain-verify-worker
           - stripe-webhook
           - authichain-openclaw
+          - authichain-agentz
           - authichain-infra
           - authichain-outreach-engine
           - blockchain
@@ -98,6 +99,13 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Set up Docker (Cloudflare Containers)
+        if: |
+          matrix.worker == 'authichain-agentz' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
+        uses: docker/setup-buildx-action@v3
+
       - name: Deploy Worker
         if: |
           env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != '' &&
