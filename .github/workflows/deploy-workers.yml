@@ -66,6 +66,7 @@ jobs:
           - authichain-verify-worker
           - stripe-webhook
           - authichain-openclaw
+          - authichain-agentz
           - authichain-infra
           - authichain-outreach-engine
           - blockchain
@@ -102,7 +103,15 @@ jobs:
         if: |
           env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != '' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
-        run: npx wrangler deploy --minify --config wrangler.toml
+        run: |
+          if [ -f wrangler.jsonc ]; then
+            CONFIG=wrangler.jsonc
+          elif [ -f wrangler.json ]; then
+            CONFIG=wrangler.json
+          else
+            CONFIG=wrangler.toml
+          fi
+          npx wrangler deploy --minify --config "$CONFIG"
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

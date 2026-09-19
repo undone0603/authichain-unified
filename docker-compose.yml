@@ -45,7 +45,8 @@ services:
     depends_on:
       - qron-platform
 
-  # Agentz (AI Framework)
+  # Agentz (AI Framework) — CLI image. Do not change CMD to uvicorn here.
+  # HTTP API image is workers/authichain-agentz/Dockerfile (Cloudflare Containers).
   agentz:
     build:
       context: .

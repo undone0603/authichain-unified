@@ -16,20 +16,26 @@ WhatsApp / Telegram / Slack / Discord / ...
                     │
             ┌───────▼────────┐
             │  OpenClaw       │
-            │  Gateway        │  (local, Node.js)
-            │  :18789         │
+            │  Gateway        │  (owner-set reachable Node host)
+            │                 │  OPENCLAW_GATEWAY_URL — do not invent
             └───────┬────────┘
                     │ webhook (POST /webhook/openclaw)
             ┌───────▼────────┐
             │  authichain-   │  (Cloudflare Worker)
             │  openclaw      │  claw.authichain.com
             └───────┬────────┘
-                    │ HTTP (Bearer auth)
+                    │ HTTP (Bearer AGENTZ_API_KEY = AGENT_SECRET)
+                    │ paths: /agents /workflows /architect/cycle
+                    │ (no /api prefix)
             ┌───────▼────────┐
-            │  AgentZ API    │  (FastAPI, localhost:8000)
-            │  + Architect   │
+            │  authichain-   │  (Cloudflare Containers)
+            │  agentz        │  agentz.authichain.com
+            │  uvicorn :8000 │  agentz.api.main:app
             └────────────────┘
 ```
+
+Keep **Cloudflare Access** on `agentz.authichain.com` and `claw.authichain.com`.
+Do not enable social publish from this bridge.
 
 ## Setup
 
@@ -51,6 +57,7 @@ openclaw gateway status
 ### 2. Connect a channel
 
 Follow the OpenClaw docs for your preferred channel:
+
 - [WhatsApp](https://docs.openclaw.ai/channels/whatsapp)
 - [Telegram](https://docs.openclaw.ai/channels/telegram)
 - [Slack](https://docs.openclaw.ai/channels/slack)
@@ -71,53 +78,97 @@ In the OpenClaw gateway config, add an outbound webhook to the bridge Worker:
 }
 ```
 
-### 4. Set Worker secrets
+### 4. Host AgentZ on Cloudflare Containers
+
+Owner decision 2026-09-19: **Cloudflare Containers** (not Tunnel).
+
+`workers/authichain-agentz/Dockerfile` follows `Dockerfile.agentz`
+(`python:3.12-slim`, `requirements-agentz.txt`, repo-root context) but is the
+API image: `EXPOSE 8000` and
+`CMD uvicorn agentz.api.main:app --host 0.0.0.0 --port 8000`.
+The Container class sets `defaultPort = 8000` and proxies with
+`getContainer(env.AGENTZ).fetch(request)`.
+
+`Dockerfile.agentz` / compose `agentz` stay the CLI (`python3 -m agentz.cli`).
+
+```bash
+cd workers/authichain-agentz
+
+# Names as used by agentz.core.credentials.get():
+#   get("agent_secret")         → AGENT_SECRET
+#   get("supabase_url")         → SUPABASE_URL
+#   get("supabase_service_key") → SUPABASE_SERVICE_ROLE_KEY
+# SUPABASE_SERVICE_KEY is accepted as an alias and forwarded to
+# SUPABASE_SERVICE_ROLE_KEY.
+npx wrangler secret put AGENT_SECRET
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+
+npx wrangler deploy --config wrangler.jsonc
+```
+
+CI: **Actions → Deploy Workers → Run workflow** with `worker=authichain-agentz`.
+The runner needs Docker (image build). The Cloudflare token needs Workers
+Scripts edit and Containers / registry push.
+
+After deploy (Access stays on `agentz.*` — unauthenticated curl 302s to
+`strainchainexecutiveteam.cloudflareaccess.com`; that is correct):
+
+```bash
+curl -sS https://agentz.authichain.com/health
+# authenticated / service-token expect: {"status":"sovereign","network":"Polygon"}
+```
+
+First request can take a minute while the container boots.
+
+Local uvicorn remains optional for development:
+
+```bash
+cd /path/to/authichain-unified
+PYTHONPATH=. python -m uvicorn agentz.api.main:app --host 0.0.0.0 --port 8000
+```
+
+### 5. Set claw Worker secrets
 
 ```bash
 cd workers/authichain-openclaw
 
-# OpenClaw gateway URL (where OpenClaw is running)
+# OpenClaw gateway — owner-set reachable host only. Do not invent a URL.
 npx wrangler secret put OPENCLAW_GATEWAY_URL
-# Enter: ws://localhost:18789 (or your gateway URL)
 
 # API key for the webhook auth
 npx wrangler secret put OPENCLAW_API_KEY
-# Enter a strong random string
 
-# AgentZ API URL
+# AgentZ Containers host (also the wrangler [vars] default)
 npx wrangler secret put AGENTZ_API_URL
-# Enter: http://localhost:8000
+# Enter: https://agentz.authichain.com
 
-# AgentZ API key (must match the AGENT_SECRET in .env)
+# Must match AGENT_SECRET on authichain-agentz
 npx wrangler secret put AGENTZ_API_KEY
-# Enter your AGENT_SECRET value
 ```
 
-### 5. Deploy the Worker
+Claw calls AgentZ at `/agents`, `/workflows`, `/architect/cycle` — **no** `/api`
+prefix. There is no in-flight OpenClaw PR as of 2026-09-19; this repo's
+`authichain-openclaw` Worker is the coordination point.
+
+### 6. Deploy the claw Worker
 
 ```bash
 cd workers/authichain-openclaw
 npx wrangler deploy --config wrangler.toml
 ```
 
-### 6. Start the AgentZ API
-
-```bash
-cd agentz
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
-```
-
 ## Usage
 
 Once connected, send messages from any messaging channel that OpenClaw routes:
 
-| Command | Action |
-|---------|--------|
-| `help` | Show available commands |
-| `agents` | List all registered AgentZ agents |
-| `workflows` | List all available workflows |
-| `run <id>` | Run a workflow (e.g. `run pinecone_trial_decision`) |
-| `architect` | Run an Architect cycle (dry-run by default) |
+| Command     | Action                                              |
+| ----------- | --------------------------------------------------- |
+| `help`      | Show available commands                             |
+| `agents`    | List all registered AgentZ agents                   |
+| `workflows` | List all available workflows                        |
+| `run <id>`  | Run a workflow (e.g. `run pinecone_trial_decision`) |
+| `architect` | Run an Architect cycle (dry-run by default)         |
 
 ### Example: WhatsApp
 
@@ -165,7 +216,7 @@ python -m agentz.cli run architect_cycle --mode dry-run
 ### Via the API
 
 ```bash
-curl -X POST http://localhost:8000/architect/cycle \
+curl -X POST https://agentz.authichain.com/architect/cycle \
   -H "Authorization: Bearer $AGENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"mode": "dry-run", "goal": "Fix all failing workflows"}'
@@ -174,7 +225,8 @@ curl -X POST http://localhost:8000/architect/cycle \
 ## Security
 
 - The OpenClaw webhook is authenticated with `OPENCLAW_API_KEY` (Bearer token)
-- The AgentZ API uses `AGENT_SECRET` for all endpoints
+- The AgentZ API uses `AGENT_SECRET` (`credentials.get("agent_secret")`) for authenticated endpoints
+- Keep Access on `agentz.*` and `claw.*`
 - The Worker does not expose credentials or secrets in responses
 - All commands run in `confirm` mode by default when triggered via chat (requires
   human approval for side-effects) unless the operator explicitly sets `auto`

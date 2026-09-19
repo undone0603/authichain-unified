@@ -13,8 +13,8 @@ zone_name = "authichain.com"
 # OpenClaw Gateway connection details (set as secrets):
 #   OPENCLAW_GATEWAY_URL  — ws://localhost:18789 or https://your-gateway
 #   OPENCLAW_API_KEY     — gateway auth token
-#   AGENTZ_API_URL       — http://localhost:8000 (AgentZ FastAPI)
-#   AGENTZ_API_KEY       — shared secret for AgentZ
+#   AGENTZ_API_URL       — https://agentz.authichain.com (Cloudflare Containers)
+#   AGENTZ_API_KEY       — same value as AgentZ AGENT_SECRET
 #   SLACK_SIGNING_SECRET  — if using the Slack channel webhook
 #
 # Run: npx wrangler secret put OPENCLAW_GATEWAY_URL --name authichain-openclaw
@@ -23,6 +23,9 @@ zone_name = "authichain.com"
 [vars]
 OPENCLAW_API_VERSION = "1"
 AGENTZ_TIMEOUT_MS = "30000"
+# Public Containers host. Override with `wrangler secret put AGENTZ_API_URL` if needed.
+# Do not invent OPENCLAW_GATEWAY_URL here — that stays owner-set.
+AGENTZ_API_URL = "https://agentz.authichain.com"
 
 [observability]
 enabled = true
