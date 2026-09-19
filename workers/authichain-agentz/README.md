@@ -1,6 +1,13 @@
 # authichain-agentz
 
-Cloudflare Containers host for the AgentZ FastAPI (`agentz.api.main:app`).
+**$0 path (owner mandate 2026-09-19):** do **not** deploy this Worker and do
+**not** enable Workers Paid / Containers. Host AgentZ with a free Cloudflare
+Tunnel — `docs/integrations/openclaw-setup.md` and `scripts/agentz-tunnel/`.
+Leave this worker undeployed so its `agentz.authichain.com/*` route cannot
+fight Tunnel DNS.
+
+In-repo Containers scaffold for the AgentZ FastAPI (`agentz.api.main:app`).
+Parked until revenue.
 
 Public URL: `https://agentz.authichain.com`  
 Keep **Cloudflare Access** on `agentz.authichain.com` (same policy family as `claw.authichain.com`).

@@ -1,0 +1,14 @@
+# Example cloudflared ingress for AgentZ on the $0 path.
+# Copy to config.yml (gitignored) and fill in the tunnel UUID + credentials path
+# from `cloudflared tunnel create agentz`.
+#
+# Do not enable Workers Paid or Cloudflare Containers.
+# Do not invent OPENCLAW_GATEWAY_URL here.
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /home/<you>/.cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  - hostname: agentz.authichain.com
+    service: http://127.0.0.1:8000
+  - service: http_status:404
