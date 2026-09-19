@@ -1,0 +1,15 @@
+# Shared by workers/authichain-agentz (repo-root build context) and Dockerfile.agentz.
+.git
+**/.git
+node_modules
+**/node_modules
+.next
+**/.next
+.venv
+**/.venv
+**/__pycache__
+*.pyc
+.cursor
+coverage
+dist
+**/dist

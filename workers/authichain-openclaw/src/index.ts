@@ -26,6 +26,7 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { AGENTZ_PATHS } from "./agentz-paths";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,11 +41,11 @@ interface Bindings {
 }
 
 interface OpenClawMessage {
-  channel: string;       // "whatsapp" | "telegram" | "slack" | "discord" | ...
-  sender: string;        // user identifier on the channel
-  text: string;          // message body
-  session_id: string;   // OpenClaw session id
-  timestamp: string;    // ISO 8601
+  channel: string; // "whatsapp" | "telegram" | "slack" | "discord" | ...
+  sender: string; // user identifier on the channel
+  text: string; // message body
+  session_id: string; // OpenClaw session id
+  timestamp: string; // ISO 8601
   metadata?: Record<string, unknown>;
 }
 
@@ -55,7 +56,7 @@ app.use("*", cors());
 
 // ── Health ────────────────────────────────────────────────────────────────────
 
-app.get("/health", (c) => {
+app.get("/health", c => {
   return c.json({
     status: "ok",
     service: "authichain-openclaw",
@@ -70,7 +71,7 @@ app.get("/health", (c) => {
 async function agentzFetch(
   env: Bindings,
   path: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<Response> {
   const base = env.AGENTZ_API_URL.replace(/\/$/, "");
   const timeout = parseInt(env.AGENTZ_TIMEOUT_MS || "30000", 10);
@@ -95,7 +96,7 @@ async function agentzFetch(
 
 // ── OpenClaw webhook receiver ────────────────────────────────────────────────
 
-app.post("/webhook/openclaw", async (c) => {
+app.post("/webhook/openclaw", async c => {
   // Verify the request is from the OpenClaw gateway
   const authHeader = c.req.header("Authorization");
   if (!authHeader || authHeader !== `Bearer ${c.env.OPENCLAW_API_KEY}`) {
@@ -149,8 +150,10 @@ function parseIntent(text: string): Intent {
   const trimmed = text.trim().toLowerCase();
 
   if (trimmed === "help" || trimmed === "?") return { type: "help" };
-  if (trimmed === "agents" || trimmed === "list agents") return { type: "list_agents" };
-  if (trimmed === "workflows" || trimmed === "list workflows") return { type: "list_workflows" };
+  if (trimmed === "agents" || trimmed === "list agents")
+    return { type: "list_agents" };
+  if (trimmed === "workflows" || trimmed === "list workflows")
+    return { type: "list_workflows" };
 
   if (trimmed.startsWith("architect") || trimmed.startsWith("run architect")) {
     const args = trimmed.split(/\s+/).slice(1);
@@ -173,7 +176,7 @@ function parseIntent(text: string): Intent {
 
 async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
   try {
-    const res = await agentzFetch(c.env, `/api/workflows/${workflowId}/run`, {
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.runWorkflow(workflowId), {
       method: "POST",
       body: JSON.stringify({ mode: "confirm" }),
     });
@@ -192,21 +195,27 @@ async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
       result: data,
     });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 async function dispatchArchitectCycle(c: any, _args: string[]) {
   try {
     // The architect endpoint is on the AgentZ Python API
-    const res = await agentzFetch(c.env, "/api/architect/cycle", {
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.architectCycle, {
       method: "POST",
       body: JSON.stringify({ mode: "dry-run" }),
     });
 
     if (!res.ok) {
       const err = await res.text();
-      return c.json({ response: `Architect cycle failed: ${err}`, error: true });
+      return c.json({
+        response: `Architect cycle failed: ${err}`,
+        error: true,
+      });
     }
 
     const data = (await res.json()) as {
@@ -230,39 +239,55 @@ async function dispatchArchitectCycle(c: any, _args: string[]) {
 
     return c.json({ response: summary, result: data });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 async function listAgents(c: any) {
   try {
-    const res = await agentzFetch(c.env, "/api/agents");
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.agents);
     const data = (await res.json()) as {
       agents?: Array<{ name: string; system_prompt?: string }>;
     };
-    const lines = data.agents?.map((a) => `  • ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`) || [];
-    return c.json({ response: `Registered agents (${data.agents?.length || 0}):\n${lines.join("\n")}` });
+    const lines =
+      data.agents?.map(
+        a => `  • ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`
+      ) || [];
+    return c.json({
+      response: `Registered agents (${data.agents?.length || 0}):\n${lines.join("\n")}`,
+    });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 async function listWorkflows(c: any) {
   try {
-    const res = await agentzFetch(c.env, "/api/workflows");
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.workflows);
     const data = (await res.json()) as {
       workflows?: Array<{ id: string; title: string }>;
     };
-    const lines = data.workflows?.map((w) => `  • ${w.id}: ${w.title}`) || [];
-    return c.json({ response: `Workflows (${data.workflows?.length || 0}):\n${lines.join("\n")}` });
+    const lines = data.workflows?.map(w => `  • ${w.id}: ${w.title}`) || [];
+    return c.json({
+      response: `Workflows (${data.workflows?.length || 0}):\n${lines.join("\n")}`,
+    });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 // ── Direct command endpoint (for CLI / API calls, not OpenClaw) ───────────────
 
-app.post("/command", async (c) => {
+app.post("/command", async c => {
   const body = await c.req.json().catch(() => ({}));
   const { command, args } = body;
 
@@ -286,13 +311,15 @@ app.post("/command", async (c) => {
 
 // ── Architect cycle endpoint ──────────────────────────────────────────────────
 
-app.post("/architect/cycle", async (c) => {
+app.post("/architect/cycle", async c => {
   const body = await c.req.json().catch(() => ({}));
   const mode = body.mode || "dry-run";
-  const goal = body.goal || "Assess fleet health, fix failing workflows, and run priority jobs.";
+  const goal =
+    body.goal ||
+    "Assess fleet health, fix failing workflows, and run priority jobs.";
 
   try {
-    const res = await agentzFetch(c.env, "/api/architect/cycle", {
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.architectCycle, {
       method: "POST",
       body: JSON.stringify({ mode, goal }),
     });

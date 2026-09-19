@@ -16,20 +16,20 @@ Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generat
 
 ### What to run now (traffic → checkout)
 
-| Lane | Status | Workflows |
-| --- | --- | --- |
-| **Revenue (LIVE)** | Do not disable | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers |
-| **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume) |
-| **Cold outbound (dry-run)** | Enable after this PR is on `main` | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false |
-| **Spend / mint (FROZEN)** | Leave disabled | `content-publish`, `agentz-orchestration`, `gov-mint`, other `gov-*` |
+| Lane                        | Status                                                                                                     | Workflows                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Revenue (LIVE)**          | Do not disable                                                                                             | Stripe DPP checkout, `/onboard`, genesis cron, Stage 1–2 verifiers                            |
+| **Traffic (enable if off)** | `gen-seo-pages` + `ghost-traffic` already **active**; enable `content-routine-pr` + `marketing-autonomous` | Inbound / PR-only. `ghost-traffic` is a stub (logs targets; no real browse volume)            |
+| **Cold outbound (dry-run)** | Enable after this PR is on `main`                                                                          | `email-proposals`, `b2b-outreach` — `dry_run` default **true**, `OWNER_LIVE_SEND` unset/false |
+| **Spend / mint (FROZEN)**   | Leave disabled                                                                                             | `content-publish`, `agentz-orchestration`, `gov-mint`, other `gov-*`                          |
 
 ### Streamlined timeline
 
-| Day | What happens | What must not happen |
-| --- | --- | --- |
-| **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only. | No live cold email. No social publish. No gov-mint. |
+| Day       | What happens                                                                                         | What must not happen                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Day 0** | Revenue path stays live. Traffic workflows on. `marketing-autonomous` = IndexNow + GSC pings only.   | No live cold email. No social publish. No gov-mint.                               |
 | **Day 1** | Enable `content-routine-pr`, then `email-proposals` + `b2b-outreach` (dry-run). Review one log each. | Do **not** set `OWNER_LIVE_SEND=true`. Do not enable `content-publish` or AgentZ. |
-| **Day 3** | After dry-run review: **one-click live flip** below. | Still frozen: AgentZ, `content-publish`, all `gov-*` until item 5. |
+| **Day 3** | After dry-run review: **one-click live flip** below.                                                 | Still frozen: AgentZ, `content-publish`, all `gov-*` until item 5.                |
 
 ### Enable traffic + dry-run outbound (`gh` or Actions UI)
 
@@ -68,20 +68,20 @@ Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. 
 
 ### Audit — 2026-09-19 (Actions API)
 
-| Workflow | State | Last conclusion | Notes |
-| --- | --- | --- | --- |
-| `ghost-traffic` | **active** | success 2026-09-19 schedule ([35454152990](https://github.com/undone0603/authichain-unified/actions/runs/35454152990)) | Job ran (not skipped). Handler is still a **stub** — logs four targets, sends no browse traffic. Not a small in-repo unblock; do not treat a green check as real funnel volume. |
-| `gen-seo-pages` | **active** | success 2026-09-18 dispatch; last schedule 2026-09-11 | Weekly Friday 09:00 UTC. Writes `content/seo/pages.json` only. |
-| `seo-regression` | **active** | success 2026-09-19 after two earlier dispatch failures the same day | Brand homepages, sitemaps, robots all 200 as of this audit. |
-| `reddit-monitor` | **active** | success 2026-09-19 schedule | Intelligence only; no posts. |
-| `pipeline-tick` | **active** | last schedule success 2026-09-16; recent pushes skipped (no `[pipeline-proof]`) | Outbound still fail-closed in `server/outreach/send-guard.ts`. |
-| `content-routine-pr` | **disabled_manually** | last success 2026-09-14 (push) | PR-only. Enable on Day 1. |
-| `content-publish` | **disabled_manually** | last success 2026-09-14 | **Stay frozen** — live LinkedIn/Reddit/X. |
-| `marketing-autonomous` | **disabled_manually** | last success 2026-09-14 schedule | Scheduled = IndexNow + GSC only. Enable as Day 0/1 inbound. |
-| `b2b-outreach` | **disabled_manually** | scheduled runs skipped (var gate); last real failure 2026-08-31 | Enable on Day 1 **after** dry-run defaults land on main. |
-| `email-proposals` | **disabled_manually** | success 2026-09-15 schedule | Already defaulted dry-run on main. Enable on Day 1. |
-| `agentz-orchestration` | **disabled_manually** | success 2026-09-16 schedule | **Stay frozen.** |
-| `gov-engine` / `gov-mint` | **disabled_manually** | — | **Stay frozen** until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. |
+| Workflow                  | State                 | Last conclusion                                                                                                        | Notes                                                                                                                                                                           |
+| ------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ghost-traffic`           | **active**            | success 2026-09-19 schedule ([35454152990](https://github.com/undone0603/authichain-unified/actions/runs/35454152990)) | Job ran (not skipped). Handler is still a **stub** — logs four targets, sends no browse traffic. Not a small in-repo unblock; do not treat a green check as real funnel volume. |
+| `gen-seo-pages`           | **active**            | success 2026-09-18 dispatch; last schedule 2026-09-11                                                                  | Weekly Friday 09:00 UTC. Writes `content/seo/pages.json` only.                                                                                                                  |
+| `seo-regression`          | **active**            | success 2026-09-19 after two earlier dispatch failures the same day                                                    | Brand homepages, sitemaps, robots all 200 as of this audit.                                                                                                                     |
+| `reddit-monitor`          | **active**            | success 2026-09-19 schedule                                                                                            | Intelligence only; no posts.                                                                                                                                                    |
+| `pipeline-tick`           | **active**            | last schedule success 2026-09-16; recent pushes skipped (no `[pipeline-proof]`)                                        | Outbound still fail-closed in `server/outreach/send-guard.ts`.                                                                                                                  |
+| `content-routine-pr`      | **disabled_manually** | last success 2026-09-14 (push)                                                                                         | PR-only. Enable on Day 1.                                                                                                                                                       |
+| `content-publish`         | **disabled_manually** | last success 2026-09-14                                                                                                | **Stay frozen** — live LinkedIn/Reddit/X.                                                                                                                                       |
+| `marketing-autonomous`    | **disabled_manually** | last success 2026-09-14 schedule                                                                                       | Scheduled = IndexNow + GSC only. Enable as Day 0/1 inbound.                                                                                                                     |
+| `b2b-outreach`            | **disabled_manually** | scheduled runs skipped (var gate); last real failure 2026-08-31                                                        | Enable on Day 1 **after** dry-run defaults land on main.                                                                                                                        |
+| `email-proposals`         | **disabled_manually** | success 2026-09-15 schedule                                                                                            | Already defaulted dry-run on main. Enable on Day 1.                                                                                                                             |
+| `agentz-orchestration`    | **disabled_manually** | success 2026-09-16 schedule                                                                                            | **Stay frozen.**                                                                                                                                                                |
+| `gov-engine` / `gov-mint` | **disabled_manually** | —                                                                                                                      | **Stay frozen** until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453.                                                                                                             |
 
 ### Live vs frozen after this pass
 
@@ -184,5 +184,5 @@ Re-enable only from the Day 0 / Day 1 lists above: `gh api -X PUT repos/undone06
 Zero Trust team: **strainchainexecutiveteam**.
 
 1. Access → Applications → **All Workers** (and any app on public brand hosts)
-2. Delete or Bypass; keep Access on `dashboard.*`, `admin.*`, `/admin`, claw/openclaw
+2. Delete or Bypass; keep Access on `dashboard.*`, `admin.*`, `/admin`, claw/openclaw, `agentz.*`
 3. Confirm: `curl -sI https://authichain.com/verify` is not 302 to `cloudflareaccess.com`

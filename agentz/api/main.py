@@ -11,13 +11,11 @@ from typing import List, Dict, Any, Optional
 import asyncio
 
 from agentz.core.credentials import get
-from agentz.core.scout import scout_businesses
-from agentz.core.builder import create_product_identity
-from agentz.core.media import generate_story_mode
-from agentz.core.trust import monitor_scans
-from agentz.core.growth import reward_repeat_scans
-from agentz.core.redemption import burn_qron_for_discount
 from supabase import create_client, Client
+
+# Heavy agentz.core.* modules (scout/builder/media/llm/web3) are imported
+# inside the endpoints that need them so uvicorn can boot /health with a
+# lean pip set on Cloudflare Containers.
 
 app = FastAPI(
     title="AgentZ: Authentic Economy API",
@@ -65,16 +63,21 @@ async def health():
 
 @app.get("/scout/{city}")
 async def api_scout(city: str, token: bool = Depends(verify_token)):
+    from agentz.core.scout import scout_businesses
     results = await scout_businesses(city)
     return {"city": city, "candidates": results}
 
 @app.post("/products")
 async def api_create_product(data: ProductCreate, supabase: Client = Depends(get_supabase), token: bool = Depends(verify_token)):
+    from agentz.core.builder import create_product_identity
     res = await create_product_identity(supabase, data.dict())
     return res
 
 @app.post("/scan")
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
+    from agentz.core.media import generate_story_mode
+    from agentz.core.trust import monitor_scans
+    from agentz.core.growth import reward_repeat_scans
     # The Atomic Action
     score = await monitor_scans(supabase, data.product_id)
     narration = await generate_story_mode(supabase, data.product_id)
@@ -94,6 +97,7 @@ async def api_marketplace(supabase: Client = Depends(get_supabase)):
 
 @app.post("/redeem")
 async def api_redeem(wallet: str, amount: float, business_id: str, supabase: Client = Depends(get_supabase)):
+    from agentz.core.redemption import burn_qron_for_discount
     return await burn_qron_for_discount(supabase, wallet, amount, business_id)
 
 # --- Public Network Stats (No Auth Required) ---

@@ -14,16 +14,18 @@ Never send customers to `*.vercel.app`.
 ## Intended globs
 
 ### authichain.com
-| Pattern | Worker |
-|---|---|
-| `/` (landing assets only) | `authichain-com` |
-| `/.well-known/jwks.json` | `authichain-edge-router` via landing `APP_WORKER` proxy |
+
+| Pattern                             | Worker                                                  |
+| ----------------------------------- | ------------------------------------------------------- |
+| `/` (landing assets only)           | `authichain-com`                                        |
+| `/.well-known/jwks.json`            | `authichain-edge-router` via landing `APP_WORKER` proxy |
 | `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing) |
-| `/api/qron-register*` | `authichain-qron-provenance` |
-| `/api/*` (rest) | `authichain-api-gateway` |
-| `api.authichain.com/*` | `authichain-api-gateway` |
-| `dashboard.authichain.com/*` | `authichain-dashboard` |
-| `claw.authichain.com/*` | `authichain-openclaw` |
+| `/api/qron-register*`               | `authichain-qron-provenance`                            |
+| `/api/*` (rest)                     | `authichain-api-gateway`                                |
+| `api.authichain.com/*`              | `authichain-api-gateway`                                |
+| `dashboard.authichain.com/*`        | `authichain-dashboard`                                  |
+| `claw.authichain.com/*`             | `authichain-openclaw`                                   |
+| `agentz.authichain.com/*`           | `authichain-agentz`                                     |
 
 `/dapp` 302s to `/dashboard` on the landing worker. `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
@@ -42,24 +44,27 @@ Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED
 `app.govchain.us` and `app.strainchain.io` are not registered in-repo (those zones have no Worker route yet). Owner steps: add a CNAME `app` on each zone, orange-cloud it, then add `[[routes]] pattern = "app.<zone>/*"` to the matching landing worker (or to `authichain-edge-router` if the zone is attached). Until then, CTAs stay on the apex paths (`/onboard`, `/generate`).
 
 ### qron.space
-| Pattern | Worker |
-|---|---|
-| `/` | `qron-space` |
-| `/generate*` | app / edge router |
-| `/api/*` | rewrite to `api.authichain.com` |
+
+| Pattern      | Worker                          |
+| ------------ | ------------------------------- |
+| `/`          | `qron-space`                    |
+| `/generate*` | app / edge router               |
+| `/api/*`     | rewrite to `api.authichain.com` |
 
 ### govchain.us
-| Pattern | Worker |
-|---|---|
-| `/` | `govchain-us` |
-| `/onboard*` | app |
+
+| Pattern     | Worker        |
+| ----------- | ------------- |
+| `/`         | `govchain-us` |
+| `/onboard*` | app           |
 
 CTAs: `https://govchain.us/onboard` only.
 
 ### strainchain.io
-| Pattern | Worker |
-|---|---|
-| `/` | `strainchain-io` |
+
+| Pattern                                 | Worker                              |
+| --------------------------------------- | ----------------------------------- |
+| `/`                                     | `strainchain-io`                    |
 | `/onboard*`, `/genetics*`, `/passport*` | `APP_ORIGIN=https://authichain.com` |
 
 ## Root `worker/` (`wrangler.toml` name = authichain)
