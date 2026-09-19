@@ -2462,7 +2462,7 @@ textarea{resize:vertical;min-height:80px}
 <body>
 <nav class="nav">
   <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="https://app.authichain.com/login" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
+  <a href="/onboard" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
 </nav>
 <div class="wrap">
   <h1>Anchor a Product to the <span>Blockchain</span></h1>
@@ -2706,7 +2706,7 @@ a{color:#c9a227;text-decoration:none}
         +'</div>'
         +'<div class="actions">'
         +'<a class="btn-outline" href="/anchor">Anchor Another</a>'
-        +'<a class="btn-outline" href="https://app.authichain.com/login" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
+        +'<a class="btn-outline" href="/onboard" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
         +'</div>';
     })
     .catch(function(e){
@@ -3031,7 +3031,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/authenticate">Start Free — Get DPP Compliant</a>
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/onboard">Start Free — Get DPP Compliant</a>
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
     </div>

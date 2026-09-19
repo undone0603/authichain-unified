@@ -373,6 +373,20 @@ describe("renderDynamicPage: /dashboard console", () => {
   });
 });
 
+describe("renderDynamicPage: /login and /authenticate", () => {
+  it("returns 200 HTML with live apex CTAs", async () => {
+    for (const path of ["/login", "/authenticate"]) {
+      const res = await app.request(path, {}, makeEnv() as any);
+      const body = await res.text();
+      expect(res.status).toBe(200);
+      expect(body).toContain("Sign in");
+      expect(body).toContain("/onboard");
+      expect(body).toContain("/dashboard");
+      expect(body).not.toContain("app.authichain.com/login");
+    }
+  });
+});
+
 describe("renderDynamicPage: /generate Living QR", () => {
   it("returns 200 HTML with a real form", async () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
@@ -421,7 +435,11 @@ describe("renderDynamicPage: /story StoryMode", () => {
     (getProductById as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
 
-    const res = await app.request("/story/does-not-exist", {}, makeEnv() as any);
+    const res = await app.request(
+      "/story/does-not-exist",
+      {},
+      makeEnv() as any
+    );
     const body = await res.text();
 
     expect(res.status).toBe(404);

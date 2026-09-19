@@ -81,6 +81,27 @@ test("a malformed certificate id is a 404", async () => {
   assert.equal((await get("/cert/garbage")).status, 404);
 });
 
+test("/thanks and /success serve the DPP thanks page", async () => {
+  for (const path of ["/thanks", "/success"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(await res.text(), /Payment received/);
+  }
+});
+
+test("anchor Sign In stays on an apex path, not app.login", async () => {
+  const html = await (await get("/anchor")).text();
+  assert.equal((await get("/anchor")).status, 200);
+  assert.ok(!html.includes("app.authichain.com/login"));
+  assert.match(html, /href="\/onboard"/);
+});
+
+test("DPP landing CTA uses /onboard, not a dead /authenticate", async () => {
+  const html = await (await get("/digital-product-passport")).text();
+  assert.match(html, /href="\/onboard"/);
+  assert.ok(!html.includes('href="/authenticate"'));
+});
+
 test("/dapp redirects to /dashboard (estate CTA)", async () => {
   const res = await get("/dapp");
   assert.equal(res.status, 302);
@@ -91,7 +112,11 @@ test("/dashboard and /generate are proxied to the app", async () => {
   for (const path of ["/dashboard", "/generate", "/api/automation/cron"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
-    assert.equal(await res.text(), "app", `${path} should come from APP_WORKER`);
+    assert.equal(
+      await res.text(),
+      "app",
+      `${path} should come from APP_WORKER`
+    );
   }
 });
 
@@ -145,7 +170,10 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Sitemap: https:\/\/authichain.com\/sitemap.xml/);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/authichain.com\/sitemap.xml/
+  );
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

@@ -15,25 +15,25 @@ Never send customers to `*.vercel.app`.
 
 ### authichain.com
 
-| Pattern                             | Worker                                                  |
-| ----------------------------------- | ------------------------------------------------------- |
-| `/` (landing assets only)           | `authichain-com`                                        |
-| `/.well-known/jwks.json`            | `authichain-edge-router` via landing `APP_WORKER` proxy |
-| `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing) |
-| `/api/qron-register*`               | `authichain-qron-provenance`                            |
-| `/api/*` (rest)                     | `authichain-api-gateway`                                |
-| `api.authichain.com/*`              | `authichain-api-gateway`                                |
-| `dashboard.authichain.com/*`        | `authichain-dashboard`                                  |
-| `claw.authichain.com/*`             | `authichain-openclaw`                                   |
+| Pattern                             | Worker                                                                                                                                                                                                                                       |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` (landing assets only)           | `authichain-com`                                                                                                                                                                                                                             |
+| `/.well-known/jwks.json`            | `authichain-edge-router` via landing `APP_WORKER` proxy                                                                                                                                                                                      |
+| `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing)                                                                                                                                                                                      |
+| `/api/qron-register*`               | `authichain-qron-provenance`                                                                                                                                                                                                                 |
+| `/api/*` (rest)                     | `authichain-api-gateway`                                                                                                                                                                                                                     |
+| `api.authichain.com/*`              | `authichain-api-gateway`                                                                                                                                                                                                                     |
+| `dashboard.authichain.com/*`        | `authichain-dashboard`                                                                                                                                                                                                                       |
+| `claw.authichain.com/*`             | `authichain-openclaw`                                                                                                                                                                                                                        |
 | `agentz.authichain.com/*`           | **$0 path:** Cloudflare Tunnel → `127.0.0.1:8000` (`scripts/agentz-tunnel/`). Do **not** attach a Worker route while Tunnel DNS owns the hostname — delete `agentz.authichain.com/*` on `authichain-agentz` or leave that worker undeployed. |
 
-`/dapp` 302s to `/dashboard` on the landing worker. `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
+`/dapp` 302s to `/dashboard` on the landing worker (edge-router also serves `/dapp` as the console). `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, `/login`, `/authenticate`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). Money + agent routes on the edge router: `GET /api/checkout/dpp` (303 Stripe), `POST /api/stripe/webhook`, `GET /api/x402/health` (200 `not_configured` until `X402_FACILITATOR_URL` is bound), `POST /api/v1/attestation`. `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
 Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED`), do **not** cut `authichain.com/*` to a landing worker that cannot proxy. Prefer specific globs.
 
 ### app.* hosts (owner DNS)
 
-`app.authichain.com` 522s when the hostname is orange-clouded to a dead origin (retired Vercel). In-repo, `worker-app/wrangler.toml` now registers `app.authichain.com/*` on `authichain-edge-router`. After merge + `deploy-cloudflare.yml`:
+`app.authichain.com` 522s when the hostname is orange-clouded to a dead origin (retired Vercel). In-repo, `worker-app/wrangler.toml` now registers `app.authichain.com/*` on `authichain-edge-router`. `GET /` on that host 302s to `/dashboard`. After merge + `deploy-cloudflare.yml`:
 
 1. Cloudflare → authichain.com zone → DNS → `app` CNAME to the zone apex or `100::` (Workers-only) **or** leave the existing record
 2. Proxy status: **orange cloud** (proxied)
