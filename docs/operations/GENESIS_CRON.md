@@ -1,6 +1,6 @@
 # Genesis cron — safe autonomous tick
 
-`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. Outbound AgentZ, live cold send, and gov-mint stay skipped (`PUBLIC_LOOP_FREEZE`). Dry-run outreach is a separate Actions enable — do not launch it from this cron.
+`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. That freeze is **outbound-spend + gov-mint**, not Stripe/DPP checkout — the revenue path is live. Dry-run outreach is a separate Actions enable; do not launch live cold send from this cron. See `PUBLIC_LOOP_FREEZE.md`.
 
 ## What fires it
 

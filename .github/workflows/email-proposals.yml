@@ -8,10 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        # STAGED ACTIVATION: defaults to true so scheduled runs and default
-        # manual runs log the proposal emails they *would* send without sending.
-        # Live send requires both unchecking this input AND
-        # vars.EMAIL_PROPOSALS_ENABLED=true. See PUBLIC_LOOP_FREEZE.md Day 3.
+        # STAGED: default true. Live send also requires vars.OWNER_LIVE_SEND=true
+        # (one-click flip — see PUBLIC_LOOP_FREEZE.md). Unset / false = no spam.
         description: "Dry run (log emails without sending)"
         required: false
         default: "true"
@@ -57,24 +55,24 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "${{ vars.EMAIL_PROPOSALS_ENABLED }}" = "true" ]; then
+            if [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → LIVE (EMAIL_PROPOSALS_ENABLED=true)"
+              echo "Scheduled run → LIVE (OWNER_LIVE_SEND=true)"
             else
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → forced dry-run (set EMAIL_PROPOSALS_ENABLED=true after dry-run review)"
+              echo "Scheduled run → forced dry-run (OWNER_LIVE_SEND unset/false)"
             fi
             exit 0
           fi
           dry="${{ inputs.dry_run }}"
           if [ "$dry" = "false" ]; then
-            if [ "${{ vars.EMAIL_PROPOSALS_ENABLED }}" != "true" ]; then
-              echo "::warning::live requested but vars.EMAIL_PROPOSALS_ENABLED is not true — forcing dry-run"
+            if [ "${{ vars.OWNER_LIVE_SEND }}" != "true" ]; then
+              echo "::warning::live requested but vars.OWNER_LIVE_SEND is not true — forcing dry-run"
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
-            echo "Manual live send (EMAIL_PROPOSALS_ENABLED=true)"
+            echo "Manual live send (OWNER_LIVE_SEND=true)"
             exit 0
           fi
           echo "dry_run=true" >> "$GITHUB_OUTPUT"
@@ -94,7 +92,7 @@ jobs:
           CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL: ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
           # STAGED: resolve-mode defaults to dry-run. Live requires
-          # vars.EMAIL_PROPOSALS_ENABLED=true (see PUBLIC_LOOP_FREEZE.md Day 3).
+          # vars.OWNER_LIVE_SEND=true (one-click flip).
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           # CAN-SPAM requires a physical postal address in every commercial
           # email, and guardedSend fails CLOSED without one. This is NOT a

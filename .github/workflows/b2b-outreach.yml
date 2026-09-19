@@ -18,10 +18,8 @@ on:
           - strainchain
           - qron
       dry_run:
-        # STAGED ACTIVATION: defaults to true so scheduled runs and default
-        # manual runs write/queue without sending. Live send requires both
-        # unchecking this input AND vars.B2B_OUTREACH_ENABLED=true.
-        # See docs/operations/PUBLIC_LOOP_FREEZE.md (Day 3 flip).
+        # STAGED: default true. Live send also requires vars.OWNER_LIVE_SEND=true
+        # (one-click flip — see PUBLIC_LOOP_FREEZE.md). Unset / false = no spam.
         description: "Dry run (save to Supabase, skip email send)"
         required: false
         default: "true"
@@ -46,10 +44,8 @@ env:
 jobs:
   outreach:
     name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
-    # Workflow-enabled runs always execute. Live send is a separate gate in
-    # "Resolve dry-run / live mode" (vars.B2B_OUTREACH_ENABLED=true AND
-    # dry_run=false). Scheduled runs stay dry-run until that var is set, so
-    # enabling this workflow produces staged evidence instead of a silent skip.
+    # Enabling this workflow is not live send. Resolve-mode stays dry-run
+    # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -76,24 +72,24 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "${{ vars.B2B_OUTREACH_ENABLED }}" = "true" ]; then
+            if [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → LIVE (B2B_OUTREACH_ENABLED=true)"
+              echo "Scheduled run → LIVE (OWNER_LIVE_SEND=true)"
             else
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → forced dry-run (set B2B_OUTREACH_ENABLED=true after dry-run review)"
+              echo "Scheduled run → forced dry-run (OWNER_LIVE_SEND unset/false)"
             fi
             exit 0
           fi
           dry="${{ inputs.dry_run }}"
           if [ "$dry" = "false" ]; then
-            if [ "${{ vars.B2B_OUTREACH_ENABLED }}" != "true" ]; then
-              echo "::warning::live requested but vars.B2B_OUTREACH_ENABLED is not true — forcing dry-run"
+            if [ "${{ vars.OWNER_LIVE_SEND }}" != "true" ]; then
+              echo "::warning::live requested but vars.OWNER_LIVE_SEND is not true — forcing dry-run"
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
-            echo "Manual live send (B2B_OUTREACH_ENABLED=true)"
+            echo "Manual live send (OWNER_LIVE_SEND=true)"
             exit 0
           fi
           echo "dry_run=true" >> "$GITHUB_OUTPUT"
