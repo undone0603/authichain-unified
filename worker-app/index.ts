@@ -209,6 +209,61 @@ app.get("/api/checkout/dpp", async c => {
   }
 });
 
+// ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
+// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
+// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+app.post("/api/funnel", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const { recordFunnelEvent } = await import("../src/lib/funnel-record");
+    const result = await recordFunnelEvent(supabase, body);
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json(
+      {
+        success: true,
+        message: "Funnel event recorded",
+        prospect_id: result.prospect_id,
+        stage: result.stage,
+        source: result.source,
+      },
+      201
+    );
+  } catch (err: any) {
+    console.error("[funnel] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to record funnel event", detail: err?.message },
+      500
+    );
+  }
+});
+
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.

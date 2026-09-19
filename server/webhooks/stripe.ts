@@ -524,7 +524,12 @@ export async function handleStripeWebhook(
 
       try {
         const { isDppOffer } = await import("../../src/lib/dpp-loop");
-        if (isDppOffer(session.metadata || {})) {
+        const linePriceId =
+          session.line_items?.data?.[0]?.price?.id ||
+          (typeof session.metadata?.stripe_price_id === "string"
+            ? session.metadata.stripe_price_id
+            : null);
+        if (isDppOffer(session.metadata || {}, linePriceId)) {
           const url =
             process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
           const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
