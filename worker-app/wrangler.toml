@@ -4,12 +4,8 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
-# for GET /api/checkout/dpp. INTERNAL_API_SECRET is required for
-# POST /api/guardrail/* (503 {"error":"INTERNAL_API_SECRET not configured"}
-# until bound — dispatch set-qron-outreach-guardrail-secret.yml, which copies
-# the existing repo secret of the same name; do not invent a value).
-# Optional NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to record
-# checkout_started on funnel_events and to back the guardrail store.
+# for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
+# SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets

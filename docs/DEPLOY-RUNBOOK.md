@@ -62,23 +62,7 @@ For the root Cloudflare deploy workflow, also set the repository variable
 cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
 `CRON_SECRET`; no Vercel secrets are required.
 
-`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`,
-including `POST /api/guardrail/{check,record,suppress}` (`authichain.com/api/guardrail/*`
-plus `app.authichain.com/*`). After publish it binds repo secret
-`INTERNAL_API_SECRET` on that Worker when the secret is set (same name as
-`b2b-outreach.yml` / `guardrail-digest.yml` — do not invent a value).
-One-shot / re-runnable bind for both `qron-outreach` and
-`authichain-edge-router`:
-
-```bash
-# Actions → "Set qron-outreach guardrail secret" → Run workflow
-gh workflow run set-qron-outreach-guardrail-secret.yml
-```
-
-Until that secret is bound, `POST /api/guardrail/check` returns 503
-`{"error":"INTERNAL_API_SECRET not configured"}`. B2B live send falls back
-to the Supabase store on 404 and any 5xx so deploy lag does not block send.
-
+`deploy-cloudflare.yml` publishes `authichain-edge-router` from `worker-app/`.
 `pnpm run build` is Next (`next build --webpack`) and does **not** emit repo-root
 `dist/`; the workflow stubs `dist/` so wrangler `assets.directory` exists. JWKS
 is served by the Worker script, not those assets.
@@ -129,4 +113,4 @@ The Worker private key is never copied into GitHub Actions. Launch proof:
 | authichain-qron-provenance | _(none; D1 `authichain-provenance`)_                                                                                                                                                                                               |
 | authichain-scan-validate   | _(none; D1 `authichain-provenance`)_                                                                                                                                                                                               |
 | authichain-agentz          | **$0 path:** leave undeployed (Tunnel, not Containers). Secrets below are only if this worker is ever deployed after revenue: `AGENT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (alias `SUPABASE_SERVICE_KEY`)           |
-| authichain-openclaw        | `OPENCLAW_GATEWAY_URL` (owner-set reachable host — do not invent), `OPENCLAW_API_KEY`, `AGENTZ_API_KEY` (local `AGENT_SECRET`). `AGENTZ_API_URL` = Tunnel host (`https://agentz.authichain.com`). See `scripts/agentz-tunnel/`      |
+| authichain-openclaw        | `OPENCLAW_GATEWAY_URL` (owner-set reachable host — do not invent), `OPENCLAW_API_KEY`, `AGENTZ_API_KEY` (local `AGENT_SECRET`). `AGENTZ_API_URL` = Tunnel host (`https://agentz.authichain.com`). See `scripts/agentz-tunnel/`     |

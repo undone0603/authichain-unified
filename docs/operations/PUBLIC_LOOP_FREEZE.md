@@ -84,16 +84,7 @@ gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
   -f segment=qron -f dry_run=false
 ```
 
-If the run still prints `guardrail check HTTP 404` or `HTTP 503` (`INTERNAL_API_SECRET not configured`), the edge-router route is missing or the Worker secret is unbound. The script falls back to the Supabase store on **404 and any 5xx** when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present, so live send is not blocked by deploy/secret lag.
-
-To bind the HTTP path (secret names only — reuse the existing repo secret):
-
-```bash
-# Actions → "Set qron-outreach guardrail secret" → Run workflow
-gh workflow run set-qron-outreach-guardrail-secret.yml -R undone0603/authichain-unified
-```
-
-That copies repo secret `INTERNAL_API_SECRET` onto `qron-outreach` and `authichain-edge-router`. `deploy-cloudflare.yml` also rebinds it on `authichain-edge-router` after each publish when the repo secret is set. Do not invent a value. `/api/health` 404 on those hosts is unrelated (not used as a probe).
+If the HTTP guardrail path returns 404 or any 5xx (including 503 `INTERNAL_API_SECRET not configured`), the script falls back to the Supabase store when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present, so live send is not blocked by deploy/secret lag. `/api/health` 404 on those hosts is unrelated.
 
 ### Audit — 2026-09-19 (Actions API)
 
