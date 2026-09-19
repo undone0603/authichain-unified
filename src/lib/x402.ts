@@ -324,7 +324,7 @@ export async function x402HealthReport(
     pricePerCall: { usd: priceUsd, atomic: usdToAtomic(priceUsd) },
     dailyCapUsd: dailyCapUsd(),
     endpoint: "/api/v1/agent-verify",
-    aliases: ["/api/x402", "/api/x402/health"],
+    aliases: ["/api/x402", "/api/x402/health", "/api/v1/agent-verify"],
     facilitator,
     warnings,
     timestamp: new Date().toISOString(),

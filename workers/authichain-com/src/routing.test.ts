@@ -108,8 +108,12 @@ test("/dapp redirects to /dashboard (estate CTA)", async () => {
   assert.equal(res.headers.get("location"), "https://authichain.com/dashboard");
 });
 
-test("GET /api/x402 and /health are answered here, not proxied", async () => {
-  for (const path of ["/api/x402", "/api/x402/health"]) {
+test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
+  for (const path of [
+    "/api/x402",
+    "/api/x402/health",
+    "/api/v1/agent-verify",
+  ]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const body = (await res.json()) as { status: string };

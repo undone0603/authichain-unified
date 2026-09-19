@@ -49,6 +49,13 @@ describe("tryHandleX402", () => {
     expect(body.aliases).toContain("/api/x402/health");
   });
 
+  it("GET /api/v1/agent-verify is health, not a 404", async () => {
+    const res = await tryHandleX402(req("/api/v1/agent-verify"));
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as { status: string };
+    expect(body.status).toBe("not_configured");
+  });
+
   it("HEAD /api/x402/health is 204", async () => {
     const res = await tryHandleX402(
       req("/api/x402/health", { method: "HEAD" })

@@ -92,6 +92,8 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/checkout/*"
 zone_name = "authichain.com"
 
+# Canonical Stripe Dashboard endpoint. Live account we_1UGTCS… already
+# posts here. Do not register /api/webhooks/stripe in Dashboard (retired).
 [[routes]]
 pattern = "authichain.com/api/stripe/webhook"
 zone_name = "authichain.com"

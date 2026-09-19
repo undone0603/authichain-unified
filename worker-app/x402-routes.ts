@@ -1,7 +1,8 @@
 /**
  * x402 agent micropayment routes on authichain-edge-router.
  *
- * GET  /api/x402 + /api/x402/health → public health (200, not_configured OK)
+ * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
+ *      (200, not_configured OK — GET must not 404)
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
@@ -166,6 +167,7 @@ export function registerX402Routes<
 >(app: Hono<{ Bindings: E; Variables: V }>): void {
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
+  app.get("/api/v1/agent-verify", c => health(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));
 }

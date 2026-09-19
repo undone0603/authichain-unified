@@ -6,7 +6,8 @@
  * authichain-edge-router, whose unmounted GET /api/* falls through to ASSETS
  * and answers an empty 404.
  *
- * GET  /api/x402 + /api/x402/health → 200 health (not_configured is OK)
+ * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
+ *      (not_configured is OK — GET must not 404)
  * POST /api/x402 + /api/v1/agent-verify → 503/402 until facilitator + payTo
  */
 import {
@@ -49,7 +50,11 @@ export function isX402Path(pathname: string): boolean {
 
 function isHealthPath(pathname: string): boolean {
   const p = normalizePath(pathname);
-  return p === "/api/x402" || p === "/api/x402/health";
+  return (
+    p === "/api/x402" ||
+    p === "/api/x402/health" ||
+    p === "/api/v1/agent-verify"
+  );
 }
 
 function hydrateX402(env?: X402Env) {
