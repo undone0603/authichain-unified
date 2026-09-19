@@ -10,9 +10,8 @@ on:
       dry_run:
         # STAGED ACTIVATION: defaults to true so scheduled runs and default
         # manual runs log the proposal emails they *would* send without sending.
-        # To send live for one run, dispatch manually with this unchecked. To
-        # remove the guard permanently after reviewing staged output, flip this
-        # default and the `|| 'true'` fallback below back to 'false'.
+        # Live send requires both unchecking this input AND
+        # vars.EMAIL_PROPOSALS_ENABLED=true. See PUBLIC_LOOP_FREEZE.md Day 3.
         description: "Dry run (log emails without sending)"
         required: false
         default: "true"
@@ -53,6 +52,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Resolve dry-run / live mode
+        id: mode
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ vars.EMAIL_PROPOSALS_ENABLED }}" = "true" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → LIVE (EMAIL_PROPOSALS_ENABLED=true)"
+            else
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → forced dry-run (set EMAIL_PROPOSALS_ENABLED=true after dry-run review)"
+            fi
+            exit 0
+          fi
+          dry="${{ inputs.dry_run }}"
+          if [ "$dry" = "false" ]; then
+            if [ "${{ vars.EMAIL_PROPOSALS_ENABLED }}" != "true" ]; then
+              echo "::warning::live requested but vars.EMAIL_PROPOSALS_ENABLED is not true — forcing dry-run"
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            echo "Manual live send (EMAIL_PROPOSALS_ENABLED=true)"
+            exit 0
+          fi
+          echo "dry_run=true" >> "$GITHUB_OUTPUT"
+          echo "Resolved dry_run=true"
+
       - name: Email high-fit proposals to agency contacts
         run: pnpm exec tsx scripts/email-proposals.ts
         env:
@@ -66,8 +93,9 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
           CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL: ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
-          # STAGED: fallback is 'true' so scheduled runs never send live.
-          DRY_RUN: ${{ inputs.dry_run || 'true' }}
+          # STAGED: resolve-mode defaults to dry-run. Live requires
+          # vars.EMAIL_PROPOSALS_ENABLED=true (see PUBLIC_LOOP_FREEZE.md Day 3).
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           # CAN-SPAM requires a physical postal address in every commercial
           # email, and guardedSend fails CLOSED without one. This is NOT a
           # secret — the whole point is that it is printed in every message —

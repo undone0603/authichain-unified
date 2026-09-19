@@ -1,6 +1,6 @@
 # Genesis cron — safe autonomous tick
 
-`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. Outbound AgentZ, outreach, and gov-mint stay skipped (`PUBLIC_LOOP_FREEZE`).
+`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. Outbound AgentZ, live cold send, and gov-mint stay skipped (`PUBLIC_LOOP_FREEZE`). Dry-run outreach is a separate Actions enable — do not launch it from this cron.
 
 ## What fires it
 

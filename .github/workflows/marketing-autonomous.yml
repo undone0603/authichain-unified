@@ -19,12 +19,10 @@ on:
           - reddit_only
           - content_drafts
       dry_run:
-        # STAGED ACTIVATION: defaults to true so scheduled runs and default
-        # manual runs print the LinkedIn/Reddit posts they *would* publish
-        # without posting live. To publish live for one run, dispatch manually
-        # with this unchecked. To remove the guard permanently after reviewing
-        # staged output, flip this default and the two `|| 'true'` fallbacks
-        # below back to 'false'.
+        # STAGED: default true. Scheduled jobs are inbound-only (IndexNow +
+        # GSC sitemap pings). LinkedIn/Reddit posting moved to content-publish.yml,
+        # which stays frozen. This input is kept so a future live social path
+        # cannot silently default to send. See PUBLIC_LOOP_FREEZE.md.
         description: "Dry run (no live posts)"
         required: false
         default: "true"
