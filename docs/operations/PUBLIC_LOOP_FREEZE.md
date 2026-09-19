@@ -2,6 +2,17 @@
 
 Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and activate** without a login code. Access is no longer the gate.
 
+## Update - 2026-09-19 verification (checkout gate)
+
+Live production checks plus GitHub Actions job/step logs for the `deploy-cloudflare.yml` run on `c1e256f2` show the checkout gate below is now **resolved**:
+
+- Run #2311 (job `105813585880`): every step succeeded, including **Inspect build output** and **Publish application Worker + Assets**. `APP_WORKER`/`authichain-edge-router` was redeployed with the real Next.js app.
+- `GET https://authichain.com/api/checkout/dpp` returns `303` to a live `checkout.stripe.com` URL. No cache headers, no homepage HTML.
+- `GET https://authichain.com/api/cron/dpp-exceptions` returns `401 {"error":"Unauthorized"}` (JSON, `no-store`) - correct for an unauthenticated call, not cached HTML.
+- The `find | head` SIGPIPE noted below did not reproduce locally and did not fire on this run - looks like a timing-dependent race, not a deterministic failure.
+
+Workstream items 2 and 4 below are now met. Item 3 (one smoke-test buyer completing the full flow) is still open - that needs an actual purchase, which was not attempted here. **Do not re-enable frozen workflows until that smoke test completes.**
+
 ## What changed
 
 - Unauthenticated `GET https://authichain.com/verify` is **not** a 302 to `cloudflareaccess.com` (reconfirmed 2026-09-17). Apex, `qron.space`, `govchain.us`, `strainchain.io` likewise return 200 with no Access login.
@@ -14,6 +25,8 @@ Autonomous scale stays paused until a stranger can **pay (or smoke-pay) and acti
 
 As of 2026-09-17 21:16 UTC, `GET /api/checkout/dpp` and `GET /api/cron/dpp-exceptions` return **cached homepage HTML** (`cf-cache-status: HIT`), not Stripe/JSON. The `dpp-exceptions` dispatch that printed `OK [200]` was that HTML, not the cron. **Purge `/api*`** (or everything on the zone) and get `deploy-cloudflare.yml` past the inspect step so `APP_WORKER` is the Next app, not a stale SPA index.
 
+**Update 2026-09-19:** superseded - see the verification note near the top of this doc. Both endpoints now return correct dynamic responses (303/JSON), not cached homepage HTML.
+
 `/onboard` has **no implementation** in this repo. That is a product decision, not an Access or 404-link fix (PR #936). Do not add a fake route to satisfy the old checklist.
 
 ## Live workstream (only)
@@ -23,9 +36,9 @@ Issue #878 — traffic → checkout → provision → activate → retain.
 Judge progress on:
 
 1. ~~Unauthenticated `/verify` without Access~~ **done**
-2. `GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML
+2. ~~`GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML~~ **done (2026-09-19)**
 3. One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate
-4. `GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live
+4. ~~`GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live~~ **done (2026-09-19) - returns 401 JSON when unauthenticated, not cached HTML**
 5. One signed Base deploy from ops EOA — still blocked until `GOVCHAIN_NFT_CONTRACT` has bytecode on 8453. Do not dispatch `gov-mint.yml`.
 
 ## Frozen (Actions disabled 2026-09-16)
@@ -40,6 +53,7 @@ Re-enable a frozen workflow only after checkout 303s and one smoke buyer complet
 
 - `deploy-workers.yml` on the #1001 merge **did deploy `authichain-com`**. The workflow is red because `passport-demo` failed (standing flake — do not widen a DPP PR to fix it).
 - `deploy-cloudflare.yml` failed at **Inspect build output** (`find | head` SIGPIPE under `pipefail`) before publishing `APP_WORKER`. That is what leaves `/api/*` on the wrong origin.
+- **Update 2026-09-19:** run `35412089035` on `c1e256f2` (job `105813585880`) completed **Inspect build output** and **Publish application Worker + Assets** successfully - the SIGPIPE did not fire this time. Treat as an unfixed intermittent race, not a resolved bug: the line-86 `find` still doesn't prune `.git`/`node_modules` and isn't wrapped with `|| true`.
 - Dispatch `deploy-workers.yml` with `worker=authichain-com` only when the landing worker changes. Do not redeploy the full matrix for a cache purge.
 
 ## Access (dashboard, if it wraps again)
