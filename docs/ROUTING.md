@@ -25,9 +25,21 @@ Never send customers to `*.vercel.app`.
 | `dashboard.authichain.com/*` | `authichain-dashboard` |
 | `claw.authichain.com/*` | `authichain-openclaw` |
 
-`/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
+`/dapp` 302s to `/dashboard` on the landing worker. `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
 Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED`), do **not** cut `authichain.com/*` to a landing worker that cannot proxy. Prefer specific globs.
+
+### app.* hosts (owner DNS)
+
+`app.authichain.com` 522s when the hostname is orange-clouded to a dead origin (retired Vercel). In-repo, `worker-app/wrangler.toml` now registers `app.authichain.com/*` on `authichain-edge-router`. After merge + `deploy-cloudflare.yml`:
+
+1. Cloudflare → authichain.com zone → DNS → `app` CNAME to the zone apex or `100::` (Workers-only) **or** leave the existing record
+2. Proxy status: **orange cloud** (proxied)
+3. Workers → `authichain-edge-router` → Routes must include `app.authichain.com/*`
+4. Do **not** point `app` at `*.vercel.app`
+5. Confirm: `curl -sI https://app.authichain.com/dashboard` is not 522
+
+`app.govchain.us` and `app.strainchain.io` are not registered in-repo (those zones have no Worker route yet). Owner steps: add a CNAME `app` on each zone, orange-cloud it, then add `[[routes]] pattern = "app.<zone>/*"` to the matching landing worker (or to `authichain-edge-router` if the zone is attached). Until then, CTAs stay on the apex paths (`/onboard`, `/generate`).
 
 ### qron.space
 | Pattern | Worker |

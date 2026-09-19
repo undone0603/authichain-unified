@@ -40,8 +40,6 @@ export const SPA_OWNED_PREFIXES: string[] = [
   "/certificates",
   "/character",
   "/crm",
-  "/dapp",
-  "/dashboard",
   "/email-campaigns",
   "/executive-assistant",
   "/gov-onboarding",
@@ -82,6 +80,9 @@ export const DYNAMIC_HANDLER_PATHS: Set<string> = new Set([
   "/landing",
   "/onboard",
   "/story",
+  "/dashboard",
+  "/dapp",
+  "/generate",
 ]);
 
 /** True iff `pathname` equals `prefix` or is nested under it (`prefix/...`). */

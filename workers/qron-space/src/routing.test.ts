@@ -24,8 +24,8 @@ function stubFetch() {
   };
 }
 
-async function get(path: string) {
-  return worker.fetch(new Request(`https://qron.space${path}`));
+async function get(path: string, env?: { APP_ORIGIN?: string }) {
+  return worker.fetch(new Request(`https://qron.space${path}`), env);
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -64,6 +64,26 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
+  assert.ok(xml.includes("<loc>https://qron.space/generate</loc>"));
+});
+
+test("/generate is proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("generate", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/generate", { APP_ORIGIN: "https://app.example.com" });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/generate");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {

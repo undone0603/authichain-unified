@@ -45,7 +45,7 @@ As of 2026-09-17 21:16 UTC, `GET /api/checkout/dpp` and `GET /api/cron/dpp-excep
 
 **Update 2026-09-19:** superseded - see the verification note near the top of this doc. Both endpoints now return correct dynamic responses (303/JSON), not cached homepage HTML.
 
-`/onboard` has **no implementation** in this repo. That is a product decision, not an Access or 404-link fix (PR #936). Do not add a fake route to satisfy the old checklist.
+`/onboard` **is implemented** (worker-app dynamic intake: GET form, POST 303 to `/onboard/received`). Live `GET https://authichain.com/onboard` returned 200 on 2026-09-19. Estate CTAs are `govchain.us/onboard`, `strainchain.io/onboard`, and `qron.space/generate` — those landing workers must proxy the path to `APP_ORIGIN=https://authichain.com`, not 404. The stale “no implementation” claim from PR #936 is superseded.
 
 ## Live workstream (only)
 

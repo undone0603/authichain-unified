@@ -76,6 +76,20 @@ test("a malformed certificate id is a 404", async () => {
   assert.equal((await get("/cert/garbage")).status, 404);
 });
 
+test("/dapp redirects to /dashboard (estate CTA)", async () => {
+  const res = await get("/dapp");
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "https://authichain.com/dashboard");
+});
+
+test("/dashboard and /generate are proxied to the app", async () => {
+  for (const path of ["/dashboard", "/generate", "/api/automation/cron"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.equal(await res.text(), "app", `${path} should come from APP_WORKER`);
+  }
+});
+
 test("/authenticate is proxied to the app rather than answered with marketing", async () => {
   const res = await get("/authenticate");
   assert.equal(res.status, 200);

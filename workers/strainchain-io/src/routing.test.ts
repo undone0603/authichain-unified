@@ -50,6 +50,7 @@ test("verification paths are proxied to the app, not answered with marketing", a
       "/genetics/mendo-love-farms",
       "/genetics/mendo-love-farms/vt-26",
       "/passport/AC-DEMO-001",
+      "/onboard",
     ]) {
       f.calls.length = 0;
       const res = await get(path);
@@ -162,6 +163,7 @@ test("the sitemap advertises the genetics library", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
   assert.ok(xml.includes("/genetics/mendo-love-farms"));
+  assert.ok(xml.includes("/onboard"));
 });
 
 test("a configured origin with trailing slashes does not double up the path", async () => {

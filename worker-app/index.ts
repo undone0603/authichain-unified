@@ -14,6 +14,7 @@ import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
+import { registerAttestationApi } from "./attestation-api";
 import { scheduled } from "./cron-dispatch";
 
 type Env = {
@@ -262,6 +263,30 @@ app.post("/api/dpp/activate", async c => {
   } catch (err: any) {
     console.error("[dpp/activate] Error:", err?.message || err);
     return c.json({ error: "Activation failed", detail: err?.message }, 500);
+  }
+});
+
+app.get("/api/automation/cron", async c => {
+  hydrateProcessEnv(c.env);
+  c.header("Cache-Control", "private, no-store");
+  c.header("CDN-Cache-Control", "no-store");
+  const { authorizeGenesis, genesisJson, runGenesisCycle } =
+    await import("../src/lib/genesis-cycle");
+  if (!authorizeGenesis(c.req.raw)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  try {
+    const results = await runGenesisCycle();
+    return c.json(genesisJson(results));
+  } catch (err: any) {
+    console.error("[automation/cron] failed:", err);
+    return c.json(
+      {
+        error: "Genesis cron failed",
+        details: err instanceof Error ? err.message : String(err),
+      },
+      500
+    );
   }
 });
 
@@ -1286,8 +1311,12 @@ app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000
 app.use("/onboard", rateLimitMiddleware("onboard", 20, 60_000));
 app.post("/onboard", (c) => renderDynamicPage(c));
 app.post("/onboard/", (c) => renderDynamicPage(c));
+app.use("/generate", rateLimitMiddleware("generate", 20, 60_000));
+app.post("/generate", (c) => renderDynamicPage(c));
+app.post("/generate/", (c) => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
+registerAttestationApi(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];

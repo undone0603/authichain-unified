@@ -14,6 +14,7 @@ import worker from "./index.ts";
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-test-key",
+  APP_ORIGIN: "https://app.example.com",
 };
 
 type StubRow = Record<string, unknown>;
@@ -81,6 +82,26 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
+  assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
+});
+
+test("/onboard is proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("onboard", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/onboard");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/onboard");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {

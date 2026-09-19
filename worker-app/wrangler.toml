@@ -54,6 +54,39 @@ zone_name = "authichain.com"
 pattern = "authichain.com/protocol/launch-proof"
 zone_name = "authichain.com"
 
+# More specific than authichain-com's authichain.com/* glob so genesis,
+# attestation, and the customer console are not swallowed by landing HTML.
+[[routes]]
+pattern = "authichain.com/api/automation/cron"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/attestation"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/attestation/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/dashboard*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/dapp*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/generate*"
+zone_name = "authichain.com"
+
+# Preferred app host. 522s when DNS still points at a dead origin (old Vercel).
+# Attaching the edge router here is the in-repo fix; owner must CNAME app
+# onto this zone and orange-cloud it (see docs/ROUTING.md).
+[[routes]]
+pattern = "app.authichain.com/*"
+zone_name = "authichain.com"
+
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml

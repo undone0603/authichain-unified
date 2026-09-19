@@ -360,6 +360,47 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
   });
 });
 
+describe("renderDynamicPage: /dashboard console", () => {
+  it("returns 200 HTML for /dashboard and /dapp", async () => {
+    for (const path of ["/dashboard", "/dapp"]) {
+      const res = await app.request(path, {}, makeEnv() as any);
+      const body = await res.text();
+      expect(res.status).toBe(200);
+      expect(body).toContain("QRON Dashboard");
+      expect(body).toContain("/onboard");
+      expect(body).toContain("/generate");
+    }
+  });
+});
+
+describe("renderDynamicPage: /generate Living QR", () => {
+  it("returns 200 HTML with a real form", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain("Generate a Living QR");
+    expect(body).toContain('<form action="/generate" method="post">');
+    expect(body).toContain('name="targetUrl"');
+  });
+
+  it("303s a valid URL to /onboard", async () => {
+    const res = await app.request(
+      "/generate",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "targetUrl=https%3A%2F%2Fexample.com%2Fsku&prompt=neon",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    expect(res.status).toBe(303);
+    const location = res.headers.get("location") || "";
+    expect(location).toContain("/onboard");
+    expect(location).toContain("vertical=qron");
+  });
+});
+
 describe("renderDynamicPage: /story StoryMode", () => {
   it("returns 200 HTML for the launch-proof object", async () => {
     const res = await app.request(

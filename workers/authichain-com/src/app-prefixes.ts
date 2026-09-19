@@ -1,6 +1,8 @@
 /** Paths the apex landing worker must proxy to APP_WORKER (authichain-edge-router). */
 export const APP_PREFIXES = [
   "/dashboard",
+  "/dapp",
+  "/generate",
   "/api",
   "/verify",
   "/auth",
