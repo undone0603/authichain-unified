@@ -27,6 +27,13 @@ import {
   formatMilestoneDate,
   countdownLabel,
 } from "../src/lib/dpp-timeline";
+import {
+  describeSkipReason,
+  loadCrmRowsForCompanies,
+  loadHubSpotContactsForCompany,
+  resolveLeadEmail,
+} from "./lib/lead-email-resolver";
+import { ensureLiveB2bChannel } from "../shared/guardrail-store";
 
 const GUARDRAIL_CHANNEL = "email.b2b-cold";
 
@@ -43,6 +50,12 @@ const segment =
 const sendFailures: string[] = [];
 let totalAttempted = 0;
 let totalSent = 0;
+let liveDispatchAttempts = 0;
+// Live runs default to a tiny batch so OWNER_LIVE_SEND cannot blast the
+// whole list. Dry-run is uncapped (it never calls Resend).
+const maxLiveSends = isDryRun
+  ? Number.POSITIVE_INFINITY
+  : Math.max(1, Number(process.env.MAX_LIVE_SENDS ?? "2") || 2);
 
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,94 +98,8 @@ const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
 
-// ── Apollo.io people-search: find work email by name + company domain ─────────
-// Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
-// Returns empty string when APOLLO_API_KEY is absent or API returns no result.
-// Set once Apollo reports the plan does not include API access. That is a
-// property of the account, not of the request, so every remaining lookup in the
-// run would fail identically — retrying them just prints the same warning once
-// per target and makes a billing problem look like flaky network.
-let apolloEntitlementBlocked = false;
-
-async function apolloFindEmail(
-  name: string,
-  company: string,
-  website: string
-): Promise<string> {
-  const key = process.env.APOLLO_API_KEY;
-  if (!key) return "";
-  if (apolloEntitlementBlocked) return "";
-
-  try {
-    const domain = website.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
-    const [firstName, ...rest] = name.split(" ");
-    const lastName = rest.join(" ");
-
-    // Apollo auth goes in the X-Api-Key header — body api_key is no longer
-    // accepted for current keys (verified: header auth returns 200, body 401).
-    const res = await fetch(
-      "https://api.apollo.io/api/v1/mixed_people/search",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-          "X-Api-Key": key,
-        },
-        body: JSON.stringify({
-          q_organization_name: company,
-          person_titles: [], // broad — let name filter do the work
-          contact_email_status: ["verified", "guessed"],
-          organization_domains: [domain],
-          page: 1,
-          per_page: 5,
-        }),
-      }
-    );
-    if (!res.ok) {
-      // Apollo answers 403 with error_code API_INACCESSIBLE when the endpoint
-      // is not on the account's plan. Confirmed 2026-08-21 against this
-      // account: both mixed_people/search and people/match return it, and the
-      // credit balance is untouched because the request never reaches metering.
-      // No key rotation or retry fixes that — only a paid plan does.
-      const body = await res.text().catch(() => "");
-      if (res.status === 403 || body.includes("API_INACCESSIBLE")) {
-        apolloEntitlementBlocked = true;
-        console.warn(
-          `  ⛔ Apollo API is not enabled on this account's plan (HTTP ${res.status}).\n` +
-            `     Every remaining lookup this run is skipped; targets with a blank\n` +
-            `     email stay 'pending_email' and are never sent to. Fix by upgrading\n` +
-            `     the Apollo plan, or by filling addresses in the leads table by hand.`
-        );
-        return "";
-      }
-      console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
-      return "";
-    }
-    const data = (await res.json()) as any;
-    const people: any[] = data.people ?? [];
-
-    // Find best name match
-    const match =
-      people.find(p => {
-        const full = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
-        return (
-          full.includes(firstName.toLowerCase()) &&
-          (!lastName || full.includes(lastName.toLowerCase()))
-        );
-      }) ?? people[0];
-
-    const email: string = match?.email ?? "";
-    if (email)
-      console.log(`  🔎 Apollo found: ${name} @ ${company} → ${email}`);
-    return email;
-  } catch (err: any) {
-    console.warn(
-      `  ⚠️  Apollo lookup failed for ${name}: ${err.message?.slice(0, 80)}`
-    );
-    return "";
-  }
-}
+const hubspotToken =
+  process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;
 
 // ── Verified real contacts from research (June 2026) ─────────────────────────
 
@@ -572,22 +499,32 @@ async function processTargets<
     }
   }
 
+  const crmRows = await loadCrmRowsForCompanies(
+    supabase,
+    targets.map(t => t.company)
+  );
+
   for (const t of targets) {
-    // Auto-populate email via Apollo if missing. A hit upgrades the target's
-    // provenance: Apollo returns addresses it has verified, which is precisely
-    // the trusted source the send guard is looking for.
-    let email = t.email;
-    let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
-    if (!email && (t as any).linkedin !== undefined) {
-      email = await apolloFindEmail(
-        (t as any).name ?? t.company,
-        t.company,
-        t.website ?? ""
-      );
-      if (email) {
-        (t as any).email = email; // mutate for DB save
-        source = "apollo_verified";
+    const resolved = await resolveLeadEmail(
+      {
+        company: t.company,
+        name: (t as any).name ?? t.company,
+        website: t.website,
+        email: t.email,
+        source: (t as any).source ?? RESEARCHED_SOURCE,
+      },
+      {
+        crmRows,
+        hubspotContacts: t.email
+          ? undefined
+          : await loadHubSpotContactsForCompany(t.company, hubspotToken),
       }
+    );
+    let email = resolved.email;
+    let source: VerificationSource = resolved.source;
+    if (email && resolved.via !== "already_set") {
+      (t as any).email = email;
+      console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
     }
 
     const { subject, html } = buildEmail(t);
@@ -638,12 +575,19 @@ async function processTargets<
     }
 
     if (!email) {
+      console.log(`     ℹ️  ${t.company}: ${describeSkipReason(resolved.via)}`);
+      queued++;
+      continue;
+    }
+
+    if (liveDispatchAttempts >= maxLiveSends) {
       console.log(
-        `     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`
+        `     ⏭️  Live cap reached (MAX_LIVE_SENDS=${maxLiveSends}) — leaving ${email} queued`
       );
       queued++;
       continue;
     }
+    liveDispatchAttempts += 1;
 
     if (!senderOk) {
       console.log(`     📬 Queued: ${email} — will send once ${from} can send`);
@@ -859,6 +803,16 @@ export async function flushQueuedLeads(): Promise<void> {
 console.log(
   `\n🚀 B2B COLD OUTREACH — segment: ${segment} | dry-run: ${isDryRun}`
 );
+if (!isDryRun) {
+  console.log(`Live send cap this run: ${maxLiveSends} (MAX_LIVE_SENDS)`);
+  try {
+    await ensureLiveB2bChannel(supabase);
+    console.log("  ✅ Guardrail channel email.b2b-cold enabled (cap 25/day)");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`  ⚠️  Could not enable email.b2b-cold channel: ${message}`);
+  }
+}
 console.log("─".repeat(60));
 
 if (segment === "all" || segment === "govchain") {
@@ -891,7 +845,7 @@ if (!hasResendKey) {
 }
 if (!process.env.APOLLO_API_KEY) {
   console.log(
-    "  ⚡ Set APOLLO_API_KEY to auto-find emails for pending contacts on next run"
+    "  ⚡ APOLLO_API_KEY unset — pending contacts fill from CRM/HubSpot or published addresses only (no paid Apollo upgrade)"
   );
 }
 console.log("  📅 Demo booking page (no Calendly needed): " + CALENDLY);

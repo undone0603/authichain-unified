@@ -554,6 +554,16 @@ describe("routing regression (Task 3.2 additive)", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "ok" });
   });
+
+  it("POST /api/guardrail/check is mounted (not a 404 SPA fallthrough)", async () => {
+    const res = await app.request("/api/guardrail/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channel: "email.b2b-cold" }),
+    });
+    expect(res.status).not.toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/);
+  });
 });
 
 describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback", () => {

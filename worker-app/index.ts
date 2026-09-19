@@ -15,6 +15,7 @@ import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
+import { registerGuardrailApi } from "./guardrail-api";
 import { scheduled } from "./cron-dispatch";
 
 type Env = {
@@ -32,6 +33,7 @@ type Env = {
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   CRON_SECRET?: string;
+  INTERNAL_API_SECRET?: string;
 };
 
 function hydrateProcessEnv(env?: Env) {
@@ -44,9 +46,16 @@ function hydrateProcessEnv(env?: Env) {
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
-    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    ["INTERNAL_API_SECRET", env.INTERNAL_API_SECRET],
+    [
+      "AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64",
+      env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
+    ],
     ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
-    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
+    [
+      "AUTHICHAIN_ATTESTATION_PUBLIC_JWK",
+      env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
+    ],
   ];
   for (const [name, value] of copy) {
     if (value && !process.env[name]) process.env[name] = value;
@@ -1307,16 +1316,20 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
-app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
+app.use(
+  "/protocol/launch-proof",
+  rateLimitMiddleware("launch-proof", 20, 60_000)
+);
 app.use("/onboard", rateLimitMiddleware("onboard", 20, 60_000));
-app.post("/onboard", (c) => renderDynamicPage(c));
-app.post("/onboard/", (c) => renderDynamicPage(c));
+app.post("/onboard", c => renderDynamicPage(c));
+app.post("/onboard/", c => renderDynamicPage(c));
 app.use("/generate", rateLimitMiddleware("generate", 20, 60_000));
-app.post("/generate", (c) => renderDynamicPage(c));
-app.post("/generate/", (c) => renderDynamicPage(c));
+app.post("/generate", c => renderDynamicPage(c));
+app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
+registerGuardrailApi(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
