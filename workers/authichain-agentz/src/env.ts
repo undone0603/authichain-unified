@@ -16,16 +16,6 @@ export type AgentZSecretBindings = {
   SUPABASE_SERVICE_ROLE_KEY?: string;
 };
 
-/** Matches docker-compose.yml `agentz-api` command; Dockerfile.agentz default is CLI. */
-export const AGENTZ_API_ENTRYPOINT = [
-  "uvicorn",
-  "agentz.api.main:app",
-  "--host",
-  "0.0.0.0",
-  "--port",
-  "8000",
-] as const;
-
 export function containerEnvFromBindings(
   bindings: AgentZSecretBindings
 ): Record<string, string> {

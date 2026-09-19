@@ -24,8 +24,8 @@
   "containers": [
     {
       "class_name": "AgentZContainer",
-      // Same image as docker-compose.yml `agentz` / `agentz-api`.
-      "image": "../../Dockerfile.agentz",
+      // API image (uvicorn :8000). Compose CLI stays Dockerfile.agentz.
+      "image": "./Dockerfile",
       "image_build_context": "../..",
       "max_instances": 2,
       "instance_type": "basic"

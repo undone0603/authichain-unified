@@ -45,8 +45,8 @@ services:
     depends_on:
       - qron-platform
 
-  # AgentZ (same Dockerfile.agentz image as Cloudflare Containers).
-  # Default command is the CLI. API host: docker compose --profile api up agentz-api
+  # Agentz (AI Framework) — CLI image. Do not change CMD to uvicorn here.
+  # HTTP API image is workers/authichain-agentz/Dockerfile (Cloudflare Containers).
   agentz:
     build:
       context: .
@@ -54,31 +54,6 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # names as used by agentz.core.credentials.get()
-      - AGENT_SECRET=${AGENT_SECRET:-}
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # Same image, uvicorn override — local stand-in for agentz.authichain.com
-  agentz-api:
-    profiles: ["api"]
-    build:
-      context: .
-      dockerfile: Dockerfile.agentz
-    command: ["uvicorn", "agentz.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - AGENT_SECRET=${AGENT_SECRET:-}
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
     depends_on:
       db:
         condition: service_healthy

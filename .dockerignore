@@ -1,5 +1,4 @@
-# Repo-root context for Dockerfile.agentz (compose `agentz` / `agentz-api`
-# and workers/authichain-agentz Cloudflare Containers).
+# Repo-root context for Dockerfile.agentz and workers/authichain-agentz/Dockerfile.
 .git
 **/.git
 node_modules

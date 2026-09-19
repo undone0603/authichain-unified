@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTZ_API_ENTRYPOINT, containerEnvFromBindings } from "./env.ts";
+import { containerEnvFromBindings } from "./env.ts";
 
 test("forwards AGENT_SECRET and SUPABASE_URL unchanged", () => {
   const env = containerEnvFromBindings({
@@ -39,15 +39,18 @@ test("omits unset secrets so placeholders are not invented", () => {
   assert.deepEqual(env, {});
 });
 
-test("API entrypoint is uvicorn on the Dockerfile.agentz image", () => {
-  assert.deepEqual(
-    [...AGENTZ_API_ENTRYPOINT],
-    ["uvicorn", "agentz.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+test("API Dockerfile uses requirements-agentz.txt and uvicorn :8000", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const dockerfile = readFileSync(join(here, "..", "Dockerfile"), "utf8");
+  assert.match(dockerfile, /COPY requirements-agentz\.txt/);
+  assert.match(dockerfile, /EXPOSE 8000/);
+  assert.match(
+    dockerfile,
+    /CMD \["uvicorn", "agentz\.api\.main:app", "--host", "0\.0\.0\.0", "--port", "8000"\]/
   );
-  const wrangler = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "..", "wrangler.jsonc"),
-    "utf8"
-  );
-  assert.match(wrangler, /"image":\s*"\.\.\/\.\.\/Dockerfile\.agentz"/);
+  const wrangler = readFileSync(join(here, "..", "wrangler.jsonc"), "utf8");
+  assert.match(wrangler, /"image":\s*"\.\/Dockerfile"/);
   assert.match(wrangler, /"image_build_context":\s*"\.\.\/\.\."/);
+  const worker = readFileSync(join(here, "index.ts"), "utf8");
+  assert.match(worker, /defaultPort = 8000/);
 });

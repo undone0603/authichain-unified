@@ -9,14 +9,11 @@ This host does **not** set `OPENCLAW_GATEWAY_URL`. That stays an owner-set reach
 
 ## Image
 
-Builds the existing repo-root `Dockerfile.agentz` (same as `docker-compose.yml` `agentz` / `agentz-api`). Context is the monorepo root. The Dockerfile default CMD is `python3 -m agentz.cli`; this Worker overrides `entrypoint` to uvicorn on port 8000.
+`workers/authichain-agentz/Dockerfile` follows repo-root `Dockerfile.agentz` (`python:3.12-slim`, `requirements-agentz.txt`, repo-root build context) but is the **API** image: `EXPOSE 8000` and `CMD uvicorn agentz.api.main:app --host 0.0.0.0 --port 8000`.
 
-Local API stand-in:
+`Dockerfile.agentz` / `docker-compose.yml` `agentz` stay the CLI (`python3 -m agentz.cli`). Do not change that CMD.
 
-```bash
-docker compose --profile api up agentz-api
-# curl http://localhost:8000/health
-```
+The Container class sets `defaultPort = 8000`.
 
 ## Deploy
 
