@@ -30,7 +30,9 @@ import {
 
 const GUARDRAIL_CHANNEL = "email.b2b-cold";
 
-const isDryRun = process.env.DRY_RUN === "true";
+// Fail-closed: unset / any value other than "false" is dry-run. Live send
+// requires DRY_RUN=false from the workflow resolve-mode step.
+const isDryRun = process.env.DRY_RUN !== "false";
 const segment =
   process.argv.find(a => a.startsWith("--segment="))?.split("=")[1] ?? "all";
 
@@ -748,6 +750,10 @@ async function processTargets<
 // Run this after fixing the sender to drain the queue without re-running the
 // full outreach script and risking duplicate outreach.
 export async function flushQueuedLeads(): Promise<void> {
+  if (isDryRun) {
+    console.log("[DRY RUN] Skipping flushQueuedLeads — no live send");
+    return;
+  }
   if (!hasResendKey) {
     console.warn(
       `No Resend credential set (${CREDENTIAL_ENV_VARS.join(" / ")}) — nothing to flush`
