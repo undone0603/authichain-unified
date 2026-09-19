@@ -99,7 +99,7 @@ if (missing.length) {
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(
   outFile,
-  JSON.stringify(
+  `${JSON.stringify(
     {
       contractName: "AuthiChainNFT",
       abi,
@@ -107,7 +107,7 @@ fs.writeFileSync(
     },
     null,
     2
-  )
+  )}\n`
 );
 
 const bytes = Math.floor((bytecode.length - 2) / 2);
