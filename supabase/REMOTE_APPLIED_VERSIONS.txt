@@ -34,3 +34,9 @@
 20260919000002
 20260920000002
 20260920143338
+
+# Not on remote (keep in migrations.archive only; do not restore):
+# 20260706000003_affiliate_program
+# 20260829_add_tenant_isolation
+# 20260829_create_evidence_table
+# Local-only pending apply (safe IF NOT EXISTS): 20260920000001
