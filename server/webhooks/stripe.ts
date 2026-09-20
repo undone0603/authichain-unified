@@ -76,6 +76,9 @@ function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
 async function fulfillDppCheckoutIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<void> {
+  // $0 DPP-SMOKE sessions still arrive as payment_status=paid. Do not
+  // gate on amount_total > 0 or is_demo — that was not the live miss,
+  // and it would drop every current smoke.
   if (session.payment_status !== "paid") return;
 
   const { isDppOffer } = await import("../../src/lib/dpp-loop");

@@ -94,6 +94,32 @@ describe("fulfillDppPaidSession", () => {
     ).toEqual(["payment_succeeded", "provisioned"]);
   });
 
+  it("does not skip $0 DPP-SMOKE sessions (is_demo + smoke_* visit id)", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, {
+      id: "cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS",
+      amount_total: 0,
+      customer_details: { email: "authichain@gmail.com" },
+      client_reference_id: "smoke_check_1789786486",
+      metadata: {
+        offer: DPP_OFFER_KEY,
+        plan: "dpp_readiness",
+        visit_id: "smoke_check_1789786486",
+        prospect_id: "smoke_check_1789786486",
+        is_demo: "true",
+        promo: "DPP-SMOKE-E2E",
+        source: "direct",
+      },
+    });
+    expect(result.handled).toBe(true);
+    expect(result.profileId).toBe("prof_1");
+    expect(rows.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(rows[0].prospect_id).toBe("smoke_check_1789786486");
+  });
+
   it("writes payment_succeeded then provisioned for a paid smoke session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);

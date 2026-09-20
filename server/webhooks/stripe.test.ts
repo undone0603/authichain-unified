@@ -334,6 +334,37 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("fulfills a $0 DPP-SMOKE checkout.session.completed (is_demo)", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_zero", {
+        id: "cs_live_a1y4Tu_smoke",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 0,
+        customer_details: { email: "authichain@gmail.com" },
+        client_reference_id: "smoke_check_1789786486",
+        metadata: {
+          offer: "dpp_readiness_2026",
+          plan: "dpp_readiness",
+          visit_id: "smoke_check_1789786486",
+          is_demo: "true",
+          promo: "DPP-SMOKE-E2E",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(fulfillDppPaidSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        id: "cs_live_a1y4Tu_smoke",
+        amount_total: 0,
+      }),
+      null
+    );
+  });
+
   it("does not fulfill checkout.session.completed until payment_status is paid", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_dpp_unpaid", {

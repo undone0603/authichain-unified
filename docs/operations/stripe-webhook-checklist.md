@@ -162,12 +162,16 @@ Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/web
 
 ### Replay a paid session that never provisioned
 
-1. Stripe Dashboard → Webhooks → the `we_…` endpoint on `https://authichain.com/api/stripe/webhook`.
-2. Open the `checkout.session.completed` (or `async_payment_succeeded`) delivery for the paid session.
-3. **Resend** the event. Expect 2xx.
-4. Confirm Supabase: `funnel_events` row with `prospect_id=<visit_id>` and `event_type=dpp_loop:provisioned`.
+Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** skipped in fulfill — `payment_status=paid` is the only payment gate.
+
+1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
+2. Filter recent deliveries for session `cs_live_a1y4Tu…` (`smoke_check_1789786486`, Fri Sep 18 ~10:54 PM ET). Expect historical **non-2xx** (handler threw on missing `DATABASE_URL` before fulfill).
+3. After this Worker deploys: **Resend** that `checkout.session.completed`. Expect 2xx.
+4. Confirm Supabase: `funnel_events` row with `prospect_id=smoke_check_1789786486` and `event_type` in (`dpp_loop:payment_succeeded`, `dpp_loop:provisioned`).
 
 Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`.
+
+Optional: add `checkout.session.async_payment_succeeded` on `we_1UGTCS…` (Klarna / delayed wallets; not required for $0 card/promo).
 
 ## Troubleshooting Checklist
 

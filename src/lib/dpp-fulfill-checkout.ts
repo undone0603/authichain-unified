@@ -42,6 +42,9 @@ export async function fulfillDppPaidSession(
   const linePriceId =
     (typeof priceId === "string" && priceId) ||
     (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
+  // $0 / DPP-SMOKE / is_demo / smoke_* visit ids are not filtered. A paid
+  // smoke session (payment_status=paid, amount_total=0) must still write
+  // payment_succeeded + provisioned. isDppOffer is the only offer gate.
   if (!isDppOffer(md, linePriceId)) {
     return { handled: false, profileId: null };
   }
