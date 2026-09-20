@@ -48,3 +48,21 @@ jobs:
             printf '%s' "$STRIPE_PRICE_ID" | npx wrangler secret put STRIPE_PRICE_ID --name authichain-com
           fi
           echo "bound STRIPE_SECRET_KEY on authichain-com"
+
+      # Owner-directed live x402 pair (public pay-to + public facilitator URL).
+      # Same values as bind-x402-secrets.yml. Not invented. Landing intercept
+      # reads these on /api/x402; secret put after deploy keeps them attached.
+      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL
+        working-directory: workers/authichain-com
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2'
+          FACILITATOR='https://facilitator.payai.network'
+          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-com
+          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-com
+          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-edge-router
+          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-edge-router
+          echo "bound X402_PAY_TO + X402_FACILITATOR_URL on authichain-com and authichain-edge-router (values not logged)"
