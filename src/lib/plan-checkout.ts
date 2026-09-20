@@ -3,6 +3,7 @@
  * Price IDs come from `src/lib/plans.ts` only. Does not create a session
  * on GET — callers must POST a planId.
  */
+import { getBrandIdFromRequest } from "./brand-billing";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -74,7 +75,7 @@ export async function createPlanCheckoutSession(opts: {
       : "";
   const source =
     typeof body.source === "string" ? body.source.trim().slice(0, 64) : "";
-  const brand = request.headers.get("x-brand")?.trim() || "authichain";
+  const brand = plan.brand ?? getBrandIdFromRequest(request);
   const origin =
     request.headers.get("origin") ||
     new URL(request.url).origin ||
