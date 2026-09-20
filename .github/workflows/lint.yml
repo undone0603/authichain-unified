@@ -31,5 +31,8 @@ jobs:
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
+      - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
+        run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
+
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
