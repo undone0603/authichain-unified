@@ -12,6 +12,10 @@ name: Pipeline Tick (direct runner)
 # server/outreach/send-guard.ts: only trusted provenance sources, non-role
 # inboxes, MX, Resend credentials, and a physical mailing address can reach
 # the network.
+#
+# Missing DATABASE_URL on schedule, workflow_dispatch, or a [pipeline-proof]
+# push fails the job (`::error::` + exit 1). Push without [pipeline-proof]
+# still skips at the job `if:` (intentional). Green means a tick ran.
 
 on:
   push:
@@ -43,17 +47,18 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - name: Skip if DATABASE_URL not configured
+      - name: Require DATABASE_URL
         id: db-check
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
           if [ -z "$DATABASE_URL" ]; then
-            echo "::notice::DATABASE_URL repo secret not set — skipping."
+            echo "::error::DATABASE_URL repo secret is not set — pipeline tick cannot run. A green check must mean a tick actually ran."
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Report activation state
         if: steps.db-check.outputs.skip != 'true'
@@ -113,8 +118,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       # A [pipeline-proof] push is the explicit one-shot launch verification path.
-      # This commit intentionally carries the marker so the proof workflow runs once.
+      # Do not put that marker on ordinary CI commits — it starts a live tick.
       - name: Run pipeline tick
+        id: tick
         if: steps.db-check.outputs.skip != 'true'
         env:
           AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
@@ -164,3 +170,29 @@ jobs:
           name: authichain-launch-proof-qron
           path: artifacts/launch-proof-qron.png
           if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          EVENT_NAME: ${{ github.event_name }}
+          DB_CONCLUSION: ${{ steps.db-check.conclusion }}
+          TICK_CONCLUSION: ${{ steps.tick.conclusion }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Pipeline tick"
+            echo ""
+            if [ "$DB_CONCLUSION" = "failure" ]; then
+              echo "- outcome: **failed** (DATABASE_URL missing)"
+            elif [ "$TICK_CONCLUSION" = "failure" ]; then
+              echo "- outcome: **failed** (tick error)"
+            elif [ "$TICK_CONCLUSION" = "success" ] && [ "$DRY_RUN" = "true" ]; then
+              echo "- outcome: **dry-run**"
+            elif [ "$TICK_CONCLUSION" = "success" ]; then
+              echo "- outcome: **ran**"
+            else
+              echo "- outcome: **skipped**"
+            fi
+            echo "- event: \`${EVENT_NAME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
