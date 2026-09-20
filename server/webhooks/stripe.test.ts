@@ -11,7 +11,16 @@ const mockCustomersRetrieve = vi.fn();
 
 vi.mock("stripe", () => {
   class MockStripe {
-    webhooks = { constructEvent: mockConstructEvent };
+    webhooks = {
+      // Live Workers throw if the handler calls the sync API.
+      constructEvent: () => {
+        throw new Error(
+          "SubtleCryptoProvider cannot be used in a synchronous context. Use await constructEventAsync(...) instead of constructEvent(...)"
+        );
+      },
+      constructEventAsync: (...args: unknown[]) =>
+        Promise.resolve(mockConstructEvent(...args)),
+    };
     customers = { retrieve: mockCustomersRetrieve };
   }
   return { default: MockStripe };
@@ -128,6 +137,21 @@ describe("handleStripeWebhook — prerequisites", () => {
     await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
       "STRIPE_WEBHOOK_SECRET not configured"
     );
+  });
+});
+
+describe("handleStripeWebhook — signature verification", () => {
+  it("rejects when constructEventAsync cannot verify any candidate secret", async () => {
+    mockConstructEvent.mockImplementation(() => {
+      throw new Error(
+        "No signatures found matching the expected signature for payload."
+      );
+    });
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      /No signatures found matching the expected signature/
+    );
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
   });
 });
 
