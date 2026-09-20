@@ -18,7 +18,7 @@ on:
         default: false
         type: boolean
       payload:
-        description: "Optional JSON body (linkedin text, or {\"bundle\":\"content/social/...json\"})"
+        description: 'Optional JSON body (linkedin text, or {"bundle":"content/social/...json"})'
         required: false
         type: string
 
