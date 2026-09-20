@@ -58,6 +58,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
+  assert.match(html, /AuthiChain Starter/);
+  assert.match(html, /\$299\/mo/);
+  assert.match(html, /https:\/\/buy\.stripe\.com\/28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
   assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
@@ -212,6 +215,22 @@ test("/dashboard and /generate are proxied to the app", async () => {
       `${path} should come from APP_WORKER`
     );
   }
+});
+
+test("/p and /p/<serial> are proxied to the app, not marketing 404", async () => {
+  for (const path of ["/p", "/p/", "/p/CERT-001", "/p/test"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.equal(
+      await res.text(),
+      "app",
+      `${path} should come from APP_WORKER`
+    );
+  }
+  // /pricing must stay on the landing worker — prefix /p is boundary-aware.
+  const pricing = await get("/pricing");
+  assert.equal(pricing.status, 200);
+  assert.match(await pricing.text(), /<title>Pricing — AuthiChain<\/title>/);
 });
 
 test("/authenticate is proxied to the app rather than answered with marketing", async () => {
