@@ -92,7 +92,6 @@ export async function tryHandleProtocolCheckout(
   } else {
     body.set("line_items[0][price]", priceId);
     body.set("line_items[0][quantity]", "1");
-    body.set("allow_promotion_codes", "true");
   }
   body.set(
     "success_url",

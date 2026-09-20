@@ -82,7 +82,8 @@ describe("createPlanCheckoutSession", () => {
       enabled: true,
       allow_promotion_codes: false,
     });
-    expect(arg.consent_collection.promotions).toBe("auto");
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBe("always");
   });
 
@@ -102,6 +103,7 @@ describe("createPlanCheckoutSession", () => {
     const arg = create.mock.calls[0][0];
     expect(arg.mode).toBe("subscription");
     expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBeUndefined();
   });
 });

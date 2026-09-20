@@ -113,7 +113,6 @@ export async function createDppCheckoutSession(opts: {
         : [{ price: PLAN.stripe_price_id, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: smoke ? undefined : true,
       client_reference_id: visitId.slice(0, 200),
       ...(email ? { customer_email: email } : {}),
       metadata: {

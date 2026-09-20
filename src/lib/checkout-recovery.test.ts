@@ -7,13 +7,13 @@ import {
 } from "./checkout-recovery";
 
 describe("hostedCheckoutRecoveryParams", () => {
-  it("enables recovery without promotion codes and collects consent", () => {
+  it("enables recovery without promotion codes or promotional consent", () => {
     const params = hostedCheckoutRecoveryParams("payment");
     expect(params.after_expiration.recovery).toEqual({
       enabled: true,
       allow_promotion_codes: false,
     });
-    expect(params.consent_collection.promotions).toBe("auto");
+    expect(params.consent_collection).toBeUndefined();
     expect(params.customer_creation).toBe("always");
   });
 
@@ -32,7 +32,7 @@ describe("applyHostedCheckoutRecovery", () => {
     expect(body.get("after_expiration[recovery][allow_promotion_codes]")).toBe(
       "false"
     );
-    expect(body.get("consent_collection[promotions]")).toBe("auto");
+    expect(body.has("consent_collection[promotions]")).toBe(false);
     expect(body.get("customer_creation")).toBe("always");
   });
 });
@@ -51,7 +51,7 @@ describe("checkoutRecoveryUrl", () => {
 });
 
 describe("checkoutSessionEmail", () => {
-  it("prefers customer_details.email so expired-session consent emails are usable", () => {
+  it("prefers customer_details.email for expired-session emails", () => {
     expect(
       checkoutSessionEmail({
         customer_details: { email: "buyer@example.com" },
