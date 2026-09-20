@@ -345,12 +345,43 @@ class LimitProofLLM:
                 continue
         raise RuntimeError("All LLM providers failed or are out of quota (async).")
 
-def get_llm(model: str = "gpt-4o", temperature: float = 0.0):
+def _is_ollama_model(model: str) -> bool:
+    """True for llama* / local* / ollama* tags that should stay on ChatOllama."""
+    name = (model or "").strip().lower()
+    if not name:
+        return False
+    if name.startswith(("llama", "local", "ollama")):
+        return True
+    return "llama" in name
+
+
+def get_llm(
+    model: str = "gpt-4o",
+    temperature: float = 0.0,
+    base_url: Optional[str] = None,
+    **kwargs: Any,
+):
+    """Return an LLM proxy.
+
+    Accepts optional ``base_url`` and extra kwargs so callers can pass
+    ChatOllama / OpenAI-style extras without TypeError. Llama and other
+    local model tags route to ChatOllama ($0 / Ollama host). Unused
+    kwargs are accepted for caller compatibility and ignored by the
+    waterfall fallback.
+    """
+    _ = kwargs  # accepted for caller compatibility (api_key, timeout, …)
     if model.startswith("gemini"):
         api_key = os.environ.get("GEMINI_API_KEY")
         if api_key and "INVALID" not in api_key:
             from langchain_google_genai import ChatGoogleGenerativeAI
             return LLMProxy(ChatGoogleGenerativeAI(model=model, temperature=temperature, google_api_key=api_key))
+    if _is_ollama_model(model):
+        host = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        try:
+            from langchain_ollama import ChatOllama
+            return LLMProxy(ChatOllama(model=model, temperature=temperature, base_url=host))
+        except ImportError:
+            logger.warning("langchain_ollama not installed; falling back to LimitProofLLM")
     return LLMProxy(LimitProofLLM(temperature=temperature))
 
 def get_provider_health() -> Dict[str, Any]: return _PROVIDER_HEALTH

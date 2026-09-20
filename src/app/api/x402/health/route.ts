@@ -1,8 +1,9 @@
 /**
  * GET /api/x402/health
  *
- * Next.js mirror of the edge handler. Production traffic is served by
- * worker-app (`registerX402Routes`). Keep this in sync via x402HealthReport.
+ * Next.js mirror of the edge handler. Production apex is landing
+ * `tryHandleX402`; worker-app also mounts `registerX402Routes`.
+ * Keep this in sync via x402HealthReport.
  */
 import { NextResponse } from "next/server";
 import { x402HealthReport } from "@/lib/x402";

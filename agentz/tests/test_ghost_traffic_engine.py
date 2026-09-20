@@ -24,7 +24,16 @@ EXPECTED_MONEY_PATHS = (
     "https://authichain.com/dpp",
     "https://authichain.com/x402",
     "https://authichain.com/onboard",
+    "https://authichain.com/trumark",
+    "https://authichain.com/made-in-america",
+    "https://authichain.com/passport",
+    "https://authichain.com/genetics/mendo-love-farms",
+    "https://authichain.com/m/mendo",
+    "https://authichain.com/m/trumark",
+    "https://authichain.com/m/musa",
+    "https://authichain.com/m/strainchain",
     "https://authichain.com/api/checkout/dpp",
+    "https://authichain.com/api/checkout/plan/strainchain_passport",
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",
     "https://qron.space/pricing",
@@ -36,7 +45,9 @@ EXPECTED_MONEY_PATHS = (
 def _ok_status(url: str) -> int:
     if url.rstrip("/").endswith("/api/funnel"):
         return 400
-    if url.endswith("/api/checkout/dpp"):
+    if url.endswith("/api/checkout/dpp") or url.endswith(
+        "/api/checkout/plan/strainchain_passport"
+    ):
         return 303
     return 200
 
@@ -72,6 +83,7 @@ def test_auto_logs_status_codes(monkeypatch):
     assert any("-> 200" in s for s in ctx.steps)
     assert any("-> 400" in s for s in ctx.steps)
     assert any("checkout/dpp" in s and "-> 303" in s for s in ctx.steps)
+    assert any("strainchain_passport" in s and "-> 303" in s for s in ctx.steps)
 
 
 def test_unexpected_5xx_raises(monkeypatch):
@@ -117,7 +129,7 @@ def test_checkout_303_is_success(monkeypatch):
 
 def test_checkout_302_is_success(monkeypatch):
     def fake_probe(method, url, timeout=12):
-        if url.endswith("/api/checkout/dpp"):
+        if url in gte.CHECKOUT_URLS:
             return 302
         return _ok_status(url)
 
@@ -172,6 +184,10 @@ def test_probe_targets_are_estate_plus_money_hooks():
     for url in EXPECTED_MONEY_PATHS:
         assert url in money
     assert gte.CHECKOUT_DPP_URL == "https://authichain.com/api/checkout/dpp"
+    assert gte.CHECKOUT_PASSPORT_URL.endswith("/strainchain_passport")
+    assert gte.CHECKOUT_URLS == frozenset(
+        {gte.CHECKOUT_DPP_URL, gte.CHECKOUT_PASSPORT_URL}
+    )
     assert gte.CHECKOUT_OK_STATUSES == frozenset({302, 303})
 
 
@@ -211,8 +227,10 @@ def test_probe_does_not_follow_checkout_redirect(monkeypatch):
     monkeypatch.setattr(gte._OPENER, "open", fake_open)
 
     assert gte._probe("GET", gte.CHECKOUT_DPP_URL) == 303
+    assert gte._probe("GET", gte.CHECKOUT_PASSPORT_URL) == 303
     assert gte._probe("GET", "https://authichain.com/pricing") == 200
     assert seen == [
         ("no-follow", gte.CHECKOUT_DPP_URL),
+        ("no-follow", gte.CHECKOUT_PASSPORT_URL),
         ("follow", "https://authichain.com/pricing"),
     ]

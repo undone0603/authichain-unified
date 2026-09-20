@@ -5,6 +5,7 @@ This is the **only** repo to build and deploy for AuthiChain, QRON, GovChain, an
 - Estate map: [`docs/ESTATE.md`](docs/ESTATE.md)
 - Deploy map: [`docs/NETWORK.md`](docs/NETWORK.md)
 - Public hosts: [authichain.com](https://authichain.com) · [qron.space](https://qron.space) · [govchain.us](https://govchain.us) · [strainchain.io](https://strainchain.io)
+- Positioning: [The authentic agentic economy](https://authichain.com/authentic-agentic-economy) — authenticity layer for agents and humans.
 - Customer CTAs: apex paths (`/onboard`, `/dapp`, `/verify`). Never `*.vercel.app`.
 - MCP source: `mcp/` (org snapshot: `AuthiChain2026/authichain-mcp-server`)
 - Private outreach: `undone0603/authichain-ai-business-manager` (API-only)
@@ -13,7 +14,7 @@ This is the **only** repo to build and deploy for AuthiChain, QRON, GovChain, an
 
 # QRON Platform & AuthiChain Unified Core
 
-Welcome to the unified repository for the **QRON Platform** and the **AuthiChain Agentic Ecosystem**.
+Welcome to the unified repository for the **QRON Platform** and **AuthiChain — the authentic agentic economy**.
 
 ## Overview
 

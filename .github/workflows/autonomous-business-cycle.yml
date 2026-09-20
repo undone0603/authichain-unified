@@ -123,3 +123,6 @@ jobs:
           fi
 
           echo "OK [$code] $method $path"
+          echo "Response body:"
+          cat /tmp/resp.txt || true
+          echo

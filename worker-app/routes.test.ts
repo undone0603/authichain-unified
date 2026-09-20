@@ -86,6 +86,8 @@ describe("GET /api/checkout/dpp", () => {
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.client_reference_id).toBe("dpp_worker_1");
     expect(arg.metadata.plan).toBe("dpp_readiness");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.customer_creation).toBe("always");
   });
 });
 
@@ -121,6 +123,9 @@ describe("GET /api/checkout/plan/:planId", () => {
     expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
     expect(arg.metadata.plan).toBe("strainchain_passport");
     expect(arg.metadata.brand).toBe("strainchain");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.allow_promotion_codes).toBeUndefined();
   });
 });
 
@@ -286,6 +291,48 @@ describe("POST /api/dpp/activate", () => {
     expect(res.headers.get("cache-control")).toMatch(/no-store/);
     const body = await res.json();
     expect(body.error).toMatch(/session_id/);
+  });
+});
+
+describe("POST /api/dpp/publish", () => {
+  it("returns 400 JSON without visit_id", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Widget" }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/visit_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visit_id: "dpp_1", name: "Widget" }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
+describe("GET /api/dpp/verify", () => {
+  it("returns 400 JSON without dpp_id", async () => {
+    const res = await app.request("/api/dpp/verify");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/dpp_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/verify?dpp_id=prod_1");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
   });
 });
 

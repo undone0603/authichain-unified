@@ -7,11 +7,55 @@ import {
   isDppOffer,
   isDemoVisit,
   recordDppLoopEvent,
+  recordEarnedRetention,
+  runDppExceptionsReport,
   stallOf,
   summarizeDppLoop,
   reconstructLoop,
+  type LoopEventRow,
 } from "./dpp-loop";
 import { DPP_OFFER_KEY } from "./plans";
+
+/** In-memory funnel_events stand-in for retention writes and cron pagination. */
+function fakeFunnel(seed: LoopEventRow[] = []) {
+  const rows: Array<Record<string, unknown>> = seed.map(r => ({ ...r }));
+  const from = () => {
+    const filters: Array<[string, unknown]> = [];
+    const builder: Record<string, unknown> = {
+      insert: async (row: Record<string, unknown>) => {
+        rows.push(row);
+        return { error: null };
+      },
+      select: () => builder,
+      eq: (col: string, val: unknown) => {
+        filters.push([col, val]);
+        return builder;
+      },
+      like: () => builder,
+      order: () => builder,
+      limit: async () => ({
+        data: rows.filter(r => filters.every(([c, v]) => r[c] === v)),
+        error: null,
+      }),
+      range: async () => ({ data: [...rows], error: null }),
+    };
+    return builder;
+  };
+  return { supabase: { from }, rows };
+}
+
+function activatedRow(
+  visitId: string,
+  timestamp: string,
+  extra: Record<string, unknown> = {}
+): LoopEventRow {
+  return {
+    prospect_id: visitId,
+    event_type: "dpp_loop:merchant_activated",
+    timestamp,
+    metadata: { loop_stage: "merchant_activated", ...extra },
+  };
+}
 
 describe("dpp-loop", () => {
   it("detects offer by metadata and price id", () => {
@@ -211,5 +255,227 @@ describe("dpp-loop", () => {
     expect(rows).toHaveLength(1001);
     expect(pages[0]).toBe(1000);
     expect(pages.length).toBeGreaterThan(1);
+  });
+
+  it("records retained when activation plus usage past the horizon earn it", async () => {
+    const activatedAt = "2026-09-01T00:00:00.000Z";
+    const usageAt = "2026-09-09T10:00:00.000Z";
+    const now = new Date("2026-09-20T00:00:00.000Z");
+    const { supabase, rows: stored } = fakeFunnel();
+
+    const result = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("paid_1", activatedAt)],
+      usageByVisit: { paid_1: [usageAt] },
+      now,
+    });
+
+    expect(result).toEqual([
+      {
+        visitId: "paid_1",
+        recorded: true,
+        reason: "usage_after_horizon",
+        qualifyingUsageAt: usageAt,
+        horizonAt: "2026-09-08T00:00:00.000Z",
+      },
+    ]);
+    expect(stored).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          prospect_id: "paid_1",
+          stage: "subscribe",
+          event_type: "dpp_loop:retained",
+          metadata: expect.objectContaining({
+            loop_stage: "retained",
+            qualifying_usage_at: usageAt,
+          }),
+        }),
+      ])
+    );
+  });
+
+  it("does not infer usage from loop rows", async () => {
+    const activatedAt = "2026-09-01T00:00:00.000Z";
+    const { supabase, rows: stored } = fakeFunnel();
+    const result = await recordEarnedRetention(supabase, {
+      rows: [
+        activatedRow("paid_1", activatedAt),
+        {
+          prospect_id: "paid_1",
+          event_type: "dpp_loop:verification",
+          timestamp: "2026-09-09T10:00:00.000Z",
+          metadata: { loop_stage: "verification" },
+        },
+      ],
+      usageByVisit: {},
+      now: new Date("2026-09-20T00:00:00.000Z"),
+    });
+
+    expect(result[0]).toMatchObject({
+      visitId: "paid_1",
+      recorded: false,
+      reason: "no_usage_after_horizon",
+    });
+    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
+      0
+    );
+  });
+
+  it("does not record retained before the horizon or for same-day usage", async () => {
+    const activatedAt = "2026-09-01T00:00:00.000Z";
+    const { supabase, rows: stored } = fakeFunnel();
+
+    const tooEarly = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("paid_1", activatedAt)],
+      usageByVisit: { paid_1: ["2026-09-09T10:00:00.000Z"] },
+      now: new Date("2026-09-02T00:00:00.000Z"),
+    });
+    expect(tooEarly[0]).toMatchObject({
+      recorded: false,
+      reason: "horizon_not_reached",
+    });
+
+    const sameDay = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("paid_2", activatedAt)],
+      usageByVisit: { paid_2: ["2026-09-01T02:00:00.000Z"] },
+      now: new Date("2026-09-20T00:00:00.000Z"),
+    });
+    expect(sameDay[0]).toMatchObject({
+      recorded: false,
+      reason: "no_usage_after_horizon",
+    });
+    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
+      0
+    );
+  });
+
+  it("records retained for DPP-SMOKE/demo visits that earned it", async () => {
+    const usageAt = "2026-09-09T10:00:00.000Z";
+    const { supabase, rows: stored } = fakeFunnel();
+    const result = await recordEarnedRetention(supabase, {
+      rows: [
+        activatedRow("demo_1", "2026-09-01T00:00:00.000Z", { is_demo: true }),
+      ],
+      usageByVisit: { demo_1: [usageAt] },
+      now: new Date("2026-09-20T00:00:00.000Z"),
+    });
+
+    expect(result[0]).toMatchObject({
+      visitId: "demo_1",
+      recorded: true,
+      reason: "usage_after_horizon",
+      qualifyingUsageAt: usageAt,
+    });
+    expect(stored).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          prospect_id: "demo_1",
+          event_type: "dpp_loop:retained",
+        }),
+      ])
+    );
+  });
+
+  it("closes the smoke loop the same day; paid buyers still wait the horizon", async () => {
+    const activatedAt = "2026-09-20T12:00:00.000Z";
+    const usageAt = "2026-09-20T13:00:00.000Z";
+    const now = new Date("2026-09-20T14:00:00.000Z");
+    const { supabase, rows: stored } = fakeFunnel();
+
+    const smoke = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("dpp_smoke_1", activatedAt, { is_demo: true })],
+      usageByVisit: { dpp_smoke_1: [usageAt] },
+      now,
+    });
+    expect(smoke[0]).toMatchObject({
+      visitId: "dpp_smoke_1",
+      recorded: true,
+      reason: "usage_after_horizon",
+      qualifyingUsageAt: usageAt,
+    });
+
+    const paid = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("paid_1", activatedAt)],
+      usageByVisit: { paid_1: [usageAt] },
+      now,
+    });
+    expect(paid[0]).toMatchObject({
+      visitId: "paid_1",
+      recorded: false,
+      reason: "horizon_not_reached",
+    });
+    expect(
+      stored.filter(r => r.prospect_id === "paid_1" && r.event_type === "dpp_loop:retained")
+    ).toHaveLength(0);
+  });
+
+  it("does not write retained twice for a visit that already has it", async () => {
+    const activatedAt = "2026-09-01T00:00:00.000Z";
+    const { supabase, rows: stored } = fakeFunnel();
+    const rows: LoopEventRow[] = [
+      activatedRow("paid_1", activatedAt),
+      {
+        prospect_id: "paid_1",
+        event_type: "dpp_loop:retained",
+        timestamp: "2026-09-10T00:00:00.000Z",
+        metadata: { loop_stage: "retained" },
+      },
+    ];
+
+    const result = await recordEarnedRetention(supabase, {
+      rows,
+      usageByVisit: { paid_1: ["2026-09-09T10:00:00.000Z"] },
+      now: new Date("2026-09-20T00:00:00.000Z"),
+    });
+
+    expect(result[0]).toMatchObject({
+      visitId: "paid_1",
+      recorded: false,
+      reason: "already_retained",
+    });
+    expect(stored).toHaveLength(0);
+  });
+
+  it("exceptions cron records earned retained and reports the count", async () => {
+    const seed: LoopEventRow[] = [
+      activatedRow("paid_1", "2026-09-01T00:00:00.000Z"),
+      {
+        prospect_id: "paid_1",
+        event_type: "dpp_loop:verification",
+        timestamp: "2026-09-09T10:00:00.000Z",
+        metadata: { loop_stage: "verification" },
+      },
+      activatedRow("demo_1", "2026-09-01T00:00:00.000Z", { is_demo: true }),
+      {
+        prospect_id: "demo_1",
+        event_type: "dpp_loop:verification",
+        timestamp: "2026-09-09T10:00:00.000Z",
+        metadata: { loop_stage: "verification", is_demo: true },
+      },
+    ];
+    const { supabase, rows: stored } = fakeFunnel(seed);
+    const report = await runDppExceptionsReport(
+      supabase,
+      new Date("2026-09-20T00:00:00.000Z")
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.retainedCount).toBe(2);
+    expect(report.retained).toEqual(
+      expect.arrayContaining([
+        {
+          visitId: "paid_1",
+          qualifyingUsageAt: "2026-09-09T10:00:00.000Z",
+        },
+        {
+          visitId: "demo_1",
+          qualifyingUsageAt: "2026-09-09T10:00:00.000Z",
+        },
+      ])
+    );
+    expect(report.demoVisits).toBe(1);
+    expect(report.visits).toBe(1);
+    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
+      2
+    );
   });
 });

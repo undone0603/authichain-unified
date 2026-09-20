@@ -2,7 +2,7 @@
 agentz.workflows.handlers.sam_gov_dhs
 -------------------------------------------
 Browser-use task: 
-1) Login to SAM.gov and link CAGE code 9Y8Z1.
+1) Login to SAM.gov and confirm CAGE code 1PUJ6 on the ZACHARY KIETZMAN entity.
 2) Navigate to DHS SVIP submission portal.
 3) Upload Technical Volume.
 4) Submit $200K Phase I application.
@@ -19,10 +19,11 @@ from agentz.core.modes import ExecutionContext, Mode
 TECHNICAL_VOLUME = r'''# DHS SVIP Grant Application
 ## AuthiChain — Blockchain-AI Platform for Preventing Forgery and Counterfeiting
 
-**Entity:** AuthiChain, Inc.  
+**Legal Applicant / SAM Entity:** ZACHARY KIETZMAN
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **CAGE Code:** 1PUJ6
-  
-**UEI Status:** Active (Final Issuance Pending)  
+**UEI:** R34XKWRJY9A5
+**UEI Status:** Active through 2027-04-20  
 **Program:** DHS Science and Technology Directorate — Silicon Valley Innovation Program (SVIP)
 **Requested Amount:** Phase I — $200,000
 ... (truncated for script clarity, full content injected in browser-use task) ...
@@ -32,8 +33,9 @@ TASK_PROMPT = f"""\
 Navigate to https://sam.gov/content/home.
 Log in to the account (use provided session or wait for user MFA if in confirm mode).
 Go to Workspace -> Entity Registration.
-Find "AuthiChain, Inc." and link CAGE code "1PUJ6".
-Verify that the registration status updates or shows the link is pending/active.
+Find "ZACHARY KIETZMAN" and confirm CAGE code "1PUJ6".
+Do not rename the SAM legal business name to AuthiChain, Inc. There is no AuthiChain, Inc. corporation.
+Verify that the registration remains Active through 2027-04-20.
 
 Next, navigate to the DHS SVIP submission portal:
 https://www.dhs.gov/science-and-technology/svip-application-process
@@ -54,7 +56,7 @@ def run(ctx: ExecutionContext) -> str:
 
     if ctx.mode == Mode.DRY_RUN:
         ctx.step("open SAM.gov")
-        ctx.step("link CAGE code 1PUJ6 to AuthiChain, Inc.")
+        ctx.step("confirm CAGE code 1PUJ6 on ZACHARY KIETZMAN SAM entity")
         ctx.step("open DHS SVIP portal")
         ctx.step("upload Technical Volume content")
         ctx.step("submit $200K Phase I application")

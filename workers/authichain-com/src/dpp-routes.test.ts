@@ -78,8 +78,20 @@ describe("tryHandleDppRoute", () => {
         }),
       })
     );
+    const publish = await tryHandleDppRoute(
+      new Request("https://authichain.com/api/dpp/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visit_id: "dpp_abc", name: "Widget" }),
+      })
+    );
+    const verify = await tryHandleDppRoute(
+      req("/api/dpp/verify?dpp_id=prod_1&visit_id=dpp_abc")
+    );
     expect(checkout).toBeNull();
     expect(activate).toBeNull();
+    expect(publish).toBeNull();
+    expect(verify).toBeNull();
     expect(webhook).toBeNull();
     expect(funnel).toBeNull();
   });

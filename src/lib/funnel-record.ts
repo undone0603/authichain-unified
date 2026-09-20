@@ -7,8 +7,7 @@
  *
  * DPP loop aliases (`dpp_published` / `verification` / `retained` /
  * `attributed_visit`) map onto the funnel_events enum. Product insert +
- * verify still live in Next `/api/dpp/publish` and `/api/dpp/verify`
- * (not mounted on the edge).
+ * verify live in `dpp-publish` / `dpp-verify`, mounted on worker-app.
  */
 
 export const FUNNEL_STAGES = [

@@ -480,6 +480,169 @@ export function evaluateRetention(
   };
 }
 
+/** Dated product usage — not activation, payment, or onboarding clicks. */
+const USAGE_STAGES: ReadonlySet<DppLoopStage> = new Set([
+  "dpp_published",
+  "verification",
+]);
+
+/**
+ * Collect usage timestamps per visit from publish/verify events.
+ *
+ * These stay a separate list from the loop rows so `evaluateRetention` can
+ * reject same-day onboarding. Presence of `verification` is not retention.
+ */
+export function usageTimestampsByVisit(
+  rows: LoopEventRow[]
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const row of rows || []) {
+    const id = row.prospect_id?.trim();
+    const stage = stageOf(row);
+    if (!id || !stage || !USAGE_STAGES.has(stage)) continue;
+    const ts = row.timestamp;
+    if (!ts) continue;
+    (out[id] ||= []).push(ts);
+  }
+  return out;
+}
+
+export type RetentionWrite = {
+  visitId: string;
+  recorded: boolean;
+  reason: string;
+  qualifyingUsageAt?: string;
+  horizonAt?: string;
+};
+
+/**
+ * Write `dpp_loop:retained` for visits that have earned it.
+ *
+ * Usage timestamps are supplied by the caller (cron collects publish/verify
+ * times; tests pass fixtures). Visits that already have `retained` are
+ * skipped. DPP-SMOKE / `is_demo` visits use a 0-day horizon so the live
+ * smoke loop can close the same day; paying buyers still wait
+ * `RETENTION_HORIZON_DAYS`. `summarizeDppLoop` keeps demos out of customer
+ * funnel counts. Idempotent via `recordDppLoopEventOnce`.
+ */
+export async function recordEarnedRetention(
+  supabase: SupabaseLike,
+  opts: {
+    rows: LoopEventRow[];
+    usageByVisit: Record<string, string[]>;
+    now?: Date;
+  }
+): Promise<RetentionWrite[]> {
+  const now = opts.now ?? new Date();
+  const out: RetentionWrite[] = [];
+
+  for (const [visitId, visitRows] of Object.entries(
+    groupLoopEventsByVisit(opts.rows)
+  )) {
+    const loop = reconstructLoop(visitRows);
+    if (loop.firstSeen.retained) {
+      out.push({ visitId, recorded: false, reason: "already_retained" });
+      continue;
+    }
+
+    const demo = isDemoVisit(visitRows);
+    const decision = evaluateRetention(
+      visitRows,
+      opts.usageByVisit[visitId] || [],
+      now,
+      demo ? 0 : RETENTION_HORIZON_DAYS
+    );
+    if (!decision.retained) {
+      out.push({
+        visitId,
+        recorded: false,
+        reason: decision.reason,
+        horizonAt: decision.horizonAt,
+      });
+      continue;
+    }
+
+    const write = await recordDppLoopEventOnce(supabase, {
+      visitId,
+      stage: "retained",
+      metadata: {
+        qualifying_usage_at: decision.qualifyingUsageAt,
+        horizon_at: decision.horizonAt,
+        retention_reason: decision.reason,
+        ...(demo ? { is_demo: true } : {}),
+      },
+    });
+    out.push({
+      visitId,
+      recorded: write.recorded,
+      reason: write.recorded
+        ? decision.reason
+        : (write.reason ?? decision.reason),
+      qualifyingUsageAt: decision.qualifyingUsageAt,
+      horizonAt: decision.horizonAt,
+    });
+  }
+
+  return out;
+}
+
+export type DppExceptionsReport = {
+  ok: true;
+  generatedAt: string;
+  visits: number;
+  demoVisits: number;
+  funnel: DppLoopSummary["funnel"];
+  exceptionCount: number;
+  exceptions: DppException[];
+  retainedCount: number;
+  retained: Array<{ visitId: string; qualifyingUsageAt?: string }>;
+};
+
+/**
+ * Daily DPP exception report + retained auto-write.
+ *
+ * Shared by Next and worker-app GET `/api/cron/dpp-exceptions`.
+ */
+export async function runDppExceptionsReport(
+  supabase: SupabaseLike,
+  now: Date = new Date()
+): Promise<DppExceptionsReport> {
+  const rows = await fetchAllLoopEvents(supabase);
+  const retention = await recordEarnedRetention(supabase, {
+    rows,
+    usageByVisit: usageTimestampsByVisit(rows),
+    now,
+  });
+  const recorded = retention.filter(r => r.recorded);
+  const summary = summarizeDppLoop(
+    [
+      ...rows,
+      ...recorded.map(r => ({
+        prospect_id: r.visitId,
+        event_type: "dpp_loop:retained" as const,
+        timestamp: now.toISOString(),
+        metadata: { loop_stage: "retained" },
+      })),
+    ],
+    now
+  );
+
+  return {
+    ok: true,
+    generatedAt: now.toISOString(),
+    visits: summary.visits,
+    demoVisits: summary.demoVisits,
+    funnel: summary.funnel,
+    exceptionCount: summary.exceptions.length,
+    exceptions: summary.exceptions,
+    retainedCount: recorded.length,
+    retained: recorded.map(r => ({
+      visitId: r.visitId,
+      qualifyingUsageAt: r.qualifyingUsageAt,
+    })),
+  };
+}
+
 /** Adapter used by `scripts/revenue-cycle.ts --phase=report`. */
 export type LoopStall = {
   visitId: string;

@@ -128,25 +128,33 @@ server.tool("get_pricing", {}, async () => ({
       type: "text",
       text: JSON.stringify(
         {
-          meteredVerification: {
+          agentRail: {
             endpoint: "POST /api/v1/agent-verify",
+            alias: "POST /api/x402",
             protocol: "x402",
-            network: "polygon",
+            network: "base",
+            chainId: "8453",
+            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
             pricePerCall: "$0.05 USDC",
-            note: "Call with no payment to receive HTTP 402 payment requirements; pay and retry with an X-PAYMENT proof header.",
+            dailyCapUsd: 10,
+            health: "https://authichain.com/api/x402/health",
+            catalog: "https://authichain.com/api/x402/catalog",
+            wellKnown: "https://authichain.com/.well-known/x402.json",
+            docs: "https://authichain.com/x402",
+            tokenomics:
+              "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
+            note: "Prefer GET catalog/health for live payTo and price. Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT. Do not use Polygon or $QRON on this rail.",
           },
-          subscriptionPlans: {
-            authichain: {
-              starter: "$49/mo",
-              professional: "$199/mo",
-              enterprise: "$799/mo",
+          humanCheckout: {
+            rail: "stripe",
+            source: "src/lib/plans.ts",
+            strainchain_passport: "$49 one-time",
+            dpp_readiness: "$299 one-time",
+            checkout: {
+              passport:
+                "https://authichain.com/api/checkout/plan/strainchain_passport",
+              dpp: "https://authichain.com/api/checkout/dpp",
             },
-            strainchain: {
-              basic: "$199/mo",
-              professional: "$499/mo",
-              enterprise: "$999/mo",
-            },
-            qron: { studioStarter: "$49/mo", studioPro: "$99/mo" },
           },
         },
         null,
@@ -182,8 +190,10 @@ server.tool(
               message: "Payment required for metered verification.",
               pay: {
                 endpoint: "POST /api/v1/agent-verify",
-                network: "polygon",
+                network: "base",
+                chainId: "8453",
                 amount: "$0.05 USDC",
+                catalog: "https://authichain.com/api/x402/catalog",
               },
               then:
                 'Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { productId: "' +

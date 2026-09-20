@@ -73,12 +73,21 @@ describe("tryHandleProtocolCheckout", () => {
     };
     expect(init.headers.Authorization).toBe("Bearer sk_test_x");
     const body = String(init.body);
+    const params = new URLSearchParams(body);
     expect(body).toContain("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(body).toContain("dpp_abc");
     expect(body).toContain("utm_source");
     expect(body).toContain("dpp_readiness_2026");
     expect(body).toContain("stripe_price_id");
     expect(body).not.toContain("payment_method_types");
+    expect(body).toContain("after_expiration");
+    expect(body).toContain("recovery");
+    expect(body).not.toContain("consent_collection");
+    expect(params.get("allow_promotion_codes")).toBeNull();
+    expect(
+      params.get("after_expiration[recovery][allow_promotion_codes]")
+    ).toBe("false");
+    expect(body).toContain("customer_creation");
   });
 
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {

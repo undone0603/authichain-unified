@@ -29,15 +29,21 @@ export const X402_PUBLIC = {
   canonicalPath: "/x402",
   canonicalUrl: "https://authichain.com/x402",
   healthUrl: "https://authichain.com/api/x402/health",
+  catalogUrl: "https://authichain.com/api/x402/catalog",
+  wellKnownUrl: "https://authichain.com/.well-known/x402.json",
   payUrl: "https://authichain.com/api/x402",
   verifyUrl: "https://authichain.com/api/v1/agent-verify",
+  tokenomicsUrl:
+    "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
   priceUsd: "$0.05",
+  priceUsdNumber: "0.05",
   network: "Base",
   chainId: "8453",
   payTo: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
   asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   assetName: "Circle USDC",
   dailyCapUsd: "$10",
+  legalEntity: "ZACHARY KIETZMAN",
 } as const;
 
 export function isX402DocsPath(pathname: string): boolean {
@@ -157,6 +163,13 @@ export function renderX402DocsPage(): string {
     },
     { label: "payTo", value: p.payTo, mono: true },
     { label: "Health", value: p.healthUrl, href: p.healthUrl, mono: true },
+    { label: "Catalog", value: p.catalogUrl, href: p.catalogUrl, mono: true },
+    {
+      label: "Well-known",
+      value: p.wellKnownUrl,
+      href: p.wellKnownUrl,
+      mono: true,
+    },
     { label: "Pay endpoint", value: p.payUrl, href: p.payUrl, mono: true },
     { label: "Alias", value: p.verifyUrl, mono: true },
     {
@@ -183,6 +196,8 @@ export function renderX402DocsPage(): string {
 <title>x402 agent pay — AuthiChain</title>
 <meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. Health at /api/x402/health. Unpaid POST returns HTTP 402.">
 <link rel="canonical" href="${esc(p.canonicalUrl)}">
+<link rel="alternate" type="application/json" href="${esc(p.catalogUrl)}" title="x402 catalog">
+<link rel="describedby" href="${esc(p.wellKnownUrl)}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#4F46E5">
 <meta property="og:type" content="website">
@@ -191,7 +206,38 @@ export function renderX402DocsPage(): string {
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"AuthiChain x402 agent verification","description":"Pay-per-call product verification for autonomous agents. ${esc(p.priceUsd)} USDC on Base.","url":"${esc(p.canonicalUrl)}"}</script>
+<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        headline: "AuthiChain x402 agent verification",
+        description: `Pay-per-call product verification for autonomous agents. ${p.priceUsd} USDC on Base.`,
+        url: p.canonicalUrl,
+        identifier: p.catalogUrl,
+      },
+      {
+        "@type": "Service",
+        name: "AuthiChain agent verification",
+        provider: {
+          "@type": "Organization",
+          name: "AuthiChain",
+          legalName: p.legalEntity,
+        },
+        url: p.canonicalUrl,
+        termsOfService: p.tokenomicsUrl,
+        offers: {
+          "@type": "Offer",
+          name: "x402 verification call",
+          price: p.priceUsdNumber,
+          priceCurrency: "USD",
+          description: `${p.priceUsd} ${p.assetName} on ${p.network} per POST /api/x402`,
+          url: p.catalogUrl,
+          availability: "https://schema.org/InStock",
+        },
+      },
+    ],
+  })}</script>
 ${ESTATE_FONTS_LINK}
 <style>
 ${X402_TOKEN_CSS}
@@ -205,6 +251,8 @@ ${X402_TOKEN_CSS}
     <nav aria-label="Page">
       <ul class="nav-links">
         <li><a href="${esc(p.healthUrl)}">Health JSON</a></li>
+        <li><a href="${esc(p.catalogUrl)}">Catalog</a></li>
+        <li><a href="/authentic-agentic-economy">Agentic economy</a></li>
         <li><a href="/pricing">Pricing</a></li>
         <li><a href="/api/checkout/dpp">DPP checkout</a></li>
         <li><a href="/dpp">DPP brief</a></li>
@@ -221,8 +269,8 @@ ${X402_TOKEN_CSS}
       <p>An unpaid <code>POST</code> receives <code>HTTP 402 Payment Required</code> with the exact scheme, asset, and receiving address. The agent settles ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}, retries with an <code>X-PAYMENT</code> proof, and the edge verifies settlement before answering.</p>
       <div class="cta">
         <a class="btn btn-primary" href="${esc(p.healthUrl)}">GET /api/x402/health</a>
+        <a class="btn" href="${esc(p.catalogUrl)}">GET /api/x402/catalog</a>
         <a class="btn" href="/dpp">DPP checkout</a>
-        <a class="btn" href="/protocol">Open protocol</a>
       </div>
     </div>
   </section>
@@ -261,9 +309,44 @@ ${X402_TOKEN_CSS}
   -d '{"sealId":"demo"}'</code></pre>
           <p>Expect HTTP 402. The body lists the asset, payTo, and EIP-712 extra. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
+        <figure>
+          <figcaption>curl — catalog</figcaption>
+          <pre><code>curl -sS https://authichain.com/api/x402/catalog</code></pre>
+          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>.</p>
+        </figure>
+        <figure>
+          <figcaption>curl — settle retry (Agent A → AuthiChain)</figcaption>
+          <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
+  -H 'content-type: application/json' \\
+  -H 'X-PAYMENT: &lt;base64-x402-payload&gt;' \\
+  -d '{"sealId":"demo"}'</code></pre>
+          <p>After an x402 client pays the 402 <code>accepts[]</code> requirement to the published payTo, retry the same POST with <code>X-PAYMENT</code>. Do not send private keys here. Facilitator URL is not republished on this page.</p>
+        </figure>
       </div>
     </div>
   </section>
+
+  <div class="wrap panel-grid">
+    <section class="card" aria-labelledby="machine-title">
+      <h2 id="machine-title">Machine-readable discovery</h2>
+      <p>Agents should fetch JSON, not scrape this HTML. Health is the live rail; catalog lists paid methods and prices copied from that same report.</p>
+      <dl class="spec">
+        <dt>Catalog</dt><dd class="mono"><a href="${esc(p.catalogUrl)}">${esc(p.catalogUrl)}</a></dd>
+        <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
+        <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
+        <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
+      </dl>
+    </section>
+    <section class="card" aria-labelledby="human-title">
+      <h2 id="human-title">Human checkout vs agent rail</h2>
+      <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
+      <ul>
+        <li>StrainChain Passport — <strong>$49</strong> one-time, <a href="/api/checkout/plan/strainchain_passport">Stripe checkout</a>.</li>
+        <li>EU DPP Readiness — <strong>$299</strong> one-time, <a href="/api/checkout/dpp">Stripe checkout</a>.</li>
+        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}.</li>
+      </ul>
+    </section>
+  </div>
 
   <div class="wrap">
     <aside class="note">
@@ -273,7 +356,7 @@ ${X402_TOKEN_CSS}
 </main>
 <footer class="site">
   <div class="wrap foot-inner">
-    <p>© 2026 AuthiChain Inc. Agent pay is live at <a href="${esc(p.canonicalPath)}">/x402</a>.</p>
+    <p>© 2026 AuthiChain. SAM legal entity ${esc(p.legalEntity)} (sole proprietor; AuthiChain is a brand, not a corporation). Agent pay is live at <a href="${esc(p.canonicalPath)}">/x402</a>.</p>
     <p><a href="/">Home</a> · <a href="/contact">Contact</a> · <a href="/dpp">/dpp</a></p>
   </div>
 </footer>

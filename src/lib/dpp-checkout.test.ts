@@ -50,7 +50,7 @@ describe("createDppCheckoutSession", () => {
     expect(arg.mode).toBe("payment");
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.client_reference_id).toBe("dpp_paid_1");
-    expect(arg.allow_promotion_codes).toBe(true);
+    expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
     expect(arg.metadata.plan).toBe("dpp_readiness");
     expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
@@ -58,6 +58,12 @@ describe("createDppCheckoutSession", () => {
       "/dpp/thanks?session_id={CHECKOUT_SESSION_ID}"
     );
     expect(arg.payment_method_types).toBeUndefined();
+    expect(arg.after_expiration.recovery).toEqual({
+      enabled: true,
+      allow_promotion_codes: false,
+    });
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.customer_creation).toBe("always");
   });
 
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
