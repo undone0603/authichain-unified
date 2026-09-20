@@ -34,22 +34,22 @@ API_PROBES: tuple[tuple[str, str], ...] = (
     ("POST", "https://authichain.com/api/funnel"),
 )
 
+CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
+CHECKOUT_OK_STATUSES = frozenset({302, 303})
+
 # Public money paths. Checkout is redirect-only: 302/303 = OK, 200 HTML fails.
 MONEY_PATHS = (
     "https://authichain.com/pricing",
     "https://authichain.com/dpp",
     "https://authichain.com/x402",
     "https://authichain.com/onboard",
-    "https://authichain.com/api/checkout/dpp",
+    CHECKOUT_DPP_URL,
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",
     "https://qron.space/pricing",
     "https://qron.space/generate",
     "https://govchain.us/onboard",
 )
-
-CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
-CHECKOUT_OK_STATUSES = frozenset({302, 303})
 
 
 class UnexpectedServerError(RuntimeError):
@@ -73,8 +73,12 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
         headers["Content-Type"] = "application/json"
         data = b"{}"
     req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    # Checkout: do not follow 303 to checkout.stripe.com (creates no charge,
+    # but we only need the redirect status). Other probes keep urlopen's
+    # default follow so a hop-to-5xx still fails.
+    open_fn = _OPENER.open if url == CHECKOUT_DPP_URL else urllib.request.urlopen
     try:
-        with _OPENER.open(req, timeout=timeout) as resp:
+        with open_fn(req, timeout=timeout) as resp:
             return int(resp.status)
     except urllib.error.HTTPError as exc:
         return int(exc.code)
@@ -137,7 +141,7 @@ def run(ctx: ExecutionContext) -> str:
 
     if failures:
         raise UnexpectedServerError(
-            "ghost-traffic unexpected 5xx or transport failure: "
+            "ghost-traffic unexpected 5xx, bad checkout status, or transport failure: "
             + "; ".join(failures)
         )
 

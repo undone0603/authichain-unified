@@ -185,3 +185,34 @@ def test_no_redirect_handler_surfaces_303():
         raise AssertionError("expected HTTPError")
     except urllib.error.HTTPError as exc:
         assert exc.code == 303
+
+
+def test_probe_does_not_follow_checkout_redirect(monkeypatch):
+    seen: list[tuple[str, str]] = []
+
+    class _Ok:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        seen.append(("follow", req.full_url))
+        return _Ok()
+
+    def fake_open(req, timeout=None):
+        seen.append(("no-follow", req.full_url))
+        raise urllib.error.HTTPError(req.full_url, 303, "See Other", {}, None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(gte._OPENER, "open", fake_open)
+
+    assert gte._probe("GET", gte.CHECKOUT_DPP_URL) == 303
+    assert gte._probe("GET", "https://authichain.com/pricing") == 200
+    assert seen == [
+        ("no-follow", gte.CHECKOUT_DPP_URL),
+        ("follow", "https://authichain.com/pricing"),
+    ]
