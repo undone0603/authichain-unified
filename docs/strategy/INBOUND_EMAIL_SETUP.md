@@ -2,7 +2,7 @@
 
 ## Overview
 
-This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment using Claude AI, and triggers intelligent follow-up sequences to nurture interested prospects.
+This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
 
 **Expected Results:**
 - Capture: 258 proposals → 39-77 replies (15-30% reply rate)
@@ -20,7 +20,7 @@ Resend Inbound Routes to webhook
          ↓
 POST /api/webhooks/resend-inbound
          ↓
-Parse email + Classify sentiment (Claude API)
+Parse email + Classify sentiment (OpenAI → Ollama → heuristic → fail-closed neutral)
          ↓
 Match reply to original proposal
          ↓
@@ -84,8 +84,10 @@ CRON_SECRET=your-secure-random-string-here
 NURTURE_POSITIVE_DELAY_MS=7200000   # 2 hours
 NURTURE_REMINDER_DAYS=7
 
-# Claude API (already in ENV, verify it's set)
-ANTHROPIC_API_KEY=sk-ant-...
+# Reply classifier (optional paid LLM). When unset, local Ollama then heuristic.
+# OPENAI_API_KEY=sk-...
+# OLLAMA_HOST=http://127.0.0.1:11434
+# OLLAMA_MODEL=llama3.2
 
 # Resend (already in ENV, verify it's set)
 RESEND_API_KEY=re_...
@@ -217,7 +219,13 @@ Expected response:
   "replyId": "uuid-here",
   "sentiment": "positive",
   "matchConfidence": 0.6,
-  "leadId": null
+  "leadId": null,
+  "action": "manual_review",
+  "classifier": {
+    "provider": "heuristic",
+    "missingSecret": "OPENAI_API_KEY",
+    "paidLlmAvailable": false
+  }
 }
 ```
 
@@ -361,20 +369,13 @@ await sendEmail({
 
 ### Issue: Sentiment always "neutral"
 
-**Cause**: Claude API key missing or API call failing
+**Cause**: The classifier fail-closes to `neutral` when the copy is ambiguous, or when every LLM backend failed and the heuristic found no strong signal. This is intentional — the nurture cron must not auto-send on a weak read.
 
 **Fix**:
-1. Verify `ANTHROPIC_API_KEY` is set in `.env`
-2. Check server logs for Claude API errors
-3. Verify Claude API key has quota remaining
-4. Test Claude API directly:
-   ```bash
-   curl https://api.anthropic.com/v1/messages \
-     -H "x-api-key: $ANTHROPIC_API_KEY" \
-     -H "anthropic-version: 2023-06-01" \
-     -H "content-type: application/json" \
-     -d '{"model": "claude-opus-4-1-20250805", "max_tokens": 100, "messages": [{"role": "user", "content": "test"}]}'
-   ```
+1. `GET /api/webhooks/resend-inbound` and read `classifier.missingSecret`. If it is `OPENAI_API_KEY`, the paid LLM is unset; the path is still live via Ollama/heuristic.
+2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `openai` / `ollama`).
+3. Optional: set `OPENAI_API_KEY`, or run local Ollama (`ollama serve` + `ollama pull llama3.2`) and set `OLLAMA_HOST`.
+4. Neutral/negative replies are **not** drafted or auto-sent. Review them at `/dashboard/inbound-replies`. This webhook does not write HubSpot.
 
 ### Issue: Nurture emails not sending
 

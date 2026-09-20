@@ -28,3 +28,7 @@
 
 ## Moat: Automated Workflows
 AI AutoFlow™ auto-generates industry-specific workflows (e.g., METRC sync for Cannabis, DSCSA for Pharma), making it impossible for generic competitors to match the vertical depth at scale.
+
+## Related runtime (do not conflate)
+
+AutoFlow here is the **industry / vertical** classifier (`shared/industries.ts`). Inbound outreach reply sentiment lives on `POST /api/webhooks/resend-inbound` — see [`docs/strategy/QUICK_START_EMAIL_REPLIES.md`](../strategy/QUICK_START_EMAIL_REPLIES.md) and [`docs/knowledge/AI_AUTOFLOW_STRATEGY.md`](../knowledge/AI_AUTOFLOW_STRATEGY.md).
