@@ -45,6 +45,9 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /href="\/x402"/);
+  assert.match(html, /href="\/trumark"/);
+  assert.match(html, /href="\/made-in-america"/);
+  assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
   assert.match(html, /--bg: #ffffff/);
@@ -189,6 +192,37 @@ test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogu
   assert.equal(res.headers.get("location"), "https://authichain.com/pricing");
 });
 
+test("/demo/strainchain lands on the TruMark money surface", async () => {
+  const res = await get("/demo/strainchain");
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "https://authichain.com/trumark");
+});
+
+test("/partners lands on the Made in America money surface", async () => {
+  const res = await get("/partners");
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "https://authichain.com/made-in-america");
+});
+
+test("TruMark and Made in America pages are live with checkout CTAs", async () => {
+  const trumark = await get("/trumark");
+  assert.equal(trumark.status, 200);
+  const trumarkHtml = await trumark.text();
+  assert.match(trumarkHtml, /href="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(trumarkHtml, /href="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(trumarkHtml, /calendly/i);
+  assert.doesNotMatch(trumarkHtml, /schedule a (call|demo)/i);
+
+  for (const path of ["/made-in-america", "/partners/brief", "/ftc-shield"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /href="\/api\/checkout\/dpp"/, path);
+    assert.doesNotMatch(html, /calendly/i);
+    assert.doesNotMatch(html, /schedule a (call|demo)/i);
+  }
+});
+
 test("app.authichain.com/ 302s to /dashboard", async () => {
   const res = await worker.fetch(
     new Request("https://app.authichain.com/", {
@@ -271,6 +305,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));

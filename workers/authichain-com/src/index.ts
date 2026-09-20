@@ -10,6 +10,12 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
 import {
+  isMadeInAmericaPath,
+  isTrumarkPath,
+  renderMadeInAmericaPage,
+  renderTrumarkPage,
+} from "./money-surfaces.ts";
+import {
   listMilestones,
   milestoneStatus,
   formatMilestoneDate,
@@ -2261,6 +2267,35 @@ function techStack() {
   );
 }
 
+function originMoneySurfaces() {
+  return `
+<section class="estate-section" id="origin">
+  <div class="wrap">
+    <p class="section-tag">Money surfaces</p>
+    <h2>TruMark seals and Made in America claims</h2>
+    <p class="section-sub">Two live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims are documentation under FTC 16 CFR Part 323. No call booking.</p>
+    <div class="estate-grid">
+      <article class="estate-card card">
+        <h3>TruMark</h3>
+        <p>Physical scan seal already used in the StrainChain demo and enterprise tag-mint copy. Cannabis brands publish one genetics passport.</p>
+        <div class="estate-actions" style="margin-top:1rem">
+          <a class="btn btn-primary" href="/trumark">TruMark brief</a>
+          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+        </div>
+      </article>
+      <article class="estate-card card">
+        <h3>Made in America</h3>
+        <p>Signed per-unit origin evidence for Made in USA labels. Partner brief at /partners/brief. EU DPP Readiness is the live checkout.</p>
+        <div class="estate-actions" style="margin-top:1rem">
+          <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
+          <a class="btn btn-outline" href="/api/checkout/dpp">DPP checkout — $299</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>`;
+}
+
 function marketReality() {
   return `
 <section class="estate-section" id="compliance">
@@ -2302,6 +2337,9 @@ function ecosystemFooter() {
         heading: "Company",
         links: [
           { href: "/contact", label: "Contact" },
+          { href: "/trumark", label: "TruMark" },
+          { href: "/made-in-america", label: "Made in America" },
+          { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
           { href: "/x402", label: "Agent pay (x402)" },
           { href: "/vs", label: "Compare" },
@@ -2334,8 +2372,8 @@ const HTML = `<!DOCTYPE html>
   ${estateNav(
     "authichain",
     [
-      { href: "#how", label: "How it works" },
-      { href: "#pillars", label: "Pillars" },
+      { href: "/trumark", label: "TruMark" },
+      { href: "/made-in-america", label: "Made in USA" },
       { href: "/pricing", label: "Pricing" },
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
@@ -2421,6 +2459,7 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estatePillars()}
   ${techStack()}
+  ${originMoneySurfaces()}
   ${foundersVision()}
   ${communityHub(BRAND)}
   ${marketReality()}
@@ -2920,7 +2959,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         <a class="btn btn-primary" id="dpp-checkout-cta" href="/protocol/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
-        <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
+        <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
@@ -3186,6 +3225,9 @@ export default {
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
@@ -3207,8 +3249,20 @@ export default {
       // same domain via the APP_WORKER service binding, so redirect same-origin.
       return Response.redirect('https://authichain.com/dashboard', 302);
     }
+    if (p === '/demo/strainchain' || p === '/demo/strainchain/') {
+      return Response.redirect('https://authichain.com/trumark', 302);
+    }
+    if (p === '/partners' || p === '/partners/') {
+      return Response.redirect('https://authichain.com/made-in-america', 302);
+    }
     if (p === '/demo' || p.startsWith('/demo/')) {
       return Response.redirect('https://authichain.com/pricing', 302);
+    }
+    if (isTrumarkPath(p) || isMadeInAmericaPath(p)) {
+      const html = isTrumarkPath(p) ? renderTrumarkPage() : renderMadeInAmericaPage();
+      return new Response(html, {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
