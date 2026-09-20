@@ -5,7 +5,11 @@
  */
 import { describe, expect, it } from "vitest";
 import Stripe from "stripe";
-import { constructStripeEventAsync } from "./stripe-construct-event";
+import {
+  constructStripeEventAsync,
+  normalizeWebhookSecrets,
+  webhookPayloadUtf8,
+} from "./stripe-construct-event";
 
 const API_VERSION = "2026-08-26.dahlia" as const;
 
@@ -73,6 +77,46 @@ describe("constructStripeEventAsync", () => {
     await expect(
       constructStripeEventAsync(stripe, payload, signature, [])
     ).rejects.toThrow(/STRIPE_WEBHOOK_SECRET not configured/);
+  });
+
+  it("trims a trailing newline from echo | wrangler secret put", async () => {
+    const secret = "whsec_trim_newline";
+    const { stripe, payload, signature } = signedPayload(
+      secret,
+      "evt_test_trim"
+    );
+    const event = await constructStripeEventAsync(stripe, payload, signature, [
+      `${secret}\n`,
+    ]);
+    expect(event.id).toBe("evt_test_trim");
+  });
+
+  it("verifies a Buffer payload without re-encoding JSON", async () => {
+    const secret = "whsec_buffer_payload";
+    const { stripe, payload, signature } = signedPayload(
+      secret,
+      "evt_test_buffer"
+    );
+    const event = await constructStripeEventAsync(
+      stripe,
+      Buffer.from(payload, "utf8"),
+      signature,
+      [secret]
+    );
+    expect(event.id).toBe("evt_test_buffer");
+  });
+});
+
+describe("normalizeWebhookSecrets / webhookPayloadUtf8", () => {
+  it("drops blank and duplicate secrets after trim", () => {
+    expect(
+      normalizeWebhookSecrets(["  whsec_a\n", "", "whsec_a", "whsec_b"])
+    ).toEqual(["whsec_a", "whsec_b"]);
+  });
+
+  it("keeps UTF-8 JSON bytes identical to the string Stripe signed", () => {
+    const json = '{"id":"evt_utf8","object":"event"}';
+    expect(webhookPayloadUtf8(Buffer.from(json, "utf8"))).toBe(json);
   });
 });
 

@@ -1,5 +1,12 @@
 # Stripe Webhook Integration Guide
 
+> **Live destination (2026-09-20):** `POST https://authichain.com/api/stripe/webhook`
+> is served by Cloudflare Worker **`authichain-edge-router`**. Bind the
+> Dashboard Reveal secret for `we_1UGTCSGqTruSqV8ThM9bXVWp` as Worker secrets
+> `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` and/or `STRIPE_WEBHOOK_SECRET`.
+> **Vercel env vars are not what live Resend verifies against.**
+> Exact owner steps: [stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md).
+
 ## Overview
 
 This guide covers the complete setup of Stripe webhook handlers for AuthiChain to track customer payments and reconcile subscriptions. The webhook receiver validates Stripe signatures, handles four key events, deduplicates retries, and logs everything to audit_log.
@@ -10,7 +17,7 @@ This guide covers the complete setup of Stripe webhook handlers for AuthiChain t
 
 **URL:** `https://authichain.com/api/stripe/webhook`  
 **Method:** POST  
-**Secret:** `STRIPE_WEBHOOK_SECRET` (Worker binding). Do **not** point Dashboard at the retired `/api/webhooks/stripe` path (live 404).
+**Secret:** `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` and/or `STRIPE_WEBHOOK_SECRET` on Worker **`authichain-edge-router`**. Do **not** point Dashboard at the retired `/api/webhooks/stripe` path.
 
 ### Event Handlers
 

@@ -1,5 +1,14 @@
 # Stripe Webhook Implementation Checklist
 
+> **Live bind (2026-09-20):** Dashboard `we_1UGTCSGqTruSqV8ThM9bXVWp` →
+> `https://authichain.com/api/stripe/webhook` is **`authichain-edge-router`**.
+> A 400 `No signatures found matching the expected signature` after #1084
+> (`constructEventAsync`) is a **stale/missing Worker signing secret**, not
+> SubtleCrypto. Paste the current Reveal secret into
+> `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (and `STRIPE_WEBHOOK_SECRET`) on that
+> Worker — see **[stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md)**.
+> Vercel is not the live destination.
+
 ## Files Created
 
 - [x] `src/app/api/webhooks/stripe/route.ts` — Main webhook handler (400+ lines)
@@ -57,14 +66,14 @@ git push origin main
 5. Click **Create** or **Save**
 6. **Reveal signing secret** → Copy (starts with `whsec_`)
 
-### 4. Set Environment Variable in Vercel
+### 4. Set the signing secret on `authichain-edge-router` (not Vercel)
 
-1. [Vercel Dashboard → Settings → Environment Variables](https://vercel.com/dashboard/settings/environment-variables)
-2. Add:
-   - **Name:** `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
-   - **Value:** (paste the secret from Step 3)
-   - **Environments:** Production, Preview, Development
-3. Click **Save**
+See [stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md). Names:
+
+- `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (required for `we_1UGTCS…`)
+- `STRIPE_WEBHOOK_SECRET` (fallback)
+
+Do not paste `whsec_` values into git or workflow_dispatch inputs.
 
 ### 5. Redeploy to Pick Up Environment Variable
 
@@ -206,7 +215,7 @@ LIMIT 20;
 ### Problem: Webhook returns 400 "Webhook Error"
 
 - [ ] Check Stripe Dashboard → Webhooks → Event details for error message
-- [ ] Verify `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is set in Vercel
+- [ ] Verify `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is set on **authichain-edge-router** (not Vercel)
 - [ ] Verify it matches the signing secret in Stripe Dashboard
 - [ ] Redeploy after adding env var
 

@@ -1,3 +1,8 @@
+> **2026-09-20:** Live Resend hits `authichain-edge-router`, not Vercel.
+> Bind the Dashboard Reveal secret for `we_1UGTCS…` as Worker secrets
+> `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` / `STRIPE_WEBHOOK_SECRET`.
+> See `docs/operations/stripe-webhook-signing-secret.md`.
+
 # Stripe Webhook Implementation Summary
 
 > **2026-08-27 update:** This document previously described

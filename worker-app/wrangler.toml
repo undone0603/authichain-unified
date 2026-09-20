@@ -3,11 +3,15 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
-# for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
-# SUPABASE_SERVICE_ROLE_KEY to record checkout_started and to fulfill paid
-# DPP sessions on POST /api/stripe/webhook. DATABASE_URL is NOT required for
-# DPP fulfill (Drizzle audit is fail-open on the Worker).
+# Secrets (wrangler secret put --name authichain-edge-router, not committed):
+# STRIPE_SECRET_KEY is required for GET /api/checkout/dpp.
+# Live Dashboard endpoint we_1UGTCSGqTruSqV8ThM9bXVWp posts here. Bind the
+# current Reveal signing secret as STRIPE_WEBHOOK_AUTHICHAIN_SECRET (and
+# STRIPE_WEBHOOK_SECRET as fallback). GitHub Actions deploy-cloudflare.yml
+# does NOT push these. See docs/operations/stripe-webhook-signing-secret.md.
+# Optional NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to record
+# checkout_started and to fulfill paid DPP sessions on POST /api/stripe/webhook.
+# DATABASE_URL is NOT required for DPP fulfill (Drizzle audit is fail-open).
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
 

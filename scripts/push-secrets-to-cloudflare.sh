@@ -20,8 +20,11 @@ fi
 
 export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 
-# Workers that need the full secret set applied
+# Workers that need the full secret set applied.
+# Live Stripe Dashboard → https://authichain.com/api/stripe/webhook is
+# authichain-edge-router (not authichain-unified).
 CORE_WORKERS=(
+  "authichain-edge-router"
   "authichain-unified"
   "authichain-api-gateway"
   "authichain-com"
@@ -40,7 +43,7 @@ WANTED_KEYS=(
   DATABASE_URL
   SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY SUPABASE_SERVICE_KEY
   JWT_SECRET
-  STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
+  STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_WEBHOOK_AUTHICHAIN_SECRET
   RESEND_API_KEY RESEND_FROM_EMAIL
   GROQ_API_KEY HF_TOKEN HF_API_KEY FAL_KEY OPENAI_API_KEY HEYGEN_API_KEY
   PINECONE_API_KEY PINECONE_INDEX
@@ -75,7 +78,8 @@ push_secret() {
     echo "  SKIP  $worker/$key"
     ((skip++)) || true ; return
   fi
-  echo "$value" | npx wrangler secret put "$key" --name "$worker" 2>&1 | tail -1
+  # printf, not echo: echo appends a newline that breaks Stripe HMAC verify.
+  printf '%s' "$value" | npx wrangler secret put "$key" --name "$worker" 2>&1 | tail -1
   if [[ "${PIPESTATUS[1]}" -eq 0 ]]; then
     ((ok++)) || true
   else

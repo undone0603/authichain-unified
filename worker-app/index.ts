@@ -73,7 +73,10 @@ function hydrateProcessEnv(env?: Env) {
     ["X402_DAILY_CAP_USD", env.X402_DAILY_CAP_USD],
   ];
   for (const [name, value] of copy) {
-    if (value && !process.env[name]) process.env[name] = value;
+    // Worker bindings win over any leftover process.env (nodejs_compat
+    // snapshot, prior isolate hydration, or a test placeholder). Skip
+    // empty bindings so we do not wipe a value that is only in process.env.
+    if (value) process.env[name] = value;
   }
 }
 
