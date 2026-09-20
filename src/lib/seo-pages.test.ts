@@ -130,28 +130,30 @@ describe("generated SEO money-path CTAs", () => {
   it("links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief", () => {
     const musa = getSeoPageBySlug("ftc-made-in-usa-labeling-verification");
     const origin = getSeoPageBySlug(
-      "made-in-america-origin-claim-substantiation",
+      "made-in-america-origin-claim-substantiation"
     );
     expect(musa?.bodyHtml).toContain(
-      'href="https://authichain.com/api/checkout/dpp"',
+      'href="https://authichain.com/api/checkout/dpp"'
     );
     expect(musa?.bodyHtml).toContain(
-      'href="https://authichain.com/made-in-america"',
+      'href="https://authichain.com/made-in-america"'
     );
     expect(origin?.bodyHtml).toContain(
-      'href="https://authichain.com/api/checkout/dpp"',
+      'href="https://authichain.com/api/checkout/dpp"'
     );
     expect(origin?.bodyHtml).toContain(
-      'href="https://authichain.com/made-in-america"',
+      'href="https://authichain.com/made-in-america"'
     );
   });
 
   it("links TruMark hubs to live passport checkout and the TruMark brief", () => {
     const trumark = getSeoPageBySlug("trumark-product-authentication-seal");
     expect(trumark?.bodyHtml).toContain(
-      'href="https://authichain.com/api/checkout/plan/strainchain_passport"',
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
-    expect(trumark?.bodyHtml).toContain('href="https://authichain.com/trumark"');
+    expect(trumark?.bodyHtml).toContain(
+      'href="https://authichain.com/trumark"'
+    );
   });
 
   it("links StrainChain cannabis hubs to live passport checkout and pricing", () => {
@@ -180,10 +182,42 @@ describe("generated SEO money-path CTAs", () => {
     for (const slug of PROTECTED_SEED_SLUGS) {
       const page = getSeoPageBySlug(slug);
       expect(page, slug).toBeTruthy();
-      expect(page?.bodyHtml).not.toContain("<h2>Get started</h2>");
     }
     for (const [slug, marker] of Object.entries(PROTECTED_SEED_MARKERS)) {
       expect(getSeoPageBySlug(slug)?.bodyHtml).toContain(marker);
     }
+  });
+
+  it("appends a single live money CTA to every protected seed", () => {
+    for (const slug of PROTECTED_SEED_SLUGS) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).toBeTruthy();
+      const matches = page?.bodyHtml.match(/<h2>Get started<\/h2>/g) ?? [];
+      expect(matches, slug).toHaveLength(1);
+    }
+  });
+
+  it("routes seed CTAs to the same live money URLs as generated hubs", () => {
+    const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
+    expect(dpp?.bodyHtml).toContain(
+      'href="https://authichain.com/api/checkout/dpp"'
+    );
+    expect(dpp?.bodyHtml).toContain('href="https://authichain.com/pricing"');
+
+    const cannabis = getSeoPageBySlug("cannabis-blockchain-provenance");
+    expect(cannabis?.bodyHtml).toContain(
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(cannabis?.bodyHtml).toContain(
+      'href="https://strainchain.io/pricing"'
+    );
+
+    const gov = getSeoPageBySlug("government-document-verification-blockchain");
+    expect(gov?.bodyHtml).toContain('href="https://govchain.us/onboard"');
+    expect(gov?.bodyHtml).not.toContain("/api/checkout/");
+
+    const qron = getSeoPageBySlug("ai-qr-code-art-generator");
+    expect(qron?.bodyHtml).toContain('href="https://qron.space/pricing"');
+    expect(qron?.bodyHtml).not.toContain("/api/checkout/");
   });
 });
