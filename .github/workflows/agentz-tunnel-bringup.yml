@@ -51,6 +51,10 @@ jobs:
           fi
           chmod +x scripts/agentz-tunnel/resolve-agent-secret.sh
           scripts/agentz-tunnel/resolve-agent-secret.sh
+          if [ ! -s "${AGENT_SECRET_OUT}" ]; then
+            echo "::error::AGENT_SECRET resolved to an empty file. Set repo Actions secret AGENT_SECRET."
+            exit 1
+          fi
           printf '%s' "${AGENTZ_API_URL}" | wrangler secret put AGENTZ_API_URL --name authichain-openclaw
           wrangler secret put AGENTZ_API_KEY --name authichain-openclaw < "$AGENT_SECRET_OUT"
           echo "bound AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw (values not logged)"
@@ -131,7 +135,12 @@ jobs:
             echo "::notice::No DEV_TEAM_GITHUB_TOKEN / GH_PAT — not writing repo secret AGENTZ_TUNNEL_TOKEN. Owner box: scripts/agentz-tunnel/run-with-api-token.sh with CLOUDFLARE_API_TOKEN (Actions cannot hand the token to the box)."
             exit 0
           fi
-          GH_TOKEN="$PAT" gh secret set AGENTZ_TUNNEL_TOKEN --app actions --body-file "$TOKEN_FILE"
+          if [ ! -s "$TOKEN_FILE" ]; then
+            echo "::error::tunnel token file is empty — not writing AGENTZ_TUNNEL_TOKEN"
+            exit 1
+          fi
+          # gh has no --body-file. Official form: stdin (do not put the token on argv).
+          GH_TOKEN="$PAT" gh secret set AGENTZ_TUNNEL_TOKEN --app actions < "$TOKEN_FILE"
           echo "stored AGENTZ_TUNNEL_TOKEN as a repo Actions secret (value not logged)"
       - name: Summary
         if: always()
