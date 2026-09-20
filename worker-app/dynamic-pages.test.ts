@@ -449,6 +449,8 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(body).toContain('name="targetUrl"');
     expect(body).toContain("fetch('/api/generate'");
+    expect(body).toContain("if(r.res.status===401)");
+    expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
     expect(body).toContain("$99");
     expect(body).toContain("$299");

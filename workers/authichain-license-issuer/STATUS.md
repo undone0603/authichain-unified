@@ -50,6 +50,15 @@ for key delivery.
   if an email is present (`stripe_customer_id` falls back to `email:…`).
 - Price ID is taken from metadata, `line_items`, or a Stripe **GET**
   retrieve with `expand[]=line_items`.
-- Idempotency ignores prior `error` rows so a retry can still insert.
+- Idempotency: a retry after `createLicense` does **not** insert a second
+  jti. Active licenses are unique per `stripe_customer_id` (including the
+  `email:…` fallback). `stripe_events` upserts `error` → `success` so a
+  later 2xx is recorded.
+- Unique index `idx_licenses_one_active_customer` (migration `0002`).
+  `deploy-workers.yml` deploys the script but does **not** apply D1
+  migrations. After merge, from `workers/authichain-license-issuer` run:
+  `wrangler d1 migrations apply authichain-license-db --remote`.
+  The handler also skips mint when `getByStripeCustomer` returns an
+  active row, so a missed migration does not re-issue on retry.
 
 Refs: `docs/superpowers/plans/worker-status-2026-04-27.md`

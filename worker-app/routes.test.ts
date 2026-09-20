@@ -121,6 +121,7 @@ describe("GET /api/generate", () => {
     const body = await res.json();
     expect(body.status).toBe("ok");
     expect(body.methods).toContain("POST");
+    expect(body.auth).toBe(false);
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );

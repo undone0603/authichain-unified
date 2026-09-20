@@ -148,6 +148,11 @@ export async function handleCheckout(
 
   const customerId = (session.customer ?? "").trim() || `email:${email}`;
   const subscriptionId = (session.subscription ?? "").trim();
+  const existing = await DB.getByStripeCustomer(env, customerId);
+  if (existing?.status === "active") {
+    return;
+  }
+
   const priceId = await resolveCheckoutPriceId(env, session);
 
   const tier = tierFromPriceId(env, priceId);

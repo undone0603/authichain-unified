@@ -297,10 +297,25 @@ app.post("/api/checkout", async c => {
 // while GET hit the catch-all JSON 404. Register both methods here so the
 // public /generate surface and studio fetch can call paid credits.
 app.get("/api/generate", async c => {
+  hydrateProcessEnv(c.env);
   c.header("Cache-Control", "private, no-store");
   const { generateHealthBody } = await import("../src/lib/generate-api");
+  const supabaseUrl =
+    c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+    c.env?.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const supabaseKey =
+    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
   return c.json(
-    generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL)
+    generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
+      authConfigured: Boolean(supabaseUrl && supabaseKey),
+    })
   );
 });
 
@@ -315,7 +330,8 @@ app.post("/api/generate", async c => {
     }
     const { handleGeneratePost, proxyQronImageGen, resolveGenerateUserId } =
       await import("../src/lib/generate-api");
-    const { deductCredit } = await import("../src/lib/business-tier");
+    const { checkCredit, deductCredit } =
+      await import("../src/lib/business-tier");
     const supabaseUrl =
       c.env?.NEXT_PUBLIC_SUPABASE_URL ||
       c.env?.SUPABASE_URL ||
@@ -336,11 +352,13 @@ app.post("/api/generate", async c => {
     const result = await handleGeneratePost({
       body,
       userId,
+      checkCredit,
       deductCredit,
       generateImage: args =>
         proxyQronImageGen({
           targetUrl: args.targetUrl,
           prompt: args.prompt,
+          style: args.style,
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
     });

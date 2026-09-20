@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createLicense, isEventProcessed, logEvent, markDelivered } = vi.hoisted(
-  () => ({
-    createLicense: vi.fn().mockResolvedValue(undefined),
-    isEventProcessed: vi.fn().mockResolvedValue(false),
-    logEvent: vi.fn().mockResolvedValue(undefined),
-    markDelivered: vi.fn().mockResolvedValue(undefined),
-  })
-);
+const {
+  createLicense,
+  isEventProcessed,
+  logEvent,
+  markDelivered,
+  getByStripeCustomer,
+} = vi.hoisted(() => ({
+  createLicense: vi.fn().mockResolvedValue(undefined),
+  isEventProcessed: vi.fn().mockResolvedValue(false),
+  logEvent: vi.fn().mockResolvedValue(undefined),
+  markDelivered: vi.fn().mockResolvedValue(undefined),
+  getByStripeCustomer: vi.fn().mockResolvedValue(null),
+}));
 
 vi.mock("../services/db", () => ({
   DB: {
@@ -15,7 +20,7 @@ vi.mock("../services/db", () => ({
     isEventProcessed,
     logEvent,
     markDelivered,
-    getByStripeCustomer: vi.fn(),
+    getByStripeCustomer,
     revoke: vi.fn(),
   },
 }));
@@ -95,6 +100,7 @@ describe("handleCheckout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createLicense.mockResolvedValue(undefined);
+    getByStripeCustomer.mockResolvedValue(null);
   });
 
   it("writes a D1 license when Stripe omits customer id but includes email", async () => {
@@ -119,12 +125,28 @@ describe("handleCheckout", () => {
     ).rejects.toThrow(/email/i);
     expect(createLicense).not.toHaveBeenCalled();
   });
+
+  it("does not mint a second license when the customer already has an active one", async () => {
+    getByStripeCustomer.mockResolvedValue({
+      id: "existing-jti",
+      status: "active",
+      stripe_customer_id: "cus_1",
+    });
+    await handleCheckout(env(), {
+      id: "cs_retry",
+      customer: "cus_1",
+      customer_details: { email: "paid@example.com" },
+      metadata: { priceId: "price_pro" },
+    });
+    expect(createLicense).not.toHaveBeenCalled();
+  });
 });
 
 describe("stripeWebhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isEventProcessed.mockResolvedValue(false);
+    getByStripeCustomer.mockResolvedValue(null);
   });
 
   it("returns 503 without pretending the event was accepted when secrets are missing", async () => {
@@ -173,5 +195,40 @@ describe("stripeWebhook", () => {
       "success",
       ""
     );
+  });
+
+  it("does not mint a second license when Stripe retries after createLicense", async () => {
+    const payload = JSON.stringify({
+      id: "evt_retry",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_paid",
+          customer: "cus_1",
+          customer_details: { email: "paid@example.com" },
+          metadata: { priceId: "price_pro" },
+        },
+      },
+    });
+    const req = () =>
+      new Request("https://issuer.example/api/license/stripe-webhook", {
+        method: "POST",
+        headers: { "Stripe-Signature": "t=1,v1=abc" },
+        body: payload,
+      });
+
+    const first = await stripeWebhook(req(), env(), dummyCtx);
+    expect(first.status).toBe(200);
+    expect(createLicense).toHaveBeenCalledTimes(1);
+
+    isEventProcessed.mockResolvedValueOnce(false);
+    getByStripeCustomer.mockResolvedValueOnce({
+      id: "jti-1",
+      status: "active",
+      stripe_customer_id: "cus_1",
+    });
+    const retry = await stripeWebhook(req(), env(), dummyCtx);
+    expect(retry.status).toBe(200);
+    expect(createLicense).toHaveBeenCalledTimes(1);
   });
 });

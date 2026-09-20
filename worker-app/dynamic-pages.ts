@@ -1253,7 +1253,11 @@ function generateFormHtml(error?: string): string {
       "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
       ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
       ".then(function(r){\n" +
-      "if(r.res.status===401||r.res.status===403){\n" +
+      "if(r.res.status===401){\n" +
+      "form.submit();\n" +
+      "return;\n" +
+      "}\n" +
+      "if(r.res.status===403){\n" +
       "err.hidden=false;\n" +
       "err.textContent=r.data.message||'Sign in or buy a generation pack.';\n" +
       "return;\n" +

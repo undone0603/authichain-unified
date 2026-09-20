@@ -22,25 +22,31 @@ export const DB = {
     env: Env,
     record: Omit<LicenseRecord, "created_at" | "delivered_at">
   ): Promise<void> {
-    await env.DATABASE.prepare(
-      `INSERT INTO licenses
+    try {
+      await env.DATABASE.prepare(
+        `INSERT INTO licenses
            (id, email, tier, seats, stripe_customer_id, stripe_subscription_id,
             key_hash, status, expires_at, created_at, delivered_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`
-    )
-      .bind(
-        record.id,
-        record.email,
-        record.tier,
-        record.seats,
-        record.stripe_customer_id,
-        record.stripe_subscription_id,
-        record.key_hash,
-        record.status,
-        record.expires_at,
-        new Date().toISOString()
       )
-      .run();
+        .bind(
+          record.id,
+          record.email,
+          record.tier,
+          record.seats,
+          record.stripe_customer_id,
+          record.stripe_subscription_id,
+          record.key_hash,
+          record.status,
+          record.expires_at,
+          new Date().toISOString()
+        )
+        .run();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/UNIQUE constraint failed/i.test(message)) return;
+      throw err;
+    }
   },
 
   async markDelivered(env: Env, id: string): Promise<void> {
@@ -86,8 +92,14 @@ export const DB = {
     detail: string
   ): Promise<void> {
     await env.DATABASE.prepare(
-      `INSERT OR IGNORE INTO stripe_events (stripe_event_id, event_type, status, detail, processed_at)
-         VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO stripe_events (stripe_event_id, event_type, status, detail, processed_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(stripe_event_id) DO UPDATE SET
+           event_type = excluded.event_type,
+           status = excluded.status,
+           detail = excluded.detail,
+           processed_at = excluded.processed_at
+         WHERE stripe_events.status != 'success'`
     )
       .bind(stripeEventId, eventType, status, detail, new Date().toISOString())
       .run();

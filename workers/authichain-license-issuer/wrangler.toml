@@ -17,6 +17,7 @@ compatibility_flags = ["nodejs_compat"]
 binding = "DATABASE"
 database_name = "authichain-license-db"
 database_id = "7757b9f2-d25f-4561-866b-37392d5cb660"
+migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "SESSIONS"

@@ -38,11 +38,24 @@ export function generateCreditPacks(): CreditPack[] {
     }));
 }
 
-export function generateHealthBody(workerUrl?: string): {
+export const QRON_IMAGE_STYLES = [
+  "gold_vault",
+  "luxury_dark",
+  "neon_cyber",
+  "marble_white",
+] as const;
+
+export type QronImageStyle = (typeof QRON_IMAGE_STYLES)[number];
+
+export function generateHealthBody(
+  workerUrl?: string,
+  opts?: { authConfigured?: boolean }
+): {
   status: "ok";
   methods: string[];
   backend: string;
   worker: string;
+  auth: boolean;
   packs: CreditPack[];
 } {
   return {
@@ -50,6 +63,7 @@ export function generateHealthBody(workerUrl?: string): {
     methods: ["POST"],
     backend: "qron-image-gen",
     worker: workerUrl || process.env.QRON_WORKER_URL || QRON_IMAGE_GEN_DEFAULT,
+    auth: Boolean(opts?.authConfigured),
     packs: generateCreditPacks(),
   };
 }
@@ -60,6 +74,7 @@ export type GeneratePostInput = {
   prompt?: string;
   presetId?: string;
   mode?: string;
+  style?: string;
 };
 
 const PRESET_PROMPTS: Record<string, string> = {
@@ -103,17 +118,21 @@ export type GeneratePostResult = {
   body: Record<string, unknown>;
 };
 
+type CreditFn = (
+  userId: string
+) => Promise<{ ok: boolean; remaining?: number; error?: string }>;
+
 export async function handleGeneratePost(opts: {
   body: GeneratePostInput;
   userId: string | null;
-  deductCredit: (
-    userId: string
-  ) => Promise<{ ok: boolean; remaining?: number; error?: string }>;
+  checkCredit: CreditFn;
+  deductCredit: CreditFn;
   generateImage: (args: {
     targetUrl: string;
     prompt: string;
     mode: string;
     presetId?: string;
+    style?: QronImageStyle;
   }) => Promise<{ imageUrl: string }>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
@@ -144,7 +163,7 @@ export async function handleGeneratePost(opts: {
     };
   }
 
-  const credit = await opts.deductCredit(opts.userId);
+  const credit = await opts.checkCredit(opts.userId);
   if (!credit.ok) {
     return {
       status: 403,
@@ -163,6 +182,7 @@ export async function handleGeneratePost(opts: {
       : "static";
   const presetId =
     typeof opts.body.presetId === "string" ? opts.body.presetId.trim() : "";
+  const style = parseQronImageStyle(opts.body.style);
 
   try {
     const generated = await opts.generateImage({
@@ -170,10 +190,12 @@ export async function handleGeneratePost(opts: {
       prompt,
       mode,
       ...(presetId ? { presetId } : {}),
+      ...(style ? { style } : {}),
     });
     if (!generated.imageUrl) {
       return { status: 502, body: { message: "No image returned" } };
     }
+    const deducted = await opts.deductCredit(opts.userId);
     return {
       status: 200,
       body: {
@@ -184,7 +206,7 @@ export async function handleGeneratePost(opts: {
           prompt,
           mode,
         },
-        remaining_credits: credit.remaining,
+        remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
       },
     };
   } catch (err) {
@@ -208,9 +230,19 @@ export type QronGenerateResponse = {
   error?: string;
 };
 
+export function parseQronImageStyle(
+  value: string | undefined
+): QronImageStyle | undefined {
+  const style = typeof value === "string" ? value.trim() : "";
+  return (QRON_IMAGE_STYLES as readonly string[]).includes(style)
+    ? (style as QronImageStyle)
+    : undefined;
+}
+
 export async function proxyQronImageGen(opts: {
   targetUrl: string;
   prompt: string;
+  style?: string;
   fetchImpl?: typeof fetch;
   workerUrl?: string;
 }): Promise<{ imageUrl: string }> {
@@ -220,12 +252,13 @@ export async function proxyQronImageGen(opts: {
     QRON_IMAGE_GEN_DEFAULT
   ).replace(/\/$/, "");
   const fetchImpl = opts.fetchImpl || fetch;
+  const style = parseQronImageStyle(opts.style);
   const res = await fetchImpl(`${worker}/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt: `${opts.prompt}. Scannable QR code that encodes ${opts.targetUrl}`,
-      style: "gold_vault",
+      ...(style ? { style } : {}),
     }),
   });
   const data = (await res.json().catch(() => ({}))) as QronGenerateResponse;
@@ -260,28 +293,120 @@ export async function resolveGenerateUserId(opts: {
   }
 }
 
+const BASE64_PREFIX = "base64-";
+const AUTH_TOKEN_CHUNK = /^(.*(?:-auth-token|sb-access-token))\.(0|[1-9]\d*)$/;
+
+function parseCookieHeader(header: string): Map<string, string> {
+  const cookies = new Map<string, string>();
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const name = part.slice(0, eq).trim();
+    if (!name) continue;
+    let raw = part.slice(eq + 1).trim();
+    if (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) {
+      raw = raw.slice(1, -1);
+    }
+    let value = raw;
+    try {
+      value = decodeURIComponent(raw);
+    } catch {
+      value = raw;
+    }
+    if (value) cookies.set(name, value);
+  }
+  return cookies;
+}
+
+function combineCookieChunks(
+  cookies: Map<string, string>,
+  key: string
+): string | null {
+  const whole = cookies.get(key);
+  if (whole) return whole;
+  const parts: string[] = [];
+  for (let i = 0; ; i++) {
+    const chunk = cookies.get(`${key}.${i}`);
+    if (!chunk) break;
+    parts.push(chunk);
+  }
+  return parts.length > 0 ? parts.join("") : null;
+}
+
+function decodeBase64Url(value: string): string | null {
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const pad =
+      normalized.length % 4 === 0
+        ? ""
+        : "=".repeat(4 - (normalized.length % 4));
+    const binary = atob(normalized + pad);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function accessTokenFromCookieValue(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("eyJ")) return trimmed;
+
+  let payload = trimmed;
+  if (trimmed.startsWith(BASE64_PREFIX)) {
+    const decoded = decodeBase64Url(trimmed.slice(BASE64_PREFIX.length));
+    if (!decoded) return null;
+    payload = decoded;
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as {
+      access_token?: string;
+      currentSession?: { access_token?: string };
+    };
+    const token = parsed.access_token || parsed.currentSession?.access_token;
+    return token || null;
+  } catch {
+    return null;
+  }
+}
+
+function authCookieKeys(cookies: Map<string, string>): string[] {
+  const keys = new Set<string>();
+  for (const name of cookies.keys()) {
+    if (name === "sb-access-token" || name.endsWith("-auth-token")) {
+      keys.add(name);
+      continue;
+    }
+    const chunk = name.match(AUTH_TOKEN_CHUNK);
+    if (chunk) keys.add(chunk[1]);
+  }
+  return [...keys];
+}
+
+/**
+ * Read a Supabase access token from Authorization or cookies.
+ *
+ * Live `@supabase/ssr` sessions are stored as `base64-<base64url(JSON)>` on
+ * `sb-<ref>-auth-token`, often split into `.0` / `.1` chunks. A JWT-only or
+ * raw-JSON parser misses those cookies and signed-in generate stays 401.
+ */
 export function extractAccessToken(request: Request): string | null {
   const header = request.headers.get("authorization") || "";
   if (header.toLowerCase().startsWith("bearer ")) {
     const token = header.slice(7).trim();
     if (token) return token;
   }
-  const cookie = request.headers.get("cookie") || "";
-  for (const part of cookie.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq < 0) continue;
-    const name = part.slice(0, eq).trim();
-    const value = decodeURIComponent(part.slice(eq + 1).trim());
-    if (!value) continue;
-    if (name === "sb-access-token" || name.endsWith("-auth-token")) {
-      if (value.startsWith("eyJ")) return value;
-      try {
-        const parsed = JSON.parse(value) as { access_token?: string };
-        if (parsed.access_token) return parsed.access_token;
-      } catch {
-        /* not JSON */
-      }
-    }
+  const cookies = parseCookieHeader(request.headers.get("cookie") || "");
+  for (const key of authCookieKeys(cookies)) {
+    const combined = combineCookieChunks(cookies, key);
+    if (!combined) continue;
+    const token = accessTokenFromCookieValue(combined);
+    if (token) return token;
   }
   return null;
 }
