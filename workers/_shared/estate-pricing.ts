@@ -34,6 +34,13 @@ export const STRAINCHAIN_BASIC = PAYMENT_LINKS.strainchain.basic;
 /** Canonical AuthiChain Starter money path — live Stripe Payment Link, $299/mo. */
 export const AUTHICHAIN_STARTER = PAYMENT_LINKS.authichain.starter;
 
+/** Live QRON generation-credit Payment Links — not Starter/Creator packs. */
+export const QRON_CREDITS = [
+  PAYMENT_LINKS.qron.credits50,
+  PAYMENT_LINKS.qron.credits250,
+  PAYMENT_LINKS.qron.credits1000,
+] as const;
+
 function esc(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -158,9 +165,28 @@ function strainchainPricingGrid(): string {
 <p class="section-sub" style="margin-top:24px">Genetics passport SKUs (Passport — Per Cultivar and Farm Plan) are catalogued with no Stripe price, so they are not offered as checkout. Request a demo on /onboard if you need that scope.</p>`;
 }
 
+function qronCreditsGrid(): string {
+  const cards = QRON_CREDITS.map((offer) => {
+    const { amount } = splitListedPrice(offer.price);
+    return `<article class="price-card">
+  <h3>${esc(offer.name)}</h3>
+  <div class="price-amount">${esc(amount)}</div>
+  <div class="price-period">one-time</div>
+  <p class="section-sub" style="margin-bottom:16px">QRON generation credits for /generate. Not a Starter or Creator pack.</p>
+  <ul class="price-features"><li>Spend on qron.space/generate</li><li>Published Stripe Payment Link</li></ul>
+  <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(offer.url)}" target="_blank" rel="noopener">Buy ${esc(offer.name)}</a>
+</article>`;
+  }).join("");
+  return `<h3 style="margin-top:40px">QRON generation credits</h3>
+<p class="section-sub">Impulse top-ups next to generation. Packs above are 100/500 generations; these are credit bundles on existing Payment Links.</p>
+<div class="pricing-grid">${cards}</div>`;
+}
+
 export function estatePricingGrid(origin: PricingOrigin): string {
   if (origin === "strainchain") return strainchainPricingGrid();
-  return cataloguePricingGrid(origin);
+  const catalogue = cataloguePricingGrid(origin);
+  if (origin === "qron") return catalogue + qronCreditsGrid();
+  return catalogue;
 }
 
 type PricingPage = {
@@ -334,7 +360,17 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
     ],
     footerMore: [{ href: "https://authichain.com/x402", label: "x402 agent pay" }],
-    offers,
+    offers: [
+      ...offers,
+      ...QRON_CREDITS.map((c) => ({
+        "@type": "Offer" as const,
+        name: c.name,
+        description: "QRON generation credits",
+        price: usdAmount(c.price),
+        priceCurrency: "USD" as const,
+        url: c.url,
+      })),
+    ],
   };
 }
 
