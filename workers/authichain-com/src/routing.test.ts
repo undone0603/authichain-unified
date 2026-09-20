@@ -54,6 +54,42 @@ test("/contact is a real page, not the homepage", async () => {
   assert.match(html, /<title>Contact AuthiChain<\/title>/);
 });
 
+test("/x402 is public HTML for the live agent-pay rail", async () => {
+  for (const path of ["/x402", "/x402/", "/docs/x402"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+    const html = await res.text();
+    assert.match(html, /<title>x402 agent pay — AuthiChain<\/title>/);
+    assert.match(html, /<main id="main">/);
+    assert.match(html, /--ac-accent:/);
+    assert.match(html, /0x5db511706FB6317cd23A7655F67450c5AC6e6AA2/);
+    assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
+    assert.match(html, /\$0\.05/);
+    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(
+      html,
+      /curl -sS -i -X POST https:\/\/authichain\.com\/api\/x402/
+    );
+    assert.ok(
+      !html.toLowerCase().includes("facilitator.payai"),
+      `${path} must not publish the facilitator URL`
+    );
+    assert.ok(
+      !html.includes("PRIVATE") && !html.includes("secret"),
+      `${path} must not mention secrets`
+    );
+  }
+});
+
+test("homepage and /dpp link to /x402", async () => {
+  const home = await (await get("/")).text();
+  assert.match(home, /href="\/x402"/);
+  const dpp = await (await get("/dpp")).text();
+  assert.match(dpp, /href="\/x402"/);
+});
+
 test("every comparison page renders, including the new /vs/everledger", async () => {
   for (const slug of ["scantrust", "circularise", "vechain", "everledger"]) {
     const res = await get(`/vs/${slug}`);
@@ -185,6 +221,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     );
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

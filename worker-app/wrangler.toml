@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 # for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
 # SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
-# GET /api/x402/health returns 200 with status "not_configured".
+# GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets

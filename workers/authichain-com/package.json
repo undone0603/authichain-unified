@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "AuthiChain.com Cloudflare Worker",
   "scripts": {
-    "deploy": "npx wrangler deploy"
+    "deploy": "npx wrangler deploy",
+    "test": "npx tsx --test src/routing.test.ts && npx vitest run src/x402-docs-page.test.ts src/x402-routes.test.ts src/dpp-routes.test.ts src/protocol-checkout.test.ts"
   },
   "devDependencies": {}
 }

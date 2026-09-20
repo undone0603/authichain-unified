@@ -5,6 +5,7 @@
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleProtocolCheckout } from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { APP_PREFIXES } from "./app-prefixes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
@@ -2276,6 +2277,7 @@ function ecosystemFooter() {
         links: [
           { href: "/contact", label: "Contact" },
           { href: "/digital-product-passport", label: "EU DPP" },
+          { href: "/x402", label: "Agent pay (x402)" },
           { href: "/vs", label: "Compare" },
         ],
       },
@@ -2873,6 +2875,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/subscriptions">Pricing</a>
+      <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
     </div>
   </nav>
@@ -3150,6 +3153,7 @@ export default {
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3173,6 +3177,11 @@ export default {
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    // TODO(wonder): restyle from Wonder artboard tokens once the owner opens
+    // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
+    if (isX402DocsPath(p)) {
+      return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
