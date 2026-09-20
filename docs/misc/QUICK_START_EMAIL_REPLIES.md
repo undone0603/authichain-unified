@@ -68,11 +68,11 @@ Deploy: `git push`
 Waterfall (no new paid spend):
 
 1. **OpenAI `gpt-4-turbo`** when `OPENAI_API_KEY` is set
-2. **Local Ollama** (`POST $OLLAMA_HOST/api/chat`, same ChatOllama host/model as the AgentZ grant handler)
+2. **Local Ollama** only when `OLLAMA_HOST` or `OLLAMA_MODEL` is set (`POST $OLLAMA_HOST/api/chat`, same ChatOllama host/model as the AgentZ grant handler). Not probed on localhost by default — that would stall production inbound.
 3. **Heuristic** keyword rules (conservative — polite "thanks / what's the price?" stays `neutral`)
 4. **Fail-closed `neutral`** if even the heuristic throws
 
-This is the inbound *reply* classifier. Industry AutoFlow (10 verticals + workflows) is a separate path: [`docs/knowledge/AI_AUTOFLOW_STRATEGY.md`](../knowledge/AI_AUTOFLOW_STRATEGY.md) and `shared/industries.ts`. Sales UI: `/dashboard/inbound-replies`.
+This is the inbound _reply_ classifier. Industry AutoFlow (10 verticals + workflows) is a separate path: [`docs/knowledge/AI_AUTOFLOW_STRATEGY.md`](../knowledge/AI_AUTOFLOW_STRATEGY.md) and `shared/industries.ts`. Sales UI: `/dashboard/inbound-replies`.
 
 Webhook side effects (audit):
 

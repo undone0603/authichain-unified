@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   classifyReplyEmail,
   classifyReplyEmailHeuristic,
@@ -7,230 +7,263 @@ import {
   isProbablyLegitimateReply,
   parseSentimentJson,
   resolveReplyClassifierBackend,
-} from './sentiment-classifier';
+} from "./sentiment-classifier";
 
-describe('resolveReplyClassifierBackend', () => {
-  it('selects OpenAI when OPENAI_API_KEY is set', () => {
+describe("resolveReplyClassifierBackend", () => {
+  it("selects OpenAI when OPENAI_API_KEY is set", () => {
     const status = resolveReplyClassifierBackend({
-      OPENAI_API_KEY: 'sk-test',
+      OPENAI_API_KEY: "sk-test",
     });
-    expect(status.primary).toBe('openai');
+    expect(status.primary).toBe("openai");
     expect(status.paidLlmAvailable).toBe(true);
     expect(status.missingSecret).toBeUndefined();
-    expect(status.waterfall[0]).toBe('openai');
+    expect(status.waterfall[0]).toBe("openai");
   });
 
-  it('names OPENAI_API_KEY as the missing paid secret and prefers Ollama', () => {
+  it("names OPENAI_API_KEY as the missing paid secret and prefers Ollama when configured", () => {
     const status = resolveReplyClassifierBackend({
-      OLLAMA_HOST: 'http://127.0.0.1:11434',
-      OLLAMA_MODEL: 'llama3.2',
+      OLLAMA_HOST: "http://127.0.0.1:11434",
+      OLLAMA_MODEL: "llama3.2",
     });
-    expect(status.primary).toBe('ollama');
+    expect(status.primary).toBe("ollama");
     expect(status.paidLlmAvailable).toBe(false);
-    expect(status.missingSecret).toBe('OPENAI_API_KEY');
-    expect(status.waterfall).toEqual(['ollama', 'heuristic', 'neutral_fallback']);
+    expect(status.missingSecret).toBe("OPENAI_API_KEY");
+    expect(status.waterfall).toEqual([
+      "ollama",
+      "heuristic",
+      "neutral_fallback",
+    ]);
+  });
+
+  it("skips probing localhost Ollama unless OLLAMA_HOST or OLLAMA_MODEL is set", () => {
+    const status = resolveReplyClassifierBackend({});
+    expect(status.primary).toBe("heuristic");
+    expect(status.missingSecret).toBe("OPENAI_API_KEY");
+    expect(status.waterfall).toEqual(["heuristic", "neutral_fallback"]);
   });
 });
 
-describe('fail-closed classifier', () => {
-  it('never throws and always returns a valid neutral payload', () => {
-    const result = failClosedNeutral(new Error('OPENAI_API_KEY is not configured'));
-    expect(result.sentiment).toBe('neutral');
+describe("fail-closed classifier", () => {
+  it("never throws and always returns a valid neutral payload", () => {
+    const result = failClosedNeutral(
+      new Error("OPENAI_API_KEY is not configured")
+    );
+    expect(result.sentiment).toBe("neutral");
     expect(result.objectionType).toBeNull();
     expect(result.confidence).toBe(0.3);
-    expect(result.provider).toBe('neutral_fallback');
-    expect(result.reasoning).toContain('OPENAI_API_KEY');
+    expect(result.provider).toBe("neutral_fallback");
+    expect(result.reasoning).toContain("OPENAI_API_KEY");
   });
 
-  it('stays live via heuristic when paid LLM and Ollama are unavailable', async () => {
-    const result = await classifyReplyEmail('thanks, we are interested', 'RE: Proposal', {
-      env: {},
-      fetchImpl: () => {
-        throw new Error('ollama down');
-      },
-      generateOpenAI: async () => {
-        throw new Error('openai should not run');
-      },
-    });
+  it("stays live via heuristic when paid LLM and Ollama are unavailable", async () => {
+    const result = await classifyReplyEmail(
+      "thanks, we are interested",
+      "RE: Proposal",
+      {
+        env: {},
+        fetchImpl: () => {
+          throw new Error("ollama down");
+        },
+        generateOpenAI: async () => {
+          throw new Error("openai should not run");
+        },
+      }
+    );
     // Heuristic still runs after Ollama fails — path stays live.
-    expect(result.provider).toBe('heuristic');
-    expect(result.sentiment).toBe('positive');
+    expect(result.provider).toBe("heuristic");
+    expect(result.sentiment).toBe("positive");
   });
 
-  it('fail-closes to neutral when the heuristic also throws (agentz pattern)', async () => {
-    const result = await classifyReplyEmail('body', 'subject', {
+  it("fail-closes to neutral when the heuristic also throws (agentz pattern)", async () => {
+    const result = await classifyReplyEmail("body", "subject", {
       env: {},
       fetchImpl: async () => {
-        throw new Error('offline');
+        throw new Error("offline");
       },
       heuristic: () => {
-        throw new Error('heuristic crashed');
+        throw new Error("heuristic crashed");
       },
     });
-    expect(result.provider).toBe('neutral_fallback');
-    expect(result.sentiment).toBe('neutral');
-    expect(result.reasoning).toContain('heuristic crashed');
+    expect(result.provider).toBe("neutral_fallback");
+    expect(result.sentiment).toBe("neutral");
+    expect(result.reasoning).toContain("heuristic crashed");
   });
 });
 
-describe('classifyReplyEmailHeuristic', () => {
-  it('classifies explicit interest as positive', () => {
+describe("classifyReplyEmailHeuristic", () => {
+  it("classifies explicit interest as positive", () => {
     const result = classifyReplyEmailHeuristic(
-      'Thanks — we are very interested and would like to schedule a demo.',
-      'RE: Proposal',
+      "Thanks — we are very interested and would like to schedule a demo.",
+      "RE: Proposal"
     );
-    expect(result.sentiment).toBe('positive');
-    expect(result.provider).toBe('heuristic');
+    expect(result.sentiment).toBe("positive");
+    expect(result.provider).toBe("heuristic");
   });
 
-  it('classifies opt-out as negative, even if it starts with thanks', () => {
+  it("classifies opt-out as negative, even if it starts with thanks", () => {
     const result = classifyReplyEmailHeuristic(
-      'Thanks but we are not interested. Please remove me.',
-      'RE: Proposal',
+      "Thanks but we are not interested. Please remove me.",
+      "RE: Proposal"
     );
-    expect(result.sentiment).toBe('negative');
+    expect(result.sentiment).toBe("negative");
   });
 
-  it('classifies a budget blocker as objection/budget', () => {
+  it("classifies a budget blocker as objection/budget", () => {
     const result = classifyReplyEmailHeuristic(
-      'This is too expensive for us this year.',
-      'RE: Proposal',
+      "This is too expensive for us this year.",
+      "RE: Proposal"
     );
-    expect(result.sentiment).toBe('objection');
-    expect(result.objectionType).toBe('budget');
+    expect(result.sentiment).toBe("objection");
+    expect(result.objectionType).toBe("budget");
   });
 
-  it('stays fail-closed (neutral) on polite or info-seeking copy', () => {
+  it("stays fail-closed (neutral) on polite or info-seeking copy", () => {
     const result = classifyReplyEmailHeuristic(
-      'Thanks for sending this over. What is the price?',
-      'RE: Proposal',
+      "Thanks for sending this over. What is the price?",
+      "RE: Proposal"
     );
-    expect(result.sentiment).toBe('neutral');
-    expect(result.provider).toBe('heuristic');
+    expect(result.sentiment).toBe("neutral");
+    expect(result.provider).toBe("heuristic");
   });
 });
 
-describe('parseSentimentJson', () => {
-  it('accepts a bare JSON object', () => {
+describe("parseSentimentJson", () => {
+  it("accepts a bare JSON object", () => {
     const result = parseSentimentJson(
       JSON.stringify({
-        sentiment: 'objection',
-        objectionType: 'timeline',
-        objectionDetails: 'next quarter',
+        sentiment: "objection",
+        objectionType: "timeline",
+        objectionDetails: "next quarter",
         confidence: 0.9,
-        reasoning: 'Asked to wait.',
+        reasoning: "Asked to wait.",
       }),
-      'openai',
+      "openai"
     );
-    expect(result.sentiment).toBe('objection');
-    expect(result.objectionType).toBe('timeline');
-    expect(result.provider).toBe('openai');
+    expect(result.sentiment).toBe("objection");
+    expect(result.objectionType).toBe("timeline");
+    expect(result.provider).toBe("openai");
   });
 
-  it('strips markdown fences', () => {
+  it("strips markdown fences", () => {
     const result = parseSentimentJson(
       '```json\n{"sentiment":"positive","objectionType":null,"confidence":0.8,"reasoning":"ok"}\n```',
-      'ollama',
+      "ollama"
     );
-    expect(result.sentiment).toBe('positive');
-    expect(result.provider).toBe('ollama');
+    expect(result.sentiment).toBe("positive");
+    expect(result.provider).toBe("ollama");
   });
 
-  it('rejects an unknown sentiment so the caller can fail closed', () => {
-    expect(() => parseSentimentJson('{"sentiment":"excited"}', 'openai')).toThrow(
-      /Invalid sentiment/,
-    );
+  it("rejects an unknown sentiment so the caller can fail closed", () => {
+    expect(() =>
+      parseSentimentJson('{"sentiment":"excited"}', "openai")
+    ).toThrow(/Invalid sentiment/);
   });
 });
 
-describe('classifyReplyEmail waterfall', () => {
+describe("classifyReplyEmail waterfall", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('uses OpenAI when the key is present and the completion is valid', async () => {
-    const result = await classifyReplyEmail('body', 'subject', {
-      env: { OPENAI_API_KEY: 'sk-test' },
+  it("uses OpenAI when the key is present and the completion is valid", async () => {
+    const result = await classifyReplyEmail("body", "subject", {
+      env: { OPENAI_API_KEY: "sk-test" },
       generateOpenAI: async () =>
         JSON.stringify({
-          sentiment: 'positive',
+          sentiment: "positive",
           objectionType: null,
           confidence: 0.91,
-          reasoning: 'Ready to proceed.',
+          reasoning: "Ready to proceed.",
         }),
     });
-    expect(result.provider).toBe('openai');
-    expect(result.sentiment).toBe('positive');
+    expect(result.provider).toBe("openai");
+    expect(result.sentiment).toBe("positive");
     expect(result.confidence).toBeCloseTo(0.91);
   });
 
-  it('falls through to Ollama when OpenAI is unset', async () => {
+  it("falls through to Ollama when OpenAI is unset", async () => {
     const fetchImpl: typeof fetch = async () =>
       new Response(
         JSON.stringify({
           message: {
             content: JSON.stringify({
-              sentiment: 'objection',
-              objectionType: 'decision_maker',
-              objectionDetails: 'needs CFO',
+              sentiment: "objection",
+              objectionType: "decision_maker",
+              objectionDetails: "needs CFO",
               confidence: 0.7,
-              reasoning: 'Needs sign-off.',
+              reasoning: "Needs sign-off.",
             }),
           },
         }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
+        { status: 200, headers: { "Content-Type": "application/json" } }
       );
 
-    const result = await classifyReplyEmail('Need to run this by our CFO', 'RE: Proposal', {
-      env: { OLLAMA_HOST: 'http://127.0.0.1:11434' },
-      fetchImpl,
-    });
-    expect(result.provider).toBe('ollama');
-    expect(result.sentiment).toBe('objection');
-    expect(result.objectionType).toBe('decision_maker');
+    const result = await classifyReplyEmail(
+      "Need to run this by our CFO",
+      "RE: Proposal",
+      {
+        env: { OLLAMA_HOST: "http://127.0.0.1:11434" },
+        fetchImpl,
+      }
+    );
+    expect(result.provider).toBe("ollama");
+    expect(result.sentiment).toBe("objection");
+    expect(result.objectionType).toBe("decision_maker");
   });
 
-  it('does not call OpenAI when OPENAI_API_KEY is missing', async () => {
+  it("does not call OpenAI or Ollama when neither is configured", async () => {
     const generateOpenAI = vi.fn(async () => {
-      throw new Error('should not be called');
+      throw new Error("should not be called");
     });
-    const result = await classifyReplyEmail('not interested, unsubscribe', 'RE: Proposal', {
-      env: {},
-      generateOpenAI,
-      fetchImpl: async () => {
-        throw new Error('ollama offline');
-      },
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("should not probe ollama");
     });
+    const result = await classifyReplyEmail(
+      "not interested, unsubscribe",
+      "RE: Proposal",
+      {
+        env: {},
+        generateOpenAI,
+        fetchImpl,
+      }
+    );
     expect(generateOpenAI).not.toHaveBeenCalled();
-    expect(result.provider).toBe('heuristic');
-    expect(result.sentiment).toBe('negative');
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.provider).toBe("heuristic");
+    expect(result.sentiment).toBe("negative");
   });
 });
 
-describe('isProbablyLegitimateReply', () => {
-  it('accepts a real reply', () => {
-    expect(isProbablyLegitimateReply('RE: Proposal', 'We are interested.')).toBe(true);
+describe("isProbablyLegitimateReply", () => {
+  it("accepts a real reply", () => {
+    expect(
+      isProbablyLegitimateReply("RE: Proposal", "We are interested.")
+    ).toBe(true);
   });
 
-  it('rejects out-of-office and bounces', () => {
-    expect(isProbablyLegitimateReply('Out of Office', 'I am currently out')).toBe(false);
-    expect(isProbablyLegitimateReply('Delivery failed', 'Mail delivery failed')).toBe(false);
+  it("rejects out-of-office and bounces", () => {
+    expect(
+      isProbablyLegitimateReply("Out of Office", "I am currently out")
+    ).toBe(false);
+    expect(
+      isProbablyLegitimateReply("Delivery failed", "Mail delivery failed")
+    ).toBe(false);
   });
 
-  it('rejects an empty body', () => {
-    expect(isProbablyLegitimateReply('RE: Proposal', '  ')).toBe(false);
+  it("rejects an empty body", () => {
+    expect(isProbablyLegitimateReply("RE: Proposal", "  ")).toBe(false);
   });
 });
 
-describe('inboundReplyAction', () => {
-  it('routes positive/objection with a lead to nurture', () => {
-    expect(inboundReplyAction('positive', 12)).toBe('nurture');
-    expect(inboundReplyAction('objection', 12)).toBe('nurture');
+describe("inboundReplyAction", () => {
+  it("routes positive/objection with a lead to nurture", () => {
+    expect(inboundReplyAction("positive", 12)).toBe("nurture");
+    expect(inboundReplyAction("objection", 12)).toBe("nurture");
   });
 
-  it('fail-closes unmatched or lukewarm replies to manual review', () => {
-    expect(inboundReplyAction('positive', null)).toBe('manual_review');
-    expect(inboundReplyAction('neutral', 12)).toBe('manual_review');
-    expect(inboundReplyAction('negative', 12)).toBe('manual_review');
+  it("fail-closes unmatched or lukewarm replies to manual review", () => {
+    expect(inboundReplyAction("positive", null)).toBe("manual_review");
+    expect(inboundReplyAction("neutral", 12)).toBe("manual_review");
+    expect(inboundReplyAction("negative", 12)).toBe("manual_review");
   });
 });

@@ -1,23 +1,28 @@
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 
-export const SENTIMENTS = ['positive', 'neutral', 'negative', 'objection'] as const;
+export const SENTIMENTS = [
+  "positive",
+  "neutral",
+  "negative",
+  "objection",
+] as const;
 export type Sentiment = (typeof SENTIMENTS)[number];
 
 export const OBJECTION_TYPES = [
-  'budget',
-  'timeline',
-  'competitor',
-  'decision_maker',
-  'other',
+  "budget",
+  "timeline",
+  "competitor",
+  "decision_maker",
+  "other",
 ] as const;
 export type ObjectionType = (typeof OBJECTION_TYPES)[number];
 
 export const CLASSIFIER_PROVIDERS = [
-  'openai',
-  'ollama',
-  'heuristic',
-  'neutral_fallback',
+  "openai",
+  "ollama",
+  "heuristic",
+  "neutral_fallback",
 ] as const;
 export type ClassifierProvider = (typeof CLASSIFIER_PROVIDERS)[number];
 
@@ -32,9 +37,9 @@ export interface SentimentResult {
 
 export interface ClassifierBackendStatus {
   /** First backend the waterfall will attempt. */
-  primary: 'openai' | 'ollama' | 'heuristic';
+  primary: "openai" | "ollama" | "heuristic";
   /** Paid LLM secret that is absent. Unset when OpenAI can run. */
-  missingSecret?: 'OPENAI_API_KEY';
+  missingSecret?: "OPENAI_API_KEY";
   paidLlmAvailable: boolean;
   ollamaHost: string;
   ollamaModel: string;
@@ -52,8 +57,8 @@ export interface ClassifyReplyDeps {
   heuristic?: (emailBody: string, emailSubject: string) => SentimentResult;
 }
 
-const DEFAULT_OLLAMA_HOST = 'http://127.0.0.1:11434';
-const DEFAULT_OLLAMA_MODEL = 'llama3.2';
+const DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434";
+const DEFAULT_OLLAMA_MODEL = "llama3.2";
 const OLLAMA_TIMEOUT_MS = 2500;
 
 const CLASSIFY_PROMPT_PREAMBLE = `You are an expert sales analyst. Classify this customer reply to a business proposal.`;
@@ -61,43 +66,71 @@ const CLASSIFY_PROMPT_PREAMBLE = `You are an expert sales analyst. Classify this
 export function failClosedNeutral(reason: unknown): SentimentResult {
   const message = reason instanceof Error ? reason.message : String(reason);
   return {
-    sentiment: 'neutral',
+    sentiment: "neutral",
     objectionType: null,
     objectionDetails: null,
     confidence: 0.3,
     reasoning: `Classification failed, defaulting to neutral: ${message}`,
-    provider: 'neutral_fallback',
+    provider: "neutral_fallback",
   };
+}
+
+export function ollamaIsConfigured(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return Boolean(env.OLLAMA_HOST?.trim() || env.OLLAMA_MODEL?.trim());
 }
 
 export function resolveReplyClassifierBackend(
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = process.env
 ): ClassifierBackendStatus {
-  const ollamaHost = (env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST).replace(/\/$/, '');
+  const ollamaHost = (env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST).replace(
+    /\/$/,
+    ""
+  );
   const ollamaModel = env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL;
   const paidLlmAvailable = Boolean(env.OPENAI_API_KEY?.trim());
+  const localLlmConfigured = ollamaIsConfigured(env);
 
   if (paidLlmAvailable) {
     return {
-      primary: 'openai',
+      primary: "openai",
       paidLlmAvailable: true,
       ollamaHost,
       ollamaModel,
-      waterfall: ['openai', 'ollama', 'heuristic', 'neutral_fallback'],
+      waterfall: localLlmConfigured
+        ? ["openai", "ollama", "heuristic", "neutral_fallback"]
+        : ["openai", "heuristic", "neutral_fallback"],
     };
   }
 
+  if (localLlmConfigured) {
+    return {
+      primary: "ollama",
+      missingSecret: "OPENAI_API_KEY",
+      paidLlmAvailable: false,
+      ollamaHost,
+      ollamaModel,
+      waterfall: ["ollama", "heuristic", "neutral_fallback"],
+    };
+  }
+
+  // Do not probe 127.0.0.1:11434 on Vercel / production unless an operator
+  // opted in with OLLAMA_HOST or OLLAMA_MODEL. That hang would delay inbound.
   return {
-    primary: 'ollama',
-    missingSecret: 'OPENAI_API_KEY',
+    primary: "heuristic",
+    missingSecret: "OPENAI_API_KEY",
     paidLlmAvailable: false,
     ollamaHost,
     ollamaModel,
-    waterfall: ['ollama', 'heuristic', 'neutral_fallback'],
+    waterfall: ["heuristic", "neutral_fallback"],
   };
 }
 
-export function buildClassifyPrompt(emailBody: string, emailSubject: string): string {
+export function buildClassifyPrompt(
+  emailBody: string,
+  emailSubject: string
+): string {
   return `${CLASSIFY_PROMPT_PREAMBLE}
 
 Email Subject: ${emailSubject}
@@ -117,22 +150,25 @@ Return ONLY a valid JSON object, no markdown or extra text.`;
 
 export function parseSentimentPayload(
   raw: unknown,
-  provider: Exclude<ClassifierProvider, 'neutral_fallback'>,
+  provider: Exclude<ClassifierProvider, "neutral_fallback">
 ): SentimentResult {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('Classifier payload is not an object');
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Classifier payload is not an object");
   }
 
   const result = raw as Record<string, unknown>;
   const sentiment = result.sentiment;
-  if (typeof sentiment !== 'string' || !SENTIMENTS.includes(sentiment as Sentiment)) {
+  if (
+    typeof sentiment !== "string" ||
+    !SENTIMENTS.includes(sentiment as Sentiment)
+  ) {
     throw new Error(`Invalid sentiment: ${String(sentiment)}`);
   }
 
   let objectionType: ObjectionType | null = null;
-  if (sentiment === 'objection' && result.objectionType) {
+  if (sentiment === "objection" && result.objectionType) {
     if (
-      typeof result.objectionType !== 'string' ||
+      typeof result.objectionType !== "string" ||
       !OBJECTION_TYPES.includes(result.objectionType as ObjectionType)
     ) {
       throw new Error(`Invalid objectionType: ${String(result.objectionType)}`);
@@ -144,19 +180,21 @@ export function parseSentimentPayload(
     sentiment: sentiment as Sentiment,
     objectionType,
     objectionDetails:
-      typeof result.objectionDetails === 'string' ? result.objectionDetails : null,
+      typeof result.objectionDetails === "string"
+        ? result.objectionDetails
+        : null,
     confidence: Math.max(0, Math.min(1, Number(result.confidence) || 0.5)),
     reasoning:
-      typeof result.reasoning === 'string' && result.reasoning.trim()
+      typeof result.reasoning === "string" && result.reasoning.trim()
         ? result.reasoning
-        : 'Classification completed',
+        : "Classification completed",
     provider,
   };
 }
 
 export function parseSentimentJson(
   text: string,
-  provider: Exclude<ClassifierProvider, 'neutral_fallback'>,
+  provider: Exclude<ClassifierProvider, "neutral_fallback">
 ): SentimentResult {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -170,7 +208,7 @@ export function parseSentimentJson(
  */
 export function classifyReplyEmailHeuristic(
   emailBody: string,
-  emailSubject: string,
+  emailSubject: string
 ): SentimentResult {
   const text = `${emailSubject}\n${emailBody}`.toLowerCase();
 
@@ -188,50 +226,54 @@ export function classifyReplyEmailHeuristic(
   ];
   if (negativePatterns.some(pattern => pattern.test(text))) {
     return {
-      sentiment: 'negative',
+      sentiment: "negative",
       objectionType: null,
       objectionDetails: null,
       confidence: 0.62,
-      reasoning: 'Heuristic: explicit rejection or opt-out language.',
-      provider: 'heuristic',
+      reasoning: "Heuristic: explicit rejection or opt-out language.",
+      provider: "heuristic",
     };
   }
 
-  const objections: Array<{ type: ObjectionType; pattern: RegExp; details: string }> = [
+  const objections: Array<{
+    type: ObjectionType;
+    pattern: RegExp;
+    details: string;
+  }> = [
     {
-      type: 'budget',
+      type: "budget",
       pattern:
         /\b(too expensive|over budget|can'?t afford|no budget|cost[- ]prohibitive|price is (too )?(high|steep))\b/,
-      details: 'Budget or price blocker',
+      details: "Budget or price blocker",
     },
     {
-      type: 'timeline',
+      type: "timeline",
       pattern:
         /\b(next quarter|next year|not the right time|too soon|later this year|revisit in|timing (is|isn'?t))\b/,
-      details: 'Timing / later-date blocker',
+      details: "Timing / later-date blocker",
     },
     {
-      type: 'competitor',
+      type: "competitor",
       pattern:
         /\b(already using|already have a (vendor|provider|solution)|went with|chose another|another vendor)\b/,
-      details: 'Incumbent vendor or competitor',
+      details: "Incumbent vendor or competitor",
     },
     {
-      type: 'decision_maker',
+      type: "decision_maker",
       pattern:
         /\b(run this by|talk to my (boss|cto|ceo|cfo|board|committee)|not my decision|need (sign[- ]?off|approval))\b/,
-      details: 'Needs another decision maker',
+      details: "Needs another decision maker",
     },
   ];
   for (const objection of objections) {
     if (objection.pattern.test(text)) {
       return {
-        sentiment: 'objection',
+        sentiment: "objection",
         objectionType: objection.type,
         objectionDetails: objection.details,
         confidence: 0.58,
         reasoning: `Heuristic: ${objection.details.toLowerCase()} language.`,
-        provider: 'heuristic',
+        provider: "heuristic",
       };
     }
   }
@@ -247,58 +289,58 @@ export function classifyReplyEmailHeuristic(
   ];
   if (positivePatterns.some(pattern => pattern.test(text))) {
     return {
-      sentiment: 'positive',
+      sentiment: "positive",
       objectionType: null,
       objectionDetails: null,
       confidence: 0.6,
-      reasoning: 'Heuristic: explicit interest or next-step language.',
-      provider: 'heuristic',
+      reasoning: "Heuristic: explicit interest or next-step language.",
+      provider: "heuristic",
     };
   }
 
   return {
-    sentiment: 'neutral',
+    sentiment: "neutral",
     objectionType: null,
     objectionDetails: null,
     confidence: 0.4,
-    reasoning: 'Heuristic: no strong interest, rejection, or objection signal.',
-    provider: 'heuristic',
+    reasoning: "Heuristic: no strong interest, rejection, or objection signal.",
+    provider: "heuristic",
   };
 }
 
 async function classifyWithOpenAI(
   prompt: string,
-  generateOpenAI?: (prompt: string) => Promise<string>,
+  generateOpenAI?: (prompt: string) => Promise<string>
 ): Promise<SentimentResult> {
   const text = generateOpenAI
     ? await generateOpenAI(prompt)
     : (
         await generateText({
-          model: openai('gpt-4-turbo'),
+          model: openai("gpt-4-turbo"),
           prompt,
           temperature: 0.3,
           maxOutputTokens: 500,
         })
       ).text;
-  return parseSentimentJson(text, 'openai');
+  return parseSentimentJson(text, "openai");
 }
 
 async function classifyWithOllama(
   prompt: string,
   host: string,
   model: string,
-  fetchImpl: typeof fetch,
+  fetchImpl: typeof fetch
 ): Promise<SentimentResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
   try {
     const response = await fetchImpl(`${host}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         stream: false,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: "user", content: prompt }],
         options: { temperature: 0.3, num_predict: 250 },
       }),
       signal: controller.signal,
@@ -310,11 +352,11 @@ async function classifyWithOllama(
       message?: { content?: string };
       response?: string;
     };
-    const text = data.message?.content ?? data.response ?? '';
+    const text = data.message?.content ?? data.response ?? "";
     if (!text.trim()) {
-      throw new Error('Ollama returned an empty completion');
+      throw new Error("Ollama returned an empty completion");
     }
-    return parseSentimentJson(text, 'ollama');
+    return parseSentimentJson(text, "ollama");
   } finally {
     clearTimeout(timer);
   }
@@ -331,7 +373,7 @@ async function classifyWithOllama(
 export async function classifyReplyEmail(
   emailBody: string,
   emailSubject: string,
-  deps: ClassifyReplyDeps = {},
+  deps: ClassifyReplyDeps = {}
 ): Promise<SentimentResult> {
   const env = deps.env ?? process.env;
   const backend = resolveReplyClassifierBackend(env);
@@ -343,25 +385,33 @@ export async function classifyReplyEmail(
       try {
         return await classifyWithOpenAI(prompt, deps.generateOpenAI);
       } catch (error) {
-        console.warn('OpenAI reply classification failed; trying local fallback', error);
+        console.warn(
+          "OpenAI reply classification failed; trying local fallback",
+          error
+        );
       }
     }
 
-    try {
-      return await classifyWithOllama(
-        prompt,
-        backend.ollamaHost,
-        backend.ollamaModel,
-        fetchImpl,
-      );
-    } catch (error) {
-      console.warn('Ollama reply classification unavailable; using heuristic', error);
+    if (ollamaIsConfigured(env)) {
+      try {
+        return await classifyWithOllama(
+          prompt,
+          backend.ollamaHost,
+          backend.ollamaModel,
+          fetchImpl
+        );
+      } catch (error) {
+        console.warn(
+          "Ollama reply classification unavailable; using heuristic",
+          error
+        );
+      }
     }
 
     const heuristic = deps.heuristic ?? classifyReplyEmailHeuristic;
     return heuristic(emailBody, emailSubject);
   } catch (error) {
-    console.error('Sentiment classification error:', error);
+    console.error("Sentiment classification error:", error);
     return failClosedNeutral(error);
   }
 }
@@ -370,7 +420,10 @@ export async function classifyReplyEmail(
  * Lightweight helper to detect if an email is likely a reply (vs bounce/OOO).
  * Returns true if email should be processed as a legitimate reply.
  */
-export function isProbablyLegitimateReply(subject: string, body: string): boolean {
+export function isProbablyLegitimateReply(
+  subject: string,
+  body: string
+): boolean {
   const subject_lower = subject.toLowerCase();
   const body_lower = body.toLowerCase();
 
@@ -383,14 +436,27 @@ export function isProbablyLegitimateReply(subject: string, body: string): boolea
     /i am currently out/i,
   ];
 
-  if (autoReplyPatterns.some(pattern => subject_lower.match(pattern) || body_lower.match(pattern))) {
+  if (
+    autoReplyPatterns.some(
+      pattern => subject_lower.match(pattern) || body_lower.match(pattern)
+    )
+  ) {
     return false;
   }
 
   // Filter out bounces
-  const bouncePatterns = [/delivery failed/i, /undeliverable/i, /mail delivery failed/i, /bounce/i];
+  const bouncePatterns = [
+    /delivery failed/i,
+    /undeliverable/i,
+    /mail delivery failed/i,
+    /bounce/i,
+  ];
 
-  if (bouncePatterns.some(pattern => subject_lower.match(pattern) || body_lower.match(pattern))) {
+  if (
+    bouncePatterns.some(
+      pattern => subject_lower.match(pattern) || body_lower.match(pattern)
+    )
+  ) {
     return false;
   }
 
@@ -405,9 +471,9 @@ export function isProbablyLegitimateReply(subject: string, body: string): boolea
 /** Nurture cron only auto-sends on positive / objection with a matched lead. */
 export function inboundReplyAction(
   sentiment: Sentiment,
-  leadId: number | null,
-): 'nurture' | 'manual_review' {
-  if (!leadId) return 'manual_review';
-  if (sentiment === 'positive' || sentiment === 'objection') return 'nurture';
-  return 'manual_review';
+  leadId: number | null
+): "nurture" | "manual_review" {
+  if (!leadId) return "manual_review";
+  if (sentiment === "positive" || sentiment === "objection") return "nurture";
+  return "manual_review";
 }

@@ -11,12 +11,15 @@ Automatically captures replies to `proposals@authichain.com`, classifies sentime
 ## 5-Minute Setup
 
 ### 1. Database Migration (1 min)
+
 ```bash
 supabase db push
 ```
+
 Creates `inbound_replies` and `reply_sequences` tables.
 
 ### 2. Resend Route (2 min)
+
 1. Go to [Resend Dashboard](https://resend.com/domains)
 2. Select `authichain.com`
 3. **Inbound Routes** → Create new route
@@ -25,7 +28,9 @@ Creates `inbound_replies` and `reply_sequences` tables.
 6. Save & copy the webhook secret
 
 ### 3. Environment Variables (1 min)
+
 Add to `.env.local`:
+
 ```
 RESEND_WEBHOOK_SECRET=<from Resend dashboard>
 NURTURE_EMAIL_FROM=proposals@authichain.com
@@ -38,13 +43,17 @@ CRON_SECRET=<generate with: node -e "console.log(require('crypto').randomBytes(3
 ```
 
 ### 4. Schedule Cron Job (1 min)
+
 Add to `vercel.json`:
+
 ```json
 {
-  "crons": [{
-    "path": "/api/cron/nurture-replies",
-    "schedule": "0 */2 * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/nurture-replies",
+      "schedule": "0 */2 * * *"
+    }
+  ]
 }
 ```
 
@@ -59,11 +68,11 @@ Deploy: `git push`
 Waterfall (no new paid spend):
 
 1. **OpenAI `gpt-4-turbo`** when `OPENAI_API_KEY` is set
-2. **Local Ollama** (`POST $OLLAMA_HOST/api/chat`, same ChatOllama host/model as the AgentZ grant handler)
+2. **Local Ollama** only when `OLLAMA_HOST` or `OLLAMA_MODEL` is set (`POST $OLLAMA_HOST/api/chat`, same ChatOllama host/model as the AgentZ grant handler). Not probed on localhost by default — that would stall production inbound.
 3. **Heuristic** keyword rules (conservative — polite "thanks / what's the price?" stays `neutral`)
 4. **Fail-closed `neutral`** if even the heuristic throws
 
-This is the inbound *reply* classifier. Industry AutoFlow (10 verticals + workflows) is a separate path: [`docs/knowledge/AI_AUTOFLOW_STRATEGY.md`](../knowledge/AI_AUTOFLOW_STRATEGY.md) and `shared/industries.ts`. Sales UI: `/dashboard/inbound-replies`.
+This is the inbound _reply_ classifier. Industry AutoFlow (10 verticals + workflows) is a separate path: [`docs/knowledge/AI_AUTOFLOW_STRATEGY.md`](../knowledge/AI_AUTOFLOW_STRATEGY.md) and `shared/industries.ts`. Sales UI: `/dashboard/inbound-replies`.
 
 Webhook side effects (audit):
 
@@ -102,6 +111,7 @@ curl -X POST http://localhost:3000/api/webhooks/resend-inbound \
 Expect `201` with `sentiment`, `action` (`nurture` or `manual_review`), and `classifier.provider` (`openai` | `ollama` | `heuristic` | `neutral_fallback`).
 
 Check database:
+
 ```sql
 SELECT sentiment, confidence, metadata->>'classifierProvider' AS provider
 FROM inbound_replies
@@ -120,13 +130,16 @@ pnpm exec vitest run src/lib/sentiment-classifier.test.ts
 ## Use It
 
 ### Sales Team Dashboard
+
 - URL: `/dashboard/inbound-replies`
 - View all incoming replies
 - Filter by sentiment/status
 - Mark as "Contacted" or "Deal Won"
 
 ### Update Proposal Template
+
 When sending proposals, use:
+
 ```
 From: proposals@authichain.com
 Subject: "Proposal: {Solution} for {Company}"
