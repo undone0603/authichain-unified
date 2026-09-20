@@ -103,7 +103,7 @@ test("query strings survive the hop", async () => {
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {
-    for (const path of ["/", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/authichain2026indexnow.txt"]) {
+    for (const path of ["/", "/pricing", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/authichain2026indexnow.txt"]) {
       f.calls.length = 0;
       const res = await get(path);
       assert.equal(res.status, 200, path);
@@ -182,6 +182,24 @@ test("the sitemap advertises the genetics library", async () => {
   const xml = await res.text();
   assert.ok(xml.includes("/genetics/mendo-love-farms"));
   assert.ok(xml.includes("/onboard"));
+  assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
+});
+
+test("/pricing is a real catalogue page, not a 404", async () => {
+  const f = stubFetch();
+  try {
+    const res = await get("/pricing");
+    assert.equal(res.status, 200);
+    assert.notEqual(res.headers.get("x-served-by"), "strainchain-io-proxy");
+    assert.equal(f.calls.length, 0, "/pricing must not be proxied");
+    const html = await res.text();
+    assert.match(html, /<title>Pricing — StrainChain<\/title>/);
+    assert.match(html, /https:\/\/buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
+    assert.match(html, /\$199/);
+    assert.match(html, /StrainChain Basic/);
+  } finally {
+    f.restore();
+  }
 });
 
 test("a configured origin with trailing slashes does not double up the path", async () => {
