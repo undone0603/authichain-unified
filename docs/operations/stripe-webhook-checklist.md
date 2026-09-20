@@ -156,7 +156,8 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/webhook` → `worker-app` → `handleStripeWebhook` → `fulfillDppPaidSession`.
 
 - Access grant writes `funnel_events.metadata.loop_stage=payment_succeeded` then `provisioned` (Supabase). It does **not** need `DATABASE_URL` / Drizzle.
-- `authichain-edge-router` hydrates Stripe + Supabase secret **names** only. A missing `DATABASE_URL` must not 400 a paid DPP session (that was the `smoke_check_1789786486` miss).
+- `authichain-edge-router` hydrates Stripe + Supabase secret **names** only. A missing `DATABASE_URL` must not 400 a paid DPP session.
+- Verification on this Worker **must** use `constructEventAsync`. Sync `constructEvent` 400s with `SubtleCryptoProvider cannot be used in a synchronous context` (that blocked Resend of `evt_1UHERP…` / `cs_live_a1y4Tu…`).
 - Do **not** revive `workers/stripe-webhook` or `workers/dpp-fulfillment` for this path.
 - `isDppOffer` matches `metadata.offer=dpp_readiness_2026`, `metadata.plan=dpp_readiness`, or catalog `price_1TwmD8GqTruSqV8TpAF8dfyA` (webhook payloads omit `line_items` unless expanded; checkout now also stamps `metadata.stripe_price_id`).
 
@@ -167,8 +168,8 @@ Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (e
 `smoke_check_1789786486` (`cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS`) is **not** skipped by `isDppOffer` — metadata has `offer` + `plan`. Funnel only has `checkout_started` because `checkout.session.completed` never successfully ran fulfill. Live `stripe_events` was empty even for prior successes (edge never wrote it). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** fulfill filters — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend email noise.
 
 1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
-2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Expect historical **non-2xx** (handler threw on missing `DATABASE_URL` before fulfill).
-3. After this Worker deploys: **Resend** that event. Expect 2xx. Replay is safe — fulfill is idempotent on session id.
+2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Historical non-2xx: first `DATABASE_URL` (fixed), then `SubtleCryptoProvider cannot be used in a synchronous context` until this async verify lands.
+3. After this Worker deploys: **Resend** `evt_1UHERPGqTruSqV8TMtUYKAF0` (or the `cs_live_a1y4Tu…` delivery). Expect 2xx. Replay is safe — fulfill is idempotent on session id.
 4. Confirm Supabase:
    ```sql
    -- delivery visible even if fulfill later throws

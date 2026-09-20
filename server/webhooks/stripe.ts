@@ -22,6 +22,7 @@ import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
 import { sendEmail } from "../email-service";
 import { BRANDS } from "../../shared/brands";
+import { constructStripeEventAsync } from "../../src/lib/stripe-construct-event";
 import {
   checkoutSessionIdFromEvent,
   recordStripeWebhookDelivery,
@@ -267,21 +268,14 @@ export async function handleStripeWebhook(
   // first mismatch (as this used to) meant any brand whose endpoint isn't
   // signed with plain STRIPE_WEBHOOK_SECRET (authichain uses
   // STRIPE_WEBHOOK_AUTHICHAIN_SECRET) would fail verification on every event.
-  let event: Stripe.Event | undefined;
-  let lastError: unknown;
-  for (const secret of candidateSecrets) {
-    try {
-      event = stripe.webhooks.constructEvent(rawBody, sig, secret);
-      break;
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  if (!event) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error("[stripe-webhook] Signature verification failed");
-  }
+  // Must be constructEventAsync: the apex Worker uses SubtleCrypto, and
+  // sync constructEvent() 400s with CryptoProviderOnlySupportsAsyncError.
+  const event = await constructStripeEventAsync(
+    stripe,
+    rawBody,
+    sig,
+    candidateSecrets
+  );
 
   console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
 
