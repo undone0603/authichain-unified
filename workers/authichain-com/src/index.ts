@@ -17,6 +17,10 @@ import {
   renderTrumarkPage,
 } from "./money-surfaces.ts";
 import {
+  isDppManufacturerArticlePath,
+  renderDppManufacturerArticle,
+} from "./dpp-manufacturer-article.ts";
+import {
   listMilestones,
   milestoneStatus,
   formatMilestoneDate,
@@ -3233,6 +3237,7 @@ export default {
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3248,6 +3253,11 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
     if (pricing) return pricing;
+    if (isDppManufacturerArticlePath(p)) {
+      return new Response(renderDppManufacturerArticle(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       // Was a redirect to the Vercel deployment; the app now lives on this
       // same domain via the APP_WORKER service binding, so redirect same-origin.

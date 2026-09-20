@@ -71,6 +71,7 @@ INDEXNOW_MONEY_URLS = (
     "https://authichain.com/dpp",
     "https://authichain.com/x402",
     "https://authichain.com/onboard",
+    "https://authichain.com/blog/eu-dpp-manufacturer",
     "https://strainchain.io/",
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",

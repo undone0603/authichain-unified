@@ -305,12 +305,28 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
+});
+
+test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {
+  for (const path of ["/blog/eu-dpp-manufacturer", "/blog/eu-dpp-manufacturer/"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /Why AuthiChain is built for the next generation of product trust/);
+    assert.match(html, /href="\/api\/checkout\/dpp"/);
+    assert.match(html, /Start DPP checkout/);
+    assert.doesNotMatch(html, /AuthiChain Inc/i);
+    assert.match(html, /ZACHARY KIETZMAN/);
+  }
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {
