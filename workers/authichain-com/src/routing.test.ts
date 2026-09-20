@@ -250,6 +250,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });

@@ -3180,9 +3180,12 @@ export default {
       const staticUrls = [
         { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
         { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/onboard', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
