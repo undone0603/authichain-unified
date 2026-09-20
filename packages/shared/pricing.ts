@@ -1,16 +1,10 @@
 /**
  * AuthiChain pricing — Stripe plan-detection reference.
  *
- * NOT the source of truth for what anything costs, despite what this file
- * claimed until 2026-09-11. The price IDs below are TEST MODE, and the only
- * consumers are `server/webhooks/stripe-plan-detection.ts` and
- * `scripts/setup-stripe-products.ts`. Live money runs through
- * `src/lib/plans.ts`, which holds the live price IDs and backs /pricing,
- * /api/checkout and the webhook — and the two files disagree on every
- * overlapping figure.
+ * NOT customer-facing. Live money and /pricing use `src/lib/plans.ts`
+ * ($29 Starter, $99 Creator, $299 DPP). The IDs below are TEST MODE.
  *
- * Ground any customer-facing price in `src/lib/plans.ts`. See
- * docs/strategy/strainchain-genetics-passport.md section 3.
+ * Ground any customer-facing price in `src/lib/plans.ts`.
  *
  * Two product clusters reflecting two distinct buyers:
  *   - B2B brand-protection (AuthiChain + StrainChain + GovChain): same SKUs,

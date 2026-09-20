@@ -42,6 +42,9 @@ type Env = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  QRON_WORKER_URL?: string;
+  NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
 };
 
 function hydrateProcessEnv(env?: Env) {
@@ -71,6 +74,12 @@ function hydrateProcessEnv(env?: Env) {
     ["X402_USDC_ASSET", env.X402_USDC_ASSET],
     ["X402_PRICE_USD", env.X402_PRICE_USD],
     ["X402_DAILY_CAP_USD", env.X402_DAILY_CAP_USD],
+    ["QRON_WORKER_URL", env.QRON_WORKER_URL],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", env.NEXT_PUBLIC_SUPABASE_ANON_KEY],
+    [
+      "SUPABASE_ANON_KEY",
+      env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ],
   ];
   for (const [name, value] of copy) {
     // Worker bindings win over any leftover process.env (nodejs_compat
@@ -279,6 +288,85 @@ app.post("/api/checkout", async c => {
       { error: "Failed to start checkout", detail: err?.message },
       500
     );
+  }
+});
+
+// ─── Living QR generate (credits + qron-image-gen) ──────────────────────────
+// Next src/app/api/generate/route.ts is not mounted on this worker. Unregistered
+// POST /api/generate used to fall through to ASSETS ("404 Not Found" text/plain)
+// while GET hit the catch-all JSON 404. Register both methods here so the
+// public /generate surface and studio fetch can call paid credits.
+app.get("/api/generate", async c => {
+  hydrateProcessEnv(c.env);
+  c.header("Cache-Control", "private, no-store");
+  const { generateHealthBody } = await import("../src/lib/generate-api");
+  const supabaseUrl =
+    c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+    c.env?.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const supabaseKey =
+    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return c.json(
+    generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
+      authConfigured: Boolean(supabaseUrl && supabaseKey),
+    })
+  );
+});
+
+app.post("/api/generate", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return c.json({ message: "Invalid JSON." }, 400);
+    }
+    const { handleGeneratePost, proxyQronImageGen, resolveGenerateUserId } =
+      await import("../src/lib/generate-api");
+    const { checkCredit, deductCredit } =
+      await import("../src/lib/business-tier");
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const supabaseKey =
+      c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      c.env?.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      c.env?.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const userId = await resolveGenerateUserId({
+      request: c.req.raw,
+      supabaseUrl,
+      supabaseKey,
+    });
+    const result = await handleGeneratePost({
+      body,
+      userId,
+      checkCredit,
+      deductCredit,
+      generateImage: args =>
+        proxyQronImageGen({
+          targetUrl: args.targetUrl,
+          prompt: args.prompt,
+          style: args.style,
+          workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
+        }),
+    });
+    c.header("Cache-Control", "private, no-store");
+    return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
+  } catch (err: any) {
+    console.error("[generate] Error:", err?.message || err);
+    return c.json({ message: "Generation failed", detail: err?.message }, 500);
   }
 });
 

@@ -98,7 +98,10 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Sitemap: https:\/\/qron.space\/sitemap.xml/);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/qron.space\/sitemap.xml/
+  );
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -107,17 +110,58 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
 test("/generate is proxied to the app, not answered with a 404", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];
-  globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
     const req = input instanceof Request ? input : new Request(input, init);
     calls.push(req);
     return new Response("generate", { status: 200 });
   }) as typeof fetch;
   try {
-    const res = await get("/generate", { APP_ORIGIN: "https://app.example.com" });
+    const res = await get("/generate", {
+      APP_ORIGIN: "https://app.example.com",
+    });
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
     assert.equal(calls.length, 1);
     assert.equal(new URL(calls[0].url).pathname, "/generate");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("POST /api/generate is proxied to the app, not landing HTML 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          targetUrl: "https://example.com",
+          prompt: "neon",
+        }),
+      }),
+      { APP_ORIGIN: "https://app.example.com" }
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/api/generate");
+    assert.equal(calls[0].method, "POST");
   } finally {
     globalThis.fetch = real;
   }

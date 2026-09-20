@@ -1,8 +1,10 @@
 // server/config/stripe.ts
-// Centralized Stripe price ID mapping for all AuthiChain brands and plans.
-// All getPriceId calls resolve from environment variables set at runtime.
+// Env-var B2B/brand plan map (authichain_basic, qron_basic, …).
+// NOT the customer catalogue. Live charges use src/lib/plans.ts
+// ($29 / $99 / $299). getPriceId() reads STRIPE_PRICE_* at runtime and
+// throws if unset — it must not be used to invent a SKU for /pricing.
 
-  import Stripe from "stripe";
+import Stripe from "stripe";
 
 let _stripe: Stripe | null = null;
 

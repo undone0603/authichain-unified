@@ -2116,12 +2116,17 @@ function stripTrailingSlashes(value: string): string {
 
 async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
   const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
-  const proxied = new Request(upstream, {
+  const init: RequestInit = {
     method: request.method,
     headers: request.headers,
-    body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
     redirect: "manual",
-  });
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    init.body = request.body;
+    // Node undici requires duplex when forwarding a streamed body.
+    (init as RequestInit & { duplex: "half" }).duplex = "half";
+  }
+  const proxied = new Request(upstream, init);
   proxied.headers.set("Host", upstream.host);
   proxied.headers.set("X-Forwarded-Host", url.host);
   proxied.headers.set("X-Forwarded-Proto", "https");
@@ -2137,7 +2142,7 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
-    if (/^\/generate(?:\/|$)/.test(url.pathname)) {
+    if (/^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname)) {
       if (!env?.APP_ORIGIN) {
         return Response.json(
           {

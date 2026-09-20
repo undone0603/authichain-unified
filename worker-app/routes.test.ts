@@ -113,6 +113,39 @@ describe("POST /api/checkout", () => {
   });
 });
 
+describe("GET /api/generate", () => {
+  it("returns health JSON instead of a 404", async () => {
+    const res = await app.request("/api/generate");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/json/);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.methods).toContain("POST");
+    expect(body.auth).toBe(false);
+    expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
+      true
+    );
+  });
+});
+
+describe("POST /api/generate", () => {
+  it("returns JSON 401 with credit packs when unauthenticated, not a plain-text 404", async () => {
+    const res = await app.request("/api/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        targetUrl: "https://example.com",
+        prompt: "neon",
+      }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("content-type")).toMatch(/json/);
+    const body = await res.json();
+    expect(body.message).toMatch(/Authentication required/i);
+    expect(Array.isArray(body.packs)).toBe(true);
+  });
+});
+
 describe("GET /api/stripe/webhook", () => {
   it("reports the handler is present without requiring a signature", async () => {
     const res = await app.request("/api/stripe/webhook");

@@ -18,17 +18,18 @@ Never send customers to `*.vercel.app`.
 | Pattern                             | Worker                                                                                                                                                                                                                                       |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/` (landing assets only)           | `authichain-com`                                                                                                                                                                                                                             |
-| `/pricing`                          | `authichain-com` (catalogue from `src/lib/plans.ts`; not the Next.js page)                                                                                                                                                                  |
+| `/pricing`                          | `authichain-com` (catalogue from `src/lib/plans.ts`; not the Next.js page)                                                                                                                                                                   |
 | `/.well-known/jwks.json`            | `authichain-edge-router` via landing `APP_WORKER` proxy                                                                                                                                                                                      |
 | `/verify*`, `/onboard*`, `/anchor*` | `authichain-edge-router` (or service-bind from landing)                                                                                                                                                                                      |
 | `/api/qron-register*`               | `authichain-qron-provenance`                                                                                                                                                                                                                 |
-| `/api/*` (rest)                     | `authichain-api-gateway`                                                                                                                                                                                                                     |
+| `/api/generate*`                    | `authichain-edge-router` (credits + proxy to `qron-image-gen`)                                                                                                                                                                               |
+| `/api/*` (rest on apex)             | `authichain-edge-router` via landing `APP_WORKER` (not the Next.js app; Vercel is gone)                                                                                                                                                      |
 | `api.authichain.com/*`              | `authichain-api-gateway`                                                                                                                                                                                                                     |
 | `dashboard.authichain.com/*`        | `authichain-dashboard`                                                                                                                                                                                                                       |
 | `claw.authichain.com/*`             | `authichain-openclaw`                                                                                                                                                                                                                        |
 | `agentz.authichain.com/*`           | **$0 path:** Cloudflare Tunnel → `127.0.0.1:8000` (`scripts/agentz-tunnel/`). Do **not** attach a Worker route while Tunnel DNS owns the hostname — delete `agentz.authichain.com/*` on `authichain-agentz` or leave that worker undeployed. |
 
-`/dapp` 302s to `/dashboard` on the landing worker (edge-router also serves `/dapp` as the console). `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, `/login`, `/authenticate`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). Money + agent routes: `GET /api/checkout/dpp` (303 Stripe), `GET /pricing` (landing HTML from `listedPlans`), `POST /api/stripe/webhook` (**Stripe Dashboard URL** — live account already points here; do not use retired `/api/webhooks/stripe`), `GET /api/x402` + `/api/x402/health` + `GET /api/v1/agent-verify` (200 **ready** / trustless — answered on **landing** before the APP_WORKER proxy and mounted on the edge router), public docs `GET /x402` (200 HTML), `POST /api/v1/attestation`. `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
+`/dapp` 302s to `/dashboard` on the landing worker (edge-router also serves `/dapp` as the console). `/dashboard`, `/dapp`, `/generate`, `/onboard`, `/verify`, `/login`, `/authenticate`, and `/api/*` must reach `APP_WORKER` (`authichain-edge-router`). Money + agent routes: `GET /api/checkout/dpp` (303 Stripe), `GET /pricing` (landing HTML from `listedPlans`), `POST /api/stripe/webhook` (**Stripe Dashboard URL** — live account already points here; do not use retired `/api/webhooks/stripe`), `GET /api/generate` (200 health) + `POST /api/generate` (401 without session, then credit deduct + proxy to `qron-image-gen`; not the Next.js route and not `authichain-api-gateway`), `GET /api/x402` + `/api/x402/health` + `GET /api/v1/agent-verify` (200 **ready** / trustless — answered on **landing** before the APP_WORKER proxy and mounted on the edge router), public docs `GET /x402` (200 HTML), `POST /api/v1/attestation`. `/dapp*` may stay behind Access. `/verify*` and `/onboard*` must not.
 
 Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED`), do **not** cut `authichain.com/*` to a landing worker that cannot proxy. Prefer specific globs.
 
@@ -46,12 +47,12 @@ Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED
 
 ### qron.space
 
-| Pattern      | Worker                          |
-| ------------ | ------------------------------- |
-| `/`          | `qron-space`                    |
-| `/pricing`   | `qron-space` (same `listedPlans` catalogue) |
-| `/generate*` | app / edge router               |
-| `/api/*`     | rewrite to `api.authichain.com` |
+| Pattern          | Worker                                                   |
+| ---------------- | -------------------------------------------------------- |
+| `/`              | `qron-space`                                             |
+| `/pricing`       | `qron-space` (same `listedPlans` catalogue)              |
+| `/generate*`     | app / edge router                                        |
+| `/api/generate*` | app / edge router (same APP_ORIGIN proxy as `/generate`) |
 
 ### govchain.us
 
@@ -78,6 +79,9 @@ Has **no `[[routes]]`**. Treat as library/stub until a hostname is attached. Do 
 ```
 curl -sI https://authichain.com/verify
 curl -sI https://authichain.com/.well-known/jwks.json
+curl -sI https://authichain.com/generate
+curl -s https://authichain.com/api/generate
+curl -s -X POST https://authichain.com/api/generate -H 'content-type: application/json' -d '{"targetUrl":"https://example.com","prompt":"neon"}'
 curl -sI https://govchain.us/onboard
 curl -sI https://strainchain.io/onboard
 ```

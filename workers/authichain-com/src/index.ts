@@ -2903,7 +2903,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     </a>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
-      <a class="nav-link" href="/subscriptions">Pricing</a>
+      <a class="nav-link" href="/pricing">Pricing</a>
       <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
     </div>
@@ -3205,7 +3205,7 @@ export default {
       return Response.redirect('https://authichain.com/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain.com/subscriptions', 302);
+      return Response.redirect('https://authichain.com/pricing', 302);
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

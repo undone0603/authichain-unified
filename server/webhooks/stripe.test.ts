@@ -75,6 +75,18 @@ vi.mock("../../src/lib/dpp-fulfill-checkout", () => ({
   fulfillDppPaidSession,
 }));
 
+const { provisionPurchase } = vi.hoisted(() => ({
+  provisionPurchase: vi.fn().mockResolvedValue({
+    profileId: "prof_pack",
+    created: false,
+    status: "provisioned",
+  }),
+}));
+
+vi.mock("../../src/lib/provisioning", () => ({
+  provisionPurchase,
+}));
+
 const { recordStripeWebhookDelivery } = vi.hoisted(() => ({
   recordStripeWebhookDelivery: vi.fn().mockResolvedValue({ ok: true }),
 }));
@@ -452,6 +464,31 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     const { handleStripeWebhook } = await import("./stripe.js");
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("provisions live $29/$99 catalogue credits from plans.ts", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_pack", {
+        id: "cs_starter_pack",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        customer: "cus_pack",
+        customer_details: { email: "buyer@example.com" },
+        metadata: { plan: "starter", brand: "authichain" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        plan: "starter",
+        email: "buyer@example.com",
+      })
+    );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
   });
 

@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { STRIPE_PRICE_TO_PLAN } from "../../shared/pricing";
 import { detectPlan } from "./stripe-plan-detection";
+import { planByStripePriceId } from "../../src/lib/plans";
 
 afterEach(() => {
   // Tests mutate the lookup table; reset between tests.
-  for (const k of Object.keys(STRIPE_PRICE_TO_PLAN)) delete STRIPE_PRICE_TO_PLAN[k];
+  for (const k of Object.keys(STRIPE_PRICE_TO_PLAN))
+    delete STRIPE_PRICE_TO_PLAN[k];
 });
 
 describe("detectPlan", () => {
@@ -33,5 +35,15 @@ describe("detectPlan", () => {
     // a QRON checkout as a B2B plan.
     expect(detectPlan("price_qron_studio", 4_900)).toBe("starter"); // amount fallback
     expect(detectPlan("price_contract_setup", 250_000)).toBe("enterprise");
+  });
+
+  it("does not amount-map live plans.ts prices ($29/$99/$299) onto B2B SKUs", () => {
+    const dpp = planByStripePriceId("price_1TwmD8GqTruSqV8TpAF8dfyA");
+    expect(dpp?.id).toBe("dpp_readiness");
+    expect(detectPlan("price_1TwmD8GqTruSqV8TpAF8dfyA", 29_900)).toBe(
+      "starter"
+    );
+    expect(detectPlan("price_1TGAiZGqTruSqV8Tb4ZdCVKr", 9_900)).toBe("starter");
+    expect(detectPlan("price_1TGOM9GqTruSqV8TdV7j3DuL", 2_900)).toBe("starter");
   });
 });
