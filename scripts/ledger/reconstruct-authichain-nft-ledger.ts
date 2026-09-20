@@ -4,10 +4,16 @@ import { writeFile, mkdir } from "node:fs/promises";
 const CONTRACT_ADDRESS = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const DEPLOY_BLOCK = 77535676;
-// polygon-rpc.com does not connect from a GitHub runner — two 60-minute runs
-// were spent in ethers' retry loop against it, reading zero blocks. The
-// workflow default and this one must agree, or a local run targets the dead
-// host while CI does not.
+// publicnode is the default because it has answered consistently. This is a
+// preference, not a verdict on the alternatives: polygon-rpc.com was
+// unreachable from CI across two runs on 2026-09-19 and then served a complete
+// state reconstruction in 3 seconds on 2026-09-20. That was a transient outage,
+// not a property of the endpoint, and an earlier revision of this comment
+// wrongly recorded it as "never connects from a GitHub runner".
+//
+// The lesson worth keeping is the preflight below, not the blocklist: any
+// public endpoint can be down when you reach for it, so fail fast and say which
+// one failed.
 const DEFAULT_RPC = "https://polygon-bor-rpc.publicnode.com";
 const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
 
@@ -242,6 +248,11 @@ const CLUSTER = new Set([
  * one doing real work, because a hung retry loop and a slow scan both present
  * as "step still running". A bounded probe turns that into a named error in
  * seconds.
+ *
+ * This matters more than picking a "good" endpoint: the endpoint that caused
+ * those two runs was working again the next day. Transient outages are the
+ * normal case for public RPCs, so the defence is a fast, named failure rather
+ * than a list of hosts to avoid.
  */
 async function preflight(): Promise<number> {
   const timeoutMs = Number(process.env.AUTHICHAIN_LEDGER_PREFLIGHT_MS ?? 20_000);
