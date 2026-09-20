@@ -83,7 +83,8 @@ jobs:
             "https://qron.space/pricing" \
             "https://qron.space/generate" \
             "https://govchain.us/" \
-            "https://govchain.us/onboard"
+            "https://govchain.us/onboard" \
+            "https://govchain.us/pricing"
           do
             ping_indexnow "$URL"
           done

@@ -49,6 +49,9 @@ workers/qron-space/src/index.ts
 # the image is moved out of source.
 workers/strainchain-io/src/index.ts
 
+# Same giant HTML-template overflow as the other estate landings.
+workers/govchain-us/src/index.ts
+
 # Two ~195k-character base64 JPEG literals (QR_ART, QR_BRAND) inlined as worker
 # assets. Prettier's parser overflows its stack on these, same failure mode as
 # the two files above. Skip until the images move out of source.
