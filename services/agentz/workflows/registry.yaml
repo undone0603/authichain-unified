@@ -233,13 +233,14 @@ workflows:
     handler: handlers.govchain_proposal
     type: api
     estimated_minutes: 15
-    requires: [gemini_api_key]
+    requires: []
     prerequisites: []
     confirm_before_run: false
     description: |
-      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted 
-      government grant opportunity, and uses an LLM to autonomously draft 
-      a Phase 1 proposal, saving the markdown output for review.
+      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted
+      government grant opportunity, and drafts a Phase 1 proposal via local
+      Ollama (llama3.2 / $OLLAMA_MODEL on $OLLAMA_HOST). Dry-run writes the
+      markdown locally and skips the pipeline ledger. No Gemini key required.
 
   - id: authichain_docusign_blitz
     title: "DocuSign Signature Blitz: Dispatch Partnership Agreements"
