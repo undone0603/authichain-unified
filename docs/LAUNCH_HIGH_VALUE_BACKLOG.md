@@ -3,7 +3,7 @@
 **Audience:** coordinator / owner. Execute this list; do not re-audit the monorepo.  
 **Audited:** 2026-09-19 from `main` @ `35322ea3` plus live curls and GitHub Actions API.  
 **Constraint:** $0 until first revenue — no Workers Paid, no Cloudflare Containers spend, no paid SaaS. Do **not** invent `OPENCLAW_GATEWAY_URL`.  
-**This PR:** fail-closed schedules + claw↔AgentZ `mode` contract + real ghost-traffic probes + `/api/funnel` DPP stage aliases.
+**This PR (x402 docs):** public `GET /x402` HTML + catalog/backlog mark the rail **ready** (not `not_configured`). Prior PR: fail-closed schedules + claw↔AgentZ `mode` + ghost-traffic probes + `/api/funnel` aliases.
 
 Secret **names** only. No values.
 
@@ -11,14 +11,14 @@ Secret **names** only. No values.
 
 ## Scores (0–5)
 
-| #   | Surface                           |   Score | One-line                                                                                                                                                                                                                                                                                                  |
-| --- | --------------------------------- | ------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (a) | First Stripe / DPP smoke purchase | **4.0** | `GET /api/checkout/dpp` **303** to `checkout.stripe.com` (live). Smoke buyer owner-attested. Gap: Dashboard must hit `/api/stripe/webhook` (legacy URL 404/410); `/api/funnel` was 404 (fixed in this PR, needs deploy).                                                                                  |
-| (b) | B2B / email live-send reliability | **1.5** | Workflows **active**, `OWNER_LIVE_SEND` attested true, scripts fail-closed. **Guardrail API 404s** on apex; client defaults to `app.authichain.com`. Parallel: _Unblock B2B outreach + guardrail_.                                                                                                        |
-| (c) | AgentZ ↔ claw productionization   | **3.5** | Tunnel `/health` 200 sovereign; claw `agentz_api: configured`. Chat `run` now sends `?mode=` + JSON; FastAPI honors both. Architect / `*email*` stay dry-run unless explicit `live`. Access service token still owner. Do not invent `OPENCLAW_GATEWAY_URL`.                                              |
-| (d) | x402 agent payments               | **3.0** | Edge + landing mount shipped (#1068). Apex `/api/x402/health` answers (200 `not_configured` until facilitator bind). First-dollar agent pay still needs owner `X402_*` secrets.                                                                                                                           |
-| (e) | app.* / brand surfaces            | **4.0** | Four apex + estate `/onboard`/`/generate` **200**. `app.authichain.com/dashboard` **200**. `app.authichain.com/` **302 → /dashboard** (#1068). Vertical `*chain-io` routes mostly commented.                                                                                                              |
-| (f) | Autonomous revenue loops          | **3.5** | Checkout + genesis + `/api/funnel` live. Schedule `DRY_RUN` fail-closed (orchestration + content-publish). Claw/AgentZ mode honored. `ghost-traffic` does real light probes. Funnel accepts `dpp_published` / `verification` / `retained` aliases. Next `/api/dpp/publish` + `/verify` still not on edge. |
+| #   | Surface                           |   Score | One-line                                                                                                                                                                                                                                                                                                           |
+| --- | --------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| (a) | First Stripe / DPP smoke purchase | **4.0** | `GET /api/checkout/dpp` **303** to `checkout.stripe.com` (live). Smoke buyer owner-attested. Gap: Dashboard must hit `/api/stripe/webhook` (legacy URL 404/410); `/api/funnel` was 404 (fixed in this PR, needs deploy).                                                                                           |
+| (b) | B2B / email live-send reliability | **1.5** | Workflows **active**, `OWNER_LIVE_SEND` attested true, scripts fail-closed. **Guardrail API 404s** on apex; client defaults to `app.authichain.com`. Parallel: _Unblock B2B outreach + guardrail_.                                                                                                                 |
+| (c) | AgentZ ↔ claw productionization   | **3.5** | Tunnel `/health` 200 sovereign; claw `agentz_api: configured`. Chat `run` now sends `?mode=` + JSON; FastAPI honors both. Architect / `*email*` stay dry-run unless explicit `live`. Access service token still owner. Do not invent `OPENCLAW_GATEWAY_URL`.                                                       |
+| (d) | x402 agent payments               | **4.5** | **Ready (not `not_configured`).** Live `GET /api/x402/health` → 200 `ready` / `trustless`; payTo `0x5db5…6AA2`, Base 8453, Circle USDC, $0.05/call, PayAI reachable. `POST /api/x402` → 402 + EIP-712 extra. Public docs `https://authichain.com/x402`. Self-pay smokes already succeeded — do not rebind secrets. |
+| (e) | app.* / brand surfaces            | **4.0** | Four apex + estate `/onboard`/`/generate` **200**. `app.authichain.com/dashboard` **200**. `app.authichain.com/` **302 → /dashboard** (#1068). Vertical `*chain-io` routes mostly commented.                                                                                                                       |
+| (f) | Autonomous revenue loops          | **3.5** | Checkout + genesis + `/api/funnel` live. Schedule `DRY_RUN` fail-closed (orchestration + content-publish). Claw/AgentZ mode honored. `ghost-traffic` does real light probes. Funnel accepts `dpp_published` / `verification` / `retained` aliases. Next `/api/dpp/publish` + `/verify` still not on edge.          |
 
 ---
 
@@ -47,6 +47,8 @@ Secret **names** only. No values.
 | Orchestration schedule fail-closed  | #1065 + this PR. Schedule sets `dry_run=true`; never `inputs.dry_run \|\| 'false'`.                                                                                                                                                                                                                                               |
 | `app.authichain.com/` 302           | #1068. Edge-router + landing redirect `/` → `/dashboard`.                                                                                                                                                                                                                                                                         |
 | x402 health mount                   | #1068. `GET /api/x402/health` on landing + edge. Bind workflow #1072/#1074 (ops EOA + PayAI) — do not invent pay-to.                                                                                                                                                                                                              |
+| x402 live rail                      | Health **ready** / trustless; unpaid `POST /api/x402` **402**. PayTo + Circle USDC + PayAI already bound — **do not rebind**. Self-pay smokes succeeded (proof only).                                                                                                                                                             |
+| x402 public docs                    | `GET https://authichain.com/x402` (and `/docs/x402`) → 200 HTML: price, payTo, health URL, unpaid 402 curls. No facilitator URL, no keys.                                                                                                                                                                                         |
 | Claw ↔ AgentZ `mode` contract       | This PR. Query + JSON body; architect/cold-email fail-closed without `live`.                                                                                                                                                                                                                                                      |
 | `content-publish` schedule dry-run  | This PR. Schedule no longer omit-`--dry-run` fail-open. Push-to-main still publishes validated bundles.                                                                                                                                                                                                                           |
 | Ghost-traffic light probes          | This PR. Four estate apexes + `/api/x402/health` + `/api/funnel`. Exit non-zero on unexpected 5xx.                                                                                                                                                                                                                                |
@@ -62,7 +64,7 @@ Live Cursor agents (2026-09-19) on the same repo:
 | ---------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Enable Outbound AgentZ orchestration** | Unfreeze / harden `agentz-orchestration.yml`, claw→AgentZ exec | Schedule `DRY_RUN` + claw `mode` **this PR**. Remaining: Access service token (owner); `AGENTZ_WEBHOOK_SECRET` on edge; do not enable Containers. |
 | **Unblock B2B outreach + guardrail**     | Live send reliability                                          | Guardrail mount + 5xx fallback shipped (#1069 / edge mount). Do not reopen here.                                                                  |
-| **Launch revenue + product path fixes**  | x402 + `app.*` product                                         | x402 health + `app.*` 302 shipped (#1068). Remaining owner: bind `X402_*`.                                                                        |
+| **Launch revenue + product path fixes**  | x402 + `app.*` product                                         | x402 health + `app.*` 302 shipped (#1068). **x402 is ready** — do not rebind `X402_*`. Public docs `/x402`.                                       |
 
 This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic probes, funnel DPP aliases, docs.
 
@@ -76,7 +78,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 | `docs/ROUTING.md` / `ESTATE.md`: `app.authichain.com` 522                | Stale. `/dashboard` is 200; apex `/` is **302 → /dashboard**.                                                                  |
 | `PUBLIC_LOOP_FREEZE.md` “Day 1 enable / stay frozen” tables              | Stale vs GitHub: `b2b-outreach`, `email-proposals`, `marketing-autonomous`, `agentz-orchestration`, `gov-mint` are **active**. |
 | `docs/launch/LAUNCH_CHECKLIST.md` “ALL SYSTEMS ACTIVE”                   | Marketing checklist (SendGrid/Gmail, luxury mission). Not the live DPP loop.                                                   |
-| `docs/superpowers/plans/2026-08-07-x402-agent-verification.md` “unbuilt” | Next paywall exists; **edge mount** is the gap.                                                                                |
+| `docs/superpowers/plans/2026-08-07-x402-agent-verification.md` “unbuilt” | Stale. Paywall + edge mount + facilitator bind are live; health is **ready**. Public surface is `/x402`.                       |
 | `workers/dpp-fulfillment` is the access-grant path                       | Adjunct CRM/email only. Access = edge webhook → `fulfillDppPaidSession`.                                                       |
 | `workers/stripe-webhook` is production DPP                               | Dead for DPP (QRON profile upsert). Canonical is edge `/api/stripe/webhook`.                                                   |
 | Enabling `agentz-orchestration` runs the Python fleet                    | It runs TS scripts + webhook log only (`docs/CAPABILITIES.md`).                                                                |
@@ -93,17 +95,17 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 
 ## GitHub workflow state (2026-09-19 API)
 
-| Workflow                                           | State                 | Note                                                                                                    |
-| -------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| `b2b-outreach`                                     | **active**            | Live send if `OWNER_LIVE_SEND=true` **and** guardrail allows                                            |
-| `email-proposals`                                  | **active**            | Dry-run default on dispatch; schedule follows owner var                                                 |
+| Workflow                                           | State                 | Note                                                                                                                             |
+| -------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `b2b-outreach`                                     | **active**            | Live send if `OWNER_LIVE_SEND=true` **and** guardrail allows                                                                     |
+| `email-proposals`                                  | **active**            | Dry-run default on dispatch; schedule follows owner var                                                                          |
 | `agentz-orchestration`                             | **active**            | Schedule resolve-mode **dry-run** (fail-closed). #1070 job-env parse fix. Live qualify/HubSpot only on dispatch `dry_run=false`. |
-| `gov-mint`                                         | **active**            | Dispatch default `dry_run=true`                                                                         |
-| `gov-engine` / ingest / score / proposals / notify | **disabled_manually** | Leave until sibling order                                                                               |
-| `content-publish`                                  | **disabled_manually** | Schedule now fail-closed dry-run (safe to re-enable). Push-to-main still live.                          |
-| `marketing-autonomous`                             | **active**            | IndexNow + GSC only. Social posting retired to `content-publish`.                                       |
-| `genesis-cron`                                     | **active**            | Safe tick                                                                                               |
-| `content-routine-pr`                               | (see GitHub)          | PR-only inbound                                                                                         |
+| `gov-mint`                                         | **active**            | Dispatch default `dry_run=true`                                                                                                  |
+| `gov-engine` / ingest / score / proposals / notify | **disabled_manually** | Leave until sibling order                                                                                                        |
+| `content-publish`                                  | **disabled_manually** | Schedule now fail-closed dry-run (safe to re-enable). Push-to-main still live.                                                   |
+| `marketing-autonomous`                             | **active**            | IndexNow + GSC only. Social posting retired to `content-publish`.                                                                |
+| `genesis-cron`                                     | **active**            | Safe tick                                                                                                                        |
+| `content-routine-pr`                               | (see GitHub)          | PR-only inbound                                                                                                                  |
 
 ---
 
@@ -154,10 +156,11 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 - **Tests:** `agentz/tests/test_mode_contract.py`, `workers/authichain-openclaw/src/agentz-mode.test.ts`.
 - **Still owner:** Cloudflare Access service token headers on claw if the tunnel policy requires them. Do not invent `OPENCLAW_GATEWAY_URL`. `AGENT_SECRET` default `"authichain-secret"` in `agentz/api/main.py` is still a foot-gun.
 
-### P1-2. x402 on the edge — **mount shipped (#1068); secrets owner**
+### P1-2. x402 on the edge — **ready (not `not_configured`)**
 
-- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402`. Paid `agent-verify` still refuses without facilitator.
-- **Owner:** bind `X402_PAY_TO` + `X402_FACILITATOR_URL` on `authichain-edge-router`.
+- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402` (#1068). Bind #1072/#1074/#1076 (ops EOA + PayAI + Base USDC). Live health: `ready`, `trustless`, $0.05, payTo `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`. Unpaid POST → 402 + EIP-712 extra. Public docs `/x402`.
+- **Do not:** rebind payTo or facilitator; invent a new receiving address; dispatch another live settle unless verifying a deploy regression.
+- **Remaining:** third-party discovery (this docs page) and first _external_ agent payment — not owner plumbing.
 
 ### P1-3. Port `POST /api/dpp/publish` + `/api/dpp/verify` to edge — **partial**
 
@@ -224,8 +227,8 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 **claw / AgentZ:**  
 `AGENTZ_API_URL` (secret-only), `AGENTZ_API_KEY`, `AGENT_SECRET`, optional owner `OPENCLAW_GATEWAY_URL` + `OPENCLAW_API_KEY`. Access service token names if policy requires (owner). Do not invent the gateway URL.
 
-**x402 (when mounting):**  
-`X402_PAY_TO`, `X402_FACILITATOR_URL`.
+**x402 (already bound — do not rebind):**  
+`X402_PAY_TO`, `X402_FACILITATOR_URL`, `X402_USDC_ASSET` on `authichain-com` and `authichain-edge-router`. Names only.
 
 **Do not set:** guessed `GOVCHAIN_NFT_CONTRACT` if `eth_getCode` is empty.
 
@@ -237,7 +240,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 2. **Funnel is mounted.** Re-curl `POST /api/funnel` — expect 400 (bad body) or 201/500 JSON, never 404.
 3. **B2B:** watch one scheduled/dispatch log with `OWNER_LIVE_SEND=true` (guardrail already mounted).
 4. **AgentZ mode + fail-closed schedules shipped (this PR).** Owner: Access service token on claw if policy requires it; bind `AGENTZ_WEBHOOK_SECRET` on edge. Do not enable Containers spend.
-5. _*x402 / app.* mounts shipped._* Owner: bind `X402_*` for first agent payment.
+5. **x402 is ready.** Public docs `/x402`. Do not rebind `X402_*`. First _external_ agent payment is discovery, not owner bind.
 6. **Owner:** `supabase db push` for `20260919*` if not applied; optional sibling `gov-*` enable after mint proof.
 7. **Leave off:** Workers Paid / Containers until a paid DPP or x402 settlement exists. `content-publish` schedule is now fail-closed (safe to re-enable).
 
@@ -249,7 +252,9 @@ curl -s -X POST https://authichain.com/api/stripe/webhook # 400 JSON
 curl -s -X POST https://authichain.com/api/funnel -H 'content-type: application/json' -d '{}'  # 400 after deploy, not 404
 curl -s https://agentz.authichain.com/health              # sovereign / Polygon
 curl -s https://claw.authichain.com/health                # agentz_api configured; gateway not_set OK
-curl -sI https://authichain.com/api/x402/health           # 200 not_configured until X402_* bound
+curl -s https://authichain.com/api/x402/health            # 200 ready / trustless
+curl -sI https://authichain.com/x402                      # 200 HTML docs
+curl -sS -i -X POST https://authichain.com/api/x402 -H 'content-type: application/json' -d '{"sealId":"demo"}'  # 402
 curl -sI https://app.authichain.com/                      # 302 → /dashboard
 curl -sI -X POST https://authichain.com/api/guardrail/check  # mounted (not 404) after B2B agent
 ```
