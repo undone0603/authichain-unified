@@ -211,6 +211,40 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
       "CERT-001"
     );
   });
+
+  it("serves a committed SEO hub before the certificate lookup", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("What a DPP contains");
+    expect(body).toContain("<h2>Get started</h2>");
+    expect(body).toContain('href="https://authichain.com/api/checkout/dpp"');
+    expect(body).toContain('type="application/ld+json"');
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getHyperdriveDb).not.toHaveBeenCalled();
+  });
+
+  it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
+    const res = await app.request(
+      "/p/cannabis-blockchain-provenance",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("What you get");
+    expect(body).toContain(
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(body).toContain('href="https://strainchain.io/pricing"');
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+  });
 });
 
 describe("renderDynamicPage: /verify verification landing", () => {

@@ -47,6 +47,7 @@ import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
+import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -77,8 +78,10 @@ function htmlDocument(opts: {
   description: string;
   canonicalPath: string;
   bodyHtml: string;
+  extraHead?: string;
 }): string {
   const { title, description, canonicalPath, bodyHtml } = opts;
+  const extraHead = opts.extraHead ?? "";
   return (
     "<!doctype html>\n" +
     '<html lang="en">\n' +
@@ -94,6 +97,7 @@ function htmlDocument(opts: {
     '<link rel="canonical" href="' +
     escapeHtml(canonicalPath) +
     '">\n' +
+    extraHead +
     "</head>\n" +
     "<body>\n" +
     bodyHtml +
@@ -101,6 +105,29 @@ function htmlDocument(opts: {
     "</body>\n" +
     "</html>"
   );
+}
+
+function renderSeoHubHtml(page: SeoPage, pathname: string): string {
+  const canonical =
+    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
+  // bodyHtml is committed in content/seo/pages.json and stripped of <script>
+  // at generation (src/lib/seo-pages.test.ts). Same contract as the Next
+  // /p/[serial] page.
+  return htmlDocument({
+    title: page.title,
+    description: page.metaDescription,
+    canonicalPath: canonical,
+    extraHead:
+      '<script type="application/ld+json">' +
+      JSON.stringify(page.jsonLd) +
+      "</script>\n",
+    bodyHtml:
+      "<main>\n<h1>" +
+      escapeHtml(page.h1) +
+      "</h1>\n" +
+      page.bodyHtml +
+      "\n</main>",
+  });
 }
 
 function htmlResponse(
@@ -187,11 +214,9 @@ async function renderShortlink(c: Context): Promise<Response> {
 
 // --- /p/<serial> - product passport ------------------------------------------
 // Source: src/app/p/[serial]/page.tsx. That page treats `serial` as EITHER a
-// committed SEO slug OR a certification serial number. Our schema has no SEO
-// slug table and no `certifications.serial_number` column; the closest
-// analogs are certificates.certificateNumber (server/content-db-helpers.ts's
-// getCertificateByNumber) and products.serialNumber. Try both so a link
-// minted either way resolves.
+// committed SEO slug (content/seo/pages.json) OR a certification serial.
+// Check the slug first — no DB — so organic hubs can convert. Certificate
+// lookup still uses certificates.certificateNumber and products.serialNumber.
 async function findPassportBySerial(
   db: ReturnType<typeof getHyperdriveDb>,
   serial: string
@@ -251,6 +276,11 @@ async function renderProductPassport(c: Context): Promise<Response> {
         ),
         404
       );
+    }
+
+    const seoPage = getSeoPageBySlug(serial);
+    if (seoPage) {
+      return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
     const db = getHyperdriveDb(c.env as any);

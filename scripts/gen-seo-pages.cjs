@@ -2,7 +2,9 @@
  * gen-seo-pages.cjs
  * Deterministically generates the committed programmatic-SEO catalogue
  * (content/seo/pages.json). Re-running is idempotent: hand-authored seed pages
- * are preserved by slug and generated pages are (re)built from the DATA table.
+ * are preserved by slug (bespoke copy is not rewritten) and generated pages
+ * are (re)built from the DATA table. Seeds that lack a Get started block
+ * receive the same live money CTA as generated hubs.
  *
  * Run:  node scripts/gen-seo-pages.cjs
  * CI:   .github/workflows/gen-seo-pages.yml — Friday 09:00 UTC and
@@ -96,6 +98,32 @@ function moneyCtaHtml(brandKey, keyword, brand) {
     `<a href="${primaryHref}">${esc(primaryLabel)}</a>` +
     (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
   return `<h2>Get started</h2><p>${links}. ${esc(brand.price)}</p>`;
+}
+
+function brandKeyForPage(page) {
+  const byName = Object.keys(BRANDS).find((k) => BRANDS[k].name === page.brand);
+  if (byName) return byName;
+  return Object.keys(BRANDS).find((k) => BRANDS[k].domain === page.domain) || null;
+}
+
+/**
+ * Append the same live money CTA used by generated hubs. Never rewrite
+ * bespoke seed copy — insert before FAQ when present, else at the end.
+ * Idempotent: a page that already has <h2>Get started</h2> is left alone.
+ */
+function appendMoneyCtaIfMissing(page) {
+  if (typeof page.bodyHtml !== 'string' || page.bodyHtml.includes('<h2>Get started</h2>')) {
+    return page;
+  }
+  const brandKey = brandKeyForPage(page);
+  if (!brandKey) return page;
+  const cta = moneyCtaHtml(brandKey, page.keyword || '', BRANDS[brandKey]);
+  const faq = page.bodyHtml.indexOf('<h2>FAQ</h2>');
+  const bodyHtml =
+    faq === -1
+      ? page.bodyHtml + cta
+      : page.bodyHtml.slice(0, faq) + cta + page.bodyHtml.slice(faq);
+  return { ...page, bodyHtml };
 }
 
 const slugify = (s) =>
@@ -786,7 +814,9 @@ if (clobberedSeeds.length > 0) {
   );
 }
 
-const seeds = existing.filter((e) => !genSlugs.has(e.slug));
+const seeds = existing
+  .filter((e) => !genSlugs.has(e.slug))
+  .map(appendMoneyCtaIfMissing);
 const unprotectedSeeds = seeds.filter((e) => !PROTECTED_SEED_SLUGS.has(e.slug));
 if (unprotectedSeeds.length > 0) {
   console.warn(
