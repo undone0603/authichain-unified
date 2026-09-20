@@ -1,5 +1,6 @@
 import { Telegram } from '../services/telegram'
 import type { Env } from '../index'
+import { menuButtonPayload, miniAppUrl, webhookUrlFrom } from '../miniapp'
 
 export async function setupWebhook(request: Request, env: Env): Promise<Response> {
   const auth = request.headers.get('Authorization')
@@ -8,7 +9,8 @@ export async function setupWebhook(request: Request, env: Env): Promise<Response
   }
 
   const telegram = new Telegram(env.TELEGRAM_BOT_TOKEN)
-  const webhookUrl = `${env.SITE_URL}/api/telegram/webhook`
+  const webhookUrl = webhookUrlFrom(request, env)
+  const webAppUrl = miniAppUrl(env)
 
   await telegram.call('setWebhook', {
     url: webhookUrl,
@@ -20,15 +22,19 @@ export async function setupWebhook(request: Request, env: Env): Promise<Response
   // Set bot commands so they show up in the Telegram UI
   await telegram.call('setMyCommands', {
     commands: [
-      { command: 'start', description: 'Welcome & getting started' },
-      { command: 'verify', description: 'Verify a product (usage: /verify <TrueMark ID>)' },
+      { command: 'start', description: 'Open StrainChain Passport ($49)' },
+      { command: 'verify', description: 'Verify a product (usage: /verify <TruMark ID>)' },
       { command: 'help', description: 'Show available commands' },
       { command: 'status', description: 'Check bot status' },
     ],
   })
 
+  // Menu Button opens the apex Mini App. BotFather can set the same URL
+  // without this worker if the token is not bound yet.
+  await telegram.call('setChatMenuButton', menuButtonPayload(webAppUrl))
+
   return new Response(
-    JSON.stringify({ ok: true, webhook: webhookUrl }),
+    JSON.stringify({ ok: true, webhook: webhookUrl, miniapp: webAppUrl }),
     { headers: { 'Content-Type': 'application/json' } }
   )
 }

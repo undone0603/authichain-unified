@@ -46,6 +46,7 @@ import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
+import { PAYMENT_LINKS } from "../server/payment-links";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -1213,6 +1214,33 @@ function generatePackLinksHtml(): string {
     .join(" · ");
 }
 
+const QRON_CREDIT_LINKS = [
+  PAYMENT_LINKS.qron.credits50,
+  PAYMENT_LINKS.qron.credits250,
+  PAYMENT_LINKS.qron.credits1000,
+] as const;
+
+function generateCreditLinksHtml(): string {
+  const buttons = QRON_CREDIT_LINKS.map(offer => {
+    return (
+      '<a class="credit-btn" href="' +
+      escapeHtml(offer.url) +
+      '" target="_blank" rel="noopener">Buy ' +
+      escapeHtml(offer.name) +
+      " — " +
+      escapeHtml(offer.price) +
+      "</a>"
+    );
+  }).join("\n");
+  return (
+    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
+    "<p>Need generation credits? Buy a credit pack on the published Stripe Payment Link. These are not Starter or Creator packs.</p>\n" +
+    '<p class="credit-ctas">\n' +
+    buttons +
+    "\n</p>\n"
+  );
+}
+
 function generateFormHtml(error?: string): string {
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
@@ -1235,7 +1263,8 @@ function generateFormHtml(error?: string): string {
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
-      "<p>Need credits? " +
+      generateCreditLinksHtml() +
+      "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
       '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +

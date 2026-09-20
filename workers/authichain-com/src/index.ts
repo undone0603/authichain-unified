@@ -6,6 +6,10 @@ import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleProtocolCheckout } from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
+import {
+  isAuthenticAgenticEconomyPath,
+  renderAuthenticAgenticEconomyPage,
+} from "./authentic-agentic-economy-page";
 import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
@@ -16,6 +20,11 @@ import {
   renderMadeInAmericaPage,
   renderTrumarkPage,
 } from "./money-surfaces.ts";
+import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
+import {
+  isDppManufacturerArticlePath,
+  renderDppManufacturerArticle,
+} from "./dpp-manufacturer-article.ts";
 import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
@@ -74,7 +83,7 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 const BRANDS = {
   authichain: {
     name: 'AuthiChain',
-    tagline: 'The Truth Layer for the Global Economy',
+    tagline: 'The authentic agentic economy',
     primary: '#4F46E5',
     primaryDim: '#4F46E5',
     secondary: '#7C3AED',
@@ -100,15 +109,15 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'Cryptographic provenance for physical products. Start EU DPP Readiness on live Stripe checkout. Issue a seal, bind it to the product, verify from any camera.',
+    'AuthiChain is the authentic agentic economy — signed seals, 5-agent consensus, and x402 pay-per-call so agents and humans can prove a physical product is real. EU DPP Readiness is live Stripe checkout.',
   keywords:
-    'product authentication, digital product passport, EU DPP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
-  ogTitle: 'AuthiChain — Issue, bind, verify',
+    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
+  ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'EU DPP Readiness is live checkout. QRON, GovChain, and StrainChain are the estate pillars. No invented customer logos.',
-  twitterTitle: 'AuthiChain — Product authentication',
+    'Agents can pay. They still need to know if it is real. Signed seals, MCP tools, x402 at $0.05 USDC, and EU DPP Readiness on live Stripe checkout.',
+  twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'Start EU DPP Readiness on live Stripe checkout. Issue → Bind → Verify.',
+    'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
@@ -127,6 +136,10 @@ const SEO = {
     {
       q: 'What else is live in the estate?',
       a: 'QRON Living QR generation on qron.space/generate, GovChain intake on govchain.us/onboard, StrainChain intake on strainchain.io/onboard, and x402 agent micropayments on /x402.',
+    },
+    {
+      q: 'What is the authentic agentic economy?',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
     },
   ],
 };
@@ -182,7 +195,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   </g>
   <text x="110" y="385" font-family="'Bebas Neue','Helvetica Neue',Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="6" fill="#f8fafc">AUTHICHAIN</text>
   <line x1="110" y1="412" x2="280" y2="412" stroke="#d4af37" stroke-width="3"/>
-  <text x="110" y="468" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="300" fill="#94a3b8">The Truth Layer for the Global Economy</text>
+  <text x="110" y="468" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="300" fill="#94a3b8">The authentic agentic economy</text>
   <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="300" fill="#94a3b8" opacity="0.75">Cryptographic provenance · ERC-721 + AI QR · 2.1s verification</text>
   <text x="1160" y="595" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="20" letter-spacing="3" fill="#d4af37">AUTHICHAIN.COM</text>
 </svg>`;
@@ -2148,6 +2161,7 @@ function seoMeta(): string {
     url,
     logo: `${url}/favicon.svg`,
     description: SEO.description,
+    slogan: 'The authentic agentic economy',
     sameAs: [
       'https://twitter.com/authichain',
       'https://www.linkedin.com/company/authichain',
@@ -2355,6 +2369,7 @@ function ecosystemFooter() {
           { href: "/m/mendo", label: "Mendo / LT-63" },
           { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
+          { href: "/authentic-agentic-economy", label: "Authentic agentic economy" },
           { href: "/x402", label: "Agent pay (x402)" },
           { href: "/vs", label: "Compare" },
         ],
@@ -2388,6 +2403,7 @@ const HTML = `<!DOCTYPE html>
     [
       { href: "/trumark", label: "TruMark" },
       { href: "/made-in-america", label: "Made in USA" },
+      { href: "/authentic-agentic-economy", label: "Agentic economy" },
       { href: "/pricing", label: "Pricing" },
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
@@ -2396,9 +2412,9 @@ const HTML = `<!DOCTYPE html>
   )}
   <main id="main">
   ${estateHero({
-    eyebrow: "Product authentication",
+    eyebrow: "The authentic agentic economy",
     title: "Issue seals. Bind products. Verify anywhere.",
-    lede: "AuthiChain is the truth layer for physical products. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
+    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
     actions: [
       { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
@@ -2471,6 +2487,16 @@ const HTML = `<!DOCTYPE html>
   </script>
 
   ${howItWorks()}
+  ${estateFeatures(
+    "The authentic agentic economy",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — signed seals, 5-agent consensus, MCP tools, and x402 at $0.05 USDC on Base.",
+    [
+      { title: "Identity", body: "Every genuine product gets a signed seal anchored on Polygon. The certificate is public. An agent can look it up the same way a person scans a QR." },
+      { title: "Verification", body: "Five agents reach weighted consensus in 2.1 seconds. MCP tools expose that check to any model that can call AuthiChain." },
+      { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+    ],
+    "agentic",
+  )}
   ${estatePillars()}
   ${techStack()}
   ${originMoneySurfaces()}
@@ -3249,6 +3275,8 @@ export default {
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3264,6 +3292,11 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
     if (pricing) return pricing;
+    if (isDppManufacturerArticlePath(p)) {
+      return new Response(renderDppManufacturerArticle(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       // Was a redirect to the Vercel deployment; the app now lives on this
       // same domain via the APP_WORKER service binding, so redirect same-origin.
@@ -3287,6 +3320,9 @@ export default {
 
     const microsite = tryHandleMicrosite(request);
     if (microsite) return microsite;
+    const miniapp = tryHandleTelegramMiniApp(request);
+    if (miniapp) return miniapp;
+
     const genetics = tryHandleGeneticsRoutes(request);
     if (genetics) return genetics;
     if (p === '/digital-product-passport' || p === '/dpp') {
@@ -3296,6 +3332,9 @@ export default {
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (isAuthenticAgenticEconomyPath(p)) {
+      return new Response(renderAuthenticAgenticEconomyPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
