@@ -41,6 +41,45 @@ describe("tryHandleX402", () => {
     expect(body.facilitator.configured).toBe(false);
   });
 
+  it("GET /api/x402/catalog lists paid endpoints from the same health config", async () => {
+    const res = await tryHandleX402(req("/api/x402/catalog"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      protocol: string;
+      payTo: string;
+      pricePerCall: { usd: number };
+      endpoints: Array<{
+        path: string;
+        paid: boolean;
+        priceUsd: number | null;
+      }>;
+    };
+    expect(body.protocol).toBe("x402");
+    expect(body.payTo).toBe("0xabc0000000000000000000000000000000000001");
+    expect(body.pricePerCall.usd).toBe(0.05);
+    expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
+      true
+    );
+  });
+
+  it("GET /.well-known/x402.json is the catalog", async () => {
+    const res = await tryHandleX402(req("/.well-known/x402.json"));
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as { catalog: string };
+    expect(body.catalog).toBe("/api/x402/catalog");
+  });
+
+  it("POST /api/x402/catalog is 405", async () => {
+    const res = await tryHandleX402(
+      req("/api/x402/catalog", { method: "POST" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" }
+    );
+    expect(res!.status).toBe(405);
+  });
+
   it("GET /api/x402 is the same health document", async () => {
     const res = await tryHandleX402(req("/api/x402"));
     expect(res!.status).toBe(200);

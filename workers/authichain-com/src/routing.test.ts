@@ -90,7 +90,12 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
     assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/catalog/);
     assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(
+      html,
+      /curl -sS https:\/\/authichain\.com\/api\/x402\/catalog/
+    );
     assert.match(
       html,
       /curl -sS -i -X POST https:\/\/authichain\.com\/api\/x402/
@@ -175,8 +180,24 @@ test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async
   ]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
-    const body = (await res.json()) as { status: string };
+    const body = (await res.json()) as { status: string; catalog?: string };
     assert.equal(body.status, "not_configured", path);
+    assert.equal(body.catalog, "/api/x402/catalog", path);
+  }
+});
+
+test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async () => {
+  for (const path of ["/api/x402/catalog", "/.well-known/x402.json"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      protocol: string;
+      catalog: string;
+      health: string;
+    };
+    assert.equal(body.protocol, "x402", path);
+    assert.equal(body.catalog, "/api/x402/catalog", path);
+    assert.equal(body.health, "/api/x402/health", path);
   }
 });
 
@@ -201,14 +222,43 @@ test("/demo/strainchain lands on the TruMark money surface", async () => {
 test("/partners lands on the Made in America money surface", async () => {
   const res = await get("/partners");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.com/made-in-america");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.com/made-in-america"
+  );
+});
+
+test("/telegram and /miniapp serve the Passport Mini App", async () => {
+  for (const path of ["/telegram", "/telegram/", "/miniapp", "/miniapp/"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
+    assert.match(html, /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/);
+    assert.match(html, /Publish Passport — \$49/);
+    assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
+    assert.doesNotMatch(html, /calendly/i);
+    assert.doesNotMatch(html, /AuthiChain Inc/i);
+    assert.doesNotMatch(html, /Series A/i);
+    assert.match(res.headers.get("content-security-policy") ?? "", /telegram\.org/);
+    assert.equal(res.headers.get("x-frame-options"), null);
+  }
+});
+
+test("/api/telegram is still proxied to the app, not the Mini App", async () => {
+  const res = await get("/api/telegram");
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "app");
 });
 
 test("TruMark and Made in America pages are live with checkout CTAs", async () => {
   const trumark = await get("/trumark");
   assert.equal(trumark.status, 200);
   const trumarkHtml = await trumark.text();
-  assert.match(trumarkHtml, /href="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(
+    trumarkHtml,
+    /href="\/api\/checkout\/plan\/strainchain_passport"/
+  );
   assert.match(trumarkHtml, /href="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(trumarkHtml, /calendly/i);
   assert.doesNotMatch(trumarkHtml, /schedule a (call|demo)/i);

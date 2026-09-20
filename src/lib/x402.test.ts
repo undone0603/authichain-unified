@@ -11,6 +11,7 @@ import {
   decodeFacilitatorPaymentPayload,
   resolveX402Asset,
   x402HealthReport,
+  x402Catalog,
   BASE_USDC_ASSET,
   type PaymentRequirement,
 } from "./x402";
@@ -34,6 +35,9 @@ afterEach(() => {
   delete process.env.X402_FACILITATOR_URL;
   delete process.env.X402_NETWORK;
   delete process.env.X402_USDC_ASSET;
+  delete process.env.X402_PRICE_USD;
+  delete process.env.X402_PAY_TO;
+  delete process.env.X402_DAILY_CAP_USD;
   vi.restoreAllMocks();
 });
 
@@ -269,5 +273,32 @@ describe("x402HealthReport", () => {
     expect(report.ok).toBe(false);
     expect(report.facilitator.configured).toBe(false);
     expect(report.asset).toBe(BASE_USDC_ASSET);
+    expect(report.catalog).toBe("/api/x402/catalog");
+    expect(report.docs).toBe("/x402");
+  });
+});
+
+describe("x402Catalog", () => {
+  it("copies price, payTo, and asset from the health report", async () => {
+    const env = {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.10",
+      X402_NETWORK: "base",
+    };
+    const health = await x402HealthReport(env);
+    const catalog = await x402Catalog(env);
+    expect(catalog.pricePerCall).toEqual(health.pricePerCall);
+    expect(catalog.pricePerCall.usd).toBe(0.1);
+    expect(catalog.pricePerCall.atomic).toBe("100000");
+    expect(catalog.payTo).toBe(health.payTo);
+    expect(catalog.asset).toBe(health.asset);
+    expect(catalog.dailyCapUsd).toBe(health.dailyCapUsd);
+    expect(catalog.protocol).toBe("x402");
+    expect(catalog.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
+      true
+    );
+    expect(
+      catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
+    ).toBe(0.1);
   });
 });

@@ -7,7 +7,8 @@
     "deploy": "wrangler deploy",
     "setup-webhook": "wrangler dev & sleep 3 && curl -s -X POST http://localhost:8787/api/telegram/setup-webhook -H \"Authorization: Bearer $TELEGRAM_WEBHOOK_SECRET\"",
     "migrate": "wrangler d1 migrations apply authichain-telegram-db",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "npx tsx --test src/miniapp.test.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260915.1",
