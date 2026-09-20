@@ -56,10 +56,12 @@ describe("isPurchasable", () => {
 
 describe("listedPlans", () => {
   it("never advertises a price nothing can charge", () => {
-    for (const p of listedPlans("qron")) {
-      expect(isPurchasable(p), `${p.id} is listed but not purchasable`).toBe(
-        true
-      );
+    for (const brand of ["qron", "strainchain"] as const) {
+      for (const p of listedPlans(brand)) {
+        expect(isPurchasable(p), `${p.id} is listed but not purchasable`).toBe(
+          true
+        );
+      }
     }
   });
 
@@ -69,17 +71,27 @@ describe("listedPlans", () => {
     expect(qron).not.toContain("strainchain_farm");
   });
 
-  it("withholds the StrainChain SKUs until a live Stripe price exists", () => {
-    // Defined so the numbers live in code rather than only in a sent proposal,
-    // but deliberately unsellable until a human creates the price.
-    expect(listedPlans("strainchain")).toEqual([]);
+  it("lists StrainChain SKUs when live Stripe prices exist", () => {
+    const strainchain = listedPlans("strainchain")
+      .map(p => p.id)
+      .sort();
+    expect(strainchain).toEqual(["strainchain_farm", "strainchain_passport"]);
 
-    const defined = PLANS.filter(p => p.brand === "strainchain");
-    expect(defined.map(p => p.id).sort()).toEqual([
-      "strainchain_farm",
-      "strainchain_passport",
-    ]);
-    for (const p of defined) expect(p.stripe_price_id).toBeNull();
+    const byId = Object.fromEntries(PLANS.map(p => [p.id, p]));
+    expect(byId.strainchain_passport.stripe_price_id).toBe(
+      "price_1UHjCZGqTruSqV8T35M6AmoJ"
+    );
+    expect(byId.strainchain_farm.stripe_price_id).toBe(
+      "price_1UHjJWGqTruSqV8TePctYzO5"
+    );
+    expect(planByStripePriceId("price_1UHjCZGqTruSqV8T35M6AmoJ")?.id).toBe(
+      "strainchain_passport"
+    );
+    expect(planByStripePriceId("price_1UHjJWGqTruSqV8TePctYzO5")?.id).toBe(
+      "strainchain_farm"
+    );
+    expect(planByAmountCents(4900)?.id).toBe("strainchain_passport");
+    expect(planByAmountCents(14900)?.id).toBe("strainchain_farm");
   });
 
   it("matches the offer sent to Mendo Love Farms", () => {

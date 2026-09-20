@@ -2278,7 +2278,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
-    <p class="section-sub">StrainChain Basic is the live $199/month Stripe Payment Link. Genetics passport SKUs stay in the catalogue until they have a Stripe price — they are not checkout here.</p>
+    <p class="section-sub">StrainChain Basic is the live $199/month Payment Link. Passport and Farm Plan prices come from the published catalogue with live Stripe checkout.</p>
     ${estatePricingGrid("strainchain")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>

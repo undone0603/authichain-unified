@@ -89,6 +89,41 @@ describe("GET /api/checkout/dpp", () => {
   });
 });
 
+describe("GET /api/checkout/plan/:planId", () => {
+  beforeEach(() => {
+    dppCreate.mockReset();
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  it("HEAD does not create a Stripe session", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    const res = await app.request("/api/checkout/plan/strainchain_passport", {
+      method: "HEAD",
+    });
+    expect(res.status).toBe(204);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("303s to Stripe Checkout with the catalogue price", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_passport",
+    });
+    const res = await app.request(
+      "/api/checkout/plan/strainchain_passport?utm_source=pricing"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_passport"
+    );
+    expect(dppCreate).toHaveBeenCalledOnce();
+    const arg = dppCreate.mock.calls[0][0];
+    expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
+    expect(arg.metadata.plan).toBe("strainchain_passport");
+    expect(arg.metadata.brand).toBe("strainchain");
+  });
+});
+
 describe("GET /api/checkout", () => {
   it("returns route health JSON and does not create a Stripe session", async () => {
     const res = await app.request("/api/checkout");
