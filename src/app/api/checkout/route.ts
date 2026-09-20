@@ -156,10 +156,9 @@ export async function POST(request: Request) {
         ...(prospectId ? { prospect_id: prospectId } : {}),
         ...(source ? { source } : {}),
       },
-      // For subscriptions, allow promo codes and show a cancel URL
+      // Preserve subscription metadata without requiring Stripe Promotions terms.
       ...(plan.stripe_mode === "subscription"
         ? {
-            allow_promotion_codes: true,
             subscription_data: {
               metadata: {
                 plan: plan.id,

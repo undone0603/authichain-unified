@@ -1318,7 +1318,7 @@ export const inboundReplies = pgTable(
     sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
     objectionType: varchar("objection_type", { length: 64 }), // budget|timeline|competitor|decision_maker|other
     objectionDetails: text("objection_details"),
-    confidence: real("confidence"), // 0.0-1.0 from Claude
+    confidence: real("confidence"), // 0.0-1.0 from reply classifier (OpenAI / Ollama / heuristic)
     proposalMatchId: varchar("proposal_match_id", { length: 64 }), // FK to proposals.id
     matchConfidence: real("match_confidence"), // how sure we are about the match
     status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused

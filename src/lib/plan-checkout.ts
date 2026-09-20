@@ -105,7 +105,6 @@ export async function createPlanCheckoutSession(opts: {
       },
       ...(plan.stripe_mode === "subscription"
         ? {
-            allow_promotion_codes: true,
             subscription_data: {
               metadata: {
                 plan: plan.id,

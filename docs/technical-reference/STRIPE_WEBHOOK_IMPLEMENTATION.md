@@ -125,8 +125,9 @@ Switch on event.type:
         └─ log after_expiration.recovery.url (when recovery is enabled
            on session create) and send checkout-recovery email if an
            email is present. Do not invent a new Resend secret — reuse
-           the existing mailer. Stripe withholds customer_details.email
-           on expired sessions unless promotional consent was collected.
+           the existing mailer. Passport/DPP sessions omit promotional
+           consent and promo-code fields until Stripe Promotions terms
+           are accepted for the account.
     ↓
 logAutomationAudit(...) — writes to activity_log for every branch
     ↓

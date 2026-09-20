@@ -50,7 +50,7 @@ describe("createDppCheckoutSession", () => {
     expect(arg.mode).toBe("payment");
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.client_reference_id).toBe("dpp_paid_1");
-    expect(arg.allow_promotion_codes).toBe(true);
+    expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
     expect(arg.metadata.plan).toBe("dpp_readiness");
     expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
@@ -62,7 +62,7 @@ describe("createDppCheckoutSession", () => {
       enabled: true,
       allow_promotion_codes: false,
     });
-    expect(arg.consent_collection.promotions).toBe("auto");
+    expect(arg.consent_collection).toBeUndefined();
     expect(arg.customer_creation).toBe("always");
   });
 

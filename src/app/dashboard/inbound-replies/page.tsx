@@ -127,7 +127,11 @@ export default function InboundRepliesDashboard() {
     <div className="space-y-6 p-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Inbound Proposal Replies</h1>
-        <p className="text-gray-600">Monitor and nurture customer responses to proposals</p>
+        <p className="text-gray-600">
+          Monitor classified replies and mark the ones that need a human. Positive and
+          objection replies with a matched lead enter auto-nurture; neutral or negative
+          stay here for review.
+        </p>
       </div>
 
       <Card>
@@ -220,6 +224,11 @@ export default function InboundRepliesDashboard() {
                             {reply.sentiment}
                             {reply.objectionType && ` - ${reply.objectionType}`}
                           </Badge>
+                          {typeof reply.metadata?.classifierProvider === 'string' && (
+                            <span className="text-xs text-gray-500">
+                              {reply.metadata.classifierProvider}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
