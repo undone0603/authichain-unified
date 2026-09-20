@@ -1,0 +1,105 @@
+name: SAM entity live lookup
+on:
+  workflow_dispatch:
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+      SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
+    steps:
+      - name: Query SAM.gov endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          if [ -z "${SAM_API_KEY:-}" ]; then SAM_API_KEY="${SAM_GOV_API_KEY:-}"; fi
+          : "${SAM_API_KEY:?SAM API key secret is not configured}"
+          : > work/status.tsv
+          found_file=""
+          query_endpoint() {
+            local name="$1" url="$2" body status rc=0
+            shift 2
+            body="work/${name}.json"
+            status="$(curl --silent --show-error --location --max-time 30 "$@" "$url" -o "$body" -w '%{http_code}')" || rc=$?
+            if [ -z "$status" ]; then status=000; fi
+            printf '%s\t%s\n' "$name" "$status" >> work/status.tsv
+            if [ "$status" = "200" ] && [ -s "$body" ]; then
+              found_file="$body"
+              return 0
+            fi
+            return 1
+          }
+          if query_endpoint v3_uei "https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_API_KEY}&ueiSAM=R34XKWRJY9A5"; then :
+          elif query_endpoint v3_cage "https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_API_KEY}&cageCode=1PUJ6"; then :
+          elif query_endpoint v4_uei "https://api.sam.gov/entity-information/v4/entities?api_key=${SAM_API_KEY}&ueiSAM=R34XKWRJY9A5"; then :
+          elif query_endpoint v4_cage "https://api.sam.gov/entity-information/v4/entities?api_key=${SAM_API_KEY}&cageCode=1PUJ6"; then :
+          elif query_endpoint v3_uei_header "https://api.sam.gov/entity-information/v3/entities?ueiSAM=R34XKWRJY9A5" -H "X-Api-Key: ${SAM_API_KEY}"; then :
+          elif query_endpoint v3_cage_header "https://api.sam.gov/entity-information/v3/entities?cageCode=1PUJ6" -H "X-Api-Key: ${SAM_API_KEY}"; then :
+          else :
+          fi
+          query_endpoint opportunities_v2 "https://api.sam.gov/opportunities/v2/search?api_key=${SAM_API_KEY}&limit=1" || true
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          statuses = {}
+          for line in Path('work/status.tsv').read_text().splitlines():
+              if '\t' in line:
+                  key, value = line.split('\t', 1)
+                  statuses[key] = int(value) if value.isdigit() else value
+          chosen = None
+          for name in ('v3_uei', 'v3_cage', 'v4_uei', 'v4_cage', 'v3_uei_header', 'v3_cage_header'):
+              if statuses.get(name) == 200 and Path(f'work/{name}.json').exists():
+                  chosen = Path(f'work/{name}.json')
+                  break
+          record = {}
+          if chosen:
+              try:
+                  payload = json.loads(chosen.read_text())
+                  data = payload.get('entityData') if isinstance(payload, dict) else None
+                  if isinstance(data, list) and data:
+                      record = data[0] if isinstance(data[0], dict) else {}
+                  elif isinstance(payload, dict):
+                      record = payload
+              except Exception:
+                  record = {}
+          def first_value(obj, keys):
+              if isinstance(obj, dict):
+                  for key in keys:
+                      if key in obj and obj[key] not in (None, ''):
+                          return obj[key]
+                  for value in obj.values():
+                      result = first_value(value, keys)
+                      if result not in (None, ''):
+                          return result
+              elif isinstance(obj, list):
+                  for value in obj:
+                      result = first_value(value, keys)
+                      if result not in (None, ''):
+                          return result
+              return None
+          address = first_value(record, ('physicalAddress',))
+          if not isinstance(address, dict):
+              address = {}
+          allowed = ('city', 'stateOrProvinceCode', 'stateOrProvince', 'zipCode', 'postalCode', 'countryCode', 'country')
+          address_summary = {key: address[key] for key in allowed if key in address and address[key] not in (None, '')}
+          redacted = {
+              'legalBusinessName': first_value(record, ('legalBusinessName',)),
+              'ueiSAM': first_value(record, ('ueiSAM',)),
+              'cageCode': first_value(record, ('cageCode',)),
+              'registrationStatus': first_value(record, ('registrationStatus',)),
+              'registrationExpirationDate': first_value(record, ('registrationExpirationDate',)),
+              'physicalAddress': address_summary,
+              'httpStatusByEndpoint': statuses,
+          }
+          Path('work/sam_entity_redacted.json').write_text(json.dumps(redacted, indent=2, sort_keys=True) + '\n')
+          PY
+      - name: Upload redacted result only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-entity-live-redacted
+          path: work/sam_entity_redacted.json
+          if-no-files-found: error
+          retention-days: 1
