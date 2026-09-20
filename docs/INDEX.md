@@ -53,6 +53,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 ## Strategy & proposals (`docs/strategy/`)
 - [strategy/ROADMAP.md](strategy/ROADMAP.md) — autonomous evolution roadmap
 - [strategy/REVENUE_STRATEGY.md](strategy/REVENUE_STRATEGY.md) — pricing, grants, partnerships
+- [strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md](strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md) — CashPing Compound: $0 autonomous buyer-traffic plan (no X Ads)
 - [strategy/SYSTEM_STATE.md](strategy/SYSTEM_STATE.md) — AgentZ state snapshot
 - [strategy/ARCHITECTURE_OVERVIEW.md](strategy/ARCHITECTURE_OVERVIEW.md) — email reply/nurture system
 - [strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md](strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md)
