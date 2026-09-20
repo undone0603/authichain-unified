@@ -100,6 +100,71 @@ describe("GET /api/checkout", () => {
   });
 });
 
+describe("GET /api/checkout/plan/:planId", () => {
+  beforeEach(() => {
+    dppCreate.mockReset();
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  it("HEAD is empty 204 and does not create a Stripe session", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    const res = await app.request("/api/checkout/plan/strainchain_passport", {
+      method: "HEAD",
+    });
+    expect(res.status).toBe(204);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown plan without calling Stripe", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    const res = await app.request("/api/checkout/plan/not-a-plan");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/Unknown plan/);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects the free plan", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    const res = await app.request("/api/checkout/plan/free");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/Free plan/);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("303s to Stripe Checkout with the live Passport price id", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_passport",
+    });
+    const res = await app.request("/api/checkout/plan/strainchain_passport");
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_passport"
+    );
+    expect(dppCreate).toHaveBeenCalledOnce();
+    const arg = dppCreate.mock.calls[0][0];
+    expect(arg.mode).toBe("payment");
+    expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
+    expect(arg.metadata.plan).toBe("strainchain_passport");
+    expect(arg.metadata.plan_id).toBe("strainchain_passport");
+  });
+
+  it("303s to Stripe Checkout with the live Farm Plan price id", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_farm",
+    });
+    const res = await app.request("/api/checkout/plan/strainchain_farm");
+    expect(res.status).toBe(303);
+    const arg = dppCreate.mock.calls[0][0];
+    expect(arg.mode).toBe("subscription");
+    expect(arg.line_items[0].price).toBe("price_1UHjJWGqTruSqV8TePctYzO5");
+    expect(arg.metadata.plan_id).toBe("strainchain_farm");
+  });
+});
+
 describe("POST /api/checkout", () => {
   it("returns 400 without planId", async () => {
     const res = await app.request("/api/checkout", {

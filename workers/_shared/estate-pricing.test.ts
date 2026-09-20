@@ -19,26 +19,29 @@ test("pricing paths are exact /pricing only", () => {
 });
 
 test("DPP uses the live checkout path, never an invented URL", () => {
-  const dpp = listedPlans("qron").find((p) => p.id === "dpp_readiness");
+  const dpp = listedPlans("qron").find(p => p.id === "dpp_readiness");
   assert.ok(dpp);
   assert.equal(dpp.price, 299);
-  assert.equal(
-    planCheckoutCta(dpp, "authichain").href,
-    "/api/checkout/dpp",
-  );
+  assert.equal(planCheckoutCta(dpp, "authichain").href, "/api/checkout/dpp");
   assert.equal(
     planCheckoutCta(dpp, "qron").href,
-    "https://authichain.com/api/checkout/dpp",
+    "https://authichain.com/api/checkout/dpp"
   );
 });
 
 test("starter and creator keep their published Payment Links", () => {
-  const starter = listedPlans("qron").find((p) => p.id === "starter");
-  const creator = listedPlans("qron").find((p) => p.id === "creator");
+  const starter = listedPlans("qron").find(p => p.id === "starter");
+  const creator = listedPlans("qron").find(p => p.id === "creator");
   assert.ok(starter?.stripe_payment_link);
   assert.ok(creator?.stripe_payment_link);
-  assert.equal(planCheckoutCta(starter, "qron").href, starter.stripe_payment_link);
-  assert.equal(planCheckoutCta(creator, "authichain").href, creator.stripe_payment_link);
+  assert.equal(
+    planCheckoutCta(starter, "qron").href,
+    starter.stripe_payment_link
+  );
+  assert.equal(
+    planCheckoutCta(creator, "authichain").href,
+    creator.stripe_payment_link
+  );
 });
 
 test("authichain Starter reuses the live Payment Link, not an invented price", () => {
@@ -49,7 +52,10 @@ test("authichain Starter reuses the live Payment Link, not an invented price", (
 
 test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   const html = renderEstatePricingPage("authichain");
-  const starterUrl = AUTHICHAIN_STARTER.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const starterUrl = AUTHICHAIN_STARTER.url.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.match(html, /AuthiChain Starter/);
   assert.match(html, /\$299\/mo/);
@@ -70,7 +76,7 @@ test("qron /pricing HTML does not advertise the AuthiChain Starter Payment Link"
   const html = renderEstatePricingPage("qron");
   assert.doesNotMatch(
     html,
-    new RegExp(AUTHICHAIN_STARTER.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    new RegExp(AUTHICHAIN_STARTER.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   );
   assert.doesNotMatch(html, /AuthiChain Starter/);
 });
@@ -86,7 +92,7 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
 test("tryHandleEstatePricing answers GET /pricing and ignores other paths", async () => {
   const hit = tryHandleEstatePricing(
     new Request("https://authichain.com/pricing"),
-    "authichain",
+    "authichain"
   );
   assert.ok(hit);
   assert.equal(hit.status, 200);
@@ -99,48 +105,88 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
   assert.equal(
     tryHandleEstatePricing(
       new Request("https://authichain.com/pricing/pro"),
-      "authichain",
+      "authichain"
     ),
-    null,
+    null
   );
   assert.equal(
     tryHandleEstatePricing(
       new Request("https://qron.space/pricing", { method: "POST" }),
-      "qron",
+      "qron"
     ),
-    null,
+    null
   );
 });
 
-test("strainchain origin reuses the live Basic Payment Link, not catalogue SKUs", () => {
+test("strainchain origin keeps the live Basic Payment Link and lists purchasable catalogue SKUs", () => {
   assert.equal(STRAINCHAIN_BASIC.url, PAYMENT_LINKS.strainchain.basic.url);
   assert.equal(STRAINCHAIN_BASIC.price, "$199/mo");
-  assert.equal(listedPlans("strainchain").length, 0);
+  const listed = listedPlans("strainchain");
+  assert.equal(listed.length, 2);
+  assert.deepEqual(listed.map(p => p.id).sort(), [
+    "strainchain_farm",
+    "strainchain_passport",
+  ]);
 });
 
-test("strainchain /pricing HTML cites the live Basic Payment Link only", () => {
+test("strainchain catalogue CTAs use Checkout via the live price id, not an invented Payment Link", () => {
+  const passport = listedPlans("strainchain").find(
+    p => p.id === "strainchain_passport"
+  );
+  const farm = listedPlans("strainchain").find(
+    p => p.id === "strainchain_farm"
+  );
+  assert.ok(passport);
+  assert.ok(farm);
+  assert.equal(passport.price, 49);
+  assert.equal(farm.price, 149);
+  assert.equal(
+    planCheckoutCta(passport, "strainchain").href,
+    "https://authichain.com/api/checkout/plan/strainchain_passport"
+  );
+  assert.equal(
+    planCheckoutCta(farm, "strainchain").href,
+    "https://authichain.com/api/checkout/plan/strainchain_farm"
+  );
+});
+
+test("strainchain /pricing HTML cites Basic plus Passport and Farm Plan", () => {
   const html = renderEstatePricingPage("strainchain");
   assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-  assert.match(html, new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(
+    html,
+    new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  );
   assert.match(html, /\$199/);
   assert.match(html, /StrainChain Basic/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
-  assert.doesNotMatch(html, /Publish one passport/);
-  assert.doesNotMatch(html, /Start a Farm Plan/);
-  assert.doesNotMatch(html, /\$49/);
-  assert.doesNotMatch(html, /\$149/);
+  assert.match(html, /Publish one passport/);
+  assert.match(html, /Start a Farm Plan/);
+  assert.match(html, /\$49/);
+  assert.match(html, /\$149/);
+  assert.match(
+    html,
+    /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_passport/
+  );
+  assert.match(
+    html,
+    /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_farm/
+  );
   assert.doesNotMatch(html, /\$2,990/);
 });
 
 test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () => {
   const hit = tryHandleEstatePricing(
     new Request("https://strainchain.io/pricing"),
-    "strainchain",
+    "strainchain"
   );
   assert.ok(hit);
   assert.equal(hit.status, 200);
   assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
   const html = await hit.text();
-  assert.match(html, new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(
+    html,
+    new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  );
 });

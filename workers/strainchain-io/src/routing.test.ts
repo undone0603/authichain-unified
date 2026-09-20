@@ -103,7 +103,14 @@ test("query strings survive the hop", async () => {
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {
-    for (const path of ["/", "/pricing", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/authichain2026indexnow.txt"]) {
+    for (const path of [
+      "/",
+      "/pricing",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/favicon.svg",
+      "/authichain2026indexnow.txt",
+    ]) {
       f.calls.length = 0;
       const res = await get(path);
       assert.equal(res.status, 200, path);
@@ -171,7 +178,10 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Sitemap: https:\/\/strainchain.io\/sitemap.xml/);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/strainchain.io\/sitemap.xml/
+  );
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -197,6 +207,10 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.match(html, /https:\/\/buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
     assert.match(html, /\$199/);
     assert.match(html, /StrainChain Basic/);
+    assert.match(html, /\$49/);
+    assert.match(html, /\$149/);
+    assert.match(html, /Publish one passport/);
+    assert.match(html, /Start a Farm Plan/);
   } finally {
     f.restore();
   }

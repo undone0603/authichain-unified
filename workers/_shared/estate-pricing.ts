@@ -5,10 +5,10 @@
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
  * render the same customer-facing catalogue as `src/lib/plans.ts` (`listedPlans`)
  * with live Payment Links or GET /api/checkout/dpp. AuthiChain also shows
- * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain does not use
- * those catalogue SKUs — `strainchain_passport` / `strainchain_farm` have
- * `stripe_price_id: null` on purpose — and instead offers the live Payment Link
- * in `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
+ * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain offers the live
+ * Payment Link in `PAYMENT_LINKS.strainchain.basic` plus purchasable catalogue
+ * SKUs from `listedPlans("strainchain")` (Passport $49, Farm $149) via
+ * GET /api/checkout/plan/:planId. Do not invent prices here.
  */
 import { listedPlans, type Plan } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
@@ -56,7 +56,7 @@ function splitListedPrice(price: string): { amount: string; period: string } {
 /** Live money-path for a listed plan. Never invent a Stripe URL. */
 export function planCheckoutCta(
   plan: Plan,
-  origin: PricingOrigin,
+  origin: PricingOrigin
 ): { href: string; label: string; external: boolean } {
   if (plan.id === "dpp_readiness") {
     return {
@@ -71,6 +71,14 @@ export function planCheckoutCta(
   if (plan.stripe_payment_link) {
     return { href: plan.stripe_payment_link, label: plan.cta, external: true };
   }
+  if (plan.brand === "strainchain" && plan.stripe_price_id) {
+    const path = `/api/checkout/plan/${encodeURIComponent(plan.id)}`;
+    return {
+      href: `https://authichain.com${path}`,
+      label: plan.cta,
+      external: true,
+    };
+  }
   if (plan.price === 0) {
     return {
       href: origin === "qron" ? "/generate" : "/onboard",
@@ -79,7 +87,8 @@ export function planCheckoutCta(
     };
   }
   return {
-    href: origin === "authichain" ? "/contact" : "https://authichain.com/contact",
+    href:
+      origin === "authichain" ? "/contact" : "https://authichain.com/contact",
     label: "Contact",
     external: origin !== "authichain",
   };
@@ -94,7 +103,7 @@ function authichainStarterCard(): string {
     "Operator intake on /onboard",
     "EU DPP Readiness remains the one-time audit path",
   ]
-    .map((f) => `<li>${esc(f)}</li>`)
+    .map(f => `<li>${esc(f)}</li>`)
     .join("");
   return `<article class="price-card">
   <h3>${esc(offer.name)}</h3>
@@ -106,21 +115,21 @@ function authichainStarterCard(): string {
 </article>`;
 }
 
-function cataloguePricingGrid(origin: Exclude<PricingOrigin, "strainchain">): string {
+function cataloguePricingGrid(
+  origin: Exclude<PricingOrigin, "strainchain">
+): string {
   const plans = listedPlans("qron");
   const starter = origin === "authichain" ? authichainStarterCard() : "";
   const cards = plans
-    .map((plan) => {
+    .map(plan => {
       const cta = planCheckoutCta(plan, origin);
       const featured = Boolean(
-        origin === "authichain" ? plan.id === "dpp_readiness" : plan.highlighted,
+        origin === "authichain" ? plan.id === "dpp_readiness" : plan.highlighted
       );
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
       const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
-      const features = plan.features
-        .map((f) => `<li>${esc(f)}</li>`)
-        .join("");
+      const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
       return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(plan.name)}</h3>
   <div class="price-amount">${esc(amount)}</div>
@@ -134,28 +143,48 @@ function cataloguePricingGrid(origin: Exclude<PricingOrigin, "strainchain">): st
   return `<div class="pricing-grid">${starter}${cards}</div>`;
 }
 
-function strainchainPricingGrid(): string {
+function strainchainBasicCard(): string {
   const offer = STRAINCHAIN_BASIC;
   const { amount, period } = splitListedPrice(offer.price);
   const features = [
-    "Live Stripe Payment Link — the only StrainChain checkout today",
+    "Live Stripe Payment Link — StrainChain Basic monthly checkout",
     "Seed-to-shelf provenance for legal cannabis markets",
     "Operator intake on /onboard",
     "Public genetics library on /genetics",
   ]
-    .map((f) => `<li>${esc(f)}</li>`)
+    .map(f => `<li>${esc(f)}</li>`)
     .join("");
-  return `<div class="pricing-grid" style="max-width:360px">
-<article class="price-card featured">
+  return `<article class="price-card featured">
   <h3>${esc(offer.name)}</h3>
   <div class="price-amount">${esc(amount)}</div>
   <div class="price-period">${esc(period)}</div>
-  <p class="section-sub" style="margin-bottom:16px">Monthly StrainChain subscription via the published Stripe Payment Link. No other StrainChain SKU is checkoutable yet.</p>
+  <p class="section-sub" style="margin-bottom:16px">Monthly StrainChain subscription via the published Stripe Payment Link. The listed price is $199/mo — no invented figure.</p>
   <ul class="price-features">${features}</ul>
   <a class="btn btn-primary" style="width:100%;text-align:center" href="${esc(offer.url)}" target="_blank" rel="noopener">Start ${esc(offer.name)}</a>
-</article>
-</div>
-<p class="section-sub" style="margin-top:24px">Genetics passport SKUs (Passport — Per Cultivar and Farm Plan) are catalogued with no Stripe price, so they are not offered as checkout. Request a demo on /onboard if you need that scope.</p>`;
+</article>`;
+}
+
+function strainchainCatalogueCards(): string {
+  return listedPlans("strainchain")
+    .map(plan => {
+      const cta = planCheckoutCta(plan, "strainchain");
+      const suffix = plan.price_suffix ?? " one-time";
+      const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
+      const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
+      return `<article class="price-card">
+  <h3>${esc(plan.name)}</h3>
+  <div class="price-amount">$${plan.price}</div>
+  <div class="price-period">${esc(suffix)}</div>
+  <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
+  <ul class="price-features">${features}</ul>
+  <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>
+</article>`;
+    })
+    .join("");
+}
+
+function strainchainPricingGrid(): string {
+  return `<div class="pricing-grid">${strainchainBasicCard()}${strainchainCatalogueCards()}</div>`;
 }
 
 export function estatePricingGrid(origin: PricingOrigin): string {
@@ -192,11 +221,22 @@ type PricingPage = {
 function pricingPage(origin: PricingOrigin): PricingPage {
   if (origin === "strainchain") {
     const basic = STRAINCHAIN_BASIC;
+    const catalogueOffers = listedPlans("strainchain").map(p => {
+      const cta = planCheckoutCta(p, "strainchain");
+      return {
+        "@type": "Offer" as const,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        priceCurrency: "USD" as const,
+        url: cta.href,
+      };
+    });
     return {
       brand: "strainchain",
       title: "Pricing — StrainChain",
       description:
-        "StrainChain Basic is $199/month via a live Stripe Payment Link. Genetics passport SKUs are not listed until they have a Stripe price.",
+        "StrainChain Basic is $199/month via a live Stripe Payment Link. Passport — Per Cultivar is $49 one-time and Farm Plan is $149/month via Stripe Checkout.",
       canonical: "https://strainchain.io/pricing",
       themeColor: "#15803d",
       primary: { href: basic.url, label: `Start ${basic.name}` },
@@ -207,13 +247,13 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       ],
       heroTitle: "Prices that already charge.",
       heroLede:
-        "StrainChain Basic is the live subscription. The buy button opens the published Stripe Payment Link — no invented price.",
+        "StrainChain Basic is the live $199/mo Payment Link. Passport and Farm Plan use the published Stripe prices — no invented figure.",
       secondary: { href: "/onboard", label: "Request demo", primary: false },
       plansNote:
-        "Only the live Payment Link is offered as checkout. Passport and Farm SKUs in the catalogue have no Stripe price yet, so they are not listed here.",
+        "StrainChain Basic is the live Payment Link. Passport and Farm Plan are listed because they now have Stripe price IDs. Checkout opens Stripe via GET /api/checkout/plan/:planId.",
       ctaTitle: `Start ${basic.name}`,
       ctaLede:
-        "The $199/month Payment Link is the chargeable path for strainchain.io.",
+        "The $199/month Payment Link remains the featured money path. Passport ($49) and Farm Plan ($149/mo) checkout on the published price IDs.",
       footerStart: [
         { href: basic.url, label: basic.name },
         { href: "/onboard", label: "Onboard" },
@@ -232,6 +272,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
           priceCurrency: "USD",
           url: basic.url,
         },
+        ...catalogueOffers,
       ],
     };
   }
@@ -239,8 +280,8 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   const isAuthichain = origin === "authichain";
   const starter = AUTHICHAIN_STARTER;
   const catalogueOffers = listedPlans("qron")
-    .filter((p) => p.price > 0)
-    .map((p) => ({
+    .filter(p => p.price > 0)
+    .map(p => ({
       "@type": "Offer" as const,
       name: p.name,
       description: p.description,
@@ -313,7 +354,10 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     nav: [
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
-      { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
+      {
+        href: "https://authichain.com/api/checkout/dpp",
+        label: "DPP checkout",
+      },
     ],
     heroTitle: "QRON prices that already charge.",
     heroLede:
@@ -331,9 +375,14 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
-      { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
+      {
+        href: "https://authichain.com/api/checkout/dpp",
+        label: "DPP checkout",
+      },
     ],
-    footerMore: [{ href: "https://authichain.com/x402", label: "x402 agent pay" }],
+    footerMore: [
+      { href: "https://authichain.com/x402", label: "x402 agent pay" },
+    ],
     offers,
   };
 }
@@ -387,7 +436,9 @@ ${estateHero({
 ${estateCtaBand({
   title: page.ctaTitle,
   lede: page.ctaLede,
-  actions: [{ href: page.primary.href, label: page.primary.label, primary: true }],
+  actions: [
+    { href: page.primary.href, label: page.primary.label, primary: true },
+  ],
 })}
 </main>
 ${estateFooter(
@@ -403,7 +454,10 @@ ${estateFooter(
         { href: "https://authichain.com", label: "AuthiChain" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
-        { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
+        {
+          href: "https://strainchain.io/onboard",
+          label: "StrainChain onboard",
+        },
       ],
     },
     {
@@ -412,8 +466,8 @@ ${estateFooter(
     },
   ],
   origin === "strainchain"
-    ? "StrainChain Basic is the live Payment Link"
-    : "Prices from the published AuthiChain plan catalogue",
+    ? "StrainChain Basic, Passport, and Farm Plan are live checkout"
+    : "Prices from the published AuthiChain plan catalogue"
 )}
 </body>
 </html>`;
@@ -426,7 +480,7 @@ export function isPricingPath(pathname: string): boolean {
 /** Serve GET/HEAD /pricing from an estate landing worker. */
 export function tryHandleEstatePricing(
   request: Request,
-  origin: PricingOrigin,
+  origin: PricingOrigin
 ): Response | null {
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   if (!isPricingPath(new URL(request.url).pathname)) return null;

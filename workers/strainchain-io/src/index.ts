@@ -2278,7 +2278,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
-    <p class="section-sub">StrainChain Basic is the live $199/month Stripe Payment Link. Genetics passport SKUs stay in the catalogue until they have a Stripe price — they are not checkout here.</p>
+    <p class="section-sub">StrainChain Basic is the live $199/month Stripe Payment Link. Passport — Per Cultivar ($49) and Farm Plan ($149/mo) checkout on the published Stripe prices.</p>
     ${estatePricingGrid("strainchain")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2287,7 +2287,7 @@ ${estateFeatures(
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">Buy StrainChain Basic on the published Payment Link, or request a demo on /onboard — the same intake production already proxies.</p>
+    <p class="section-sub">Buy StrainChain Basic on the published Payment Link, or start Passport / Farm Plan checkout from /pricing. Request a demo on /onboard — the same intake production already proxies.</p>
     <div class="estate-actions">
       <a class="btn btn-primary" href="/pricing">View pricing</a>
       <a class="btn btn-outline" href="/onboard">Request demo</a>

@@ -241,6 +241,45 @@ app.get("/api/checkout/dpp", async c => {
   }
 });
 
+// Estate HTML money path for catalogue plans that have a Stripe price id
+// but no Payment Link (StrainChain Passport / Farm). GET /api/checkout stays
+// health-only so probes cannot start a session by hitting the collection URL.
+app.get("/api/checkout/plan/:planId", async c => {
+  if (c.req.method === "HEAD") {
+    c.header("Cache-Control", "private, no-store");
+    c.header("CDN-Cache-Control", "no-store");
+    return c.body(null, 204);
+  }
+  try {
+    hydrateProcessEnv(c.env);
+    const { createPlanCheckoutSession } =
+      await import("../src/lib/plan-checkout");
+    const result = await createPlanCheckoutSession({
+      request: c.req.raw,
+      body: { planId: c.req.param("planId") },
+      stripeSecretKey:
+        c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+    });
+    if (!result.ok) {
+      c.header("Cache-Control", "private, no-store");
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.redirect(result.url, 303);
+  } catch (err: any) {
+    console.error("[checkout/plan] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
 // Generic plan checkout (POST). GET is route-health only — never creates a
 // Stripe session, so CI/probes cannot start a live charge.
 app.get("/api/checkout", c => {

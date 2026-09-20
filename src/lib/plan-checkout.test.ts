@@ -32,6 +32,20 @@ describe("createPlanCheckoutSession", () => {
     });
   });
 
+  it("does not reject StrainChain passport as unknown or free", async () => {
+    const result = await createPlanCheckoutSession({
+      request: new Request("https://authichain.com/api/checkout", {
+        method: "POST",
+      }),
+      body: { planId: "strainchain_passport" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).not.toMatch(/Unknown plan|Free plan/);
+    }
+  });
+
   it("rejects the free plan", async () => {
     const result = await createPlanCheckoutSession({
       request: new Request("https://authichain.com/api/checkout", {

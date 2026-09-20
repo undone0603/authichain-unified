@@ -94,6 +94,7 @@ export async function createPlanCheckoutSession(opts: {
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: plan.id,
+        plan_id: plan.id,
         brand,
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
@@ -106,6 +107,7 @@ export async function createPlanCheckoutSession(opts: {
             subscription_data: {
               metadata: {
                 plan: plan.id,
+                plan_id: plan.id,
                 brand,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
                 ...(refCode ? { ref_code: refCode } : {}),

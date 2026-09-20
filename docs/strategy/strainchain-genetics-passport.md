@@ -142,14 +142,15 @@ different buyer from a Laytonville breeder and is not the comparable. So:
 2. Two StrainChain passport SKUs are defined there matching what was pitched —
    $49 one-time per cultivar, $149/mo farm plan — because the offer is already in a
    prospect's inbox and honouring it costs nothing structurally.
-3. Both ship with `stripe_price_id: null`. **Nothing can charge until a human
-   creates the live Stripe price.** That is the escalation, and it blocks no
-   engineering.
+3. Live Stripe prices were created 2026-09-20 and wired into `plans.ts`:
+   Passport `price_1UHjCZGqTruSqV8T35M6AmoJ` (`prod_VIJqbTJOoGT1I3`, $49
+   one-time, metadata `plan_id=strainchain_passport`); Farm Plan
+   `price_1UHjJWGqTruSqV8TePctYzO5` (`prod_VIJxYUXwNWQzh4`, $149/mo, metadata
+   `plan_id=strainchain_farm`). Do not invent replacements.
 4. The manual-outreach playbook's instruction to ground pricing in
    `shared/pricing.ts` is corrected to point at `plans.ts`.
 
-**Still escalated:** creating the live Stripe prices, and any further mail to Mendo
-Love Farms.
+**Still escalated:** any further mail to Mendo Love Farms.
 
 ---
 
