@@ -2,6 +2,10 @@
 agentz.workflows.handlers.govchain_proposal
 -------------------------------------------
 Picks the highest-fit unsubmitted grant from the shared pipeline and drafts a proposal.
+
+Prefers local ChatOllama (llama3.2 / $OLLAMA_MODEL) so a dry-run needs no
+paid API key. Dry-run still writes the markdown draft locally and skips
+the pipeline ledger.
 """
 from __future__ import annotations
 
@@ -10,10 +14,25 @@ from pathlib import Path
 
 from agentz.core.grants_pipeline import qualified_opportunities, status_of, update_status
 from agentz.core.llm import get_llm
-from agentz.core.modes import ExecutionContext
+from agentz.core.modes import ExecutionContext, Mode
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROPOSALS_DIR = REPO_ROOT / "content" / "grants" / "govchain"
+
+
+def _proposal_model() -> str:
+    return os.environ.get("OLLAMA_MODEL") or os.environ.get("LLM_MODEL") or "llama3.2"
+
+
+def _draft_llm():
+    """Prefer ChatOllama on $OLLAMA_HOST; fall back to get_llm (same route)."""
+    model = _proposal_model()
+    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    try:
+        from langchain_ollama import ChatOllama
+        return ChatOllama(model=model, temperature=0.2, base_url=host)
+    except ImportError:
+        return get_llm(model=model, temperature=0.2, base_url=host)
 
 
 def run(ctx: ExecutionContext) -> str:
@@ -44,12 +63,7 @@ Include Sections:
 Output entirely in Markdown.
 """
 
-    llm_model = os.getenv("LLM_MODEL", "google/gemma-4-e4b:2")
-    llm = get_llm(
-        model=llm_model,
-        base_url="http://192.168.254.10:1234/v1",
-        temperature=0.2,
-    )
+    llm = _draft_llm()
     response = llm.invoke(prompt)
     content = getattr(response, "content", None)
 
@@ -59,6 +73,10 @@ Output entirely in Markdown.
     PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
     draft_path = PROPOSALS_DIR / f"{top['notice_id']}.md"
     draft_path.write_text(str(content), encoding="utf-8")
+
+    if ctx.mode == Mode.DRY_RUN:
+        ctx.step(f"dry-run: draft saved locally at {draft_path}; skipping ledger update")
+        return f"dry-run: drafted proposal for {top['notice_id']} (ledger not updated)"
 
     update_status(
         top["notice_id"],

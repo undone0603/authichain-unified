@@ -105,7 +105,10 @@ def test_govchain_proposal_uses_pipeline_and_writes_ledger(tmp_path: Path, monke
         def invoke(self, prompt):
             class R: content = "# stub proposal"
             return R()
-    monkeypatch.setattr("agentz.workflows.handlers.govchain_proposal.get_llm", lambda **kw: _FakeLLM())
+    monkeypatch.setattr(
+        "agentz.workflows.handlers.govchain_proposal._draft_llm",
+        lambda: _FakeLLM(),
+    )
 
     proposals_dir = tmp_path / "content_grants"
     monkeypatch.setattr(
@@ -123,3 +126,46 @@ def test_govchain_proposal_uses_pipeline_and_writes_ledger(tmp_path: Path, monke
     assert gp.status_of("also", ledger) is None
     # Drafted file exists in patched dir
     assert (proposals_dir / "top.md").exists()
+
+
+def test_govchain_proposal_dry_run_drafts_and_skips_ledger(tmp_path: Path, monkeypatch):
+    from agentz.workflows.handlers import govchain_proposal
+
+    csv = tmp_path / "gov_pursue_list.csv"
+    csv.write_text(
+        textwrap.dedent(
+            """\
+            notice_id,title,agency,deadline,fit_score
+            top,Top Opp,DOD,2099-01-01T00:00:00-04:00,95
+            """
+        ),
+        encoding="utf-8",
+    )
+    ledger = tmp_path / "pipeline_ledger.json"
+    monkeypatch.setattr(gp, "DEFAULT_CSV", csv)
+    monkeypatch.setattr(gp, "DEFAULT_LEDGER", ledger)
+
+    class _FakeLLM:
+        def invoke(self, prompt):
+            class R: content = "# dry-run stub proposal"
+            return R()
+
+    monkeypatch.setattr(
+        "agentz.workflows.handlers.govchain_proposal._draft_llm",
+        lambda: _FakeLLM(),
+    )
+    proposals_dir = tmp_path / "content_grants"
+    monkeypatch.setattr(
+        "agentz.workflows.handlers.govchain_proposal.PROPOSALS_DIR",
+        proposals_dir,
+    )
+
+    ctx = ExecutionContext(mode=Mode.DRY_RUN, workflow_id="test_govchain", verbose=False)
+    out = govchain_proposal.run(ctx)
+
+    assert "top" in out
+    assert "dry-run" in out
+    assert (proposals_dir / "top.md").exists()
+    assert (proposals_dir / "top.md").read_text(encoding="utf-8") == "# dry-run stub proposal"
+    assert not ledger.exists()
+    assert gp.status_of("top", ledger) is None
