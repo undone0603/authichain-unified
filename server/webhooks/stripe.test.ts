@@ -124,6 +124,7 @@ beforeEach(async () => {
   vi.mocked(db.logActivity).mockResolvedValue(undefined);
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+  delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test";
@@ -133,6 +134,15 @@ describe("handleStripeWebhook — prerequisites", () => {
   it("throws when STRIPE_WEBHOOK_SECRET is not set", async () => {
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_SECRET_KEY;
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+      "STRIPE_WEBHOOK_SECRET not configured"
+    );
+  });
+
+  it("treats whitespace-only STRIPE_WEBHOOK_SECRET as missing", async () => {
+    process.env.STRIPE_WEBHOOK_SECRET = "  \n";
+    delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
     const { handleStripeWebhook } = await import("./stripe.js");
     await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
       "STRIPE_WEBHOOK_SECRET not configured"
@@ -149,9 +159,19 @@ describe("handleStripeWebhook — signature verification", () => {
     });
     const { handleStripeWebhook } = await import("./stripe.js");
     await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
-      /No signatures found matching the expected signature/
+      /No signatures found matching the expected signature[\s\S]*STRIPE_WEBHOOK_SECRET=set/
     );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("trims wrangler-echo newlines before constructEventAsync", async () => {
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test\n";
+    mockConstructEvent.mockReturnValue(
+      makeEvent("webhook_endpoint.created", "evt_test_trim", {})
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(mockConstructEvent).toHaveBeenCalledWith("{}", SIG, "whsec_test");
   });
 });
 

@@ -128,15 +128,32 @@ async function fulfillDppCheckoutIfPaid(
  * secret per call, so handleStripeWebhook tries each configured candidate in
  * order until one verifies the signature.
  */
-function getWebhookSecretCandidates(): string[] {
+function getWebhookSecretEnvNames(): string[] {
   const envNames = new Set<string>(["STRIPE_WEBHOOK_SECRET"]);
   for (const brand of Object.values(BRANDS)) {
     envNames.add(brand.billing.webhookSecretEnv);
   }
+  return [...envNames];
+}
+
+/**
+ * Presence only — never include secret values. Surfaced on 400 so a
+ * Dashboard Resend shows whether the reminted endpoint secret is bound.
+ */
+export function describeWebhookSecretPresence(): string {
+  return getWebhookSecretEnvNames()
+    .map(name => `${name}=${process.env[name]?.trim() ? "set" : "missing"}`)
+    .join(", ");
+}
+
+function getWebhookSecretCandidates(): string[] {
   const secrets: string[] = [];
-  for (const name of envNames) {
-    const value = process.env[name];
-    if (value) secrets.push(value);
+  const seen = new Set<string>();
+  for (const name of getWebhookSecretEnvNames()) {
+    const value = process.env[name]?.trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    secrets.push(value);
   }
   return secrets;
 }
@@ -270,12 +287,18 @@ export async function handleStripeWebhook(
   // STRIPE_WEBHOOK_AUTHICHAIN_SECRET) would fail verification on every event.
   // Must be constructEventAsync: the apex Worker uses SubtleCrypto, and
   // sync constructEvent() 400s with CryptoProviderOnlySupportsAsyncError.
-  const event = await constructStripeEventAsync(
-    stripe,
-    rawBody,
-    sig,
-    candidateSecrets
-  );
+  let event: Stripe.Event;
+  try {
+    event = await constructStripeEventAsync(
+      stripe,
+      rawBody,
+      sig,
+      candidateSecrets
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`${msg} (${describeWebhookSecretPresence()})`);
+  }
 
   console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
 

@@ -18,6 +18,7 @@
 #   export SUPABASE_ANON_KEY="eyJ..."
 #   export STRIPE_SECRET_KEY="sk_live_new..."
 #   export STRIPE_WEBHOOK_SECRET="whsec_new..."
+#   export STRIPE_WEBHOOK_AUTHICHAIN_SECRET="whsec_new..."  # we_1UGTCS… / authichain.com
 #   export TELEGRAM_BOT_TOKEN="..."
 #   export TELEGRAM_ADMIN_CHAT_ID="..."
 #   bash scripts/rotate-secrets.sh
@@ -59,6 +60,20 @@ put_secret resend-relay              RESEND_API_KEY      "${RESEND_API_KEY:-}"
 
 # Supabase anon key — autopilot reads/writes drip_prospects.
 put_secret authichain-autopilot      SUPABASE_ANON_KEY   "${SUPABASE_ANON_KEY:-}"
+
+# Stripe — live apex webhook is authichain-edge-router (worker-app), not
+# license-issuer. Use printf (no trailing newline) — echo | wrangler secret put
+# stores \n and Dashboard signatures fail.
+put_named_secret() {
+  local worker="$1" name="$2" value="$3"
+  [ -z "$value" ] && return 0
+  echo "  → $worker : $name"
+  printf '%s' "$value" | $WX secret put "$name" --name "$worker" >/dev/null
+  pushed=$((pushed + 1))
+}
+put_named_secret authichain-edge-router STRIPE_SECRET_KEY "${STRIPE_SECRET_KEY:-}"
+put_named_secret authichain-edge-router STRIPE_WEBHOOK_SECRET "${STRIPE_WEBHOOK_SECRET:-}"
+put_named_secret authichain-edge-router STRIPE_WEBHOOK_AUTHICHAIN_SECRET "${STRIPE_WEBHOOK_AUTHICHAIN_SECRET:-}"
 
 # Stripe — license issuer turns webhooks into signed licenses.
 put_secret authichain-license-issuer STRIPE_SECRET_KEY     "${STRIPE_SECRET_KEY:-}"

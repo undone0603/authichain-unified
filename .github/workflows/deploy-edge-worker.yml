@@ -91,6 +91,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler whoami
 
+      # STRIPE_WEBHOOK_SECRET here binds authichain-revenue-worker only.
+      # Live we_1UGTCSGqTruSqV8ThM9bXVWp → authichain-edge-router. Update that
+      # Worker via bind-stripe-webhook-secrets.yml (or wrangler --name
+      # authichain-edge-router). See docs/operations/stripe-webhook-signing-secret.md.
       - name: Upload worker secrets
         if: steps.secrets_check.outputs.skip != 'true'
         shell: bash
