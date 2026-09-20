@@ -88,6 +88,32 @@ jobs:
           SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
         run: python3 scripts/publish-social-bundle.py --check-credentials
 
+      - name: Resolve publish mode
+        id: mode
+        run: |
+          set -euo pipefail
+          # Fail-closed: schedule has no inputs, so `inputs.dry_run == true`
+          # was never true and the publish step posted live. Schedule is
+          # always dry-run. Live social is push-to-main (validated bundles)
+          # or an explicit dispatch with dry_run=false.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run → forced dry-run (no live social)"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.dry_run }}" = "false" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+              echo "Manual dispatch → live publish"
+              exit 0
+            fi
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch → dry-run"
+            exit 0
+          fi
+          echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          echo "Push to main → live publish of validated bundles"
+
       - name: Publish
         env:
           LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
@@ -112,12 +138,12 @@ jobs:
           SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
         run: |
           ARGS=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           if [ -n "${{ inputs.bundle }}" ]; then ARGS="$ARGS --bundle ${{ inputs.bundle }}"; fi
           python3 scripts/publish-social-bundle.py $ARGS
 
       - name: Record what was published
-        if: inputs.dry_run != 'true'
+        if: steps.mode.outputs.dry_run != 'true'
         run: |
           set -euo pipefail
           # `git diff` cannot see untracked files, and on the very first live

@@ -30,6 +30,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { AGENTZ_PATHS } from "./agentz-paths";
+import {
+  isFailClosedWorkflow,
+  parseModeArgs,
+  resolveAgentzMode,
+  withModeQuery,
+} from "./agentz-mode";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +62,6 @@ interface OpenClawMessage {
 
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
-
 
 // ── Auth helpers (AgentZ → bridge + CLI) ──────────────────────────────────────
 
@@ -163,7 +168,6 @@ async function agentzFetch(
   }
 }
 
-
 // ── OpenClaw gateway outbound (Worker → gateway hooks) ───────────────────────
 
 async function openclawNotify(
@@ -178,7 +182,11 @@ async function openclawNotify(
 ): Promise<{ ok: boolean; status: number; data: unknown }> {
   const gw = (env.OPENCLAW_GATEWAY_URL || "").trim();
   if (!gw) {
-    return { ok: false, status: 503, data: { error: "OPENCLAW_GATEWAY_URL not_set" } };
+    return {
+      ok: false,
+      status: 503,
+      data: { error: "OPENCLAW_GATEWAY_URL not_set" },
+    };
   }
   if (isLocalUrl(gw)) {
     return {
@@ -312,11 +320,27 @@ function parseIntent(text: string): Intent {
 
 // ── Dispatchers ───────────────────────────────────────────────────────────────
 
-async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
+async function dispatchWorkflow(c: any, workflowId: string, args: string[]) {
+  const parsed = parseModeArgs(args);
+  const failClosed = isFailClosedWorkflow(workflowId, "workflow");
+  const { mode, coerced } = resolveAgentzMode({
+    requested: parsed.mode,
+    live: parsed.live,
+    failClosed,
+  });
+  const path = withModeQuery(
+    AGENTZ_PATHS.runWorkflow(workflowId),
+    mode,
+    parsed.live
+  );
   try {
-    const res = await agentzFetch(c.env, AGENTZ_PATHS.runWorkflow(workflowId), {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode: "confirm" }),
+      body: JSON.stringify({
+        mode,
+        live: parsed.live,
+        coerced_to_dry_run: coerced,
+      }),
     });
 
     if (!res.ok) {
@@ -340,12 +364,22 @@ async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
   }
 }
 
-async function dispatchArchitectCycle(c: any, _args: string[]) {
+async function dispatchArchitectCycle(c: any, args: string[]) {
+  const parsed = parseModeArgs(args);
+  const { mode, coerced } = resolveAgentzMode({
+    requested: parsed.mode,
+    live: parsed.live,
+    failClosed: true,
+  });
+  const path = withModeQuery(AGENTZ_PATHS.architectCycle, mode, parsed.live);
   try {
-    // The architect endpoint is on the AgentZ Python API
-    const res = await agentzFetch(c.env, AGENTZ_PATHS.architectCycle, {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode: "dry-run" }),
+      body: JSON.stringify({
+        mode,
+        live: parsed.live,
+        coerced_to_dry_run: coerced,
+      }),
     });
 
     if (!res.ok) {
@@ -509,15 +543,29 @@ app.post("/architect/cycle", async c => {
   if (!bearerOk(c)) return unauthorized(c);
 
   const body = await c.req.json().catch(() => ({}));
-  const mode = body.mode || "dry-run";
+  const { mode, coerced } = resolveAgentzMode({
+    requested: body.mode || "dry-run",
+    live: Boolean(body.live),
+    failClosed: true,
+  });
   const goal =
     body.goal ||
     "Assess fleet health, fix failing workflows, and run priority jobs.";
+  const path = withModeQuery(
+    AGENTZ_PATHS.architectCycle,
+    mode,
+    Boolean(body.live)
+  );
 
   try {
-    const res = await agentzFetch(c.env, AGENTZ_PATHS.architectCycle, {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode, goal }),
+      body: JSON.stringify({
+        mode,
+        goal,
+        live: Boolean(body.live),
+        coerced_to_dry_run: coerced,
+      }),
     });
     const data = (await res.json()) as any;
     return c.json(data);
@@ -535,8 +583,10 @@ function formatHelp(): string {
     "  help              — Show this help",
     "  agents            — List registered AgentZ agents",
     "  workflows         — List available workflows",
-    "  run <id>          — Run a workflow by ID (e.g. run stripe_webhook)",
-    "  architect         — Run an architect cycle (dry-run by default)",
+    "  run <id> [dry-run|confirm|auto] [--live]",
+    "                    — Run a workflow. Default dry-run. Architect / *email*",
+    "                      stay dry-run unless --live is explicit.",
+    "  architect [--live] — Architect cycle (dry-run unless --live)",
     "",
     "Messages from any connected channel (WhatsApp, Telegram, Slack, etc.)",
     "are routed here by the OpenClaw gateway.",

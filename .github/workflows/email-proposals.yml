@@ -54,6 +54,8 @@ jobs:
         id: mode
         run: |
           set -euo pipefail
+          # Schedule is fail-closed unless the owner explicitly armed
+          # OWNER_LIVE_SEND. Empty inputs must never imply live send.
           if [ "${{ github.event_name }}" = "schedule" ]; then
             if [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"

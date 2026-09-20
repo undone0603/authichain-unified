@@ -7,7 +7,9 @@ import { createClient } from "@supabase/supabase-js";
 import { chat } from "./lib/llm.ts";
 import { normalizeContactEmail } from "./lib/contact-email.ts";
 
-const isDryRun = process.env.DRY_RUN === "true";
+// Fail-closed: unset / empty DRY_RUN is dry-run. Live writes only when
+// DRY_RUN is the string "false" (orchestration resolve-mode on dispatch).
+const isDryRun = process.env.DRY_RUN !== "false";
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!

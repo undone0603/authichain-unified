@@ -33,7 +33,7 @@ Until `authichain-edge-router` is confirmed deployed (`CLOUDFLARE_DEPLOY_ENABLED
 
 ### app.* hosts (owner DNS)
 
-`app.authichain.com` 522s when the hostname is orange-clouded to a dead origin (retired Vercel). `/dashboard` is already live on `authichain-edge-router` (`app.authichain.com/*`). `GET /` has no SPA `index.html`, so it 404s until a Worker answers it. Landing (`authichain-com`) registers the more-specific `app.authichain.com/` and 302s to `/dashboard` via Deploy authichain-com. Edge-router also 302s `/` → `/dashboard` after `deploy-cloudflare.yml`. Owner DNS steps:
+`app.authichain.com` 522s when the hostname is orange-clouded to a dead origin (retired Vercel). `/dashboard` is live on `authichain-edge-router` (`app.authichain.com/*`). **`GET /` 302s to `/dashboard`** (edge-router `isAppHostname` + landing `app.authichain.com/` route). Live probe 2026-09-19: 302, not 404. Owner DNS steps:
 
 1. Cloudflare → authichain.com zone → DNS → `app` CNAME to the zone apex or `100::` (Workers-only) **or** leave the existing record
 2. Proxy status: **orange cloud** (proxied)

@@ -4,10 +4,12 @@ agentz.api.main
 FastAPI Gateway for the AgentZ Autonomous Trust Infrastructure.
 Exposes core agents for Mobile, GPT, and Third-party integrations.
 """
-from fastapi import FastAPI, Header, HTTPException, Depends
+from fastapi import FastAPI, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+
+from agentz.api.mode_contract import resolve_execution_mode
 import asyncio
 
 from agentz.core.credentials import get
@@ -163,9 +165,27 @@ async def api_list_workflows():
     }
 
 
+async def _read_json_object(request: Request) -> dict:
+    try:
+        body = await request.json()
+    except Exception:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
 @app.post("/workflows/{workflow_id}/run", dependencies=[Depends(verify_token)])
-async def api_run_workflow(workflow_id: str, mode: str = "dry-run"):
-    """Run a single workflow by ID."""
+async def api_run_workflow(
+    workflow_id: str,
+    request: Request,
+    mode: Optional[str] = Query(None),
+    live: bool = Query(False),
+):
+    """Run a single workflow by ID.
+
+    `mode` is accepted as a query param *or* JSON body (claw chat used to
+    send only the body, which FastAPI ignored). Architect / *email*
+    workflows stay dry-run unless `live=true`.
+    """
     from agentz.core.runner import load_registry, execute
     from agentz.core.modes import parse_mode
 
@@ -174,7 +194,14 @@ async def api_run_workflow(workflow_id: str, mode: str = "dry-run"):
     if not wf:
         raise HTTPException(status_code=404, detail=f"Workflow '{workflow_id}' not found")
 
-    m = parse_mode(mode)
+    resolved, coerced, live_flag = resolve_execution_mode(
+        query_mode=mode,
+        body=await _read_json_object(request),
+        live_query=live,
+        workflow_id=workflow_id,
+        endpoint="workflow",
+    )
+    m = parse_mode(resolved)
     result = execute(wf, m, verbose=False)
     return {
         "workflow_id": result.workflow_id,
@@ -182,25 +209,50 @@ async def api_run_workflow(workflow_id: str, mode: str = "dry-run"):
         "notes": result.notes,
         "error": result.error,
         "duration_s": result.duration_s,
+        "mode": resolved,
+        "coerced_to_dry_run": coerced,
+        "live": live_flag,
     }
 
 
 @app.post("/architect/cycle", dependencies=[Depends(verify_token)])
-async def api_architect_cycle(mode: str = "dry-run", goal: str = ""):
+async def api_architect_cycle(
+    request: Request,
+    mode: Optional[str] = Query(None),
+    live: bool = Query(False),
+    goal: str = Query(""),
+):
     """
     Run a Unified Architect cycle. Returns the full cycle report.
 
-    The Architect is the meta-agent that assesses fleet health, generates
-    an LLM-powered action plan, delegates execution, and reviews results.
+    Fail-closed to dry-run unless `live=true` (query or JSON). JSON `mode`
+    is honored the same way as `/workflows/{id}/run`.
     """
     from agentz.core.architect import ArchitectAgent
     from agentz.core.modes import parse_mode
 
+    body = await _read_json_object(request)
+    resolved, coerced, live_flag = resolve_execution_mode(
+        query_mode=mode,
+        body=body,
+        live_query=live,
+        workflow_id="architect_cycle",
+        endpoint="architect",
+    )
     architect = ArchitectAgent()
-    m = parse_mode(mode)
-    effective_goal = goal or "Assess fleet health, fix failing workflows, and run priority jobs."
+    m = parse_mode(resolved)
+    effective_goal = (
+        goal
+        or (body.get("goal") if isinstance(body.get("goal"), str) else "")
+        or "Assess fleet health, fix failing workflows, and run priority jobs."
+    )
     report = architect.run_cycle(goal=effective_goal, mode=m, verbose=False)
-    return {"report": report.to_dict()}
+    return {
+        "report": report.to_dict(),
+        "mode": resolved,
+        "coerced_to_dry_run": coerced,
+        "live": live_flag,
+    }
 
 
 # --- Launch Governor Endpoints ---
