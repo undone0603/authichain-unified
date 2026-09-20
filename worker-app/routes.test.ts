@@ -124,7 +124,8 @@ describe("GET /api/checkout/plan/:planId", () => {
     expect(arg.metadata.plan).toBe("strainchain_passport");
     expect(arg.metadata.brand).toBe("strainchain");
     expect(arg.after_expiration.recovery.enabled).toBe(true);
-    expect(arg.consent_collection.promotions).toBe("auto");
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.allow_promotion_codes).toBeUndefined();
   });
 });
 

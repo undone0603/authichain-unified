@@ -5,8 +5,8 @@
  *
  * New Passport / DPP sessions enable `after_expiration.recovery` so expired
  * Checkout Sessions expose a 30-day recovery URL on
- * `checkout.session.expired`. Promotion codes stay off on the recovered
- * session until a later pass.
+ * `checkout.session.expired`. Promotion codes and promotional consent stay
+ * off until the Stripe Promotions terms are accepted for this account.
  */
 
 export const CHECKOUT_RECOVERY_ALLOW_PROMOTION_CODES = false;
@@ -17,9 +17,6 @@ export type HostedCheckoutRecoveryParams = {
       enabled: true;
       allow_promotion_codes: false;
     };
-  };
-  consent_collection: {
-    promotions: "auto";
   };
   customer_creation?: "always";
 };
@@ -33,9 +30,6 @@ export function hostedCheckoutRecoveryParams(
         enabled: true,
         allow_promotion_codes: CHECKOUT_RECOVERY_ALLOW_PROMOTION_CODES,
       },
-    },
-    consent_collection: {
-      promotions: "auto",
     },
     ...(mode === "payment" ? { customer_creation: "always" as const } : {}),
   };
@@ -51,7 +45,6 @@ export function applyHostedCheckoutRecovery(
     "after_expiration[recovery][allow_promotion_codes]",
     String(CHECKOUT_RECOVERY_ALLOW_PROMOTION_CODES)
   );
-  body.set("consent_collection[promotions]", "auto");
   if (mode === "payment") {
     body.set("customer_creation", "always");
   }
