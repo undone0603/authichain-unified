@@ -160,18 +160,45 @@ Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/web
 - Do **not** revive `workers/stripe-webhook` or `workers/dpp-fulfillment` for this path.
 - `isDppOffer` matches `metadata.offer=dpp_readiness_2026`, `metadata.plan=dpp_readiness`, or catalog `price_1TwmD8GqTruSqV8TpAF8dfyA` (webhook payloads omit `line_items` unless expanded; checkout now also stamps `metadata.stripe_price_id`).
 
-### Replay a paid session that never provisioned
+### Owner: Resend the missed smoke (`we_1UGTCS…`)
 
-Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** skipped for funnel writes or access grant — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend noise. The working historical smoke lacked `is_demo` because it used a $299 price + promo, not because fulfill filtered demos.
+Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`).
+
+`smoke_check_1789786486` (`cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS`) is **not** skipped by `isDppOffer` — metadata has `offer` + `plan`. Funnel only has `checkout_started` because `checkout.session.completed` never successfully ran fulfill. Live `stripe_events` was empty even for prior successes (edge never wrote it). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** fulfill filters — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend email noise.
 
 1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
-2. Filter recent deliveries for session `cs_live_a1y4Tu…` (`smoke_check_1789786486`, Fri Sep 18 ~10:54 PM ET). Expect historical **non-2xx** (handler threw on missing `DATABASE_URL` before fulfill).
-3. After this Worker deploys: **Resend** that `checkout.session.completed`. Expect 2xx.
-4. Confirm Supabase: `funnel_events` row with `prospect_id=smoke_check_1789786486` and `event_type` in (`dpp_loop:payment_succeeded`, `dpp_loop:provisioned`).
+2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Expect historical **non-2xx** (handler threw on missing `DATABASE_URL` before fulfill).
+3. After this Worker deploys: **Resend** that event. Expect 2xx. Replay is safe — fulfill is idempotent on session id.
+4. Confirm Supabase:
+   ```sql
+   -- delivery visible even if fulfill later throws
+   SELECT event_id, event_type, session_id, status, http_status, error, processed_at
+   FROM stripe_events
+   WHERE session_id LIKE 'cs_live_a1y4Tu%'
+   ORDER BY processed_at DESC;
+
+   -- access grant
+   SELECT event_type, prospect_id, metadata
+   FROM funnel_events
+   WHERE prospect_id = 'smoke_check_1789786486'
+     AND event_type IN ('dpp_loop:payment_succeeded', 'dpp_loop:provisioned');
+   ```
+   If `session_id` / `status` columns are missing, the handler still wrote `event_id` + `event_type` + `processed_at` (migration `20260920000001` is optional).
 
 Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`.
 
 Optional: add `checkout.session.async_payment_succeeded` on `we_1UGTCS…` (Klarna / delayed wallets; not required for $0 card/promo).
+
+### stripe_events is observability, not a fulfill lock
+
+Every verified POST to the apex handler upserts `public.stripe_events` with event id, type, checkout session id (when present), HTTP outcome (`received` → `success` | `error` | `duplicate`), and the last error. A prior `received` / `error` / Drizzle `alreadyProcessed` row must **not** skip DPP `checkout.session.completed` — Resend has to be able to fulfill. `fulfillDppPaidSession` remains idempotent via `recordDppLoopEventOnce(session.id)` + profile upsert.
+
+```sql
+SELECT event_id, event_type, session_id, status, http_status, error, processed_at
+FROM stripe_events
+ORDER BY processed_at DESC
+LIMIT 20;
+```
 
 ## Troubleshooting Checklist
 

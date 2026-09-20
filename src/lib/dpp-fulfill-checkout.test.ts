@@ -133,7 +133,7 @@ describe("fulfillDppPaidSession", () => {
     expect(sendEmail).toHaveBeenCalledOnce();
   });
 
-  it("writes payment_succeeded then provisioned for a paid smoke session", async () => {
+  it("writes payment_succeeded before provision on a $0 promo session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result).toEqual({ handled: true, profileId: "prof_1" });
