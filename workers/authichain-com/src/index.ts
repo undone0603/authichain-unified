@@ -7,6 +7,7 @@ import { tryHandleProtocolCheckout } from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { APP_PREFIXES } from "./app-prefixes";
+import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
 import {
@@ -3185,6 +3186,9 @@ export default {
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/genetics/mendo-love-farms', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
@@ -3210,6 +3214,9 @@ export default {
     if (p === '/demo' || p.startsWith('/demo/')) {
       return Response.redirect('https://authichain.com/pricing', 302);
     }
+
+    const genetics = tryHandleGeneticsRoutes(request);
+    if (genetics) return genetics;
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
