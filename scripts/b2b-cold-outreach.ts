@@ -20,6 +20,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { guardrailCheck, guardrailRecord } from "./lib/guardrail-client";
 import {
+  isAlreadyContacted,
+  shouldNotLiveResend,
+} from "./lib/b2b-send-policy";
+import {
   checkSender,
   reportSenderFailure,
   CREDENTIAL_ENV_VARS,
@@ -662,6 +666,22 @@ async function processTargets<
 
     const { subject, html } = buildEmail(t);
 
+    if (email && shouldNotLiveResend(email)) {
+      console.log(`  ⏭️  Do-not-resend list — ${email}`);
+      continue;
+    }
+    if (email && !isDryRun) {
+      const { data: existing } = await supabase
+        .from("leads")
+        .select("status")
+        .eq("email", email)
+        .maybeSingle();
+      if (isAlreadyContacted(existing?.status)) {
+        console.log(`  ⏭️  Already contacted ${email} — not re-sending`);
+        continue;
+      }
+    }
+
     // Determine initial status
     const dbStatus = isDryRun
       ? "draft"
@@ -718,6 +738,10 @@ async function processTargets<
         `     ⏭️  Live cap reached (MAX_LIVE_SENDS=${maxLiveSends}) — leaving ${email} queued`
       );
       queued++;
+      await supabase
+        .from("leads")
+        .update({ status: "queued", updatedAt: new Date().toISOString() })
+        .eq("email", email);
       continue;
     }
 
@@ -881,10 +905,7 @@ export async function flushQueuedLeads(): Promise<number> {
     if (!meta?.subject || !meta?.html_preview) continue;
     const leadEmail = String(lead.email ?? "").toLowerCase();
     if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
-    if (
-      leadEmail === "franchiseinfo@fastsigns.com" ||
-      leadEmail === "inquiries@moo.com"
-    ) {
+    if (shouldNotLiveResend(leadEmail)) {
       console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
       continue;
     }
