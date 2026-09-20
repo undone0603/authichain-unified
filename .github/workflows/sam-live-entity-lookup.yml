@@ -1,0 +1,115 @@
+name: SAM live entity lookup (temporary)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SAM_API_KEY: ${{ secrets.SAM_API_KEY || secrets.SAM_GOV_API_KEY }}
+    steps:
+      - name: Query SAM.gov and write redacted summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$RUNNER_TEMP/sam-entity"
+          mkdir -p "$work"
+
+          if [[ -z "${SAM_API_KEY:-}" ]]; then
+            printf '%s\n' '{"status":"missing_secret"}' > "$work/uei.json"
+            printf '%s\n' '{"status":"missing_secret"}' > "$work/cage.json"
+            printf '000' > "$work/uei.status"
+            printf '000' > "$work/cage.status"
+            printf '000' > "$work/opportunities.status"
+          else
+            curl --silent --show-error --max-time 45 \
+              --output "$work/uei.json" --write-out '%{http_code}' \
+              "https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_API_KEY}&ueiSAM=R34XKWRJY9A5&includeSections=entityRegistration,coreData" \
+              > "$work/uei.status" 2> "$work/uei.curlerr" || true
+
+            curl --silent --show-error --max-time 45 \
+              --output "$work/cage.json" --write-out '%{http_code}' \
+              "https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_API_KEY}&cageCode=1PUJ6&includeSections=entityRegistration,coreData" \
+              > "$work/cage.status" 2> "$work/cage.curlerr" || true
+
+            from_date="$(date -u -d '7 days ago' '+%m/%d/%Y')"
+            to_date="$(date -u '+%m/%d/%Y')"
+            curl --silent --show-error --max-time 45 --output /dev/null --write-out '%{http_code}' \
+              "https://api.sam.gov/opportunities/v2/search?api_key=${SAM_API_KEY}&limit=1&postedFrom=${from_date}&postedTo=${to_date}" \
+              > "$work/opportunities.status" 2> "$work/opportunities.curlerr" || true
+          fi
+
+          for response in "$work/uei.json" "$work/cage.json"; do
+            if ! jq -e 'type == "object"' "$response" >/dev/null 2>&1; then
+              printf '%s\n' '{}' > "$response"
+            fi
+          done
+
+          uei_status="$(tr -dc '0-9' < "$work/uei.status" || true)"
+          cage_status="$(tr -dc '0-9' < "$work/cage.status" || true)"
+          opportunities_status="$(tr -dc '0-9' < "$work/opportunities.status" || true)"
+          uei_status="${uei_status:-000}"
+          cage_status="${cage_status:-000}"
+          opportunities_status="${opportunities_status:-000}"
+
+          jq -n \
+            --arg ueiStatus "$uei_status" \
+            --arg cageStatus "$cage_status" \
+            --arg opportunitiesStatus "$opportunities_status" \
+            --slurpfile uei "$work/uei.json" \
+            --slurpfile cage "$work/cage.json" \
+            '
+            def first_record($doc):
+              if (($doc.entityData? // null) | type) == "array" and (($doc.entityData | length) > 0) then
+                $doc.entityData[0]
+              elif (($doc.results? // null) | type) == "array" and (($doc.results | length) > 0) then
+                $doc.results[0]
+              else
+                $doc
+              end;
+            def summary($doc):
+              (first_record($doc)) as $record |
+              ($record.entityRegistration // {}) as $registration |
+              ($record.coreData // {}) as $core |
+              ($core.physicalAddress // $record.physicalAddress // {}) as $address |
+              {
+                legalBusinessName: ($registration.legalBusinessName // null),
+                ueiSAM: ($registration.ueiSAM // null),
+                cageCode: ($registration.cageCode // null),
+                registrationStatus: ($registration.registrationStatus // null),
+                registrationExpirationDate: ($registration.registrationExpirationDate // $registration.expirationDate // null),
+                physicalAddress: {
+                  addressLine1: ($address.addressLine1 // null),
+                  addressLine2: ($address.addressLine2 // null),
+                  city: ($address.city // null),
+                  stateOrProvinceCode: ($address.stateOrProvinceCode // null),
+                  zipCode: ($address.zipCode // null),
+                  zipCodePlus4: ($address.zipCodePlus4 // null),
+                  countryCode: ($address.countryCode // null)
+                }
+              };
+            {
+              retrievedAt: (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
+              lookups: [
+                {lookup: "ueiSAM=R34XKWRJY9A5", httpStatus: ($ueiStatus | tonumber), entity: summary($uei[0])},
+                {lookup: "cageCode=1PUJ6", httpStatus: ($cageStatus | tonumber), entity: summary($cage[0])}
+              ],
+              opportunitiesHttpStatus: ($opportunitiesStatus | tonumber)
+            }
+            ' > "$GITHUB_WORKSPACE/sam-entity-summary.json"
+
+          chmod 600 "$GITHUB_WORKSPACE/sam-entity-summary.json"
+      - name: Upload redacted summary only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-entity-summary
+          path: sam-entity-summary.json
+          if-no-files-found: error
+          retention-days: 1
