@@ -348,22 +348,64 @@ describe("dpp-loop", () => {
     );
   });
 
-  it("does not record retained for demo visits", async () => {
+  it("records retained for DPP-SMOKE/demo visits that earned it", async () => {
+    const usageAt = "2026-09-09T10:00:00.000Z";
     const { supabase, rows: stored } = fakeFunnel();
     const result = await recordEarnedRetention(supabase, {
       rows: [
         activatedRow("demo_1", "2026-09-01T00:00:00.000Z", { is_demo: true }),
       ],
-      usageByVisit: { demo_1: ["2026-09-09T10:00:00.000Z"] },
+      usageByVisit: { demo_1: [usageAt] },
       now: new Date("2026-09-20T00:00:00.000Z"),
     });
 
     expect(result[0]).toMatchObject({
       visitId: "demo_1",
-      recorded: false,
-      reason: "demo",
+      recorded: true,
+      reason: "usage_after_horizon",
+      qualifyingUsageAt: usageAt,
     });
-    expect(stored).toHaveLength(0);
+    expect(stored).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          prospect_id: "demo_1",
+          event_type: "dpp_loop:retained",
+        }),
+      ])
+    );
+  });
+
+  it("closes the smoke loop the same day; paid buyers still wait the horizon", async () => {
+    const activatedAt = "2026-09-20T12:00:00.000Z";
+    const usageAt = "2026-09-20T13:00:00.000Z";
+    const now = new Date("2026-09-20T14:00:00.000Z");
+    const { supabase, rows: stored } = fakeFunnel();
+
+    const smoke = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("dpp_smoke_1", activatedAt, { is_demo: true })],
+      usageByVisit: { dpp_smoke_1: [usageAt] },
+      now,
+    });
+    expect(smoke[0]).toMatchObject({
+      visitId: "dpp_smoke_1",
+      recorded: true,
+      reason: "usage_after_horizon",
+      qualifyingUsageAt: usageAt,
+    });
+
+    const paid = await recordEarnedRetention(supabase, {
+      rows: [activatedRow("paid_1", activatedAt)],
+      usageByVisit: { paid_1: [usageAt] },
+      now,
+    });
+    expect(paid[0]).toMatchObject({
+      visitId: "paid_1",
+      recorded: false,
+      reason: "horizon_not_reached",
+    });
+    expect(
+      stored.filter(r => r.prospect_id === "paid_1" && r.event_type === "dpp_loop:retained")
+    ).toHaveLength(0);
   });
 
   it("does not write retained twice for a visit that already has it", async () => {
@@ -417,16 +459,23 @@ describe("dpp-loop", () => {
     );
 
     expect(report.ok).toBe(true);
-    expect(report.retainedCount).toBe(1);
-    expect(report.retained).toEqual([
-      {
-        visitId: "paid_1",
-        qualifyingUsageAt: "2026-09-09T10:00:00.000Z",
-      },
-    ]);
+    expect(report.retainedCount).toBe(2);
+    expect(report.retained).toEqual(
+      expect.arrayContaining([
+        {
+          visitId: "paid_1",
+          qualifyingUsageAt: "2026-09-09T10:00:00.000Z",
+        },
+        {
+          visitId: "demo_1",
+          qualifyingUsageAt: "2026-09-09T10:00:00.000Z",
+        },
+      ])
+    );
     expect(report.demoVisits).toBe(1);
+    expect(report.visits).toBe(1);
     expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
-      1
+      2
     );
   });
 });
