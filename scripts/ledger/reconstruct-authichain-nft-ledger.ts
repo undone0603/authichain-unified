@@ -4,16 +4,14 @@ import { writeFile, mkdir } from "node:fs/promises";
 const CONTRACT_ADDRESS = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const DEPLOY_BLOCK = 77535676;
-// publicnode is the default because it has answered consistently. This is a
-// preference, not a verdict on the alternatives: polygon-rpc.com was
-// unreachable from CI across two runs on 2026-09-19 and then served a complete
-// state reconstruction in 3 seconds on 2026-09-20. That was a transient outage,
-// not a property of the endpoint, and an earlier revision of this comment
-// wrongly recorded it as "never connects from a GitHub runner".
+// Fallback only. CI supplies POLYGON_RPC_URL from a repo secret; this value is
+// what a bare local run gets.
 //
-// The lesson worth keeping is the preflight below, not the blocklist: any
-// public endpoint can be down when you reach for it, so fail fast and say which
-// one failed.
+// No claim is made here about which public endpoints work. Two earlier
+// revisions of this comment asserted opposite verdicts on polygon-rpc.com, and
+// both were unfounded: the runs they cited had POLYGON_RPC_URL set, so they
+// exercised the secret's endpoint and never the one named. The reachability of
+// any specific public endpoint from CI is, as of this writing, untested.
 const DEFAULT_RPC = "https://polygon-bor-rpc.publicnode.com";
 const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
 
@@ -249,10 +247,11 @@ const CLUSTER = new Set([
  * as "step still running". A bounded probe turns that into a named error in
  * seconds.
  *
- * This matters more than picking a "good" endpoint: the endpoint that caused
- * those two runs was working again the next day. Transient outages are the
- * normal case for public RPCs, so the defence is a fast, named failure rather
- * than a list of hosts to avoid.
+ * NOTE: this has not been verified against an actually-unreachable endpoint.
+ * Three attempts to test it all reached a working RPC instead — the first
+ * because the endpoint recovered, the next two because POLYGON_RPC_URL was set
+ * and silently overrode the URL under test. Treat the fast-fail as intended
+ * behaviour, not demonstrated behaviour, until a run proves it.
  */
 async function preflight(): Promise<number> {
   const timeoutMs = Number(process.env.AUTHICHAIN_LEDGER_PREFLIGHT_MS ?? 20_000);
@@ -265,7 +264,10 @@ async function preflight(): Promise<number> {
   });
   try {
     const latest = await Promise.race([provider.getBlockNumber(), expiry]);
-    console.error(`RPC ok: ${RPC_URL} at block ${latest}`);
+    // Host only — the configured URL may carry an API key, and relying on the
+    // runner's secret masking to hide it is a weaker guarantee than not
+    // printing it.
+    console.error(`RPC ok: ${new URL(RPC_URL).host} at block ${latest}`);
     return latest;
   } finally {
     if (timer) clearTimeout(timer);

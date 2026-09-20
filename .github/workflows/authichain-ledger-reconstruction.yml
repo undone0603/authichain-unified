@@ -9,13 +9,16 @@ name: AuthiChain on-chain ledger reconstruction
 # problem. At the 8,000-block default the range needs ~900 sequential getLogs
 # calls against the public RPC, which does not fit.
 #
-# The default RPC is publicnode because it has answered consistently. The
-# previous default, polygon-rpc.com, cost two 60-minute runs on 2026-09-19 in
-# ethers' "failed to detect network" retry loop — then served a full state
-# reconstruction in 3 seconds on 2026-09-20. That was an outage, not a bad
-# endpoint; an earlier revision of this comment recorded it as permanent, which
-# was wrong. Either endpoint is fine; the preflight is what makes an outage
-# cheap. A POLYGON_RPC_URL repo *secret*
+# The endpoint comes from the POLYGON_RPC_URL repo secret, with a public
+# fallback if it is ever unset. There is deliberately no rpc_url input: one
+# existed briefly and was inert from the day it was added, because the secret
+# took precedence over it. Every run that appeared to test a specific endpoint
+# was in fact using the secret, which produced several confident and wrong
+# conclusions about which public endpoints work.
+#
+# If the configured endpoint needs to change, change the secret. An input would
+# also have printed its value into the logs of a public repository, so a keyed
+# archive URL could never have travelled through it safely. A POLYGON_RPC_URL repo *secret*
 # takes precedence when set: secrets are masked in logs, whereas this input is
 # printed in clear text, so a keyed archive URL must go in the secret and never
 # in the input.
@@ -47,11 +50,6 @@ on:
         required: false
         default: "9000"
         type: string
-      rpc_url:
-        description: "Polygon RPC. Public endpoints only — this value is printed in the logs, so never pass a URL with an API key in it."
-        required: false
-        default: "https://polygon-bor-rpc.publicnode.com"
-        type: string
 
 jobs:
   reconstruct:
@@ -72,7 +70,7 @@ jobs:
       - name: Reconstruct production AuthiChain NFT ledger
         run: pnpm ledger:authichain-nft
         env:
-          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL || inputs.rpc_url || 'https://polygon-bor-rpc.publicnode.com' }}
+          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL || 'https://polygon-bor-rpc.publicnode.com' }}
           AUTHICHAIN_LEDGER_MODE: ${{ inputs.mode || 'state' }}
           AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '9000' }}
       - uses: actions/upload-artifact@v4
