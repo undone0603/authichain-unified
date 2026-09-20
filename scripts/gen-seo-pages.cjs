@@ -745,6 +745,7 @@ function buildEntry(d) {
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
   'anti-counterfeit-qr-verification',
+  'authentic-agentic-economy',
   'battery-passport-due-diligence-requirement',
   'biotrack-integration-blockchain-provenance',
   'blockchain-product-authentication',

@@ -1,5 +1,27 @@
 [
   {
+    "slug": "authentic-agentic-economy",
+    "keyword": "authentic agentic economy",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Authentic Agentic Economy | AuthiChain",
+    "metaDescription": "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
+    "h1": "The Authentic Agentic Economy",
+    "bodyHtml": "<p>Agents can already pay, call tools, and act. They cannot tell a genuine product from a counterfeit unless authenticity is machine-verifiable. AuthiChain is that layer — the <strong>authentic agentic economy</strong>.</p><h2>What is live</h2><ul><li>Signed seals anchored on Polygon, publicly verifiable from authichain.com/anchor</li><li>5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) in 2.1 seconds</li><li>MCP tools so an agent can verify authenticity and request a paid check</li><li>x402 pay-per-call verification at $0.05 USDC on Base — unpaid POST returns HTTP 402</li><li>EU DPP Readiness on live Stripe checkout at $299 via GET /api/checkout/dpp</li></ul><h2>Why agents need authenticity</h2><p>Public research on the agentic economy (identity, MCP, settlement, Digital Product Passports as machine-queryable infrastructure) describes the gap. AuthiChain does not claim those papers. It ships the physical-world authenticity check those stacks still need.</p><h2>Start on a live path</h2><p>Humans enroll <a href=\"https://authichain.com/api/checkout/dpp\">EU DPP Readiness</a>. Agents use <a href=\"https://authichain.com/x402\">x402 agent pay</a>. The canonical brief is <a href=\"https://authichain.com/authentic-agentic-economy\">authichain.com/authentic-agentic-economy</a>.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "The Authentic Agentic Economy",
+      "name": "AuthiChain — The authentic agentic economy",
+      "brand": {
+        "@type": "Brand",
+        "name": "AuthiChain"
+      },
+      "description": "AuthiChain is the authenticity layer for the agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.",
+      "url": "https://authichain.com/authentic-agentic-economy"
+    }
+  },
+  {
     "slug": "blockchain-product-authentication",
     "keyword": "blockchain product authentication",
     "brand": "AuthiChain",

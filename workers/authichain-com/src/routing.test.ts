@@ -50,6 +50,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
+  assert.match(html, /The authentic agentic economy/);
+  assert.match(html, /href="\/authentic-agentic-economy"/);
   assert.match(html, /--bg: #ffffff/);
   assert.match(html, /--accent: #4F46E5/);
   assert.doesNotMatch(html, /FedRAMP/);
@@ -116,6 +118,34 @@ test("homepage and /dpp link to /x402", async () => {
   assert.match(home, /href="\/x402"/);
   const dpp = await (await get("/dpp")).text();
   assert.match(dpp, /href="\/x402"/);
+});
+
+test("/authentic-agentic-economy is a real positioning page", async () => {
+  for (const path of [
+    "/authentic-agentic-economy",
+    "/authentic-agentic-economy/",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+    const html = await res.text();
+    assert.match(
+      html,
+      /<title>The authentic agentic economy — AuthiChain<\/title>/
+    );
+    assert.match(
+      html,
+      /Agents can pay\. They still need to know if it is real\./
+    );
+    assert.match(html, /href="\/api\/checkout\/dpp"/);
+    assert.match(html, /href="\/x402"/);
+    assert.match(html, /arxiv\.org\/abs\/2602\.14219/);
+    assert.ok(
+      !html.toLowerCase().includes("facilitator.payai"),
+      `${path} must not publish the facilitator URL`
+    );
+  }
+  assert.equal((await get("/agentic-economy")).status, 404);
 });
 
 test("every comparison page renders, including the new /vs/everledger", async () => {
@@ -360,6 +390,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
+  assert.ok(
+    xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
+  );
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

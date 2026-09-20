@@ -252,6 +252,7 @@ ${X402_TOKEN_CSS}
       <ul class="nav-links">
         <li><a href="${esc(p.healthUrl)}">Health JSON</a></li>
         <li><a href="${esc(p.catalogUrl)}">Catalog</a></li>
+        <li><a href="/authentic-agentic-economy">Agentic economy</a></li>
         <li><a href="/pricing">Pricing</a></li>
         <li><a href="/api/checkout/dpp">DPP checkout</a></li>
         <li><a href="/dpp">DPP brief</a></li>

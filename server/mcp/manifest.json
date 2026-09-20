@@ -2,7 +2,7 @@
   "name": "authichain-trust-engine",
   "displayName": "AuthiChain Trust Engine",
   "version": "1.0.0",
-  "description": "Verification/trust layer for the agentic economy. Agents verify product authenticity, classify verticals, and pay per verification via x402.",
+  "description": "The authentic agentic economy — verification/trust layer. Agents verify product authenticity, classify verticals, and pay per verification via x402.",
   "homepage": "https://authichain.com",
   "transport": "stdio",
   "command": "npx",
@@ -46,12 +46,14 @@
     }
   },
   "keywords": [
+    "authentic-agentic-economy",
     "authentication",
     "provenance",
     "blockchain",
     "x402",
     "agent-commerce",
     "verification",
-    "trust"
+    "trust",
+    "mcp"
   ]
 }

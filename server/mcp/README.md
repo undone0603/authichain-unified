@@ -1,6 +1,6 @@
 # AuthiChain Trust Engine — MCP Server
 
-The verification/trust layer for the agentic economy. Any AI agent (Claude, Cursor,
+The authentic agentic economy — verification/trust layer. Any AI agent (Claude, Cursor,
 or an autonomous "business OS") can call AuthiChain to verify authenticity, classify a
 product, and **pay per verification via x402** — no human in the loop at runtime.
 

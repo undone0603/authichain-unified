@@ -30,7 +30,7 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
     domain: "authichain.com",
     url: "https://authichain.com",
     wordmark: "AuthiChain",
-    tagline: "The truth layer for physical products",
+    tagline: "The authentic agentic economy",
     accent: "#4F46E5",
     accentInk: "#ffffff",
     accentSoft: "#eef2ff",
@@ -495,14 +495,14 @@ export function estateMark(brand: EstateBrandId): string {
 export function estateNav(
   brand: EstateBrandId,
   links: EstateLink[],
-  primary: EstateCta,
+  primary: EstateCta
 ): string {
   const b = ESTATE_BRANDS[brand];
   const items = links
-    .map((l) => `<li><a href="${esc(l.href)}">${esc(l.label)}</a></li>`)
+    .map(l => `<li><a href="${esc(l.href)}">${esc(l.label)}</a></li>`)
     .join("");
   const mobile = [
-    ...links.map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a>`),
+    ...links.map(l => `<a href="${esc(l.href)}">${esc(l.label)}</a>`),
     `<a class="btn btn-primary" href="${esc(primary.href)}">${esc(primary.label)}</a>`,
   ].join("");
   return `<nav class="estate-nav nav" aria-label="Primary">
@@ -524,8 +524,8 @@ export function estateHero(opts: {
 }): string {
   const actions = opts.actions
     .map(
-      (a) =>
-        `<a class="btn ${a.primary === false ? "btn-outline" : "btn-primary"}" href="${esc(a.href)}">${esc(a.label)}</a>`,
+      a =>
+        `<a class="btn ${a.primary === false ? "btn-outline" : "btn-primary"}" href="${esc(a.href)}">${esc(a.label)}</a>`
     )
     .join("");
   return `<header class="estate-hero hero" id="hero">
@@ -539,10 +539,10 @@ export function estateHero(opts: {
 }
 
 export function estateTrust(
-  items: Array<{ value: string; label: string; id?: string }>,
+  items: Array<{ value: string; label: string; id?: string }>
 ): string {
   const cells = items
-    .map((it) => {
+    .map(it => {
       const value = it.id
         ? `<strong class="stat-value" id="${esc(it.id)}">${esc(it.value)}</strong>`
         : `<strong class="stat-value">${esc(it.value)}</strong>`;
@@ -558,12 +558,12 @@ export function estateSteps(
   heading: string,
   sub: string,
   steps: Array<{ title: string; body: string }>,
-  id = "how",
+  id = "how"
 ): string {
   const cards = steps
     .map(
       (s, i) =>
-        `<div class="step"><div class="step-num">${String(i + 1).padStart(2, "0")}</div><h3>${esc(s.title)}</h3><p>${esc(s.body)}</p></div>`,
+        `<div class="step"><div class="step-num">${String(i + 1).padStart(2, "0")}</div><h3>${esc(s.title)}</h3><p>${esc(s.body)}</p></div>`
     )
     .join("");
   return `<section class="estate-section" id="${esc(id)}">
@@ -579,12 +579,12 @@ export function estateFeatures(
   heading: string,
   sub: string,
   features: Array<{ title: string; body: string }>,
-  id = "features",
+  id = "features"
 ): string {
   const cards = features
     .map(
-      (f) =>
-        `<article class="estate-card card"><h3>${esc(f.title)}</h3><p>${esc(f.body)}</p></article>`,
+      f =>
+        `<article class="estate-card card"><h3>${esc(f.title)}</h3><p>${esc(f.body)}</p></article>`
     )
     .join("");
   return `<section class="estate-section" id="${esc(id)}">
@@ -603,8 +603,8 @@ export function estateCtaBand(opts: {
 }): string {
   const actions = opts.actions
     .map(
-      (a) =>
-        `<a class="btn ${a.primary === false ? "btn-outline" : "btn-primary"}" href="${esc(a.href)}">${esc(a.label)}</a>`,
+      a =>
+        `<a class="btn ${a.primary === false ? "btn-outline" : "btn-primary"}" href="${esc(a.href)}">${esc(a.label)}</a>`
     )
     .join("");
   return `<section class="estate-cta cta-section" id="get-started">
@@ -619,13 +619,13 @@ export function estateCtaBand(opts: {
 export function estateFooter(
   brand: EstateBrandId,
   columns: Array<{ heading: string; links: EstateLink[] }>,
-  note: string,
+  note: string
 ): string {
   const b = ESTATE_BRANDS[brand];
   const cols = columns
-    .map((col) => {
+    .map(col => {
       const lis = col.links
-        .map((l) => `<li><a href="${esc(l.href)}">${esc(l.label)}</a></li>`)
+        .map(l => `<li><a href="${esc(l.href)}">${esc(l.label)}</a></li>`)
         .join("");
       return `<div><div class="footer-heading">${esc(col.heading)}</div><ul class="footer-links">${lis}</ul></div>`;
     })
