@@ -37,64 +37,91 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_CONFIG: .gitleaks.toml
 
+  # GitHub evaluates jobs.<id>.if BEFORE strategy expands, so a job-level
+  # `if: matrix.worker != 'authichain-agentz'` fails the entire workflow graph
+  # (Unrecognized named-value: 'matrix', 0 jobs, "This workflow graph cannot
+  # be shown."). Build the list here instead: $0 default omits agentz;
+  # workflow_dispatch + deploy_agentz_containers=true appends it (Workers Paid).
+  deploy-matrix:
+    name: Build worker matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      workers: ${{ steps.build.outputs.workers }}
+    steps:
+      - name: Select workers ($0 default; AgentZ opt-in)
+        id: build
+        env:
+          DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
+        run: |
+          set -euo pipefail
+          # Keep this list aligned with workers/* that should auto-deploy on
+          # main. Do not add authichain-agentz — Cloudflare Containers stay
+          # opt-in so a push never enables Workers Paid.
+          workers=$(jq -nc '[
+            "authichain-api",
+            "authichain-api-gateway",
+            "authichain-automation",
+            "authichain-com",
+            "authichain-dashboard",
+            "qron-automation",
+            "qron-image-gen",
+            "qron-outreach",
+            "qron-space",
+            "resend-relay",
+            "strainchain-io",
+            "govchain-us",
+            "bitcoin-auth",
+            "outreach-queue",
+            "ai-classification",
+            "analytics",
+            "auth",
+            "authichain-autopilot",
+            "authichain-chain-data",
+            "authichain-gateway",
+            "authichain-license-issuer",
+            "authichain-qron-provenance",
+            "authichain-scan-validate",
+            "authichain-telegram",
+            "authichain-verify-worker",
+            "stripe-webhook",
+            "authichain-openclaw",
+            "authichain-infra",
+            "authichain-outreach-engine",
+            "blockchain",
+            "chipchain-io",
+            "dpp-fulfillment",
+            "fanchain-io",
+            "glowchain-io",
+            "gs1-resolver",
+            "harvestchain-io",
+            "luxechain-io",
+            "partchain-io",
+            "provenchain-io",
+            "rxchain-io",
+            "threadchain-io",
+            "watchchain-io",
+            "passport-demo",
+            "qfs-adapter",
+            "authichain-bridge"
+          ]')
+          if [ "${DEPLOY_AGENTZ}" = "true" ]; then
+            workers=$(jq -nc --argjson w "${workers}" '$w + ["authichain-agentz"]')
+          fi
+          echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+          if [ "${DEPLOY_AGENTZ}" = "true" ]; then
+            echo "deploy matrix (agentz opt-in): ${workers}"
+          else
+            echo "deploy matrix (\$0 default, agentz omitted): ${workers}"
+          fi
+
   deploy:
     runs-on: ubuntu-latest
-    needs: secret-scan
+    needs: [secret-scan, deploy-matrix]
     strategy:
       fail-fast: false
       matrix:
-        worker:
-          - authichain-api
-          - authichain-api-gateway
-          - authichain-automation
-          - authichain-com
-          - authichain-dashboard
-          - qron-automation
-          - qron-image-gen
-          - qron-outreach
-          - qron-space
-          - resend-relay
-          - strainchain-io
-          - govchain-us
-          - bitcoin-auth
-          - outreach-queue
-          - ai-classification
-          - analytics
-          - auth
-          - authichain-autopilot
-          - authichain-chain-data
-          - authichain-gateway
-          - authichain-license-issuer
-          - authichain-qron-provenance
-          - authichain-scan-validate
-          - authichain-telegram
-          - authichain-verify-worker
-          - stripe-webhook
-          - authichain-openclaw
-          - authichain-agentz
-          - authichain-infra
-          - authichain-outreach-engine
-          - blockchain
-          - chipchain-io
-          - dpp-fulfillment
-          - fanchain-io
-          - glowchain-io
-          - gs1-resolver
-          - harvestchain-io
-          - luxechain-io
-          - partchain-io
-          - provenchain-io
-          - rxchain-io
-          - threadchain-io
-          - watchchain-io
-          - passport-demo
-          - qfs-adapter
-          - authichain-bridge
-    # $0 path: do not auto-deploy Cloudflare Containers. authichain-agentz
-    # stays in the matrix for opt-in dispatch only (Workers Paid).
-    if: |
-      matrix.worker != 'authichain-agentz' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true')
+        worker: ${{ fromJSON(needs.deploy-matrix.outputs.workers) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
