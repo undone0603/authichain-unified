@@ -44,6 +44,7 @@ import {
 import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
+import { notifyPilotIntake } from "./onboard-notify";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -920,7 +921,42 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   dest.searchParams.set("ref", ref);
   dest.searchParams.set("vertical", vertical);
   dest.searchParams.set("company", company);
+  scheduleOnboardNotify(c, {
+    company,
+    contact: contactName,
+    email,
+    vertical,
+    product: productName,
+    ref,
+  });
   return c.redirect(dest.pathname + dest.search, 303);
+}
+
+// Fire-and-forget inbound alert. waitUntil keeps the isolate alive after the
+// 303; if executionCtx is missing (tests / some runtimes), still void-notify.
+function scheduleOnboardNotify(
+  c: Context,
+  payload: {
+    company: string;
+    contact: string;
+    email: string;
+    vertical: string;
+    product: string;
+    ref: string;
+  }
+): void {
+  const work = notifyPilotIntake({
+    ...payload,
+    env: c.env as {
+      RESEND_API_KEY?: string;
+      RESEND_API_KEY2?: string;
+    },
+  }).catch(() => undefined);
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    void work;
+  }
 }
 
 function renderOnboardReceived(c: Context): Response {

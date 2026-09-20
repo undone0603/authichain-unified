@@ -17,7 +17,12 @@ vi.mock("../server/identity-db-helpers", () => ({
   getQronById: vi.fn(),
 }));
 
+vi.mock("./onboard-notify", () => ({
+  notifyPilotIntake: vi.fn().mockResolvedValue(undefined),
+}));
+
 const { renderDynamicPage } = await import("./dynamic-pages");
+const { notifyPilotIntake } = await import("./onboard-notify");
 const { getHyperdriveDb } = await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
@@ -343,6 +348,50 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(location).toContain("/onboard/received");
     expect(location).toContain("ref=");
     expect(location).toContain("vertical=strainchain");
+  });
+
+  it("waitUntils inbound notify before the 303 when executionCtx is present", async () => {
+    const pending: Promise<unknown>[] = [];
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01",
+        redirect: "manual",
+      },
+      makeEnv({ RESEND_API_KEY2: "re_test" }) as any,
+      { waitUntil: (p: Promise<unknown>) => { pending.push(p); } } as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(pending.length).toBe(1);
+    await Promise.all(pending);
+    expect(notifyPilotIntake).toHaveBeenCalledTimes(1);
+    const arg = (notifyPilotIntake as any).mock.calls[0][0];
+    expect(arg.company).toBe("Trulieve");
+    expect(arg.contact).toBe("Jordan Hale");
+    expect(arg.email).toBe("jordan@trulieve.com");
+    expect(arg.vertical).toBe("strainchain");
+    expect(arg.product).toBe("Jar Seal 01");
+    expect(arg.ref).toMatch(/^[a-f0-9]{16}$/);
+    expect(arg.env?.RESEND_API_KEY2).toBe("re_test");
+  });
+
+  it("void-notifies when executionCtx is missing and still 303s", async () => {
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Acme&contactName=Ada&email=ada%40acme.com&vertical=qron&productName=Living+QR",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(notifyPilotIntake).toHaveBeenCalled();
   });
 
   it("renders the received confirmation when a ref is present", async () => {

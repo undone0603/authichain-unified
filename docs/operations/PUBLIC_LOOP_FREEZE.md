@@ -12,6 +12,18 @@ This freeze blocked **autonomous cold outbound** (Resend/social spam) and **gov-
 
 **Safe tick (does not thaw cold send):** weekday `genesis-cron.yml` hits `GET /api/automation/cron` only. See `docs/operations/GENESIS_CRON.md`. Do not uncomment `worker-app/wrangler.toml` GROUP B crons.
 
+## Update — 2026-09-19 owner unfreeze (named humans only)
+
+Owner unfroze five named humans only (not a workflow thaw):
+
+- Trulieve Kalee
+- Curaleaf Jeremy
+- Cresco info@
+- Wilson Harper hello@
+- RealTHCV info@
+
+Workflow outbound remains frozen (`b2b-outreach` / `email-proposals` / `gov-mint` still gated). `/onboard` notify (ntfy + optional Resend to owner inboxes) is inbound-only — it does not thaw cold send.
+
 ## Owner directive — 2026-09-19 (first dollar, then staged outbound)
 
 Checkout is live. Smoke buyer is owner-attested. Estate `/onboard` and `/generate` return 200. Frustration that "everything is frozen" is a docs problem: the revenue path was already on; only cold-send spend and gov-mint stayed off.
