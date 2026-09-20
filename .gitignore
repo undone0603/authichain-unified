@@ -93,6 +93,10 @@ dist/
 authichain_premium/
 qron-platform/
 qron/
+!docs/marketing/qron/
+!docs/marketing/qron/**
+!docs/qron/
+!docs/qron/**
 govchain.us/
 maison-elite-ai-dropship/
 
