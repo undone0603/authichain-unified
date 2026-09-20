@@ -174,28 +174,36 @@ Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/web
 
 Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`).
 
-`smoke_check_1789786486` (`cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS`) is **not** skipped by `isDppOffer` — metadata has `offer` + `plan`. Funnel only has `checkout_started` because `checkout.session.completed` never successfully ran fulfill. Live `stripe_events` was empty even for prior successes (edge never wrote it). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** fulfill filters — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend email noise.
+`smoke_check_1789786486` (`cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS`) is **not** skipped by `isDppOffer` — metadata has `offer` + `plan`. `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** fulfill filters — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend email noise.
+
+**2026-09-20 Resend wrote `payment_succeeded` but not `provisioned`.** Not an `is_demo` short-circuit. Live `payment_succeeded` has `email=authichain@gmail.com`. `fulfillDppPaidSession` then called `provisionPurchase`, which inserts `{ email, brand, created_at }` into `public.profiles`. That table’s `user_id` was `NOT NULL` + FK to `auth.users` (0 rows). Insert failed `23502`; the error was mapped to `no_identity`; `provisioned` was skipped; webhook still HTTP 200. Fix: `user_id` is nullable for guests (migration `20260920000002`); insert errors now `upsert_failed` and throw so Stripe retries; `no_identity` still writes `dpp_loop:provisioned` with `metadata.skip_reason=no_identity`.
 
 1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
 2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Historical non-2xx: first `DATABASE_URL` (fixed), then `SubtleCryptoProvider cannot be used in a synchronous context` until this async verify lands.
-3. After this Worker deploys: **Resend** `evt_1UHERPGqTruSqV8TMtUYKAF0` (or the `cs_live_a1y4Tu…` delivery). Expect 2xx. Replay is safe — fulfill is idempotent on session id.
+3. After this Worker **and** migration `20260920000002` (profiles.user_id nullable) deploy: **Resend** `evt_1UHERPGqTruSqV8TMtUYKAF0` (or the `cs_live_a1y4Tu…` delivery). Expect 2xx. Replay is safe — fulfill is idempotent on session id. A prior `payment_succeeded` row does **not** block `provisioned`.
 4. Confirm Supabase:
    ```sql
    -- delivery visible even if fulfill later throws
-   SELECT event_id, event_type, session_id, status, http_status, error, processed_at
+   SELECT event_id, event_type, processed_at
    FROM stripe_events
-   WHERE session_id LIKE 'cs_live_a1y4Tu%'
+   WHERE event_id = 'evt_1UHERPGqTruSqV8TMtUYKAF0'
    ORDER BY processed_at DESC;
 
-   -- access grant
+   -- access grant: expect BOTH rows. provisioned must have profile_id
+   -- (success) or skip_reason=no_identity (no email / no user_id).
    SELECT event_type, prospect_id, metadata
    FROM funnel_events
    WHERE prospect_id = 'smoke_check_1789786486'
-     AND event_type IN ('dpp_loop:payment_succeeded', 'dpp_loop:provisioned');
+     AND event_type IN ('dpp_loop:payment_succeeded', 'dpp_loop:provisioned')
+   ORDER BY timestamp ASC;
+
+   SELECT id, email, user_id, subscription_plan, brand
+   FROM profiles
+   WHERE email = 'authichain@gmail.com';
    ```
    If `session_id` / `status` columns are missing, the handler still wrote `event_id` + `event_type` + `processed_at` (migration `20260920000001` is optional).
 
-Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`.
+Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`. After checkout, expect `payment_succeeded` **and** `provisioned` (with `profile_id` or `skip_reason`).
 
 Optional: add `checkout.session.async_payment_succeeded` on `we_1UGTCS…` (Klarna / delayed wallets; not required for $0 card/promo).
 
