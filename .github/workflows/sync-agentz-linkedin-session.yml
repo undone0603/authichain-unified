@@ -53,7 +53,7 @@ jobs:
             echo "POST /credentials/$(cat /tmp/cred.key) → HTTP ${http}"
             if [ "$http" != "200" ]; then
               echo "::error::AgentZ rejected credential $(cat /tmp/cred.key)"
-              head -c 200 /tmp/cred.out || true
+              head -c 200 /tmp/cred.out
               exit 1
             fi
             rm -f /tmp/cred.json /tmp/cred.out /tmp/cred.key
