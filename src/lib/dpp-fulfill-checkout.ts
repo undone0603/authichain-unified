@@ -8,7 +8,12 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import { dppActivateUrl, isDppOffer, recordDppLoopEventOnce } from "./dpp-loop";
+import {
+  dppActivateUrl,
+  isDppDemoSession,
+  isDppOffer,
+  recordDppLoopEventOnce,
+} from "./dpp-loop";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,6 +65,13 @@ export async function fulfillDppPaidSession(
     .trim();
   const brand = getBrandIdFromMetadata(md);
   const plan = md.plan || "dpp_readiness";
+  const demo = isDppDemoSession(md);
+  const loopMeta = {
+    plan,
+    brand,
+    amount_total: session.amount_total,
+    ...(demo ? { is_demo: true } : {}),
+  };
 
   if (visitId) {
     await recordDppLoopEventOnce(supabase, {
@@ -69,7 +81,7 @@ export async function fulfillDppPaidSession(
       email: email || null,
       stripeSessionId: session.id,
       dedupeKey: session.id,
-      metadata: { plan, brand, amount_total: session.amount_total },
+      metadata: loopMeta,
     });
   }
 
@@ -91,11 +103,16 @@ export async function fulfillDppPaidSession(
       profileId: prov.profileId,
       stripeSessionId: session.id,
       dedupeKey: session.id,
-      metadata: { created: prov.created, plan },
+      metadata: {
+        created: prov.created,
+        plan,
+        ...(demo ? { is_demo: true } : {}),
+      },
     });
   }
 
-  if (prov.profileId && email) {
+  // Demo/smoke may skip Resend noise. Access grant + funnel writes already ran.
+  if (prov.profileId && email && !demo) {
     const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
       planName: "EU DPP Readiness Audit",
       activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),

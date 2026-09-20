@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DPP_OFFER_KEY } from "./plans";
 import { DPP_PRICE_ID } from "./dpp-loop";
 
@@ -14,6 +14,7 @@ vi.mock("./billing-emails", () => ({
   }),
 }));
 
+const { sendEmail } = await import("./email");
 const { fulfillDppPaidSession } = await import("./dpp-fulfill-checkout");
 
 function fakeSupabase(opts?: { profileId?: string | null }) {
@@ -65,6 +66,10 @@ const paidSession = {
 };
 
 describe("fulfillDppPaidSession", () => {
+  beforeEach(() => {
+    vi.mocked(sendEmail).mockClear();
+  });
+
   it("no-ops when the session is not a DPP offer", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
@@ -118,6 +123,14 @@ describe("fulfillDppPaidSession", () => {
       "dpp_loop:provisioned",
     ]);
     expect(rows[0].prospect_id).toBe("smoke_check_1789786486");
+    expect((rows[0].metadata as { is_demo?: boolean }).is_demo).toBe(true);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("sends the provisioned email for a non-demo paid session", async () => {
+    const { supabase } = fakeSupabase();
+    await fulfillDppPaidSession(supabase, paidSession);
+    expect(sendEmail).toHaveBeenCalledOnce();
   });
 
   it("writes payment_succeeded then provisioned for a paid smoke session", async () => {

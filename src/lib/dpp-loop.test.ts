@@ -3,6 +3,7 @@ import {
   DPP_PRICE_ID,
   dppActivateUrl,
   fetchAllLoopEvents,
+  isDppDemoSession,
   isDppOffer,
   isDemoVisit,
   recordDppLoopEvent,
@@ -18,6 +19,14 @@ describe("dpp-loop", () => {
     expect(isDppOffer({ plan: "dpp_readiness" })).toBe(true);
     expect(isDppOffer({}, DPP_PRICE_ID)).toBe(true);
     expect(isDppOffer({ plan: "starter" })).toBe(false);
+  });
+
+  it("detects demo/smoke metadata without treating it as a non-offer", () => {
+    expect(isDppDemoSession({ is_demo: "true" })).toBe(true);
+    expect(isDppDemoSession({ is_demo: true })).toBe(true);
+    expect(isDppDemoSession({ promo: "DPP-SMOKE-E2E" })).toBe(true);
+    expect(isDppDemoSession({ offer: DPP_OFFER_KEY })).toBe(false);
+    expect(isDppOffer({ offer: DPP_OFFER_KEY, is_demo: "true" })).toBe(true);
   });
 
   it("builds activate URL with session and visit", () => {

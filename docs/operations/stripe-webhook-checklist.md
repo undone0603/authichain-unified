@@ -162,7 +162,7 @@ Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/web
 
 ### Replay a paid session that never provisioned
 
-Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** skipped in fulfill — `payment_status=paid` is the only payment gate.
+Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`). `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** skipped for funnel writes or access grant — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend noise. The working historical smoke lacked `is_demo` because it used a $299 price + promo, not because fulfill filtered demos.
 
 1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
 2. Filter recent deliveries for session `cs_live_a1y4Tu…` (`smoke_check_1789786486`, Fri Sep 18 ~10:54 PM ET). Expect historical **non-2xx** (handler threw on missing `DATABASE_URL` before fulfill).

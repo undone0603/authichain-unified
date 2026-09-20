@@ -525,6 +525,19 @@ export function isDppSmokePromo(value: string | null | undefined): boolean {
   return (value || "").trim().toUpperCase() === DPP_SMOKE_PROMO;
 }
 
+/**
+ * Stripe metadata flag for DPP-SMOKE / $0 checkout. Demo may skip Resend
+ * and customer-funnel counts. It must never skip fulfill or access grant.
+ * Stripe metadata is stringly typed (`"true"`), so accept both forms.
+ */
+export function isDppDemoSession(
+  metadata: Record<string, unknown> | null | undefined
+): boolean {
+  const demo = metadata?.is_demo ?? metadata?.demo;
+  if (demo === true || demo === "true" || demo === "1") return true;
+  return isDppSmokePromo(String(metadata?.promo || ""));
+}
+
 export function isDppOffer(
   metadata: Record<string, unknown> | null | undefined,
   priceId?: string | null
