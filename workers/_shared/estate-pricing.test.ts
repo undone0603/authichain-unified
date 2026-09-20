@@ -83,6 +83,28 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   assert.doesNotMatch(html, /\$2,990/);
 });
 
+function escapedUrl(url: string): RegExp {
+  return new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
+test("qron /pricing surfaces live credit Payment Links, distinct from packs", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.match(html, /QRON generation credits/);
+  assert.match(html, escapedUrl(PAYMENT_LINKS.qron.credits50.url));
+  assert.match(html, escapedUrl(PAYMENT_LINKS.qron.credits250.url));
+  assert.match(html, escapedUrl(PAYMENT_LINKS.qron.credits1000.url));
+  assert.match(html, /50 Credits/);
+  assert.match(html, /\$9\.99/);
+  assert.match(html, /Starter Pack/);
+  assert.match(html, /Creator Pack/);
+});
+
+test("authichain /pricing does not list QRON credit Payment Links", () => {
+  const html = renderEstatePricingPage("authichain");
+  assert.doesNotMatch(html, escapedUrl(PAYMENT_LINKS.qron.credits50.url));
+  assert.doesNotMatch(html, /QRON generation credits/);
+});
+
 test("tryHandleEstatePricing answers GET /pricing and ignores other paths", async () => {
   const hit = tryHandleEstatePricing(
     new Request("https://authichain.com/pricing"),
