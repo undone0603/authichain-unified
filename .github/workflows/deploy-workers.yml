@@ -234,13 +234,9 @@ jobs:
         run: |
           set -euo pipefail
           # AGENTZ_API_URL is secret-only (not [vars]; a plaintext var makes put fail 10053).
-          printf '%s' 'https://agentz.authichain.com' | npx wrangler secret put AGENTZ_API_URL --name authichain-openclaw
-          if [ -z "${AGENT_SECRET:-}" ]; then
-            echo "::error::GitHub secret AGENT_SECRET is empty — cannot bind AGENTZ_API_KEY on authichain-openclaw"
-            exit 1
-          fi
-          printf '%s' "$AGENT_SECRET" | npx wrangler secret put AGENTZ_API_KEY --name authichain-openclaw
-          echo "bound AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw"
+          # Empty AGENT_SECRET: warn + skip AGENTZ_API_KEY ($0 path). Do not
+          # continue-on-error this step — a real wrangler failure must still fail.
+          bash ../../scripts/ci/bind-openclaw-agentz-secrets.sh
 
       - name: Bind Stripe secret on authichain-com
         if: |
