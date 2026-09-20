@@ -289,6 +289,48 @@ describe("POST /api/dpp/activate", () => {
   });
 });
 
+describe("POST /api/dpp/publish", () => {
+  it("returns 400 JSON without visit_id", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Widget" }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/visit_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visit_id: "dpp_1", name: "Widget" }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
+describe("GET /api/dpp/verify", () => {
+  it("returns 400 JSON without dpp_id", async () => {
+    const res = await app.request("/api/dpp/verify");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/dpp_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/verify?dpp_id=prod_1");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
 describe("GET /api/cron/dpp-exceptions", () => {
   it("returns 401 JSON without a bearer token, never HTML", async () => {
     const res = await app.request("/api/cron/dpp-exceptions");

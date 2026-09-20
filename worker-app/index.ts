@@ -558,6 +558,119 @@ app.post("/api/dpp/activate", async c => {
   }
 });
 
+function edgeSupabase(env?: Env) {
+  const supabaseUrl =
+    env?.NEXT_PUBLIC_SUPABASE_URL ||
+    env?.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const serviceKey =
+    env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return null;
+  return import("@supabase/supabase-js").then(({ createClient }) =>
+    createClient(supabaseUrl, serviceKey)
+  );
+}
+
+// Next src/app/api/dpp/publish and /verify are not on this worker; unregistered
+// /api/* falls through to ASSETS 404 and the loop never records dpp_published.
+app.post("/api/dpp/publish", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const supabase = await edgeSupabase(c.env);
+    const { publishDpp } = await import("../src/lib/dpp-publish");
+    const result = await publishDpp({ body, supabase });
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json(result);
+  } catch (err: any) {
+    console.error("[dpp/publish] Error:", err?.message || err);
+    return c.json({ error: "publish_failed", detail: err?.message }, 500);
+  }
+});
+
+async function dppVerify(c: {
+  env?: Env;
+  req: { json: () => Promise<unknown>; query: (name: string) => string | undefined };
+  header: (name: string, value: string) => void;
+  json: (body: unknown, status?: number) => Response;
+}, params: { dppId: string; visitId: string | null; source: string }) {
+  hydrateProcessEnv(c.env);
+  const supabase = await edgeSupabase(c.env);
+  const { verifyDpp } = await import("../src/lib/dpp-verify");
+  const result = await verifyDpp({ ...params, supabase });
+  c.header("Cache-Control", "private, no-store");
+  if (!result.ok) {
+    if (result.error === "not_found") {
+      return c.json(
+        {
+          ok: false,
+          status: "not_found",
+          dpp_id: result.dpp_id,
+          proves: result.proves,
+          doesNotProve: result.doesNotProve,
+          event_recorded: false,
+        },
+        404
+      );
+    }
+    return c.json(
+      {
+        error: result.error,
+        ...(result.detail ? { detail: result.detail } : {}),
+      },
+      result.status
+    );
+  }
+  return c.json(result);
+}
+
+app.get("/api/dpp/verify", async c => {
+  try {
+    return await dppVerify(c, {
+      dppId: (c.req.query("dpp_id") || "").trim(),
+      visitId: (c.req.query("visit_id") || "").trim() || null,
+      source: (c.req.query("source") || "direct").trim() || "direct",
+    });
+  } catch (err: any) {
+    console.error("[dpp/verify] Error:", err?.message || err);
+    return c.json({ error: "verify_failed", detail: err?.message }, 500);
+  }
+});
+
+app.post("/api/dpp/verify", async c => {
+  try {
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid_json" }, 400);
+    }
+    return await dppVerify(c, {
+      dppId: String(body.dpp_id || "").trim(),
+      visitId: String(body.visit_id || "").trim() || null,
+      source: String(body.source || "direct"),
+    });
+  } catch (err: any) {
+    console.error("[dpp/verify] Error:", err?.message || err);
+    return c.json({ error: "verify_failed", detail: err?.message }, 500);
+  }
+});
+
 app.get("/api/automation/cron", async c => {
   hydrateProcessEnv(c.env);
   c.header("Cache-Control", "private, no-store");
