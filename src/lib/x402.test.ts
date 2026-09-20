@@ -8,7 +8,10 @@ import {
   wouldExceedCap,
   dailyCapUsd,
   settlePayment,
+  decodeFacilitatorPaymentPayload,
+  resolveX402Asset,
   x402HealthReport,
+  BASE_USDC_ASSET,
   type PaymentRequirement,
 } from "./x402";
 
@@ -30,6 +33,7 @@ const proofHeader = (p: Record<string, unknown>) =>
 afterEach(() => {
   delete process.env.X402_FACILITATOR_URL;
   delete process.env.X402_NETWORK;
+  delete process.env.X402_USDC_ASSET;
   vi.restoreAllMocks();
 });
 
@@ -53,6 +57,24 @@ describe("buildPaymentRequired", () => {
     expect(r.status).toBe(402);
     expect(r.body.accepts[0].maxAmountRequired).toBe("50000");
     expect(r.body.accepts[0].network).toBe("base");
+    expect(r.body.accepts[0].asset).toBe(BASE_USDC_ASSET);
+    expect(r.body.accepts[0].extra).toEqual({
+      name: "USD Coin",
+      version: "2",
+    });
+  });
+});
+
+describe("resolveX402Asset", () => {
+  it("uses official Base USDC when the ticker or nothing is set", () => {
+    expect(resolveX402Asset("base")).toBe(BASE_USDC_ASSET);
+    expect(resolveX402Asset("base", "USDC")).toBe(BASE_USDC_ASSET);
+  });
+  it("honors an explicit 0x asset", () => {
+    const other = "0x1111111111111111111111111111111111111111";
+    expect(resolveX402Asset("base", other)).toBe(other);
+    process.env.X402_USDC_ASSET = other;
+    expect(resolveX402Asset("base")).toBe(other);
   });
 });
 
@@ -67,6 +89,26 @@ describe("parsePaymentHeader", () => {
     expect(parsePaymentHeader(null)).toBeNull();
     expect(parsePaymentHeader("not-base64-json!!")).toBeNull();
     expect(parsePaymentHeader(proofHeader({ payer: PAYER }))).toBeNull(); // no amount/network
+  });
+  it("flattens an official x402 exact payload", () => {
+    const p = parsePaymentHeader(
+      proofHeader({
+        x402Version: 1,
+        scheme: "exact",
+        network: "base",
+        payload: {
+          signature: "0xabc",
+          authorization: { from: PAYER, to: "0xdef", value: "50000" },
+        },
+      })
+    );
+    expect(p).toMatchObject({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+      signature: "0xabc",
+    });
   });
 });
 
@@ -157,6 +199,39 @@ describe("settlePayment (facilitator)", () => {
     });
   });
 
+  it("sends a decoded paymentPayload object, not the raw base64 header", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const header = proofHeader({
+      x402Version: 1,
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+      signature: "0xsig",
+      payload: {
+        signature: "0xsig",
+        authorization: { from: PAYER, to: "0xabc", value: "50000" },
+      },
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, transaction: "0xabc" }),
+    } as Response);
+    await settlePayment(header, req);
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(body.x402Version).toBe(1);
+    expect(body.paymentPayload).toMatchObject({
+      scheme: "exact",
+      payer: PAYER,
+      amount: "50000",
+    });
+    expect(typeof body.paymentPayload).toBe("object");
+  });
+
+  it("decodeFacilitatorPaymentPayload leaves non-JSON as the raw string", () => {
+    expect(decodeFacilitatorPaymentPayload("proof")).toBe("proof");
+  });
+
   it("refuses when the facilitator rejects the payment", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -193,5 +268,6 @@ describe("x402HealthReport", () => {
     expect(report.ready).toBe(false);
     expect(report.ok).toBe(false);
     expect(report.facilitator.configured).toBe(false);
+    expect(report.asset).toBe(BASE_USDC_ASSET);
   });
 });

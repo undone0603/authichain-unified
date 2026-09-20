@@ -52,7 +52,7 @@ jobs:
       # Owner-directed live x402 pair (public pay-to + public facilitator URL).
       # Same values as bind-x402-secrets.yml. Not invented. Landing intercept
       # reads these on /api/x402; secret put after deploy keeps them attached.
-      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL
+      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET
         working-directory: workers/authichain-com
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -61,8 +61,11 @@ jobs:
           set -euo pipefail
           PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2'
           FACILITATOR='https://facilitator.payai.network'
+          USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
           printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-com
           printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-com
+          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name authichain-com
           printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-edge-router
           printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name authichain-edge-router
-          echo "bound X402_PAY_TO + X402_FACILITATOR_URL on authichain-com and authichain-edge-router (values not logged)"
+          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name authichain-edge-router
+          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on authichain-com and authichain-edge-router (values not logged)"

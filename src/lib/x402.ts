@@ -15,13 +15,15 @@
 
 export interface PaymentRequirement {
   scheme: "exact";
-  network: string; // e.g. 'polygon'
+  network: string; // e.g. 'base'
   maxAmountRequired: string; // atomic units (USDC has 6 decimals)
   resource: string; // the URL being paid for
   description: string;
   payTo: string; // receiving wallet
   asset: string; // token contract (USDC)
   mimeType: "application/json";
+  maxTimeoutSeconds?: number;
+  extra?: { name?: string; version?: string };
 }
 
 export interface PaymentProof {
@@ -34,6 +36,35 @@ export interface PaymentProof {
 }
 
 export const USDC_DECIMALS = 6;
+
+/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. */
+export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" } as const;
+
+export const X402_MAX_TIMEOUT_SECONDS = 60;
+
+/**
+ * Resolve the challenge asset. A bare ticker ("USDC") is not a contract
+ * address — PayAI's Base settle path needs official Base USDC.
+ */
+export function resolveX402Asset(network?: string, asset?: string): string {
+  const explicit = asset ?? process.env.X402_USDC_ASSET;
+  if (explicit && /^0x[a-fA-F0-9]{40}$/.test(explicit)) return explicit;
+  const net = network ?? process.env.X402_NETWORK ?? "base";
+  if (net === "base" || net === "eip155:8453") return BASE_USDC_ASSET;
+  return explicit || "USDC";
+}
+
+function requirementExtra(network: string, asset: string) {
+  if (
+    (network === "base" || network === "eip155:8453") &&
+    asset.toLowerCase() === BASE_USDC_ASSET.toLowerCase()
+  ) {
+    return { ...BASE_USDC_EIP712 };
+  }
+  return undefined;
+}
 
 /** Convert a USD dollar amount to USDC atomic units (6 decimals), as a string. */
 export function usdToAtomic(usd: number): string {
@@ -54,15 +85,20 @@ export function buildPaymentRequired(opts: {
   status: 402;
   body: { x402Version: number; accepts: PaymentRequirement[] };
 } {
+  const network = opts.network ?? process.env.X402_NETWORK ?? "base";
+  const asset = resolveX402Asset(network, opts.asset);
+  const extra = requirementExtra(network, asset);
   const requirement: PaymentRequirement = {
     scheme: "exact",
-    network: opts.network ?? process.env.X402_NETWORK ?? "base",
+    network,
     maxAmountRequired: usdToAtomic(opts.priceUsd),
     resource: opts.resource,
     description: opts.description ?? "AuthiChain verification",
     payTo: opts.payTo,
-    asset: opts.asset ?? process.env.X402_USDC_ASSET ?? "USDC",
+    asset,
     mimeType: "application/json",
+    maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
+    ...(extra ? { extra } : {}),
   };
   return { status: 402, body: { x402Version: 1, accepts: [requirement] } };
 }
@@ -74,8 +110,29 @@ export function parsePaymentHeader(
   if (!header) return null;
   try {
     const json = Buffer.from(header, "base64").toString("utf8");
-    const proof = JSON.parse(json) as PaymentProof;
-    if (!proof.payer || !proof.amount || !proof.network) return null;
+    const raw = JSON.parse(json) as Record<string, unknown>;
+    const nested =
+      raw.payload && typeof raw.payload === "object"
+        ? (raw.payload as Record<string, unknown>)
+        : undefined;
+    const auth =
+      nested?.authorization && typeof nested.authorization === "object"
+        ? (nested.authorization as Record<string, unknown>)
+        : undefined;
+    const payer = String(raw.payer ?? auth?.from ?? "");
+    const amount = String(raw.amount ?? auth?.value ?? "");
+    const network = String(raw.network ?? "");
+    if (!payer || !amount || !network) return null;
+    const proof: PaymentProof = {
+      scheme: String(raw.scheme ?? "exact"),
+      network,
+      payer,
+      amount,
+    };
+    const signature = raw.signature ?? nested?.signature;
+    const txHash = raw.txHash;
+    if (typeof signature === "string" && signature) proof.signature = signature;
+    if (typeof txHash === "string" && txHash) proof.txHash = txHash;
     return proof;
   } catch {
     return null;
@@ -134,8 +191,19 @@ export interface SettlementResult {
  *
  * Set X402_FACILITATOR_URL to go trustless. Without it, this returns settled:true
  * but trustless:false (dev mode) — callers MUST refuse to treat dev-mode as paid in
- * production. The raw base64 X-PAYMENT header is forwarded as the payment payload.
+ * production. The X-PAYMENT header is decoded and sent as the facilitator
+ * `paymentPayload` object (PayAI / x402 v1 expect JSON, not the raw base64).
  */
+export function decodeFacilitatorPaymentPayload(
+  paymentHeaderB64: string
+): unknown {
+  try {
+    return JSON.parse(Buffer.from(paymentHeaderB64, "base64").toString("utf8"));
+  } catch {
+    return paymentHeaderB64;
+  }
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
   requirement: PaymentRequirement
@@ -149,11 +217,13 @@ export async function settlePayment(
     };
   }
   try {
+    const paymentPayload = decodeFacilitatorPaymentPayload(paymentHeaderB64);
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        paymentPayload: paymentHeaderB64,
+        x402Version: 1,
+        paymentPayload,
         paymentRequirements: requirement,
       }),
     });
@@ -320,7 +390,10 @@ export async function x402HealthReport(
     payTo,
     network: env.X402_NETWORK || process.env.X402_NETWORK || "base",
     chainId: env.X402_CHAIN_ID || process.env.X402_CHAIN_ID || "8453",
-    asset: env.X402_USDC_ASSET || process.env.X402_USDC_ASSET || "USDC",
+    asset: resolveX402Asset(
+      env.X402_NETWORK || process.env.X402_NETWORK,
+      env.X402_USDC_ASSET || process.env.X402_USDC_ASSET
+    ),
     pricePerCall: { usd: priceUsd, atomic: usdToAtomic(priceUsd) },
     dailyCapUsd: dailyCapUsd(),
     endpoint: "/api/v1/agent-verify",

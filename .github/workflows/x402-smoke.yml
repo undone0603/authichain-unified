@@ -1,0 +1,70 @@
+# Live x402 micropayment smoke against https://authichain.com/api/x402.
+#
+# Default is dry_run=true (health + derive + USDC balance + sign, no POST).
+# Live settlement only when the owner unchecks dry_run after USDC is funded.
+# Never print POLYGON_PRIVATE_KEY / WALLET_PRIVATE_KEY.
+#
+# Required secrets for a live run (already expected on this repo):
+#   POLYGON_PRIVATE_KEY or WALLET_PRIVATE_KEY   Base ops EOA (0x5db5…)
+#
+# Do not dispatch dry_run=false until the ops EOA holds at least $0.05 USDC
+# on Base (owner is funding ~$0.10). The script fails clearly below 50000 atomic.
+name: x402 smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no settle). Uncheck only after ~$0.10 USDC lands on the ops EOA."
+        required: false
+        default: true
+        type: boolean
+      endpoint:
+        description: "x402 POST URL"
+        required: false
+        default: https://authichain.com/api/x402
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x402-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "10.28.2" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "22", cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Check smoke secrets (names only)
+        env:
+          HAS_POLYGON: ${{ secrets.POLYGON_PRIVATE_KEY != '' }}
+          HAS_WALLET: ${{ secrets.WALLET_PRIVATE_KEY != '' }}
+        run: |
+          echo "has_polygon_key=${HAS_POLYGON}"
+          echo "has_wallet_key=${HAS_WALLET}"
+          echo "dry_run=${{ inputs.dry_run }}"
+          if [ "${HAS_POLYGON}" != "true" ] && [ "${HAS_WALLET}" != "true" ]; then
+            echo "::warning::No POLYGON_PRIVATE_KEY or WALLET_PRIVATE_KEY secret"
+            if [ "${{ inputs.dry_run }}" = "false" ]; then
+              echo "::error::Live smoke needs POLYGON_PRIVATE_KEY or WALLET_PRIVATE_KEY"
+              exit 1
+            fi
+          fi
+
+      - name: Run x402 smoke
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          X402_ENDPOINT: ${{ inputs.endpoint }}
+          X402_PAY_TO: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
+        run: pnpm exec tsx scripts/x402-smoke.ts

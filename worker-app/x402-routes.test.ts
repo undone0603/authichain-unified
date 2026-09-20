@@ -68,10 +68,13 @@ describe("POST /api/x402", () => {
     expect(res.status).toBe(402);
     const body = (await res.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string }>;
+      accepts: Array<{ payTo: string; asset: string }>;
     };
     expect(body.x402Version).toBe(1);
     expect(body.accepts[0].payTo).toBe(process.env.X402_PAY_TO);
+    expect(body.accepts[0].asset).toBe(
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    );
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {
