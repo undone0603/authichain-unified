@@ -9,6 +9,14 @@ name: AuthiChain on-chain ledger reconstruction
 # problem. At the 8,000-block default the range needs ~900 sequential getLogs
 # calls against the public RPC, which does not fit.
 #
+# The default RPC was https://polygon-rpc.com until it was shown never to connect
+# from a GitHub runner at all — two 60-minute runs were spent in ethers'
+# once-a-second "failed to detect network" retry loop, reading zero blocks. The
+# default is now publicnode, which answers. A POLYGON_RPC_URL repo *secret*
+# takes precedence when set: secrets are masked in logs, whereas this input is
+# printed in clear text, so a keyed archive URL must go in the secret and never
+# in the input.
+#
 # Hence: a bigger default chunk and a bigger budget. chunk_size is a dispatch
 # input rather than a constant so a range limit can be retried without another
 # commit — public RPCs cap getLogs ranges and the cap is not documented
@@ -25,9 +33,9 @@ on:
         default: "50000"
         type: string
       rpc_url:
-        description: "Polygon RPC. A dedicated endpoint finishes far faster than the public one."
+        description: "Polygon RPC. Public endpoints only — this value is printed in the logs, so never pass a URL with an API key in it."
         required: false
-        default: "https://polygon-rpc.com"
+        default: "https://polygon-bor-rpc.publicnode.com"
         type: string
 
 jobs:
@@ -49,7 +57,7 @@ jobs:
       - name: Reconstruct production AuthiChain NFT ledger
         run: pnpm ledger:authichain-nft
         env:
-          POLYGON_RPC_URL: ${{ inputs.rpc_url || 'https://polygon-rpc.com' }}
+          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL || inputs.rpc_url || 'https://polygon-bor-rpc.publicnode.com' }}
           AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '50000' }}
       - uses: actions/upload-artifact@v4
         with:

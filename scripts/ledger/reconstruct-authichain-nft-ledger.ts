@@ -43,7 +43,8 @@ const ABI = [
   "function tokenByIndex(uint256 index) view returns (uint256)",
 ];
 
-const provider = new JsonRpcProvider(process.env.POLYGON_RPC_URL ?? DEFAULT_RPC);
+const RPC_URL = process.env.POLYGON_RPC_URL ?? DEFAULT_RPC;
+const provider = new JsonRpcProvider(RPC_URL);
 const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
 const iface = new Interface(ABI);
 
@@ -222,8 +223,36 @@ const CLUSTER = new Set([
   "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2",
 ]);
 
+/**
+ * Fails fast on an unusable RPC.
+ *
+ * ethers retries network detection once a second, forever, printing
+ * "failed to detect network" and nothing else. Two 60-minute CI runs were
+ * consumed that way before anyone read the log — the job looks identical to
+ * one doing real work, because a hung retry loop and a slow scan both present
+ * as "step still running". A bounded probe turns that into a named error in
+ * seconds.
+ */
+async function preflight(): Promise<number> {
+  const timeoutMs = Number(process.env.AUTHICHAIN_LEDGER_PREFLIGHT_MS ?? 20_000);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`RPC preflight failed: ${RPC_URL} did not answer eth_blockNumber within ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+  try {
+    const latest = await Promise.race([provider.getBlockNumber(), expiry]);
+    console.error(`RPC ok: ${RPC_URL} at block ${latest}`);
+    return latest;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function main() {
-  const latest = await provider.getBlockNumber();
+  const latest = await preflight();
   const rows = MODE === "logs" ? await rowsFromLogs(latest) : await rowsFromState();
   rows.sort((a, b) => Number(a.tokenId) - Number(b.tokenId));
 
