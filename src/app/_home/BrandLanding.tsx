@@ -51,7 +51,7 @@ export interface BrandLandingProps {
 }
 
 const DEFAULT_PRIMARY: Record<BrandId, LandingCta> = {
-  authichain: { label: 'Open dashboard', href: '/dashboard' },
+  authichain: { label: 'Start DPP checkout', href: '/api/checkout/dpp' },
   qron: { label: 'Generate Living QR', href: '/generate' },
   strainchain: { label: 'Request demo', href: '/onboard' },
   govchain: { label: 'Request access', href: '/onboard' },
@@ -194,20 +194,27 @@ export function BrandLanding({
 
       <footer className="px-6 py-12 border-t border-slate-200 bg-white">
         <nav aria-label="Estate" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600 mb-6">
-          <Link href="/dashboard" className="hover:text-slate-950">Dashboard</Link>
+          <Link href="/api/checkout/dpp" className="hover:text-slate-950">DPP checkout</Link>
+          <Link href="/pricing" className="hover:text-slate-950">Pricing</Link>
           <Link href="/onboard" className="hover:text-slate-950">Onboard</Link>
           <Link href="/generate" className="hover:text-slate-950">Generate</Link>
-          <Link href="/api/checkout/dpp" className="hover:text-slate-950">DPP checkout</Link>
-          <a href="https://qron.space" className="hover:text-slate-950">QRON</a>
-          <a href="https://govchain.us" className="hover:text-slate-950">GovChain</a>
-          <a href="https://strainchain.io" className="hover:text-slate-950">StrainChain</a>
+          <Link href="/dashboard" className="hover:text-slate-950">Dashboard</Link>
+          <a href="https://authichain.com/x402" className="hover:text-slate-950">x402</a>
+          <a href="https://qron.space/generate" className="hover:text-slate-950">QRON</a>
+          <a href="https://govchain.us/onboard" className="hover:text-slate-950">GovChain</a>
+          <a href="https://strainchain.io/onboard" className="hover:text-slate-950">StrainChain</a>
         </nav>
         <p className="text-xs text-slate-500">
           © 2026 {brand.displayName} · AuthiChain estate · Settlement on Polygon
         </p>
       </footer>
 
-      <StickyConversionBar accent={accent} href={primary.href} label={primary.label} />
+      <StickyConversionBar
+        accent={accent}
+        href={primary.href}
+        label={primary.label}
+        subtext={brandId === 'authichain' ? 'EU DPP Readiness — $299 live checkout' : 'Start on the live conversion path'}
+      />
       <ExitIntentGuide accent={accent} productInterest={brandId} />
     </div>
   );

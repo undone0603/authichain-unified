@@ -3,7 +3,7 @@ import { BRAND_IDS, BRANDS, type BrandId } from '@shared/brands';
 import { LIGHT_ACCENT } from '@/lib/estate-accents';
 
 const HEADER_CTA: Record<BrandId, { href: string; label: string }> = {
-  authichain: { href: '/dashboard', label: 'Dashboard' },
+  authichain: { href: '/api/checkout/dpp', label: 'Start DPP checkout' },
   qron: { href: '/generate', label: 'Generate' },
   strainchain: { href: '/onboard', label: 'Onboard' },
   govchain: { href: '/onboard', label: 'Onboard' },
@@ -88,6 +88,14 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
 
         {/* CTAs */}
         <div className="flex shrink-0 items-center gap-2">
+          {brandId === 'authichain' && (
+            <Link
+              href="/x402"
+              className="hidden sm:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
+            >
+              x402
+            </Link>
+          )}
           <Link
             href="/pricing"
             className="hidden sm:inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-800 hover:border-slate-400"

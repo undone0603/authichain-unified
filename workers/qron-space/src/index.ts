@@ -11,6 +11,10 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
+import {
+  estatePricingGrid,
+  tryHandleEstatePricing,
+} from "../../_shared/estate-pricing.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <circle cx="32" cy="32" r="30" fill="#030c18" stroke="#06b6d4" stroke-width="1.5"/>
@@ -2155,6 +2159,7 @@ export default {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://qron.space/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://qron.space/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://qron.space/generate</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
@@ -2167,6 +2172,8 @@ export default {
     }
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
+    const pricing = tryHandleEstatePricing(request, "qron");
+    if (pricing) return pricing;
     // Only the apex renders HTML here. Anything else is a 404 rather than a
     // 200 homepage — see notFound above.
     if (p !== '/') return notFound(p);
@@ -2202,7 +2209,7 @@ ${estateNav(
   "qron",
   [
     { href: "#features", label: "Capabilities" },
-    { href: "#pricing", label: "Pricing" },
+    { href: "/pricing", label: "Pricing" },
     { href: "#videos", label: "Videos" },
     { href: "https://authichain.com", label: "AuthiChain" },
   ],
@@ -2215,7 +2222,7 @@ ${estateHero({
   lede: "Turn a URL into a signed Living QR for packaging and labels. Generation is the first-dollar path — open /generate, no token theater required.",
   actions: [
     { href: "/generate", label: "Generate Living QR", primary: true },
-    { href: "#pricing", label: "View pricing", primary: false },
+    { href: "/pricing", label: "View pricing", primary: false },
   ],
 })}
 ${estateTrust([
@@ -2241,13 +2248,9 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Products and pricing</h2>
-    <p class="section-sub">AI QR art, blockchain-anchored authentication, and EU DPP readiness — checkout uses the existing Stripe payment links.</p>
-    <div class="pricing-grid">
-      <div class="price-card"><h3>QRON Pro</h3><div class="price-amount">$49</div><div class="price-period">per month</div><ul class="price-features"><li>AI-generated artistic QR codes</li><li>Blockchain-anchored verification</li><li>QRON engagement platform access</li><li>Priority generation queue</li></ul><a href="https://buy.stripe.com/14AbJ13R78Jo5ia0YY1ND3q" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy QRON Pro</a></div>
-      <div class="price-card featured"><h3>AuthiChain Pro</h3><div class="price-amount">$499</div><div class="price-period">per month</div><ul class="price-features"><li>10,000 seals/mo</li><li>50,000 verifications/mo</li><li>5 brand domains</li><li>Advanced analytics + priority support</li></ul><a href="https://buy.stripe.com/fZucN587n3p411U3761ND3s" class="btn btn-primary" style="width:100%;text-align:center" target="_blank" rel="noopener">Most Popular</a></div>
-      <div class="price-card"><h3>AuthiChain Basic</h3><div class="price-amount">$149</div><div class="price-period">per month</div><ul class="price-features"><li>1,000 seals/mo</li><li>5,000 verifications/mo</li><li>1 brand domain</li><li>Blockchain-anchored authentication</li></ul><a href="https://buy.stripe.com/aFa28r5Zf0cS8um9vu1ND3r" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy Basic</a></div>
-      <div class="price-card"><h3>EU DPP Audit</h3><div class="price-amount">$2,990</div><div class="price-period">one-time</div><ul class="price-features"><li>Digital Product Passport readiness audit</li><li>Written report + strategy call</li><li>Delivered in 5 business days</li><li>Credit toward Basic on conversion</li></ul><a href="https://buy.stripe.com/9B6fZh9brf7M4e6gXW1ND3t" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Book Audit</a></div>
-    </div>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Starter and Creator use Stripe Payment Links. EU DPP Readiness uses live checkout on authichain.com.</p>
+    ${estatePricingGrid("qron")}
+    <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
 </section>
 
@@ -2266,7 +2269,8 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/generate", label: "Generate Living QR" },
-        { href: "#pricing", label: "Pricing" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
       ],
     },
     {

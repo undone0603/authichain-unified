@@ -51,6 +51,11 @@ test("the apex still renders the marketing page", async () => {
     const html = await res.text();
     assert.match(html, /QRON/);
     assert.match(html, /href="\/generate"/);
+    assert.match(html, /href="\/pricing"/);
+    assert.match(html, /\$29/);
+    assert.match(html, /\$99/);
+    assert.match(html, /\$299/);
+    assert.doesNotMatch(html, /\$2,990/);
     assert.match(html, /--bg: #ffffff/);
   } finally {
     f.restore();
@@ -67,7 +72,18 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
+  assert.ok(xml.includes("<loc>https://qron.space/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://qron.space/generate</loc>"));
+});
+
+test("/pricing is a real catalogue page, not a 404", async () => {
+  const res = await get("/pricing");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<title>Pricing — QRON<\/title>/);
+  assert.match(html, /\$299/);
+  assert.match(html, /href="\/generate"/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/checkout\/dpp/);
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {

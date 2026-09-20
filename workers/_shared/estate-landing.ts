@@ -31,9 +31,9 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
     url: "https://authichain.com",
     wordmark: "AuthiChain",
     tagline: "The truth layer for physical products",
-    accent: "#0f766e",
+    accent: "#4F46E5",
     accentInk: "#ffffff",
-    accentSoft: "#ccfbf1",
+    accentSoft: "#eef2ff",
     ink: "#0f172a",
   },
   qron: {
@@ -74,7 +74,7 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
   },
 };
 
-export const ESTATE_FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">`;
+export const ESTATE_FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">`;
 
 export interface EstateLink {
   href: string;
@@ -87,6 +87,10 @@ export interface EstateCta extends EstateLink {
 
 export function estateCssVars(brand: EstateBrandId): string {
   const b = ESTATE_BRANDS[brand];
+  const shadow =
+    brand === "authichain"
+      ? "0 1px 2px rgba(79, 70, 229, 0.06), 0 16px 40px rgba(79, 70, 229, 0.10)"
+      : "0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04)";
   return `:root {
   --bg: #ffffff;
   --bg2: #f8fafc;
@@ -100,15 +104,16 @@ export function estateCssVars(brand: EstateBrandId): string {
   --accent: ${b.accent};
   --accent-ink: ${b.accentInk};
   --accent-soft: ${b.accentSoft};
+  --violet: #7C3AED;
   --primary: ${b.accent};
   --primary-dim: ${b.accent};
   --primary-glow: transparent;
-  --secondary: ${b.accent};
-  --display: "IBM Plex Serif", "Georgia", serif;
-  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --mono: "IBM Plex Sans", ui-monospace, monospace;
+  --secondary: ${brand === "authichain" ? "#7C3AED" : b.accent};
+  --display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius: 10px;
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --shadow: ${shadow};
 }`;
 }
 
@@ -360,8 +365,8 @@ h2 {
   display: grid;
   gap: 16px;
 }
-.steps { grid-template-columns: repeat(4, 1fr); }
-.pricing-grid { grid-template-columns: repeat(3, 1fr); }
+.steps { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.pricing-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .compliance-grid, .bridge-grid { grid-template-columns: repeat(2, 1fr); }
 .integrations { grid-template-columns: repeat(4, 1fr); }
 .step-num {
@@ -546,6 +551,27 @@ export function estateTrust(
     .join("");
   return `<section class="estate-trust trust stats-bar" aria-label="Product capabilities">
   <div class="estate-trust-grid">${cells}</div>
+</section>`;
+}
+
+export function estateSteps(
+  heading: string,
+  sub: string,
+  steps: Array<{ title: string; body: string }>,
+  id = "how",
+): string {
+  const cards = steps
+    .map(
+      (s, i) =>
+        `<div class="step"><div class="step-num">${String(i + 1).padStart(2, "0")}</div><h3>${esc(s.title)}</h3><p>${esc(s.body)}</p></div>`,
+    )
+    .join("");
+  return `<section class="estate-section" id="${esc(id)}">
+  <div class="wrap">
+    <h2>${esc(heading)}</h2>
+    <p class="section-sub">${esc(sub)}</p>
+    <div class="steps">${cards}</div>
+  </div>
 </section>`;
 }
 

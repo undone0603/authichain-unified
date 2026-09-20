@@ -55,8 +55,8 @@ function esc(value: unknown): string {
 }
 
 /**
- * Interim token sheet. Values match estate light-enterprise (`#0f766e` on
- * white, IBM Plex) plus a mineral-dark ledger for the paid rail.
+ * Interim token sheet. Values match estate light-enterprise (`#4F46E5` on
+ * white, Plus Jakarta Sans) plus a mineral-dark ledger for the paid rail.
  *
  * TODO(wonder): Replace this block from Wonder artboard exports. Prefer
  * `var(--wonder-…)` aliases that point at these slots — do not flatten
@@ -69,17 +69,17 @@ const X402_TOKEN_CSS = `:root {
   --ac-muted: #475569;
   --ac-faint: #64748b;
   --ac-border: #e2e8f0;
-  --ac-accent: #0f766e;
+  --ac-accent: #4F46E5;
   --ac-accent-ink: #ffffff;
-  --ac-accent-soft: #ccfbf1;
+  --ac-accent-soft: #eef2ff;
   --ac-rail: #0b1220;
   --ac-rail-ink: #e2e8f0;
   --ac-rail-muted: #94a3b8;
   --ac-rail-line: rgba(226,232,240,.12);
   --ac-radius: 10px;
-  --ac-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 32px rgba(15,23,42,.05);
-  --ac-display: "IBM Plex Serif", Georgia, serif;
-  --ac-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --ac-shadow: 0 1px 2px rgba(79,70,229,.06), 0 16px 40px rgba(79,70,229,.10);
+  --ac-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --ac-body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   --ac-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --ac-measure: 40rem;
   --ac-page: 68rem;
@@ -184,7 +184,7 @@ export function renderX402DocsPage(): string {
 <meta name="description" content="AuthiChain x402 agent verification micropayments: ${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)}. Health at /api/x402/health. Unpaid POST returns HTTP 402.">
 <link rel="canonical" href="${esc(p.canonicalUrl)}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#4F46E5">
 <meta property="og:type" content="website">
 <meta property="og:title" content="x402 agent pay — AuthiChain">
 <meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)} per agent verification. Discover the live rail, then POST unpaid for a 402 challenge.">
@@ -205,8 +205,9 @@ ${X402_TOKEN_CSS}
     <nav aria-label="Page">
       <ul class="nav-links">
         <li><a href="${esc(p.healthUrl)}">Health JSON</a></li>
-        <li><a href="/dpp">DPP</a></li>
-        <li><a href="/protocol">Protocol</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/api/checkout/dpp">DPP checkout</a></li>
+        <li><a href="/dpp">DPP brief</a></li>
       </ul>
     </nav>
   </div>

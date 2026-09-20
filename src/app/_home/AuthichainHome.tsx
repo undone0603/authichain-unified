@@ -1,63 +1,92 @@
-import { ShieldCheck, ScanLine, Award, Boxes, Eye, Lock } from 'lucide-react';
+import { ShieldCheck, ScanLine, Award, QrCode, Landmark, Leaf } from 'lucide-react';
 import { BrandLanding } from './BrandLanding';
-import { CompetitorTable } from '@/components/CompetitorTable';
-import { RoiCalculator } from '@/components/RoiCalculator';
 
 /**
- * AuthiChain (authichain.com) — the flagship B2B product-authentication brand
- * and the protocol's default. Renders the gold "Protocol" theme (no theme
- * class override; uses the :root tokens) with the AuthiChain teal accent.
+ * AuthiChain (authichain.com) — flagship authentication brand.
+ * Narrative is limited to realized capabilities. Primary money path is
+ * EU DPP Readiness via GET /api/checkout/dpp.
  */
 export function AuthichainHome() {
   return (
     <BrandLanding
       brandId="authichain"
-      eyebrow="Enterprise Authentication"
-      primaryCta={{ label: 'Open dashboard', href: '/dashboard' }}
-      secondaryCta={{ label: 'Start DPP checkout', href: '/api/checkout/dpp' }}
+      eyebrow="Product authentication"
+      headline="Issue seals. Bind products. Verify anywhere."
+      subhead="The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue. QRON, GovChain, and StrainChain convert on paths that already work."
+      primaryCta={{ label: 'Start DPP checkout', href: '/api/checkout/dpp' }}
+      secondaryCta={{ label: 'View pricing', href: '/pricing' }}
       stats={[
         { value: 'Ed25519', label: 'Signed seals' },
         { value: 'Polygon', label: 'On-chain anchor' },
-        { value: 'GPT-4', label: 'Vision analysis' },
-        { value: '10', label: 'Industry verticals' },
+        { value: '$299', label: 'EU DPP Readiness' },
+        { value: 'x402', label: 'Agent micropayments' },
       ]}
       features={[
         {
+          icon: <Award className="h-6 w-6" />,
+          title: 'EU DPP Readiness',
+          desc: 'Live self-serve checkout. Written readiness assessment, merchant activation, and 50 workspace generations. $299 credited toward AuthiChain Basic on conversion.',
+        },
+        {
           icon: <ShieldCheck className="h-6 w-6" />,
-          title: 'Blockchain-Verified Seals',
-          desc: 'Issue tamper-evident, cryptographically-signed seals for every product. Each scan proves authenticity against an immutable on-chain record.',
+          title: 'Issue a signed seal',
+          desc: 'Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable — no invented customer logos.',
         },
         {
           icon: <ScanLine className="h-6 w-6" />,
-          title: 'AI Image Authentication',
-          desc: 'GPT-4 Vision inspects packaging, labels, and seals to flag counterfeits before they reach your customers — no special hardware required.',
+          title: 'Bind and verify',
+          desc: 'Bind the seal to the physical item, then verify from any camera against the public record.',
         },
         {
-          icon: <Award className="h-6 w-6" />,
-          title: 'NFT Certificates',
-          desc: 'Mint ERC-721 certificates of authenticity that travel with the product and transfer with ownership across its entire lifecycle.',
+          icon: <QrCode className="h-6 w-6" />,
+          title: 'QRON Living QR',
+          desc: 'Generate a signed, redirectable QR on qron.space/generate when packaging needs a scannable identity.',
         },
         {
-          icon: <Boxes className="h-6 w-6" />,
-          title: 'Supply-Chain Provenance',
-          desc: 'Track every hand-off from manufacture to shelf with QR-anchored events, giving buyers and regulators a verifiable chain of custody.',
+          icon: <Landmark className="h-6 w-6" />,
+          title: 'GovChain intake',
+          desc: 'Federal contract intelligence starts on govchain.us/onboard. This page does not promise a live government mint.',
         },
         {
-          icon: <Eye className="h-6 w-6" />,
-          title: 'Real-Time Verification',
-          desc: 'Customers verify a product in one scan — instant authenticity, origin, and recall status from any phone camera.',
-        },
-        {
-          icon: <Lock className="h-6 w-6" />,
-          title: 'Enterprise Controls',
-          desc: 'Role-based access, audit logging, and an immutable ledger of every action — built for compliance-grade supply chains.',
+          icon: <Leaf className="h-6 w-6" />,
+          title: 'StrainChain provenance',
+          desc: 'Seed-to-sale intake on strainchain.io/onboard. Genetics passport totals are derived from lab panels, not transcribed.',
         },
       ]}
-      closingLine="Protect Every Product. Verify Every Transaction."
+      closingLine="Start EU DPP Readiness."
     >
-      {/* AuthiChain-only conversion sections */}
-      <RoiCalculator accent="#00FFD1" subscriptionCost={199} planLabel="AuthiChain" />
-      <CompetitorTable />
+      <section className="max-w-7xl mx-auto px-6 pb-20">
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 mb-3">How it works</h2>
+        <p className="text-sm text-slate-600 mb-8 max-w-2xl">Three realized steps. No new product surface.</p>
+        <div className="grid gap-5 md:grid-cols-3">
+          {[
+            { n: '01', t: 'Issue', d: 'Issue a cryptographically signed seal for the product.' },
+            { n: '02', t: 'Bind', d: 'Bind it to the physical item — a Living QR, a passport, or a label.' },
+            { n: '03', t: 'Verify', d: 'Confirm authenticity from any camera. Agents can pay per call on /x402.' },
+          ].map((s) => (
+            <article key={s.t} className="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
+              <div className="text-sm font-semibold text-indigo-600 mb-2">{s.n}</div>
+              <h3 className="text-base font-semibold text-slate-950 mb-2">{s.t}</h3>
+              <p className="text-sm text-slate-600">{s.d}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="border-y border-slate-200 bg-slate-50 px-6 py-16">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600 mb-3">Secondary</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-950 mb-3">x402 agent micropayments</h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Funded agents verify a product for $0.05 USDC on Base. Public docs and unpaid 402 curls live at /x402.
+          </p>
+          <a
+            href="/x402"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 hover:border-slate-400"
+          >
+            Open /x402
+          </a>
+        </div>
+      </section>
     </BrandLanding>
   );
 }

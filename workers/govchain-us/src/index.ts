@@ -2322,7 +2322,7 @@ ${estateNav(
     { href: "#how", label: "How it works" },
     { href: "#pros", label: "Capabilities" },
     { href: "/opportunities", label: "Opportunities" },
-    { href: "#pricing", label: "Pricing" },
+    { href: "#start", label: "Start" },
   ],
   { href: "/onboard", label: "Request access" },
 )}
@@ -2404,14 +2404,13 @@ ${estateFeatures(
   </div>
 </section>
 
-<section class="estate-section" id="pricing">
+<section class="estate-section" id="start">
   <div class="wrap">
-    <h2>Pricing</h2>
-    <p class="section-sub">Per-organization. Unlimited opportunities. No per-bid fees. Start on /onboard.</p>
-    <div class="pricing-grid">
-      <div class="price-card"><h3>Contractor</h3><div class="price-amount">$299</div><div class="price-period">per month</div><ul class="price-features"><li>SAM.gov opportunity radar</li><li>AI fit-scoring</li><li>5 capability drafts / mo</li><li>Public datalog (read)</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Start trial</a></div>
-      <div class="price-card featured"><h3>Agency</h3><div class="price-amount">$799</div><div class="price-period">per month</div><ul class="price-features"><li>Everything in Contractor</li><li>Unlimited capability drafts</li><li>Made-in-USA provenance seals</li><li>FAR/DFARS/NIST exports</li><li>Deadline watchdog alerts</li></ul><a href="/onboard" class="btn btn-primary" style="width:100%;text-align:center">Most popular</a></div>
-      <div class="price-card"><h3>Enterprise</h3><div class="price-amount">Custom</div><div class="price-period">prime and multi-team</div><ul class="price-features"><li>Multi-team workspaces</li><li>White-label public datalog</li><li>Sub-tier supply-chain anchoring</li><li>Dedicated compliance officer</li><li>SLA and SSO</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Contact sales</a></div>
+    <h2>Start on the live path</h2>
+    <p class="section-sub">GovChain does not publish a self-serve price in the AuthiChain catalogue. Request access on /onboard — the same intake production already proxies. This page does not promise a live government mint.</p>
+    <div class="estate-actions">
+      <a class="btn btn-primary" href="/onboard">Request access</a>
+      <a class="btn btn-outline" href="https://authichain.com/pricing">AuthiChain pricing</a>
     </div>
   </div>
 </section>

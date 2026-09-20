@@ -15,7 +15,7 @@ function esc(value: unknown): string {
   );
 }
 
-const ACCENT = "#0f766e";
+const ACCENT = "#4F46E5";
 
 const CONTACT_ROUTES = [
   {
@@ -57,9 +57,11 @@ export function renderContactPage(): string {
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#fff;color:#0f172a;font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.6}
+body{background:#fff;color:#0f172a;font-family:'Plus Jakarta Sans',system-ui,sans-serif;line-height:1.6}
 a{color:${ACCENT};text-decoration:none}
 a:focus-visible{outline:2px solid ${ACCENT};outline-offset:3px}
 .nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid #e2e8f0;max-width:1040px;margin:0 auto}
@@ -75,7 +77,7 @@ h1{font-size:clamp(2rem,5vw,3rem);font-weight:600;letter-spacing:-.03em;margin-b
 .note{border:1px solid #e2e8f0;border-radius:10px;padding:1.75rem;background:#f8fafc;margin-bottom:4rem;color:#475569;font-size:.86rem}
 footer{border-top:1px solid #e2e8f0;padding:3rem 1.5rem;text-align:left;color:#64748b;font-size:.8rem}
 </style></head><body>
-<div class="nav"><a href="/" class="logo">AuthiChain</a><a href="/vs">Compare</a></div>
+<div class="nav"><a href="/" class="logo">AuthiChain</a><span><a href="/pricing">Pricing</a> · <a href="/x402">x402</a> · <a href="/api/checkout/dpp">DPP checkout</a></span></div>
 <div class="wrap">
 <section class="hero">
   <h1>Contact</h1>
