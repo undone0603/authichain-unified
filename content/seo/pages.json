@@ -7626,7 +7626,7 @@
     "title": "FTC Made In USA Labeling Verification | AuthiChain",
     "metaDescription": "A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case.",
     "h1": "FTC Made In USA Labeling Verification",
-    "bodyHtml": "<p>A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.</p><h2>Why AuthiChain</h2><ul><li>The FTC’s “all or virtually all” standard requires final assembly, all significant processing, and all or virtually all components to originate in the US — components a supply-chain record can trace, not just a label can assert</li><li>A signed record ties a specific batch or serial to the sourcing data behind a USA claim, evidence that outlasts a label printed once at the factory</li><li>This is a separate rule from USDA’s “Product of USA” standard, which applies only to meat, poultry, and egg products under a different agency</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed record satisfy the FTC’s substantiation requirement?</h3><p>The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard.</p><h3>What’s the penalty for a false Made in USA claim?</h3><p>Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep.</p>",
+    "bodyHtml": "<p>A March 2026 executive order directed the FTC to prioritize “Made in America” enforcement, and by its April 2026 sweep the agency had settled a $625,000 case over an unqualified USA claim — the “all or virtually all” standard the rule sets is a documentation problem a signed, per-unit record can carry.</p><h2>Why AuthiChain</h2><ul><li>The FTC’s “all or virtually all” standard requires final assembly, all significant processing, and all or virtually all components to originate in the US — components a supply-chain record can trace, not just a label can assert</li><li>A signed record ties a specific batch or serial to the sourcing data behind a USA claim, evidence that outlasts a label printed once at the factory</li><li>This is a separate rule from USDA’s “Product of USA” standard, which applies only to meat, poultry, and egg products under a different agency</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/made-in-america\">Read the Made in America brief</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed record satisfy the FTC’s substantiation requirement?</h3><p>The rule requires “competent and reliable evidence” for an unqualified claim. A signed, timestamped record documenting component origin is evidence a company can point to — it doesn’t replace actually meeting the all-or-virtually-all standard.</p><h3>What’s the penalty for a false Made in USA claim?</h3><p>Civil penalties run up to roughly $53,088 per violation under the Made in USA Labeling Rule, adjusted periodically for inflation — separate from FTC Act enforcement actions like those in the April 2026 sweep.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -8185,6 +8185,260 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Unknown — the Act lets the UK choose whether to recognize EU product requirements, but the consultation doesn’t commit to mirroring ESPR. A record built on open standards, GS1 Digital Link and W3C Verifiable Credentials, ports to whichever specific fields a UK rule ends up requiring."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "made-in-america-origin-claim-substantiation",
+    "keyword": "made in america origin claim substantiation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Made In America Origin Claim Substantiation | AuthiChain",
+    "metaDescription": "An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to.",
+    "h1": "Made In America Origin Claim Substantiation",
+    "bodyHtml": "<p>An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to show that all or virtually all of that specific product is US-origin, and a signed per-unit record is one way to carry that evidence.</p><h2>Why AuthiChain</h2><ul><li>Executive Order 14392 told the FTC to prioritize truthful Made in America advertising; the rule a seller is held to remains 16 CFR Part 323, the same authority behind the April 2026 sweep</li><li>A signed record ties a batch or serial to component origin and US processing steps — documentation that outlasts a label printed once at the factory</li><li>This is not a certification that the product meets the standard; it is checkable evidence a buyer or investigator can read without a sales call</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/made-in-america\">Read the Made in America brief</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed record make a Made in USA claim legal?</h3><p>No — the claim is legal only if the product actually meets the all-or-virtually-all standard. The record is competent-and-reliable-evidence material, not a license to use the words.</p><h3>Where do we start if we already make the claim?</h3><p>EU DPP Readiness at $299 is the live self-serve checkout for a written assessment and first published record. The Made in America brief is at https://authichain.com/made-in-america.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Made In America Origin Claim Substantiation",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to show that all or virtually all of that specific product is US-origin, and a signed per-unit record is one way to carry that evidence.",
+          "url": "https://authichain.com/p/made-in-america-origin-claim-substantiation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Made In America Origin Claim Substantiation",
+              "item": "https://authichain.com/p/made-in-america-origin-claim-substantiation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed record make a Made in USA claim legal?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the claim is legal only if the product actually meets the all-or-virtually-all standard. The record is competent-and-reliable-evidence material, not a license to use the words."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Where do we start if we already make the claim?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "EU DPP Readiness at $299 is the live self-serve checkout for a written assessment and first published record. The Made in America brief is at https://authichain.com/made-in-america."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "made-in-usa-origin-claims-documentation",
+    "keyword": "made in usa origin claims documentation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Made In USA Origin Claims Documentation | AuthiChain",
+    "metaDescription": "FTC origin-claim documentation is a per-product file, not a brand slogan: final assembly, significant processing, and all or virtually all components have to.",
+    "h1": "Made In USA Origin Claims Documentation",
+    "bodyHtml": "<p>FTC origin-claim documentation is a per-product file, not a brand slogan: final assembly, significant processing, and all or virtually all components have to be US-origin, and that story has to exist before someone asks for it.</p><h2>Why AuthiChain</h2><ul><li>The April 2026 sweep’s largest order was $625,000 against an unqualified USA claim — a documentation failure as much as a sourcing one</li><li>A signed, timestamped record per batch is what a compliance team can hand over; reconstructing the bill of materials after a letter arrives is what the rule is built to catch</li><li>USDA’s Product of USA standard for meat, poultry, and eggs is a separate agency and a separate file — do not file FTC evidence under that label</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/made-in-america\">Read the Made in America brief</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is this the same as a USDA Product of USA label?</h3><p>No. USDA FSIS rules apply to meat, poultry, and egg products. The FTC Made in USA Labeling Rule applies to most other consumer products making an unqualified US-origin claim.</p><h3>What is the live checkout for this?</h3><p>https://authichain.com/api/checkout/dpp — EU DPP Readiness at $299, the published AuthiChain money rail for origin and passport documentation.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Made In USA Origin Claims Documentation",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "FTC origin-claim documentation is a per-product file, not a brand slogan: final assembly, significant processing, and all or virtually all components have to be US-origin, and that story has to exist before someone asks for it.",
+          "url": "https://authichain.com/p/made-in-usa-origin-claims-documentation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Made In USA Origin Claims Documentation",
+              "item": "https://authichain.com/p/made-in-usa-origin-claims-documentation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is this the same as a USDA Product of USA label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. USDA FSIS rules apply to meat, poultry, and egg products. The FTC Made in USA Labeling Rule applies to most other consumer products making an unqualified US-origin claim."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the live checkout for this?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "https://authichain.com/api/checkout/dpp — EU DPP Readiness at $299, the published AuthiChain money rail for origin and passport documentation."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "buy-american-made-in-usa-provenance",
+    "keyword": "buy american made in usa provenance",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Buy American Made In USA Provenance | AuthiChain",
+    "metaDescription": "Buy American and Made in USA questions in federal procurement are still origin questions: a contracting officer can ask where a unit was made, and a signed.",
+    "h1": "Buy American Made In USA Provenance",
+    "bodyHtml": "<p>Buy American and Made in USA questions in federal procurement are still origin questions: a contracting officer can ask where a unit was made, and a signed provenance record answers for that serial instead of a brochure answering for the brand.</p><h2>Why AuthiChain</h2><ul><li>Office of Made in America / GSA / Commerce missions stay written-packet and self-serve — no book-a-call CTA, and no AuthiChain Inc. letterhead; the SAM legal name is ZACHARY KIETZMAN</li><li>A per-unit record is evidence toward a domestic-origin assertion, not a FAR/DFARS determination this page can grant</li><li>EU DPP Readiness at $299 is the live checkout; the Made in America brief and partner packet sit at /made-in-america and /partners/brief</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/made-in-america\">Read the Made in America brief</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this satisfy the Buy American Act by itself?</h3><p>No. Buy American and trade-agreement determinations are contracting-officer calls. A signed origin record is documentation those officers can read; it is not a substitute for the determination.</p><h3>Who is the legal entity on SAM?</h3><p>ZACHARY KIETZMAN. AuthiChain is a brand, not a separately registered corporation.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Buy American Made In USA Provenance",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Buy American and Made in USA questions in federal procurement are still origin questions: a contracting officer can ask where a unit was made, and a signed provenance record answers for that serial instead of a brochure answering for the brand.",
+          "url": "https://authichain.com/p/buy-american-made-in-usa-provenance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Buy American Made In USA Provenance",
+              "item": "https://authichain.com/p/buy-american-made-in-usa-provenance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this satisfy the Buy American Act by itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Buy American and trade-agreement determinations are contracting-officer calls. A signed origin record is documentation those officers can read; it is not a substitute for the determination."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who is the legal entity on SAM?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "ZACHARY KIETZMAN. AuthiChain is a brand, not a separately registered corporation."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "trumark-product-authentication-seal",
+    "keyword": "trumark product authentication seal",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "TruMark Product Authentication Seal | StrainChain",
+    "metaDescription": "TruMark is the physical scan seal on a package — the mark a phone camera checks — not a separate sticker SKU; the live self-serve purchase behind a cannabis.",
+    "h1": "TruMark Product Authentication Seal",
+    "bodyHtml": "<p>TruMark is the physical scan seal on a package — the mark a phone camera checks — not a separate sticker SKU; the live self-serve purchase behind a cannabis TruMark is a StrainChain genetics passport at $49.</p><h2>Why StrainChain</h2><ul><li>The StrainChain demo already frames a scan as a TruMark scan: issue a signed seal, bind it to the tag, verify from any camera</li><li>Passport checkout is GET https://authichain.com/api/checkout/plan/strainchain_passport — one cultivar, totals recomputed from the lab panel, not transcribed</li><li>Larger tag programs and EU origin documentation use the published pricing catalogue or EU DPP Readiness at $299; do not invent a TruMark price</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/plan/strainchain_passport\">Start StrainChain passport checkout</a> · <a href=\"https://authichain.com/trumark\">Read the TruMark brief</a>. Plans start at $199/mo.</p><h2>FAQ</h2><h3>What does TruMark cost?</h3><p>TruMark is the seal, not a Stripe product. The published self-serve SKU for a cannabis unit is the $49 genetics passport. Other published plans live at /pricing.</p><h3>Where is the TruMark brief?</h3><p>https://authichain.com/trumark — scan story, Passport $49, DPP $299, and a written-packet email. No call booking.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "StrainChain — TruMark Product Authentication Seal",
+          "brand": {
+            "@type": "Brand",
+            "name": "StrainChain"
+          },
+          "description": "TruMark is the physical scan seal on a package — the mark a phone camera checks — not a separate sticker SKU; the live self-serve purchase behind a cannabis TruMark is a StrainChain genetics passport at $49.",
+          "url": "https://strainchain.io/p/trumark-product-authentication-seal"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "TruMark Product Authentication Seal",
+              "item": "https://strainchain.io/p/trumark-product-authentication-seal"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does TruMark cost?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "TruMark is the seal, not a Stripe product. The published self-serve SKU for a cannabis unit is the $49 genetics passport. Other published plans live at /pricing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Where is the TruMark brief?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "https://authichain.com/trumark — scan story, Passport $49, DPP $299, and a written-packet email. No call booking."
               }
             }
           ]

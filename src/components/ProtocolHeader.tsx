@@ -89,12 +89,26 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
         {/* CTAs */}
         <div className="flex shrink-0 items-center gap-2">
           {brandId === 'authichain' && (
-            <Link
-              href="/x402"
-              className="hidden sm:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
-            >
-              x402
-            </Link>
+            <>
+              <Link
+                href="/trumark"
+                className="hidden lg:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
+              >
+                TruMark
+              </Link>
+              <Link
+                href="/made-in-america"
+                className="hidden lg:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
+              >
+                Made in USA
+              </Link>
+              <Link
+                href="/x402"
+                className="hidden sm:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
+              >
+                x402
+              </Link>
+            </>
           )}
           <Link
             href="/pricing"

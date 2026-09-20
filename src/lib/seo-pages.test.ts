@@ -109,6 +109,31 @@ describe('generated SEO money-path CTAs', () => {
     );
   });
 
+  it('links Made in USA / origin-claim hubs to DPP checkout and the Made in America brief', () => {
+    const musa = getSeoPageBySlug('ftc-made-in-usa-labeling-verification');
+    const origin = getSeoPageBySlug('made-in-america-origin-claim-substantiation');
+    expect(musa?.bodyHtml).toContain(
+      'href="https://authichain.com/api/checkout/dpp"'
+    );
+    expect(musa?.bodyHtml).toContain(
+      'href="https://authichain.com/made-in-america"'
+    );
+    expect(origin?.bodyHtml).toContain(
+      'href="https://authichain.com/api/checkout/dpp"'
+    );
+    expect(origin?.bodyHtml).toContain(
+      'href="https://authichain.com/made-in-america"'
+    );
+  });
+
+  it('links TruMark hubs to live passport checkout and the TruMark brief', () => {
+    const trumark = getSeoPageBySlug('trumark-product-authentication-seal');
+    expect(trumark?.bodyHtml).toContain(
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(trumark?.bodyHtml).toContain('href="https://authichain.com/trumark"');
+  });
+
   it('links StrainChain cannabis hubs to live passport checkout and pricing', () => {
     const cannabis = getSeoPageBySlug('blockchain-qr-code-for-cannabis');
     expect(cannabis?.bodyHtml).toContain(
