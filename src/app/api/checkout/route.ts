@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hostedCheckoutRecoveryParams } from "@/lib/checkout-recovery";
 import { PLANS } from "@/lib/plans";
 import { createClient } from "@/utils/supabase/server";
 import { logAutomation } from "@/lib/automation";
@@ -140,6 +141,7 @@ export async function POST(request: Request) {
 
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
+      ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}${prospectId ? `&prospect_id=${prospectId}` : ""}${source ? `&utm_source=${source}` : ""}`,

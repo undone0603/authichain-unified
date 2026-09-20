@@ -79,6 +79,10 @@ describe("tryHandleProtocolCheckout", () => {
     expect(body).toContain("dpp_readiness_2026");
     expect(body).toContain("stripe_price_id");
     expect(body).not.toContain("payment_method_types");
+    expect(body).toContain("after_expiration");
+    expect(body).toContain("recovery");
+    expect(body).toContain("consent_collection");
+    expect(body).toContain("customer_creation");
   });
 
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {

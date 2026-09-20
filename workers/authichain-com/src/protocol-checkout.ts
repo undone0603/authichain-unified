@@ -4,6 +4,7 @@
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
+import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
 
@@ -120,6 +121,7 @@ export async function tryHandleProtocolCheckout(
   if (utmContent) body.set("metadata[utm_content]", utmContent);
   if (utmTerm) body.set("metadata[utm_term]", utmTerm);
   if (referrer) body.set("metadata[referrer]", referrer);
+  applyHostedCheckoutRecovery(body, "payment");
 
   const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",

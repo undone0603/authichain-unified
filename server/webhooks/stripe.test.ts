@@ -664,6 +664,37 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     expect(result.received).toBe(true);
     expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
   });
+
+  it("logs after_expiration.recovery.url when present", async () => {
+    const { logAutomationAudit } = await import("../db.js");
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_003", {
+        id: "cs_expired_003",
+        customer_details: { email: "lost@example.com" },
+        after_expiration: {
+          recovery: { url: "https://buy.stripe.com/r/recover_test" },
+        },
+        metadata: { plan: "dpp_readiness" },
+        amount_total: 29900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(logAutomationAudit).toHaveBeenCalledWith(
+      "checkout_abandoned",
+      expect.objectContaining({
+        recoveryUrl: "https://buy.stripe.com/r/recover_test",
+        email: "lost@example.com",
+      }),
+      undefined
+    );
+    expect(log.mock.calls.flat().join("\n")).toContain(
+      "https://buy.stripe.com/r/recover_test"
+    );
+    log.mockRestore();
+  });
 });
 
 describe("plan detection (via subscription amounts)", () => {

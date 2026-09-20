@@ -122,7 +122,11 @@ Switch on event.type:
     │   └─ (one-time service orders) handleServiceOrderPayment(...)
     │
     └─ checkout.session.expired
-        └─ send checkout-recovery email
+        └─ log after_expiration.recovery.url (when recovery is enabled
+           on session create) and send checkout-recovery email if an
+           email is present. Do not invent a new Resend secret — reuse
+           the existing mailer. Stripe withholds customer_details.email
+           on expired sessions unless promotional consent was collected.
     ↓
 logAutomationAudit(...) — writes to activity_log for every branch
     ↓

@@ -4,6 +4,7 @@
  * on GET — callers must POST a planId.
  */
 import { getBrandIdFromRequest } from "./brand-billing";
+import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -86,6 +87,7 @@ export async function createPlanCheckoutSession(opts: {
     const stripe = new Stripe(stripeSecretKey);
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
+      ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
       success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
