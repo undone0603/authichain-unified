@@ -78,7 +78,9 @@ Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. 
 
 ### One live B2B dispatch (after a clean dry-run)
 
-`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only **cold** segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live. `--segment=partners` is a channel-partner load (dry-run by default; live requires `ALLOW_PARTNER_SENDS=true`) and is never folded into govchain/strainchain/qron/`all`.
+`MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only **cold** segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live. `--segment=partners` is a channel-partner load and is never folded into govchain/strainchain/qron/`all`. `high_leverage` stays dry-run only.
+
+Live partner dispatch requires `OWNER_LIVE_SEND=true` **and** `dry_run=false`. Only that combination sets `ALLOW_PARTNER_SENDS=true` in the workflow (the script otherwise fail-closes). The cap still walks file order in `scripts/data/channel-partners-2026-09-19.json` — first two eligible are Existo Solutions and ICS Consulting. Oakley Signs (`already_connected`) and Onnit (`inbound_warm`) stay later in that list; there is no extra targeting sort.
 
 ```bash
 # 1. Dry-run first — must exit 0 and log [DRY RUN] (no Resend)
@@ -88,6 +90,10 @@ gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
 # 2. Tiny live batch — requires vars.OWNER_LIVE_SEND=true
 gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
   -f segment=qron -f dry_run=false
+
+# 3. Live channel-partner batch (MAX_LIVE_SENDS=2). Same OWNER_LIVE_SEND gate.
+#    Workflow sets ALLOW_PARTNER_SENDS=true only for this dispatch + live mode.
+gh workflow run b2b-outreach.yml -f segment=partners -f dry_run=false
 ```
 
 If the HTTP guardrail path returns 404 or any 5xx (including 503 `INTERNAL_API_SECRET not configured`), the script falls back to the Supabase store when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present, so live send is not blocked by deploy/secret lag. `/api/health` 404 on those hosts is unrelated.
