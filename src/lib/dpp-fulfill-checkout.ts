@@ -94,7 +94,7 @@ export async function fulfillDppPaidSession(
     stripeSubscriptionId: toId(session.subscription),
   });
 
-  if (prov.profileId && visitId) {
+  if (visitId && prov.profileId) {
     await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
       stage: "provisioned",
@@ -109,6 +109,29 @@ export async function fulfillDppPaidSession(
         ...(demo ? { is_demo: true } : {}),
       },
     });
+  } else if (visitId && prov.status === "no_identity") {
+    // Retry cannot invent a buyer. Write provisioned with skip_reason so ops
+    // can tell a completed smoke from a half-fulfill. is_demo does not skip
+    // access grant — only Resend email noise.
+    await recordDppLoopEventOnce(supabase, {
+      visitId: String(visitId),
+      stage: "provisioned",
+      source: md.source || "direct",
+      email: email || null,
+      stripeSessionId: session.id,
+      dedupeKey: session.id,
+      metadata: {
+        skip_reason: "no_identity",
+        plan,
+        ...(demo ? { is_demo: true } : {}),
+      },
+    });
+  } else if (prov.status === "upsert_failed") {
+    // Do not write dpp_loop:provisioned here — session-id dedupe would hide a
+    // later successful retry. Throw so Stripe Resend / retries can grant access.
+    throw new Error(
+      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+    );
   }
 
   // Demo/smoke may skip Resend noise. Access grant + funnel writes already ran.

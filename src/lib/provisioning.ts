@@ -17,8 +17,8 @@
  * dunning status. See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation.
  */
 
-import { PLAN_CREDITS, type PlanId } from './plans';
-import { type BrandId } from '@shared/brands';
+import { PLAN_CREDITS, type PlanId } from "./plans";
+import { type BrandId } from "@shared/brands";
 
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
@@ -40,11 +40,15 @@ export interface ProvisionInput {
 export interface ProvisionResult {
   profileId: string | null;
   created: boolean;
-  status: 'provisioned' | 'no_identity';
+  status: "provisioned" | "no_identity" | "upsert_failed";
+  error?: string;
 }
 
-function grantFor(plan: string | null | undefined, explicit?: number): number | undefined {
-  if (typeof explicit === 'number' && !Number.isNaN(explicit)) return explicit;
+function grantFor(
+  plan: string | null | undefined,
+  explicit?: number
+): number | undefined {
+  if (typeof explicit === "number" && !Number.isNaN(explicit)) return explicit;
   if (plan && plan in PLAN_CREDITS) return PLAN_CREDITS[plan as PlanId];
   return undefined;
 }
@@ -55,7 +59,7 @@ function grantFor(plan: string | null | undefined, explicit?: number): number | 
  */
 export async function provisionPurchase(
   supabase: SupabaseLike,
-  input: ProvisionInput,
+  input: ProvisionInput
 ): Promise<ProvisionResult> {
   const email = input.email?.toLowerCase().trim() || null;
 
@@ -65,28 +69,56 @@ export async function provisionPurchase(
 
   if (!profileId && email) {
     const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
       .maybeSingle();
     if (existing?.id) {
       profileId = existing.id as string;
     } else {
       // Guest checkout with no prior account — create a minimal profile so the
       // purchase is never lost. The user can claim it later via the same email.
-      const { data: inserted } = await supabase
-        .from('profiles')
-        .insert({ email, brand: input.brand, created_at: new Date().toISOString() })
-        .select('id')
+      // Live profiles.user_id is an auth.users FK; guests omit it (nullable).
+      const insertRow: Record<string, unknown> = {
+        email,
+        brand: input.brand,
+        created_at: new Date().toISOString(),
+      };
+      if (input.userId) insertRow.user_id = input.userId;
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("profiles")
+        .insert(insertRow)
+        .select("id")
         .maybeSingle();
+      if (insertError) {
+        console.error(
+          "[provisioning] guest profile insert failed:",
+          insertError
+        );
+        return {
+          profileId: null,
+          created: false,
+          status: "upsert_failed",
+          error: insertError.message || String(insertError),
+        };
+      }
       profileId = (inserted?.id as string) ?? null;
       created = !!profileId;
+      if (!profileId) {
+        return {
+          profileId: null,
+          created: false,
+          status: "upsert_failed",
+          error: "profiles insert returned no id",
+        };
+      }
     }
   }
 
   if (!profileId) {
     // No user id and no email — nothing to attach entitlements to.
-    return { profileId: null, created: false, status: 'no_identity' };
+    return { profileId: null, created: false, status: "no_identity" };
   }
 
   // 2. Apply entitlements. Reset usage so the new period starts clean.
@@ -94,18 +126,20 @@ export async function provisionPurchase(
   const update: Record<string, unknown> = {
     brand: input.brand,
     subscription_plan: input.plan ?? undefined,
-    subscription_status: input.isTrial ? 'trialing' : 'active',
+    subscription_status: input.isTrial ? "trialing" : "active",
     subscribed_at: new Date().toISOString(),
     last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
   };
-  if (input.stripeCustomerId) update.stripe_customer_id = input.stripeCustomerId;
-  if (input.stripeSubscriptionId) update.stripe_subscription_id = input.stripeSubscriptionId;
+  if (input.stripeCustomerId)
+    update.stripe_customer_id = input.stripeCustomerId;
+  if (input.stripeSubscriptionId)
+    update.stripe_subscription_id = input.stripeSubscriptionId;
   if (grant !== undefined) {
     update.generations_limit = grant;
     update.generations_used = 0;
   }
 
-  await supabase.from('profiles').update(update).eq('id', profileId);
+  await supabase.from("profiles").update(update).eq("id", profileId);
 
-  return { profileId, created, status: 'provisioned' };
+  return { profileId, created, status: "provisioned" };
 }

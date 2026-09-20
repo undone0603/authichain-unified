@@ -17,18 +17,33 @@ vi.mock("./billing-emails", () => ({
 const { sendEmail } = await import("./email");
 const { fulfillDppPaidSession } = await import("./dpp-fulfill-checkout");
 
-function fakeSupabase(opts?: { profileId?: string | null }) {
+function fakeSupabase(opts?: {
+  profileId?: string | null;
+  existingProfile?: boolean;
+  insertError?: { message: string } | null;
+}) {
   const rows: Array<Record<string, unknown>> = [];
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
+  const existingProfile = opts?.existingProfile ?? profileId != null;
   const from = (table: string) => {
     const filters: Array<[string, unknown]> = [];
     const builder: Record<string, unknown> = {
-      insert: async (row: Record<string, unknown>) => {
-        if (table === "funnel_events") rows.push(row);
-        if (table === "profiles") {
-          return { data: profileId ? { id: profileId } : null, error: null };
+      insert: (row: Record<string, unknown>) => {
+        if (table === "funnel_events") {
+          rows.push(row);
+          return Promise.resolve({ error: null });
         }
-        return { error: null };
+        if (table === "profiles") {
+          const result = opts?.insertError
+            ? { data: null, error: opts.insertError }
+            : { data: profileId ? { id: profileId } : null, error: null };
+          return {
+            select: () => ({
+              maybeSingle: async () => result,
+            }),
+          };
+        }
+        return Promise.resolve({ error: null });
       },
       update: () => builder,
       select: () => builder,
@@ -38,7 +53,10 @@ function fakeSupabase(opts?: { profileId?: string | null }) {
       },
       maybeSingle: async () => {
         if (table === "profiles") {
-          return { data: profileId ? { id: profileId } : null, error: null };
+          return {
+            data: existingProfile && profileId ? { id: profileId } : null,
+            error: null,
+          };
         }
         return { data: null, error: null };
       },
@@ -148,7 +166,7 @@ describe("fulfillDppPaidSession", () => {
     });
   });
 
-  it("does not write provisioned when there is no buyer identity", async () => {
+  it("writes provisioned with skip_reason when there is no buyer identity", async () => {
     const { supabase, rows } = fakeSupabase({ profileId: null });
     const result = await fulfillDppPaidSession(supabase, {
       ...paidSession,
@@ -157,7 +175,72 @@ describe("fulfillDppPaidSession", () => {
       metadata: { ...paidSession.metadata, user_id: undefined },
     });
     expect(result).toEqual({ handled: true, profileId: null });
+    expect(rows.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(rows[1].metadata).toMatchObject({
+      loop_stage: "provisioned",
+      skip_reason: "no_identity",
+    });
+  });
+
+  it("throws on guest profile insert failure so Stripe retries; does not write provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({
+      profileId: null,
+      existingProfile: false,
+      insertError: {
+        message:
+          'null value in column "user_id" of relation "profiles" violates not-null constraint',
+      },
+    });
+    await expect(
+      fulfillDppPaidSession(supabase, {
+        id: "cs_live_a1y4Tu_user_id",
+        amount_total: 0,
+        customer_details: { email: "authichain@gmail.com" },
+        client_reference_id: "smoke_check_1789786486",
+        metadata: {
+          offer: DPP_OFFER_KEY,
+          plan: "dpp_readiness",
+          visit_id: "smoke_check_1789786486",
+          is_demo: "true",
+          promo: "DPP-SMOKE-E2E",
+        },
+      })
+    ).rejects.toThrow(/user_id/i);
     expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
+  });
+
+  it("provisions a guest smoke buyer when profiles insert succeeds without user_id", async () => {
+    const { supabase, rows } = fakeSupabase({
+      profileId: "prof_guest",
+      existingProfile: false,
+    });
+    const result = await fulfillDppPaidSession(supabase, {
+      id: "cs_live_a1y4Tu_guest",
+      amount_total: 0,
+      customer_details: { email: "authichain@gmail.com" },
+      client_reference_id: "smoke_check_1789786486",
+      metadata: {
+        offer: DPP_OFFER_KEY,
+        plan: "dpp_readiness",
+        visit_id: "smoke_check_1789786486",
+        is_demo: "true",
+        promo: "DPP-SMOKE-E2E",
+      },
+    });
+    expect(result).toEqual({ handled: true, profileId: "prof_guest" });
+    expect(rows.map(r => r.event_type)).toEqual([
+      "dpp_loop:payment_succeeded",
+      "dpp_loop:provisioned",
+    ]);
+    expect(
+      (rows[1].metadata as { skip_reason?: string }).skip_reason
+    ).toBeUndefined();
+    expect((rows[1].metadata as { profile_id?: string }).profile_id).toBe(
+      "prof_guest"
+    );
   });
 
   it("does not double-count payment or provision on webhook replay", async () => {
