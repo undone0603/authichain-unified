@@ -25,6 +25,12 @@ function req(path: string, host = "authichain.com") {
   return new Request(`https://${host}${path}`);
 }
 
+function hasSitemapPath(urls: URL[], pathname: string): boolean {
+  return urls.some(
+    (u) => u.protocol === "https:" && u.hostname === "authichain.com" && u.pathname === pathname,
+  );
+}
+
 test("embedded packs stay in sync with content/microsites HTML", () => {
   const manifest = JSON.parse(
     readFileSync(join(ROOT, "content/microsites/manifest.json"), "utf8"),
@@ -118,9 +124,9 @@ test("apex worker serves /m pages and does not steal /p", async () => {
 });
 
 test("sitemap lists canonical microsite URLs", () => {
-  const urls = micrositeSitemapUrls();
-  assert.ok(urls.includes("https://authichain.com/m"));
-  assert.ok(urls.includes("https://authichain.com/m/mendo"));
+  const urls = micrositeSitemapUrls().map((raw) => new URL(raw));
+  assert.ok(hasSitemapPath(urls, "/m"));
+  assert.ok(hasSitemapPath(urls, "/m/mendo"));
   assert.equal(Object.keys(MICROSITES).length, 4);
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
   assert.equal(DPP_CHECKOUT.endsWith("/api/checkout/dpp"), true);
