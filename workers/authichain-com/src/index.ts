@@ -28,9 +28,11 @@ import {
   estateHero,
   estateNav,
   estateSkipLink,
+  estateSteps,
   estateTrust,
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
+import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
 
 /**
  * Escapes text interpolated into the worker's HTML. The timeline data is
@@ -62,9 +64,9 @@ const BRANDS = {
   authichain: {
     name: 'AuthiChain',
     tagline: 'The Truth Layer for the Global Economy',
-    primary: '#0f766e',
-    primaryDim: '#0f766e',
-    secondary: '#0f766e',
+    primary: '#4F46E5',
+    primaryDim: '#4F46E5',
+    secondary: '#7C3AED',
     bg: '#ffffff',
     bg2: '#f8fafc',
     bg3: '#f1f5f9',
@@ -74,7 +76,7 @@ const BRANDS = {
     borderDim: '#e2e8f0',
     glowRgba: 'transparent',
     logoMark: 'AC',
-        accent: '#0f766e',
+        accent: '#4F46E5',
     url: 'https://authichain.com',
   }
 };
@@ -87,33 +89,33 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'Cryptographic provenance for every physical product. ERC-721 NFTs + AI QR + 2.1-second verification. The truth layer for the global economy. EU DPP compliant.',
+    'Cryptographic provenance for physical products. Start EU DPP Readiness on live Stripe checkout. Issue a seal, bind it to the product, verify from any camera.',
   keywords:
-    'blockchain authentication, anti-counterfeiting, product verification, NFT certificates, ERC-721, Polygon, supply chain, EU DPP, digital product passport, brand protection',
-  ogTitle: 'AuthiChain — The Truth Layer for the Global Economy',
+    'product authentication, digital product passport, EU DPP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
+  ogTitle: 'AuthiChain — Issue, bind, verify',
   ogDescription:
-    'Blockchain-verified provenance for every physical product. NFT + AI QR + on-chain audit trail. $0.004 per seal.',
-  twitterTitle: 'AuthiChain — Blockchain Product Authentication',
+    'EU DPP Readiness is live checkout. QRON, GovChain, and StrainChain are the estate pillars. No invented customer logos.',
+  twitterTitle: 'AuthiChain — Product authentication',
   twitterDescription:
-    'Cryptographic seals for the physical world. ERC-721 + AI QR + 2.1s verification.',
+    'Start EU DPP Readiness on live Stripe checkout. Issue → Bind → Verify.',
   ogImage: 'https://authichain.com/og-image.png',
-  themeColor: '#0f766e',
+  themeColor: '#4F46E5',
   faqs: [
     {
-      q: 'How does AuthiChain prevent counterfeiting?',
-      a: 'Each genuine product gets an ERC-721 NFT certificate minted on Polygon with a cryptographic hash of the product data. Every scan is verified on-chain in 2.1 seconds against five AI agents that reach weighted consensus on authenticity.',
+      q: 'How does AuthiChain verify a product?',
+      a: 'Issue a cryptographically signed seal, bind it to the physical item, then verify from any camera against the on-chain record.',
     },
     {
       q: 'How much does AuthiChain cost?',
-      a: 'Pricing starts at $0.004 per seal for high-volume brands, with monthly plans from $49 (Starter) to $1,999 (Enterprise) including CSRD/DSCSA/EUDR compliance exports.',
+      a: 'The live self-serve offer is EU DPP Readiness at $299 one-time via GET /api/checkout/dpp. QRON Starter is $29 and Creator is $99 on published Stripe Payment Links. See /pricing.',
     },
     {
-      q: 'Which compliance standards does AuthiChain support?',
-      a: 'EU CSRD, FDA DSCSA, EUDR, USMCA, ISO 22005, and the EU Digital Product Passport (DPP) launching July 2026. Audit-ready exports included.',
+      q: 'What is EU DPP Readiness?',
+      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
     },
     {
-      q: 'Which industries does AuthiChain serve?',
-      a: 'Luxury goods, pharmaceuticals, cannabis, automotive parts, streetwear, fine wine, industrial chemicals, and art/collectibles — any vertical where provenance and anti-counterfeiting matter.',
+      q: 'What else is live in the estate?',
+      a: 'QRON Living QR generation on qron.space/generate, GovChain intake on govchain.us/onboard, StrainChain intake on strainchain.io/onboard, and x402 agent micropayments on /x402.',
     },
   ],
 };
@@ -2213,23 +2215,47 @@ function foundersVision() {
   return `
 <section class="estate-section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="wrap" style="max-width:760px">
-    <p class="section-tag">Founder's note</p>
-    <h2>The authentication layer</h2>
-    <blockquote class="section-sub" style="border-left:3px solid var(--accent);padding-left:16px;font-style:italic">
-      We are building the authentication layer for the physical world. Our product, QRON, transforms physical items into scannable identities.
-    </blockquote>
+    <p class="section-tag">What is live</p>
+    <h2>Realized capability, not a pitch deck</h2>
+    <p class="section-sub">AuthiChain issues signed seals, binds them to products, and verifies them in public. The money path is EU DPP Readiness — the same Stripe checkout production already uses.</p>
   </div>
 </section>`;
 }
 
+function howItWorks() {
+  return estateSteps(
+    "How it works",
+    "Three steps that already exist on this estate. No new product surface.",
+    [
+      { title: "Issue", body: "Issue a cryptographically signed seal for the product. Certificates are Ed25519-signed and anchored on Polygon." },
+      { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
+      { title: "Verify", body: "Anyone with a camera confirms authenticity against the public record. Agents can pay per call on the x402 rail." },
+    ],
+    "how",
+  );
+}
+
+function estatePillars() {
+  return estateFeatures(
+    "Estate pillars",
+    "Sister brands convert on paths that already work. No invented customer logos.",
+    [
+      { title: "QRON", body: "Living QR codes that still scan. Generate on qron.space/generate — the first-dollar path for packaging and labels." },
+      { title: "GovChain", body: "Federal contract intelligence intake. Start on govchain.us/onboard. This page does not promise a live government mint." },
+      { title: "StrainChain", body: "Seed-to-sale provenance and genetics passports. Start on strainchain.io/onboard. Totals are derived from lab panels, not transcribed." },
+    ],
+    "pillars",
+  );
+}
+
 function techStack() {
   return estateFeatures(
-    "How verification works",
-    "Existing AuthiChain product claims — cryptographic seals, multi-agent review, and compliance exports.",
+    "What AuthiChain already does",
+    "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "TruMark seal", body: "Cryptographic digital seal anchored on-chain. Every seal is an ERC-721 NFT on Polygon — tamper-evident and publicly verifiable." },
-      { title: "5-agent review", body: "Guardian, Archivist, Sentinel, Scout, and Arbiter reach weighted consensus in 2.1 seconds. A single compromised reading does not stand alone." },
-      { title: "EU DPP ready", body: "Audit-ready exports for EU CSRD, FDA DSCSA, EUDR, and the Digital Product Passport. One integration covers the major standards we already support." },
+      { title: "Signed seals", body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable." },
+      { title: "EU DPP Readiness", body: "Live Stripe checkout at GET /api/checkout/dpp. $299 one-time from the published plan catalogue, credited toward AuthiChain Basic on conversion." },
+      { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
   );
@@ -2258,10 +2284,10 @@ function ecosystemFooter() {
       {
         heading: "Start",
         links: [
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/onboard", label: "Onboard" },
           { href: "/api/checkout/dpp", label: "DPP checkout" },
-          { href: "/anchor", label: "Anchor a product" },
+          { href: "/pricing", label: "Pricing" },
+          { href: "/onboard", label: "Onboard" },
+          { href: "/dashboard", label: "Dashboard" },
         ],
       },
       {
@@ -2304,33 +2330,34 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">EU Digital Product Passport enrollment is open — <a href="/digital-product-passport">Read the brief</a> or <a href="/api/checkout/dpp">start checkout</a></div>
+  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. <a href="/api/checkout/dpp">Start DPP checkout</a> or <a href="/pricing">view pricing</a></div>
   ${estateNav(
     "authichain",
     [
-      { href: "#technology", label: "How it works" },
-      { href: "/digital-product-passport", label: "EU DPP" },
+      { href: "#how", label: "How it works" },
+      { href: "#pillars", label: "Pillars" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
-      { href: "/onboard", label: "Onboard" },
     ],
-    { href: "/dashboard", label: "Open dashboard" },
+    { href: "/api/checkout/dpp", label: "Start DPP checkout" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "Product authentication",
-    title: "Verify products. Prove provenance.",
-    lede: "AuthiChain issues ERC-721 certificates, AI-reviewed QR identities, and audit-ready Digital Product Passports. Open the dashboard, enroll a DPP, or start onboarding — the same paths used in production.",
+    title: "Issue seals. Bind products. Verify anywhere.",
+    lede: "AuthiChain is the truth layer for physical products. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
     actions: [
-      { href: "/dashboard", label: "Open dashboard", primary: true },
-      { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
+      { href: "/pricing", label: "View pricing", primary: false },
       { href: "/onboard", label: "Onboard", primary: false },
     ],
   })}
   ${estateTrust([
     { value: "Ed25519", label: "Signed seals" },
     { value: "Polygon", label: "On-chain anchor" },
-    { value: "2.1s", label: "Agent consensus" },
-    { value: "EU DPP", label: "Audit exports" },
+    { value: "$299", label: "EU DPP Readiness" },
+    { value: "x402", label: "Agent micropayments" },
   ])}
 
   <section class="estate-verify" id="registry" aria-labelledby="registry-heading">
@@ -2391,17 +2418,19 @@ const HTML = `<!DOCTYPE html>
   }
   </script>
 
+  ${howItWorks()}
+  ${estatePillars()}
   ${techStack()}
   ${foundersVision()}
   ${communityHub(BRAND)}
   ${marketReality()}
   ${estateCtaBand({
-    title: "Start on the live conversion path",
-    lede: "Dashboard, DPP checkout, and onboard are the same routes production already uses. No new product surface.",
+    title: "Start EU DPP Readiness",
+    lede: "GET /api/checkout/dpp opens the live Stripe session. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
     actions: [
-      { href: "/dashboard", label: "Open dashboard", primary: true },
-      { href: "/api/checkout/dpp", label: "Start DPP checkout" },
-      { href: "/onboard", label: "Onboard", primary: false },
+      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
+      { href: "/pricing", label: "View pricing", primary: false },
+      { href: "/x402", label: "x402 agent pay", primary: false },
     ],
   })}
   </main>
@@ -3150,6 +3179,7 @@ export default {
       // 200 — a sitemap promising five pages that did not exist.
       const staticUrls = [
         { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
+        { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
@@ -3167,6 +3197,8 @@ export default {
     }
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
+    const pricing = tryHandleEstatePricing(request, "authichain");
+    if (pricing) return pricing;
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       // Was a redirect to the Vercel deployment; the app now lives on this
       // same domain via the APP_WORKER service binding, so redirect same-origin.

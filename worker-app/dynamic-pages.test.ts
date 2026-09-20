@@ -279,7 +279,7 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain(
-      "Every Product Verified. Every Transaction Trusted."
+      "Issue seals. Bind products. Verify anywhere."
     );
   });
 });

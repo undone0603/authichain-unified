@@ -2167,7 +2167,7 @@ ${estateNav(
     { href: "#how", label: "How it works" },
     { href: "#advantages", label: "Capabilities" },
     { href: "/genetics/mendo-love-farms", label: "Genetics" },
-    { href: "#pricing", label: "Pricing" },
+    { href: "#start", label: "Start" },
   ],
   { href: "/onboard", label: "Request demo" },
 )}
@@ -2266,14 +2266,13 @@ ${estateFeatures(
   </div>
 </section>
 
-<section class="estate-section" id="pricing">
+<section class="estate-section" id="start">
   <div class="wrap">
-    <h2>Pricing</h2>
-    <p class="section-sub">Per-location pricing. No per-transaction fees. Unlimited batches. Start on /onboard.</p>
-    <div class="pricing-grid">
-      <div class="price-card"><h3>Grower</h3><div class="price-amount">$199</div><div class="price-period">per location / month</div><ul class="price-features"><li>Up to 500 strain NFTs/mo</li><li>METRC + BioTrack sync</li><li>4-layer audit trail</li><li>Basic compliance reports</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Start free trial</a></div>
-      <div class="price-card featured"><h3>Operator</h3><div class="price-amount">$499</div><div class="price-period">per location / month</div><ul class="price-features"><li>Unlimited strain NFTs</li><li>All compliance integrations</li><li>IoT sensor integration</li><li>Real-time regulator dashboard</li><li>API access</li></ul><a href="/onboard" class="btn btn-primary" style="width:100%;text-align:center">Most popular</a></div>
-      <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$999</div><div class="price-period">per location / month</div><ul class="price-features"><li>Multi-state management</li><li>White-label portal</li><li>Custom compliance workflows</li><li>Dedicated compliance officer</li><li>SLA guarantee</li></ul><a href="/onboard" class="btn btn-outline" style="width:100%;text-align:center">Contact sales</a></div>
+    <h2>Start on the live path</h2>
+    <p class="section-sub">StrainChain passport SKUs are defined in the catalogue but are not purchasable until a live Stripe price exists. Request a demo on /onboard — the same intake production already proxies.</p>
+    <div class="estate-actions">
+      <a class="btn btn-primary" href="/onboard">Request demo</a>
+      <a class="btn btn-outline" href="/genetics/mendo-love-farms">View genetics library</a>
     </div>
   </div>
 </section>

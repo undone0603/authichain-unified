@@ -48,8 +48,9 @@ describe("x402 public docs page", () => {
     expect(html).toContain('<main id="main">');
     expect(html).toContain('<header class="nav">');
     expect(html).toContain('<footer class="site">');
-    expect(html).toContain("--ac-accent: #0f766e");
+    expect(html).toContain("--ac-accent: #4F46E5");
     expect(html).toContain("--ac-rail: #0b1220");
-    expect(html).toContain("IBM Plex Sans");
+    expect(html).toContain("Plus Jakarta Sans");
+    expect(html).toContain('href="/pricing"');
   });
 });

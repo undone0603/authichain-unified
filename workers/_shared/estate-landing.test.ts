@@ -11,6 +11,7 @@ import {
   estateHero,
   estateIndexNowResponse,
   estateNav,
+  estateSteps,
   estateTrust,
   tryHandleEstateIndexNow,
 } from "./estate-landing.ts";
@@ -24,6 +25,25 @@ test("light tokens stay on white for every estate brand", () => {
   }
   assert.match(ESTATE_BASE_CSS, /:focus-visible/);
   assert.match(ESTATE_BASE_CSS, /\.skip-link/);
+  assert.match(estateCssVars("authichain"), /--accent: #4F46E5/);
+  assert.match(estateCssVars("authichain"), /Plus Jakarta Sans/);
+  assert.match(estateCssVars("authichain"), /79, 70, 229/);
+});
+
+test("how-it-works steps keep Issue → Bind → Verify copy verbatim", () => {
+  const html = estateSteps(
+    "How it works",
+    "Three realized steps.",
+    [
+      { title: "Issue", body: "Issue a signed seal." },
+      { title: "Bind", body: "Bind it to the product." },
+      { title: "Verify", body: "Verify from any camera." },
+    ],
+  );
+  assert.match(html, /id="how"/);
+  assert.match(html, /Issue/);
+  assert.match(html, /Bind/);
+  assert.match(html, /Verify/);
 });
 
 test("shared chrome keeps conversion hrefs verbatim", () => {

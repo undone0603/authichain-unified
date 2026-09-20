@@ -43,7 +43,24 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /href="\/pricing"/);
+  assert.match(html, /href="\/x402"/);
+  assert.match(html, /Start DPP checkout/);
+  assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
   assert.match(html, /--bg: #ffffff/);
+  assert.match(html, /--accent: #4F46E5/);
+  assert.doesNotMatch(html, /FedRAMP/);
+  assert.doesNotMatch(html, /NSF award/);
+});
+
+test("/pricing is a real catalogue page, not a 404", async () => {
+  const res = await get("/pricing");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
+  assert.match(html, /\$299/);
+  assert.match(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /href="\/x402"/);
 });
 
 test("/contact is a real page, not the homepage", async () => {
@@ -221,6 +238,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     );
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
