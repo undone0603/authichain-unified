@@ -108,6 +108,7 @@ jobs:
           echo "Resolved dry_run=true"
 
       - name: Run B2B cold outreach
+        if: ${{ inputs.flush_queued != 'true' }}
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -140,7 +141,7 @@ jobs:
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == 'true' && steps.mode.outputs.dry_run == 'false' }}
-        run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
