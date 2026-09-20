@@ -1,3 +1,8 @@
+> **2026-09-20:** Live Resend hits `authichain-edge-router`, not Vercel.
+> Bind the Dashboard Reveal secret for `we_1UGTCS…` as Worker secrets
+> `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` / `STRIPE_WEBHOOK_SECRET`.
+> See `docs/operations/stripe-webhook-signing-secret.md`.
+
 # Stripe Webhook Implementation Summary
 
 > **2026-08-27 update:** This document previously described
@@ -117,7 +122,12 @@ Switch on event.type:
     │   └─ (one-time service orders) handleServiceOrderPayment(...)
     │
     └─ checkout.session.expired
-        └─ send checkout-recovery email
+        └─ log after_expiration.recovery.url (when recovery is enabled
+           on session create) and send checkout-recovery email if an
+           email is present. Do not invent a new Resend secret — reuse
+           the existing mailer. Passport/DPP sessions omit promotional
+           consent and promo-code fields until Stripe Promotions terms
+           are accepted for the account.
     ↓
 logAutomationAudit(...) — writes to activity_log for every branch
     ↓

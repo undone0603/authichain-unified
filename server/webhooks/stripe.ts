@@ -22,6 +22,16 @@ import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
 import { sendEmail } from "../email-service";
 import { BRANDS } from "../../shared/brands";
+import { constructStripeEventAsync } from "../../src/lib/stripe-construct-event";
+import {
+  checkoutRecoveryUrl,
+  checkoutSessionEmail,
+} from "../../src/lib/checkout-recovery";
+import {
+  checkoutSessionIdFromEvent,
+  recordStripeWebhookDelivery,
+  type StripeWebhookDeliveryStatus,
+} from "../../src/lib/stripe-webhook-log";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -46,6 +56,134 @@ function getStripeClient(): Stripe {
 // ─── Webhook signing secrets (per-brand) ──────────────────────────────────────
 
 /**
+ * Apex `authichain-edge-router` hydrates Stripe + Supabase secrets only.
+ * Drizzle helpers call getDb() which throws without DATABASE_URL. DPP
+ * fulfill writes to Supabase and must not depend on that Node pooler.
+ */
+async function optionalDb<T>(
+  label: string,
+  run: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[stripe-webhook] ${label} skipped (${msg})`);
+    return fallback;
+  }
+}
+
+function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
+  return (
+    session.line_items?.data?.[0]?.price?.id ||
+    (typeof session.metadata?.stripe_price_id === "string"
+      ? session.metadata.stripe_price_id
+      : null)
+  );
+}
+
+function isReplayableCheckoutEvent(type: string): boolean {
+  return (
+    type === "checkout.session.completed" ||
+    type === "checkout.session.async_payment_succeeded"
+  );
+}
+
+async function getWebhookSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(url, key);
+}
+
+async function fulfillCatalogCreditsIfPaid(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  if (session.payment_status !== "paid") return;
+  const linePriceId = checkoutLinePriceId(session);
+  const { isDppOffer } = await import("../../src/lib/dpp-loop");
+  if (isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  const { PLAN_CREDITS, planByAmountCents, planByStripePriceId } =
+    await import("../../src/lib/plans");
+  const metaPlan =
+    typeof session.metadata?.plan === "string" ? session.metadata.plan : "";
+  let catalog =
+    planByStripePriceId(linePriceId)?.id ||
+    planByAmountCents(session.amount_total ?? undefined)?.id;
+  if (
+    !catalog &&
+    metaPlan &&
+    metaPlan in PLAN_CREDITS &&
+    metaPlan !== "starter"
+  ) {
+    catalog = metaPlan as typeof catalog;
+  }
+  if (!catalog && metaPlan === "starter" && session.mode === "payment") {
+    catalog = "starter";
+  }
+  if (!catalog) return;
+
+  const supabase = await getWebhookSupabase();
+  if (!supabase) {
+    console.error(
+      "[stripe-webhook] catalogue session paid but Supabase is not configured"
+    );
+    return;
+  }
+
+  const { provisionPurchase } = await import("../../src/lib/provisioning");
+  const email =
+    session.customer_details?.email ||
+    session.customer_email ||
+    (typeof session.metadata?.customer_email === "string"
+      ? session.metadata.customer_email
+      : null);
+  const prov = await provisionPurchase(supabase, {
+    email,
+    userId: session.metadata?.user_id || null,
+    plan: catalog,
+    brand: (session.metadata?.brand as "authichain") || "authichain",
+    stripeCustomerId:
+      typeof session.customer === "string" ? session.customer : null,
+    stripeSubscriptionId:
+      typeof session.subscription === "string" ? session.subscription : null,
+  });
+  if (prov.status === "upsert_failed") {
+    throw new Error(
+      `Catalogue provision failed: ${prov.error || "profiles upsert failed"}`
+    );
+  }
+}
+
+async function fulfillDppCheckoutIfPaid(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  // $0 DPP-SMOKE sessions still arrive as payment_status=paid. Do not
+  // gate on amount_total > 0 or is_demo — that was not the live miss,
+  // and it would drop every current smoke.
+  if (session.payment_status !== "paid") return;
+
+  const { isDppOffer } = await import("../../src/lib/dpp-loop");
+  const linePriceId = checkoutLinePriceId(session);
+  if (!isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  const supabase = await getWebhookSupabase();
+  if (!supabase) {
+    console.error(
+      "[stripe-webhook] DPP session paid but Supabase is not configured"
+    );
+    return;
+  }
+
+  const { fulfillDppPaidSession } =
+    await import("../../src/lib/dpp-fulfill-checkout");
+  await fulfillDppPaidSession(supabase, session, linePriceId);
+}
+
+/**
  * Every distinct env var name that any brand's Stripe webhook endpoint may be
  * signed with, per shared/brands.ts `billing.webhookSecretEnv`, plus the
  * generic STRIPE_WEBHOOK_SECRET fallback. authichain uses its own secret
@@ -54,15 +192,32 @@ function getStripeClient(): Stripe {
  * secret per call, so handleStripeWebhook tries each configured candidate in
  * order until one verifies the signature.
  */
-function getWebhookSecretCandidates(): string[] {
+function getWebhookSecretEnvNames(): string[] {
   const envNames = new Set<string>(["STRIPE_WEBHOOK_SECRET"]);
   for (const brand of Object.values(BRANDS)) {
     envNames.add(brand.billing.webhookSecretEnv);
   }
+  return [...envNames];
+}
+
+/**
+ * Presence only — never include secret values. Surfaced on 400 so a
+ * Dashboard Resend shows whether the reminted endpoint secret is bound.
+ */
+export function describeWebhookSecretPresence(): string {
+  return getWebhookSecretEnvNames()
+    .map(name => `${name}=${process.env[name]?.trim() ? "set" : "missing"}`)
+    .join(", ");
+}
+
+function getWebhookSecretCandidates(): string[] {
   const secrets: string[] = [];
-  for (const name of envNames) {
-    const value = process.env[name];
-    if (value) secrets.push(value);
+  const seen = new Set<string>();
+  for (const name of getWebhookSecretEnvNames()) {
+    const value = process.env[name]?.trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    secrets.push(value);
   }
   return secrets;
 }
@@ -194,23 +349,42 @@ export async function handleStripeWebhook(
   // first mismatch (as this used to) meant any brand whose endpoint isn't
   // signed with plain STRIPE_WEBHOOK_SECRET (authichain uses
   // STRIPE_WEBHOOK_AUTHICHAIN_SECRET) would fail verification on every event.
-  let event: Stripe.Event | undefined;
-  let lastError: unknown;
-  for (const secret of candidateSecrets) {
-    try {
-      event = stripe.webhooks.constructEvent(rawBody, sig, secret);
-      break;
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  if (!event) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error("[stripe-webhook] Signature verification failed");
+  // Must be constructEventAsync: the apex Worker uses SubtleCrypto, and
+  // sync constructEvent() 400s with CryptoProviderOnlySupportsAsyncError.
+  let event: Stripe.Event;
+  try {
+    event = await constructStripeEventAsync(
+      stripe,
+      rawBody,
+      sig,
+      candidateSecrets
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`${msg} (${describeWebhookSecretPresence()})`);
   }
 
   console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
+
+  const supabase = await getWebhookSupabase();
+  const sessionId = checkoutSessionIdFromEvent(event);
+  const logDelivery = async (
+    status: StripeWebhookDeliveryStatus,
+    extras?: { httpStatus?: number | null; error?: string | null }
+  ) => {
+    await recordStripeWebhookDelivery(supabase, {
+      eventId: event.id,
+      eventType: event.type,
+      sessionId,
+      status,
+      httpStatus: extras?.httpStatus,
+      error: extras?.error,
+    });
+  };
+
+  // Persist before side effects so a later throw is still queryable.
+  // A stripe_events row is NOT a fulfill lock — DPP replay still runs.
+  await logDelivery("received");
 
   // Allow test verification events through without idempotency check
   if (event.id.startsWith("evt_test_")) {
@@ -218,383 +392,435 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await db.hasWebhookEventProcessed(event.id)) {
+  // Drizzle/DATABASE_URL is optional on the apex Worker. Missing it used to
+  // 400 every checkout.session.completed *before* fulfillDppPaidSession, so
+  // paid DPP smokes never wrote loop_stage=provisioned. Fail open.
+  const alreadyProcessed = await optionalDb(
+    "idempotency",
+    () => db.hasWebhookEventProcessed(event.id),
+    false
+  );
+  if (alreadyProcessed && !isReplayableCheckoutEvent(event.type)) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
+    await logDelivery("duplicate", { httpStatus: 200 });
     return { received: true, type: event.type, duplicate: true };
+  }
+
+  // Paid DPP checkout must still fulfill on Stripe Resend / retries even
+  // when Drizzle already claimed the event (or stripe_events has received).
+  if (alreadyProcessed && isReplayableCheckoutEvent(event.type)) {
+    console.log(
+      `[stripe-webhook] Duplicate ${event.type} — replaying DPP fulfill only: ${event.id}`
+    );
+    const session = event.data.object as Stripe.Checkout.Session;
+    try {
+      await fulfillDppCheckoutIfPaid(session);
+      await logDelivery("success", { httpStatus: 200 });
+      return {
+        received: true,
+        type: event.type,
+        duplicate: true,
+        handled: true,
+      };
+    } catch (dppErr) {
+      const msg = dppErr instanceof Error ? dppErr.message : String(dppErr);
+      console.error("[stripe-webhook] DPP fulfill failed", dppErr);
+      await logDelivery("error", { httpStatus: 400, error: msg });
+      throw dppErr;
+    }
   }
 
   // Idempotency — claim step skipped in test environments where only hasWebhookEventProcessed is mocked.
 
   // Mark in-flight immediately so a concurrent duplicate delivery sees it as processed.
-  await db.logActivity({
-    userId: null,
-    action: "webhook_received",
-    entityType: "webhook",
-    entityId: 0,
-    details: { eventId: event.id, type: event.type },
-  });
+  await optionalDb(
+    "claim",
+    () =>
+      db.logActivity({
+        userId: null,
+        action: "webhook_received",
+        entityType: "webhook",
+        entityId: 0,
+        details: { eventId: event.id, type: event.type },
+      }),
+    undefined
+  );
 
-  switch (event.type) {
-    // ── Subscription created / updated ──────────────────────────────────────
-    case "customer.subscription.created":
-    case "customer.subscription.updated": {
-      const sub = event.data.object as Stripe.Subscription &
-        Record<string, any>;
-      const customerId =
-        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
-      const firstItem = sub.items?.data?.[0];
-      const priceId = firstItem?.price?.id ?? null;
-      const amountCents = firstItem?.price?.unit_amount ?? 0;
-      const billingCycle =
-        firstItem?.price?.recurring?.interval === "year" ? "annual" : "monthly";
-      const metaPlan = sub.metadata?.plan ?? null;
-      const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
-      const status = mapStripeStatus(sub.status);
-      const userId = await resolveUserId(stripe, customerId, sub.metadata);
+  let handled = true;
+  try {
+    switch (event.type) {
+      // ── Subscription created / updated ──────────────────────────────────────
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const sub = event.data.object as Stripe.Subscription &
+          Record<string, any>;
+        const customerId =
+          typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+        const firstItem = sub.items?.data?.[0];
+        const priceId = firstItem?.price?.id ?? null;
+        const amountCents = firstItem?.price?.unit_amount ?? 0;
+        const billingCycle =
+          firstItem?.price?.recurring?.interval === "year"
+            ? "annual"
+            : "monthly";
+        const metaPlan = sub.metadata?.plan ?? null;
+        const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
+        const status = mapStripeStatus(sub.status);
+        const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
-      if (userId) {
-        await db.upsertStripeSubscription({
-          userId,
-          plan,
-          status,
-          monthlyQuota: getPlanQuota(plan),
-          billingCycle,
-          stripeCustomerId: customerId ?? null,
-          stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start
-            ? new Date(sub.current_period_start * 1000)
-            : new Date(),
-          currentPeriodEnd: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
-        });
+        if (userId) {
+          await db.upsertStripeSubscription({
+            userId,
+            plan,
+            status,
+            monthlyQuota: getPlanQuota(plan),
+            billingCycle,
+            stripeCustomerId: customerId ?? null,
+            stripeSubscriptionId: sub.id,
+            currentPeriodStart: sub.current_period_start
+              ? new Date(sub.current_period_start * 1000)
+              : new Date(),
+            currentPeriodEnd: sub.current_period_end
+              ? new Date(sub.current_period_end * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+          });
 
-        // Send welcome email on new subscription activation
-        if (
-          event.type === "customer.subscription.created" &&
-          (status === "active" || status === "trialing")
-        ) {
-          try {
-            const customer = await stripe.customers.retrieve(customerId!);
-            const email = !customer.deleted
-              ? ((customer as Stripe.Customer).email ?? null)
-              : null;
-            const name = !customer.deleted
-              ? ((customer as Stripe.Customer).name ?? "there")
-              : "there";
-            if (email) {
-              const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
-              await sendEmail({
-                to: email,
-                subject: `Welcome to AuthiChain ${product.name}`,
-                body: `Hi ${name},\n\nYour AuthiChain ${product.name} subscription is now active.\n\nHere's what you get:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nGet started at https://authichain.com/dashboard\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
-                fromName: "AuthiChain",
-              });
-              console.log(
-                `[stripe-webhook] Welcome email sent to ${maskEmail(email)}`
+          // Send welcome email on new subscription activation
+          if (
+            event.type === "customer.subscription.created" &&
+            (status === "active" || status === "trialing")
+          ) {
+            try {
+              const customer = await stripe.customers.retrieve(customerId!);
+              const email = !customer.deleted
+                ? ((customer as Stripe.Customer).email ?? null)
+                : null;
+              const name = !customer.deleted
+                ? ((customer as Stripe.Customer).name ?? "there")
+                : "there";
+              if (email) {
+                const product =
+                  STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+                await sendEmail({
+                  to: email,
+                  subject: `Welcome to AuthiChain ${product.name}`,
+                  body: `Hi ${name},\n\nYour AuthiChain ${product.name} subscription is now active.\n\nHere's what you get:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nGet started at https://authichain.com/dashboard\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+                  fromName: "AuthiChain",
+                });
+                console.log(
+                  `[stripe-webhook] Welcome email sent to ${maskEmail(email)}`
+                );
+              }
+            } catch (err) {
+              console.warn(
+                "[stripe-webhook] Welcome email failed (non-fatal):",
+                err
               );
             }
-          } catch (err) {
-            console.warn(
-              "[stripe-webhook] Welcome email failed (non-fatal):",
-              err
-            );
           }
         }
+
+        await db.logAutomationAudit(
+          event.type === "customer.subscription.created"
+            ? "billing_subscription_created"
+            : "billing_subscription_updated",
+          {
+            eventId: event.id,
+            stripeSubscriptionId: sub.id,
+            stripeCustomerId: customerId ?? null,
+            plan,
+            status,
+            billingCycle,
+            userId: userId ?? null,
+          },
+          userId
+        );
+
+        console.log(
+          `[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`
+        );
+        break;
       }
 
-      await db.logAutomationAudit(
-        event.type === "customer.subscription.created"
-          ? "billing_subscription_created"
-          : "billing_subscription_updated",
-        {
-          eventId: event.id,
-          stripeSubscriptionId: sub.id,
-          stripeCustomerId: customerId ?? null,
-          plan,
-          status,
-          billingCycle,
-          userId: userId ?? null,
-        },
-        userId
-      );
+      // ── Subscription deleted (cancelled) ────────────────────────────────────
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription &
+          Record<string, any>;
+        const customerId =
+          typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+        const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
-      console.log(
-        `[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`
-      );
-      break;
-    }
+        await db.setSubscriptionStatusByStripeId(
+          sub.id,
+          "cancelled",
+          new Date()
+        );
 
-    // ── Subscription deleted (cancelled) ────────────────────────────────────
-    case "customer.subscription.deleted": {
-      const sub = event.data.object as Stripe.Subscription &
-        Record<string, any>;
-      const customerId =
-        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
-      const userId = await resolveUserId(stripe, customerId, sub.metadata);
+        await db.logAutomationAudit(
+          "billing_subscription_cancelled",
+          {
+            eventId: event.id,
+            stripeSubscriptionId: sub.id,
+            stripeCustomerId: customerId ?? null,
+            userId: userId ?? null,
+          },
+          userId
+        );
 
-      await db.setSubscriptionStatusByStripeId(sub.id, "cancelled", new Date());
-
-      await db.logAutomationAudit(
-        "billing_subscription_cancelled",
-        {
-          eventId: event.id,
-          stripeSubscriptionId: sub.id,
-          stripeCustomerId: customerId ?? null,
-          userId: userId ?? null,
-        },
-        userId
-      );
-
-      console.log(`[stripe-webhook] Subscription cancelled: ${sub.id}`);
-      break;
-    }
-
-    // ── Invoice payment succeeded ────────────────────────────────────────────
-    case "invoice.payment_succeeded":
-    case "invoice.paid": {
-      const inv = event.data.object as Stripe.Invoice & Record<string, any>;
-      const customerId =
-        typeof inv.customer === "string"
-          ? inv.customer
-          : (inv.customer as any)?.id;
-      const subscriptionId =
-        typeof inv.subscription === "string"
-          ? inv.subscription
-          : (inv.subscription as any)?.id;
-
-      // Resolve userId — try subscription metadata first, then customer
-      let userId: number | undefined;
-      if (subscriptionId) {
-        const localSub =
-          await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
-        userId = localSub?.userId ?? undefined;
-      }
-      if (!userId) {
-        userId = await resolveUserId(stripe, customerId);
+        console.log(`[stripe-webhook] Subscription cancelled: ${sub.id}`);
+        break;
       }
 
-      const amountCents = inv.amount_paid ?? 0;
-      const amountUsd = amountCents / 100;
-      const currency = (inv.currency ?? "usd").toUpperCase();
+      // ── Invoice payment succeeded ────────────────────────────────────────────
+      case "invoice.payment_succeeded":
+      case "invoice.paid": {
+        const inv = event.data.object as Stripe.Invoice & Record<string, any>;
+        const customerId =
+          typeof inv.customer === "string"
+            ? inv.customer
+            : (inv.customer as any)?.id;
+        const subscriptionId =
+          typeof inv.subscription === "string"
+            ? inv.subscription
+            : (inv.subscription as any)?.id;
 
-      // Detect plan from invoice line items
-      const firstLine = inv.lines?.data?.[0] as any;
-      const priceId = firstLine?.price?.id ?? null;
-      const invBillingCycle =
-        firstLine?.price?.recurring?.interval === "year" ? "annual" : "monthly";
-      const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
+        // Resolve userId — try subscription metadata first, then customer
+        let userId: number | undefined;
+        if (subscriptionId) {
+          const localSub =
+            await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
+          userId = localSub?.userId ?? undefined;
+        }
+        if (!userId) {
+          userId = await resolveUserId(stripe, customerId);
+        }
 
-      await Promise.all([
-        amountUsd > 0
-          ? db.recordRevenue({
-              source: "stripe",
-              amount: amountUsd.toFixed(2),
+        const amountCents = inv.amount_paid ?? 0;
+        const amountUsd = amountCents / 100;
+        const currency = (inv.currency ?? "usd").toUpperCase();
+
+        // Detect plan from invoice line items
+        const firstLine = inv.lines?.data?.[0] as any;
+        const priceId = firstLine?.price?.id ?? null;
+        const invBillingCycle =
+          firstLine?.price?.recurring?.interval === "year"
+            ? "annual"
+            : "monthly";
+        const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
+
+        await Promise.all([
+          amountUsd > 0
+            ? db.recordRevenue({
+                source: "stripe",
+                amount: amountUsd.toFixed(2),
+                currency,
+                type: "subscription",
+                userId: userId ?? null,
+                metadata: {
+                  eventId: event.id,
+                  invoiceId: inv.id,
+                  stripeSubscriptionId: subscriptionId ?? null,
+                  stripeCustomerId: customerId ?? null,
+                  plan,
+                },
+              })
+            : Promise.resolve(),
+          subscriptionId
+            ? db.setSubscriptionStatusByStripeId(subscriptionId, "active")
+            : Promise.resolve(),
+          db.logAutomationAudit(
+            "billing_invoice_paid",
+            {
+              eventId: event.id,
+              invoiceId: inv.id,
+              stripeSubscriptionId: subscriptionId ?? null,
+              stripeCustomerId: customerId ?? null,
+              amountUsd,
               currency,
-              type: "subscription",
+              plan,
               userId: userId ?? null,
-              metadata: {
-                eventId: event.id,
-                invoiceId: inv.id,
-                stripeSubscriptionId: subscriptionId ?? null,
-                stripeCustomerId: customerId ?? null,
-                plan,
-              },
-            })
-          : Promise.resolve(),
-        subscriptionId
-          ? db.setSubscriptionStatusByStripeId(subscriptionId, "active")
-          : Promise.resolve(),
-        db.logAutomationAudit(
-          "billing_invoice_paid",
+            },
+            userId
+          ),
+        ]);
+
+        console.log(
+          `[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`
+        );
+        break;
+      }
+
+      // ── Invoice payment failed ───────────────────────────────────────────────
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice & Record<string, any>;
+        const customerId =
+          typeof inv.customer === "string"
+            ? inv.customer
+            : (inv.customer as any)?.id;
+        const subscriptionId =
+          typeof inv.subscription === "string"
+            ? inv.subscription
+            : (inv.subscription as any)?.id;
+
+        let userId: number | undefined;
+        if (subscriptionId) {
+          const localSub =
+            await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
+          userId = localSub?.userId ?? undefined;
+          await Promise.all([
+            db.setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
+            userId
+              ? db.createSystemNotification(
+                  userId,
+                  "Payment Failed",
+                  "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
+                  "alert",
+                  "/subscriptions"
+                )
+              : Promise.resolve(),
+          ]);
+        }
+
+        await db.logAutomationAudit(
+          "billing_dunning_started",
           {
             eventId: event.id,
             invoiceId: inv.id,
             stripeSubscriptionId: subscriptionId ?? null,
             stripeCustomerId: customerId ?? null,
-            amountUsd,
-            currency,
-            plan,
+            attemptCount: (inv as any).attempt_count ?? 1,
+            dunningStep: "day_0",
             userId: userId ?? null,
           },
           userId
-        ),
-      ]);
-
-      console.log(
-        `[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`
-      );
-      break;
-    }
-
-    // ── Invoice payment failed ───────────────────────────────────────────────
-    case "invoice.payment_failed": {
-      const inv = event.data.object as Stripe.Invoice & Record<string, any>;
-      const customerId =
-        typeof inv.customer === "string"
-          ? inv.customer
-          : (inv.customer as any)?.id;
-      const subscriptionId =
-        typeof inv.subscription === "string"
-          ? inv.subscription
-          : (inv.subscription as any)?.id;
-
-      let userId: number | undefined;
-      if (subscriptionId) {
-        const localSub =
-          await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
-        userId = localSub?.userId ?? undefined;
-        await Promise.all([
-          db.setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
-          userId
-            ? db.createSystemNotification(
-                userId,
-                "Payment Failed",
-                "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
-                "alert",
-                "/subscriptions"
-              )
-            : Promise.resolve(),
-        ]);
-      }
-
-      await db.logAutomationAudit(
-        "billing_dunning_started",
-        {
-          eventId: event.id,
-          invoiceId: inv.id,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-          attemptCount: (inv as any).attempt_count ?? 1,
-          dunningStep: "day_0",
-          userId: userId ?? null,
-        },
-        userId
-      );
-
-      console.log(
-        `[stripe-webhook] Payment failed: invoice=${inv.id} sub=${subscriptionId}`
-      );
-      break;
-    }
-
-    // ── Checkout session completed ───────────────────────────────────────────
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.user_id
-        ? parseInt(session.metadata.user_id, 10)
-        : undefined;
-      const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
-      const billingCycle =
-        session.metadata?.billing === "annual" ? "annual" : "monthly";
-      const amountCents = session.amount_total ?? 0;
-      const amountUsd = amountCents / 100;
-      const customerId =
-        typeof session.customer === "string" ? session.customer : undefined;
-      const subscriptionId =
-        typeof session.subscription === "string"
-          ? session.subscription
-          : undefined;
-
-      await db.logAutomationAudit(
-        "billing_checkout_completed",
-        {
-          eventId: event.id,
-          userId: userId ?? null,
-          plan,
-          billingCycle,
-          amountUsd,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-        },
-        userId
-      );
-
-      if (session.metadata?.type === "one_time_service") {
-        await handleServiceOrderPayment({
-          id: session.id,
-          payment_intent:
-            typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : undefined,
-        });
-      }
-
-      try {
-        const { isDppOffer } = await import("../../src/lib/dpp-loop");
-        if (isDppOffer(session.metadata || {})) {
-          const url =
-            process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-          const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          if (url && key) {
-            const { createClient } = await import("@supabase/supabase-js");
-            const { fulfillDppPaidSession } =
-              await import("../../src/lib/dpp-fulfill-checkout");
-            await fulfillDppPaidSession(createClient(url, key), session);
-          } else {
-            console.error(
-              "[stripe-webhook] DPP session paid but Supabase is not configured"
-            );
-          }
-        }
-      } catch (dppErr) {
-        console.error("[stripe-webhook] DPP fulfill failed", dppErr);
-        throw dppErr;
-      }
-
-      console.log(
-        `[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`
-      );
-      break;
-    }
-
-    // ── Checkout session expired (abandoned) ─────────────────────────────────
-    case "checkout.session.expired": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.user_id
-        ? parseInt(session.metadata.user_id, 10)
-        : undefined;
-      const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
-      const email = session.customer_email || session.metadata?.customer_email;
-      const name = session.metadata?.customer_name || "there";
-
-      await db.logAutomationAudit(
-        "checkout_abandoned",
-        {
-          eventId: event.id,
-          userId: userId ?? null,
-          plan: plan ?? null,
-          email: email ?? null,
-        },
-        userId
-      );
-
-      if (email) {
-        const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
-        const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
-        await sendEmail({
-          to: email,
-          subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
-          body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit https://authichain.com/subscriptions to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
-          fromName: "AuthiChain",
-        });
-        console.log(
-          `[stripe-webhook] Checkout recovery email sent to ${maskEmail(email)}`
         );
+
+        console.log(
+          `[stripe-webhook] Payment failed: invoice=${inv.id} sub=${subscriptionId}`
+        );
+        break;
       }
 
-      console.log(
-        `[stripe-webhook] Checkout expired/abandoned: user=${userId} plan=${plan}`
-      );
-      break;
+      // ── Checkout session completed / async paid ──────────────────────────────
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.user_id
+          ? parseInt(session.metadata.user_id, 10)
+          : undefined;
+        const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
+        const billingCycle =
+          session.metadata?.billing === "annual" ? "annual" : "monthly";
+        const amountCents = session.amount_total ?? 0;
+        const amountUsd = amountCents / 100;
+        const customerId =
+          typeof session.customer === "string" ? session.customer : undefined;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : undefined;
+
+        // Fulfill before Drizzle audit: a paid DPP session must provision even
+        // when DATABASE_URL / activity_log is unavailable on the edge Worker.
+        try {
+          await fulfillDppCheckoutIfPaid(session);
+          await fulfillCatalogCreditsIfPaid(session);
+        } catch (dppErr) {
+          console.error("[stripe-webhook] checkout fulfill failed", dppErr);
+          throw dppErr;
+        }
+
+        await optionalDb(
+          "checkout audit",
+          () =>
+            db.logAutomationAudit(
+              "billing_checkout_completed",
+              {
+                eventId: event.id,
+                userId: userId ?? null,
+                plan,
+                billingCycle,
+                amountUsd,
+                stripeSubscriptionId: subscriptionId ?? null,
+                stripeCustomerId: customerId ?? null,
+              },
+              userId
+            ),
+          undefined
+        );
+
+        if (session.metadata?.type === "one_time_service") {
+          await handleServiceOrderPayment({
+            id: session.id,
+            payment_intent:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : undefined,
+          });
+        }
+
+        console.log(
+          `[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`
+        );
+        break;
+      }
+
+      // ── Checkout session expired (abandoned) ─────────────────────────────────
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.user_id
+          ? parseInt(session.metadata.user_id, 10)
+          : undefined;
+        const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
+        const email = checkoutSessionEmail(session);
+        const recoveryUrl = checkoutRecoveryUrl(session);
+        const name = session.metadata?.customer_name || "there";
+
+        await db.logAutomationAudit(
+          "checkout_abandoned",
+          {
+            eventId: event.id,
+            userId: userId ?? null,
+            plan: plan ?? null,
+            email: email ?? null,
+            recoveryUrl,
+          },
+          userId
+        );
+
+        if (email) {
+          const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+          const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
+          const continueUrl =
+            recoveryUrl || "https://authichain.com/subscriptions";
+          await sendEmail({
+            to: email,
+            subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
+            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+            fromName: "AuthiChain",
+          });
+          console.log(
+            `[stripe-webhook] Checkout recovery email sent to ${maskEmail(email)}`
+          );
+        }
+
+        console.log(
+          `[stripe-webhook] Checkout expired/abandoned: user=${userId} plan=${plan} recovery_url=${recoveryUrl ?? "none"}`
+        );
+        break;
+      }
+
+      default:
+        console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
+        handled = false;
     }
 
-    default:
-      console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
-      return { received: true, type: event.type, handled: false };
+    await logDelivery("success", { httpStatus: 200 });
+    return { received: true, type: event.type, handled };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await logDelivery("error", { httpStatus: 400, error: msg });
+    throw err;
   }
-
-  return { received: true, type: event.type, handled: true };
 }

@@ -233,13 +233,14 @@ workflows:
     handler: handlers.govchain_proposal
     type: api
     estimated_minutes: 15
-    requires: [gemini_api_key]
+    requires: []
     prerequisites: []
     confirm_before_run: false
     description: |
-      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted 
-      government grant opportunity, and uses an LLM to autonomously draft 
-      a Phase 1 proposal, saving the markdown output for review.
+      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted
+      government grant opportunity, and drafts a Phase 1 proposal via local
+      Ollama (llama3.2 / $OLLAMA_MODEL on $OLLAMA_HOST). Dry-run writes the
+      markdown locally and skips the pipeline ledger. No Gemini key required.
 
   - id: authichain_docusign_blitz
     title: "DocuSign Signature Blitz: Dispatch Partnership Agreements"
@@ -907,8 +908,9 @@ workflows:
     prerequisites: []
     confirm_before_run: true
     description: |
-      Links CAGE code 1PUJ6 to the AuthiChain, Inc. SAM.gov entity
-      registration, then submits a $200,000 Phase I application to the DHS
+      Confirms CAGE code 1PUJ6 on the ZACHARY KIETZMAN SAM.gov entity
+      (AuthiChain is a brand only; do not rename SAM to AuthiChain, Inc.),
+      then submits a $200,000 Phase I application to the DHS
       Science & Technology Directorate Silicon Valley Innovation Program
       (SVIP) for "Preventing Forgery and Counterfeiting." Browser-automated;
       real government submission — always review dry-run output first.

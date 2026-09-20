@@ -3,21 +3,36 @@
 //   1. Defense contractors (GovChain — CMMC Nov 2026 deadline)
 //   2. Cannabis compliance managers (StrainChain — $499/mo Theater 1)
 //   3. Print shops / brand agencies (QRON — $29-99 quick wins)
+// Plus an opt-in channel-partner list (not folded into `all`):
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
+// Live partner sends also need ALLOW_PARTNER_SENDS=true (or --allow-partner-sends)
+// and stay under MAX_LIVE_SENDS. Do not mix partners into govchain/strainchain/qron.
+// Existo + ICS are on PARTNER_ALREADY_SENT after two live Resend sends 2026-09-20.
 //
 // Usage:
 //   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=govchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=strainchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
+//   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=high_leverage
+// high_leverage is dry-run only (Tier 1 buyer emails already in Supabase).
 
 import { createClient } from "@supabase/supabase-js";
 import { guardrailCheck, guardrailRecord } from "./lib/guardrail-client";
+import {
+  existingLeadBlocksLiveSend,
+  nextLeadWriteStatus,
+  normalizeLeadEmail,
+  shouldNotLiveResend,
+} from "./lib/b2b-send-policy";
 import {
   checkSender,
   reportSenderFailure,
   CREDENTIAL_ENV_VARS,
 } from "./lib/resend-preflight";
 import {
+  countsAsLiveSendAttempt,
   guardedSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
@@ -27,10 +42,44 @@ import {
   formatMilestoneDate,
   countdownLabel,
 } from "../src/lib/dpp-timeline";
+import {
+  describeSkipReason,
+  loadCrmRowsForCompanies,
+  loadHubSpotContactsForCompany,
+  resolveLeadEmail,
+} from "./lib/lead-email-resolver";
+import { ensureLiveB2bChannel } from "../shared/guardrail-store";
+import {
+  CHANNEL_PARTNER_LEAD_SOURCE,
+  CHANNEL_PARTNER_TARGETS,
+  allowPartnerLiveSends,
+  assertPartnerRunAllowed,
+  orderPartnerTargetsForSend,
+  shouldLoadPartnerTargets,
+  type ChannelPartnerTarget,
+} from "./lib/channel-partners";
+import {
+  HIGH_LEVERAGE_LEAD_SOURCE,
+  HIGH_LEVERAGE_TARGETS,
+  assertHighLeverageRunAllowed,
+  shouldLoadHighLeverageTargets,
+  type HighLeverageTarget,
+} from "./lib/high-leverage";
+
+export {
+  CHANNEL_PARTNER_LEAD_SOURCE,
+  CHANNEL_PARTNER_TARGETS,
+} from "./lib/channel-partners";
+export {
+  HIGH_LEVERAGE_LEAD_SOURCE,
+  HIGH_LEVERAGE_TARGETS,
+} from "./lib/high-leverage";
 
 const GUARDRAIL_CHANNEL = "email.b2b-cold";
 
-const isDryRun = process.env.DRY_RUN === "true";
+// Fail-closed: unset / any value other than "false" is dry-run. Live send
+// requires DRY_RUN=false from the workflow resolve-mode step.
+const isDryRun = process.env.DRY_RUN !== "false";
 const segment =
   process.argv.find(a => a.startsWith("--segment="))?.split("=")[1] ?? "all";
 
@@ -41,6 +90,14 @@ const segment =
 const sendFailures: string[] = [];
 let totalAttempted = 0;
 let totalSent = 0;
+// Counts only real Resend attempts (sent or resend_http_*), not policy
+// refuses such as role_inbox / no_mx — those must not burn MAX_LIVE_SENDS.
+let liveDispatchAttempts = 0;
+// Live runs default to a tiny batch so OWNER_LIVE_SEND cannot blast the
+// whole list. Dry-run is uncapped (it never calls Resend).
+const maxLiveSends = isDryRun
+  ? Number.POSITIVE_INFINITY
+  : Math.max(1, Number(process.env.MAX_LIVE_SENDS ?? "2") || 2);
 
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,6 +129,9 @@ const SEGMENT_FROM: Record<string, string> = {
   govchain: process.env.OUTREACH_FROM_GOVCHAIN ?? FALLBACK_FROM,
   strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? "hello@strainchain.io",
   qron: process.env.OUTREACH_FROM_QRON ?? FALLBACK_FROM,
+  // Partnership / high-leverage pitches use the parent brand — not a product cold blast.
+  partners: FALLBACK_FROM,
+  high_leverage: FALLBACK_FROM,
 };
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
@@ -83,94 +143,8 @@ const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
 
-// ── Apollo.io people-search: find work email by name + company domain ─────────
-// Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
-// Returns empty string when APOLLO_API_KEY is absent or API returns no result.
-// Set once Apollo reports the plan does not include API access. That is a
-// property of the account, not of the request, so every remaining lookup in the
-// run would fail identically — retrying them just prints the same warning once
-// per target and makes a billing problem look like flaky network.
-let apolloEntitlementBlocked = false;
-
-async function apolloFindEmail(
-  name: string,
-  company: string,
-  website: string
-): Promise<string> {
-  const key = process.env.APOLLO_API_KEY;
-  if (!key) return "";
-  if (apolloEntitlementBlocked) return "";
-
-  try {
-    const domain = website.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
-    const [firstName, ...rest] = name.split(" ");
-    const lastName = rest.join(" ");
-
-    // Apollo auth goes in the X-Api-Key header — body api_key is no longer
-    // accepted for current keys (verified: header auth returns 200, body 401).
-    const res = await fetch(
-      "https://api.apollo.io/api/v1/mixed_people/search",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-          "X-Api-Key": key,
-        },
-        body: JSON.stringify({
-          q_organization_name: company,
-          person_titles: [], // broad — let name filter do the work
-          contact_email_status: ["verified", "guessed"],
-          organization_domains: [domain],
-          page: 1,
-          per_page: 5,
-        }),
-      }
-    );
-    if (!res.ok) {
-      // Apollo answers 403 with error_code API_INACCESSIBLE when the endpoint
-      // is not on the account's plan. Confirmed 2026-08-21 against this
-      // account: both mixed_people/search and people/match return it, and the
-      // credit balance is untouched because the request never reaches metering.
-      // No key rotation or retry fixes that — only a paid plan does.
-      const body = await res.text().catch(() => "");
-      if (res.status === 403 || body.includes("API_INACCESSIBLE")) {
-        apolloEntitlementBlocked = true;
-        console.warn(
-          `  ⛔ Apollo API is not enabled on this account's plan (HTTP ${res.status}).\n` +
-            `     Every remaining lookup this run is skipped; targets with a blank\n` +
-            `     email stay 'pending_email' and are never sent to. Fix by upgrading\n` +
-            `     the Apollo plan, or by filling addresses in the leads table by hand.`
-        );
-        return "";
-      }
-      console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
-      return "";
-    }
-    const data = (await res.json()) as any;
-    const people: any[] = data.people ?? [];
-
-    // Find best name match
-    const match =
-      people.find(p => {
-        const full = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
-        return (
-          full.includes(firstName.toLowerCase()) &&
-          (!lastName || full.includes(lastName.toLowerCase()))
-        );
-      }) ?? people[0];
-
-    const email: string = match?.email ?? "";
-    if (email)
-      console.log(`  🔎 Apollo found: ${name} @ ${company} → ${email}`);
-    return email;
-  } catch (err: any) {
-    console.warn(
-      `  ⚠️  Apollo lookup failed for ${name}: ${err.message?.slice(0, 80)}`
-    );
-    return "";
-  }
-}
+const hubspotToken =
+  process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;
 
 // ── Verified real contacts from research (June 2026) ─────────────────────────
 
@@ -527,6 +501,110 @@ function qronEmail(t: (typeof QRON_TARGETS)[0]): {
   return { subject, html };
 }
 
+/**
+ * Channel-partner copy — referral / implementation / already-warm, not an
+ * end-buyer cold blast. Does not claim a custom demo or a pre-provisioned
+ * sandbox.
+ */
+function partnerEmail(t: ChannelPartnerTarget): {
+  subject: string;
+  html: string;
+} {
+  const first = t.name.split(" ")[0] || t.company;
+  const product =
+    t.segment === "govchain"
+      ? "GovChain"
+      : t.segment === "qron"
+        ? "QRON"
+        : "StrainChain";
+  const also =
+    t.also_segment === "qron"
+      ? " QRON white-label is the same conversation if you also place branded QR."
+      : "";
+  const relation = t.already_connected
+    ? `We're already connected — this is a partner upsell, not a first-touch blast.`
+    : t.inbound_warm
+      ? `CS forwarded your inbound in April 2026 — treating this as a warm follow-up, not cold outreach.`
+      : `You're on our channel-partner shortlist (consultants, accelerators, and implementation shops), not an end-buyer list.`;
+
+  const subject = t.already_connected
+    ? `Partner upsell — ${product} with ${t.company}`
+    : t.inbound_warm
+      ? `Following up — ${product} / AuthiChain and ${t.company}`
+      : `Channel partnership — ${product} / AuthiChain and ${t.company}`;
+
+  const html = `
+<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
+  <p>Hi ${first},</p>
+
+  <p>${relation}</p>
+
+  <p>${product} (<a href="https://authichain.com">authichain.com</a>) is the
+  product your clients would actually run. The ask here is a channel
+  conversation — referral, implementation, or white-label — not a
+  self-serve checkout pitch.${also}</p>
+
+  <p>${t.notes}</p>
+
+  <p>If that is still the wrong desk, say so and I'll close the thread.
+  Otherwise
+  <a href="${CALENDLY}?name=${encodeURIComponent(t.name)}&company=${encodeURIComponent(t.company)}">
+  book 15 minutes</a> or reply with the person who owns partnerships.</p>
+
+  <p>Best,<br>
+  Zachary<br>
+  AuthiChain<br>
+  <a href="https://authichain.com">authichain.com</a></p>
+</div>`;
+  return { subject, html };
+}
+
+function highLeverageEmail(t: HighLeverageTarget): {
+  subject: string;
+  html: string;
+} {
+  const first = t.name.split(" ")[0] || t.company;
+  const product =
+    t.segment === "qron"
+      ? "QRON"
+      : t.segment === "govchain"
+        ? "GovChain"
+        : "StrainChain";
+  const subject = `${product} — ${t.company}`;
+  const html = `
+<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
+  <p>Hi ${first},</p>
+  <p>Draft only. This address is on the high-leverage shortlist already
+  stored in Supabase (${HIGH_LEVERAGE_LEAD_SOURCE}). It is not a live send.</p>
+  <p>${t.notes}</p>
+  <p>Best,<br>Zachary<br>AuthiChain</p>
+</div>`;
+  return { subject, html };
+}
+
+function escapeIlikeExact(email: string): string {
+  return normalizeLeadEmail(email)
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+}
+
+async function loadLeadRowsByEmail(
+  email: string
+): Promise<Array<{ email?: string | null; status?: string | null }>> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("email,status")
+    .ilike("email", escapeIlikeExact(email));
+  if (error) {
+    console.warn(
+      `  ⚠️  Lead lookup failed for ${email}: ${error.message} — treating as already contacted`
+    );
+    return [{ email, status: "contacted" }];
+  }
+  return data ?? [];
+}
+
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
 async function processTargets<
@@ -534,7 +612,12 @@ async function processTargets<
 >(
   targets: T[],
   buildEmail: (t: T) => { subject: string; html: string },
-  segmentName: string
+  segmentName: string,
+  opts: {
+    leadSource?: string;
+    trustListedEmail?: boolean;
+    allowRoleInbox?: boolean;
+  } = {}
 ) {
   let sent = 0;
   let saved = 0;
@@ -570,34 +653,75 @@ async function processTargets<
     }
   }
 
+  const crmRows = opts.trustListedEmail
+    ? []
+    : await loadCrmRowsForCompanies(
+        supabase,
+        targets.map(t => t.company)
+      );
+
   for (const t of targets) {
-    // Auto-populate email via Apollo if missing. A hit upgrades the target's
-    // provenance: Apollo returns addresses it has verified, which is precisely
-    // the trusted source the send guard is looking for.
     let email = t.email;
     let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
-    if (!email && (t as any).linkedin !== undefined) {
-      email = await apolloFindEmail(
-        (t as any).name ?? t.company,
-        t.company,
-        t.website ?? ""
+    // Partner rows already carry a published / inbound / connected address.
+    // Do not run them through usableEmail() — that strips role inboxes
+    // (contact@, info@, hello@) which are the desk these partners publish.
+    if (!opts.trustListedEmail) {
+      const resolved = await resolveLeadEmail(
+        {
+          company: t.company,
+          name: (t as any).name ?? t.company,
+          website: t.website,
+          email: t.email,
+          source: (t as any).source ?? RESEARCHED_SOURCE,
+        },
+        {
+          crmRows,
+          hubspotContacts: t.email
+            ? undefined
+            : await loadHubSpotContactsForCompany(t.company, hubspotToken),
+        }
       );
-      if (email) {
-        (t as any).email = email; // mutate for DB save
-        source = "apollo_verified";
+      email = resolved.email;
+      source = resolved.source;
+      if (email && resolved.via !== "already_set") {
+        (t as any).email = email;
+        console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
       }
     }
 
     const { subject, html } = buildEmail(t);
 
+    if (email && shouldNotLiveResend(email)) {
+      console.log(`  ⏭️  Do-not-resend list — ${email}`);
+      continue;
+    }
+    let existingStatus: string | null = null;
+    if (email && !isDryRun) {
+      const existingRows = await loadLeadRowsByEmail(email);
+      if (existingLeadBlocksLiveSend(existingRows, email)) {
+        console.log(`  ⏭️  Already contacted ${email} — not re-sending`);
+        continue;
+      }
+      existingStatus =
+        existingRows.find(
+          (row) =>
+            normalizeLeadEmail(String(row.email ?? "")) ===
+            normalizeLeadEmail(email)
+        )?.status ?? null;
+    }
+
     // Determine initial status
-    const dbStatus = isDryRun
-      ? "draft"
-      : !email
-        ? "pending_email" // Apollo found nothing; manual lookup needed
-        : !senderOk
-          ? "queued" // No usable credential for this sender; drain later
-          : "draft"; // Ready to send
+    const dbStatus = nextLeadWriteStatus(
+      existingStatus,
+      isDryRun
+        ? "draft"
+        : !email
+          ? "pending_email" // Apollo found nothing; manual lookup needed
+          : !senderOk
+            ? "queued" // No usable credential for this sender; drain later
+            : "draft" // Ready to send
+    );
 
     const { error: dbErr } = await supabase.from("leads").upsert(
       {
@@ -606,7 +730,7 @@ async function processTargets<
           `[pending]@${t.company.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
         name: (t as any).name ?? t.company,
         company: t.company,
-        source: `b2b_outreach_${segmentName}`,
+        source: opts.leadSource ?? `b2b_outreach_${segmentName}`,
         status: dbStatus,
         // `source` is persisted so a later flush re-applies the same provenance
         // decision instead of silently downgrading an Apollo-verified address.
@@ -636,10 +760,20 @@ async function processTargets<
     }
 
     if (!email) {
+      console.log(`     ℹ️  ${t.company}: ${describeSkipReason(resolved.via)}`);
+      queued++;
+      continue;
+    }
+
+    if (liveDispatchAttempts >= maxLiveSends) {
       console.log(
-        `     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`
+        `     ⏭️  Live cap reached (MAX_LIVE_SENDS=${maxLiveSends}) — leaving ${email} queued`
       );
       queued++;
+      await supabase
+        .from("leads")
+        .update({ status: "queued", updatedAt: new Date().toISOString() })
+        .eq("email", email);
       continue;
     }
 
@@ -673,6 +807,8 @@ async function processTargets<
       // so every cold send carries a reply-to, one-click List-Unsubscribe
       // headers and the CAN-SPAM postal address — and so unverified recipients
       // are refused before any network call.
+      const allowRoleInbox =
+        opts.allowRoleInbox === true || segmentName === "partners";
       const res = await guardedSend({
         to: email,
         source,
@@ -681,7 +817,13 @@ async function processTargets<
         from,
         company: "AuthiChain",
         apiKey: credential ? process.env[credential] : undefined,
+        allowRoleInbox,
       });
+      // Policy refuses (role_inbox, untrusted, no MX) must not burn
+      // MAX_LIVE_SENDS — only a real Resend attempt counts.
+      if (countsAsLiveSendAttempt(res)) {
+        liveDispatchAttempts += 1;
+      }
       if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
@@ -747,33 +889,76 @@ async function processTargets<
 // ── Flush queued leads: send emails that were saved with status=queued ─────────
 // Run this after fixing the sender to drain the queue without re-running the
 // full outreach script and risking duplicate outreach.
-export async function flushQueuedLeads(): Promise<void> {
+export async function flushQueuedLeads(): Promise<number> {
+  if (isDryRun) {
+    console.log("[DRY RUN] Skipping flushQueuedLeads — no live send");
+    return 0;
+  }
   if (!hasResendKey) {
     console.warn(
       `No Resend credential set (${CREDENTIAL_ENV_VARS.join(" / ")}) — nothing to flush`
     );
-    return;
+    return 0;
   }
 
-  const { data: leads } = await supabase
+  const sourceFilter =
+    segment && segment !== "all"
+      ? `b2b_outreach_${segment}`
+      : "b2b_outreach_%";
+  // Cap leftovers are saved as `draft` then skipped; the log says "queued"
+  // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
+  // unsent-again while 4imprint/Signarama drafts can go out.
+  let query = supabase
     .from("leads")
     .select("*")
-    .eq("status", "queued")
-    .like("source", "b2b_outreach_%");
+    .in("status", ["queued", "draft"])
+    .order("createdAt", { ascending: false });
+  query =
+    sourceFilter.endsWith("%")
+      ? query.like("source", sourceFilter)
+      : query.eq("source", sourceFilter);
+
+  const { data: leads } = await query;
 
   if (!leads?.length) {
-    console.log("No queued leads to flush.");
-    return;
+    console.log(`No queued leads to flush (${sourceFilter}).`);
+    return 0;
   }
 
+  let flushed = 0;
   for (const lead of leads) {
+    if (flushed >= maxLiveSends) {
+      console.log(
+        `     ⏭️  Live cap reached (MAX_LIVE_SENDS=${maxLiveSends}) — leaving ${lead.email} queued`
+      );
+      continue;
+    }
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
+    const leadEmail = String(lead.email ?? "").toLowerCase();
+    if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
+    if (shouldNotLiveResend(leadEmail)) {
+      console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
+      continue;
+    }
 
     // Recover the segment the draft was written for so the flush sends under
     // the same brand the copy was written in. checkSender caches per address,
     // so this costs one probe per distinct sender across the whole flush.
     const leadSegment = String(lead.source ?? "").replace("b2b_outreach_", "");
+    // Partner drafts use a different source and are not part of the cold
+    // drain. Extra fail-closed if a row was ever tagged b2b_outreach_partners.
+    if (
+      lead.source === CHANNEL_PARTNER_LEAD_SOURCE ||
+      lead.source === HIGH_LEVERAGE_LEAD_SOURCE ||
+      leadSegment === "partners" ||
+      leadSegment === "high_leverage"
+    ) {
+      console.log(
+        `  ⏭️  Skipping partner lead ${lead.email} — partner sends are not flushed with cold queue`
+      );
+      continue;
+    }
     const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
 
     const senderCheck = await checkSender(from);
@@ -815,6 +1000,7 @@ export async function flushQueuedLeads(): Promise<void> {
           .from("leads")
           .update({ status: "contacted", updatedAt: new Date().toISOString() })
           .eq("email", lead.email);
+        flushed++;
         console.log(`  ✉️  Flushed: ${lead.email}`);
         await guardrailRecord({
           channel: GUARDRAIL_CHANNEL,
@@ -846,6 +1032,28 @@ export async function flushQueuedLeads(): Promise<void> {
       });
     }
   }
+  return flushed;
+}
+
+const flushQueuedOnly = process.env.FLUSH_QUEUED_ONLY === "true";
+
+if (flushQueuedOnly) {
+  console.log(
+    `\n🚀 B2B FLUSH QUEUED — segment: ${segment} | dry-run: ${isDryRun}`
+  );
+  if (!isDryRun) {
+    console.log(`Live send cap this run: ${maxLiveSends} (MAX_LIVE_SENDS)`);
+    try {
+      await ensureLiveB2bChannel(supabase);
+      console.log("  ✅ Guardrail channel email.b2b-cold enabled (cap 25/day)");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`  ⚠️  Could not enable email.b2b-cold channel: ${message}`);
+    }
+  }
+  const n = await flushQueuedLeads();
+  console.log(`Flushed ${n} leads`);
+  process.exit(0);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -853,6 +1061,16 @@ export async function flushQueuedLeads(): Promise<void> {
 console.log(
   `\n🚀 B2B COLD OUTREACH — segment: ${segment} | dry-run: ${isDryRun}`
 );
+if (!isDryRun) {
+  console.log(`Live send cap this run: ${maxLiveSends} (MAX_LIVE_SENDS)`);
+  try {
+    await ensureLiveB2bChannel(supabase);
+    console.log("  ✅ Guardrail channel email.b2b-cold enabled (cap 25/day)");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`  ⚠️  Could not enable email.b2b-cold channel: ${message}`);
+  }
+}
 console.log("─".repeat(60));
 
 if (segment === "all" || segment === "govchain") {
@@ -870,6 +1088,55 @@ if (segment === "all" || segment === "qron") {
   await processTargets(QRON_TARGETS, qronEmail, "qron");
 }
 
+if (shouldLoadPartnerTargets(segment)) {
+  const partnerGate = assertPartnerRunAllowed({
+    isDryRun,
+    allowLive: allowPartnerLiveSends(),
+  });
+  if (!partnerGate.ok) {
+    console.error(`\n::error::${partnerGate.message}`);
+    process.exit(1);
+  }
+  console.log(
+    `\n🤝 CHANNEL PARTNERS — ${CHANNEL_PARTNER_LEAD_SOURCE} (not a cold end-buyer blast)`
+  );
+  if (!isDryRun) {
+    console.log(
+      `  Live partner send is explicit (ALLOW_PARTNER_SENDS) and still capped by MAX_LIVE_SENDS=${maxLiveSends}`
+    );
+  }
+  await processTargets(
+    orderPartnerTargetsForSend(CHANNEL_PARTNER_TARGETS),
+    partnerEmail,
+    "partners",
+    {
+      leadSource: CHANNEL_PARTNER_LEAD_SOURCE,
+      trustListedEmail: true,
+      allowRoleInbox: true,
+    }
+  );
+}
+
+if (shouldLoadHighLeverageTargets(segment)) {
+  const hlGate = assertHighLeverageRunAllowed({ isDryRun });
+  if (!hlGate.ok) {
+    console.error(`\n::error::${hlGate.message}`);
+    process.exit(1);
+  }
+  console.log(
+    `\n🎯 HIGH LEVERAGE — ${HIGH_LEVERAGE_LEAD_SOURCE} (dry-run only; not a cold list dump)`
+  );
+  await processTargets(
+    [...HIGH_LEVERAGE_TARGETS],
+    highLeverageEmail,
+    "high_leverage",
+    {
+      leadSource: HIGH_LEVERAGE_LEAD_SOURCE,
+      trustListedEmail: true,
+    }
+  );
+}
+
 console.log("\n✅ OUTREACH COMPLETE");
 console.log(
   `Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`
@@ -885,12 +1152,12 @@ if (!hasResendKey) {
 }
 if (!process.env.APOLLO_API_KEY) {
   console.log(
-    "  ⚡ Set APOLLO_API_KEY to auto-find emails for pending contacts on next run"
+    "  ⚡ APOLLO_API_KEY unset — pending contacts fill from CRM/HubSpot or published addresses only (no paid Apollo upgrade)"
   );
 }
 console.log("  📅 Demo booking page (no Calendly needed): " + CALENDLY);
 console.log(
-  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' order by created_at desc"
+  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' or source in ('channel_partner_web_scan_2026-09-19','high_leverage_scan_2026-09-19') order by created_at desc"
 );
 
 // ── Fail loudly on delivery problems ─────────────────────────────────────────

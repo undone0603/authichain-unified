@@ -8,7 +8,8 @@
 
 **Between:**
 
-- **AuthiChain, Inc.** (“Provider”), UEI R34XKWRJY9A5, CAGE 1PUJ6
+- **ZACHARY KIETZMAN** (“Provider”), operating the AuthiChain brand, UEI R34XKWRJY9A5, CAGE 1PUJ6
+  - AuthiChain is a brand only; there is no AuthiChain, Inc. corporation.
 - **Pilot Partner:** ________________________________ (“Partner”)
 
 ## 1. Purpose

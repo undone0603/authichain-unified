@@ -10,15 +10,17 @@ workers_dev = false
 pattern = "claw.authichain.com/*"
 zone_name = "authichain.com"
 
-# OpenClaw Gateway connection details (set as secrets):
-#   OPENCLAW_GATEWAY_URL  — ws://localhost:18789 or https://your-gateway
+# OpenClaw Gateway + AgentZ connection details (secrets only — not [vars]):
+#   OPENCLAW_GATEWAY_URL  — owner-set reachable host (do not invent)
 #   OPENCLAW_API_KEY     — gateway auth token
-#   AGENTZ_API_URL       — http://localhost:8000 (AgentZ FastAPI)
-#   AGENTZ_API_KEY       — shared secret for AgentZ
+#   AGENTZ_API_URL       — public AgentZ base URL (named tunnel or
+#                          trycloudflare). Secret-only: a [vars] entry with
+#                          this name makes `wrangler secret put` fail 10053.
+#   AGENTZ_API_KEY       — same value as AgentZ AGENT_SECRET
 #   SLACK_SIGNING_SECRET  — if using the Slack channel webhook
 #
-# Run: npx wrangler secret put OPENCLAW_GATEWAY_URL --name authichain-openclaw
-# (repeat for each secret)
+# Run: npx wrangler secret put AGENTZ_API_URL --name authichain-openclaw
+# (repeat for each secret). Bind via Actions: Bind claw AgentZ URL.
 
 [vars]
 OPENCLAW_API_VERSION = "1"

@@ -86,6 +86,137 @@ describe("GET /api/checkout/dpp", () => {
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.client_reference_id).toBe("dpp_worker_1");
     expect(arg.metadata.plan).toBe("dpp_readiness");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.customer_creation).toBe("always");
+  });
+});
+
+describe("GET /api/checkout/plan/:planId", () => {
+  beforeEach(() => {
+    dppCreate.mockReset();
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  it("HEAD does not create a Stripe session", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    const res = await app.request("/api/checkout/plan/strainchain_passport", {
+      method: "HEAD",
+    });
+    expect(res.status).toBe(204);
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("303s to Stripe Checkout with the catalogue price", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_passport",
+    });
+    const res = await app.request(
+      "/api/checkout/plan/strainchain_passport?utm_source=pricing"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_passport"
+    );
+    expect(dppCreate).toHaveBeenCalledOnce();
+    const arg = dppCreate.mock.calls[0][0];
+    expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
+    expect(arg.metadata.plan).toBe("strainchain_passport");
+    expect(arg.metadata.brand).toBe("strainchain");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.allow_promotion_codes).toBeUndefined();
+  });
+});
+
+describe("GET /api/checkout", () => {
+  it("returns route health JSON and does not create a Stripe session", async () => {
+    const res = await app.request("/api/checkout");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.smoke).toBe("GET /api/checkout/dpp");
+    expect(body.webhook).toBe("POST /api/stripe/webhook");
+  });
+});
+
+describe("POST /api/checkout", () => {
+  it("returns 400 without planId", async () => {
+    const res = await app.request("/api/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/planId/);
+  });
+});
+
+describe("GET /api/generate", () => {
+  it("returns health JSON instead of a 404", async () => {
+    const res = await app.request("/api/generate");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/json/);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.methods).toContain("POST");
+    expect(body.auth).toBe(false);
+    expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
+      true
+    );
+  });
+});
+
+describe("POST /api/generate", () => {
+  it("returns JSON 401 with credit packs when unauthenticated, not a plain-text 404", async () => {
+    const res = await app.request("/api/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        targetUrl: "https://example.com",
+        prompt: "neon",
+      }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("content-type")).toMatch(/json/);
+    const body = await res.json();
+    expect(body.message).toMatch(/Authentication required/i);
+    expect(Array.isArray(body.packs)).toBe(true);
+  });
+});
+
+describe("GET /api/stripe/webhook", () => {
+  it("reports the handler is present without requiring a signature", async () => {
+    const res = await app.request("/api/stripe/webhook");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.handler).toBe("present");
+  });
+});
+
+describe("POST /api/webhooks/stripe", () => {
+  it("aliases to the canonical webhook handler", async () => {
+    const res = await app.request("/api/webhooks/stripe", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(200);
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    expect(handleStripeWebhook).toHaveBeenCalled();
+  });
+});
+
+describe("app host /", () => {
+  it("302s app.authichain.com/ to /dashboard", async () => {
+    const res = await app.request("/", {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/dashboard");
   });
 });
 
@@ -115,6 +246,36 @@ describe("POST /api/stripe/webhook", () => {
   });
 });
 
+describe("POST /api/funnel", () => {
+  it("returns 400 JSON when required fields are missing", async () => {
+    const res = await app.request("/api/funnel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ stage: "visit_landing_page" }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/prospect_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/funnel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        prospect_id: "dpp_worker_1",
+        stage: "visit_landing_page",
+        source: "seo",
+        event_type: "dpp_loop:attributed_visit",
+      }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
 describe("POST /api/dpp/activate", () => {
   it("returns 400 JSON without session_id", async () => {
     const res = await app.request("/api/dpp/activate", {
@@ -133,6 +294,48 @@ describe("POST /api/dpp/activate", () => {
   });
 });
 
+describe("POST /api/dpp/publish", () => {
+  it("returns 400 JSON without visit_id", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Widget" }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/visit_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visit_id: "dpp_1", name: "Widget" }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
+describe("GET /api/dpp/verify", () => {
+  it("returns 400 JSON without dpp_id", async () => {
+    const res = await app.request("/api/dpp/verify");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    const body = await res.json();
+    expect(body.error).toMatch(/dpp_id/);
+  });
+
+  it("returns 500 JSON when Supabase is not configured", async () => {
+    const res = await app.request("/api/dpp/verify?dpp_id=prod_1");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/i);
+  });
+});
+
 describe("GET /api/cron/dpp-exceptions", () => {
   it("returns 401 JSON without a bearer token, never HTML", async () => {
     const res = await app.request("/api/cron/dpp-exceptions");
@@ -141,6 +344,31 @@ describe("GET /api/cron/dpp-exceptions", () => {
     expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
     const body = await res.json();
     expect(body.error).toMatch(/Unauthorized/i);
+  });
+});
+
+describe("GET /api/automation/cron", () => {
+  it("returns 401 JSON without a bearer token, never HTML", async () => {
+    const res = await app.request("/api/automation/cron");
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toMatch(/Unauthorized/i);
+  });
+});
+
+describe("POST /api/v1/attestation", () => {
+  it("returns JSON (not HTML) when the signing key is missing", async () => {
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ version: "0.1" }),
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/i);
+    const body = await res.json();
+    expect(body.error).toBeTruthy();
   });
 });
 
@@ -395,10 +623,13 @@ describe("manifest-driven static + SPA routing", () => {
     expect(body).not.toContain("MARKETING");
   });
 
-  it("serves the SPA shell for /dashboard", async () => {
+  it("serves the authentic-economy console for /dashboard, not a 404 SPA miss", async () => {
     const res = await app.request("/dashboard", {}, makeEnv() as any);
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe("SPA-SHELL");
+    const body = await res.text();
+    expect(body).toContain("QRON Dashboard");
+    expect(body).toContain("/onboard");
+    expect(body).not.toBe("SPA-SHELL");
   });
 
   it("passes /_next/static/x.js through to ASSETS raw", async () => {
@@ -525,6 +756,16 @@ describe("routing regression (Task 3.2 additive)", () => {
     const res = await app.request("/api/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "ok" });
+  });
+
+  it("POST /api/guardrail/check is mounted (not a 404 SPA fallthrough)", async () => {
+    const res = await app.request("/api/guardrail/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channel: "email.b2b-cold" }),
+    });
+    expect(res.status).not.toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/json/);
   });
 });
 

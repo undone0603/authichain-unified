@@ -15,6 +15,13 @@ zone_name = "authichain.com"
 pattern = "www.authichain.com/*"
 zone_name = "authichain.com"
 
+# More specific than edge-router's app.authichain.com/* so the empty SPA
+# root 302s to /dashboard via Deploy authichain-com (gated edge-router
+# deploys do not have to land first). /dashboard stays on the edge router.
+[[routes]]
+pattern = "app.authichain.com/"
+zone_name = "authichain.com"
+
 [observability]
 enabled = true
 

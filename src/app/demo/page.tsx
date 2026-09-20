@@ -155,11 +155,11 @@ export default function DemoGalleryPage() {
               Be one of the first pilots on the AuthiChain protocol. The spec, the reference verifier and the conformance suite are open — audit the cryptography before you commit to anything.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-                <Link href="/" className="btn-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">
-                   Start Free Generation <ArrowRight className="w-4 h-4" />
+                <Link href="/api/checkout/dpp" className="btn-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">
+                   DPP checkout — $299 <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/enterprise" className="btn-outline-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
-                   Request Industrial Access <ArrowRight className="w-4 h-4" />
+                <Link href="/api/checkout/plan/strainchain_passport" className="btn-outline-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
+                   Passport checkout — $49 <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
         </div>

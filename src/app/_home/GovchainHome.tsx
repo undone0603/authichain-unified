@@ -11,15 +11,13 @@ export function GovchainHome() {
       brandId="govchain"
       themeClass="theme-patriotic"
       eyebrow="Government Opportunities"
+      primaryCta={{ label: 'Request access', href: '/onboard' }}
+      secondaryCta={{ label: 'Browse opportunities', href: '/opportunities' }}
       stats={[
-        { value: '$770B', label: 'Federal Market' },
-        { value: '92', label: 'Max Fit Score' },
-        { value: 'FAR/DFARS', label: 'Compliant' },
-        { value: '24/7', label: 'Monitoring' },
-        { value: '256-bit', label: 'SHA-3 Hash' },
-        { value: 'Instant', label: 'Seal Time' },
-        { value: 'No Login', label: 'To Verify' },
-        { value: 'Open', label: 'Verification' },
+        { value: '/onboard', label: 'Live intake' },
+        { value: 'SAM.gov', label: 'Notice source' },
+        { value: 'FAR/DFARS', label: 'Evidence map' },
+        { value: 'No mint CTA', label: 'No live gov-mint' },
       ]}
       features={[
         {
@@ -39,8 +37,8 @@ export function GovchainHome() {
         },
         {
           icon: <Trophy className="h-6 w-6" />,
-          title: 'On-Chain Proof-of-Win',
-          desc: 'Mint verifiable proof-of-win NFTs for past performance you can show primes and partners without disclosing sensitive data.',
+          title: 'Public datalog',
+          desc: 'Intake records stay on the /onboard path. This page does not promise a live government mint or cold outbound.',
         },
         {
           icon: <Bell className="h-6 w-6" />,

@@ -3,10 +3,13 @@
  * x402 (HTTP 402 "Payment Required") helpers for autonomous agent micropayments.
  *
  * Flow: an agent calls a paid endpoint with no payment -> we return 402 + the
- * payment requirements. The agent's wallet pays (USDC on Polygon / $QRON) and
+ * payment requirements. The agent's wallet pays Base USDC (Circle, 8453) and
  * retries with an `X-PAYMENT` proof header -> we verify + enforce a per-payer
  * spend cap, then serve the resource. Autonomous at runtime; the wallet must be
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
+ * `$QRON` and any governance token stay off this rail (see
+ * docs/strategy/AGENT_TOKENOMICS_x402.md). Do not rebind X402_PAY_TO,
+ * X402_FACILITATOR_URL, or X402_USDC_ASSET.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
@@ -14,30 +17,62 @@
  */
 
 export interface PaymentRequirement {
-  scheme: 'exact';
-  network: string;            // e.g. 'polygon'
-  maxAmountRequired: string;  // atomic units (USDC has 6 decimals)
-  resource: string;           // the URL being paid for
+  scheme: "exact";
+  network: string; // e.g. 'base'
+  maxAmountRequired: string; // atomic units (USDC has 6 decimals)
+  resource: string; // the URL being paid for
   description: string;
-  payTo: string;              // receiving wallet
-  asset: string;              // token contract (USDC)
-  mimeType: 'application/json';
+  payTo: string; // receiving wallet
+  asset: string; // token contract (USDC)
+  mimeType: "application/json";
+  maxTimeoutSeconds?: number;
+  extra?: { name?: string; version?: string };
 }
 
 export interface PaymentProof {
   scheme: string;
   network: string;
-  payer: string;        // payer wallet address
-  amount: string;       // atomic units paid
-  txHash?: string;      // settlement tx (on-chain) if available
-  signature?: string;   // authorization signature
+  payer: string; // payer wallet address
+  amount: string; // atomic units paid
+  txHash?: string; // settlement tx (on-chain) if available
+  signature?: string; // authorization signature
 }
 
 export const USDC_DECIMALS = 6;
 
+/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. */
+export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" } as const;
+
+export const X402_MAX_TIMEOUT_SECONDS = 60;
+
+/**
+ * Resolve the challenge asset. A bare ticker ("USDC") is not a contract
+ * address — PayAI's Base settle path needs official Base USDC.
+ */
+export function resolveX402Asset(network?: string, asset?: string): string {
+  const explicit = asset ?? process.env.X402_USDC_ASSET;
+  if (explicit && /^0x[a-fA-F0-9]{40}$/.test(explicit)) return explicit;
+  const net = network ?? process.env.X402_NETWORK ?? "base";
+  if (net === "base" || net === "eip155:8453") return BASE_USDC_ASSET;
+  return explicit || "USDC";
+}
+
+function requirementExtra(network: string, asset: string) {
+  if (
+    (network === "base" || network === "eip155:8453") &&
+    asset.toLowerCase() === BASE_USDC_ASSET.toLowerCase()
+  ) {
+    return { ...BASE_USDC_EIP712 };
+  }
+  return undefined;
+}
+
 /** Convert a USD dollar amount to USDC atomic units (6 decimals), as a string. */
 export function usdToAtomic(usd: number): string {
-  if (!Number.isFinite(usd) || usd < 0) throw new Error('usdToAtomic: invalid amount');
+  if (!Number.isFinite(usd) || usd < 0)
+    throw new Error("usdToAtomic: invalid amount");
   return Math.round(usd * 10 ** USDC_DECIMALS).toString();
 }
 
@@ -49,27 +84,58 @@ export function buildPaymentRequired(opts: {
   network?: string;
   asset?: string;
   description?: string;
-}): { status: 402; body: { x402Version: number; accepts: PaymentRequirement[] } } {
+}): {
+  status: 402;
+  body: { x402Version: number; accepts: PaymentRequirement[] };
+} {
+  const network = opts.network ?? process.env.X402_NETWORK ?? "base";
+  const asset = resolveX402Asset(network, opts.asset);
+  const extra = requirementExtra(network, asset);
   const requirement: PaymentRequirement = {
-    scheme: 'exact',
-    network: opts.network ?? process.env.X402_NETWORK ?? 'base',
+    scheme: "exact",
+    network,
     maxAmountRequired: usdToAtomic(opts.priceUsd),
     resource: opts.resource,
-    description: opts.description ?? 'AuthiChain verification',
+    description: opts.description ?? "AuthiChain verification",
     payTo: opts.payTo,
-    asset: opts.asset ?? (process.env.X402_USDC_ASSET ?? 'USDC'),
-    mimeType: 'application/json',
+    asset,
+    mimeType: "application/json",
+    maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
+    ...(extra ? { extra } : {}),
   };
   return { status: 402, body: { x402Version: 1, accepts: [requirement] } };
 }
 
 /** Decode the base64-encoded JSON `X-PAYMENT` header into a PaymentProof. */
-export function parsePaymentHeader(header: string | null | undefined): PaymentProof | null {
+export function parsePaymentHeader(
+  header: string | null | undefined
+): PaymentProof | null {
   if (!header) return null;
   try {
-    const json = Buffer.from(header, 'base64').toString('utf8');
-    const proof = JSON.parse(json) as PaymentProof;
-    if (!proof.payer || !proof.amount || !proof.network) return null;
+    const json = Buffer.from(header, "base64").toString("utf8");
+    const raw = JSON.parse(json) as Record<string, unknown>;
+    const nested =
+      raw.payload && typeof raw.payload === "object"
+        ? (raw.payload as Record<string, unknown>)
+        : undefined;
+    const auth =
+      nested?.authorization && typeof nested.authorization === "object"
+        ? (nested.authorization as Record<string, unknown>)
+        : undefined;
+    const payer = String(raw.payer ?? auth?.from ?? "");
+    const amount = String(raw.amount ?? auth?.value ?? "");
+    const network = String(raw.network ?? "");
+    if (!payer || !amount || !network) return null;
+    const proof: PaymentProof = {
+      scheme: String(raw.scheme ?? "exact"),
+      network,
+      payer,
+      amount,
+    };
+    const signature = raw.signature ?? nested?.signature;
+    const txHash = raw.txHash;
+    if (typeof signature === "string" && signature) proof.signature = signature;
+    if (typeof txHash === "string" && txHash) proof.txHash = txHash;
     return proof;
   } catch {
     return null;
@@ -87,19 +153,29 @@ export function parsePaymentHeader(header: string | null | undefined): PaymentPr
  */
 export function verifyPaymentProof(
   proof: PaymentProof,
-  requirement: PaymentRequirement,
+  requirement: PaymentRequirement
 ): { valid: boolean; payer: string; amount: bigint; reason?: string } {
-  const fail = (reason: string) => ({ valid: false, payer: proof.payer ?? '', amount: 0n, reason });
+  const fail = (reason: string) => ({
+    valid: false,
+    payer: proof.payer ?? "",
+    amount: 0n,
+    reason,
+  });
 
-  if (proof.network !== requirement.network) return fail('network mismatch');
+  if (proof.network !== requirement.network) return fail("network mismatch");
   let amount: bigint;
-  try { amount = BigInt(proof.amount); } catch { return fail('bad amount'); }
-  if (amount < BigInt(requirement.maxAmountRequired)) return fail('underpaid');
-  if (!/^0x[a-fA-F0-9]{40}$/.test(proof.payer)) return fail('bad payer address');
+  try {
+    amount = BigInt(proof.amount);
+  } catch {
+    return fail("bad amount");
+  }
+  if (amount < BigInt(requirement.maxAmountRequired)) return fail("underpaid");
+  if (!/^0x[a-fA-F0-9]{40}$/.test(proof.payer))
+    return fail("bad payer address");
 
   // Production settlement check would go here (facilitator or on-chain txHash).
   if (process.env.X402_FACILITATOR_URL && !proof.txHash && !proof.signature) {
-    return fail('missing settlement proof');
+    return fail("missing settlement proof");
   }
   return { valid: true, payer: proof.payer, amount };
 }
@@ -118,28 +194,72 @@ export interface SettlementResult {
  *
  * Set X402_FACILITATOR_URL to go trustless. Without it, this returns settled:true
  * but trustless:false (dev mode) — callers MUST refuse to treat dev-mode as paid in
- * production. The raw base64 X-PAYMENT header is forwarded as the payment payload.
+ * production. The X-PAYMENT header is decoded and sent as the facilitator
+ * `paymentPayload` object (PayAI / x402 v1 expect JSON, not the raw base64).
  */
+export function decodeFacilitatorPaymentPayload(
+  paymentHeaderB64: string
+): unknown {
+  try {
+    return JSON.parse(Buffer.from(paymentHeaderB64, "base64").toString("utf8"));
+  } catch {
+    return paymentHeaderB64;
+  }
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
-  requirement: PaymentRequirement,
+  requirement: PaymentRequirement
 ): Promise<SettlementResult> {
   const facilitator = process.env.X402_FACILITATOR_URL;
   if (!facilitator) {
-    return { settled: true, trustless: false, reason: "dev_mode_no_facilitator" };
+    return {
+      settled: true,
+      trustless: false,
+      reason: "dev_mode_no_facilitator",
+    };
   }
   try {
+    const paymentPayload = decodeFacilitatorPaymentPayload(paymentHeaderB64);
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentPayload: paymentHeaderB64, paymentRequirements: requirement }),
+      body: JSON.stringify({
+        x402Version: 1,
+        paymentPayload,
+        paymentRequirements: requirement,
+      }),
     });
-    if (!res.ok) return { settled: false, trustless: true, reason: `facilitator_http_${res.status}` };
-    const j = (await res.json()) as { success?: boolean; txHash?: string; transaction?: string; errorReason?: string; error?: string };
-    if (j.success) return { settled: true, trustless: true, txHash: j.txHash ?? j.transaction };
-    return { settled: false, trustless: true, reason: j.errorReason ?? j.error ?? "settle_failed" };
+    if (!res.ok)
+      return {
+        settled: false,
+        trustless: true,
+        reason: `facilitator_http_${res.status}`,
+      };
+    const j = (await res.json()) as {
+      success?: boolean;
+      txHash?: string;
+      transaction?: string;
+      errorReason?: string;
+      error?: string;
+    };
+    if (j.success)
+      return {
+        settled: true,
+        trustless: true,
+        txHash: j.txHash ?? j.transaction,
+      };
+    return {
+      settled: false,
+      trustless: true,
+      reason: j.errorReason ?? j.error ?? "settle_failed",
+    };
   } catch (err) {
-    return { settled: false, trustless: true, reason: err instanceof Error ? err.message : "settle_error" };
+    return {
+      settled: false,
+      trustless: true,
+      reason: err instanceof Error ? err.message : "settle_error",
+    };
   }
 }
 
@@ -147,7 +267,7 @@ export async function settlePayment(
 export function wouldExceedCap(
   currentSpentAtomic: bigint,
   paymentAtomic: bigint,
-  capAtomic: bigint,
+  capAtomic: bigint
 ): boolean {
   return currentSpentAtomic + paymentAtomic > capAtomic;
 }
@@ -156,4 +276,247 @@ export function wouldExceedCap(
 export function dailyCapUsd(): number {
   const v = Number(process.env.X402_DAILY_CAP_USD);
   return Number.isFinite(v) && v > 0 ? v : 10;
+}
+
+export const X402_DEFAULT_PRICE_USD = 0.05;
+
+export function x402PriceUsd(raw?: string): number {
+  const v = Number(raw ?? process.env.X402_PRICE_USD);
+  return Number.isFinite(v) && v > 0 ? v : X402_DEFAULT_PRICE_USD;
+}
+
+export type X402HealthEnv = {
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
+};
+
+export type X402FacilitatorStatus = {
+  configured: boolean;
+  reachable: boolean;
+  httpStatus?: number;
+  supported?: unknown;
+  error?: string;
+};
+
+export type X402HealthBody = {
+  ok: boolean;
+  ready: boolean;
+  status: "ready" | "not_configured" | "degraded";
+  mode: "trustless" | "not_configured" | "dev";
+  payTo: string | null;
+  network: string;
+  chainId: string;
+  asset: string;
+  pricePerCall: { usd: number; atomic: string };
+  dailyCapUsd: number;
+  endpoint: string;
+  aliases: string[];
+  catalog: string;
+  docs: string;
+  facilitator: X402FacilitatorStatus;
+  warnings: string[];
+  timestamp: string;
+};
+
+async function facilitatorStatus(
+  url: string | undefined
+): Promise<X402FacilitatorStatus> {
+  if (!url) return { configured: false, reachable: false };
+  try {
+    const res = await fetch(`${url.replace(/\/$/, "")}/supported`, {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    });
+    let supported: unknown;
+    try {
+      supported = await res.json();
+    } catch {
+      /* non-JSON is fine */
+    }
+    return {
+      configured: true,
+      reachable: res.ok,
+      httpStatus: res.status,
+      supported,
+    };
+  } catch (err) {
+    return {
+      configured: true,
+      reachable: false,
+      error: err instanceof Error ? err.message : "unreachable",
+    };
+  }
+}
+
+/**
+ * Public x402 go-live report. Always safe to serve (no secrets).
+ * No facilitator → HTTP 200 with `status: "not_configured"` ($0 path).
+ */
+export async function x402HealthReport(
+  env: X402HealthEnv = process.env
+): Promise<X402HealthBody> {
+  const payTo =
+    env.X402_PAY_TO?.trim() || process.env.X402_PAY_TO?.trim() || null;
+  const facilitatorUrl =
+    env.X402_FACILITATOR_URL?.trim() ||
+    process.env.X402_FACILITATOR_URL?.trim();
+  const facilitator = await facilitatorStatus(facilitatorUrl);
+  const priceUsd = x402PriceUsd(env.X402_PRICE_USD);
+  const trustless = facilitator.configured && facilitator.reachable;
+  const ready = Boolean(payTo) && trustless;
+  const status: X402HealthBody["status"] = !facilitator.configured
+    ? "not_configured"
+    : ready
+      ? "ready"
+      : "degraded";
+
+  const warnings: string[] = [];
+  if (!payTo)
+    warnings.push("X402_PAY_TO not set — no receiving address configured.");
+  if (!facilitator.configured) {
+    warnings.push(
+      "X402_FACILITATOR_URL not set — settlement is not trustless; paid calls stay closed."
+    );
+  }
+  if (facilitator.configured && !facilitator.reachable) {
+    warnings.push("Facilitator configured but unreachable.");
+  }
+
+  return {
+    ok: ready,
+    ready,
+    status,
+    mode: facilitator.configured ? "trustless" : "not_configured",
+    payTo,
+    network: env.X402_NETWORK || process.env.X402_NETWORK || "base",
+    chainId: env.X402_CHAIN_ID || process.env.X402_CHAIN_ID || "8453",
+    asset: resolveX402Asset(
+      env.X402_NETWORK || process.env.X402_NETWORK,
+      env.X402_USDC_ASSET || process.env.X402_USDC_ASSET
+    ),
+    pricePerCall: { usd: priceUsd, atomic: usdToAtomic(priceUsd) },
+    dailyCapUsd: dailyCapUsd(),
+    endpoint: "/api/v1/agent-verify",
+    aliases: ["/api/x402", "/api/x402/health", "/api/v1/agent-verify"],
+    catalog: "/api/x402/catalog",
+    docs: "/x402",
+    facilitator,
+    warnings,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export type X402CatalogEndpoint = {
+  method: "GET" | "POST";
+  path: string;
+  paid: boolean;
+  description: string;
+  priceUsd: number | null;
+  priceAtomic: string | null;
+  unpaidStatus?: number;
+};
+
+export type X402CatalogBody = {
+  protocol: "x402";
+  x402Version: 1;
+  brand: "AuthiChain";
+  docs: string;
+  health: string;
+  catalog: string;
+  wellKnown: string;
+  tokenomics: string;
+  unitOfAccount: "USDC";
+  network: string;
+  chainId: string;
+  asset: string;
+  payTo: string | null;
+  pricePerCall: { usd: number; atomic: string };
+  dailyCapUsd: number;
+  status: X402HealthBody["status"];
+  ready: boolean;
+  mode: X402HealthBody["mode"];
+  endpoints: X402CatalogEndpoint[];
+  humanCheckout: {
+    rail: "stripe";
+    passportUsd: number;
+    dppUsd: number;
+    source: string;
+  };
+  timestamp: string;
+};
+
+/**
+ * Machine-readable catalog for MCP / OpenAPI-style discovery.
+ * Price, payTo, asset, and caps are copied from x402HealthReport — never
+ * a second hardcoded schedule.
+ */
+export async function x402Catalog(
+  env: X402HealthEnv = process.env
+): Promise<X402CatalogBody> {
+  const health = await x402HealthReport(env);
+  const paid = (path: string, description: string): X402CatalogEndpoint => ({
+    method: "POST",
+    path,
+    paid: true,
+    description,
+    priceUsd: health.pricePerCall.usd,
+    priceAtomic: health.pricePerCall.atomic,
+    unpaidStatus: 402,
+  });
+  const free = (path: string, description: string): X402CatalogEndpoint => ({
+    method: "GET",
+    path,
+    paid: false,
+    description,
+    priceUsd: null,
+    priceAtomic: null,
+  });
+  return {
+    protocol: "x402",
+    x402Version: 1,
+    brand: "AuthiChain",
+    docs: "/x402",
+    health: "/api/x402/health",
+    catalog: "/api/x402/catalog",
+    wellKnown: "/.well-known/x402.json",
+    tokenomics:
+      "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
+    unitOfAccount: "USDC",
+    network: health.network,
+    chainId: health.chainId,
+    asset: health.asset,
+    payTo: health.payTo,
+    pricePerCall: health.pricePerCall,
+    dailyCapUsd: health.dailyCapUsd,
+    status: health.status,
+    ready: health.ready,
+    mode: health.mode,
+    endpoints: [
+      free("/api/x402/health", "Public rail health (no secrets)"),
+      free("/api/x402", "Health alias"),
+      free("/api/x402/catalog", "Paid-endpoint catalog for agents and MCP"),
+      free("/.well-known/x402.json", "Well-known catalog document"),
+      free(
+        "/api/v1/agent-verify",
+        "Health alias on GET; POST is the paid skill"
+      ),
+      paid("/api/x402", "AuthiChain agent verification (seal / product)"),
+      paid(
+        "/api/v1/agent-verify",
+        "AuthiChain agent verification (seal / product)"
+      ),
+    ],
+    humanCheckout: {
+      rail: "stripe",
+      passportUsd: 49,
+      dppUsd: 299,
+      source: "src/lib/plans.ts",
+    },
+    timestamp: health.timestamp,
+  };
 }

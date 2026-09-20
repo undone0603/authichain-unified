@@ -13,8 +13,8 @@ pattern = "www.strainchain.io/*"
 zone_name = "strainchain.io"
 
 [vars]
-# Origin that renders /genetics and /passport (and /onboard once the app
-# worker is bound). Never use *.vercel.app for customer traffic.
+# Origin that renders /genetics, /passport, and /onboard.
+# Never use *.vercel.app for customer traffic.
 APP_ORIGIN = "https://authichain.com"
 
 [observability]

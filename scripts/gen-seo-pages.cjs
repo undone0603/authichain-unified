@@ -5,6 +5,8 @@
  * are preserved by slug and generated pages are (re)built from the DATA table.
  *
  * Run:  node scripts/gen-seo-pages.cjs
+ * CI:   .github/workflows/gen-seo-pages.yml — Friday 09:00 UTC and
+ *       workflow_dispatch. Commits content/seo/pages.json only when it changes.
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,9 +20,87 @@ const BRANDS = {
   qron: { name: 'QRON', domain: 'qron.space', price: 'Plans start at $29/mo.' },
 };
 
+// Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
+// estate landing workers. Do not invent checkout URLs or dollar amounts.
+const LIVE_MONEY = {
+  authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
+  authichainPricing: 'https://authichain.com/pricing',
+  // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
+  strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
+};
+
+function isDppKeyword(keyword) {
+  return /digital product passport|\bdpp\b|batter(?:y|ies)|textiles/i.test(keyword);
+}
+
+function isCannabisKeyword(keyword) {
+  return /\b(cannabis|metrc|strain|coa|dispensary|biotrack)\b/i.test(keyword);
+}
+
+function isMusaKeyword(keyword) {
+  return /made in (usa|america)|origin claim|16 cfr|ftc made in|buy american/i.test(keyword);
+}
+
+function isTrumarkKeyword(keyword) {
+  return /trumark/i.test(keyword);
+}
+
+/**
+ * Brand-aware CTA after How it works. Keyword bias can override brand:
+ * DPP / battery / textiles → AuthiChain DPP checkout; cannabis / METRC /
+ * strain / COA → StrainChain passport checkout + strainchain.io/pricing.
+ * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
+ */
+function moneyCtaHtml(brandKey, keyword, brand) {
+  let primaryHref;
+  let primaryLabel;
+  let secondaryHref = null;
+  let secondaryLabel = null;
+
+  const cannabis = isCannabisKeyword(keyword);
+  const dpp = isDppKeyword(keyword);
+  const musa = isMusaKeyword(keyword);
+  const trumark = isTrumarkKeyword(keyword);
+
+  if (trumark) {
+    primaryHref = LIVE_MONEY.strainchainPassportCheckout;
+    primaryLabel = 'Start StrainChain passport checkout';
+    secondaryHref = 'https://authichain.com/trumark';
+    secondaryLabel = 'Read the TruMark brief';
+  } else if (musa || ((dpp || brandKey === 'authichain') && !cannabis)) {
+    primaryHref = LIVE_MONEY.authichainDppCheckout;
+    primaryLabel = 'Start DPP readiness checkout';
+    secondaryHref = musa
+      ? 'https://authichain.com/made-in-america'
+      : LIVE_MONEY.authichainPricing;
+    secondaryLabel = musa ? 'Read the Made in America brief' : 'View AuthiChain pricing';
+  } else if (cannabis || brandKey === 'strainchain') {
+    if (cannabis) {
+      primaryHref = LIVE_MONEY.strainchainPassportCheckout;
+      primaryLabel = 'Start StrainChain passport checkout';
+      secondaryHref = `https://${BRANDS.strainchain.domain}/pricing`;
+      secondaryLabel = 'View StrainChain pricing';
+    } else {
+      primaryHref = `https://${BRANDS.strainchain.domain}/pricing`;
+      primaryLabel = 'View StrainChain pricing';
+    }
+  } else if (brandKey === 'govchain') {
+    primaryHref = `https://${brand.domain}/onboard`;
+    primaryLabel = 'Request GovChain access';
+  } else {
+    primaryHref = `https://${brand.domain}/pricing`;
+    primaryLabel = `View ${brand.name} pricing`;
+  }
+
+  const links =
+    `<a href="${primaryHref}">${esc(primaryLabel)}</a>` +
+    (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
+  return `<h2>Get started</h2><p>${links}. ${esc(brand.price)}</p>`;
+}
+
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK' };
+const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark' };
 const titleCase = (s) =>
   s.split(/\b/).map((w) => {
     const lw = w.toLowerCase();
@@ -573,6 +653,24 @@ const DATA = [
     lead: 'The UK’s Product Regulation and Metrology Act, which received Royal Assent on 21 July 2025, gives ministers delegated power to set new labelling rules — and a March–June 2026 consultation on a “digital by default” core product safety framework is the first sign of where those powers might point, though nothing has been decided yet.',
     bullets: ['The Act itself sets no digital-labelling requirement — it creates the power for ministers to make one by secondary legislation, which is why the 2026 consultation exists: to test proposals before any rule is drafted', 'The consultation closed 23 June 2026 with no published outcome as of this writing — a business building toward UK “digital by default” labelling today is preparing for a plausible direction, not a confirmed deadline', 'A W3C Verifiable Credential resolving from a GS1 Digital Link URL, the same record this protocol already issues for EU DPP categories, doesn’t need a second format if a UK rule lands close to the EU’s own carrier requirements — only a UK-specific field set to slot into the same credentialSubject'],
     faqs: [{ q: 'Is digital product labelling mandatory in the UK yet?', a: 'No — the Product Regulation and Metrology Act 2025 grants ministers the power to make labelling rules, including digital ones, but no such rule has been made yet. The Department for Business and Trade’s 2026 consultation on a “digital by default” framework closed 23 June 2026 with no rule published as of this writing.' }, { q: 'Will a UK digital label just mirror the EU Digital Product Passport?', a: 'Unknown — the Act lets the UK choose whether to recognize EU product requirements, but the consultation doesn’t commit to mirroring ESPR. A record built on open standards, GS1 Digital Link and W3C Verifiable Credentials, ports to whichever specific fields a UK rule ends up requiring.' }] },
+
+  // ── TruMark + Made in America money surfaces (2026-09-20) ──────────
+  { keyword: 'made in america origin claim substantiation', brand: 'authichain', schemaType: 'Service',
+    lead: 'An unqualified Made in America or Made in USA claim is a substantiation problem under the FTC Made in USA Labeling Rule (16 CFR Part 323): the seller has to show that all or virtually all of that specific product is US-origin, and a signed per-unit record is one way to carry that evidence.',
+    bullets: ['Executive Order 14392 told the FTC to prioritize truthful Made in America advertising; the rule a seller is held to remains 16 CFR Part 323, the same authority behind the April 2026 sweep', 'A signed record ties a batch or serial to component origin and US processing steps — documentation that outlasts a label printed once at the factory', 'This is not a certification that the product meets the standard; it is checkable evidence a buyer or investigator can read without a sales call'],
+    faqs: [{ q: 'Does a signed record make a Made in USA claim legal?', a: 'No — the claim is legal only if the product actually meets the all-or-virtually-all standard. The record is competent-and-reliable-evidence material, not a license to use the words.' }, { q: 'Where do we start if we already make the claim?', a: 'EU DPP Readiness at $299 is the live self-serve checkout for a written assessment and first published record. The Made in America brief is at https://authichain.com/made-in-america.' }] },
+  { keyword: 'made in usa origin claims documentation', brand: 'authichain', schemaType: 'Product',
+    lead: 'FTC origin-claim documentation is a per-product file, not a brand slogan: final assembly, significant processing, and all or virtually all components have to be US-origin, and that story has to exist before someone asks for it.',
+    bullets: ['The April 2026 sweep’s largest order was $625,000 against an unqualified USA claim — a documentation failure as much as a sourcing one', 'A signed, timestamped record per batch is what a compliance team can hand over; reconstructing the bill of materials after a letter arrives is what the rule is built to catch', 'USDA’s Product of USA standard for meat, poultry, and eggs is a separate agency and a separate file — do not file FTC evidence under that label'],
+    faqs: [{ q: 'Is this the same as a USDA Product of USA label?', a: 'No. USDA FSIS rules apply to meat, poultry, and egg products. The FTC Made in USA Labeling Rule applies to most other consumer products making an unqualified US-origin claim.' }, { q: 'What is the live checkout for this?', a: 'https://authichain.com/api/checkout/dpp — EU DPP Readiness at $299, the published AuthiChain money rail for origin and passport documentation.' }] },
+  { keyword: 'buy american made in usa provenance', brand: 'authichain', schemaType: 'Service',
+    lead: 'Buy American and Made in USA questions in federal procurement are still origin questions: a contracting officer can ask where a unit was made, and a signed provenance record answers for that serial instead of a brochure answering for the brand.',
+    bullets: ['Office of Made in America / GSA / Commerce missions stay written-packet and self-serve — no book-a-call CTA, and no AuthiChain Inc. letterhead; the SAM legal name is ZACHARY KIETZMAN', 'A per-unit record is evidence toward a domestic-origin assertion, not a FAR/DFARS determination this page can grant', 'EU DPP Readiness at $299 is the live checkout; the Made in America brief and partner packet sit at /made-in-america and /partners/brief'],
+    faqs: [{ q: 'Does this satisfy the Buy American Act by itself?', a: 'No. Buy American and trade-agreement determinations are contracting-officer calls. A signed origin record is documentation those officers can read; it is not a substitute for the determination.' }, { q: 'Who is the legal entity on SAM?', a: 'ZACHARY KIETZMAN. AuthiChain is a brand, not a separately registered corporation.' }] },
+  { keyword: 'trumark product authentication seal', brand: 'strainchain', schemaType: 'Product',
+    lead: 'TruMark is the physical scan seal on a package — the mark a phone camera checks — not a separate sticker SKU; the live self-serve purchase behind a cannabis TruMark is a StrainChain genetics passport at $49.',
+    bullets: ['The StrainChain demo already frames a scan as a TruMark scan: issue a signed seal, bind it to the tag, verify from any camera', 'Passport checkout is GET https://authichain.com/api/checkout/plan/strainchain_passport — one cultivar, totals recomputed from the lab panel, not transcribed', 'Larger tag programs and EU origin documentation use the published pricing catalogue or EU DPP Readiness at $299; do not invent a TruMark price'],
+    faqs: [{ q: 'What does TruMark cost?', a: 'TruMark is the seal, not a Stripe product. The published self-serve SKU for a cannabis unit is the $49 genetics passport. Other published plans live at /pricing.' }, { q: 'Where is the TruMark brief?', a: 'https://authichain.com/trumark — scan story, Passport $49, DPP $299, and a written-packet email. No call booking.' }] },
 ];
 
 function buildEntry(d) {
@@ -590,6 +688,7 @@ function buildEntry(d) {
     `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. ${esc(b.price)}</p>` +
+    moneyCtaHtml(d.brand, d.keyword, b) +
     `<h2>FAQ</h2>` +
     d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
 
@@ -646,6 +745,7 @@ function buildEntry(d) {
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
   'anti-counterfeit-qr-verification',
+  'authentic-agentic-economy',
   'battery-passport-due-diligence-requirement',
   'biotrack-integration-blockchain-provenance',
   'blockchain-product-authentication',

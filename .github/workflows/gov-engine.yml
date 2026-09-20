@@ -1,4 +1,8 @@
-# .github/workflows/gov-engine.yml
+# Orchestrator for gov-ingest → gov-score → gov-proposals → gov-mint → gov-notify.
+# Keep this workflow disabled until item 5 (AuthiChainNFT bytecode on Base 8453).
+# Sibling enable order after getCode proof: ingest 304824543 → score 304825517
+# → proposals 304825758 → mint 304825951 (dry_run default true) → notify 304826125
+# → this engine 261329391. Scheduled mint/notify/score/proposals stay dry.
 name: Government Lead-Gen Engine
 
 on:

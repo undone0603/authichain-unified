@@ -1,0 +1,72 @@
+# Push LinkedIn session cookies from GitHub Secrets onto live AgentZ.
+# Never prints cookie values. Dispatch-only.
+name: Sync AgentZ LinkedIn session
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-agentz-linkedin
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Push LINKEDIN_* session to AgentZ
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sync cookies to AgentZ
+        env:
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
+          LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}
+          AGENTZ_URL: https://agentz.authichain.com
+        run: |
+          set -euo pipefail
+          if [ -z "${AGENT_SECRET:-}" ]; then
+            echo "::error::AGENT_SECRET is empty"
+            exit 1
+          fi
+          if [ -z "${LINKEDIN_SESSION_COOKIE:-}" ]; then
+            echo "::error::LINKEDIN_SESSION_COOKIE is empty"
+            exit 1
+          fi
+
+          post_cred() {
+            local key="$1"
+            local value="$2"
+            # Build JSON without printing value
+            python3 - "$key" "$value" <<'PY' > /tmp/cred.json
+          import json,sys
+          print(json.dumps({"value": sys.argv[2]}))
+          open("/tmp/cred.key","w").write(sys.argv[1])
+          PY
+            local http
+            http=$(curl -sS -o /tmp/cred.out -w '%{http_code}' \
+              -X POST "${AGENTZ_URL}/credentials/$(cat /tmp/cred.key)" \
+              -H "Authorization: Bearer ${AGENT_SECRET}" \
+              -H "Content-Type: application/json" \
+              --data-binary @/tmp/cred.json)
+            echo "POST /credentials/$(cat /tmp/cred.key) → HTTP ${http}"
+            if [ "$http" != "200" ]; then
+              echo "::error::AgentZ rejected credential $(cat /tmp/cred.key)"
+              head -c 200 /tmp/cred.out
+              exit 1
+            fi
+            rm -f /tmp/cred.json /tmp/cred.out /tmp/cred.key
+          }
+
+          post_cred linkedin_session "$LINKEDIN_SESSION_COOKIE"
+          if [ -n "${LINKEDIN_JSESSIONID:-}" ]; then
+            post_cred linkedin_jsessionid "$LINKEDIN_JSESSIONID"
+          else
+            echo "LINKEDIN_JSESSIONID empty — skipped (li_at alone may still work)"
+          fi
+
+          # Status only (no values)
+          curl -sS -H "Authorization: Bearer ${AGENT_SECRET}" \
+            "${AGENTZ_URL}/credentials/linkedin_session/status"
+          echo

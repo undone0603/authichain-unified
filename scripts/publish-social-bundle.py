@@ -73,7 +73,10 @@ def pick_bundle(ledger: dict) -> Path | None:
 def post_linkedin(bundle: dict, dry: bool) -> tuple[bool, str]:
     token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
     urn = os.environ.get("LINKEDIN_PERSON_URN")
+    session = os.environ.get("LINKEDIN_SESSION_COOKIE")
     if not token or not urn:
+        if session:
+            return False, "skipped: session cookie present — use AgentZ browser path"
         return False, "skipped: LINKEDIN_ACCESS_TOKEN/LINKEDIN_PERSON_URN not set"
     if dry:
         return True, "dry-run"
@@ -251,6 +254,11 @@ def check_linkedin() -> tuple[str, str]:
     token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
     urn = os.environ.get("LINKEDIN_PERSON_URN")
     if not token or not urn:
+        if os.environ.get("LINKEDIN_SESSION_COOKIE"):
+            return (
+                "unconfigured",
+                "OAuth unset; session cookie present — use AgentZ browser path",
+            )
         return "unconfigured", "LINKEDIN_ACCESS_TOKEN/LINKEDIN_PERSON_URN not set"
 
     import requests

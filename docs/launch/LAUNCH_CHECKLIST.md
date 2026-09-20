@@ -23,6 +23,7 @@
 
 - [x] **Technical Narrative:** Phase I architecture ($200K) fully drafted in `DHS_SVIP_Grant_Application.md`.
 - [x] **SAM.gov Registration:**
+  - Legal name: ZACHARY KIETZMAN (AuthiChain is a brand only; there is no AuthiChain, Inc.)
   - UEI: R34XKWRJY9A5
   - CAGE: 1PUJ6
   - Status: Active (Verified through Apr 20, 2027).

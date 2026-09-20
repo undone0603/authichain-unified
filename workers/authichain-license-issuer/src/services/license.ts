@@ -13,41 +13,41 @@
  *   wrangler secret put LICENSE_PUBLIC_KEY_PEM    < license-public.pem
  */
 
-import type { Env } from '../index'
-import type { LicenseTier } from './db'
+import type { Env } from "../index";
+import type { LicenseTier } from "./db";
 
 export interface LicensePayload {
-  sub: string        // email
-  tier: LicenseTier
-  seats: number      // 0 = unlimited
-  exp: number        // unix seconds
-  iat: number
-  jti: string        // unique ID for this key
+  sub: string; // email
+  tier: LicenseTier;
+  seats: number; // 0 = unlimited
+  exp: number; // unix seconds
+  iat: number;
+  jti: string; // unique ID for this key
 }
 
 function base64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function toBase64url(str: string): string {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const der = Uint8Array.from(
-    atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, '')),
-    (c) => c.charCodeAt(0)
-  )
+    atob(pem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "")),
+    c => c.charCodeAt(0)
+  );
   return crypto.subtle.importKey(
-    'pkcs8',
+    "pkcs8",
     der.buffer,
-    { name: 'ECDSA', namedCurve: 'P-256' },
+    { name: "ECDSA", namedCurve: "P-256" },
     false,
-    ['sign']
-  )
+    ["sign"]
+  );
 }
 
 /**
@@ -57,36 +57,44 @@ export async function issueLicenseKey(
   env: Env,
   payload: LicensePayload
 ): Promise<string> {
-  const privateKey = await importPrivateKey(env.LICENSE_PRIVATE_KEY_PEM)
+  const privateKey = await importPrivateKey(env.LICENSE_PRIVATE_KEY_PEM);
 
-  const payloadB64 = toBase64url(JSON.stringify(payload))
-  const data = new TextEncoder().encode(payloadB64)
+  const payloadB64 = toBase64url(JSON.stringify(payload));
+  const data = new TextEncoder().encode(payloadB64);
 
   const signature = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
+    { name: "ECDSA", hash: "SHA-256" },
     privateKey,
     data
-  )
+  );
 
-  return `${payloadB64}.${base64url(signature)}`
+  return `${payloadB64}.${base64url(signature)}`;
 }
 
 /**
  * Hash a key for storage — we never store the raw key.
  */
 export async function hashKey(key: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(key)
+  );
   return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /**
  * Determine tier from a Stripe price ID.
  */
 export function tierFromPriceId(env: Env, priceId: string): LicenseTier {
-  if (priceId === env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID) return 'enterprise'
-  return 'pro'
+  if (!priceId?.trim()) {
+    throw new Error("checkout.session.completed missing price id");
+  }
+  if (priceId === env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID)
+    return "enterprise";
+  if (priceId === env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID) return "pro";
+  throw new Error(`unknown license price id: ${priceId}`);
 }
 
 /**
@@ -94,5 +102,5 @@ export function tierFromPriceId(env: Env, priceId: string): LicenseTier {
  */
 export function seatsForTier(tier: LicenseTier): number {
   // 0 = unlimited seats. Pro gets a fixed seat allowance; Enterprise is unrestricted.
-  return tier === 'enterprise' ? 0 : 5
+  return tier === "enterprise" ? 0 : 5;
 }

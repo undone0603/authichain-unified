@@ -69,50 +69,49 @@ function getLandingContent(brandId: BrandId): LandingContent {
   const baseContent: Record<BrandId, LandingContent> = {
     authichain: {
       eyebrow: 'Product Authentication',
-      headline: 'Every Product Verified. Every Transaction Trusted.',
+      headline: 'Issue seals. Bind products. Verify anywhere.',
       subhead:
-        'Blockchain-powered authentication with AI verification. NFT certificates, QR scanning, and supply chain transparency in minutes.',
+        'The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.',
       features: [
         {
           icon: '🔐',
-          title: 'ERC-721 Certificates',
-          desc: 'Immutable product seals on Polygon blockchain. Cryptographic proof of authenticity with full provenance.',
+          title: 'Signed seals',
+          desc: 'Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.',
         },
         {
           icon: '📱',
-          title: 'AI QR Verification',
-          desc: '5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) verifies authenticity in 2.1 seconds.',
+          title: 'Issue → Bind → Verify',
+          desc: 'Issue a seal, bind it to the product, verify from any camera. Agents can pay per call on /x402.',
         },
         {
           icon: '📊',
-          title: 'Supply Chain Audit',
-          desc: '22 supply chain events tracked immutably: manufacturing, customs, QA, distribution, retail receipt.',
+          title: 'EU DPP Readiness',
+          desc: 'Live self-serve checkout via GET /api/checkout/dpp. $299 credited toward AuthiChain Basic on conversion.',
         },
         {
           icon: '🌍',
-          title: 'Multi-Standard Compliance',
-          desc: 'EU DPP, CSRD, EUDR, FDA DSCSA, USMCA, ISO 22005. One integration covers every requirement.',
+          title: 'Estate pillars',
+          desc: 'QRON generate, GovChain onboard, StrainChain onboard. No invented customer logos. No live gov-mint promise.',
         },
         {
           icon: '⚡',
-          title: '$0.004 Per Seal',
-          desc: 'Industry-leading pricing. No setup fees. Monthly plans from $49 (Starter) to $1,999 (Enterprise).',
+          title: 'Published prices',
+          desc: 'Starter $29, Creator $99, EU DPP Readiness $299 — from the AuthiChain plan catalogue, not invented list prices.',
         },
         {
           icon: '✅',
-          title: 'Zero Dependencies',
-          desc: 'Open protocol. Offline verification. No vendor lock-in. Run the verifier on your own machine.',
+          title: 'x402 agent pay',
+          desc: 'Secondary money path. $0.05 USDC on Base per verification. Public docs at /x402.',
         },
       ],
       stats: [
-        { value: '2.1s', label: 'Verification Time' },
-        { value: '5', label: 'AI Agents' },
-        { value: '22+', label: 'Supply Events' },
+        { value: 'Ed25519', label: 'Signed seals' },
+        { value: '$299', label: 'EU DPP Readiness' },
+        { value: 'x402', label: 'Agent micropayments' },
       ],
-      closingLine:
-        'Start protecting your products today. First seal included. No credit card required.',
-      primaryCta: { label: 'Get Started Free', href: '/onboard' },
-      secondaryCta: { label: 'Book a Demo', href: 'mailto:hello@authichain.com' },
+      closingLine: 'Start EU DPP Readiness on the live checkout path.',
+      primaryCta: { label: 'Start DPP checkout', href: '/api/checkout/dpp' },
+      secondaryCta: { label: 'View pricing', href: '/pricing' },
     },
     qron: {
       eyebrow: 'AI QR Art',
@@ -157,8 +156,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: '1000s', label: 'Per Batch' },
       ],
       closingLine: 'Turn your links into art. Free credits included with signup.',
-      primaryCta: { label: 'Generate QR Art', href: '/qr-codes' },
-      secondaryCta: { label: 'View Gallery', href: '/gallery' },
+      primaryCta: { label: 'Generate Living QR', href: '/generate' },
+      secondaryCta: { label: 'View pricing', href: '/pricing' },
     },
     strainchain: {
       eyebrow: 'Cannabis Compliance',
@@ -203,8 +202,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: '100%', label: 'Traceable' },
       ],
       closingLine: 'Get compliant without the complexity. No setup fees.',
-      primaryCta: { label: 'Start Tracking', href: '/dashboard' },
-      secondaryCta: { label: 'Schedule Demo', href: 'mailto:hello@strainchain.com' },
+      primaryCta: { label: 'Request demo', href: '/onboard' },
+      secondaryCta: { label: 'View genetics library', href: '/genetics/mendo-love-farms' },
     },
     govchain: {
       eyebrow: 'Government Blockchain',
@@ -249,8 +248,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: 'Blockchain', label: 'Immutable' },
       ],
       closingLine: 'Make government data public. Build trust with blockchain.',
-      primaryCta: { label: 'Get Started', href: '/dashboard' },
-      secondaryCta: { label: 'Contact Us', href: 'mailto:hello@govchain.us' },
+      primaryCta: { label: 'Request access', href: '/onboard' },
+      secondaryCta: { label: 'Browse opportunities', href: '/opportunities' },
     },
   };
 

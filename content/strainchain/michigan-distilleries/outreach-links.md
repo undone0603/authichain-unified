@@ -1,70 +1,50 @@
 # Michigan distillery outreach links
 
-One `passport-demo` link per prospect for the manual outreach cycle, built
-2026-09-11. **Nothing here has been sent.**
+One live AuthiChain intake URL per prospect for the manual outreach cycle.
+These replaced the retired `passport-demo` worker query placeholders
+on 2026-09-20. **Nothing here is a personalized passport claim.**
+
+Live check (HTTP 200 today): `https://authichain.com/onboard` and
+`https://strainchain.io/onboard`. `https://strainchain.io/genetics/mendo-love-farms`
+was **not** 200 at replacement time, so it is not used. Do not invent domains.
 
 ## The links
 
-Each carries only the prospect's name. Every other field falls back to a visible
-placeholder, so the page reads as a template built for them rather than a claim
-about them.
+Each URL is the live AuthiChain onboard form with UTM so a reply can be
+attributed to this list. Distilleries are a DPP / authenticity pitch, so the
+estate is authichain.com — not StrainChain genetics.
 
-| Prospect                   | Mark | Link                                                                             |
-| -------------------------- | ---- | -------------------------------------------------------------------------------- |
-| Coppercraft Distillery     | CD   | `https://passport-demo.undone-k.workers.dev/?b=Coppercraft%20Distillery`         |
-| Michigrain Distillery      | MD   | `https://passport-demo.undone-k.workers.dev/?b=Michigrain%20Distillery`          |
-| Iron Fish Distillery       | IF   | `https://passport-demo.undone-k.workers.dev/?b=Iron%20Fish%20Distillery`         |
-| Eastern Market Brewing Co. | EM   | `https://passport-demo.undone-k.workers.dev/?b=Eastern%20Market%20Brewing%20Co.` |
-| Off the Chain Brewstillery | OT   | `https://passport-demo.undone-k.workers.dev/?b=Off%20the%20Chain%20Brewstillery` |
-| Detroit City Distillery    | DC   | `https://passport-demo.undone-k.workers.dev/?b=Detroit%20City%20Distillery`      |
-| Valentine Distilling Co.   | VD   | `https://passport-demo.undone-k.workers.dev/?b=Valentine%20Distilling%20Co.`     |
-| Long Road Distillers       | LR   | `https://passport-demo.undone-k.workers.dev/?b=Long%20Road%20Distillers`         |
+| Prospect                   | Mark | Link                                                                                                         |
+| -------------------------- | ---- | ------------------------------------------------------------------------------------------------------------ |
+| Coppercraft Distillery     | CD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=coppercraft`    |
+| Michigrain Distillery      | MD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=michigrain`     |
+| Iron Fish Distillery       | IF   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=iron-fish`      |
+| Eastern Market Brewing Co. | EM   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=eastern-market` |
+| Off the Chain Brewstillery | OT   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=off-the-chain`  |
+| Detroit City Distillery    | DC   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=detroit-city`   |
+| Valentine Distilling Co.   | VD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=valentine`      |
+| Long Road Distillers       | LR   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=long-road`      |
 
-Verified in Chromium **through the worker's own `fetch()` output**: all eight
-render the prospect's name, derive the monogram above, and leak **none** of the
-eight Copper & Rye specifics. Zero console errors. A branded link shows
-`Your product name` / `Your town, your state` / `BATCH-0000`.
+### Before / after
 
-> **Correction.** When this file was first written, the monograms were verified
-> by extracting the HTML from the worker source rather than by calling the
-> worker. That reads the template literal's _source text_, which is not what the
-> browser receives — see "The backslash trap" in
-> `workers/passport-demo/README.md`. Under that bug `split(/\s+/)` was emitted as
-> `split(/s+/)`, splitting brand names on the letter "s", so seven of these eight
-> monograms were **wrong in production**: Coppercraft rendered `CT` not `CD`,
-> Iron Fish `IH` not `IF`. The cause is fixed and the table above is now verified
-> against the worker's actual response.
+|        | URL                                                                                                  |
+| ------ | ---------------------------------------------------------------------------------------------------- |
+| Before | retired `passport-demo` worker `?b=` query URLs (not an estate)                                      |
+| After  | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=<slug>` |
 
-## Why no town is set
+The retired worker URLs rendered a template with the prospect's name and
+placeholder product / town / batch fields. They are not linked from this list
+anymore. The intake form is the live estate path that already answers 200.
 
-The plan called for name **and town**. Town was dropped, deliberately.
+## Why no personalized passport page
 
-The rule this whole passport change exists to enforce is that nothing unverified
-gets printed under a real company's name. Primary sources could not be reached —
-the network egress proxy blocks the distilleries' own websites — so the only
-available sources were search snippets, and they were not good enough:
+The previous table pointed at a demo worker so a cold email could show a
+named mockup. That worker is not an estate, and this list now only cites
+URLs that return 200 on a published domain.
 
-- **Coppercraft** — returned as Saugatuck, against a recollection of Holland.
-- **Valentine** — one snippet gave Clinton, Ferndale _and_ Detroit in the same
-  breath.
-
-Two of the first four checked were ambiguous or contradictory. Printing "Holland,
-Michigan" on a passport sent to a distillery that moved to Saugatuck is a small
-error that lands exactly where it hurts — on the page whose entire pitch is that
-it only states verifiable things.
-
-So `o=` is omitted and the page shows `Your town, your state`, which is honest.
-
-**To add towns**, append to any link:
-
-```
-&o=Thompsonville,%20Michigan
-```
-
-This takes seconds for someone who knows these prospects, and it is the right
-person to do it. The same applies to `p` (product), `t` (type · size),
-`d` (release date), `x` (batch) and `s1`–`s4` (the four story chapters) — any
-supplied value overrides its placeholder.
+Do not paste town, batch, or product copy onto a public URL unless it is
+verified. That rule is unchanged: primary sources for these eight were not
+good enough to print a town under the company name.
 
 ## Before sending: playbook precondition
 
@@ -73,7 +53,7 @@ when there is **real data, a verified contact, and an existing relationship**, a
 that an address must be Apollo-verified or published by the company itself —
 "never a pattern guess".
 
-For these eight, none of the three appears to hold. That does not block building
-links, but it does bear on sending: a pattern-guessed address (`info@`,
+For these eight, none of the three appears to hold. That does not block listing
+live intake URLs, but it does bear on sending: a pattern-guessed address (`info@`,
 `hello@`) is what the deliverability runbook is written against. Verify each
 contact before any of these goes out.

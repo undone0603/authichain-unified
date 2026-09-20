@@ -19,12 +19,9 @@ on:
           - reddit_only
           - content_drafts
       dry_run:
-        # STAGED ACTIVATION: defaults to true so scheduled runs and default
-        # manual runs print the LinkedIn/Reddit posts they *would* publish
-        # without posting live. To publish live for one run, dispatch manually
-        # with this unchecked. To remove the guard permanently after reviewing
-        # staged output, flip this default and the two `|| 'true'` fallbacks
-        # below back to 'false'.
+        # STAGED: default true. Scheduled jobs are inbound-only (IndexNow +
+        # GSC sitemap pings). Live social is content-publish.yml (frozen).
+        # OWNER_LIVE_SEND does not apply here — this workflow does not send email.
         description: "Dry run (no live posts)"
         required: false
         default: "true"
@@ -50,11 +47,45 @@ jobs:
       - name: Ping IndexNow for all domains
         run: |
           KEY="authichain2026indexnow"
-          for DOMAIN in authichain.com qron.space strainchain.io govchain.us; do
-            echo "Pinging IndexNow for $DOMAIN..."
-            curl -s -o /dev/null -w "%{http_code}" \
-              "https://api.indexnow.org/indexnow?url=https://${DOMAIN}/sitemap.xml&key=${KEY}" \
+          ping_indexnow() {
+            local url="$1"
+            echo "Pinging IndexNow for $url..."
+            curl -s -o /dev/null -w "%{http_code}\n" \
+              "https://api.indexnow.org/indexnow?url=${url}&key=${KEY}" \
               -H "Content-Type: application/x-www-form-urlencoded" || true
+          }
+          # Sitemaps plus money URLs. Fail soft per URL so one IndexNow
+          # blip does not red the job.
+          for URL in \
+            "https://authichain.com/sitemap.xml" \
+            "https://qron.space/sitemap.xml" \
+            "https://strainchain.io/sitemap.xml" \
+            "https://govchain.us/sitemap.xml" \
+            "https://authichain.com/" \
+            "https://authichain.com/pricing" \
+            "https://authichain.com/dpp" \
+            "https://authichain.com/x402" \
+            "https://authichain.com/onboard" \
+            "https://authichain.com/trumark" \
+            "https://authichain.com/made-in-america" \
+            "https://authichain.com/passport" \
+            "https://authichain.com/genetics/mendo-love-farms" \
+            "https://authichain.com/m" \
+            "https://authichain.com/m/mendo" \
+            "https://authichain.com/m/trumark" \
+            "https://authichain.com/m/musa" \
+            "https://authichain.com/m/strainchain" \
+            "https://authichain.com/blog/eu-dpp-manufacturer" \
+            "https://strainchain.io/" \
+            "https://strainchain.io/pricing" \
+            "https://strainchain.io/onboard" \
+            "https://qron.space/" \
+            "https://qron.space/pricing" \
+            "https://qron.space/generate" \
+            "https://govchain.us/" \
+            "https://govchain.us/onboard"
+          do
+            ping_indexnow "$URL"
           done
 
       - name: Submit sitemaps to Google Search Console

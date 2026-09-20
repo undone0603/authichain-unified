@@ -1,4 +1,14 @@
 # .github/workflows/b2b-outreach.yml
+#
+# Dry-run (default):
+#   gh workflow run b2b-outreach.yml -f segment=qron -f dry_run=true
+# Tiny live batch (OWNER_LIVE_SEND=true, MAX_LIVE_SENDS=2, QRON only):
+#   gh workflow run b2b-outreach.yml -f segment=qron -f dry_run=false
+# Live channel partners (OWNER_LIVE_SEND=true, MAX_LIVE_SENDS=2).
+# Sets ALLOW_PARTNER_SENDS=true only for this dispatch + resolved live:
+#   gh workflow run b2b-outreach.yml -f segment=partners -f dry_run=false
+# partners / high_leverage are never folded into all / govchain / strainchain / qron.
+# high_leverage stays dry-run only.
 name: B2B Cold Outreach
 
 on:
@@ -8,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       segment:
-        description: "Which segment to target (govchain | strainchain | qron | all)"
+        description: "Which segment to target (govchain | strainchain | qron | partners | high_leverage | all). partners/high_leverage are not folded into all. high_leverage is dry-run only."
         required: false
         default: "all"
         type: choice
@@ -17,10 +27,14 @@ on:
           - govchain
           - strainchain
           - qron
+          - partners
+          - high_leverage
       dry_run:
+        # STAGED: default true. Live send also requires vars.OWNER_LIVE_SEND=true
+        # (one-click flip — see PUBLIC_LOOP_FREEZE.md). Unset / false = no spam.
         description: "Dry run (save to Supabase, skip email send)"
         required: false
-        default: "false"
+        default: "true"
         type: boolean
       flush_queued:
         description: "Only flush already-queued leads (no new prospecting)"
@@ -41,13 +55,9 @@ env:
 
 jobs:
   outreach:
-    name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
-    # Manual runs (workflow_dispatch) are always allowed. Scheduled runs only
-    # send live outreach once B2B_OUTREACH_ENABLED is explicitly set to
-    # "true" as a repository variable — the same kill-switch convention used
-    # by autonomous-business-cycle.yml, so this cron trigger can't silently
-    # send live cold email before someone has opted in.
-    if: ${{ github.event_name == 'workflow_dispatch' || vars.B2B_OUTREACH_ENABLED == 'true' }}
+    name: B2B Cold Outreach — ${{ github.event_name == 'schedule' && 'qron' || inputs.segment || 'all' }}
+    # Enabling this workflow is not live send. Resolve-mode stays dry-run
+    # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -69,8 +79,48 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Resolve dry-run / live mode
+        id: mode
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → LIVE (OWNER_LIVE_SEND=true)"
+            else
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → forced dry-run (OWNER_LIVE_SEND unset/false)"
+            fi
+            exit 0
+          fi
+          dry="${{ inputs.dry_run }}"
+          if [ "$dry" = "false" ]; then
+            if [ "${{ vars.OWNER_LIVE_SEND }}" != "true" ]; then
+              echo "::warning::live requested but vars.OWNER_LIVE_SEND is not true — forcing dry-run"
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            echo "Manual live send (OWNER_LIVE_SEND=true)"
+            exit 0
+          fi
+          echo "dry_run=true" >> "$GITHUB_OUTPUT"
+          echo "Resolved dry_run=true"
+
+      - name: Resolve segment
+        id: segment
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "segment=qron" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run → segment=qron (never all)"
+            exit 0
+          fi
+          echo "segment=${{ inputs.segment || 'all' }}" >> "$GITHUB_OUTPUT"
+
       - name: Run B2B cold outreach
-        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
+        if: ${{ inputs.flush_queued != true }}
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ steps.segment.outputs.segment }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -85,16 +135,24 @@ jobs:
           SALES_NOTIFY_EMAIL: ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
           CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           AUTHICHAIN_BOOK_URL: ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           FLUSH_QUEUED_ONLY: ${{ inputs.flush_queued || 'false' }}
+          # Tiny live batch — override only after a clean dry-run. Never a list dump.
+          MAX_LIVE_SENDS: "2"
+          # Fail-closed: scripts/lib/channel-partners.ts refuses live partner
+          # sends unless this is exactly "true". Set only for workflow_dispatch
+          # segment=partners after OWNER_LIVE_SEND resolves dry_run=false.
+          # Schedule, all, qron, high_leverage, and dry-run stay unset/false.
+          ALLOW_PARTNER_SENDS: ${{ github.event_name == 'workflow_dispatch' && inputs.segment == 'partners' && steps.mode.outputs.dry_run == 'false' && 'true' || 'false' }}
+          GUARDRAIL_API_URL: ${{ vars.GUARDRAIL_API_URL || 'https://app.authichain.com' }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
           MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
           UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
-        if: ${{ inputs.flush_queued == 'true' }}
-        run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
+        if: ${{ inputs.flush_queued == true && steps.mode.outputs.dry_run == 'false' }}
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ steps.segment.outputs.segment }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -105,6 +163,10 @@ jobs:
           OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
           OUTREACH_FROM_QRON: ${{ secrets.OUTREACH_FROM_QRON }}
           CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+          FLUSH_QUEUED_ONLY: "true"
+          MAX_LIVE_SENDS: "2"
+          GUARDRAIL_API_URL: ${{ vars.GUARDRAIL_API_URL || 'https://app.authichain.com' }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
           MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
           UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}

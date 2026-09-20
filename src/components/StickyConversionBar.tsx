@@ -65,7 +65,7 @@ export function StickyConversionBar({
     <div
       role="region"
       aria-label="Sign-up call to action"
-      className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-zinc-800 bg-black/95 backdrop-blur-md"
+      className="fixed inset-x-0 bottom-0 z-40 animate-slide-up border-t border-slate-200 bg-white/95 backdrop-blur-md shadow-[0_-8px_24px_rgba(15,23,42,0.06)]"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
@@ -73,15 +73,15 @@ export function StickyConversionBar({
             className="hidden h-2 w-2 shrink-0 animate-pulse rounded-full sm:inline-block"
             style={{ backgroundColor: accent }}
           />
-          <p className="text-[11px] font-black uppercase leading-tight tracking-widest text-white sm:text-xs">
+          <p className="text-[11px] font-semibold uppercase leading-tight tracking-wider text-slate-900 sm:text-xs">
             {label}
-            <span className="ml-2 font-bold text-zinc-500">— {subtext}</span>
+            <span className="ml-2 font-medium text-slate-500">— {subtext}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href={href}
-            className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-black transition-transform hover:translate-y-[-1px] sm:text-xs"
+            className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white transition-transform hover:translate-y-[-1px] sm:text-xs"
             style={{ backgroundColor: accent }}
           >
             Get Started
@@ -90,7 +90,7 @@ export function StickyConversionBar({
           <button
             onClick={dismiss}
             aria-label="Dismiss"
-            className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-white"
+            className="rounded-lg p-2 text-slate-500 transition-colors hover:text-slate-900"
           >
             <X className="h-4 w-4" />
           </button>

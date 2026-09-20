@@ -32,6 +32,7 @@ CRED_KEY_TO_ENV = {
     "hubspot_owner_id":     "HUBSPOT_OWNER_ID",
     "gmail_oauth":          "GMAIL_OAUTH_REFRESH_TOKEN",
     "linkedin_session":     "LINKEDIN_SESSION_COOKIE",
+    "linkedin_jsessionid":  "LINKEDIN_JSESSIONID",
     "reddit_session":       "REDDIT_SESSION_COOKIE",
     "twitter_session":      "TWITTER_SESSION_COOKIE",
     "sam_auth":             "SAM_AUTH_COOKIE",
@@ -51,6 +52,10 @@ CRED_KEY_TO_ENV = {
     "outreach_admin_token": "OUTREACH_ADMIN_TOKEN",
     "outreach_worker_url":   "OUTREACH_WORKER_URL",
     "agent_secret":         "AGENT_SECRET",
+    # OpenClaw bridge (AgentZ → claw.authichain.com)
+    "openclaw_api_key":     "OPENCLAW_API_KEY",
+    "claw_bridge_url":      "CLAW_BRIDGE_URL",
+    "openclaw_bridge_url":  "OPENCLAW_BRIDGE_URL",
     "polygon_rpc_url":      "POLYGON_RPC_URL",
     "polygon_private_key":  "POLYGON_PRIVATE_KEY",
     "deepseek_api_key":      "DEEPSEEK_API_KEY",
@@ -193,6 +198,16 @@ def get(key: str, required: bool = True) -> Optional[str]:
             )
         return None
     return value
+
+
+def set_credential(key: str, value: str) -> bool:
+    """Persist a credential. Never logs the value — only the key name.
+
+    Named set_credential (not `set`) so this module can still use builtin set().
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("credential value must be a non-empty string")
+    return update_credential(key, value)
 
 
 def update_credential(key: str, value: str) -> bool:

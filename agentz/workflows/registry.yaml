@@ -218,13 +218,14 @@ workflows:
     handler: handlers.govchain_proposal
     type: api
     estimated_minutes: 15
-    requires: [gemini_api_key]
+    requires: []
     prerequisites: []
     confirm_before_run: false
     description: |
-      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted 
-      government grant opportunity, and uses an LLM to autonomously draft 
-      a Phase 1 proposal, saving the markdown output for review.
+      Reads gov_pursue_list.csv, identifies the top-scoring unsubmitted
+      government grant opportunity, and drafts a Phase 1 proposal via local
+      Ollama (llama3.2 / $OLLAMA_MODEL on $OLLAMA_HOST). Dry-run writes the
+      markdown locally and skips the pipeline ledger. No Gemini key required.
 
   - id: authichain_docusign_blitz
     title: "DocuSign Signature Blitz: Dispatch Partnership Agreements"
@@ -389,13 +390,27 @@ workflows:
     handler: handlers.authichain_social_launch
     type: composite
     estimated_minutes: 15
-    requires: [openai_api_key]
-    prerequisites: [authichain_pilot_deploy]
+    requires: [linkedin_session]
+    prerequisites: []
     description: |
-      Autonomous Content Distribution:
-      1) Generates platform-specific copy using GPT-4o.
-      2) Coordinates distribution across LinkedIn (Sales Nav), Reddit, and Twitter.
-      3) Drives traffic to qron.space engagement hub.
+      Owner-approved social distribution. Dry-run by default.
+      Live LinkedIn-first uses LINKEDIN_SESSION_COOKIE / JSESSIONID
+      via the browser session. Optional payload.linkedin or
+      payload.bundle (content/social/*.json). Does not invent prices.
+
+  - id: linkedin_post
+    title: "LinkedIn post (browser session)"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.linkedin_post
+    type: browser
+    estimated_minutes: 10
+    requires: [linkedin_session]
+    prerequisites: []
+    description: |
+      Posts to LinkedIn using the browser session cookies synced
+      from GitHub secrets. Accepts payload.linkedin / payload.text
+      or payload.bundle under content/social/.
 
   - id: authichain_advanced_ops
     title: "Advanced Ecosystem Evolution: Concierge + Microsites + Oracles"

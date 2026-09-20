@@ -1,5 +1,14 @@
 # Stripe Webhook Implementation Checklist
 
+> **Live bind (2026-09-20):** Dashboard `we_1UGTCSGqTruSqV8ThM9bXVWp` →
+> `https://authichain.com/api/stripe/webhook` is **`authichain-edge-router`**.
+> A 400 `No signatures found matching the expected signature` after #1084
+> (`constructEventAsync`) is a **stale/missing Worker signing secret**, not
+> SubtleCrypto. Paste the current Reveal secret into
+> `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (and `STRIPE_WEBHOOK_SECRET`) on that
+> Worker — see **[stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md)**.
+> Vercel is not the live destination.
+
 ## Files Created
 
 - [x] `src/app/api/webhooks/stripe/route.ts` — Main webhook handler (400+ lines)
@@ -10,6 +19,7 @@
 ## Quick Setup (5 Steps)
 
 ### 1. Apply Supabase Migration
+
 ```bash
 cd supabase
 supabase migration up          # Local test
@@ -17,12 +27,15 @@ supabase db push              # Push to production
 ```
 
 **Verify:**
+
 ```bash
 supabase db list-tables
 ```
+
 Should show: `payments`, `subscriptions`, `alerts`, `audit_log`, `stripe_events`
 
 ### 2. Deploy Webhook Handler
+
 ```bash
 # Build and test locally
 pnpm build
@@ -35,30 +48,35 @@ git push origin main
 ```
 
 **Verify in Vercel:**
+
 - Deployment is green
 - New endpoint appears in logs
 
 ### 3. Get Webhook Secret from Stripe
+
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. Click **Add endpoint** (if new) or edit existing
-3. URL: `https://app.authichain.com/api/webhooks/stripe`
+3. URL: `https://authichain.com/api/stripe/webhook` (not the retired `/api/webhooks/stripe`)
 4. Events:
-   - `checkout.session.completed`
+   - `checkout.session.completed` (required for DPP fulfill)
+   - `checkout.session.async_payment_succeeded` (Klarna / delayed wallets)
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
    - `customer.subscription.deleted`
 5. Click **Create** or **Save**
 6. **Reveal signing secret** → Copy (starts with `whsec_`)
 
-### 4. Set Environment Variable in Vercel
-1. [Vercel Dashboard → Settings → Environment Variables](https://vercel.com/dashboard/settings/environment-variables)
-2. Add:
-   - **Name:** `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
-   - **Value:** (paste the secret from Step 3)
-   - **Environments:** Production, Preview, Development
-3. Click **Save**
+### 4. Set the signing secret on `authichain-edge-router` (not Vercel)
+
+See [stripe-webhook-signing-secret.md](./stripe-webhook-signing-secret.md). Names:
+
+- `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` (required for `we_1UGTCS…`)
+- `STRIPE_WEBHOOK_SECRET` (fallback)
+
+Do not paste `whsec_` values into git or workflow_dispatch inputs.
 
 ### 5. Redeploy to Pick Up Environment Variable
+
 1. Go to Vercel → Deployments
 2. Click the latest deployment
 3. Click **Redeploy**
@@ -67,9 +85,11 @@ git push origin main
 ## Verification Tests
 
 ### Test 1: Webhook Signature Validation
+
 Make a POST request to the endpoint with an invalid signature:
+
 ```bash
-curl -X POST https://app.authichain.com/api/webhooks/stripe \
+curl -X POST https://authichain.com/api/stripe/webhook \
   -H "stripe-signature: invalid" \
   -d '{"id":"evt_test"}'
 
@@ -77,9 +97,10 @@ curl -X POST https://app.authichain.com/api/webhooks/stripe \
 ```
 
 ### Test 2: Stripe CLI Local Testing
+
 ```bash
 # Terminal 1: Start webhook forwarding
-stripe listen --forward-to localhost:3000/api/webhooks/stripe \
+stripe listen --forward-to localhost:3000/api/stripe/webhook \
   --events checkout.session.completed,invoice.payment_succeeded,invoice.payment_failed,customer.subscription.deleted
 
 # Copy the signing secret (whsec_test_...) to .env.local
@@ -94,7 +115,9 @@ stripe trigger checkout.session.completed
 ```
 
 ### Test 3: Database Inserts
+
 After a successful test, verify the data was written:
+
 ```sql
 -- Check payment was recorded
 SELECT * FROM payments ORDER BY created_at DESC LIMIT 1;
@@ -110,6 +133,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ```
 
 ### Test 4: Production Webhook Test (After Deployment)
+
 1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. Click your endpoint
 3. Scroll to **Recent events**
@@ -117,6 +141,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 5. Click it to see the request and response
 
 **Expected Response:**
+
 ```json
 {
   "received": true,
@@ -125,6 +150,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 ```
 
 ### Test 5: Real Payment Flow
+
 1. Complete a real or test payment on the site
 2. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 3. Check the **Recent events** section
@@ -134,15 +160,75 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
    SELECT * FROM payments ORDER BY created_at DESC LIMIT 1;
    ```
 
+## DPP fulfill on the apex Worker (2026-09-20)
+
+Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/webhook` → `worker-app` → `handleStripeWebhook` → `fulfillDppPaidSession`.
+
+- Access grant writes `funnel_events.metadata.loop_stage=payment_succeeded` then `provisioned` (Supabase). It does **not** need `DATABASE_URL` / Drizzle.
+- `authichain-edge-router` hydrates Stripe + Supabase secret **names** only. A missing `DATABASE_URL` must not 400 a paid DPP session.
+- Verification on this Worker **must** use `constructEventAsync`. Sync `constructEvent` 400s with `SubtleCryptoProvider cannot be used in a synchronous context` (that blocked Resend of `evt_1UHERP…` / `cs_live_a1y4Tu…`).
+- Do **not** revive `workers/stripe-webhook` or `workers/dpp-fulfillment` for this path.
+- `isDppOffer` matches `metadata.offer=dpp_readiness_2026`, `metadata.plan=dpp_readiness`, or catalog `price_1TwmD8GqTruSqV8TpAF8dfyA` (webhook payloads omit `line_items` unless expanded; checkout now also stamps `metadata.stripe_price_id`).
+
+### Owner: Resend the missed smoke (`we_1UGTCS…`)
+
+Live endpoint: `we_1UGTCS…` → `https://authichain.com/api/stripe/webhook` (enabled; events include `checkout.session.completed`).
+
+`smoke_check_1789786486` (`cs_live_a1y4TuVXsdPVbXgPejLnXYpSWD5RvpmO273RUC3BxOHnAZ5JwlARbBMxQS`) is **not** skipped by `isDppOffer` — metadata has `offer` + `plan`. `$0` / `DPP-SMOKE-E2E` / `is_demo` are **not** fulfill filters — `payment_status=paid` is the only payment gate. `is_demo=true` only skips Resend email noise.
+
+**2026-09-20 Resend wrote `payment_succeeded` but not `provisioned`.** Not an `is_demo` short-circuit. Live `payment_succeeded` has `email=authichain@gmail.com`. `fulfillDppPaidSession` then called `provisionPurchase`, which inserts `{ email, brand, created_at }` into `public.profiles`. That table’s `user_id` was `NOT NULL` + FK to `auth.users` (0 rows). Insert failed `23502`; the error was mapped to `no_identity`; `provisioned` was skipped; webhook still HTTP 200. Fix: `user_id` is nullable for guests (migration `20260920000002`); insert errors now `upsert_failed` and throw so Stripe retries; `no_identity` still writes `dpp_loop:provisioned` with `metadata.skip_reason=no_identity`.
+
+1. Stripe Dashboard → Developers → Webhooks → `we_1UGTCS…` (authichain-com DPP + billing).
+2. Open the `checkout.session.completed` delivery for session `cs_live_a1y4Tu…`. Historical non-2xx: first `DATABASE_URL` (fixed), then `SubtleCryptoProvider cannot be used in a synchronous context` until this async verify lands.
+3. After this Worker **and** migration `20260920000002` (profiles.user_id nullable) deploy: **Resend** `evt_1UHERPGqTruSqV8TMtUYKAF0` (or the `cs_live_a1y4Tu…` delivery). Expect 2xx. Replay is safe — fulfill is idempotent on session id. A prior `payment_succeeded` row does **not** block `provisioned`.
+4. Confirm Supabase:
+   ```sql
+   -- delivery visible even if fulfill later throws
+   SELECT event_id, event_type, processed_at
+   FROM stripe_events
+   WHERE event_id = 'evt_1UHERPGqTruSqV8TMtUYKAF0'
+   ORDER BY processed_at DESC;
+
+   -- access grant: expect BOTH rows. provisioned must have profile_id
+   -- (success) or skip_reason=no_identity (no email / no user_id).
+   SELECT event_type, prospect_id, metadata
+   FROM funnel_events
+   WHERE prospect_id = 'smoke_check_1789786486'
+     AND event_type IN ('dpp_loop:payment_succeeded', 'dpp_loop:provisioned')
+   ORDER BY timestamp ASC;
+
+   SELECT id, email, user_id, subscription_plan, brand
+   FROM profiles
+   WHERE email = 'authichain@gmail.com';
+   ```
+   If `session_id` / `status` columns are missing, the handler still wrote `event_id` + `event_type` + `processed_at` (migration `20260920000001` is optional).
+
+Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`. After checkout, expect `payment_succeeded` **and** `provisioned` (with `profile_id` or `skip_reason`).
+
+Optional: add `checkout.session.async_payment_succeeded` on `we_1UGTCS…` (Klarna / delayed wallets; not required for $0 card/promo).
+
+### stripe_events is observability, not a fulfill lock
+
+Every verified POST to the apex handler upserts `public.stripe_events` with event id, type, checkout session id (when present), HTTP outcome (`received` → `success` | `error` | `duplicate`), and the last error. A prior `received` / `error` / Drizzle `alreadyProcessed` row must **not** skip DPP `checkout.session.completed` — Resend has to be able to fulfill. `fulfillDppPaidSession` remains idempotent via `recordDppLoopEventOnce(session.id)` + profile upsert.
+
+```sql
+SELECT event_id, event_type, session_id, status, http_status, error, processed_at
+FROM stripe_events
+ORDER BY processed_at DESC
+LIMIT 20;
+```
+
 ## Troubleshooting Checklist
 
 ### Problem: Webhook returns 400 "Webhook Error"
+
 - [ ] Check Stripe Dashboard → Webhooks → Event details for error message
-- [ ] Verify `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is set in Vercel
+- [ ] Verify `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` is set on **authichain-edge-router** (not Vercel)
 - [ ] Verify it matches the signing secret in Stripe Dashboard
 - [ ] Redeploy after adding env var
 
 ### Problem: Webhook returns 500 "Internal Server Error"
+
 - [ ] Check Vercel Logs for stack trace
 - [ ] Verify `STRIPE_SECRET_KEY` is still set
 - [ ] Verify `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set
@@ -150,6 +236,7 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 - [ ] Check if leads table has `status` column: `supabase db execute "SELECT status FROM lead_captures LIMIT 1"`
 
 ### Problem: Payments table is empty but Stripe shows successful payment
+
 - [ ] Check Stripe Dashboard → Webhooks → **Event deliveries**
 - [ ] Look for red ✗ status (failed delivery)
 - [ ] Click the event to see error response
@@ -157,22 +244,25 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
 - [ ] If 400 error, check that webhook secret is correct
 
 ### Problem: Duplicate payments in database
+
 - [ ] This is expected! Stripe retries webhooks
 - [ ] Check `stripe_events` table to confirm dedup is working
 - [ ] If you see **duplicate rows**, run the cleanup query in the guide
 
 ### Problem: Leads not tagged as customers
+
 - [ ] Check if lead exists with payment's customer_email
 - [ ] Check `audit_log` for errors during the update
 - [ ] Verify `lead_captures` table has `status` column
 - [ ] Manually update if needed:
-     ```sql
-     UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com';
-     ```
+  ```sql
+  UPDATE lead_captures SET status = 'customer' WHERE email = 'customer@example.com';
+  ```
 
 ## Monitoring
 
 ### Daily Revenue Check
+
 ```sql
 SELECT
   DATE(created_at) as date,
@@ -186,16 +276,19 @@ LIMIT 7;
 ```
 
 ### Active Subscriptions
+
 ```sql
 SELECT COUNT(*) as active_subscriptions FROM subscriptions WHERE status = 'active';
 ```
 
 ### Failed Payments Alerting
+
 ```sql
 SELECT * FROM critical_alerts ORDER BY created_at DESC LIMIT 10;
 ```
 
 ### Recent Webhook Activity
+
 ```sql
 SELECT
   DATE(created_at),
@@ -213,7 +306,9 @@ ORDER BY DATE(created_at) DESC;
 ## Integration Points
 
 ### Lead Nurturing
+
 When a lead becomes a customer:
+
 ```sql
 -- Find all customers who need follow-up
 SELECT email, created_at FROM lead_captures WHERE status = 'customer' AND updated_at > NOW() - INTERVAL '24 hours';
@@ -222,7 +317,9 @@ SELECT email, created_at FROM lead_captures WHERE status = 'customer' AND update
 Use this in your HubSpot/Make.com automation to trigger win/upsell sequences.
 
 ### Dunning & Revenue Retention
+
 When a payment fails:
+
 ```sql
 -- Find subscriptions with failed payments
 SELECT customer_email, subscription_id FROM subscriptions WHERE status = 'payment_failed';
@@ -231,6 +328,7 @@ SELECT customer_email, subscription_id FROM subscriptions WHERE status = 'paymen
 Your dunning flow (`src/lib/dunning.ts`) can retry these automatically.
 
 ### Analytics & Reporting
+
 ```sql
 -- Customer Acquisition Cost (CAC) proxy
 SELECT COUNT(DISTINCT customer_email) as acquired_customers, SUM(amount_cents) / 100.0 / COUNT(DISTINCT customer_email) as cost_per_customer
@@ -257,6 +355,7 @@ WHERE DATE(created_at) >= DATE_TRUNC('month', NOW());
 ## Support
 
 For questions, check:
+
 1. `stripe-webhook-setup.md` → Troubleshooting section
 2. `src/app/api/webhooks/stripe/route.ts` → Inline comments
 3. Stripe API docs: https://docs.stripe.com/webhooks

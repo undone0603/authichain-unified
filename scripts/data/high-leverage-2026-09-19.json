@@ -1,0 +1,57 @@
+{
+  "source": "high_leverage_scan_2026-09-19",
+  "generated": "2026-09-19",
+  "note": "Tier 1 emails already in Supabase. Loadable via --segment=high_leverage. Not folded into all/govchain/strainchain/qron/partners. Dry-run only — no live send in this path. Do not invent additional addresses.",
+  "targets": [
+    {
+      "company": "FASTSIGNS",
+      "name": "Scott Krupa",
+      "email": "scott.krupa@fastsigns.com",
+      "website": "https://fastsigns.com",
+      "segment": "qron",
+      "role": "buyer",
+      "notes": "Supabase lead source high_leverage_scan_2026-09-19. Named FASTSIGNS contact (not the franchiseinfo@ role desk).",
+      "source": "unknown"
+    },
+    {
+      "company": "FASTSIGNS",
+      "name": "Mark Jameson",
+      "email": "mark.jameson@fastsigns.com",
+      "website": "https://fastsigns.com",
+      "segment": "qron",
+      "role": "buyer",
+      "notes": "Supabase lead source high_leverage_scan_2026-09-19. Named FASTSIGNS contact (not the franchiseinfo@ role desk).",
+      "source": "unknown"
+    },
+    {
+      "company": "Stash Stock",
+      "name": "Stash Stock",
+      "email": "info@stashstock.com",
+      "website": "https://stashstock.com",
+      "segment": "strainchain",
+      "role": "buyer",
+      "notes": "Supabase lead source high_leverage_scan_2026-09-19. Only the stored info@ address — no additional contacts added.",
+      "source": "unknown"
+    },
+    {
+      "company": "Curaleaf",
+      "name": "Wendy Linscott",
+      "email": "wendy.linscott@curaleaf.com",
+      "website": "https://curaleaf.com",
+      "segment": "strainchain",
+      "role": "buyer",
+      "notes": "Supabase lead source high_leverage_scan_2026-09-19. Same address already recorded in scripts/dry-run-outreach.ts as a HubSpot Curaleaf contact.",
+      "source": "unknown"
+    },
+    {
+      "company": "C3 Industries",
+      "name": "Kathryn Long",
+      "email": "klong@c3industries.com",
+      "website": "https://c3industries.com",
+      "segment": "strainchain",
+      "role": "buyer",
+      "notes": "Supabase lead source high_leverage_scan_2026-09-19. Same address already recorded in scripts/dry-run-outreach.ts as a HubSpot C3 deal contact. workers/qron-outreach notes a 2026-06-26 delivery — do not duplicate-send.",
+      "source": "unknown"
+    }
+  ]
+}

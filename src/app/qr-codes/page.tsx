@@ -15,8 +15,8 @@ export default function QrCodesPage() {
       eyebrow="AI QR Art"
       headline="QR Codes That Are Actually Art."
       subhead="Turn any URL into a scannable work of art. 11 illusion-diffusion styles, rendered in seconds, every one cryptographically signed and still scannable."
-      primaryCta={{ label: 'Buy Generations', href: '/pricing' }}
-      secondaryCta={{ label: 'Try the Generator', href: '/' }}
+      primaryCta={{ label: 'Generate Living QR', href: '/generate' }}
+      secondaryCta={{ label: 'View pricing', href: '/pricing' }}
       stats={[
         { value: '11', label: 'Art styles' },
         { value: '~5s', label: 'Per render' },

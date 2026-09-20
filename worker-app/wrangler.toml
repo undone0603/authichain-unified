@@ -3,9 +3,20 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
-# for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
-# SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
+# Secrets (wrangler secret put --name authichain-edge-router, not committed):
+# STRIPE_SECRET_KEY is required for GET /api/checkout/dpp.
+# Live Dashboard endpoint we_1UGTCSGqTruSqV8ThM9bXVWp posts here. Bind the
+# current Reveal signing secret as STRIPE_WEBHOOK_AUTHICHAIN_SECRET (and
+# STRIPE_WEBHOOK_SECRET as fallback). GitHub Actions deploy-cloudflare.yml
+# does NOT push these. See docs/operations/stripe-webhook-signing-secret.md.
+# Optional NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to record
+# checkout_started and to fulfill paid DPP sessions on POST /api/stripe/webhook.
+# DATABASE_URL is NOT required for DPP fulfill (Drizzle audit is fail-open).
+# Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
+# GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
+# Optional QRON_WORKER_URL for POST /api/generate (defaults to
+# https://qron-image-gen.undone-k.workers.dev). Optional
+# NEXT_PUBLIC_SUPABASE_ANON_KEY to resolve generate sessions.
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
@@ -52,6 +63,97 @@ zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/protocol/launch-proof"
+zone_name = "authichain.com"
+
+# More specific than authichain-com's authichain.com/* glob so genesis,
+# attestation, and the customer console are not swallowed by landing HTML.
+[[routes]]
+pattern = "authichain.com/api/automation/cron"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/attestation"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/attestation/*"
+zone_name = "authichain.com"
+
+# More specific than the landing worker's /api/* glob so B2B/qron-outreach
+# check+record do not 404 on the apex if APP_WORKER is unbound.
+[[routes]]
+pattern = "authichain.com/api/guardrail/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/v1/agent-verify*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/checkout"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/checkout/*"
+zone_name = "authichain.com"
+
+# More specific than landing authichain.com/* so POST /api/generate is not
+# answered by ASSETS 404 when APP_WORKER is unbound. Same pattern as checkout.
+[[routes]]
+pattern = "authichain.com/api/generate"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/generate/*"
+zone_name = "authichain.com"
+
+# Canonical Stripe Dashboard endpoint. Live account we_1UGTCS… already
+# posts here. Do not register /api/webhooks/stripe in Dashboard (retired).
+[[routes]]
+pattern = "authichain.com/api/stripe/webhook"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/webhooks/stripe"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attest"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attest/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attestations"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/attestations/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/dashboard*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/dapp*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/generate*"
+zone_name = "authichain.com"
+
+# Preferred app host. 522s when DNS still points at a dead origin (old Vercel).
+# Attaching the edge router here is the in-repo fix; owner must CNAME app
+# onto this zone and orange-cloud it (see docs/ROUTING.md).
+[[routes]]
+pattern = "app.authichain.com/*"
 zone_name = "authichain.com"
 
 [[kv_namespaces]]

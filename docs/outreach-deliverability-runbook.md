@@ -6,7 +6,7 @@
 
 Outreach has recorded **zero replies, ever**, at a **16% bounce rate**
 (`docs/CAPABILITIES.md` cross-cutting risks). Zero is the important number. Bad targeting
-and bad copy produce *low* reply rates — 0.5%, 1%. They do not produce zero. Zero across
+and bad copy produce _low_ reply rates — 0.5%, 1%. They do not produce zero. Zero across
 every campaign means the messages are not reaching inboxes, and no amount of subject-line
 testing fixes that.
 
@@ -16,11 +16,11 @@ that rate makes the next send worse.
 
 ## What was changed in the repo
 
-| Change | File | Why |
-|---|---|---|
-| Disabled the 4-hourly cron | `.github/workflows/outreach-trigger.yml` | Queue exhausted (6/6 sent) — every firing was a no-op burning CI minutes and hiding that outreach is dead |
-| Disabled the 8-hourly cron | `.github/workflows/dpp-outreach-trigger.yml` | Same, DPP queue 4/4 sent |
-| Added `reply_to`, changed default `from` off `noreply@` | `server/outreach/send-guard.ts` | A cold email from `noreply@` with no reply-to **cannot be replied to at all**. Interested prospects had no path back. This alone guarantees part of the zero. |
+| Change                                                  | File                                         | Why                                                                                                                                                           |
+| ------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Disabled the 4-hourly cron                              | `.github/workflows/outreach-trigger.yml`     | Queue exhausted (6/6 sent) — every firing was a no-op burning CI minutes and hiding that outreach is dead                                                     |
+| Disabled the 8-hourly cron                              | `.github/workflows/dpp-outreach-trigger.yml` | Same, DPP queue 4/4 sent                                                                                                                                      |
+| Added `reply_to`, changed default `from` off `noreply@` | `server/outreach/send-guard.ts`              | A cold email from `noreply@` with no reply-to **cannot be replied to at all**. Interested prospects had no path back. This alone guarantees part of the zero. |
 
 Both workflows keep `workflow_dispatch`, so they can still be run by hand. Re-enable the
 schedules only after the DNS work below is done **and** the queues are repopulated.
@@ -81,7 +81,7 @@ message known to work.** Automation multiplies a message; multiplying zero gives
 
 For the first 10 customers: the founder writes ~20 emails a week, by hand, to named Michigan
 cannabis operators and MSOs, each referencing something specific about that operator. Track
-replies, not sends. When a version starts getting replies, *then* it is worth automating —
+replies, not sends. When a version starts getting replies, _then_ it is worth automating —
 and the machinery to do so is already built and waiting.
 
 ## Success criteria before re-enabling the crons
@@ -124,14 +124,14 @@ work was never done — was wrong.
 `RESEND_API_KEY2`, and the domains are split across them. Measured 2026-08-16 by
 `verify-outreach-secrets.yml` with `probe_matrix`:
 
-| Key | Sender | Result |
-|---|---|---|
-| `RESEND_API_KEY` | `hello@strainchain.io` | ✅ CAN SEND |
-| `RESEND_API_KEY` | `*@authichain.com` | ❌ domain not on this account |
-| `RESEND_API_KEY2` | `hello@authichain.com` | ✅ CAN SEND |
-| `RESEND_API_KEY2` | `proposals@authichain.com` | ✅ CAN SEND |
-| `RESEND_API_KEY2` | `hello@strainchain.io` | ❌ domain not on this account |
-| either | `hello@mail.authichain.com` | ❌ subdomain not registered |
+| Key               | Sender                      | Result                        |
+| ----------------- | --------------------------- | ----------------------------- |
+| `RESEND_API_KEY`  | `hello@strainchain.io`      | ✅ CAN SEND                   |
+| `RESEND_API_KEY`  | `*@authichain.com`          | ❌ domain not on this account |
+| `RESEND_API_KEY2` | `hello@authichain.com`      | ✅ CAN SEND                   |
+| `RESEND_API_KEY2` | `proposals@authichain.com`  | ✅ CAN SEND                   |
+| `RESEND_API_KEY2` | `hello@strainchain.io`      | ❌ domain not on this account |
+| either            | `hello@mail.authichain.com` | ❌ subdomain not registered   |
 
 So `authichain.com` **was already fully authenticated** — §1's SPF/DKIM/DMARC work is done,
 on the second account. The code simply never knew that credential existed, and a single-key
@@ -146,13 +146,14 @@ The only mail that has actually left came from `hello@strainchain.io`
 
 ### What changed in the repo
 
-| Change | File | Why |
-|---|---|---|
-| Sender preflight before any send loop | `scripts/lib/resend-preflight.ts` | Probes `delivered@resend.dev` once per sender. A dead key or unverified domain now fails in the first second with a named cause, instead of after the prospect list is burned |
-| Per-segment sender addresses | `scripts/b2b-cold-outreach.ts` | A GovChain pitch sent from a cannabis-compliance domain reads as spam. Each segment can send under its own brand via `OUTREACH_FROM_GOVCHAIN` / `_STRAINCHAIN` / `_QRON` |
-| Credential resolved per sender | `scripts/lib/resend-preflight.ts` | The preflight probes each configured credential and reports which one Resend accepted, so the send path binds to the account that owns that domain. Chosen over a hand-maintained domain→key table, which would silently drift the moment a domain moved between accounts |
-| Defaults restored to real brands | both outreach scripts, both workflows | GovChain/QRON send from `authichain.com`, StrainChain from `strainchain.io`, proposals from `proposals@authichain.com` — all verified, just on different accounts |
-| Failed preflight queues instead of dropping | `scripts/b2b-cold-outreach.ts` | Drafts are still written with `status=queued`; `flushQueuedLeads()` drains them once the sender works, with no duplicate outreach |
+| Change                                      | File                                  | Why                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sender preflight before any send loop       | `scripts/lib/resend-preflight.ts`     | Probes `delivered@resend.dev` once per sender. A dead key or unverified domain now fails in the first second with a named cause, instead of after the prospect list is burned                                                                                                                                                                                                                                 |
+| Per-segment sender addresses                | `scripts/b2b-cold-outreach.ts`        | A GovChain pitch sent from a cannabis-compliance domain reads as spam. Each segment can send under its own brand via `OUTREACH_FROM_GOVCHAIN` / `_STRAINCHAIN` / `_QRON`                                                                                                                                                                                                                                      |
+| Credential resolved per sender              | `scripts/lib/resend-preflight.ts`     | The preflight probes each configured credential and reports which one Resend accepted, so the send path binds to the account that owns that domain. Chosen over a hand-maintained domain→key table, which would silently drift the moment a domain moved between accounts                                                                                                                                     |
+| Defaults restored to real brands            | both outreach scripts, both workflows | GovChain/QRON send from `authichain.com`, StrainChain from `strainchain.io`, proposals from `proposals@authichain.com` — all verified, just on different accounts                                                                                                                                                                                                                                             |
+| Failed preflight queues instead of dropping | `scripts/b2b-cold-outreach.ts`        | Drafts are still written with `status=queued`; `flushQueuedLeads()` drains them once the sender works, with no duplicate outreach                                                                                                                                                                                                                                                                             |
+| Channel-partner list is opt-in              | `scripts/lib/channel-partners.ts`     | `--segment=partners` loads the 2026-09-19 web-scan shortlist (`source=channel_partner_web_scan_2026-09-19`). Not included in `all` / product cold sends. Live partner sends need `ALLOW_PARTNER_SENDS=true` and stay under `MAX_LIVE_SENDS`. Trusted partner role desks are allowed via `allowRoleInbox`; cold segments still reject `role_inbox`. URL-only agencies and DPP consultancies are comments only. |
 
 ### Status: resolved 2026-08-16
 
@@ -195,15 +196,15 @@ owner.** All were plausible-shaped guesses — `compliance@`, `innovation@`, `b2
 `franchise@` — which is the exact failure mode `server/outreach/send-guard.ts` exists to
 stop, and a likely contributor to the 37% bounce rate on the July batch.
 
-| Target | Hand-written | Verdict | What the company actually publishes |
-|---|---|---|---|
-| Trulieve | `compliance@trulieve.com` | guess | `ir@`, `media@`; staff mail `first.last@` |
-| Curaleaf | `compliance@curaleaf.com` | guess | `IR@`, `media@` |
-| Harvest Health | `compliance@harvestinc.com` | **defunct** | acquired by Trulieve 2021-10-01 |
-| FASTSIGNS | `innovation@fastsigns.com` | guess | **`franchiseinfo@fastsigns.com`** |
-| MOO | `product@moo.com` | guess | **`inquiries@moo.com`** |
-| 4imprint | `b2b@4imprint.com` | guess | `sales@` (role inbox), `webart@` (order support) |
-| Signarama | `franchise@signarama.com` | guess | none — intake is a web form |
+| Target         | Hand-written                | Verdict     | What the company actually publishes              |
+| -------------- | --------------------------- | ----------- | ------------------------------------------------ |
+| Trulieve       | `compliance@trulieve.com`   | guess       | `ir@`, `media@`; staff mail `first.last@`        |
+| Curaleaf       | `compliance@curaleaf.com`   | guess       | `IR@`, `media@`                                  |
+| Harvest Health | `compliance@harvestinc.com` | **defunct** | acquired by Trulieve 2021-10-01                  |
+| FASTSIGNS      | `innovation@fastsigns.com`  | guess       | **`franchiseinfo@fastsigns.com`**                |
+| MOO            | `product@moo.com`           | guess       | **`inquiries@moo.com`**                          |
+| 4imprint       | `b2b@4imprint.com`          | guess       | `sales@` (role inbox), `webart@` (order support) |
+| Signarama      | `franchise@signarama.com`   | guess       | none — intake is a web form                      |
 
 ### The general finding
 
@@ -213,7 +214,7 @@ it through web forms, or publish only role inboxes — `sales@`, `media@`, `ir@`
 product to investor relations is worse than not sending.
 
 The same holds for the GovChain targets: CTC, ITC Federal, RealmOne and Integrated Data
-Services all use contact forms, and what is discoverable is only their staff *email format*
+Services all use contact forms, and what is discoverable is only their staff _email format_
 (`last+initial@ctc.com`, `first.last@realmone.com`, `f.last@itcfederal.com`).
 
 **A format is not an address.** Synthesising `jdoe@ctc.com` from a known pattern is
@@ -224,12 +225,25 @@ and do not treat RocketReach / LeadIQ / ZoomInfo / ContactOut / Seamless output 
 
 ### What to do instead
 
-1. **Apollo is the working path.** `APOLLO_API_KEY` is configured and authenticating
-   (HTTP 200 on the last verify run). Blank-email targets resolve through it at run time and
-   are upgraded to `apollo_verified`, which the guard accepts. This is why the targets are
-   blanked rather than filled with guesses.
-2. **The two genuinely published addresses are in use** — FASTSIGNS' `franchiseinfo@` and
-   MOO's `inquiries@`, marked `published_contact`. Both were confirmed to clear the guard;
-   a generic `info@` still does not, even when published, which is intended.
-3. **Web forms and LinkedIn are the honest fallback** for the rest. Every target already
-   carries a LinkedIn URL. That is a different channel from this script, not a gap in it.
+1. **Published addresses first.** FASTSIGNS' `franchiseinfo@` and MOO's `inquiries@`
+   are marked `published_contact`. Both clear the send guard. A generic `info@` still
+   does not, even when published, which is intended.
+2. **CRM / HubSpot before Apollo.** `scripts/lib/lead-email-resolver.ts` reuses a
+   Supabase `leads` row whose `metadata.source` is already trusted, then a HubSpot
+   contact with inbound/opt-in provenance (`HUBSPOT_TOKEN`). It never upgrades a
+   guessed or paid-search HubSpot row to a trusted source.
+3. **Apollo is optional and must degrade.** If `APOLLO_API_KEY` is unset, or the
+   account returns `403 API_INACCESSIBLE`, remaining lookups are skipped once with
+   a clear reason. Do **not** buy an Apollo upgrade on the $0 path — fill the
+   leads table from CRM or a published company address instead.
+4. **Web forms and LinkedIn** stay the honest fallback for everyone else.
+
+### One live dispatch (QRON only, cap 2)
+
+```bash
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=true
+# after a clean dry-run log, and only if vars.OWNER_LIVE_SEND=true:
+gh workflow run b2b-outreach.yml -R undone0603/authichain-unified \
+  -f segment=qron -f dry_run=false
+```

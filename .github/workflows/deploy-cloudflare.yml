@@ -89,6 +89,10 @@ jobs:
             \( -name dist -o -name out -o -name .open-next -o -name .next -o -name build \) -print
           echo "=== next.config output ==="
           find . -name 'next.config.*' -print
+      # Publishes worker-app as authichain-edge-router. Does NOT bind
+      # STRIPE_WEBHOOK_* — those persist from wrangler secret put / the
+      # bind-stripe-webhook-secrets workflow. A reminted Dashboard secret
+      # will keep 400ing until that Worker secret is updated.
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app

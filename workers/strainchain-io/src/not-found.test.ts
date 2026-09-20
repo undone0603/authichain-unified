@@ -17,7 +17,7 @@ async function get(path: string) {
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
-  for (const path of ["/nope-xyz123", "/pricing", "/deep/unknown/path"]) {
+  for (const path of ["/nope-xyz123", "/deep/unknown/path"]) {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} should 404`);
     assert.match(await res.text(), /does not exist/);
@@ -27,13 +27,18 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
 test("the apex still renders the marketing page", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /StrainChain/);
+  const html = await res.text();
+  assert.match(html, /StrainChain/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /href="\/pricing"/);
+  assert.match(html, /--bg: #ffffff/);
 });
 
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("genetics/mendo-love-farms"));
+  assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {

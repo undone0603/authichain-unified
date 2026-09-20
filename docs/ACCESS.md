@@ -25,26 +25,27 @@ Do not add a “bypass for everyone” app on `*`. Leave the zone public.
 
 ### Keep Access on
 
-| Host / path | App name suggestion |
-|---|---|
-| `dashboard.authichain.com` | ac-dashboard |
-| `claw.authichain.com` | ac-claw |
-| `authichain.com/admin*` | ac-admin |
-| `authichain.com/dapp*` | ac-dapp (optional) |
-| Worker `*.workers.dev` ops scripts | existing |
+| Host / path                        | App name suggestion |
+| ---------------------------------- | ------------------- |
+| `dashboard.authichain.com`         | ac-dashboard        |
+| `claw.authichain.com`              | ac-claw             |
+| `agentz.authichain.com`            | ac-agentz           |
+| `authichain.com/admin*`            | ac-admin            |
+| `authichain.com/dapp*`             | ac-dapp (optional)  |
+| Worker `*.workers.dev` ops scripts | existing            |
 
 Policy on those: email allowlist (founder + operators). Not “everyone”.
 
 ### Public must answer 200
 
-| URL | Expect |
-|---|---|
-| `https://authichain.com/` | landing HTML |
-| `https://authichain.com/verify` | verify UI or 404 from app, **not** 302 to Access |
-| `https://authichain.com/.well-known/jwks.json` | `application/json` JWKS |
-| `https://govchain.us/onboard` | onboard form |
-| `https://strainchain.io/onboard` | onboard form |
-| `https://qron.space/` | studio landing |
+| URL                                            | Expect                                           |
+| ---------------------------------------------- | ------------------------------------------------ |
+| `https://authichain.com/`                      | landing HTML                                     |
+| `https://authichain.com/verify`                | verify UI or 404 from app, **not** 302 to Access |
+| `https://authichain.com/.well-known/jwks.json` | `application/json` JWKS                          |
+| `https://govchain.us/onboard`                  | onboard form                                     |
+| `https://strainchain.io/onboard`               | onboard form                                     |
+| `https://qron.space/`                          | studio landing                                   |
 
 ```
 curl -sI https://authichain.com/verify

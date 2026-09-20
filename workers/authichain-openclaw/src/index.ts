@@ -12,10 +12,13 @@
  * This Worker exposes:
  *   POST /webhook/openclaw   — receives inbound messages from OpenClaw
  *                              gateway (channel messages routed to AgentZ)
- *   POST /command            — sends a command to AgentZ and returns result
- *   GET  /health             — liveness check
- *   GET  /agents             — lists AgentZ agents (proxy to AgentZ API)
- *   POST /architect/cycle    — triggers the Unified Architect cycle
+ *   POST /command            — AgentZ/CLI command against AgentZ (Bearer)
+ *   POST /notify             — AgentZ → OpenClaw outbound notify (Bearer)
+ *   GET  /health             — liveness check (public)
+ *   GET  /gateway/status     — bridge config status (Bearer)
+ *   GET  /agents             — lists AgentZ agents (proxy, Bearer)
+ *   GET  /workflows          — lists AgentZ workflows (proxy, Bearer)
+ *   POST /architect/cycle    — triggers the Unified Architect cycle (Bearer)
  *
  * The OpenClaw gateway forwards messages it receives from connected
  * channels (WhatsApp, Telegram, etc.) to this webhook. The Worker parses
@@ -26,6 +29,13 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { AGENTZ_PATHS } from "./agentz-paths";
+import {
+  isFailClosedWorkflow,
+  parseModeArgs,
+  resolveAgentzMode,
+  withModeQuery,
+} from "./agentz-mode";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,11 +50,11 @@ interface Bindings {
 }
 
 interface OpenClawMessage {
-  channel: string;       // "whatsapp" | "telegram" | "slack" | "discord" | ...
-  sender: string;        // user identifier on the channel
-  text: string;          // message body
-  session_id: string;   // OpenClaw session id
-  timestamp: string;    // ISO 8601
+  channel: string; // "whatsapp" | "telegram" | "slack" | "discord" | ...
+  sender: string; // user identifier on the channel
+  text: string; // message body
+  session_id: string; // OpenClaw session id
+  timestamp: string; // ISO 8601
   metadata?: Record<string, unknown>;
 }
 
@@ -53,15 +63,80 @@ interface OpenClawMessage {
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
 
+// ── Auth helpers (AgentZ → bridge + CLI) ──────────────────────────────────────
+
+function bearerOk(c: {
+  req: { header: (n: string) => string | undefined };
+  env: Bindings;
+}): boolean {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader) return false;
+  const key = c.env.OPENCLAW_API_KEY;
+  const agentzKey = c.env.AGENTZ_API_KEY;
+  if (key && authHeader === `Bearer ${key}`) return true;
+  if (agentzKey && authHeader === `Bearer ${agentzKey}`) return true;
+  return false;
+}
+
+function unauthorized(c: any) {
+  return c.json({ error: "unauthorized" }, 401);
+}
+
+function isLocalUrl(url: string): boolean {
+  try {
+    const u = new URL(url.replace(/^ws/i, "http"));
+    return (
+      u.hostname === "localhost" ||
+      u.hostname === "127.0.0.1" ||
+      u.hostname === "0.0.0.0" ||
+      u.hostname.endsWith(".local")
+    );
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(url);
+  }
+}
+
+function redactUrl(url: string): string {
+  try {
+    const u = new URL(url.replace(/^ws/i, "http"));
+    return `${u.protocol}//${u.host}/…`;
+  } catch {
+    return "(unparseable)";
+  }
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
-app.get("/health", (c) => {
+app.get("/health", c => {
   return c.json({
     status: "ok",
     service: "authichain-openclaw",
     openclaw_gateway: c.env.OPENCLAW_GATEWAY_URL ? "configured" : "not_set",
     agentz_api: c.env.AGENTZ_API_URL ? "configured" : "not_set",
-    version: "1.0.0",
+    version: "1.1.0",
+  });
+});
+
+app.get("/gateway/status", c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  const gw = (c.env.OPENCLAW_GATEWAY_URL || "").trim();
+  const agentz = (c.env.AGENTZ_API_URL || "").trim();
+  return c.json({
+    status: "ok",
+    service: "authichain-openclaw",
+    version: "1.1.0",
+    openclaw_gateway: gw ? "configured" : "not_set",
+    agentz_api: agentz ? "configured" : "not_set",
+    openclaw_gateway_hint: gw ? redactUrl(gw) : null,
+    agentz_api_hint: agentz ? redactUrl(agentz) : null,
+    notes: [
+      gw && isLocalUrl(gw)
+        ? "OPENCLAW_GATEWAY_URL looks local — Cloudflare Workers cannot reach localhost. Use a public tunnel/VPS URL."
+        : null,
+      agentz && isLocalUrl(agentz)
+        ? "AGENTZ_API_URL looks local — Workers cannot reach localhost. Point at a reachable FastAPI host."
+        : null,
+    ].filter(Boolean),
   });
 });
 
@@ -70,7 +145,7 @@ app.get("/health", (c) => {
 async function agentzFetch(
   env: Bindings,
   path: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<Response> {
   const base = env.AGENTZ_API_URL.replace(/\/$/, "");
   const timeout = parseInt(env.AGENTZ_TIMEOUT_MS || "30000", 10);
@@ -93,9 +168,81 @@ async function agentzFetch(
   }
 }
 
+// ── OpenClaw gateway outbound (Worker → gateway hooks) ───────────────────────
+
+async function openclawNotify(
+  env: Bindings,
+  body: {
+    text: string;
+    mode?: string;
+    channel?: string;
+    to?: string;
+    idempotency_key?: string;
+  }
+): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const gw = (env.OPENCLAW_GATEWAY_URL || "").trim();
+  if (!gw) {
+    return {
+      ok: false,
+      status: 503,
+      data: { error: "OPENCLAW_GATEWAY_URL not_set" },
+    };
+  }
+  if (isLocalUrl(gw)) {
+    return {
+      ok: false,
+      status: 503,
+      data: {
+        error:
+          "OPENCLAW_GATEWAY_URL is local; Workers cannot reach localhost. Use a public tunnel/VPS.",
+      },
+    };
+  }
+
+  const httpBase = gw
+    .replace(/^wss:/i, "https:")
+    .replace(/^ws:/i, "http:")
+    .replace(/\/$/, "");
+
+  const wakeMode = body.mode === "next-heartbeat" ? "next-heartbeat" : "now";
+  const payload: Record<string, unknown> = {
+    text: body.text,
+    mode: wakeMode,
+  };
+  const useAgent = Boolean(body.channel || body.to);
+  const path = useAgent ? "/hooks/agent" : "/hooks/wake";
+  if (useAgent) {
+    payload.message = body.text;
+    payload.deliver = true;
+    if (body.channel) payload.channel = body.channel;
+    if (body.to) payload.to = body.to;
+    payload.wakeMode = wakeMode;
+    if (body.idempotency_key)
+      payload.sessionKey = `hook:agentz:${body.idempotency_key}`;
+  }
+
+  const res = await fetch(`${httpBase}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.OPENCLAW_API_KEY}`,
+      "x-openclaw-token": env.OPENCLAW_API_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+  const raw = await res.text();
+  let data: unknown = raw;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { raw };
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 // ── OpenClaw webhook receiver ────────────────────────────────────────────────
 
-app.post("/webhook/openclaw", async (c) => {
+app.post("/webhook/openclaw", async c => {
   // Verify the request is from the OpenClaw gateway
   const authHeader = c.req.header("Authorization");
   if (!authHeader || authHeader !== `Bearer ${c.env.OPENCLAW_API_KEY}`) {
@@ -149,8 +296,10 @@ function parseIntent(text: string): Intent {
   const trimmed = text.trim().toLowerCase();
 
   if (trimmed === "help" || trimmed === "?") return { type: "help" };
-  if (trimmed === "agents" || trimmed === "list agents") return { type: "list_agents" };
-  if (trimmed === "workflows" || trimmed === "list workflows") return { type: "list_workflows" };
+  if (trimmed === "agents" || trimmed === "list agents")
+    return { type: "list_agents" };
+  if (trimmed === "workflows" || trimmed === "list workflows")
+    return { type: "list_workflows" };
 
   if (trimmed.startsWith("architect") || trimmed.startsWith("run architect")) {
     const args = trimmed.split(/\s+/).slice(1);
@@ -171,11 +320,27 @@ function parseIntent(text: string): Intent {
 
 // ── Dispatchers ───────────────────────────────────────────────────────────────
 
-async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
+async function dispatchWorkflow(c: any, workflowId: string, args: string[]) {
+  const parsed = parseModeArgs(args);
+  const failClosed = isFailClosedWorkflow(workflowId, "workflow");
+  const { mode, coerced } = resolveAgentzMode({
+    requested: parsed.mode,
+    live: parsed.live,
+    failClosed,
+  });
+  const path = withModeQuery(
+    AGENTZ_PATHS.runWorkflow(workflowId),
+    mode,
+    parsed.live
+  );
   try {
-    const res = await agentzFetch(c.env, `/api/workflows/${workflowId}/run`, {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode: "confirm" }),
+      body: JSON.stringify({
+        mode,
+        live: parsed.live,
+        coerced_to_dry_run: coerced,
+      }),
     });
 
     if (!res.ok) {
@@ -192,21 +357,37 @@ async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
       result: data,
     });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
-async function dispatchArchitectCycle(c: any, _args: string[]) {
+async function dispatchArchitectCycle(c: any, args: string[]) {
+  const parsed = parseModeArgs(args);
+  const { mode, coerced } = resolveAgentzMode({
+    requested: parsed.mode,
+    live: parsed.live,
+    failClosed: true,
+  });
+  const path = withModeQuery(AGENTZ_PATHS.architectCycle, mode, parsed.live);
   try {
-    // The architect endpoint is on the AgentZ Python API
-    const res = await agentzFetch(c.env, "/api/architect/cycle", {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode: "dry-run" }),
+      body: JSON.stringify({
+        mode,
+        live: parsed.live,
+        coerced_to_dry_run: coerced,
+      }),
     });
 
     if (!res.ok) {
       const err = await res.text();
-      return c.json({ response: `Architect cycle failed: ${err}`, error: true });
+      return c.json({
+        response: `Architect cycle failed: ${err}`,
+        error: true,
+      });
     }
 
     const data = (await res.json()) as {
@@ -230,39 +411,67 @@ async function dispatchArchitectCycle(c: any, _args: string[]) {
 
     return c.json({ response: summary, result: data });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 async function listAgents(c: any) {
   try {
-    const res = await agentzFetch(c.env, "/api/agents");
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.agents);
     const data = (await res.json()) as {
       agents?: Array<{ name: string; system_prompt?: string }>;
     };
-    const lines = data.agents?.map((a) => `  • ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`) || [];
-    return c.json({ response: `Registered agents (${data.agents?.length || 0}):\n${lines.join("\n")}` });
+    const lines =
+      data.agents?.map(
+        a => `  • ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`
+      ) || [];
+    return c.json({
+      response: `Registered agents (${data.agents?.length || 0}):\n${lines.join("\n")}`,
+    });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 async function listWorkflows(c: any) {
   try {
-    const res = await agentzFetch(c.env, "/api/workflows");
+    const res = await agentzFetch(c.env, AGENTZ_PATHS.workflows);
     const data = (await res.json()) as {
       workflows?: Array<{ id: string; title: string }>;
     };
-    const lines = data.workflows?.map((w) => `  • ${w.id}: ${w.title}`) || [];
-    return c.json({ response: `Workflows (${data.workflows?.length || 0}):\n${lines.join("\n")}` });
+    const lines = data.workflows?.map(w => `  • ${w.id}: ${w.title}`) || [];
+    return c.json({
+      response: `Workflows (${data.workflows?.length || 0}):\n${lines.join("\n")}`,
+    });
   } catch (e: any) {
-    return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
+    return c.json({
+      response: `AgentZ unreachable: ${e.message}`,
+      error: true,
+    });
   }
 }
 
 // ── Direct command endpoint (for CLI / API calls, not OpenClaw) ───────────────
 
-app.post("/command", async (c) => {
+app.get("/agents", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  return await listAgents(c);
+});
+
+app.get("/workflows", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+  return await listWorkflows(c);
+});
+
+app.post("/command", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+
   const body = await c.req.json().catch(() => ({}));
   const { command, args } = body;
 
@@ -279,22 +488,84 @@ app.post("/command", async (c) => {
       return await listAgents(c);
     case "list_workflows":
       return await listWorkflows(c);
+    case "help":
+      return c.json({ response: formatHelp() });
     default:
       return c.json({ error: `unknown command: ${command}` }, 400);
   }
 });
 
-// ── Architect cycle endpoint ──────────────────────────────────────────────────
+app.post("/notify", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
 
-app.post("/architect/cycle", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const mode = body.mode || "dry-run";
-  const goal = body.goal || "Assess fleet health, fix failing workflows, and run priority jobs.";
+  const text = (body as { text?: string }).text;
+  if (!text || typeof text !== "string") {
+    return c.json({ error: "text required" }, 400);
+  }
+
+  const dryRun = Boolean((body as { dry_run?: boolean }).dry_run);
+  const payload = {
+    text,
+    mode: (body as { mode?: string }).mode,
+    channel: (body as { channel?: string }).channel,
+    to: (body as { to?: string }).to,
+    idempotency_key: (body as { idempotency_key?: string }).idempotency_key,
+  };
+
+  if (dryRun) {
+    return c.json({
+      ok: true,
+      dry_run: true,
+      would_notify: {
+        ...payload,
+        gateway: c.env.OPENCLAW_GATEWAY_URL
+          ? redactUrl(c.env.OPENCLAW_GATEWAY_URL)
+          : "not_set",
+      },
+    });
+  }
 
   try {
-    const res = await agentzFetch(c.env, "/api/architect/cycle", {
+    const result = await openclawNotify(c.env, payload);
+    return c.json(
+      { ok: result.ok, status: result.status, result: result.data },
+      result.ok ? 200 : (result.status as 502 | 503)
+    );
+  } catch (e: any) {
+    return c.json({ ok: false, error: e.message }, 502);
+  }
+});
+
+// ── Architect cycle endpoint ──────────────────────────────────────────────────
+
+app.post("/architect/cycle", async c => {
+  if (!bearerOk(c)) return unauthorized(c);
+
+  const body = await c.req.json().catch(() => ({}));
+  const { mode, coerced } = resolveAgentzMode({
+    requested: body.mode || "dry-run",
+    live: Boolean(body.live),
+    failClosed: true,
+  });
+  const goal =
+    body.goal ||
+    "Assess fleet health, fix failing workflows, and run priority jobs.";
+  const path = withModeQuery(
+    AGENTZ_PATHS.architectCycle,
+    mode,
+    Boolean(body.live)
+  );
+
+  try {
+    const res = await agentzFetch(c.env, path, {
       method: "POST",
-      body: JSON.stringify({ mode, goal }),
+      body: JSON.stringify({
+        mode,
+        goal,
+        live: Boolean(body.live),
+        coerced_to_dry_run: coerced,
+      }),
     });
     const data = (await res.json()) as any;
     return c.json(data);
@@ -312,11 +583,15 @@ function formatHelp(): string {
     "  help              — Show this help",
     "  agents            — List registered AgentZ agents",
     "  workflows         — List available workflows",
-    "  run <id>          — Run a workflow by ID (e.g. run stripe_webhook)",
-    "  architect         — Run an architect cycle (dry-run by default)",
+    "  run <id> [dry-run|confirm|auto] [--live]",
+    "                    — Run a workflow. Default dry-run. Architect / *email*",
+    "                      stay dry-run unless --live is explicit.",
+    "  architect [--live] — Architect cycle (dry-run unless --live)",
     "",
     "Messages from any connected channel (WhatsApp, Telegram, Slack, etc.)",
     "are routed here by the OpenClaw gateway.",
+    "",
+    "AgentZ can call back via POST /notify and POST /command on this Worker.",
   ].join("\n");
 }
 

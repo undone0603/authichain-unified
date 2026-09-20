@@ -29,7 +29,9 @@ describe("resolveOwner", () => {
   });
 
   it("routes /_next/* to marketing (static passthrough)", () => {
-    expect(resolveOwner("/_next/static/chunk.js", marketingRoutes)).toBe("marketing");
+    expect(resolveOwner("/_next/static/chunk.js", marketingRoutes)).toBe(
+      "marketing"
+    );
   });
 
   it("routes exact dynamic-handler paths to dynamic", () => {
@@ -39,9 +41,16 @@ describe("resolveOwner", () => {
     expect(resolveOwner("/gallery", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/s", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/p", marketingRoutes)).toBe("dynamic");
-    expect(resolveOwner("/brand/qron/artwork", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/brand/qron/artwork", marketingRoutes)).toBe(
+      "dynamic"
+    );
     expect(resolveOwner("/onboard", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/story", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/dashboard", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/dapp", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/generate", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/login", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/authenticate", marketingRoutes)).toBe("dynamic");
   });
 
   it("routes nested paths under a dynamic-handler path to dynamic (prefix match)", () => {
@@ -49,18 +58,24 @@ describe("resolveOwner", () => {
     expect(resolveOwner("/s/abc123", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/p/serial-1", marketingRoutes)).toBe("dynamic");
     expect(resolveOwner("/onboard/received", marketingRoutes)).toBe("dynamic");
-    expect(resolveOwner("/story/00000000-0000-4000-8000-000000000001", marketingRoutes)).toBe("dynamic");
+    expect(
+      resolveOwner(
+        "/story/00000000-0000-4000-8000-000000000001",
+        marketingRoutes
+      )
+    ).toBe("dynamic");
   });
 
   it("routes SPA-owned prefixes to spa", () => {
-    expect(resolveOwner("/dashboard", marketingRoutes)).toBe("spa");
     expect(resolveOwner("/admin/products", marketingRoutes)).toBe("spa");
     expect(resolveOwner("/qr-gallery", marketingRoutes)).toBe("spa");
   });
 
   it("does not let /administrator falsely match the /admin prefix", () => {
     // boundary-aware matching: "/administrator" must NOT match "/admin"
-    expect(resolveOwner("/administrator", marketingRoutes)).toBe("spa-fallback");
+    expect(resolveOwner("/administrator", marketingRoutes)).toBe(
+      "spa-fallback"
+    );
   });
 
   it("prefers marketing-static over SPA for the D1-resolved collisions", () => {
@@ -89,7 +104,13 @@ describe("resolveOwner", () => {
   });
 
   it("excludes the D1 marketing-static collisions from SPA_OWNED_PREFIXES", () => {
-    for (const collision of ["/demo", "/pricing", "/qr-codes", "/supply-chain", "/white-label"]) {
+    for (const collision of [
+      "/demo",
+      "/pricing",
+      "/qr-codes",
+      "/supply-chain",
+      "/white-label",
+    ]) {
       expect(SPA_OWNED_PREFIXES).not.toContain(collision);
     }
   });

@@ -1,0 +1,87 @@
+name: Genesis Cron (safe tick)
+
+# Weekday tick for GET /api/automation/cron on authichain-edge-router.
+#
+# This is the durable SAFE loop. It does not enable outreach, gov-mint,
+# worker-app GROUP B wrangler crons, or AgentZ cold email. AgentZ
+# orchestration is a separate workflow (agentz-orchestration.yml).
+# See docs/operations/PUBLIC_LOOP_FREEZE.md and worker-app/wrangler.toml.
+#
+# autonomous-business-cycle.yml retired its schedule on 2026-09-08 and is
+# dispatch-only. Cloudflare hourly [triggers] in worker-app/wrangler.toml
+# stay commented on purpose (avoid double-fire / GROUP B outreach).
+#
+# Owner: GitHub Actions secret CRON_SECRET must match the Cloudflare
+# Worker secret on authichain-edge-router. Reconcile if either is rotated.
+
+on:
+  schedule:
+    # Every 6 hours, Monday–Friday UTC
+    - cron: "0 0,6,12,18 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: genesis-cron
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GENESIS_URL: https://authichain.com/api/automation/cron
+
+jobs:
+  genesis:
+    name: Call genesis cron
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repo secret is not set. It must match the Cloudflare Worker secret on authichain-edge-router."
+            exit 1
+          fi
+
+      - name: GET /api/automation/cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          set +e
+          code=$(curl --silent --show-error --output /tmp/resp.json \
+            --write-out '%{http_code}' \
+            --request GET "$GENESIS_URL" \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            --header "Accept: application/json")
+          curl_status=$?
+          set -e
+
+          echo "HTTP ${code:-000} GET $GENESIS_URL"
+          if [ -f /tmp/resp.json ]; then
+            cat /tmp/resp.json
+            echo
+          fi
+
+          if [ "$curl_status" -ne 0 ]; then
+            echo "::error::curl failed (exit ${curl_status}) talking to $GENESIS_URL"
+            exit 1
+          fi
+
+          if [ "${code:-000}" != "200" ]; then
+            echo "::error::$GENESIS_URL returned HTTP ${code:-000} (expected 200)"
+            if [ "${code:-000}" = "401" ]; then
+              echo "::error::CRON_SECRET here must match the Cloudflare Worker secret on authichain-edge-router. Reconcile the two, then re-dispatch."
+            fi
+            exit 1
+          fi
+
+          if ! jq -e '.status == "genesis"' /tmp/resp.json >/dev/null; then
+            echo "::error::Response JSON status is not genesis"
+            exit 1
+          fi
+
+          echo "OK [200] status=genesis"

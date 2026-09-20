@@ -752,3 +752,183 @@ Noted here per instructions, not edited into `SPEC.md`:
   the section.
 
 ---
+
+## 2026-09-20
+
+General web search again this week. `eprint.iacr.org`, `arxiv.org`, `medium.com`,
+`untp.unece.org`, and `bpma.co.uk` were all blocked by the network egress proxy on direct fetch
+attempts this session — `eprint.iacr.org` specifically now blocked on every one of the five weeks
+this radar has tried it. Items sourced from those domains below are read via search-result
+summaries only, not the primary document, and flagged individually. Absence of a finding below
+means "not found by this search," not "did not happen."
+
+### What actually moved this week
+
+- **A new, directly on-point competitor surfaced this week that no prior entry had found: the UN
+  Transparency Protocol (UNTP), built by UNECE/UNCTAD.** UNTP defines "a suite of interoperable
+  digital credentials and discovery mechanisms that enable verifiable supply-chain transparency at
+  scale" — a UN standard digital product passport, a digital conformity credential, and a
+  traceability-event structure spanning a value chain
+  ([UNCTAD](https://unctad.org/news/unlocking-transparency-promise-un-transparency-protocol-global-trade),
+  [UNECE spec index](https://untp.unece.org/docs/specification/), fetch of the primary site blocked
+  this session, read via search-result summary). Per search summaries, UNTP mandates **W3C VC Data
+  Model 2.0 using the JSON-LD Compacted Document Form with the W3C VC JOSE/COSE *enveloping* proof
+  mechanism** — not the embedded Data Integrity proof (`Ed25519Signature2020`) our spec uses. That
+  is a real, specific divergence between two VC-based provenance specs solving the same class of
+  problem: UNTP wraps the credential in a signed JWT/JOSE envelope, ours signs a JCS-canonicalized
+  (RFC 8785) JSON document directly per §3.2. Whether the two are cross-verifiable, or only
+  cross-verifiable with extra tooling, was not established this week — no primary UNTP text was
+  read, so treat this as a confirmed *difference in mechanism*, not yet a confirmed *interop
+  problem*. UNTP v1.0 was reported, as of late summer, to be targeting release "by 1 September
+  2026," "suitable for pre-production pilot implementations"; no independent confirmation was found
+  this week that v1.0 actually shipped on that date, so treat it as targeted, not confirmed
+  shipped. Named backers/implementers found this week: **Transmute** — already an adjacent
+  competitor this radar tracks — published its own explainer on UNTP digital product passports
+  ([Medium, transmute-techtalk](https://medium.com/transmute-techtalk/introducing-the-un-transparency-protocol-digital-product-passports-3e115213e64c),
+  fetch blocked this session, read via search-result summary only), and the EU's own textiles
+  transition-pathways platform is tracking UNTP as relevant to EU DPP implementation
+  ([transition-pathways.europa.eu](https://transition-pathways.europa.eu/textiles/news/united-nations-transparency-protocol-untp)).
+  A UN institutional backer aligning the same underlying data model (W3C VC) to the same problem
+  (physical-item/supply-chain provenance) as our spec, with a named vendor implementer already
+  writing about it, is a materially bigger signal than anything else logged in this radar to date
+  — see awareness targets below.
+- **The UK GOV.UK digital product record call for evidence closes tomorrow, 21 September 2026**,
+  still with no news this week beyond confirmation of the closing date and topics covered
+  ([GOV.UK](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy),
+  [LexisNexis summary](https://www.lexisnexis.co.uk/legal/news/dbist-dbt-launch-call-for-evidence-on-digital-product-records-policy)).
+  This is the fifth straight entry flagging it, and the window closes before this radar's next
+  scheduled run. Stated plainly: it was not acted on while open. The honest framing going forward
+  is not "still actionable" but "missed" — future entries should watch for the government's
+  published response/summary of evidence instead, which is the next real opportunity to be cited
+  or to comment.
+- **FprEN 18246 remains reported "at formal vote," still not confirmed published**, consistent
+  with every prior week back to 2026-09-02
+  ([standards.iteh.ai catalog](https://standards.iteh.ai/catalog/standards/cen/9d9fbc1f-0c14-4e84-ab6c-f233e3f19398/pren-18246),
+  [renoon.com](https://www.renoon.com/blog/digital-product-passport-standards-cen-cenelec-publication-in-may-2026)).
+  One source this week states the Commission's own roadmap now expects both outstanding DPP
+  standards (FprEN 18239, FprEN 18246) resolved "in September 2026" — the same "expected this
+  month" framing carried for three weeks running, not new confirmation of publication.
+- **W3C Confidence Method and Render Method status is contradictory again this week, same pattern
+  as 2026-09-11.** The working group charter states both reach Recommendation status in September
+  2026, but other search results this week describe Render Method as still undergoing horizontal
+  review in late August/early September with an open a11y-review window through 2026-10-12
+  ([w3c/a11y-request#176](https://github.com/w3c/a11y-request/issues/176),
+  [w3cping/privacy-request#225](https://github.com/w3cping/privacy-request/issues/225)), and
+  Confidence Method's own most recent dated Working Draft found is 2025-10-30
+  ([w3.org/TR/2025/WD-vc-confidence-method-20251030](https://www.w3.org/TR/2025/WD-vc-confidence-method-20251030/)).
+  A review window explicitly open until mid-October is inconsistent with "already a Recommendation"
+  today. Carrying forward the same caution as last week: treat both as still pre-Recommendation,
+  target unconfirmed, until a primary `/TR/` page with a dated Recommendation header is actually
+  read.
+- **The EU DPP Registry's launch date is now reported inconsistently across sources.** Prior
+  entries (2026-08-19 onward) cited the Commission's own page for a **2026-07-20** operational
+  date; a search result surfaced this week states the registry "launched... on September 2nd,
+  2026." The primary Commission announcement page was not re-read this week to resolve the
+  discrepancy, and the source making the September claim (bpma.co.uk) was blocked on direct fetch.
+  Flagging the conflict rather than picking a date: this may be two different things (the Registry
+  itself vs. a later public/testing-environment milestone) conflated by one summary, but it should
+  not be repeated as fact in either direction without reading a primary source first.
+- **The W3C/GS1 "E-commerce for Humans and AI Agents" workshop (Zurich, 2026-09-08–09) confirmed
+  no formal outcomes report**, consistent with the 2026-09-11 entry's finding
+  ([Forkast](https://forkast.news/what-agent-commerce-needs-from-product-data-lessons-from-the-w3c-gs1-workshop/)).
+  New this week: Forkast's writeup names Google, Shopify, OpenAI, and Mars as participants framing
+  the "last meter" problem (an agent completing a transaction without being able to definitively
+  identify the exact physical item involved). No new information on outputs beyond last week —
+  still nothing published to react to, only participants and framing.
+- **The IACR C2PA security-analysis paper (eprint 2026/804) is unread in full for a fifth
+  consecutive week** — both `eprint.iacr.org` and, newly this week, `arxiv.org` (blocked for the
+  first time this radar has tried it directly, for the companion piece 2604.24890) failed on
+  direct fetch. Per search-result summaries only: the specific mechanism behind the
+  timestamp-tampering finding reported 2026-09-11 is that "nothing in the signed data references
+  the timestamp," so a trusted timestamp can be stripped or swapped without invalidating the
+  content signature — a structural gap in how the layers of the C2PA proof compose, not a bug in
+  one implementation. Stated plainly, per the honesty rules: this radar has now cited this paper
+  five times without reading it once, because the network path to it is blocked in this
+  environment every week it has been tried. That is worth surfacing to whoever operates this
+  routine directly, since a citable independent security analysis of a major adjacent spec is
+  exactly the kind of source this radar exists to actually verify, not just relay.
+- **Quiet or not found this search:** no dated Spherity or OriginTrail news specific to this week
+  (OriginTrail's most recent dated item remains the 21 August Election Guardian launch, already
+  logged 2026-09-02). No IBM TrustChain or Avery Dennison atma.io news. EPCIS 2.1 is reported still
+  in progress, targeted for "end of 2026" — no version bump this week. GS1 Digital Link stays at
+  the already-reported v1.7.0 (August 2026). The Global Digital Collaboration Conference (Geneva,
+  2026-09-01–03) was covered only in general framing ("trust as infrastructure," cross-border
+  digital wallets) — no item found connecting it specifically to physical-item provenance or to
+  our narrow scope.
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged, and UNTP's JOSE-enveloping-proof
+  choice doesn't itself change this comparison (a JOSE-signed VC can also be checked with just a
+  public key), but it's the first adjacent spec found using a *different* proof mechanism for the
+  *same* data model, which is a new and more precise kind of divergence than "they need a server
+  and we don't."
+- **Three verdicts, no score** — unchanged; still can't be sharpened against Confidence Method
+  while its status stays unconfirmed.
+- **Adversarial conformance suite validated against deliberately broken implementations** — no
+  equivalent found for UNTP this week either; worth checking directly once its own conformance
+  material (if any) is actually readable.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged. UNTP is a
+  UN-governed open specification, not a vendor platform, so this contrast doesn't apply to UNTP the
+  way it does to Spherity/Transmute/OriginTrail as products — a different, institutional kind of
+  competition for "the reference definition" than a vendor comparison.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **No crypto-agility or post-quantum story** — unchanged.
+- **No bridging to the EU's ESDC/ISO-IEC-20248 vocabulary** — unchanged; FprEN 18246 still not
+  published.
+- **No access-tiering model** — unchanged from 2026-09-09.
+- **New this week: no stated position on proof-mechanism interoperability.** `SPEC.md` §3.2
+  mandates an embedded Data Integrity proof over JCS-canonicalized bytes and says nothing about
+  the JOSE/COSE enveloping-proof form that W3C VC 2.0 also permits and that UNTP has now chosen.
+  Two specs both claiming "we implement W3C VC 2.0" while using incompatible proof mechanisms is
+  exactly the kind of silent divergence our own conformance suite's canonicalization vectors exist
+  to catch *within* one proof mechanism — this is the same failure mode one level up, *between*
+  proof mechanisms, and today nothing in `SPEC.md` even names it as a choice that was made.
+
+### Named awareness targets
+
+- **UN Transparency Protocol (UNECE/UNCTAD)** —
+  [untp.unece.org](https://untp.unece.org/docs/specification/) (fetch blocked this session, read
+  via search summary; revisit directly next week). This is now the single most actionable
+  awareness target this radar has found: a UN-governed spec using the same base standard (W3C VC)
+  for the same problem class (physical-item provenance / supply-chain transparency), already being
+  written about by an adjacent competitor (Transmute) and tracked by an EU sectoral platform
+  (textiles). A short, direct technical comparison — proof mechanism, verdict/status model,
+  offline-verifiability claims — read from UNTP's primary spec once fetchable, is higher-leverage
+  right now than anything else on this radar, including the closing UK consultation.
+- **UK GOV.UK digital product record call for evidence** —
+  [gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy).
+  Closes tomorrow, 21 September 2026, unsubmitted through five straight entries. Demoted from "top
+  target" this week per the honesty rules — it is closing, not open — with the government's
+  eventual published summary of responses as the next real touchpoint to watch for.
+- **W3C `vc-confidence-method` and `vc-render-method` repos** — unchanged as ongoing watches:
+  [github.com/w3c/vc-confidence-method](https://github.com/w3c/vc-confidence-method),
+  [w3.org/TR/vc-render-method](https://www.w3.org/TR/vc-render-method/). Horizontal review windows
+  open into mid-October make this the point to check back on Recommendation status.
+- **IACR 2026/804 / UMBC CISA group** —
+  [cisa.umbc.edu](https://cisa.umbc.edu/verifying-provenance-of-digital-media-security-analysis-of-c2pa-and-its-implementation/).
+  Fifth straight week blocked from direct read in this environment; flagged above as an
+  infrastructure limitation worth escalating rather than continuing to cite secondhand indefinitely.
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over, unresolved: `confidenceMethod`-style interaction with the §5.1 verdict; no named
+  mechanism for v0.2 `credentialStatus` revocation; Ed25519-only with no crypto-agility statement;
+  no bridging to the EU's emerging ESDC/ISO-IEC-20248 vocabulary; no stated scope boundary on the
+  §6 no-auth requirement relative to the EU's tiered access model.
+- New this week: `SPEC.md` §2–3 name exactly one proof mechanism (embedded Data Integrity,
+  `Ed25519Signature2020`, JCS-canonicalized per RFC 8785) with no acknowledgment that W3C VC 2.0
+  also defines a JOSE/COSE enveloping-proof form, which at least one other VC-based provenance
+  spec (UNTP) has chosen instead. Worth a short note in a future revision naming the choice
+  explicitly — e.g., "this specification defines the embedded-proof profile of VC 2.0; an
+  enveloping-proof credential is out of scope for a v0.1 conformant verifier" — so the omission
+  reads as a deliberate profile choice rather than an unnoticed gap once a reader is comparing the
+  two specs side by side.
+
+---

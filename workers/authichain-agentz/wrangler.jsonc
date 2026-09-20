@@ -1,0 +1,48 @@
+{
+  "name": "authichain-agentz",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-19",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "pattern": "agentz.authichain.com/*",
+      "zone_name": "authichain.com"
+    }
+  ],
+  // Worker secrets (forwarded into the container — names match
+  // agentz.core.credentials.get / CRED_KEY_TO_ENV):
+  //   AGENT_SECRET                 — get("agent_secret")
+  //   SUPABASE_URL                 — get("supabase_url")
+  //   SUPABASE_SERVICE_KEY         — alias accepted by this Worker
+  //   SUPABASE_SERVICE_ROLE_KEY    — get("supabase_service_key")
+  //
+  // Keep Cloudflare Access on agentz.authichain.com (do not bypass).
+  // Do not invent OPENCLAW_GATEWAY_URL here; that stays owner-set on claw.
+  "containers": [
+    {
+      "class_name": "AgentZContainer",
+      // API image (uvicorn :8000). Compose CLI stays Dockerfile.agentz.
+      "image": "./Dockerfile",
+      "image_build_context": "../..",
+      "max_instances": 2,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AGENTZ",
+        "class_name": "AgentZContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AgentZContainer"]
+    }
+  ]
+}

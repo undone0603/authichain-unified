@@ -23,6 +23,9 @@
 //   - GET/POST /onboard         -> pilot intake (validates, 303 to received)
 //   - GET /story/<id>           -> StoryMode for the launch-proof object or
 //     a product/certificate lookup
+//   - GET /dashboard|/dapp      -> authentic-economy console (not SPA 404)
+//   - GET /login|/authenticate  -> public console (SPA auth is not in ASSETS)
+//   - GET/POST /generate        -> Living QR intake (qron.space CTA)
 //
 // Stubbed (serve the SPA shell; follow-ups, see task-3.3-report.md):
 //   - /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>
@@ -41,6 +44,9 @@ import {
 import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
+import { notifyPilotIntake } from "./onboard-notify";
+import { listedPlans } from "../src/lib/plans";
+import { PAYMENT_LINKS } from "../server/payment-links";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -97,7 +103,11 @@ function htmlDocument(opts: {
   );
 }
 
-function htmlResponse(c: Context, body: string, status: 200 | 404): Response {
+function htmlResponse(
+  c: Context,
+  body: string,
+  status: 200 | 400 | 404
+): Response {
   return c.html(body, status);
 }
 
@@ -491,50 +501,49 @@ const LANDING_CONTENT: Record<
 > = {
   authichain: {
     eyebrow: "Product Authentication",
-    headline: "Every Product Verified. Every Transaction Trusted.",
+    headline: "Issue seals. Bind products. Verify anywhere.",
     subhead:
-      "Blockchain-powered authentication with AI verification. NFT certificates, QR scanning, and supply chain transparency in minutes.",
+      "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
     features: [
       {
         icon: "🔐",
-        title: "ERC-721 Certificates",
-        desc: "Immutable product seals on Polygon blockchain. Cryptographic proof of authenticity with full provenance.",
+        title: "Signed seals",
+        desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
       },
       {
         icon: "📱",
-        title: "AI QR Verification",
-        desc: "5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) verifies authenticity in 2.1 seconds.",
+        title: "Issue → Bind → Verify",
+        desc: "Issue a seal, bind it to the product, verify from any camera. Agents can pay per call on /x402.",
       },
       {
         icon: "📊",
-        title: "Supply Chain Audit",
-        desc: "22 supply chain events tracked immutably: manufacturing, customs, QA, distribution, retail receipt.",
+        title: "EU DPP Readiness",
+        desc: "Live self-serve checkout via GET /api/checkout/dpp. $299 credited toward AuthiChain Basic on conversion.",
       },
       {
         icon: "🌍",
-        title: "Multi-Standard Compliance",
-        desc: "EU DPP, CSRD, EUDR, FDA DSCSA, USMCA, ISO 22005. One integration covers every requirement.",
+        title: "Estate pillars",
+        desc: "QRON generate, GovChain onboard, StrainChain onboard. No invented customer logos. No live gov-mint promise.",
       },
       {
         icon: "⚡",
-        title: "$0.004 Per Seal",
-        desc: "Industry-leading pricing. No setup fees. Monthly plans from $49 (Starter) to $1,999 (Enterprise).",
+        title: "Published prices",
+        desc: "Starter $29, Creator $99, EU DPP Readiness $299 — from the AuthiChain plan catalogue.",
       },
       {
         icon: "✅",
-        title: "Zero Dependencies",
-        desc: "Open protocol. Offline verification. No vendor lock-in. Run the verifier on your own machine.",
+        title: "x402 agent pay",
+        desc: "Secondary money path. $0.05 USDC on Base per verification. Public docs at /x402.",
       },
     ],
     stats: [
-      { value: "2.1s", label: "Verification Time" },
-      { value: "5", label: "AI Agents" },
-      { value: "22+", label: "Supply Events" },
+      { value: "Ed25519", label: "Signed seals" },
+      { value: "$299", label: "EU DPP Readiness" },
+      { value: "x402", label: "Agent micropayments" },
     ],
-    closingLine:
-      "Start protecting your products today. First seal included. No credit card required.",
-    primaryCta: { label: "Get Started Free", href: "/onboard" },
-    secondaryCta: { label: "Book a Demo", href: "mailto:hello@authichain.com" },
+    closingLine: "Start EU DPP Readiness on the live checkout path.",
+    primaryCta: { label: "Start DPP checkout", href: "/api/checkout/dpp" },
+    secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
     eyebrow: "AI QR Art",
@@ -798,7 +807,6 @@ function renderLanding(c: Context): Response {
   );
 }
 
-
 // --- /onboard - pilot intake -------------------------------------------------
 // Real intake, not a stub. GET renders a form. POST validates company,
 // contact, work email, vertical, and first product, then 303s to
@@ -817,11 +825,10 @@ const EMAIL_RE =
 
 function onboardFormHtml(error?: string): string {
   const errorBlock = error
-    ? "<p role=\"alert\">" + escapeHtml(error) + "</p>\n"
+    ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
     : "";
   const options = ONBOARD_VERTICALS.map(
-    (id) =>
-      '<option value="' + id + '">' + escapeHtml(id) + "</option>"
+    id => '<option value="' + id + '">' + escapeHtml(id) + "</option>"
   ).join("\n");
   return htmlDocument({
     title: "Onboard a Pilot | AuthiChain",
@@ -865,11 +872,22 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let productName = "";
   try {
     const form = await c.req.parseBody();
-    company = String(form.company || "").trim().slice(0, 80);
-    contactName = String(form.contactName || "").trim().slice(0, 80);
-    email = String(form.email || "").trim().toLowerCase().slice(0, 120);
-    vertical = String(form.vertical || "authichain").trim().toLowerCase();
-    productName = String(form.productName || "").trim().slice(0, 80);
+    company = String(form.company || "")
+      .trim()
+      .slice(0, 80);
+    contactName = String(form.contactName || "")
+      .trim()
+      .slice(0, 80);
+    email = String(form.email || "")
+      .trim()
+      .toLowerCase()
+      .slice(0, 120);
+    vertical = String(form.vertical || "authichain")
+      .trim()
+      .toLowerCase();
+    productName = String(form.productName || "")
+      .trim()
+      .slice(0, 80);
   } catch {
     return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
   }
@@ -881,9 +899,15 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     );
   }
   if (!EMAIL_RE.test(email)) {
-    return htmlResponse(c, onboardFormHtml("A valid work email is required."), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("A valid work email is required."),
+      400
+    );
   }
-  if (!ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])) {
+  if (
+    !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
+  ) {
     return htmlResponse(c, onboardFormHtml("Unknown vertical."), 400);
   }
   const refBytes = await crypto.subtle.digest(
@@ -892,20 +916,60 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   );
   const ref = [...new Uint8Array(refBytes)]
     .slice(0, 8)
-    .map((b) => b.toString(16).padStart(2, "0"))
+    .map(b => b.toString(16).padStart(2, "0"))
     .join("");
   const dest = new URL("/onboard/received", c.req.url);
   dest.searchParams.set("ref", ref);
   dest.searchParams.set("vertical", vertical);
   dest.searchParams.set("company", company);
+  scheduleOnboardNotify(c, {
+    company,
+    contact: contactName,
+    email,
+    vertical,
+    product: productName,
+    ref,
+  });
   return c.redirect(dest.pathname + dest.search, 303);
+}
+
+// Fire-and-forget inbound alert. waitUntil keeps the isolate alive after the
+// 303; if executionCtx is missing (tests / some runtimes), still void-notify.
+function scheduleOnboardNotify(
+  c: Context,
+  payload: {
+    company: string;
+    contact: string;
+    email: string;
+    vertical: string;
+    product: string;
+    ref: string;
+  }
+): void {
+  const work = notifyPilotIntake({
+    ...payload,
+    env: c.env as {
+      RESEND_API_KEY?: string;
+      RESEND_API_KEY2?: string;
+    },
+  }).catch(() => undefined);
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    void work;
+  }
 }
 
 function renderOnboardReceived(c: Context): Response {
   const url = new URL(c.req.url);
-  const ref = (url.searchParams.get("ref") || "").replace(/[^a-f0-9]/g, "").slice(0, 16);
+  const ref = (url.searchParams.get("ref") || "")
+    .replace(/[^a-f0-9]/g, "")
+    .slice(0, 16);
   const company = (url.searchParams.get("company") || "").slice(0, 80);
-  const vertical = (url.searchParams.get("vertical") || "authichain").slice(0, 24);
+  const vertical = (url.searchParams.get("vertical") || "authichain").slice(
+    0,
+    24
+  );
   if (!ref) {
     return htmlResponse(
       c,
@@ -975,7 +1039,7 @@ function launchProofStoryHtml(): string {
       "<main>\n" +
       "<p>StoryMode</p>\n" +
       "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
-      "<p data-verified=\"true\">Production issuer signing</p>\n" +
+      '<p data-verified="true">Production issuer signing</p>\n' +
       "<dl>\n" +
       "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
       "<dt>kid</dt><dd><code>" +
@@ -1071,11 +1135,220 @@ async function renderStory(c: Context): Promise<Response> {
   }
 }
 
+// --- /dashboard and /dapp — authentic-economy console ----------------------
+// The Vite SPA shell is not in the edge ASSETS bundle (client/public has no
+// index.html), so treating /dashboard as SPA produced a live 404 after the
+// landing worker's /dapp → /dashboard redirect.
+
+function dashboardHtml(): string {
+  return htmlDocument({
+    title: "Dashboard | AuthiChain",
+    description:
+      "Authentic-economy console: onboard a pilot, verify a seal, generate a Living QR.",
+    canonicalPath: "/dashboard",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>QRON Dashboard</h1>\n" +
+      "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
+      "<ul>\n" +
+      '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
+      '<li><a href="/verify">Verify a seal</a></li>\n' +
+      '<li><a href="/generate">Generate a Living QR</a></li>\n' +
+      '<li><a href="/protocol">Protocol</a></li>\n' +
+      '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
+      "</ul>\n" +
+      "</main>",
+  });
+}
+
+function renderDashboard(c: Context): Response {
+  return htmlResponse(c, dashboardHtml(), 200);
+}
+
+function authenticateHtml(): string {
+  return htmlDocument({
+    title: "Sign in | AuthiChain",
+    description:
+      "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
+    canonicalPath: "/authenticate",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Sign in</h1>\n" +
+      "<p>The public console does not require a separate app host. Start a pilot or open the dashboard.</p>\n" +
+      "<ul>\n" +
+      '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
+      '<li><a href="/dashboard">Dashboard</a></li>\n' +
+      '<li><a href="/dpp">EU DPP audit</a></li>\n' +
+      '<li><a href="/api/checkout/dpp">Start DPP checkout</a></li>\n' +
+      "</ul>\n" +
+      "</main>",
+  });
+}
+
+function renderAuthenticate(c: Context): Response {
+  return htmlResponse(c, authenticateHtml(), 200);
+}
+
+// --- /generate — Living QR intake (qron.space CTA) -------------------------
+
+function generatePackLinksHtml(): string {
+  const packs = listedPlans("qron").filter(
+    p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
+  );
+  return packs
+    .map(p => {
+      const href =
+        p.id === "dpp_readiness"
+          ? "/api/checkout/dpp"
+          : p.stripe_payment_link || "/pricing";
+      return (
+        '<a href="' +
+        escapeHtml(href) +
+        '">' +
+        escapeHtml(p.name) +
+        " — $" +
+        p.price +
+        "</a>"
+      );
+    })
+    .join(" · ");
+}
+
+const QRON_CREDIT_LINKS = [
+  PAYMENT_LINKS.qron.credits50,
+  PAYMENT_LINKS.qron.credits250,
+  PAYMENT_LINKS.qron.credits1000,
+] as const;
+
+function generateCreditLinksHtml(): string {
+  const buttons = QRON_CREDIT_LINKS.map(offer => {
+    return (
+      '<a class="credit-btn" href="' +
+      escapeHtml(offer.url) +
+      '" target="_blank" rel="noopener">Buy ' +
+      escapeHtml(offer.name) +
+      " — " +
+      escapeHtml(offer.price) +
+      "</a>"
+    );
+  }).join("\n");
+  return (
+    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
+    "<p>Need generation credits? Buy a credit pack on the published Stripe Payment Link. These are not Starter or Creator packs.</p>\n" +
+    '<p class="credit-ctas">\n' +
+    buttons +
+    "\n</p>\n"
+  );
+}
+
+function generateFormHtml(error?: string): string {
+  const errorBlock = error
+    ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
+    : '<p role="alert" id="generate-error" hidden></p>\n';
+  return htmlDocument({
+    title: "Generate a Living QR | $QRON",
+    description:
+      "Create a Living QR for a product URL. Public generate CTA for qron.space.",
+    canonicalPath: "/generate",
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Generate a Living QR</h1>\n" +
+      "<p>Target URL and a short prompt. Signed-in packs spend a generation credit via <code>POST /api/generate</code>. Without a session this form still queues a QRON onboard for a pilot seal.</p>\n" +
+      errorBlock +
+      '<p id="generate-result" hidden></p>\n' +
+      '<form id="generate-form" action="/generate" method="post">\n' +
+      '<label for="targetUrl">Product or verify URL</label>\n' +
+      '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
+      '<label for="prompt">Style prompt (optional)</label>\n' +
+      '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
+      '<button type="submit">Queue Living QR</button>\n' +
+      "</form>\n" +
+      generateCreditLinksHtml() +
+      "<p>Need a generation pack? " +
+      generatePackLinksHtml() +
+      ' · <a href="/pricing">All pricing</a></p>\n' +
+      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +
+      "<script>\n" +
+      "(function(){\n" +
+      "var form=document.getElementById('generate-form');\n" +
+      "var err=document.getElementById('generate-error');\n" +
+      "var out=document.getElementById('generate-result');\n" +
+      "if(!form)return;\n" +
+      "form.addEventListener('submit',function(e){\n" +
+      "e.preventDefault();\n" +
+      "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
+      "var prompt=document.getElementById('prompt').value.trim();\n" +
+      "err.hidden=true; out.hidden=true;\n" +
+      "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
+      ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
+      ".then(function(r){\n" +
+      "if(r.res.status===401){\n" +
+      "form.submit();\n" +
+      "return;\n" +
+      "}\n" +
+      "if(r.res.status===403){\n" +
+      "err.hidden=false;\n" +
+      "err.textContent=r.data.message||'Sign in or buy a generation pack.';\n" +
+      "return;\n" +
+      "}\n" +
+      "if(!r.res.ok){\n" +
+      "err.hidden=false;\n" +
+      "err.textContent=r.data.message||'Generation failed.';\n" +
+      "return;\n" +
+      "}\n" +
+      "var url=r.data.qron&&r.data.qron.imageUrl;\n" +
+      "if(!url){err.hidden=false;err.textContent='No image returned.';return;}\n" +
+      "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
+      "out.hidden=false;\n" +
+      'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
+      "})\n" +
+      ".catch(function(){err.hidden=false;err.textContent='Network error. Queuing onboard instead.';form.submit();});\n" +
+      "});\n" +
+      "})();\n" +
+      "</script>\n" +
+      "</main>",
+  });
+}
+
+async function handleGeneratePost(c: Context): Promise<Response> {
+  let targetUrl = "";
+  let prompt = "";
+  try {
+    const form = await c.req.parseBody();
+    targetUrl = String(form.targetUrl || "").trim();
+    prompt = String(form.prompt || "")
+      .trim()
+      .slice(0, 200);
+  } catch {
+    return htmlResponse(c, generateFormHtml("Could not read the form."), 400);
+  }
+  if (!/^https?:\/\//i.test(targetUrl) || targetUrl.length > 500) {
+    return htmlResponse(
+      c,
+      generateFormHtml("A valid http(s) URL is required."),
+      400
+    );
+  }
+  const dest = new URL("/onboard", c.req.url);
+  dest.searchParams.set("vertical", "qron");
+  dest.searchParams.set("productName", "Living QR");
+  dest.searchParams.set("sku", prompt || "generate");
+  dest.searchParams.set("serial", targetUrl.slice(0, 40));
+  return c.redirect(dest.pathname + dest.search, 303);
+}
+
+async function renderGenerate(c: Context): Promise<Response> {
+  if (c.req.method === "POST") {
+    return handleGeneratePost(c);
+  }
+  return htmlResponse(c, generateFormHtml(), 200);
+}
 
 // --- Dispatcher --------------------------------------------------------------
 
 // Renders every path owned by DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
-// Implemented: /s, /p, /verify, /landing, /onboard, /story.
+// Implemented: /s, /p, /verify, /landing, /onboard, /story, /dashboard, /dapp,
+// /generate, /login, /authenticate.
 // Stubbed (serve the SPA shell): /status, /grants, /gallery, /reveal,
 // /brand/qron/artwork.
 export async function renderDynamicPage(c: Context): Promise<Response> {
@@ -1098,6 +1371,21 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
   }
   if (pathname === "/story" || pathname.startsWith("/story/")) {
     return renderStory(c);
+  }
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+    return renderDashboard(c);
+  }
+  if (pathname === "/dapp" || pathname.startsWith("/dapp/")) {
+    return renderDashboard(c);
+  }
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    return renderAuthenticate(c);
+  }
+  if (pathname === "/authenticate" || pathname.startsWith("/authenticate/")) {
+    return renderAuthenticate(c);
+  }
+  if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+    return renderGenerate(c);
   }
 
   // Stubs: /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>.

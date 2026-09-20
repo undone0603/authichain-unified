@@ -27,30 +27,30 @@ Health (verified 2026-08-07): `pnpm check` 0 errors · `pnpm test` 704/704 · `p
 
 REST surface alongside tRPC. Notable live/critical ones:
 
-- **Money in:** `/api/stripe/webhook` (signature-verified, provisions guests by email + welcome email), `/api/webhooks/stripe`, `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (agent micropayments)
+- **Money in:** `/api/stripe/webhook` (canonical Stripe Dashboard URL; signature-verified, provisions guests by email + welcome email). Retired `/api/webhooks/stripe` is a 404 — do not register it in Dashboard. Also `/api/checkout`, `/api/subscribe`, `/api/trial`, `/api/upgrade`, `/api/upsell`, `/api/x402` (**LIVE** agent micropayments — see §7)
 - **Admin ops:** `/api/admin/ops` (admin-gated, aggregates `scheduled_job_runs` → OpsDashboard) ← wired 2026-07-15
 - **Autonomous cron endpoints** (CRON_SECRET-bearer gated): `/api/cron/{pipeline,jobs,retention,dunning,govchain,competitive-monitor,nurture-replies,dpp-exceptions}`, `/api/automation/cron`, `/api/trial-reminder`. GitHub `autonomous-business-cycle.yml` schedules are retired; DPP stalls also print from `scripts/revenue-cycle.ts --phase=report`.
 - **Lead capture / outreach:** `/api/lead-capture`, `/api/leads`, `/api/crm`, `/api/agentz/webhook` (logs to Supabase + upserts leads — a heartbeat, NOT an agent executor), `/api/social-proof`, `/api/waitlist`, `/api/testimonials`
 - **Product surface:** `/api/verify`, `/api/certificate`, `/api/seal`, `/api/generate` (QR art), `/api/provenance`, `/api/qron`, `/api/industrial`, `/api/governance`, `/api/strainchain`, `/api/govchain`
-- **Integrations:** `/api/telegram`, `/api/gpt` (GPT plugin), `/api/mcp`, `/api/keys` (API key mgmt), `/api/usage`, `/api/team`, `/api/x402`
+- **Integrations:** `/telegram` Mini App (Passport $49 Menu Button), `/api/telegram` (QRON Nightstamp webhook — do not reuse for StrainChain), `/api/gpt` (GPT plugin), `/api/mcp`, `/api/keys` (API key mgmt), `/api/usage`, `/api/team`, `/api/x402`
 
 ## 3. Cloudflare Workers — 42 live, 31 in repo (⚠ 11-worker drift)
 
 Repo-managed (`workers/*`, deployed by `.github/workflows/deploy-cloudflare.yml` + `deploy-workers.yml`):
 
-| Worker | Capability | Status |
-|---|---|---|
-| `authichain-com` | Apex marketing site + app-path proxy → app.authichain.com | LIVE (funnel fixed 2026-07-15) |
-| `qron-space`, `govchain-us`, `strainchain-io` | Brand landing + SEO layer | LIVE |
-| `authichain-api`, `authichain-api-gateway`, `authichain-gateway` | API edge routing | LIVE |
-| `authichain-scan-validate`, `authichain-qron-provenance` | QR scan validation + provenance (D1 `authichain-provenance` = 5a6672a7…) | LIVE |
-| `authichain-autopilot` | 6h cron automation | LIVE |
-| `qron-automation` | uptime (30m) / SEO ping (6h) / digest (12h) | LIVE |
-| `qron-outreach` | Cold-email sender (QRON 6/6 + DPP 4/4 queues **exhausted**) | GATED, queues empty |
-| `qron-image-gen` | QR art generation | ON-DEMAND |
-| `stripe-webhook`, `stripe-webhook-worker` | Stripe event handling | ON-DEMAND |
-| `resend-relay` | Email relay (3000/day verified) | ON-DEMAND |
-| `authichain-telegram`, `bitcoin-auth`, `blockchain`, `ai-classification`, `analytics`, `auth`, `authichain-chain-data`, `authichain-license-issuer`, `authichain-consensus-engine`, `authichain-infra`, `authichain-bridge`, `authichain-dashboard`, `watchchain-io` | Vertical/support services | ON-DEMAND |
+| Worker                                                                                                                                                                                                                                                               | Capability                                                               | Status                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------ |
+| `authichain-com`                                                                                                                                                                                                                                                     | Apex marketing site + app-path proxy → app.authichain.com                | LIVE (funnel fixed 2026-07-15) |
+| `qron-space`, `govchain-us`, `strainchain-io`                                                                                                                                                                                                                        | Brand landing + SEO layer                                                | LIVE                           |
+| `authichain-api`, `authichain-api-gateway`, `authichain-gateway`                                                                                                                                                                                                     | API edge routing                                                         | LIVE                           |
+| `authichain-scan-validate`, `authichain-qron-provenance`                                                                                                                                                                                                             | QR scan validation + provenance (D1 `authichain-provenance` = 5a6672a7…) | LIVE                           |
+| `authichain-autopilot`                                                                                                                                                                                                                                               | 6h cron automation                                                       | LIVE                           |
+| `qron-automation`                                                                                                                                                                                                                                                    | uptime (30m) / SEO ping (6h) / digest (12h)                              | LIVE                           |
+| `qron-outreach`                                                                                                                                                                                                                                                      | Cold-email sender (QRON 6/6 + DPP 4/4 queues **exhausted**)              | GATED, queues empty            |
+| `qron-image-gen`                                                                                                                                                                                                                                                     | QR art generation                                                        | ON-DEMAND                      |
+| `stripe-webhook`, `stripe-webhook-worker`                                                                                                                                                                                                                            | Stripe event handling                                                    | ON-DEMAND                      |
+| `resend-relay`                                                                                                                                                                                                                                                       | Email relay (3000/day verified)                                          | ON-DEMAND                      |
+| `authichain-telegram`, `bitcoin-auth`, `blockchain`, `ai-classification`, `analytics`, `auth`, `authichain-chain-data`, `authichain-license-issuer`, `authichain-consensus-engine`, `authichain-infra`, `authichain-bridge`, `authichain-dashboard`, `watchchain-io` | Vertical/support services                                                | ON-DEMAND                      |
 
 **Live-but-not-in-repo (drift — regrew 27→42 since June):** `authichain-revenue-worker` (new 07-07), `authichain-outreach-engine` (D1 cold-email, resurrected), `outreach-queue`, `qron-daily-ops` (6am health digest, has dead hardcoded keys), `qron-self-heal`, `qron-ai-api`, `qron-portfolio`, `gmail-relay-z`, `qron-edge`, `authichain-verify-worker`, `authichain-consensus-engine`, and others. **These deploy from nowhere in the repo — source lives only on Cloudflare.**
 
@@ -67,6 +67,7 @@ A large automation layer invisible to repo code search. Key clusters:
 ## 5. Schedulers — what actually fires, and when
 
 **GitHub Actions (the real cron layer — ~15 scheduled workflows):**
+
 - `autonomous-business-cycle.yml` — **14 daily jobs** hitting the CRON_SECRET-gated Vercel endpoints (pipeline 00:00, subscription-health 03:00, customer-health 05:00, automation 06:00, govchain 07:00, dunning 08:00, retention 09:00, trial-reminder 10:00, live-check 11:00, token-metrics 12:00, ecosystem-health 13:00; competitive-monitor Mondays; founder-payout 1st of month). **This is LIVE — the autonomous business cycle runs.**
 - `outreach-trigger.yml` (every 4h) + `dpp-outreach-trigger.yml` (every 8h) → qron-outreach worker. **Both hit exhausted queues — no-ops burning minutes.**
 - `b2b-outreach.yml` (Mondays 14:00) → `scripts/b2b-cold-outreach.ts` (Apollo-enriched)
@@ -74,7 +75,7 @@ A large automation layer invisible to repo code search. Key clusters:
 - `ghost-traffic.yml` (9am ET) → agentz ghost_traffic_engine
 - `marketing-autonomous.yml` (Mon/Wed/Fri — LinkedIn/Reddit/Twitter/SEO)
 - `email-proposals.yml` (weekdays 15:00)
-- `agentz-orchestration.yml` (8am) → POSTs `/api/agentz/webhook` (logging heartbeat only)
+- `agentz-orchestration.yml` (8am) → Phase 0 pings `https://claw.authichain.com/health` + `https://agentz.authichain.com/health` (architect dry-run via claw if a bearer secret exists); then qualify/funnel; POSTs `/api/agentz/webhook` (logging). Schedule is dry-run. See `docs/operations/AGENTZ_ORCHESTRATION.md`.
 
 **Supabase pg_cron (6 jobs — shadow scheduler):** `agentZ-growth-engine` (30m), `agentZ-ph-tracker` (30m), `strainchain-mi-blast` (00:05), `strainchain-day25` (09:00), `automation-orchestrator` (14:00 — the daily drip sender), `stripe-sync-worker` (EVERY MINUTE).
 
@@ -84,12 +85,13 @@ A large automation layer invisible to repo code search. Key clusters:
 
 Autonomous business-operations agent. Capabilities span gov grant proposals, DocuSign blitzes, HubSpot drip repair, LinkedIn/Reddit outreach, Stripe link generation, pilot deployments (Detroit/Michigan), SEO, content multiplication, RFP capture, executive reporting, the reinvestment flywheel, and social launches.
 
-**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) only POSTs a logging webhook and does NOT run the CLI, so registry workflows fire **only when run manually**. Prefer `--mode dry-run` until the DPP revenue loop is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
+**⚠ Safety-critical:** the CLI `run` command defaults to `--mode confirm` and dispatches through the registry runner (credential preflight treats placeholders as missing). `run --all --mode auto` is refused. The GitHub path (`agentz-orchestration.yml`) pings live claw/AgentZ and may POST claw `/architect/cycle` in **dry-run only**. It does **not** run the CLI registry (no `hot_lead_outreach_blitz` / AgentZ cold email). Prefer `--mode dry-run` until a dry-run orchestration log is green. Run env: `~/.agentz-venv`, node 22, Groq-only LLM.
 
 ## 7. Money surface
 
 - **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"): ~28 active payment links, 3 flagship subscription tiers (`src/app/pricing/page.tsx`, 5 buy-links live), 1 registered webhook path. **Zero successful charges ever** — every historical charge is a failed owner self-test. Constraint is traffic, not plumbing.
 - **Revenue provisioning:** `checkout.session.completed` → find/create user by email → record revenue → welcome email. Verified working end-to-end.
+- **x402 agent pay (LIVE, not `not_configured`):** `GET https://authichain.com/api/x402/health` → 200 `ready` / `trustless`. PayTo `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`, Base `8453`, Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, **$0.05 / call**, PayAI facilitator reachable. `POST /api/x402` returns **402** with asset + EIP-712 extra when unpaid. Public docs: `https://authichain.com/x402`. Machine catalog: `GET /api/x402/catalog` and `/.well-known/x402.json` (prices copied from health). Tokenomics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Do not rebind payTo / facilitator. Live self-pay smokes already succeeded — do not treat another settle as required.
 
 ## Cross-cutting risks (for a future ops pass)
 

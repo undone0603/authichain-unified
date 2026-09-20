@@ -33,7 +33,8 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
     
     # Official Company Metadata (Phase 20)
     company_meta = {
-        "name": "AUTHICHAIN",
+        "name": "ZACHARY KIETZMAN",
+        "brand": "AuthiChain",
         "uei": "R34XKWRJY9A5",
         "cage": "1PUJ6",
         "address": "109 N 4th St, Roscommon, MI 48653-9090 USA",
@@ -41,7 +42,7 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
     }
 
     winning_narrative = (
-        f"AUTHICHAIN (UEI: {company_meta['uei']}, CAGE: {company_meta['cage']}) provides an "
+        f"ZACHARY KIETZMAN, operating the AuthiChain brand (UEI: {company_meta['uei']}, CAGE: {company_meta['cage']}), provides an "
         "autonomous engine integrating blockchain (Polygon) and AI for proactive, "
         "immutable supply chain auditing. We shift from reactive manual auditing to "
         "real-time AI-driven enforcement and anomaly detection."
@@ -53,6 +54,7 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
     
     OFFICIAL APPLICANT:
     Name: {company_meta['name']}
+    Brand: {company_meta['brand']} (brand only; there is no AuthiChain, Inc. corporation)
     UEI: {company_meta['uei']}
     CAGE Code: {company_meta['cage']}
     Physical Address: {company_meta['address']}

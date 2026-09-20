@@ -1,0 +1,15 @@
+# Repo-root context for Dockerfile.agentz and workers/authichain-agentz/Dockerfile.
+.git
+**/.git
+node_modules
+**/node_modules
+.next
+**/.next
+.venv
+**/.venv
+**/__pycache__
+*.pyc
+.cursor
+coverage
+dist
+**/dist

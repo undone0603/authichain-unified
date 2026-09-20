@@ -15,7 +15,7 @@ function esc(value: unknown): string {
   );
 }
 
-const ACCENT = "#00FFD1";
+const ACCENT = "#4F46E5";
 
 const CONTACT_ROUTES = [
   {
@@ -57,24 +57,27 @@ export function renderContactPage(): string {
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6}
+body{background:#fff;color:#0f172a;font-family:'Plus Jakarta Sans',system-ui,sans-serif;line-height:1.6}
 a{color:${ACCENT};text-decoration:none}
-.nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid #18181b;max-width:1040px;margin:0 auto}
-.logo{font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fff;font-size:1rem}
+a:focus-visible{outline:2px solid ${ACCENT};outline-offset:3px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid #e2e8f0;max-width:1040px;margin:0 auto}
+.logo{font-weight:650;letter-spacing:-.02em;color:#0f172a;font-size:1.05rem}
 .wrap{max-width:1040px;margin:0 auto;padding:0 1.5rem}
-.hero{text-align:center;padding:5rem 0 3rem}
-h1{font-size:clamp(2rem,5vw,3.25rem);font-weight:900;letter-spacing:-.02em;text-transform:uppercase;margin-bottom:1.25rem}
-.lede{max-width:600px;margin:0 auto;color:#a1a1aa}
+.hero{text-align:left;padding:4rem 0 2rem}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:600;letter-spacing:-.03em;margin-bottom:1.25rem}
+.lede{max-width:600px;color:#475569}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;margin:2.5rem 0 4rem}
-.card{border:1px solid #18181b;border-radius:1rem;padding:1.75rem;background:#09090b}
-.card h2{font-size:.8rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:${ACCENT};margin-bottom:.6rem}
-.card p{font-size:.86rem;color:#a1a1aa;margin-bottom:1rem}
-.note{border:1px solid #18181b;border-radius:1rem;padding:1.75rem;background:#09090b;margin-bottom:4rem;color:#a1a1aa;font-size:.86rem}
-footer{border-top:1px solid #18181b;padding:3rem 1.5rem;text-align:center;color:#3f3f46;font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+.card{border:1px solid #e2e8f0;border-radius:10px;padding:1.75rem;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.card h2{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${ACCENT};margin-bottom:.6rem}
+.card p{font-size:.86rem;color:#475569;margin-bottom:1rem}
+.note{border:1px solid #e2e8f0;border-radius:10px;padding:1.75rem;background:#f8fafc;margin-bottom:4rem;color:#475569;font-size:.86rem}
+footer{border-top:1px solid #e2e8f0;padding:3rem 1.5rem;text-align:left;color:#64748b;font-size:.8rem}
 </style></head><body>
-<div class="nav"><a href="/" class="logo">AuthiChain</a><a href="/vs">Compare</a></div>
+<div class="nav"><a href="/" class="logo">AuthiChain</a><span><a href="/pricing">Pricing</a> · <a href="/x402">x402</a> · <a href="/api/checkout/dpp">DPP checkout</a></span></div>
 <div class="wrap">
 <section class="hero">
   <h1>Contact</h1>

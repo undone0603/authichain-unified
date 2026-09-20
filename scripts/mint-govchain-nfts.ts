@@ -5,6 +5,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { ethers } from "ethers";
+import { isEmptyBytecode } from "./lib/authichain-nft-artifact.js";
 import { GOVCHAIN_SIGNER, POLYGON_AUTHICHAIN_NFT, resolveChain, rpcUrl } from "./lib/evm-chains.js";
 
 const isDryRun = process.env.DRY_RUN !== "false";
@@ -28,9 +29,10 @@ async function mintGovChainNFTs() {
   console.log(`[gov-mint] chain=${chain.name} (${chain.chainId}) dryRun=${isDryRun}`);
 
   if (!contractAddress || !walletKey) {
-    console.warn(
-      "[gov-mint] Missing CONTRACT_ADDRESS / WALLET_PRIVATE_KEY — skipping. Deploy AuthiChainNFT to Base or set CHAIN=polygon to use the live Polygon contract."
-    );
+    const msg =
+      "[gov-mint] Missing GOVCHAIN_NFT_CONTRACT / WALLET_PRIVATE_KEY — skipping. Deploy AuthiChainNFT to Base (deploy-govchain-nft-base.yml) or set CHAIN=polygon to use the live Polygon contract.";
+    if (!isDryRun) throw new Error(msg);
+    console.warn(msg);
     return 0;
   }
 
@@ -56,15 +58,19 @@ async function mintGovChainNFTs() {
   }
 
   const code = await provider.getCode(contractAddress);
-  if (!code || code === "0x") {
-    console.warn(
-      `[gov-mint] No contract at ${contractAddress} on ${chain.name}. ` +
-        (chain.chainId === 8453
-          ? "AuthiChainNFT is live on Polygon only (0x4da4…). Redeploy to Base or set CHAIN=polygon."
-          : `Confirm ${POLYGON_AUTHICHAIN_NFT} on Polygon.`)
-    );
+  if (isEmptyBytecode(code)) {
+    const msg =
+      `[gov-mint] No contract at ${contractAddress} on ${chain.name} (getCode=0x). ` +
+      (chain.chainId === 8453
+        ? "AuthiChainNFT is live on Polygon only (0x4da4…). Dispatch deploy-govchain-nft-base.yml with dry_run=false or set CHAIN=polygon."
+        : `Confirm ${POLYGON_AUTHICHAIN_NFT} on Polygon.`);
+    if (!isDryRun) throw new Error(msg);
+    console.warn(msg);
     return 0;
   }
+  console.log(
+    `[gov-mint] contract=${contractAddress} getCode_ok explorer=${chain.explorer}/address/${contractAddress}`
+  );
 
   const wallet = new ethers.Wallet(walletKey, provider);
   const product = new ethers.Contract(contractAddress, PRODUCT_ABI, wallet);
@@ -123,6 +129,11 @@ async function mintGovChainNFTs() {
   return minted;
 }
 
-const total = await mintGovChainNFTs();
-console.log(`[gov-mint] done minted=${total} chain=${chain.key}`);
-process.exit(0);
+try {
+  const total = await mintGovChainNFTs();
+  console.log(`[gov-mint] done minted=${total} chain=${chain.key}`);
+  process.exit(0);
+} catch (err) {
+  console.error("[gov-mint] failed:", err instanceof Error ? err.message : err);
+  process.exit(1);
+}

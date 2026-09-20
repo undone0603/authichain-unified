@@ -11,11 +11,13 @@ export function StrainchainHome() {
       brandId="strainchain"
       themeClass="theme-agricultural"
       eyebrow="Seed-to-Sale Provenance"
+      primaryCta={{ label: 'Request demo', href: '/onboard' }}
+      secondaryCta={{ label: 'View genetics library', href: '/genetics/mendo-love-farms' }}
       stats={[
-        { value: '38', label: 'Legal Markets' },
-        { value: '$199', label: 'Per Location / Mo' },
-        { value: '4', label: 'Audit Layers' },
-        { value: '<1 s', label: 'Verify Time' },
+        { value: '/onboard', label: 'Live intake' },
+        { value: '/genetics', label: 'Passport library' },
+        { value: 'CoA panel', label: 'Totals derived' },
+        { value: 'No live SKU', label: 'Until Stripe price' },
       ]}
       features={[
         {

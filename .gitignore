@@ -93,8 +93,15 @@ dist/
 authichain_premium/
 qron-platform/
 qron/
+!docs/marketing/qron/
+!docs/marketing/qron/**
+!docs/qron/
+!docs/qron/**
 govchain.us/
 maison-elite-ai-dropship/
+
+# Local / Actions AuthiChainNFT deploy receipts (address is public; keep off main)
+/deployments/
 
 # Debug/lint output artifacts
 eslint_errors.txt

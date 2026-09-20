@@ -1,3 +1,11 @@
+/**
+ * Legacy SPA / B2B subscription catalogue ($49 / $199 / $799).
+ *
+ * NOT customer-facing on the live apex. Buyers use `src/lib/plans.ts`
+ * ($29 / $99 / $299) via GET /pricing and POST /api/checkout. This file
+ * still feeds the Vite SPA `/subscriptions` page and
+ * `server/subscriptions/router.ts`. Do not add new checkout paths here.
+ */
 export const SUBSCRIPTION_PLANS = {
   starter: {
     name: "Starter",
@@ -97,7 +105,7 @@ export const ADDON_PRICING = {
   },
   nftMinting: {
     name: "NFT Minting",
-    price: 2.50,
+    price: 2.5,
     unit: "per NFT",
     description: "Mint authentication certificates as NFTs",
   },
@@ -138,7 +146,11 @@ export const INDUSTRY_SOLUTIONS = {
     name: "Pharmaceutical & Healthcare",
     tagline: "DSCSA-compliant drug supply chain verification",
     startingPrice: 799,
-    targetBuyers: ["Chief Compliance Officers", "VP Supply Chain", "Quality Directors"],
+    targetBuyers: [
+      "Chief Compliance Officers",
+      "VP Supply Chain",
+      "Quality Directors",
+    ],
   },
   agriculture: {
     name: "Agriculture & Food Safety",
@@ -162,13 +174,21 @@ export const INDUSTRY_SOLUTIONS = {
     name: "Electronics & Components",
     tagline: "Eliminate counterfeit components from your supply chain",
     startingPrice: 499,
-    targetBuyers: ["Procurement Directors", "Quality Engineers", "Supply Chain VPs"],
+    targetBuyers: [
+      "Procurement Directors",
+      "Quality Engineers",
+      "Supply Chain VPs",
+    ],
   },
   medtech: {
     name: "Medical Device (ISO)",
     tagline: "High-stakes authentication for life-saving hardware",
     startingPrice: 12500,
-    targetBuyers: ["Quality Directors", "Regulatory Affairs", "Chief Med Officers"],
+    targetBuyers: [
+      "Quality Directors",
+      "Regulatory Affairs",
+      "Chief Med Officers",
+    ],
   },
 } as const;
 

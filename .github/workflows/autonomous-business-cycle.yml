@@ -2,10 +2,11 @@ name: Autonomous Business Cycle
 
 on:
   # Scheduled runs retired 2026-09-08: the Vercel app that hosted the
-  # /api/cron/* business-cycle endpoints was deleted. Scheduling now lives
-  # in Cloudflare Cron Triggers (authichain-autopilot, every 6h).
-  # Re-add schedule triggers here only if/when the cron functions are
-  # ported to Cloudflare Workers and reachable again.
+  # /api/cron/* business-cycle endpoints was deleted. The safe weekday
+  # genesis tick is `.github/workflows/genesis-cron.yml` (GET
+  # /api/automation/cron). Do not re-add this file's old 14-job schedule,
+  # and do not uncomment worker-app hourly [triggers] / GROUP B to
+  # replace it.
   workflow_dispatch:
     inputs:
       task:
@@ -122,3 +123,6 @@ jobs:
           fi
 
           echo "OK [$code] $method $path"
+          echo "Response body:"
+          cat /tmp/resp.txt || true
+          echo

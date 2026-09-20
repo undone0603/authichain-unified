@@ -16,20 +16,33 @@ WhatsApp / Telegram / Slack / Discord / ...
                     │
             ┌───────▼────────┐
             │  OpenClaw       │
-            │  Gateway        │  (local, Node.js)
-            │  :18789         │
+            │  Gateway        │  (owner-set reachable Node host)
+            │                 │  OPENCLAW_GATEWAY_URL — do not invent
             └───────┬────────┘
                     │ webhook (POST /webhook/openclaw)
             ┌───────▼────────┐
             │  authichain-   │  (Cloudflare Worker)
             │  openclaw      │  claw.authichain.com
             └───────┬────────┘
-                    │ HTTP (Bearer auth)
+                    │ HTTP (Bearer AGENTZ_API_KEY = AGENT_SECRET)
+                    │ paths: /agents /workflows /architect/cycle
+                    │ (no /api prefix)
             ┌───────▼────────┐
-            │  AgentZ API    │  (FastAPI, localhost:8000)
-            │  + Architect   │
+            │  AgentZ API    │  ($0: free Cloudflare Tunnel)
+            │  uvicorn :8000 │  agentz.api.main:app
+            │  127.0.0.1     │  agentz.authichain.com
             └────────────────┘
 ```
+
+Keep **Cloudflare Access** on `agentz.authichain.com` and `claw.authichain.com`
+except where `/health` is already public. Do not enable social publish from
+this bridge. AgentZ orchestration dry-run is
+`docs/operations/AGENTZ_ORCHESTRATION.md`.
+
+Owner mandate 2026-09-19: stay on **$0** until revenue. Host AgentZ with a
+**free Cloudflare Tunnel**. Do **not** enable Workers Paid. Do **not** deploy
+Cloudflare Containers (`authichain-agentz`). See
+[AgentZ via free Cloudflare Tunnel](#4-agentz-via-free-cloudflare-tunnel).
 
 ## Setup
 
@@ -51,6 +64,7 @@ openclaw gateway status
 ### 2. Connect a channel
 
 Follow the OpenClaw docs for your preferred channel:
+
 - [WhatsApp](https://docs.openclaw.ai/channels/whatsapp)
 - [Telegram](https://docs.openclaw.ai/channels/telegram)
 - [Slack](https://docs.openclaw.ai/channels/slack)
@@ -71,53 +85,119 @@ In the OpenClaw gateway config, add an outbound webhook to the bridge Worker:
 }
 ```
 
-### 4. Set Worker secrets
+### 4. AgentZ via free Cloudflare Tunnel
+
+Owner mandate 2026-09-19: stay on **$0** until revenue. Skip Containers. Use
+Tunnel. Example config lives in `scripts/agentz-tunnel/`.
+
+Do **not** enable Workers Paid. Do **not** deploy Cloudflare Containers
+(`workers/authichain-agentz`). That worker stays in-repo as unused code on the
+$0 path. Leave it undeployed.
+
+#### Named free tunnel (prefer)
+
+A named tunnel keeps a stable hostname. Route DNS to `agentz.authichain.com`
+**or** a free Cloudflare subdomain you already own.
+
+```bash
+# One-time (after cloudflared login to the authichain.com zone)
+cloudflared tunnel create agentz
+cloudflared tunnel route dns agentz agentz.authichain.com
+# OR: cloudflared tunnel route dns agentz <free-subdomain-you-own>
+```
+
+Copy `scripts/agentz-tunnel/config.example.yml` to a local `config.yml` (do not
+commit credentials). Ingress is `http://127.0.0.1:8000`.
+
+```bash
+cd /path/to/authichain-unified
+PYTHONPATH=. python -m uvicorn agentz.api.main:app --host 127.0.0.1 --port 8000
+
+cloudflared tunnel --config scripts/agentz-tunnel/config.yml run
+```
+
+Local process env for uvicorn (not Worker secrets): `AGENT_SECRET`,
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — the names
+`agentz.core.credentials.get()` reads.
+
+#### Worker route conflict
+
+`workers/authichain-agentz/wrangler.jsonc` registers `agentz.authichain.com/*`.
+A Tunnel CNAME and a Worker route on the same hostname fight.
+
+When Tunnel DNS owns `agentz.authichain.com`:
+
+1. Delete the Worker route `agentz.authichain.com/*` in the Cloudflare dashboard
+   (Workers → `authichain-agentz` → Triggers), **or**
+2. Leave `authichain-agentz` **undeployed** (do not run
+   `wrangler deploy` / Deploy Workers with `worker=authichain-agentz`).
+
+Do not attach both.
+
+#### Quick tunnel (smoke only)
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+
+This prints a `*.trycloudflare.com` URL. It **changes** every process restart.
+There is **no SSE guarantee** on quick tunnels. Use it only to prove uvicorn
+answers; do not point production claw at it.
+
+#### Health
+
+Access stays on `agentz.*` — unauthenticated curl 302s to
+`strainchainexecutiveteam.cloudflareaccess.com`; that is correct.
+
+```bash
+curl -sS https://agentz.authichain.com/health
+# authenticated / service-token expect: {"status":"sovereign","network":"Polygon"}
+```
+
+If you routed a free subdomain instead, curl that host.
+
+### 5. Set claw Worker secrets
 
 ```bash
 cd workers/authichain-openclaw
 
-# OpenClaw gateway URL (where OpenClaw is running)
+# OpenClaw gateway — owner-set reachable host only. Do not invent a URL.
 npx wrangler secret put OPENCLAW_GATEWAY_URL
-# Enter: ws://localhost:18789 (or your gateway URL)
 
 # API key for the webhook auth
 npx wrangler secret put OPENCLAW_API_KEY
-# Enter a strong random string
 
-# AgentZ API URL
+# AgentZ host (named tunnel or trycloudflare). Secret-only — not a [vars] entry.
 npx wrangler secret put AGENTZ_API_URL
-# Enter: http://localhost:8000
+# Enter: https://agentz.authichain.com
+# (or the free subdomain you routed; not a trycloudflare.com smoke URL)
 
-# AgentZ API key (must match the AGENT_SECRET in .env)
+# Must match the local AGENT_SECRET uvicorn is using
 npx wrangler secret put AGENTZ_API_KEY
-# Enter your AGENT_SECRET value
 ```
 
-### 5. Deploy the Worker
+Claw calls AgentZ at `/agents`, `/workflows`, `/architect/cycle` — **no** `/api`
+prefix. There is no in-flight OpenClaw PR as of 2026-09-19; this repo's
+`authichain-openclaw` Worker is the coordination point.
+
+### 6. Deploy the claw Worker
 
 ```bash
 cd workers/authichain-openclaw
 npx wrangler deploy --config wrangler.toml
 ```
 
-### 6. Start the AgentZ API
-
-```bash
-cd agentz
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
-```
-
 ## Usage
 
 Once connected, send messages from any messaging channel that OpenClaw routes:
 
-| Command | Action |
-|---------|--------|
-| `help` | Show available commands |
-| `agents` | List all registered AgentZ agents |
-| `workflows` | List all available workflows |
-| `run <id>` | Run a workflow (e.g. `run pinecone_trial_decision`) |
-| `architect` | Run an Architect cycle (dry-run by default) |
+| Command     | Action                                              |
+| ----------- | --------------------------------------------------- |
+| `help`      | Show available commands                             |
+| `agents`    | List all registered AgentZ agents                   |
+| `workflows` | List all available workflows                        |
+| `run <id>`  | Run a workflow (e.g. `run pinecone_trial_decision`) |
+| `architect` | Run an Architect cycle (dry-run by default)         |
 
 ### Example: WhatsApp
 
@@ -165,16 +245,51 @@ python -m agentz.cli run architect_cycle --mode dry-run
 ### Via the API
 
 ```bash
-curl -X POST http://localhost:8000/architect/cycle \
+curl -X POST https://agentz.authichain.com/architect/cycle \
   -H "Authorization: Bearer $AGENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"mode": "dry-run", "goal": "Fix all failing workflows"}'
 ```
 
+## AgentZ → OpenClaw (reverse client)
+
+AgentZ can call the bridge Worker as a client (status, notify, command) without a
+direct WebSocket to the OpenClaw Node gateway. Containers hosting and the claw
+`/api` path fix live in PR #1057 — this section covers the Python client only.
+
+```bash
+export CLAW_BRIDGE_URL=https://claw.authichain.com   # optional; this is the default
+export OPENCLAW_API_KEY=...                          # same secret as the Worker
+
+python -m agentz.cli openclaw status
+python -m agentz.cli openclaw notify "fleet check complete" --dry-run
+python -m agentz.cli openclaw notify "fleet check complete" --send
+python -m agentz.cli openclaw command agents
+```
+
+- `notify` defaults to dry-run (no channel delivery) unless `--send`.
+- Client module: `agentz.integrations.openclaw.OpenClawClient`.
+- Bridge reverse routes: `GET /gateway/status`, `GET /agents`, `GET /workflows`,
+  `POST /notify`, Bearer on `POST /command` (accepts `OPENCLAW_API_KEY` or
+  `AGENTZ_API_KEY`).
+
+## GitHub Actions orchestration (dry-run)
+
+`.github/workflows/agentz-orchestration.yml` is the outbound AgentZ tick.
+It uses the public hosts above. It does **not** set `OPENCLAW_GATEWAY_URL`.
+
+```bash
+gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/307144845/enable
+gh workflow run agentz-orchestration.yml --ref main -f dry_run=true -f ping_agentz=true
+```
+
+See `docs/operations/AGENTZ_ORCHESTRATION.md`. Do not enable `content-publish`.
+
 ## Security
 
 - The OpenClaw webhook is authenticated with `OPENCLAW_API_KEY` (Bearer token)
-- The AgentZ API uses `AGENT_SECRET` for all endpoints
+- The AgentZ API uses `AGENT_SECRET` (`credentials.get("agent_secret")`) for authenticated endpoints
+- Keep Access on `agentz.*` and `claw.*`
 - The Worker does not expose credentials or secrets in responses
 - All commands run in `confirm` mode by default when triggered via chat (requires
   human approval for side-effects) unless the operator explicitly sets `auto`

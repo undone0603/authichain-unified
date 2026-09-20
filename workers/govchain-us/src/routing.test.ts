@@ -14,6 +14,7 @@ import worker from "./index.ts";
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-test-key",
+  APP_ORIGIN: "https://app.example.com",
 };
 
 type StubRow = Record<string, unknown>;
@@ -72,7 +73,10 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
 test("the apex still renders the marketing page", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /Federal Contract Intelligence/);
+  const html = await res.text();
+  assert.match(html, /Federal Contract Intelligence/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /--bg: #ffffff/);
 });
 
 test("the sitemap lists only real URLs and no fragments", async () => {
@@ -81,6 +85,44 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
+  assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
+});
+
+test("IndexNow key file is served as short-cache plain text", async () => {
+  const res = await get("/authichain2026indexnow.txt");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "text/plain; charset=utf-8");
+  assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(await res.text(), "authichain2026indexnow");
+  assert.equal((await get("/authichain2026indexnow.txt/")).status, 404);
+});
+
+test("robots and sitemap still answer after the IndexNow route", async () => {
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(await robots.text(), /Sitemap: https:\/\/govchain.us\/sitemap.xml/);
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(await sitemap.text(), /<urlset/);
+});
+
+test("/onboard is proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("onboard", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/onboard");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/onboard");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {

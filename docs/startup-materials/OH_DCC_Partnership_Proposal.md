@@ -2,7 +2,8 @@
 ## Powered by GovChain.us & AuthiChain Protocol
 
 **Date:** May 16, 2026  
-**Entity:** AuthiChain, Inc.  
+**Legal Entity:** ZACHARY KIETZMAN  
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6  
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653
@@ -10,7 +11,7 @@
 ---
 
 ### **Executive Summary**
-AuthiChain, Inc. proposes the implementation of the **Ohio Audit Integrity Shield (OAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Ohio Division of Cannabis Control (DCC)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for Ohio's rapidly expanding adult-use market.
+AuthiChain proposes the implementation of the **Ohio Audit Integrity Shield (OAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Ohio Division of Cannabis Control (DCC)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for Ohio's rapidly expanding adult-use market.
 
 ### **The Problem: The "Provenance Gap"**
 As Ohio scales its adult-use program, seed-to-sale tracking (METRC) generates massive data volumes that lack **cryptographic finality**. Manual audits are labor-intensive, creating bottlenecks for state regulators and compliance risks for operators.
@@ -30,7 +31,7 @@ The GovChain protocol provides three core pillars of trust for Ohio:
 ---
 
 ### **Next Steps**
-AuthiChain, Inc. is prepared to deploy a **Phase I Pilot** targeting 15 major cultivators in the Columbus and Cleveland regions.
+AuthiChain is prepared to deploy a **Phase I Pilot** targeting 15 major cultivators in the Columbus and Cleveland regions.
 
 **Contact:**  
 **Z@authichain.com**  

@@ -24,8 +24,8 @@ function stubFetch() {
   };
 }
 
-async function get(path: string) {
-  return worker.fetch(new Request(`https://qron.space${path}`));
+async function get(path: string, env?: { APP_ORIGIN?: string }) {
+  return worker.fetch(new Request(`https://qron.space${path}`), env);
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -48,7 +48,15 @@ test("the apex still renders the marketing page", async () => {
   try {
     const res = await get("/");
     assert.equal(res.status, 200);
-    assert.match(await res.text(), /QRON/);
+    const html = await res.text();
+    assert.match(html, /QRON/);
+    assert.match(html, /href="\/generate"/);
+    assert.match(html, /href="\/pricing"/);
+    assert.match(html, /\$29/);
+    assert.match(html, /\$99/);
+    assert.match(html, /\$299/);
+    assert.doesNotMatch(html, /\$2,990/);
+    assert.match(html, /--bg: #ffffff/);
   } finally {
     f.restore();
   }
@@ -64,6 +72,99 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
+  assert.ok(xml.includes("<loc>https://qron.space/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://qron.space/generate</loc>"));
+});
+
+test("/pricing is a real catalogue page, not a 404", async () => {
+  const res = await get("/pricing");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<title>Pricing — QRON<\/title>/);
+  assert.match(html, /\$299/);
+  assert.match(html, /href="\/generate"/);
+  assert.match(html, /https:\/\/authichain\.com\/api\/checkout\/dpp/);
+});
+
+test("IndexNow key file is served as short-cache plain text", async () => {
+  const res = await get("/authichain2026indexnow.txt");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "text/plain; charset=utf-8");
+  assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(await res.text(), "authichain2026indexnow");
+  assert.equal((await get("/authichain2026indexnow.txt/")).status, 404);
+});
+
+test("robots and sitemap still answer after the IndexNow route", async () => {
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/qron.space\/sitemap.xml/
+  );
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(await sitemap.text(), /<urlset/);
+});
+
+test("/generate is proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("generate", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/generate", {
+      APP_ORIGIN: "https://app.example.com",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/generate");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("POST /api/generate is proxied to the app, not landing HTML 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          targetUrl: "https://example.com",
+          prompt: "neon",
+        }),
+      }),
+      { APP_ORIGIN: "https://app.example.com" }
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/api/generate");
+    assert.equal(calls[0].method, "POST");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {

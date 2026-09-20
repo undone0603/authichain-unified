@@ -13,6 +13,7 @@ import {
   resolveBuyerWallet,
   resolveSku,
 } from "@/lib/ledger-service";
+import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -178,17 +179,11 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature")!;
 
-  let event: Stripe.Event | null = null;
-  let lastErr = "";
-  for (const secret of secrets) {
-    try {
-      event = stripe.webhooks.constructEvent(body, sig, secret);
-      break;
-    } catch (err) {
-      lastErr = getErrorMessage(err);
-    }
-  }
-  if (!event) {
+  let event: Stripe.Event;
+  try {
+    event = await constructStripeEventAsync(stripe, body, sig, secrets);
+  } catch (err) {
+    const lastErr = getErrorMessage(err);
     console.error("Stripe webhook signature verification failed:", lastErr);
     return NextResponse.json(
       { error: `Webhook Error: ${lastErr}` },
@@ -240,7 +235,7 @@ export async function POST(req: NextRequest) {
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
         if (dppOffer) {
-          await fulfillDppPaidSession(getSupabase(), session);
+          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
           break;
         }
 

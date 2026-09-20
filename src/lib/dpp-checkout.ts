@@ -6,6 +6,7 @@
  * `src/lib/plans.ts` only.
  */
 
+import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
@@ -97,6 +98,7 @@ export async function createDppCheckoutSession(opts: {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      ...hostedCheckoutRecoveryParams("payment"),
       line_items: smoke
         ? [
             {
@@ -111,13 +113,15 @@ export async function createDppCheckoutSession(opts: {
         : [{ price: PLAN.stripe_price_id, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: smoke ? undefined : true,
       client_reference_id: visitId.slice(0, 200),
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: PLAN.id,
         brand: "authichain",
         offer: DPP_OFFER_KEY,
+        ...(PLAN.stripe_price_id
+          ? { stripe_price_id: PLAN.stripe_price_id }
+          : {}),
         prospect_id: visitId,
         visit_id: visitId,
         source,

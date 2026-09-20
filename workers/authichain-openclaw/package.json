@@ -5,6 +5,9 @@
   "dependencies": {
     "hono": "^4.12.31"
   },
+  "scripts": {
+    "test": "node --experimental-strip-types src/agentz-paths.test.ts"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260915.1",
     "wrangler": "^4.129.0"

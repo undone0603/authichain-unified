@@ -17,7 +17,12 @@ vi.mock("../server/identity-db-helpers", () => ({
   getQronById: vi.fn(),
 }));
 
+vi.mock("./onboard-notify", () => ({
+  notifyPilotIntake: vi.fn().mockResolvedValue(undefined),
+}));
+
 const { renderDynamicPage } = await import("./dynamic-pages");
+const { notifyPilotIntake } = await import("./onboard-notify");
 const { getHyperdriveDb } = await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
@@ -149,6 +154,16 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain('rel="canonical"');
   });
 
+  it("bare /p is a clear 404, not a redirect and not a silent hub", async () => {
+    const res = await app.request("/p", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No serial number was provided.");
+    expect(res.headers.get("location")).toBeNull();
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+  });
+
   it("returns 404 HTML when neither certificate nor product-serial lookup matches", async () => {
     (getCertificateByNumber as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
@@ -273,9 +288,7 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain(
-      "Every Product Verified. Every Transaction Trusted."
-    );
+    expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
   });
 });
 
@@ -345,6 +358,54 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(location).toContain("vertical=strainchain");
   });
 
+  it("waitUntils inbound notify before the 303 when executionCtx is present", async () => {
+    const pending: Promise<unknown>[] = [];
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01",
+        redirect: "manual",
+      },
+      makeEnv({ RESEND_API_KEY2: "re_test" }) as any,
+      {
+        waitUntil: (p: Promise<unknown>) => {
+          pending.push(p);
+        },
+      } as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(pending.length).toBe(1);
+    await Promise.all(pending);
+    expect(notifyPilotIntake).toHaveBeenCalledTimes(1);
+    const arg = (notifyPilotIntake as any).mock.calls[0][0];
+    expect(arg.company).toBe("Trulieve");
+    expect(arg.contact).toBe("Jordan Hale");
+    expect(arg.email).toBe("jordan@trulieve.com");
+    expect(arg.vertical).toBe("strainchain");
+    expect(arg.product).toBe("Jar Seal 01");
+    expect(arg.ref).toMatch(/^[a-f0-9]{16}$/);
+    expect(arg.env?.RESEND_API_KEY2).toBe("re_test");
+  });
+
+  it("void-notifies when executionCtx is missing and still 303s", async () => {
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Acme&contactName=Ada&email=ada%40acme.com&vertical=qron&productName=Living+QR",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+
+    expect(res.status).toBe(303);
+    expect(notifyPilotIntake).toHaveBeenCalled();
+  });
+
   it("renders the received confirmation when a ref is present", async () => {
     const res = await app.request(
       "/onboard/received?ref=abcd1234&company=Trulieve&vertical=strainchain",
@@ -357,6 +418,79 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("Pilot request received");
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
+  });
+});
+
+describe("renderDynamicPage: /dashboard console", () => {
+  it("returns 200 HTML for /dashboard and /dapp", async () => {
+    for (const path of ["/dashboard", "/dapp"]) {
+      const res = await app.request(path, {}, makeEnv() as any);
+      const body = await res.text();
+      expect(res.status).toBe(200);
+      expect(body).toContain("QRON Dashboard");
+      expect(body).toContain("/onboard");
+      expect(body).toContain("/generate");
+    }
+  });
+});
+
+describe("renderDynamicPage: /login and /authenticate", () => {
+  it("returns 200 HTML with live apex CTAs", async () => {
+    for (const path of ["/login", "/authenticate"]) {
+      const res = await app.request(path, {}, makeEnv() as any);
+      const body = await res.text();
+      expect(res.status).toBe(200);
+      expect(body).toContain("Sign in");
+      expect(body).toContain("/onboard");
+      expect(body).toContain("/dashboard");
+      expect(body).not.toContain("app.authichain.com/login");
+    }
+  });
+});
+
+describe("renderDynamicPage: /generate Living QR", () => {
+  it("returns 200 HTML with a real form", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain("Generate a Living QR");
+    expect(body).toContain(
+      '<form id="generate-form" action="/generate" method="post">'
+    );
+    expect(body).toContain('name="targetUrl"');
+    expect(body).toContain("fetch('/api/generate'");
+    expect(body).toContain("if(r.res.status===401)");
+    expect(body).toContain("form.submit()");
+    expect(body).toContain("$29");
+    expect(body).toContain("$99");
+    expect(body).toContain("$299");
+    expect(body).toContain("https://buy.stripe.com/3cIaEX73jcZE5ia2321Nu1l");
+    expect(body).toContain("https://buy.stripe.com/9B69AT73j9NseSKazy1Nu1m");
+    expect(body).toContain("https://buy.stripe.com/9B600j73jcZE6megXW1Nu1n");
+    expect(body).toContain("50 Credits");
+    expect(body).toContain("$9.99");
+    expect(body).toContain("250 Credits");
+    expect(body).toContain("$39.99");
+    expect(body).toContain("1000 Credits");
+    expect(body).toContain("$99.99");
+    expect(body).toContain("Need generation credits");
+  });
+
+  it("303s a valid URL to /onboard", async () => {
+    const res = await app.request(
+      "/generate",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "targetUrl=https%3A%2F%2Fexample.com%2Fsku&prompt=neon",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    expect(res.status).toBe(303);
+    const location = res.headers.get("location") || "";
+    expect(location).toContain("/onboard");
+    expect(location).toContain("vertical=qron");
   });
 });
 
@@ -380,7 +514,11 @@ describe("renderDynamicPage: /story StoryMode", () => {
     (getProductById as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
 
-    const res = await app.request("/story/does-not-exist", {}, makeEnv() as any);
+    const res = await app.request(
+      "/story/does-not-exist",
+      {},
+      makeEnv() as any
+    );
     const body = await res.text();
 
     expect(res.status).toBe(404);

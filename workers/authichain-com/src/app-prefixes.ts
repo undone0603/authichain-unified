@@ -1,8 +1,13 @@
 /** Paths the apex landing worker must proxy to APP_WORKER (authichain-edge-router). */
 export const APP_PREFIXES = [
   "/dashboard",
+  "/dapp",
+  "/generate",
   "/api",
   "/verify",
+  // Product passport GET /p/<serial> — worker-app/dynamic-pages.ts.
+  // Without this prefix the apex answered marketing 404 HTML for /p and /p/*.
+  "/p",
   "/auth",
   "/login",
   "/logout",

@@ -151,13 +151,9 @@ export const PLANS: Plan[] = [
   },
   // --- StrainChain passport SKUs -------------------------------------------
   //
-  // These match the offer already sent to Mendo Love Farms on 2026-09-10.
-  // stripe_price_id is null on purpose: nothing can charge until a human
-  // creates the live Stripe price. isPurchasable() keeps them off every
-  // customer-facing surface until then, so defining them here costs nothing
-  // and stops the numbers living only in a PDF.
-  //
-  // See docs/strategy/strainchain-genetics-passport.md section 3.
+  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Checkout
+  // via GET /api/checkout/plan/:planId on authichain.com. See
+  // docs/strategy/strainchain-genetics-passport.md section 3.
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
@@ -165,7 +161,7 @@ export const PLANS: Plan[] = [
     description:
       "One published genetics passport, built from your existing CoAs",
     generations: 0,
-    stripe_price_id: null,
+    stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",
@@ -184,7 +180,7 @@ export const PLANS: Plan[] = [
     price_suffix: "/month",
     description: "Unlimited cultivars, updated on every new certificate",
     generations: 0,
-    stripe_price_id: null,
+    stripe_price_id: "price_1UHjJWGqTruSqV8TePctYzO5",
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
@@ -220,6 +216,24 @@ export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
 
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
+
+/** Look up a live catalogue plan by Stripe price ID. */
+export function planByStripePriceId(
+  priceId: string | null | undefined
+): Plan | undefined {
+  if (!priceId) return undefined;
+  return PLANS.find(p => p.stripe_price_id === priceId);
+}
+
+/** Match a paid amount to a unique live catalogue price (cents). */
+export function planByAmountCents(
+  amountCents: number | null | undefined
+): Plan | undefined {
+  if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
+  const dollars = amountCents / 100;
+  const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
+  return matches.length === 1 ? matches[0] : undefined;
+}
 
 // Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {

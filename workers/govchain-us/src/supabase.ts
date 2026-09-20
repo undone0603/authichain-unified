@@ -24,6 +24,8 @@
 export interface SupabaseEnv {
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  /** Origin that renders /onboard. Set in wrangler.toml. */
+  APP_ORIGIN?: string;
 }
 
 /**

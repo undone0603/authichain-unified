@@ -14,6 +14,9 @@ import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
+import { registerAttestationApi } from "./attestation-api";
+import { registerX402Routes } from "./x402-routes";
+import { registerGuardrailApi } from "./guardrail-api";
 import { scheduled } from "./cron-dispatch";
 
 type Env = {
@@ -31,6 +34,17 @@ type Env = {
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   CRON_SECRET?: string;
+  INTERNAL_API_SECRET?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
+  QRON_WORKER_URL?: string;
+  NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
 };
 
 function hydrateProcessEnv(env?: Env) {
@@ -43,12 +57,35 @@ function hydrateProcessEnv(env?: Env) {
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
-    ["AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64", env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64],
+    ["INTERNAL_API_SECRET", env.INTERNAL_API_SECRET],
+    [
+      "AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64",
+      env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64,
+    ],
     ["AUTHICHAIN_ATTESTATION_KEY_ID", env.AUTHICHAIN_ATTESTATION_KEY_ID],
-    ["AUTHICHAIN_ATTESTATION_PUBLIC_JWK", env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK],
+    [
+      "AUTHICHAIN_ATTESTATION_PUBLIC_JWK",
+      env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK,
+    ],
+    ["X402_PAY_TO", env.X402_PAY_TO],
+    ["X402_FACILITATOR_URL", env.X402_FACILITATOR_URL],
+    ["X402_NETWORK", env.X402_NETWORK],
+    ["X402_CHAIN_ID", env.X402_CHAIN_ID],
+    ["X402_USDC_ASSET", env.X402_USDC_ASSET],
+    ["X402_PRICE_USD", env.X402_PRICE_USD],
+    ["X402_DAILY_CAP_USD", env.X402_DAILY_CAP_USD],
+    ["QRON_WORKER_URL", env.QRON_WORKER_URL],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", env.NEXT_PUBLIC_SUPABASE_ANON_KEY],
+    [
+      "SUPABASE_ANON_KEY",
+      env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ],
   ];
   for (const [name, value] of copy) {
-    if (value && !process.env[name]) process.env[name] = value;
+    // Worker bindings win over any leftover process.env (nodejs_compat
+    // snapshot, prior isolate hydration, or a test placeholder). Skip
+    // empty bindings so we do not wipe a value that is only in process.env.
+    if (value) process.env[name] = value;
   }
 }
 
@@ -150,6 +187,11 @@ app.use(
 
 app.get("/api/health", c => c.json({ status: "ok" }));
 
+function isAppHostname(host: string): boolean {
+  const h = host.split(":")[0].toLowerCase();
+  return h.startsWith("app.");
+}
+
 // ─── DPP $299 Checkout ──────────────────────────────────────────────────────
 // Same session create as Next src/app/api/checkout/dpp. Registered here so
 // authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
@@ -199,10 +241,258 @@ app.get("/api/checkout/dpp", async c => {
   }
 });
 
+// Catalogue plan checkout (GET). Same session create as Next
+// src/app/api/checkout/plan/[planId].
+app.get("/api/checkout/plan/:planId", async c => {
+  if (c.req.method === "HEAD") {
+    c.header("Cache-Control", "private, no-store");
+    c.header("CDN-Cache-Control", "no-store");
+    return c.body(null, 204);
+  }
+  try {
+    hydrateProcessEnv(c.env);
+    const planId = c.req.param("planId");
+    const search = new URL(c.req.url).searchParams;
+    const { createPlanCheckoutSession } =
+      await import("../src/lib/plan-checkout");
+    const result = await createPlanCheckoutSession({
+      request: c.req.raw,
+      body: {
+        planId,
+        email: search.get("email") ?? undefined,
+        prospectId:
+          search.get("prospect_id") ?? search.get("visit_id") ?? undefined,
+        source: search.get("utm_source") ?? search.get("source") ?? undefined,
+        affiliateCode: search.get("affiliate_code") ?? undefined,
+      },
+      stripeSecretKey:
+        c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+    });
+    if (!result.ok) {
+      c.header("Cache-Control", "private, no-store");
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.redirect(result.url, 303);
+  } catch (err: any) {
+    console.error("[checkout/plan] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
+// Generic plan checkout (POST). GET is route-health only — never creates a
+// Stripe session, so CI/probes cannot start a live charge.
+app.get("/api/checkout", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json({
+    ok: true,
+    methods: ["POST"],
+    smoke: "GET /api/checkout/dpp",
+    webhook: "POST /api/stripe/webhook",
+    thanks: "/dpp/thanks",
+    activate: "/dpp/activate",
+  });
+});
+
+app.post("/api/checkout", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, string> = {};
+    try {
+      body = (await c.req.json()) as Record<string, string>;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { createPlanCheckoutSession } =
+      await import("../src/lib/plan-checkout");
+    const result = await createPlanCheckoutSession({
+      request: c.req.raw,
+      body,
+      stripeSecretKey:
+        c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+    });
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json({ url: result.url, planId: result.planId });
+  } catch (err: any) {
+    console.error("[checkout] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to start checkout", detail: err?.message },
+      500
+    );
+  }
+});
+
+// ─── Living QR generate (credits + qron-image-gen) ──────────────────────────
+// Next src/app/api/generate/route.ts is not mounted on this worker. Unregistered
+// POST /api/generate used to fall through to ASSETS ("404 Not Found" text/plain)
+// while GET hit the catch-all JSON 404. Register both methods here so the
+// public /generate surface and studio fetch can call paid credits.
+app.get("/api/generate", async c => {
+  hydrateProcessEnv(c.env);
+  c.header("Cache-Control", "private, no-store");
+  const { generateHealthBody } = await import("../src/lib/generate-api");
+  const supabaseUrl =
+    c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+    c.env?.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const supabaseKey =
+    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return c.json(
+    generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
+      authConfigured: Boolean(supabaseUrl && supabaseKey),
+    })
+  );
+});
+
+app.post("/api/generate", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return c.json({ message: "Invalid JSON." }, 400);
+    }
+    const { handleGeneratePost, proxyQronImageGen, resolveGenerateUserId } =
+      await import("../src/lib/generate-api");
+    const { checkCredit, deductCredit } =
+      await import("../src/lib/business-tier");
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const supabaseKey =
+      c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      c.env?.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      c.env?.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const userId = await resolveGenerateUserId({
+      request: c.req.raw,
+      supabaseUrl,
+      supabaseKey,
+    });
+    const result = await handleGeneratePost({
+      body,
+      userId,
+      checkCredit,
+      deductCredit,
+      generateImage: args =>
+        proxyQronImageGen({
+          targetUrl: args.targetUrl,
+          prompt: args.prompt,
+          style: args.style,
+          workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
+        }),
+    });
+    c.header("Cache-Control", "private, no-store");
+    return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
+  } catch (err: any) {
+    console.error("[generate] Error:", err?.message || err);
+    return c.json({ message: "Generation failed", detail: err?.message }, 500);
+  }
+});
+
+// ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
+// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
+// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+app.post("/api/funnel", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    let supabase = null;
+    const supabaseUrl =
+      c.env?.NEXT_PUBLIC_SUPABASE_URL ||
+      c.env?.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const serviceKey =
+      c.env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const { createClient } = await import("@supabase/supabase-js");
+      supabase = createClient(supabaseUrl, serviceKey);
+    }
+    const { recordFunnelEvent } = await import("../src/lib/funnel-record");
+    const result = await recordFunnelEvent(supabase, body);
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json(
+      {
+        success: true,
+        message: "Funnel event recorded",
+        prospect_id: result.prospect_id,
+        stage: result.stage,
+        source: result.source,
+      },
+      201
+    );
+  } catch (err: any) {
+    console.error("[funnel] Error:", err?.message || err);
+    return c.json(
+      { error: "Failed to record funnel event", detail: err?.message },
+      500
+    );
+  }
+});
+
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.post("/api/stripe/webhook", async c => {
+app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json({
+    ok: true,
+    handler: "present",
+    methods: ["POST"],
+    canonical: "/api/stripe/webhook",
+  });
+});
+
+async function stripeWebhookPost(c: {
+  env?: Env;
+  req: {
+    header: (name: string) => string | undefined;
+    arrayBuffer: () => Promise<ArrayBuffer>;
+  };
+  json: (body: unknown, status?: number) => Response;
+}) {
   const sig = c.req.header("stripe-signature");
   if (!sig) {
     return c.json({ error: "Missing stripe-signature header" }, 400);
@@ -217,7 +507,10 @@ app.post("/api/stripe/webhook", async c => {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
     return c.json({ error: err.message }, 400);
   }
-});
+}
+
+app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
+app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
 
 app.post("/api/dpp/activate", async c => {
   try {
@@ -265,6 +558,143 @@ app.post("/api/dpp/activate", async c => {
   }
 });
 
+function edgeSupabase(env?: Env) {
+  const supabaseUrl =
+    env?.NEXT_PUBLIC_SUPABASE_URL ||
+    env?.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const serviceKey =
+    env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return null;
+  return import("@supabase/supabase-js").then(({ createClient }) =>
+    createClient(supabaseUrl, serviceKey)
+  );
+}
+
+// Next src/app/api/dpp/publish and /verify are not on this worker; unregistered
+// /api/* falls through to ASSETS 404 and the loop never records dpp_published.
+app.post("/api/dpp/publish", async c => {
+  try {
+    hydrateProcessEnv(c.env);
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const supabase = await edgeSupabase(c.env);
+    const { publishDpp } = await import("../src/lib/dpp-publish");
+    const result = await publishDpp({ body, supabase });
+    c.header("Cache-Control", "private, no-store");
+    if (!result.ok) {
+      return c.json(
+        {
+          error: result.error,
+          ...(result.detail ? { detail: result.detail } : {}),
+        },
+        result.status
+      );
+    }
+    return c.json(result);
+  } catch (err: any) {
+    console.error("[dpp/publish] Error:", err?.message || err);
+    return c.json({ error: "publish_failed", detail: err?.message }, 500);
+  }
+});
+
+async function dppVerify(c: {
+  env?: Env;
+  req: { json: () => Promise<unknown>; query: (name: string) => string | undefined };
+  header: (name: string, value: string) => void;
+  json: (body: unknown, status?: number) => Response;
+}, params: { dppId: string; visitId: string | null; source: string }) {
+  hydrateProcessEnv(c.env);
+  const supabase = await edgeSupabase(c.env);
+  const { verifyDpp } = await import("../src/lib/dpp-verify");
+  const result = await verifyDpp({ ...params, supabase });
+  c.header("Cache-Control", "private, no-store");
+  if (!result.ok) {
+    if (result.error === "not_found") {
+      return c.json(
+        {
+          ok: false,
+          status: "not_found",
+          dpp_id: result.dpp_id,
+          proves: result.proves,
+          doesNotProve: result.doesNotProve,
+          event_recorded: false,
+        },
+        404
+      );
+    }
+    return c.json(
+      {
+        error: result.error,
+        ...(result.detail ? { detail: result.detail } : {}),
+      },
+      result.status
+    );
+  }
+  return c.json(result);
+}
+
+app.get("/api/dpp/verify", async c => {
+  try {
+    return await dppVerify(c, {
+      dppId: (c.req.query("dpp_id") || "").trim(),
+      visitId: (c.req.query("visit_id") || "").trim() || null,
+      source: (c.req.query("source") || "direct").trim() || "direct",
+    });
+  } catch (err: any) {
+    console.error("[dpp/verify] Error:", err?.message || err);
+    return c.json({ error: "verify_failed", detail: err?.message }, 500);
+  }
+});
+
+app.post("/api/dpp/verify", async c => {
+  try {
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid_json" }, 400);
+    }
+    return await dppVerify(c, {
+      dppId: String(body.dpp_id || "").trim(),
+      visitId: String(body.visit_id || "").trim() || null,
+      source: String(body.source || "direct"),
+    });
+  } catch (err: any) {
+    console.error("[dpp/verify] Error:", err?.message || err);
+    return c.json({ error: "verify_failed", detail: err?.message }, 500);
+  }
+});
+
+app.get("/api/automation/cron", async c => {
+  hydrateProcessEnv(c.env);
+  c.header("Cache-Control", "private, no-store");
+  c.header("CDN-Cache-Control", "no-store");
+  const { authorizeGenesis, genesisJson, runGenesisCycle } =
+    await import("../src/lib/genesis-cycle");
+  if (!authorizeGenesis(c.req.raw)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  try {
+    const results = await runGenesisCycle();
+    return c.json(genesisJson(results));
+  } catch (err: any) {
+    console.error("[automation/cron] failed:", err);
+    return c.json(
+      {
+        error: "Genesis cron failed",
+        details: err instanceof Error ? err.message : String(err),
+      },
+      500
+    );
+  }
+});
+
 app.get("/api/cron/dpp-exceptions", async c => {
   hydrateProcessEnv(c.env);
   c.header("Cache-Control", "private, no-store");
@@ -274,20 +704,9 @@ app.get("/api/cron/dpp-exceptions", async c => {
     return c.json({ error: "Unauthorized" }, 401);
   }
   try {
-    const { fetchAllLoopEvents, summarizeDppLoop } =
-      await import("../src/lib/dpp-loop");
+    const { runDppExceptionsReport } = await import("../src/lib/dpp-loop");
     const { supabaseAdmin } = await import("../src/lib/supabase-admin");
-    const rows = await fetchAllLoopEvents(supabaseAdmin);
-    const summary = summarizeDppLoop(rows);
-    return c.json({
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      visits: summary.visits,
-      demoVisits: summary.demoVisits,
-      funnel: summary.funnel,
-      exceptionCount: summary.exceptions.length,
-      exceptions: summary.exceptions,
-    });
+    return c.json(await runDppExceptionsReport(supabaseAdmin));
   } catch (err: any) {
     console.error("[cron/dpp-exceptions] failed:", err);
     return c.json(
@@ -1282,12 +1701,21 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
-app.use("/protocol/launch-proof", rateLimitMiddleware("launch-proof", 20, 60_000));
+app.use(
+  "/protocol/launch-proof",
+  rateLimitMiddleware("launch-proof", 20, 60_000)
+);
 app.use("/onboard", rateLimitMiddleware("onboard", 20, 60_000));
-app.post("/onboard", (c) => renderDynamicPage(c));
-app.post("/onboard/", (c) => renderDynamicPage(c));
+app.post("/onboard", c => renderDynamicPage(c));
+app.post("/onboard/", c => renderDynamicPage(c));
+app.use("/generate", rateLimitMiddleware("generate", 20, 60_000));
+app.post("/generate", c => renderDynamicPage(c));
+app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
+registerAttestationApi(app);
+registerX402Routes(app);
+registerGuardrailApi(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
@@ -1316,6 +1744,11 @@ app.get("/sitemap.xml", async c => {
 
 app.get("*", async c => {
   const { pathname: rawPathname } = new URL(c.req.url);
+  const appHost =
+    c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
+  if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
+    return c.redirect("/dashboard", 302);
+  }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page
   // wrongly falls through to the SPA shell (an SEO regression for any
@@ -1334,10 +1767,10 @@ app.get("*", async c => {
 
   const owner = resolveOwner(pathname, await getMarketingRoutes(c.env));
 
-  // "api" should never reach here (real /api/* routes are registered above);
-  // handle defensively by passing the raw request through to ASSETS.
+  // "api" should never reach here (real /api/* routes are registered above).
+  // Return JSON 404 — ASSETS has no API files and used to emit an empty 404.
   if (owner === "api") {
-    return c.env.ASSETS.fetch(c.req.raw);
+    return c.json({ error: "Not found" }, 404);
   }
 
   // "dynamic": lean Hono-rendered pages (Task 3.3). /s, /p, /verify are real

@@ -1,0 +1,166 @@
+# $0 AgentZ named-tunnel bring-up (Cloudflare API + wrangler).
+# Uses existing Actions secrets only. Does not invent OPENCLAW_GATEWAY_URL.
+# Does not deploy Containers, enable Workers Paid, social publish, or
+# agentz-orchestration. Does not keep a cloudflared connector running here
+# (ephemeral runners cannot host the origin).
+name: AgentZ tunnel bring-up ($0)
+
+on:
+  workflow_dispatch:
+    inputs:
+      emit_token_artifact:
+        description: "Upload a 1-day tunnel run-token artifact for the owner box. Default on. Prefer scripts/agentz-tunnel/run-with-api-token.sh locally."
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentz-tunnel-bringup
+  cancel-in-progress: true
+
+env:
+  TUNNEL_UUID: 08378b03-f6a2-46cf-aab8-a2754bad869f
+  TUNNEL_HOSTNAME: agentz.authichain.com
+  AGENTZ_API_URL: https://agentz.authichain.com
+
+jobs:
+  claw-secrets:
+    name: Bind claw AGENTZ_* only
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install wrangler
+        run: npm install -g wrangler
+      - name: Put AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          DEV_TEAM_GITHUB_TOKEN: ${{ secrets.DEV_TEAM_GITHUB_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          AGENT_SECRET_OUT: ${{ runner.temp }}/agent-secret.txt
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty."
+            exit 1
+          fi
+          chmod +x scripts/agentz-tunnel/resolve-agent-secret.sh
+          scripts/agentz-tunnel/resolve-agent-secret.sh
+          if [ ! -s "${AGENT_SECRET_OUT}" ]; then
+            echo "::error::AGENT_SECRET resolved to an empty file. Set repo Actions secret AGENT_SECRET."
+            exit 1
+          fi
+          printf '%s' "${AGENTZ_API_URL}" | wrangler secret put AGENTZ_API_URL --name authichain-openclaw
+          wrangler secret put AGENTZ_API_KEY --name authichain-openclaw < "$AGENT_SECRET_OUT"
+          echo "bound AGENTZ_API_URL + AGENTZ_API_KEY on authichain-openclaw (values not logged)"
+          echo "skipped OPENCLAW_GATEWAY_URL (owner-set only; do not invent)"
+      - name: Upload 1-day minted AGENT_SECRET (only if minted this run)
+        if: env.minted_agent_secret == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentz-agent-secret
+          path: ${{ runner.temp }}/agent-secret.txt
+          retention-days: 1
+          if-no-files-found: ignore
+      - name: Best-effort authichain-agentz secrets (skip on Containers / empty)
+        continue-on-error: true
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AGENT_SECRET_FILE: ${{ runner.temp }}/agent-secret.txt
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ ! -s "${AGENT_SECRET_FILE:-}" ]; then
+            echo "::notice::AGENT_SECRET unavailable — skipping authichain-agentz Worker secrets (Containers stay undeployed)."
+            exit 0
+          fi
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::notice::SUPABASE_* missing — skipping authichain-agentz Worker secrets (claw-only path)."
+            exit 0
+          fi
+          wrangler secret put AGENT_SECRET --name authichain-agentz < "$AGENT_SECRET_FILE"
+          printf '%s' "$SUPABASE_URL" | wrangler secret put SUPABASE_URL --name authichain-agentz
+          printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-agentz
+          echo "bound authichain-agentz secrets (values not logged)"
+
+  tunnel-cf:
+    name: Tunnel DNS + Worker route cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify tunnel, CNAME, clear Worker route
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TUNNEL_TOKEN_OUT: ${{ runner.temp }}/agentz-tunnel-token.txt
+        run: |
+          set -euo pipefail
+          chmod +x scripts/agentz-tunnel/cf-bringup.sh
+          scripts/agentz-tunnel/cf-bringup.sh
+          if [ -s "${TUNNEL_TOKEN_OUT}" ]; then
+            echo "token_minted=true" >> "$GITHUB_ENV"
+          else
+            echo "token_minted=false" >> "$GITHUB_ENV"
+          fi
+      - name: Upload 1-day run-token artifact
+        if: env.token_minted == 'true' && (github.event.inputs.emit_token_artifact == 'true' || github.event.inputs.emit_token_artifact == '')
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentz-tunnel-token
+          path: ${{ runner.temp }}/agentz-tunnel-token.txt
+          retention-days: 1
+          if-no-files-found: ignore
+      - name: Store AGENTZ_TUNNEL_TOKEN repo secret (PAT only)
+        if: env.token_minted == 'true'
+        env:
+          DEV_TEAM_GITHUB_TOKEN: ${{ secrets.DEV_TEAM_GITHUB_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TOKEN_FILE: ${{ runner.temp }}/agentz-tunnel-token.txt
+        run: |
+          set -euo pipefail
+          # Prefer DEV_TEAM_GITHUB_TOKEN; fall back to GH_PAT. GITHUB_TOKEN cannot write Actions secrets.
+          if [ -n "${DEV_TEAM_GITHUB_TOKEN:-}" ]; then
+            PAT="$DEV_TEAM_GITHUB_TOKEN"
+          elif [ -n "${GH_PAT:-}" ]; then
+            PAT="$GH_PAT"
+          else
+            echo "::notice::No DEV_TEAM_GITHUB_TOKEN / GH_PAT — not writing repo secret AGENTZ_TUNNEL_TOKEN. Owner box: scripts/agentz-tunnel/run-with-api-token.sh with CLOUDFLARE_API_TOKEN (Actions cannot hand the token to the box)."
+            exit 0
+          fi
+          if [ ! -s "$TOKEN_FILE" ]; then
+            echo "::error::tunnel token file is empty — not writing AGENTZ_TUNNEL_TOKEN"
+            exit 1
+          fi
+          # gh has no --body-file. Official form: stdin (do not put the token on argv).
+          GH_TOKEN="$PAT" gh secret set AGENTZ_TUNNEL_TOKEN --app actions < "$TOKEN_FILE"
+          echo "stored AGENTZ_TUNNEL_TOKEN as a repo Actions secret (value not logged)"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### AgentZ tunnel bring-up (\$0)"
+            echo ""
+            echo "- Tunnel UUID \`${TUNNEL_UUID}\`"
+            echo "- DNS \`${TUNNEL_HOSTNAME}\` → \`${TUNNEL_UUID}.cfargotunnel.com\` (proxied)"
+            echo "- Worker route \`${TUNNEL_HOSTNAME}/*\` on \`authichain-agentz\` cleared when present"
+            echo "- Containers stay undeployed (no Workers Paid)"
+            echo "- Claw \`AGENTZ_*\` bind is the sibling job; \`OPENCLAW_GATEWAY_URL\` is not set"
+            echo "- Repo secret \`AGENT_SECRET\` must exist (or be minted once via PAT) for claw \`AGENTZ_API_KEY\`"
+            echo ""
+            echo "Owner box (preferred — Actions cannot start the connector):"
+            echo ""
+            echo '```bash'
+            echo "export CLOUDFLARE_API_TOKEN=...   # same Actions secret"
+            echo "export CLOUDFLARE_ACCOUNT_ID=..."
+            echo "PYTHONPATH=. python -m uvicorn agentz.api.main:app --host 127.0.0.1 --port 8000"
+            echo "./scripts/agentz-tunnel/run-with-api-token.sh"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,3 +1,21 @@
+import {
+  ESTATE_BASE_CSS,
+  ESTATE_FONTS_LINK,
+  estateCtaBand,
+  estateCssVars,
+  estateFeatures,
+  estateFooter,
+  estateHero,
+  estateNav,
+  estateSkipLink,
+  estateTrust,
+  tryHandleEstateIndexNow,
+} from "../../_shared/estate-landing.ts";
+import {
+  estatePricingGrid,
+  tryHandleEstatePricing,
+} from "../../_shared/estate-pricing.ts";
+
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <circle cx="32" cy="32" r="30" fill="#030c18" stroke="#06b6d4" stroke-width="1.5"/>
   <polygon points="32,12 46,20 46,36 32,44 18,36 18,20" fill="none" stroke="#06b6d4" stroke-width="2"/>
@@ -2020,11 +2038,11 @@ function renderVideosSection(videos: YtVideo[]): string {
   // No uploads yet (or the feed failed) — link to the channel instead of
   // rendering an empty grid.
   if (!videos.length) {
-    return `<section id="videos">
-  <h2>Watch &amp; Learn</h2>
-  <p class="section-sub">New protocol explainers every week.</p>
-  <div style="text-align:center;margin-top:1.5rem">
-    <a href="https://www.youtube.com/channel/${YT_CHANNEL_ID}" target="_blank" rel="noopener" class="btn btn-outline">Visit the channel →</a>
+    return `<section class="estate-section" id="videos">
+  <div class="wrap">
+  <h2>Watch and learn</h2>
+  <p class="section-sub">Protocol explainers from the AuthiChain / QRON channel.</p>
+  <a href="https://www.youtube.com/channel/${YT_CHANNEL_ID}" target="_blank" rel="noopener" class="btn btn-outline">Visit the channel</a>
   </div>
 </section>`;
   }
@@ -2039,12 +2057,14 @@ function renderVideosSection(videos: YtVideo[]): string {
       <h3>${escapeHtml(v.title)}</h3>
       <time datetime="${escapeHtml(v.published)}">${escapeHtml(v.published.slice(0, 10))}</time>
     </div>`).join('');
-  return `<section id="videos">
-  <h2>Watch &amp; Learn</h2>
-  <p class="section-sub">New protocol explainers every week.</p>
+  return `<section class="estate-section" id="videos">
+  <div class="wrap">
+  <h2>Watch and learn</h2>
+  <p class="section-sub">Protocol explainers from the AuthiChain / QRON channel.</p>
   <div class="video-grid">${cards}</div>
-  <div style="text-align:center;margin-top:2rem">
+  <div style="margin-top:1.5rem">
     <a href="https://www.youtube.com/channel/${YT_CHANNEL_ID}?sub_confirmation=1" target="_blank" rel="noopener" class="btn btn-primary">Subscribe on YouTube</a>
+  </div>
   </div>
 </section>`;
 }
@@ -2084,11 +2104,57 @@ a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:60
   });
 }
 
+type Env = {
+  APP_ORIGIN?: string;
+};
+
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
+  return value.slice(0, end);
+}
+
+async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
+  const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
+  const init: RequestInit = {
+    method: request.method,
+    headers: request.headers,
+    redirect: "manual",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    init.body = request.body;
+    // Node undici requires duplex when forwarding a streamed body.
+    (init as RequestInit & { duplex: "half" }).duplex = "half";
+  }
+  const proxied = new Request(upstream, init);
+  proxied.headers.set("Host", upstream.host);
+  proxied.headers.set("X-Forwarded-Host", url.host);
+  proxied.headers.set("X-Forwarded-Proto", "https");
+  const res = await fetch(proxied);
+  const headers = new Headers(res.headers);
+  headers.set("x-served-by", "qron-space-proxy");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env?: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
+    }
+    if (/^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname)) {
+      if (!env?.APP_ORIGIN) {
+        return Response.json(
+          {
+            error: "app_origin_not_configured",
+            detail:
+              "qron.space cannot reach the generate form. Set APP_ORIGIN in workers/qron-space/wrangler.toml.",
+            path: url.pathname,
+          },
+          { status: 503, headers: { "cache-control": "no-store" } },
+        );
+      }
+      return proxyToApp(request, url, env.APP_ORIGIN);
     }
     const p = url.pathname;
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
@@ -2098,6 +2164,8 @@ export default {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://qron.space/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://qron.space/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://qron.space/generate</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
@@ -2107,6 +2175,10 @@ export default {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
+    const indexNow = tryHandleEstateIndexNow(request);
+    if (indexNow) return indexNow;
+    const pricing = tryHandleEstatePricing(request, "qron");
+    if (pricing) return pricing;
     // Only the apex renders HTML here. Anything else is a 404 rather than a
     // 200 homepage — see notFound above.
     if (p !== '/') return notFound(p);
@@ -2114,232 +2186,115 @@ export default {
     const videosHtml = renderVideosSection(await fetchLatestVideos());
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>$QRON Token Hub — Stake, Govern, Bridge</title>
-<meta name="description" content="The $QRON token powers staking, governance, and cross-chain bridge for the AuthiChain ecosystem.">
+<title>QRON — Living QR codes that scan</title>
+<meta name="description" content="Generate a signed Living QR for packaging and labels. Ed25519-signed, Polygon-anchored, scannable from any camera.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
-<meta property="og:title" content="$QRON Token Hub — Stake, Govern, Bridge">
-<meta property="og:description" content="Stake $QRON to earn yield, govern protocol upgrades, and bridge across Polygon, Ethereum, and Base.">
+<meta property="og:title" content="QRON — Living QR codes that scan">
+<meta property="og:description" content="Generate a signed Living QR for packaging and labels. Ed25519-signed and still scannable.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://qron.space/og-image.png">
+<meta name="theme-color" content="#b45309">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"The $QRON token powers staking, governance, and cross-chain bridge for the AuthiChain ecosystem.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"$QRON Token Hub","url":"https://qron.space","description":"Stake $QRON to earn yield, govern protocol upgrades, and bridge across Polygon, Ethereum, and Base."}</script>
+${ESTATE_FONTS_LINK}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"QRON","url":"https://qron.space","logo":"https://qron.space/favicon.svg","description":"Generate signed Living QR codes for packaging and labels.","sameAs":["https://authichain.com","https://twitter.com/authichain"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"QRON","url":"https://qron.space","description":"Living QR generation for the AuthiChain estate."}</script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#020817;--surface:#0d1425;--border:#1e2d4a;--cyan:#06b6d4;--purple:#8b5cf6;--text:#e2e8f0;--muted:#64748b}
-body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.6}
-a{color:var(--cyan);text-decoration:none}
-.video-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;margin-top:2rem}
-.video-card{background:rgba(15,23,42,.6);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
-.video-card:hover{border-color:var(--cyan)}
-.video-frame{position:relative;width:100%;padding-top:56.25%}
-.video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.video-card h3{font-size:1rem;margin:.9rem 1rem .3rem;line-height:1.4}
-.video-card time{display:block;font-size:.8rem;color:var(--muted);margin:0 1rem 1rem}
-.nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 2rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(2,8,23,.95);backdrop-filter:blur(12px);z-index:100}
-.logo{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.nav-links{display:flex;gap:1.5rem;list-style:none}
-.nav-links a{color:var(--muted);font-size:.9rem;transition:color .2s}
-.nav-links a:hover{color:var(--cyan)}
-.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:600;font-size:.95rem;transition:all .2s;cursor:pointer;border:none}
-.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff}
-.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
-.btn-outline{background:transparent;border:1px solid var(--cyan);color:var(--cyan)}
-.btn-outline:hover{background:var(--cyan);color:var(--bg)}
-.hero{text-align:center;padding:5rem 2rem 4rem;max-width:900px;margin:0 auto}
-.hero-badge{display:inline-block;background:rgba(6,182,212,.1);border:1px solid var(--cyan);color:var(--cyan);padding:.4rem 1rem;border-radius:2rem;font-size:.85rem;margin-bottom:1.5rem}
-.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;line-height:1.1;margin-bottom:1.5rem;background:linear-gradient(135deg,#fff 40%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{font-size:1.2rem;color:var(--muted);max-width:600px;margin:0 auto 2.5rem}
-.hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;padding:2.5rem;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.stat{text-align:center}
-.stat-value{font-size:1.8rem;font-weight:700;color:var(--cyan)}
-.stat-label{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem}
-section{padding:5rem 2rem;max-width:1200px;margin:0 auto}
-h2{font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;margin-bottom:1rem}
-.section-sub{color:var(--muted);margin-bottom:3rem;max-width:600px}
-.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.75rem;transition:border-color .2s}
-.card:hover{border-color:var(--cyan)}
-.card-icon{font-size:2rem;margin-bottom:1rem}
-.card h3{font-size:1.15rem;font-weight:600;margin-bottom:.75rem}
-.card p{color:var(--muted);font-size:.9rem}
-.staking-panel{background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;overflow:hidden}
-.staking-header{padding:1.75rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.staking-tiers{display:grid;grid-template-columns:repeat(3,1fr)}
-.tier{padding:1.5rem;border-right:1px solid var(--border);text-align:center}
-.tier:last-child{border-right:none}
-.tier-name{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem}
-.tier-apy{font-size:2rem;font-weight:700;color:var(--cyan);margin-bottom:.25rem}
-.tier-lock{font-size:.85rem;color:var(--muted)}
-.gov-list{display:flex;flex-direction:column;gap:1rem}
-.proposal{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;display:flex;justify-content:space-between;align-items:center}
-.proposal-title{font-weight:600;font-size:.95rem}
-.proposal-meta{font-size:.8rem;color:var(--muted);margin-top:.25rem}
-.badge{display:inline-block;padding:.25rem .75rem;border-radius:2rem;font-size:.75rem;font-weight:600}
-.badge-active{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid var(--cyan)}
-.badge-passed{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid #22c55e}
-.tokenomics{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center}
-.token-chart{aspect-ratio:1;max-width:320px;background:conic-gradient(var(--cyan) 0% 40%,var(--purple) 40% 65%,#f59e0b 65% 80%,#22c55e 80% 92%,var(--muted) 92% 100%);border-radius:50%;margin:auto}
-.token-legend{display:flex;flex-direction:column;gap:.75rem}
-.legend-item{display:flex;align-items:center;gap:.75rem;font-size:.9rem}
-.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
-.bridge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
-.chain-card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center}
-.chain-name{font-weight:600;margin:.5rem 0 .25rem}
-.chain-meta{font-size:.8rem;color:var(--muted)}
-.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem}
-.price-card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2rem;text-align:center}
-.price-card.featured{border-color:var(--cyan);position:relative}
-.price-amount{font-size:2.5rem;font-weight:700;color:var(--cyan);margin:1rem 0}
-.price-period{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem}
-.price-features{list-style:none;text-align:left;margin-bottom:2rem}
-.price-features li{padding:.4rem 0;font-size:.9rem;color:var(--muted)}
-.price-features li::before{content:"✓ ";color:var(--cyan)}
-.cta-section{text-align:center;padding:5rem 2rem;background:linear-gradient(135deg,rgba(6,182,212,.05),rgba(139,92,246,.05));border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border)}
-@media(max-width:768px){.stats-bar,.staking-tiers,.tokenomics,.bridge-grid,.pricing-grid{grid-template-columns:1fr}.tier{border-right:none;border-bottom:1px solid var(--border)}}
+${estateCssVars("qron")}
+${ESTATE_BASE_CSS}
+.pricing-grid{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.pricing-grid{grid-template-columns:1fr}}
 </style></head><body>
-<nav class="nav">
-  <div class="logo">$QRON</div>
-  <ul class="nav-links">
-    <li><a href="#advantages">Advantages</a></li>
-    <li><a href="#staking">Staking</a></li>
-    <li><a href="#governance">Governance</a></li>
-    <li><a href="#bridge">Bridge</a></li>
-    <li><a href="#tokenomics">Tokenomics</a></li>
-    <li><a href="#videos">Videos</a></li>
-    <li><a href="#pricing">Pricing</a></li>
-  </ul>
-  <a href="https://authichain.com/dapp" class="btn btn-primary">Connect Wallet</a>
-</nav>
+${estateSkipLink()}
+${estateNav(
+  "qron",
+  [
+    { href: "#features", label: "Capabilities" },
+    { href: "/pricing", label: "Pricing" },
+    { href: "#videos", label: "Videos" },
+    { href: "https://authichain.com", label: "AuthiChain" },
+  ],
+  { href: "/generate", label: "Generate Living QR" },
+)}
+<main id="main">
+${estateHero({
+  eyebrow: "QRON · Living QR",
+  title: "AI QR art that still scans.",
+  lede: "Turn a URL into a signed Living QR for packaging and labels. Generation is the first-dollar path — open /generate, no token theater required.",
+  actions: [
+    { href: "/generate", label: "Generate Living QR", primary: true },
+    { href: "/pricing", label: "View pricing", primary: false },
+  ],
+})}
+${estateTrust([
+  { value: "Ed25519", label: "Signed payload" },
+  { value: "Scannable", label: "Any camera app" },
+  { value: "Polygon", label: "On-chain anchor" },
+  { value: "Editable", label: "Redirects, no reprint" },
+])}
+${estateFeatures(
+  "What QRON is for",
+  "Product claims from the existing QRON studio — art that remains a working code.",
+  [
+    { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
+    { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
+    { title: "Estate verification", body: "Each QRON is signed for AuthiChain verification. Scan to confirm the destination and the certificate behind it." },
+    { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
+    { title: "Utility token, not the CTA", body: "$QRON is the estate utility token on Polygon. Staking and governance are secondary; generation is how you start." },
+    { title: "Public contract", body: "Staking contract 0xAebf…E437 is published on Polygonscan. Inspect it there — we do not invent vote counts or APY theater on this page." },
+  ],
+  "features",
+)}
 
-<div class="hero">
-  <div class="hero-badge">🔷 $QRON Token — Polygon PoS + ERC-20</div>
-  <h1>Power the AuthiChain Ecosystem</h1>
-  <p>Stake $QRON to earn yield, govern protocol upgrades, and bridge seamlessly across Polygon, Ethereum, and Base.</p>
-  <div class="hero-cta">
-    <a href="#staking" class="btn btn-primary">Start Staking</a>
-    <a href="#tokenomics" class="btn btn-outline">View Tokenomics</a>
-  </div>
-</div>
-
-<div class="stats-bar">
-  <div class="stat"><div class="stat-value" id="qs-auths">370</div><div class="stat-label">Authentications</div></div>
-  <div class="stat"><div class="stat-value" id="qs-certs">1,369</div><div class="stat-label">Valid Certificates</div></div>
-  <div class="stat"><div class="stat-value" id="qs-events">6,371</div><div class="stat-label">Chain Events</div></div>
-  <div class="stat"><div class="stat-value" id="qs-rewards">369</div><div class="stat-label">Rewards Issued</div></div>
-</div>
-<script>
-fetch('https://qron.space/api/qron/stats')
-  .then(r=>r.json()).then(function(d){
-    if(d.authentications_total!=null)document.getElementById('qs-auths').textContent=d.authentications_total.toLocaleString();
-    if(d.certificates_valid!=null)document.getElementById('qs-certs').textContent=d.certificates_valid.toLocaleString();
-    if(d.product_events_total!=null)document.getElementById('qs-events').textContent=d.product_events_total.toLocaleString();
-    if(d.rewards_issued!=null)document.getElementById('qs-rewards').textContent=d.rewards_issued.toLocaleString();
-  }).catch(function(){});
-</script>
-
-<section id="advantages">
-  <h2>Why $QRON</h2>
-  <p class="section-sub">The particular advantages that set $QRON apart from a generic utility token.</p>
-  <div class="grid-3">
-    <div class="card"><div class="card-icon">📈</div><h3>Real, On-Chain Yield</h3><p>Up to 42.1% APY from protocol fee revenue — not inflationary emissions. Rewards are paid by actual ecosystem usage.</p></div>
-    <div class="card"><div class="card-icon">🌉</div><h3>Sub-$0.10 Cross-Chain</h3><p>Move between Polygon, Ethereum, and Base with ~2s finality and fees under a dime — liquidity without lock-in.</p></div>
-    <div class="card"><div class="card-icon">🗳️</div><h3>Governance That Bites</h3><p>Holders vote on APY, treasury, and bridge deployments. Passed QIPs ship — governance with teeth, not theater.</p></div>
-    <div class="card"><div class="card-icon">🔥</div><h3>Deflationary by Design</h3><p>A share of every protocol fee buys back and burns $QRON, tightening supply as the AuthiChain economy grows.</p></div>
-    <div class="card"><div class="card-icon">🎨</div><h3>Backed by Real Utility</h3><p>$QRON powers AI QR-art generation, certificate minting, and verification across the AuthiChain ecosystem.</p></div>
-    <div class="card"><div class="card-icon">🔒</div><h3>Audited & Verified</h3><p>Staking secured by verified Polygon PoS contracts, publicly inspectable on Polygonscan.</p></div>
-  </div>
-</section>
-
-<section id="staking">
-  <h2>Staking Tiers</h2>
-  <p class="section-sub">Lock $QRON for higher yield. All staking secured by Polygon PoS smart contracts.</p>
-  <div class="staking-panel">
-    <div class="staking-header">
-      <div><strong>Active Staking Pool</strong><div style="color:var(--muted);font-size:.85rem">Contract: 0xAebf...E437 · Verified on Polygonscan</div></div>
-      <a href="https://authichain.com/dapp" class="btn btn-primary">Stake Now</a>
-    </div>
-    <div class="staking-tiers">
-      <div class="tier"><div class="tier-name">Flexible</div><div class="tier-apy">18.7%</div><div class="tier-lock">30-day lock · No penalty</div></div>
-      <div class="tier"><div class="tier-name">Standard</div><div class="tier-apy">28.4%</div><div class="tier-lock">90-day lock · 2% early exit</div></div>
-      <div class="tier"><div class="tier-name">Power</div><div class="tier-apy">42.1%</div><div class="tier-lock">180-day lock · 5% early exit</div></div>
-    </div>
-  </div>
-</section>
-
-<section id="governance">
-  <h2>Governance</h2>
-  <p class="section-sub">$QRON holders vote on protocol parameters, treasury allocations, and ecosystem upgrades.</p>
-  <div class="gov-list">
-    <div class="proposal">
-      <div><div class="proposal-title">QIP-048: Increase Flexible Staking APY to 22%</div><div class="proposal-meta">Ends May 20, 2026 · 8,421 votes cast</div></div>
-      <span class="badge badge-active">Active</span>
-    </div>
-    <div class="proposal">
-      <div><div class="proposal-title">QIP-047: Deploy QRON Bridge to Base Network</div><div class="proposal-meta">Ended May 5, 2026 · 11,203 votes cast</div></div>
-      <span class="badge badge-passed">Passed</span>
-    </div>
-    <div class="proposal">
-      <div><div class="proposal-title">QIP-046: Treasury Allocation Q2 2026</div><div class="proposal-meta">Ended Apr 28, 2026 · 9,876 votes cast</div></div>
-      <span class="badge badge-passed">Passed</span>
-    </div>
-  </div>
-</section>
-
-<section id="bridge">
-  <h2>Cross-Chain Bridge</h2>
-  <p class="section-sub">Move $QRON across networks with sub-2-minute finality and sub-$0.10 fees.</p>
-  <div class="bridge-grid">
-    <div class="chain-card"><div style="font-size:2rem">⬡</div><div class="chain-name">Polygon PoS</div><div class="chain-meta">Primary · ~2s finality</div></div>
-    <div class="chain-card"><div style="font-size:2rem">⟠</div><div class="chain-name">Ethereum</div><div class="chain-meta">Bridge live · ~12s finality</div></div>
-    <div class="chain-card"><div style="font-size:2rem">🔵</div><div class="chain-name">Base</div><div class="chain-meta">QIP-047 · Deploying Q2 2026</div></div>
-  </div>
-</section>
-
-<section id="tokenomics">
-  <h2>Tokenomics</h2>
-  <p class="section-sub">Total supply: 100,000,000 $QRON · Deflationary via fee burn</p>
-  <div class="tokenomics">
-    <div class="token-chart"></div>
-    <div class="token-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div><strong>40%</strong> — Staking Rewards</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div><strong>25%</strong> — Ecosystem Fund</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><strong>15%</strong> — Team (4yr vest)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><strong>12%</strong> — Public Sale</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--muted)"></div><strong>8%</strong> — Treasury / DAO</div>
-    </div>
-  </div>
-</section>
-
-<section id="pricing">
-  <h2>Products &amp; Pricing</h2>
-  <p class="section-sub">AI QR art, blockchain-anchored product authentication, and EU DPP readiness — checkout in one click.</p>
-  <div class="pricing-grid">
-    <div class="price-card"><h3>QRON Pro</h3><div class="price-amount">$49</div><div class="price-period">per month</div><ul class="price-features"><li>AI-generated artistic QR codes</li><li>Blockchain-anchored verification</li><li>QRON engagement platform access</li><li>Priority generation queue</li></ul><a href="https://buy.stripe.com/14AbJ13R78Jo5ia0YY1ND3q" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy QRON Pro</a></div>
-    <div class="price-card featured"><h3>AuthiChain Pro</h3><div class="price-amount">$499</div><div class="price-period">per month</div><ul class="price-features"><li>10,000 seals/mo</li><li>50,000 verifications/mo</li><li>5 brand domains</li><li>Advanced analytics + priority support</li></ul><a href="https://buy.stripe.com/fZucN587n3p411U3761ND3s" class="btn btn-primary" style="width:100%;text-align:center" target="_blank" rel="noopener">Most Popular</a></div>
-    <div class="price-card"><h3>AuthiChain Basic</h3><div class="price-amount">$149</div><div class="price-period">per month</div><ul class="price-features"><li>1,000 seals/mo</li><li>5,000 verifications/mo</li><li>1 brand domain</li><li>Blockchain-anchored authentication</li></ul><a href="https://buy.stripe.com/aFa28r5Zf0cS8um9vu1ND3r" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy Basic</a></div>
-    <div class="price-card"><h3>EU DPP Audit</h3><div class="price-amount">$2,990</div><div class="price-period">one-time</div><ul class="price-features"><li>Digital Product Passport readiness audit</li><li>Written report + strategy call</li><li>Delivered in 5 business days</li><li>Credit toward Basic on conversion</li></ul><a href="https://buy.stripe.com/9B6fZh9brf7M4e6gXW1ND3t" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Book Audit</a></div>
+<section class="estate-section" id="pricing">
+  <div class="wrap">
+    <h2>Products and pricing</h2>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Starter and Creator use Stripe Payment Links. EU DPP Readiness uses live checkout on authichain.com.</p>
+    ${estatePricingGrid("qron")}
+    <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
 </section>
 
 ${videosHtml}
 
-<div class="cta-section">
-  <h2>Ready to stake $QRON?</h2>
-  <p style="color:var(--muted);margin:1rem 0 2rem">Connect your wallet and start earning yield on Polygon today.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Launch dApp</a>
-</div>
-
-<footer>
-  <p>© 2026 QRON / AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a> · Contract: 0xAebfA6b08fb25b59748c93273aB8880e20FfE437</p>
-</footer>
+${estateCtaBand({
+  title: "Generate a Living QR",
+  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space.",
+  actions: [{ href: "/generate", label: "Generate Living QR", primary: true }],
+})}
+</main>
+${estateFooter(
+  "qron",
+  [
+    {
+      heading: "Start",
+      links: [
+        { href: "/generate", label: "Generate Living QR" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
+      ],
+    },
+    {
+      heading: "Estate",
+      links: [
+        { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
+        { href: "https://govchain.us/onboard", label: "GovChain onboard" },
+        { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
+      ],
+    },
+    {
+      heading: "Contract",
+      links: [
+        { href: "https://polygonscan.com/address/0xAebfA6b08fb25b59748c93273aB8880e20FfE437", label: "Polygonscan" },
+      ],
+    },
+  ],
+  "QRON / AuthiChain · Living QR generation",
+)}
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });
   },

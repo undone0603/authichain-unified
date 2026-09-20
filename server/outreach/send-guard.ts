@@ -10,7 +10,7 @@ import { recordDryRunSend } from "../email-service";
 
 export type VerificationSource =
   | "apollo_verified"
-  | "reacher_verified"   // deliverable + non-catch-all per self-hosted Reacher (free OSS)
+  | "reacher_verified" // deliverable + non-catch-all per self-hosted Reacher (free OSS)
   | "inbound_optin"
   | "confirmed_reply"
   /**
@@ -33,12 +33,39 @@ const TRUSTED_SOURCES: ReadonlySet<VerificationSource> = new Set([
   "published_contact",
 ]);
 
-// Generic/role inboxes — never a real decision-maker; reject so we don't hit
-// support queues (the info@ auto-responder problem).
+// Generic/role inboxes — reject for cold end-buyer segments so we don't hit
+// support queues (the info@ auto-responder problem). Channel-partner desks
+// are the exception: those companies publish contact@ / info@ / hello@ as
+// the partnership inbox. Callers must pass `allowRoleInbox` explicitly;
+// trusted provenance alone is not enough.
 const ROLE_LOCALPARTS = new Set([
-  "info", "support", "help", "contact", "sales", "admin", "hello",
-  "billing", "noreply", "no-reply", "team", "office",
+  "info",
+  "support",
+  "help",
+  "contact",
+  "sales",
+  "admin",
+  "hello",
+  "billing",
+  "noreply",
+  "no-reply",
+  "team",
+  "office",
 ]);
+
+export function isRoleInboxEmail(email: string): boolean {
+  const local = (email || "").trim().toLowerCase().split("@")[0] ?? "";
+  return ROLE_LOCALPARTS.has(local);
+}
+
+export type AssessRecipientOptions = {
+  /**
+   * Permit a role inbox when the source is already trusted. Only the
+   * channel-partner path sets this — govchain / strainchain / qron / all
+   * must keep role inboxes rejected.
+   */
+  allowRoleInbox?: boolean;
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -53,23 +80,35 @@ export interface RecipientAssessment {
 }
 
 /** Pure provenance + format assessment (no network). */
-export function assessRecipient(email: string, source: VerificationSource): RecipientAssessment {
+export function assessRecipient(
+  email: string,
+  source: VerificationSource,
+  opts: AssessRecipientOptions = {}
+): RecipientAssessment {
   const reasons: string[] = [];
   const normalized = (email || "").trim().toLowerCase();
   const validFormat = EMAIL_RE.test(normalized);
   if (!validFormat) reasons.push("invalid_format");
 
-  const localPart = normalized.split("@")[0] ?? "";
-  const isRoleInbox = ROLE_LOCALPARTS.has(localPart);
-  if (isRoleInbox) reasons.push("role_inbox");
+  const isRoleInbox = isRoleInboxEmail(normalized);
+  const roleInboxBlocked = isRoleInbox && opts.allowRoleInbox !== true;
+  if (roleInboxBlocked) reasons.push("role_inbox");
 
   const trustedSource = TRUSTED_SOURCES.has(source);
   if (!trustedSource) reasons.push(`untrusted_source:${source}`);
 
   const status: "allow" | "reject" =
-    validFormat && trustedSource && !isRoleInbox ? "allow" : "reject";
+    validFormat && trustedSource && !roleInboxBlocked ? "allow" : "reject";
 
-  return { email: normalized, source, validFormat, trustedSource, isRoleInbox, status, reasons };
+  return {
+    email: normalized,
+    source,
+    validFormat,
+    trustedSource,
+    isRoleInbox,
+    status,
+    reasons,
+  };
 }
 
 export function canSend(a: RecipientAssessment): boolean {
@@ -89,12 +128,19 @@ export async function domainAcceptsMail(email: string): Promise<boolean> {
 }
 
 /** CAN-SPAM compliant footer — physical address + working unsubscribe are required. */
-export function unsubscribeFooter(opts: { company: string; address: string; unsubscribeUrl: string }): string {
+export function unsubscribeFooter(opts: {
+  company: string;
+  address: string;
+  unsubscribeUrl: string;
+}): string {
   return `\n\n—\n${opts.company}\n${opts.address}\nUnsubscribe: ${opts.unsubscribeUrl}`;
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  return s.replace(
+    /[&<>"]/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!
+  );
 }
 
 /**
@@ -102,7 +148,11 @@ function escapeHtml(s: string): string {
  * exists in the plain-text alternative is not compliant for the recipients who
  * read the HTML part — which is nearly all of them.
  */
-export function unsubscribeFooterHtml(opts: { company: string; address: string; unsubscribeUrl: string }): string {
+export function unsubscribeFooterHtml(opts: {
+  company: string;
+  address: string;
+  unsubscribeUrl: string;
+}): string {
   return (
     `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px">` +
     `<p style="font-size:12px;color:#9ca3af;line-height:1.5;margin:0">` +
@@ -118,6 +168,17 @@ export interface GuardedSendResult {
   /** Resend message id, present only on a successful send. */
   id?: string;
   assessment: RecipientAssessment;
+}
+
+/**
+ * Whether a guardedSend result should count against MAX_LIVE_SENDS.
+ * Immediate policy refuses (role_inbox, untrusted source, no MX, missing
+ * config) must not burn the cap — only a real Resend attempt does.
+ */
+export function countsAsLiveSendAttempt(res: GuardedSendResult): boolean {
+  if (res.sent) return true;
+  const reason = res.reason ?? "";
+  return reason.startsWith("resend_http_");
 }
 
 /**
@@ -145,8 +206,12 @@ export async function guardedSend(args: {
    * RESEND_API_KEY for callers that only ever use the first account.
    */
   apiKey?: string;
+  /** See AssessRecipientOptions.allowRoleInbox — partners only. */
+  allowRoleInbox?: boolean;
 }): Promise<GuardedSendResult> {
-  const assessment = assessRecipient(args.to, args.source);
+  const assessment = assessRecipient(args.to, args.source, {
+    allowRoleInbox: args.allowRoleInbox === true,
+  });
   if (!canSend(assessment)) {
     return { sent: false, reason: assessment.reasons.join(","), assessment };
   }
@@ -155,19 +220,30 @@ export async function guardedSend(args: {
   }
 
   const apiKey = args.apiKey ?? process.env.RESEND_API_KEY;
-  if (!apiKey) return { sent: false, reason: "resend_not_configured", assessment };
+  if (!apiKey)
+    return { sent: false, reason: "resend_not_configured", assessment };
 
   // CAN-SPAM requires a valid physical postal address in every commercial email.
   // Fail CLOSED if none is configured, rather than ship a placeholder — so
   // autopilot can never send a non-compliant message.
   const address = args.address ?? process.env.MAILING_ADDRESS;
   if (!address) {
-    return { sent: false, reason: "mailing_address_not_configured", assessment };
+    return {
+      sent: false,
+      reason: "mailing_address_not_configured",
+      assessment,
+    };
   }
   const unsubscribeUrl =
-    args.unsubscribeUrl ?? process.env.UNSUBSCRIBE_URL ?? "https://authichain.com/unsubscribe";
+    args.unsubscribeUrl ??
+    process.env.UNSUBSCRIBE_URL ??
+    "https://authichain.com/unsubscribe";
 
-  const footerOpts = { company: args.company ?? "AuthiChain", address, unsubscribeUrl };
+  const footerOpts = {
+    company: args.company ?? "AuthiChain",
+    address,
+    unsubscribeUrl,
+  };
   const footer = unsubscribeFooter(footerOpts);
 
   if (args.body === undefined && args.html === undefined) {
@@ -178,31 +254,50 @@ export async function guardedSend(args: {
   // reports what a live run would really do: a recipient rejected by
   // assessRecipient(), a domain with no MX, or a missing postal address is
   // reported as blocked rather than as "would send".
-  if (recordDryRunSend({ to: assessment.email, subject: args.subject, body: args.body ?? args.html ?? "" })) {
+  if (
+    recordDryRunSend({
+      to: assessment.email,
+      subject: args.subject,
+      body: args.body ?? args.html ?? "",
+    })
+  ) {
     return { sent: false, reason: "dry_run", assessment };
   }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       // A cold email from noreply@ with no reply-to cannot be replied to at all,
       // and mailbox providers treat the combination as a spam signal. Outreach has
       // recorded zero replies ever against a 16% bounce rate; this is part of why.
       // RESEND_FROM should be a human, monitored address on an authenticated
       // sending domain — see docs/outreach-deliverability-runbook.md.
-      from: args.from ?? process.env.RESEND_FROM ?? "AuthiChain <hello@authichain.com>",
-      reply_to: args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
+      from:
+        args.from ??
+        process.env.RESEND_FROM ??
+        "AuthiChain <hello@authichain.com>",
+      reply_to:
+        args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
       to: assessment.email,
       subject: args.subject,
       ...(args.body !== undefined ? { text: args.body + footer } : {}),
-      ...(args.html !== undefined ? { html: args.html + unsubscribeFooterHtml(footerOpts) } : {}),
+      ...(args.html !== undefined
+        ? { html: args.html + unsubscribeFooterHtml(footerOpts) }
+        : {}),
       // One-click unsubscribe (RFC 8058) — improves compliance + deliverability.
-      headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     }),
   });
 
-  if (!res.ok) return { sent: false, reason: `resend_http_${res.status}`, assessment };
+  if (!res.ok)
+    return { sent: false, reason: `resend_http_${res.status}`, assessment };
 
   const payload = (await res.json().catch(() => ({}))) as { id?: string };
   return { sent: true, id: payload.id, assessment };

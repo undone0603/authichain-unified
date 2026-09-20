@@ -1,40 +1,43 @@
-import { router } from './utils/router'
-import { stripeWebhook } from './routes/stripe-webhook'
-import { licenseVerify } from './routes/license-verify'
-import { licenseRevoke } from './routes/license-revoke'
+import { router } from "./utils/router";
+import { stripeWebhook } from "./routes/stripe-webhook";
+import { licenseVerify } from "./routes/license-verify";
+import { licenseRevoke } from "./routes/license-revoke";
+import { licenseHealth } from "./routes/health";
 
 export interface Env {
   // Stripe
-  STRIPE_SECRET_KEY: string
-  STRIPE_WEBHOOK_SECRET: string
-  STRIPE_AGENT_BROWSER_PRO_PRICE_ID: string
-  STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID: string
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  STRIPE_AGENT_BROWSER_PRO_PRICE_ID: string;
+  STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID: string;
 
   // License signing (ECDSA P-256 PEM, set via wrangler secret)
-  LICENSE_PRIVATE_KEY_PEM: string
-  LICENSE_PUBLIC_KEY_PEM: string
+  LICENSE_PRIVATE_KEY_PEM: string;
+  LICENSE_PUBLIC_KEY_PEM: string;
 
   // Telegram (reuses auth token from the main bot)
-  TELEGRAM_BOT_TOKEN: string
-  TELEGRAM_ADMIN_CHAT_ID: string
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_ADMIN_CHAT_ID: string;
 
   // Email delivery of the issued licence key. Optional: sendLicenseEmail()
   // checks for it and returns false when absent, so the worker still issues
   // licences without it — it just does not mail them. Set via
   // `wrangler secret put RESEND_API_KEY`.
-  RESEND_API_KEY?: string
+  RESEND_API_KEY?: string;
 
   // Persistence
-  DATABASE: D1Database   // license records
-  SESSIONS: KVNamespace  // short-lived delivery tokens
+  DATABASE: D1Database; // license records
+  SESSIONS: KVNamespace; // short-lived delivery tokens
 }
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
     return router(request, env, ctx, [
-      ['POST', '/api/license/stripe-webhook', stripeWebhook],
-      ['GET',  '/api/license/verify',         licenseVerify],
-      ['POST', '/api/license/revoke',          licenseRevoke],
-    ])
+      ["GET", "/health", licenseHealth],
+      ["GET", "/api/license/health", licenseHealth],
+      ["POST", "/api/license/stripe-webhook", stripeWebhook],
+      ["GET", "/api/license/verify", licenseVerify],
+      ["POST", "/api/license/revoke", licenseRevoke],
+    ]);
   },
-}
+};
