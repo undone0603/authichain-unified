@@ -8,6 +8,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { moneyCtaHtml } = require('./lib/seo-money-cta.cjs');
 
 const OUT = path.join(__dirname, '..', 'content', 'seo', 'pages.json');
 
@@ -590,6 +591,7 @@ function buildEntry(d) {
     `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. ${esc(b.price)}</p>` +
+    moneyCtaHtml(d.keyword, d.brand) +
     `<h2>FAQ</h2>` +
     d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
 
