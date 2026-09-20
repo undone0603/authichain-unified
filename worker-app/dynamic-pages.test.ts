@@ -154,6 +154,16 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain('rel="canonical"');
   });
 
+  it("bare /p is a clear 404, not a redirect and not a silent hub", async () => {
+    const res = await app.request("/p", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No serial number was provided.");
+    expect(res.headers.get("location")).toBeNull();
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+  });
+
   it("returns 404 HTML when neither certificate nor product-serial lookup matches", async () => {
     (getCertificateByNumber as any).mockResolvedValue(undefined);
     (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));

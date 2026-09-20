@@ -4,7 +4,8 @@
  * Landing workers own marketing HTML and 404 unknown paths, so the Next.js
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
  * render the same customer-facing catalogue as `src/lib/plans.ts` (`listedPlans`)
- * with live Payment Links or GET /api/checkout/dpp. StrainChain does not use
+ * with live Payment Links or GET /api/checkout/dpp. AuthiChain also shows
+ * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain does not use
  * those catalogue SKUs — `strainchain_passport` / `strainchain_farm` have
  * `stripe_price_id: null` on purpose — and instead offers the live Payment Link
  * in `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
@@ -29,6 +30,9 @@ export type PricingOrigin = "authichain" | "qron" | "strainchain";
 
 /** Canonical StrainChain money path — live Stripe Payment Link, $199/mo. */
 export const STRAINCHAIN_BASIC = PAYMENT_LINKS.strainchain.basic;
+
+/** Canonical AuthiChain Starter money path — live Stripe Payment Link, $299/mo. */
+export const AUTHICHAIN_STARTER = PAYMENT_LINKS.authichain.starter;
 
 function esc(value: string): string {
   return value
@@ -81,8 +85,30 @@ export function planCheckoutCta(
   };
 }
 
+function authichainStarterCard(): string {
+  const offer = AUTHICHAIN_STARTER;
+  const { amount, period } = splitListedPrice(offer.price);
+  const features = [
+    "Live Stripe Payment Link — published AuthiChain Starter checkout",
+    "Monthly subscription at the listed $299/mo price",
+    "Operator intake on /onboard",
+    "EU DPP Readiness remains the one-time audit path",
+  ]
+    .map((f) => `<li>${esc(f)}</li>`)
+    .join("");
+  return `<article class="price-card">
+  <h3>${esc(offer.name)}</h3>
+  <div class="price-amount">${esc(amount)}</div>
+  <div class="price-period">${esc(period)}</div>
+  <p class="section-sub" style="margin-bottom:16px">Monthly AuthiChain subscription via the published Stripe Payment Link. The listed price is $299/mo — no invented figure.</p>
+  <ul class="price-features">${features}</ul>
+  <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(offer.url)}" target="_blank" rel="noopener">Start ${esc(offer.name)}</a>
+</article>`;
+}
+
 function cataloguePricingGrid(origin: Exclude<PricingOrigin, "strainchain">): string {
   const plans = listedPlans("qron");
+  const starter = origin === "authichain" ? authichainStarterCard() : "";
   const cards = plans
     .map((plan) => {
       const cta = planCheckoutCta(plan, origin);
@@ -105,7 +131,7 @@ function cataloguePricingGrid(origin: Exclude<PricingOrigin, "strainchain">): st
 </article>`;
     })
     .join("");
-  return `<div class="pricing-grid">${cards}</div>`;
+  return `<div class="pricing-grid">${starter}${cards}</div>`;
 }
 
 function strainchainPricingGrid(): string {
@@ -211,7 +237,8 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   }
 
   const isAuthichain = origin === "authichain";
-  const offers = listedPlans("qron")
+  const starter = AUTHICHAIN_STARTER;
+  const catalogueOffers = listedPlans("qron")
     .filter((p) => p.price > 0)
     .map((p) => ({
       "@type": "Offer" as const,
@@ -223,13 +250,26 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         ? "https://authichain.com/pricing"
         : "https://qron.space/pricing",
     }));
+  const offers = isAuthichain
+    ? [
+        {
+          "@type": "Offer" as const,
+          name: starter.name,
+          description: "AuthiChain Starter monthly subscription",
+          price: usdAmount(starter.price),
+          priceCurrency: "USD" as const,
+          url: starter.url,
+        },
+        ...catalogueOffers,
+      ]
+    : catalogueOffers;
 
   if (isAuthichain) {
     return {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
+        "Live AuthiChain prices from the published plan catalogue. AuthiChain Starter is $299/mo via a live Stripe Payment Link. EU DPP Readiness is $299 via Stripe checkout.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: { href: "/api/checkout/dpp", label: "Start DPP checkout" },
@@ -241,15 +281,16 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       ],
       heroTitle: "Prices that already charge.",
       heroLede:
-        "These figures come from the AuthiChain plan catalogue. The primary money path is EU DPP Readiness via live Stripe checkout.",
+        "These figures come from the AuthiChain plan catalogue and the published AuthiChain Starter Payment Link. The primary money path is still EU DPP Readiness via live Stripe checkout.",
       secondary: { href: "/onboard", label: "Onboard", primary: false },
       plansNote:
-        "Only plans with a Stripe price or Payment Link are listed. Theater subscriptions without a Payment Link use Contact.",
+        "AuthiChain Starter is the live $299/mo Payment Link. Catalogue plans with a Stripe price or Payment Link stay listed. Theater subscriptions without a Payment Link use Contact.",
       ctaTitle: "Start EU DPP Readiness",
       ctaLede:
-        "GET /api/checkout/dpp opens the live Stripe session. No new product surface.",
+        "GET /api/checkout/dpp opens the live Stripe session. AuthiChain Starter is the monthly Payment Link on this page.",
       footerStart: [
         { href: "/api/checkout/dpp", label: "DPP checkout" },
+        { href: starter.url, label: starter.name },
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
       ],

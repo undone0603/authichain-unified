@@ -5,6 +5,9 @@ export const APP_PREFIXES = [
   "/generate",
   "/api",
   "/verify",
+  // Product passport GET /p/<serial> — worker-app/dynamic-pages.ts.
+  // Without this prefix the apex answered marketing 404 HTML for /p and /p/*.
+  "/p",
   "/auth",
   "/login",
   "/logout",

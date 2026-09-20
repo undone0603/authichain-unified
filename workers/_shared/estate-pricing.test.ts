@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { listedPlans } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
 import {
+  AUTHICHAIN_STARTER,
   isPricingPath,
   planCheckoutCta,
   renderEstatePricingPage,
@@ -40,16 +41,38 @@ test("starter and creator keep their published Payment Links", () => {
   assert.equal(planCheckoutCta(creator, "authichain").href, creator.stripe_payment_link);
 });
 
+test("authichain Starter reuses the live Payment Link, not an invented price", () => {
+  assert.equal(AUTHICHAIN_STARTER.url, PAYMENT_LINKS.authichain.starter.url);
+  assert.equal(AUTHICHAIN_STARTER.price, "$299/mo");
+  assert.equal(AUTHICHAIN_STARTER.name, "AuthiChain Starter");
+});
+
 test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   const html = renderEstatePricingPage("authichain");
+  const starterUrl = AUTHICHAIN_STARTER.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
+  assert.match(html, /AuthiChain Starter/);
+  assert.match(html, /\$299\/mo/);
+  assert.match(html, new RegExp(starterUrl));
   assert.match(html, /\$299/);
   assert.match(html, /\$29/);
   assert.match(html, /\$99/);
   assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
+  assert.match(html, /Start DPP Readiness Audit/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
+  assert.doesNotMatch(html, /Publish one passport/);
+  assert.doesNotMatch(html, /Start a Farm Plan/);
+});
+
+test("qron /pricing HTML does not advertise the AuthiChain Starter Payment Link", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.doesNotMatch(
+    html,
+    new RegExp(AUTHICHAIN_STARTER.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
+  assert.doesNotMatch(html, /AuthiChain Starter/);
 });
 
 test("qron /pricing HTML cites catalogue prices and generate", () => {
@@ -68,7 +91,10 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
   assert.ok(hit);
   assert.equal(hit.status, 200);
   assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
-  assert.match(await hit.text(), /Start DPP Readiness Audit/);
+  const hitHtml = await hit.text();
+  assert.match(hitHtml, /Start DPP Readiness Audit/);
+  assert.match(hitHtml, /AuthiChain Starter/);
+  assert.match(hitHtml, /https:\/\/buy\.stripe\.com\/28E8wP0EVf7M6mefTS1Nu1p/);
 
   assert.equal(
     tryHandleEstatePricing(
