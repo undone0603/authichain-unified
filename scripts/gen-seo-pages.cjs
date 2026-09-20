@@ -5,6 +5,8 @@
  * are preserved by slug and generated pages are (re)built from the DATA table.
  *
  * Run:  node scripts/gen-seo-pages.cjs
+ * CI:   .github/workflows/gen-seo-pages.yml — Friday 09:00 UTC and
+ *       workflow_dispatch. Commits content/seo/pages.json only when it changes.
  */
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +19,67 @@ const BRANDS = {
   govchain: { name: 'GovChain', domain: 'govchain.us', price: 'No enterprise contract — public-sector pricing.' },
   qron: { name: 'QRON', domain: 'qron.space', price: 'Plans start at $29/mo.' },
 };
+
+// Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
+// estate landing workers. Do not invent checkout URLs or dollar amounts.
+const LIVE_MONEY = {
+  authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
+  authichainPricing: 'https://authichain.com/pricing',
+  // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
+  strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
+};
+
+function isDppKeyword(keyword) {
+  return /digital product passport|\bdpp\b|batter(?:y|ies)|textiles/i.test(keyword);
+}
+
+function isCannabisKeyword(keyword) {
+  return /\b(cannabis|metrc|strain|coa|dispensary|biotrack)\b/i.test(keyword);
+}
+
+/**
+ * Brand-aware CTA after How it works. Keyword bias can override brand:
+ * DPP / battery / textiles → AuthiChain DPP checkout; cannabis / METRC /
+ * strain / COA → StrainChain passport checkout + strainchain.io/pricing.
+ * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
+ */
+function moneyCtaHtml(brandKey, keyword, brand) {
+  let primaryHref;
+  let primaryLabel;
+  let secondaryHref = null;
+  let secondaryLabel = null;
+
+  const cannabis = isCannabisKeyword(keyword);
+  const dpp = isDppKeyword(keyword);
+
+  if ((dpp || brandKey === 'authichain') && !cannabis) {
+    primaryHref = LIVE_MONEY.authichainDppCheckout;
+    primaryLabel = 'Start DPP readiness checkout';
+    secondaryHref = LIVE_MONEY.authichainPricing;
+    secondaryLabel = 'View AuthiChain pricing';
+  } else if (cannabis || brandKey === 'strainchain') {
+    if (cannabis) {
+      primaryHref = LIVE_MONEY.strainchainPassportCheckout;
+      primaryLabel = 'Start StrainChain passport checkout';
+      secondaryHref = `https://${BRANDS.strainchain.domain}/pricing`;
+      secondaryLabel = 'View StrainChain pricing';
+    } else {
+      primaryHref = `https://${BRANDS.strainchain.domain}/pricing`;
+      primaryLabel = 'View StrainChain pricing';
+    }
+  } else if (brandKey === 'govchain') {
+    primaryHref = `https://${brand.domain}/onboard`;
+    primaryLabel = 'Request GovChain access';
+  } else {
+    primaryHref = `https://${brand.domain}/pricing`;
+    primaryLabel = `View ${brand.name} pricing`;
+  }
+
+  const links =
+    `<a href="${primaryHref}">${esc(primaryLabel)}</a>` +
+    (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
+  return `<h2>Get started</h2><p>${links}. ${esc(brand.price)}</p>`;
+}
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -590,6 +653,7 @@ function buildEntry(d) {
     `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. ${esc(b.price)}</p>` +
+    moneyCtaHtml(d.brand, d.keyword, b) +
     `<h2>FAQ</h2>` +
     d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
 
