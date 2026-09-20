@@ -33,7 +33,11 @@ function clawBindStep(yml: string): string {
   return next === -1 ? rest : rest.slice(0, next);
 }
 
-function runBind(env: NodeJS.ProcessEnv, wranglerLog: string) {
+function runBind(
+  env: NodeJS.ProcessEnv,
+  wranglerLog: string,
+  wranglerExit = 0
+) {
   const fakeBin = mkdtempSync(join(tmpdir(), "wrangler-fake-"));
   const wrangler = join(fakeBin, "wrangler");
   writeFileSync(
@@ -42,9 +46,9 @@ function runBind(env: NodeJS.ProcessEnv, wranglerLog: string) {
 set -euo pipefail
 echo "$*" >> "${wranglerLog}"
 if [ "\${1:-}" = "secret" ] && [ "\${2:-}" = "put" ]; then
-  echo "\$3" >> "${wranglerLog}.names"
   cat >/dev/null
 fi
+exit ${wranglerExit}
 `
   );
   chmodSync(wrangler, 0o755);
@@ -80,6 +84,7 @@ describe("deploy-workers openclaw AGENT_SECRET bind", () => {
     expect(step).not.toMatch(/exit 1/);
     expect(step).not.toMatch(/continue-on-error:/);
     expect(step).toContain("scripts/ci/bind-openclaw-agentz-secrets.sh");
+    expect(step).toContain("AGENT_SECRET: ${{ secrets.AGENT_SECRET }}");
   });
 });
 
@@ -128,6 +133,20 @@ describe("bind-openclaw-agentz-secrets.sh", () => {
         /secret put AGENTZ_API_KEY --name authichain-openclaw/
       );
       expect(calls).not.toContain(secret);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still fails when wrangler cannot bind AGENTZ_API_URL even if AGENT_SECRET is empty", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-bind-"));
+    const log = join(dir, "wrangler.log");
+    writeFileSync(log, "");
+    try {
+      const result = runBind({ AGENT_SECRET: "" }, log, 1);
+      const combined = `${result.stdout}\n${result.stderr}`;
+      expect(result.status).not.toBe(0);
+      expect(combined).not.toMatch(/skipping AGENTZ_API_KEY/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
