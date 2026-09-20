@@ -704,20 +704,9 @@ app.get("/api/cron/dpp-exceptions", async c => {
     return c.json({ error: "Unauthorized" }, 401);
   }
   try {
-    const { fetchAllLoopEvents, summarizeDppLoop } =
-      await import("../src/lib/dpp-loop");
+    const { runDppExceptionsReport } = await import("../src/lib/dpp-loop");
     const { supabaseAdmin } = await import("../src/lib/supabase-admin");
-    const rows = await fetchAllLoopEvents(supabaseAdmin);
-    const summary = summarizeDppLoop(rows);
-    return c.json({
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      visits: summary.visits,
-      demoVisits: summary.demoVisits,
-      funnel: summary.funnel,
-      exceptionCount: summary.exceptions.length,
-      exceptions: summary.exceptions,
-    });
+    return c.json(await runDppExceptionsReport(supabaseAdmin));
   } catch (err: any) {
     console.error("[cron/dpp-exceptions] failed:", err);
     return c.json(

@@ -2,14 +2,16 @@
  * DPP stall / exception cron.
  *
  * Reports paid-loop stalls (payment_succeeded onward). Bounce and checkout
- * abandon are funnel counts, not founder exceptions.
+ * abandon are funnel counts, not founder exceptions. Visits that have earned
+ * retention (activation + dated usage at/after the 7-day horizon) get a
+ * `dpp_loop:retained` write.
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>` via `isCronAuthorized`.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/cron-auth";
-import { fetchAllLoopEvents, summarizeDppLoop } from "@/lib/dpp-loop";
+import { runDppExceptionsReport } from "@/lib/dpp-loop";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -30,25 +32,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const rows = await fetchAllLoopEvents(supabaseAdmin);
-    const summary = summarizeDppLoop(rows);
-    return NextResponse.json(
-      {
-        ok: true,
-        generatedAt: new Date().toISOString(),
-        visits: summary.visits,
-        demoVisits: summary.demoVisits,
-        funnel: summary.funnel,
-        exceptionCount: summary.exceptions.length,
-        exceptions: summary.exceptions,
+    const report = await runDppExceptionsReport(supabaseAdmin);
+    return NextResponse.json(report, {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "CDN-Cache-Control": "no-store",
       },
-      {
-        headers: {
-          "Cache-Control": "private, no-store",
-          "CDN-Cache-Control": "no-store",
-        },
-      }
-    );
+    });
   } catch (err) {
     console.error("[cron/dpp-exceptions] failed:", err);
     return NextResponse.json(
