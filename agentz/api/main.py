@@ -10,6 +10,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
 from agentz.api.mode_contract import resolve_execution_mode
+from agentz.api.session_credentials import (
+    apply_session_credential,
+    session_credential_status,
+)
 import asyncio
 
 from agentz.core.credentials import get
@@ -194,15 +198,16 @@ async def api_run_workflow(
     if not wf:
         raise HTTPException(status_code=404, detail=f"Workflow '{workflow_id}' not found")
 
+    body = await _read_json_object(request)
     resolved, coerced, live_flag = resolve_execution_mode(
         query_mode=mode,
-        body=await _read_json_object(request),
+        body=body,
         live_query=live,
         workflow_id=workflow_id,
         endpoint="workflow",
     )
     m = parse_mode(resolved)
-    result = execute(wf, m, verbose=False)
+    result = execute(wf, m, verbose=False, parameters=body)
     return {
         "workflow_id": result.workflow_id,
         "status": result.status,
@@ -253,6 +258,32 @@ async def api_architect_cycle(
         "coerced_to_dry_run": coerced,
         "live": live_flag,
     }
+
+
+@app.post("/credentials/{key}", dependencies=[Depends(verify_token)])
+async def api_set_session_credential(key: str, request: Request):
+    """Push an allowlisted session cookie into the live AgentZ process.
+
+    Allowed keys: linkedin_session, linkedin_jsessionid, reddit_session,
+    twitter_session. Body is `{"value": "..."}`. The value is never echoed.
+    """
+    body = await _read_json_object(request)
+    value = body.get("value")
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="body.value must be a string")
+    try:
+        return apply_session_credential(key, value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/credentials/{key}/status", dependencies=[Depends(verify_token)])
+async def api_session_credential_status(key: str):
+    """Presence/length of an allowlisted session cookie. Never returns the value."""
+    try:
+        return session_credential_status(key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # --- Launch Governor Endpoints ---

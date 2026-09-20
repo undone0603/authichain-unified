@@ -89,6 +89,48 @@ INDEXNOW_SITEMAPS = (
 )
 
 
+def test_agentz_manual_post_is_dispatch_only_and_defaults_live_false():
+    yml = _read("agentz-manual-post.yml")
+    assert "schedule:" not in yml
+    assert "workflow_dispatch:" in yml
+    assert "cron:" not in yml
+    assert "default: authichain_social_launch_orchestrated" in yml
+    assert "live:" in yml
+    assert "default: false" in yml
+    assert "https://agentz.authichain.com/workflows/" in yml
+    assert "secrets.AGENT_SECRET" in yml
+    assert "Bearer" in yml
+    assert "AGENT_SECRET is missing" in yml or "AGENT_SECRET is empty" in yml
+
+
+def test_sync_agentz_linkedin_session_is_dispatch_only():
+    yml = _read("sync-agentz-linkedin-session.yml")
+    assert "schedule:" not in yml
+    assert "workflow_dispatch:" in yml
+    assert "cron:" not in yml
+    assert "secrets.AGENT_SECRET" in yml
+    assert "secrets.LINKEDIN_SESSION_COOKIE" in yml
+    assert "secrets.LINKEDIN_JSESSIONID" in yml
+    assert "AGENTZ_URL: https://agentz.authichain.com" in yml
+    assert "/credentials/" in yml
+    assert "linkedin_session" in yml
+    assert "linkedin_jsessionid" in yml
+    assert "/credentials/linkedin_session/status" in yml
+    assert "echo \"$LINKEDIN_SESSION_COOKIE\"" not in yml
+    assert "echo $LINKEDIN_SESSION_COOKIE" not in yml
+
+
+def test_content_publish_passes_linkedin_session_secrets():
+    yml = _read("content-publish.yml")
+    assert "LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}" in yml
+    assert "LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}" in yml
+    assert "LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}" in yml
+    # Schedule stays fail-closed dry-run
+    schedule_block = yml.split('if [ "${{ github.event_name }}" = "schedule" ]; then', 1)[1]
+    schedule_block = schedule_block.split("fi", 1)[0]
+    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in schedule_block
+
+
 def test_marketing_autonomous_indexnow_pings_sitemaps_and_money_urls():
     yml = _read("marketing-autonomous.yml")
     assert "authichain2026indexnow" in yml
