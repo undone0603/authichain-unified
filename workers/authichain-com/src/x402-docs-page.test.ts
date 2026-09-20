@@ -42,4 +42,14 @@ describe("x402 public docs page", () => {
     expect(html).not.toMatch(/X402_FACILITATOR_URL/);
     expect(html).not.toMatch(/0x[a-fA-F0-9]{64}/);
   });
+
+  it("uses semantic landmarks and restyleable --ac-* tokens", () => {
+    const html = renderX402DocsPage();
+    expect(html).toContain('<main id="main">');
+    expect(html).toContain('<header class="nav">');
+    expect(html).toContain('<footer class="site">');
+    expect(html).toContain("--ac-accent: #0f766e");
+    expect(html).toContain("--ac-rail: #0b1220");
+    expect(html).toContain("IBM Plex Sans");
+  });
 });

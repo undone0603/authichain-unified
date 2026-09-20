@@ -61,6 +61,8 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
     const html = await res.text();
     assert.match(html, /<title>x402 agent pay — AuthiChain<\/title>/);
+    assert.match(html, /<main id="main">/);
+    assert.match(html, /--ac-accent:/);
     assert.match(html, /0x5db511706FB6317cd23A7655F67450c5AC6e6AA2/);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
