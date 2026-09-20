@@ -519,8 +519,11 @@ export type RetentionWrite = {
  * Write `dpp_loop:retained` for visits that have earned it.
  *
  * Usage timestamps are supplied by the caller (cron collects publish/verify
- * times; tests pass fixtures). Demo visits and visits that already have
- * `retained` are skipped. Idempotent via `recordDppLoopEventOnce`.
+ * times; tests pass fixtures). Visits that already have `retained` are
+ * skipped. DPP-SMOKE / `is_demo` visits use a 0-day horizon so the live
+ * smoke loop can close the same day; paying buyers still wait
+ * `RETENTION_HORIZON_DAYS`. `summarizeDppLoop` keeps demos out of customer
+ * funnel counts. Idempotent via `recordDppLoopEventOnce`.
  */
 export async function recordEarnedRetention(
   supabase: SupabaseLike,
@@ -536,21 +539,18 @@ export async function recordEarnedRetention(
   for (const [visitId, visitRows] of Object.entries(
     groupLoopEventsByVisit(opts.rows)
   )) {
-    if (isDemoVisit(visitRows)) {
-      out.push({ visitId, recorded: false, reason: "demo" });
-      continue;
-    }
-
     const loop = reconstructLoop(visitRows);
     if (loop.firstSeen.retained) {
       out.push({ visitId, recorded: false, reason: "already_retained" });
       continue;
     }
 
+    const demo = isDemoVisit(visitRows);
     const decision = evaluateRetention(
       visitRows,
       opts.usageByVisit[visitId] || [],
-      now
+      now,
+      demo ? 0 : RETENTION_HORIZON_DAYS
     );
     if (!decision.retained) {
       out.push({
@@ -569,6 +569,7 @@ export async function recordEarnedRetention(
         qualifying_usage_at: decision.qualifyingUsageAt,
         horizon_at: decision.horizonAt,
         retention_reason: decision.reason,
+        ...(demo ? { is_demo: true } : {}),
       },
     });
     out.push({
