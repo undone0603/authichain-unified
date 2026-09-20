@@ -63,3 +63,36 @@ def test_marketing_autonomous_schedule_is_inbound_only():
     assert "content-publish.yml" in yml
     assert "linkedin-post:" in yml
     assert "retired in favour of validated bundles" in yml
+
+
+INDEXNOW_MONEY_URLS = (
+    "https://authichain.com/",
+    "https://authichain.com/pricing",
+    "https://authichain.com/dpp",
+    "https://authichain.com/x402",
+    "https://authichain.com/onboard",
+    "https://strainchain.io/",
+    "https://strainchain.io/pricing",
+    "https://strainchain.io/onboard",
+    "https://qron.space/",
+    "https://qron.space/pricing",
+    "https://qron.space/generate",
+    "https://govchain.us/",
+    "https://govchain.us/onboard",
+)
+
+INDEXNOW_SITEMAPS = (
+    "https://authichain.com/sitemap.xml",
+    "https://qron.space/sitemap.xml",
+    "https://strainchain.io/sitemap.xml",
+    "https://govchain.us/sitemap.xml",
+)
+
+
+def test_marketing_autonomous_indexnow_pings_sitemaps_and_money_urls():
+    yml = _read("marketing-autonomous.yml")
+    assert "authichain2026indexnow" in yml
+    assert "|| true" in yml
+    for url in INDEXNOW_SITEMAPS + INDEXNOW_MONEY_URLS:
+        # Quoted so apex "/" is not satisfied by "/sitemap.xml".
+        assert f'"{url}"' in yml, f"IndexNow should ping {url}"

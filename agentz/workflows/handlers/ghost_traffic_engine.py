@@ -5,6 +5,7 @@ Light health probes for the four estate apexes plus money/loop mounts.
 
 No paid APIs. No invented secrets. Safe GET / empty-JSON POST only.
 Unexpected 5xx (or transport failure) fails the run.
+GET /api/checkout/dpp must 302/303 — do not follow the Stripe redirect.
 """
 from __future__ import annotations
 
@@ -33,9 +34,36 @@ API_PROBES: tuple[tuple[str, str], ...] = (
     ("POST", "https://authichain.com/api/funnel"),
 )
 
+# Public money paths. Checkout is redirect-only: 302/303 = OK, 200 HTML fails.
+MONEY_PATHS = (
+    "https://authichain.com/pricing",
+    "https://authichain.com/dpp",
+    "https://authichain.com/x402",
+    "https://authichain.com/onboard",
+    "https://authichain.com/api/checkout/dpp",
+    "https://strainchain.io/pricing",
+    "https://strainchain.io/onboard",
+    "https://qron.space/pricing",
+    "https://qron.space/generate",
+    "https://govchain.us/onboard",
+)
+
+CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
+CHECKOUT_OK_STATUSES = frozenset({302, 303})
+
 
 class UnexpectedServerError(RuntimeError):
-    """Raised when a probe returns 5xx or cannot complete."""
+    """Raised when a probe returns 5xx, a bad checkout status, or cannot complete."""
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Surface the redirect status instead of following (no Stripe GET)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, msg, headers, fp)
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
@@ -46,10 +74,23 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
         data = b"{}"
     req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _OPENER.open(req, timeout=timeout) as resp:
             return int(resp.status)
     except urllib.error.HTTPError as exc:
         return int(exc.code)
+
+
+def _status_is_failure(url: str, status: int) -> bool:
+    if url == CHECKOUT_DPP_URL:
+        return status not in CHECKOUT_OK_STATUSES
+    return status >= 500
+
+
+def _all_probes() -> list[tuple[str, str]]:
+    probes: list[tuple[str, str]] = [("GET", url) for url in ESTATE_APEXES]
+    probes.extend(API_PROBES)
+    probes.extend(("GET", url) for url in MONEY_PATHS)
+    return probes
 
 
 def run(ctx: ExecutionContext) -> str:
@@ -57,8 +98,8 @@ def run(ctx: ExecutionContext) -> str:
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     ctx.step(f"Run timestamp: {now}")
 
-    plan = [f"GET {url}" for url in ESTATE_APEXES]
-    plan.extend(f"{method} {url}" for method, url in API_PROBES)
+    probes = _all_probes()
+    plan = [f"{method} {url}" for method, url in probes]
 
     if ctx.mode == Mode.DRY_RUN:
         ctx.step(f"[DRY-RUN] Would probe {len(plan)} targets (no HTTP):")
@@ -69,29 +110,20 @@ def run(ctx: ExecutionContext) -> str:
     results: list[tuple[str, str, int]] = []
     failures: list[str] = []
 
-    for url in ESTATE_APEXES:
-        try:
-            status = _probe("GET", url)
-        except Exception as exc:  # noqa: BLE001 — transport failure is a failed probe
-            failures.append(f"GET {url} transport: {exc}")
-            ctx.step(f"GET {url} -> TRANSPORT_ERROR {exc}")
-            continue
-        results.append(("GET", url, status))
-        ctx.step(f"GET {url} -> {status}")
-        if status >= 500:
-            failures.append(f"GET {url} -> {status}")
-
-    for method, url in API_PROBES:
+    for method, url in probes:
         try:
             status = _probe(method, url)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 — transport failure is a failed probe
             failures.append(f"{method} {url} transport: {exc}")
             ctx.step(f"{method} {url} -> TRANSPORT_ERROR {exc}")
             continue
         results.append((method, url, status))
         ctx.step(f"{method} {url} -> {status}")
-        if status >= 500:
-            failures.append(f"{method} {url} -> {status}")
+        if _status_is_failure(url, status):
+            detail = f"{method} {url} -> {status}"
+            if url == CHECKOUT_DPP_URL:
+                detail += " (expected 302 or 303)"
+            failures.append(detail)
 
     summary = {
         "probes": [
