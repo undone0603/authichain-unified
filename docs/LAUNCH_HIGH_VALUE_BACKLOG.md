@@ -93,17 +93,17 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 
 ## GitHub workflow state (2026-09-19 API)
 
-| Workflow                                           | State                 | Note                                                                                                    |
-| -------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| `b2b-outreach`                                     | **active**            | Live send if `OWNER_LIVE_SEND=true` **and** guardrail allows                                            |
-| `email-proposals`                                  | **active**            | Dry-run default on dispatch; schedule follows owner var                                                 |
+| Workflow                                           | State                 | Note                                                                                                                             |
+| -------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `b2b-outreach`                                     | **active**            | Live send if `OWNER_LIVE_SEND=true` **and** guardrail allows                                                                     |
+| `email-proposals`                                  | **active**            | Dry-run default on dispatch; schedule follows owner var                                                                          |
 | `agentz-orchestration`                             | **active**            | Schedule resolve-mode **dry-run** (fail-closed). #1070 job-env parse fix. Live qualify/HubSpot only on dispatch `dry_run=false`. |
-| `gov-mint`                                         | **active**            | Dispatch default `dry_run=true`                                                                         |
-| `gov-engine` / ingest / score / proposals / notify | **disabled_manually** | Leave until sibling order                                                                               |
-| `content-publish`                                  | **disabled_manually** | Schedule now fail-closed dry-run (safe to re-enable). Push-to-main still live.                          |
-| `marketing-autonomous`                             | **active**            | IndexNow + GSC only. Social posting retired to `content-publish`.                                       |
-| `genesis-cron`                                     | **active**            | Safe tick                                                                                               |
-| `content-routine-pr`                               | (see GitHub)          | PR-only inbound                                                                                         |
+| `gov-mint`                                         | **active**            | Dispatch default `dry_run=true`                                                                                                  |
+| `gov-engine` / ingest / score / proposals / notify | **disabled_manually** | Leave until sibling order                                                                                                        |
+| `content-publish`                                  | **disabled_manually** | Schedule now fail-closed dry-run (safe to re-enable). Push-to-main still live.                                                   |
+| `marketing-autonomous`                             | **active**            | IndexNow + GSC only. Social posting retired to `content-publish`.                                                                |
+| `genesis-cron`                                     | **active**            | Safe tick                                                                                                                        |
+| `content-routine-pr`                               | (see GitHub)          | PR-only inbound                                                                                                                  |
 
 ---
 
@@ -118,6 +118,14 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 - **Risk:** High if still pointed at retired URL; change is reversible.
 - **Owner / secrets:** Stripe Dashboard. Worker secrets on **`authichain-edge-router`**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and/or `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`, `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 - **Done when:** Stripe event deliveries for a smoke/paid session are 2xx on `https://authichain.com/api/stripe/webhook`; a `funnel_events` row with `loop_stage=provisioned` exists.
+
+### P0-1b. Edge webhook threw before fulfill (2026-09-20)
+
+- **Problem:** Apex `handleStripeWebhook` called Drizzle `getDb()` (requires `DATABASE_URL`) for idempotency/audit _before_ `fulfillDppPaidSession`. `authichain-edge-router` hydrates Stripe + Supabase only — not `DATABASE_URL`. Paid `checkout.session.completed` then 400'd and never wrote `provisioned`.
+- **Not the cause:** `isDppOffer` / `metadata.offer` / priceId. Live `smoke_check_1789786486` (`cs_live_a1y4TuVX…`) is `payment_status=paid` with `offer=dpp_readiness_2026` + `plan=dpp_readiness`; funnel only has `checkout_started`.
+- **Contrast:** `dpp_smoke_1789591727` has `payment_succeeded` + `provisioned` (Next handler, 2026-09-17, before apex was canonical).
+- **Fix (this PR):** fail-open Drizzle on the webhook; fulfill every paid DPP `checkout.session.completed` and `async_payment_succeeded`.
+- **Owner after merge:** replay the failed `checkout.session.completed` from Dashboard (or a new `DPP-SMOKE-E2E` checkout). Confirm `event_type=dpp_loop:provisioned`. Keep `checkout.session.completed` selected on the live `we_…` endpoint.
 
 ### P0-2. Deploy this PR so `/api/funnel` is no longer 404
 

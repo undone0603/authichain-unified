@@ -5,7 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 
 # Secrets (wrangler secret put, not committed): STRIPE_SECRET_KEY is required
 # for GET /api/checkout/dpp. Optional NEXT_PUBLIC_SUPABASE_URL +
-# SUPABASE_SERVICE_ROLE_KEY to record checkout_started on funnel_events.
+# SUPABASE_SERVICE_ROLE_KEY to record checkout_started and to fulfill paid
+# DPP sessions on POST /api/stripe/webhook. DATABASE_URL is NOT required for
+# DPP fulfill (Drizzle audit is fail-open on the Worker).
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 with status "not_configured".
 

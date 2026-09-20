@@ -8,7 +8,7 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
-import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { dppActivateUrl, isDppOffer, recordDppLoopEventOnce } from "./dpp-loop";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,11 +35,13 @@ function toId(
 
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
-  session: DppCheckoutSessionLike
+  session: DppCheckoutSessionLike,
+  priceId?: string | null
 ): Promise<{ handled: boolean; profileId: string | null }> {
   const md = session.metadata || {};
   const linePriceId =
-    typeof md.stripe_price_id === "string" ? md.stripe_price_id : null;
+    (typeof priceId === "string" && priceId) ||
+    (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
   if (!isDppOffer(md, linePriceId)) {
     return { handled: false, profileId: null };
   }
@@ -57,12 +59,13 @@ export async function fulfillDppPaidSession(
   const plan = md.plan || "dpp_readiness";
 
   if (visitId) {
-    await recordDppLoopEvent(supabase, {
+    await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
       stage: "payment_succeeded",
       source: md.source || "direct",
       email: email || null,
       stripeSessionId: session.id,
+      dedupeKey: session.id,
       metadata: { plan, brand, amount_total: session.amount_total },
     });
   }
@@ -77,13 +80,14 @@ export async function fulfillDppPaidSession(
   });
 
   if (prov.profileId && visitId) {
-    await recordDppLoopEvent(supabase, {
+    await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
       stage: "provisioned",
       source: md.source || "direct",
       email: email || null,
       profileId: prov.profileId,
       stripeSessionId: session.id,
+      dedupeKey: session.id,
       metadata: { created: prov.created, plan },
     });
   }

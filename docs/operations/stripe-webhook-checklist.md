@@ -49,7 +49,8 @@ git push origin main
 2. Click **Add endpoint** (if new) or edit existing
 3. URL: `https://authichain.com/api/stripe/webhook` (not the retired `/api/webhooks/stripe`)
 4. Events:
-   - `checkout.session.completed`
+   - `checkout.session.completed` (required for DPP fulfill)
+   - `checkout.session.async_payment_succeeded` (Klarna / delayed wallets)
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
    - `customer.subscription.deleted`
@@ -149,6 +150,24 @@ SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY create
    ```sql
    SELECT * FROM payments ORDER BY created_at DESC LIMIT 1;
    ```
+
+## DPP fulfill on the apex Worker (2026-09-20)
+
+Canonical path: Stripe Dashboard → `POST https://authichain.com/api/stripe/webhook` → `worker-app` → `handleStripeWebhook` → `fulfillDppPaidSession`.
+
+- Access grant writes `funnel_events.metadata.loop_stage=payment_succeeded` then `provisioned` (Supabase). It does **not** need `DATABASE_URL` / Drizzle.
+- `authichain-edge-router` hydrates Stripe + Supabase secret **names** only. A missing `DATABASE_URL` must not 400 a paid DPP session (that was the `smoke_check_1789786486` miss).
+- Do **not** revive `workers/stripe-webhook` or `workers/dpp-fulfillment` for this path.
+- `isDppOffer` matches `metadata.offer=dpp_readiness_2026`, `metadata.plan=dpp_readiness`, or catalog `price_1TwmD8GqTruSqV8TpAF8dfyA` (webhook payloads omit `line_items` unless expanded; checkout now also stamps `metadata.stripe_price_id`).
+
+### Replay a paid session that never provisioned
+
+1. Stripe Dashboard → Webhooks → the `we_…` endpoint on `https://authichain.com/api/stripe/webhook`.
+2. Open the `checkout.session.completed` (or `async_payment_succeeded`) delivery for the paid session.
+3. **Resend** the event. Expect 2xx.
+4. Confirm Supabase: `funnel_events` row with `prospect_id=<visit_id>` and `event_type=dpp_loop:provisioned`.
+
+Or start a new smoke: `GET https://authichain.com/api/checkout/dpp?visit_id=dpp_smoke_<unix>&promo=DPP-SMOKE-E2E`.
 
 ## Troubleshooting Checklist
 

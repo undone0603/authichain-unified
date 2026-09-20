@@ -46,6 +46,58 @@ function getStripeClient(): Stripe {
 // ─── Webhook signing secrets (per-brand) ──────────────────────────────────────
 
 /**
+ * Apex `authichain-edge-router` hydrates Stripe + Supabase secrets only.
+ * Drizzle helpers call getDb() which throws without DATABASE_URL. DPP
+ * fulfill writes to Supabase and must not depend on that Node pooler.
+ */
+async function optionalDb<T>(
+  label: string,
+  run: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[stripe-webhook] ${label} skipped (${msg})`);
+    return fallback;
+  }
+}
+
+function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
+  return (
+    session.line_items?.data?.[0]?.price?.id ||
+    (typeof session.metadata?.stripe_price_id === "string"
+      ? session.metadata.stripe_price_id
+      : null)
+  );
+}
+
+async function fulfillDppCheckoutIfPaid(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  if (session.payment_status !== "paid") return;
+
+  const { isDppOffer } = await import("../../src/lib/dpp-loop");
+  const linePriceId = checkoutLinePriceId(session);
+  if (!isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error(
+      "[stripe-webhook] DPP session paid but Supabase is not configured"
+    );
+    return;
+  }
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const { fulfillDppPaidSession } =
+    await import("../../src/lib/dpp-fulfill-checkout");
+  await fulfillDppPaidSession(createClient(url, key), session, linePriceId);
+}
+
+/**
  * Every distinct env var name that any brand's Stripe webhook endpoint may be
  * signed with, per shared/brands.ts `billing.webhookSecretEnv`, plus the
  * generic STRIPE_WEBHOOK_SECRET fallback. authichain uses its own secret
@@ -218,8 +270,15 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await db.hasWebhookEventProcessed(event.id)) {
+  // Drizzle/DATABASE_URL is optional on the apex Worker. Missing it used to
+  // 400 every checkout.session.completed *before* fulfillDppPaidSession, so
+  // paid DPP smokes never wrote loop_stage=provisioned. Fail open.
+  const alreadyProcessed = await optionalDb(
+    "idempotency",
+    () => db.hasWebhookEventProcessed(event.id),
+    false
+  );
+  if (alreadyProcessed) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
@@ -227,13 +286,18 @@ export async function handleStripeWebhook(
   // Idempotency — claim step skipped in test environments where only hasWebhookEventProcessed is mocked.
 
   // Mark in-flight immediately so a concurrent duplicate delivery sees it as processed.
-  await db.logActivity({
-    userId: null,
-    action: "webhook_received",
-    entityType: "webhook",
-    entityId: 0,
-    details: { eventId: event.id, type: event.type },
-  });
+  await optionalDb(
+    "claim",
+    () =>
+      db.logActivity({
+        userId: null,
+        action: "webhook_received",
+        entityType: "webhook",
+        entityId: 0,
+        details: { eventId: event.id, type: event.type },
+      }),
+    undefined
+  );
 
   switch (event.type) {
     // ── Subscription created / updated ──────────────────────────────────────
@@ -480,8 +544,9 @@ export async function handleStripeWebhook(
       break;
     }
 
-    // ── Checkout session completed ───────────────────────────────────────────
-    case "checkout.session.completed": {
+    // ── Checkout session completed / async paid ──────────────────────────────
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.user_id
         ? parseInt(session.metadata.user_id, 10)
@@ -498,18 +563,32 @@ export async function handleStripeWebhook(
           ? session.subscription
           : undefined;
 
-      await db.logAutomationAudit(
-        "billing_checkout_completed",
-        {
-          eventId: event.id,
-          userId: userId ?? null,
-          plan,
-          billingCycle,
-          amountUsd,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-        },
-        userId
+      // Fulfill before Drizzle audit: a paid DPP session must provision even
+      // when DATABASE_URL / activity_log is unavailable on the edge Worker.
+      try {
+        await fulfillDppCheckoutIfPaid(session);
+      } catch (dppErr) {
+        console.error("[stripe-webhook] DPP fulfill failed", dppErr);
+        throw dppErr;
+      }
+
+      await optionalDb(
+        "checkout audit",
+        () =>
+          db.logAutomationAudit(
+            "billing_checkout_completed",
+            {
+              eventId: event.id,
+              userId: userId ?? null,
+              plan,
+              billingCycle,
+              amountUsd,
+              stripeSubscriptionId: subscriptionId ?? null,
+              stripeCustomerId: customerId ?? null,
+            },
+            userId
+          ),
+        undefined
       );
 
       if (session.metadata?.type === "one_time_service") {
@@ -520,33 +599,6 @@ export async function handleStripeWebhook(
               ? session.payment_intent
               : undefined,
         });
-      }
-
-      try {
-        const { isDppOffer } = await import("../../src/lib/dpp-loop");
-        const linePriceId =
-          session.line_items?.data?.[0]?.price?.id ||
-          (typeof session.metadata?.stripe_price_id === "string"
-            ? session.metadata.stripe_price_id
-            : null);
-        if (isDppOffer(session.metadata || {}, linePriceId)) {
-          const url =
-            process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-          const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          if (url && key) {
-            const { createClient } = await import("@supabase/supabase-js");
-            const { fulfillDppPaidSession } =
-              await import("../../src/lib/dpp-fulfill-checkout");
-            await fulfillDppPaidSession(createClient(url, key), session);
-          } else {
-            console.error(
-              "[stripe-webhook] DPP session paid but Supabase is not configured"
-            );
-          }
-        }
-      } catch (dppErr) {
-        console.error("[stripe-webhook] DPP fulfill failed", dppErr);
-        throw dppErr;
       }
 
       console.log(

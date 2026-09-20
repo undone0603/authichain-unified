@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
         if (dppOffer) {
-          await fulfillDppPaidSession(getSupabase(), session);
+          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
           break;
         }
 

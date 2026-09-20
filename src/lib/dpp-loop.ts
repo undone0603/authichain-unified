@@ -88,7 +88,7 @@ export async function recordDppLoopEvent(
   if (!visitId) return;
 
   try {
-    await supabase.from("funnel_events").insert({
+    const { error } = await supabase.from("funnel_events").insert({
       prospect_id: visitId,
       stage: STAGE_TO_FUNNEL[input.stage],
       source: normalizeSource(input.source),
@@ -105,6 +105,9 @@ export async function recordDppLoopEvent(
       },
       timestamp: new Date().toISOString(),
     });
+    if (error) {
+      console.error("[dpp-loop] record failed:", input.stage, error);
+    }
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
   }
