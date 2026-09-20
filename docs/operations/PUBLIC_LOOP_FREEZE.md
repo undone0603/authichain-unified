@@ -80,7 +80,7 @@ Manual dispatch still needs `dry_run` unchecked **and** `OWNER_LIVE_SEND=true`. 
 
 `MAX_LIVE_SENDS` is hard-set to **2** in `b2b-outreach.yml`. QRON is the only **cold** segment with published addresses (`franchiseinfo@fastsigns.com`, `inquiries@moo.com`). Do not dispatch `segment=all` live. `--segment=partners` is a channel-partner load and is never folded into govchain/strainchain/qron/`all`. `high_leverage` stays dry-run only.
 
-Live partner dispatch requires `OWNER_LIVE_SEND=true` **and** `dry_run=false`. Only that combination sets `ALLOW_PARTNER_SENDS=true` in the workflow (the script otherwise fail-closes). The cap still walks file order in `scripts/data/channel-partners-2026-09-19.json` — first two eligible are Existo Solutions and ICS Consulting. Oakley Signs (`already_connected`) and Onnit (`inbound_warm`) stay later in that list; there is no extra targeting sort.
+Live partner dispatch requires `OWNER_LIVE_SEND=true` **and** `dry_run=false`. Only that combination sets `ALLOW_PARTNER_SENDS=true` in the workflow (the script otherwise fail-closes). Live order is Existo Solutions then ICS Consulting, then named APEX staff (`fitzpatricks@` / `mooret@` / `mcmanuss@`). Trusted partner role desks (`contact@` / `info@` / `hello@`) are allowed on this segment only — cold govchain / strainchain / qron / all still reject `role_inbox`. `MAX_LIVE_SENDS` counts real Resend attempts, not policy refuses, so a skipped partner does not burn a slot. Oakley Signs (`already_connected`) and Onnit (`inbound_warm`) stay later in that list.
 
 ```bash
 # 1. Dry-run first — must exit 0 and log [DRY RUN] (no Resend)

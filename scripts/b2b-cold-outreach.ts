@@ -25,6 +25,7 @@ import {
   CREDENTIAL_ENV_VARS,
 } from "./lib/resend-preflight";
 import {
+  countsAsLiveSendAttempt,
   guardedSend,
   type VerificationSource,
 } from "../server/outreach/send-guard";
@@ -46,6 +47,7 @@ import {
   CHANNEL_PARTNER_TARGETS,
   allowPartnerLiveSends,
   assertPartnerRunAllowed,
+  orderPartnerTargetsForSend,
   shouldLoadPartnerTargets,
   type ChannelPartnerTarget,
 } from "./lib/channel-partners";
@@ -81,6 +83,8 @@ const segment =
 const sendFailures: string[] = [];
 let totalAttempted = 0;
 let totalSent = 0;
+// Counts only real Resend attempts (sent or resend_http_*), not policy
+// refuses such as role_inbox / no_mx — those must not burn MAX_LIVE_SENDS.
 let liveDispatchAttempts = 0;
 // Live runs default to a tiny batch so OWNER_LIVE_SEND cannot blast the
 // whole list. Dry-run is uncapped (it never calls Resend).
@@ -579,7 +583,11 @@ async function processTargets<
   targets: T[],
   buildEmail: (t: T) => { subject: string; html: string },
   segmentName: string,
-  opts: { leadSource?: string; trustListedEmail?: boolean } = {}
+  opts: {
+    leadSource?: string;
+    trustListedEmail?: boolean;
+    allowRoleInbox?: boolean;
+  } = {}
 ) {
   let sent = 0;
   let saved = 0;
@@ -712,7 +720,6 @@ async function processTargets<
       queued++;
       continue;
     }
-    liveDispatchAttempts += 1;
 
     if (!senderOk) {
       console.log(`     📬 Queued: ${email} — will send once ${from} can send`);
@@ -744,6 +751,8 @@ async function processTargets<
       // so every cold send carries a reply-to, one-click List-Unsubscribe
       // headers and the CAN-SPAM postal address — and so unverified recipients
       // are refused before any network call.
+      const allowRoleInbox =
+        opts.allowRoleInbox === true || segmentName === "partners";
       const res = await guardedSend({
         to: email,
         source,
@@ -752,7 +761,13 @@ async function processTargets<
         from,
         company: "AuthiChain",
         apiKey: credential ? process.env[credential] : undefined,
+        allowRoleInbox,
       });
+      // Policy refuses (role_inbox, untrusted, no MX) must not burn
+      // MAX_LIVE_SENDS — only a real Resend attempt counts.
+      if (countsAsLiveSendAttempt(res)) {
+        liveDispatchAttempts += 1;
+      }
       if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
@@ -985,10 +1000,16 @@ if (shouldLoadPartnerTargets(segment)) {
       `  Live partner send is explicit (ALLOW_PARTNER_SENDS) and still capped by MAX_LIVE_SENDS=${maxLiveSends}`
     );
   }
-  await processTargets([...CHANNEL_PARTNER_TARGETS], partnerEmail, "partners", {
-    leadSource: CHANNEL_PARTNER_LEAD_SOURCE,
-    trustListedEmail: true,
-  });
+  await processTargets(
+    orderPartnerTargetsForSend(CHANNEL_PARTNER_TARGETS),
+    partnerEmail,
+    "partners",
+    {
+      leadSource: CHANNEL_PARTNER_LEAD_SOURCE,
+      trustListedEmail: true,
+      allowRoleInbox: true,
+    }
+  );
 }
 
 if (shouldLoadHighLeverageTargets(segment)) {

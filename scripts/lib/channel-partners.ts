@@ -11,7 +11,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { VerificationSource } from "../../server/outreach/send-guard";
+import {
+  isRoleInboxEmail,
+  type VerificationSource,
+} from "../../server/outreach/send-guard";
 
 export const CHANNEL_PARTNER_LEAD_SOURCE =
   "channel_partner_web_scan_2026-09-19";
@@ -140,4 +143,38 @@ export function assertPartnerRunAllowed(opts: {
     };
   }
   return { ok: true };
+}
+
+/**
+ * Live-send order: Existo then ICS (published partner desks), then named
+ * APEX staff, then the remaining list. Role inboxes stay eligible — the
+ * send guard waives role_inbox only for this segment — but named people
+ * should take a cap slot before another generic inbox if Existo/ICS skip.
+ */
+const PREFERRED_PARTNER_EMAILS = [
+  "contact@existosolutions.com",
+  "info@icsconsultingservice.com",
+  "fitzpatricks@nemcworks.org",
+  "mooret@nemcworks.org",
+  "mcmanuss@nemcworks.org",
+] as const;
+
+export function orderPartnerTargetsForSend(
+  targets: readonly ChannelPartnerTarget[]
+): ChannelPartnerTarget[] {
+  const rank = new Map<string, number>(
+    PREFERRED_PARTNER_EMAILS.map((email, index) => [email, index])
+  );
+  return [...targets].sort((a, b) => {
+    const aEmail = a.email.toLowerCase();
+    const bEmail = b.email.toLowerCase();
+    const aPreferred = rank.get(aEmail);
+    const bPreferred = rank.get(bEmail);
+    if (aPreferred !== undefined || bPreferred !== undefined) {
+      return (aPreferred ?? 1_000) - (bPreferred ?? 1_000);
+    }
+    const aRole = isRoleInboxEmail(aEmail) ? 1 : 0;
+    const bRole = isRoleInboxEmail(bEmail) ? 1 : 0;
+    return aRole - bRole;
+  });
 }

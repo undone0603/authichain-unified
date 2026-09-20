@@ -6,6 +6,7 @@ import {
   allowPartnerLiveSends,
   assertPartnerRunAllowed,
   loadChannelPartnerFile,
+  orderPartnerTargetsForSend,
   shouldLoadPartnerTargets,
 } from "./channel-partners.ts";
 
@@ -129,5 +130,22 @@ describe("partner segment gate", () => {
       true
     );
     expect(allowPartnerLiveSends({}, ["--allow-partner-sends"])).toBe(true);
+  });
+
+  it("orders Existo then ICS then named APEX ahead of leftover role inboxes", () => {
+    const emails = orderPartnerTargetsForSend(CHANNEL_PARTNER_TARGETS).map(
+      p => p.email
+    );
+    expect(emails.slice(0, 5)).toEqual([
+      "contact@existosolutions.com",
+      "info@icsconsultingservice.com",
+      "fitzpatricks@nemcworks.org",
+      "mooret@nemcworks.org",
+      "mcmanuss@nemcworks.org",
+    ]);
+    expect(emails).toEqual(expect.arrayContaining(["hello@pufcreativ.com"]));
+    expect(emails.indexOf("fitzpatricks@nemcworks.org")).toBeLessThan(
+      emails.indexOf("hello@pufcreativ.com")
+    );
   });
 });
