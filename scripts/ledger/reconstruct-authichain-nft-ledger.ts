@@ -4,7 +4,11 @@ import { writeFile, mkdir } from "node:fs/promises";
 const CONTRACT_ADDRESS = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const DEPLOY_BLOCK = 77535676;
-const DEFAULT_RPC = "https://polygon-rpc.com";
+// polygon-rpc.com does not connect from a GitHub runner — two 60-minute runs
+// were spent in ethers' retry loop against it, reading zero blocks. The
+// workflow default and this one must agree, or a local run targets the dead
+// host while CI does not.
+const DEFAULT_RPC = "https://polygon-bor-rpc.publicnode.com";
 const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
 
 /**
@@ -31,6 +35,12 @@ const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
  * the provenance trail with actors, locations and timestamps survives here.
  */
 const MODE = (process.env.AUTHICHAIN_LEDGER_MODE ?? "state").toLowerCase();
+if (MODE !== "state" && MODE !== "logs") {
+  // Falling back to state on a typo yields a successful-looking artifact with
+  // empty mintTx/transfers/clusterRecipients — indistinguishable from a real
+  // result unless someone reads provenanceAvailable. Refuse instead.
+  throw new Error(`AUTHICHAIN_LEDGER_MODE must be "state" or "logs", got "${MODE}"`);
+}
 
 const ABI = [
   "event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)",
@@ -296,7 +306,17 @@ async function main() {
   console.log(JSON.stringify(summary, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => {
+    provider.destroy();
+  })
+  .catch((error) => {
+    console.error(error);
+    // Setting process.exitCode alone is not enough: ethers' _start() bootstrap
+    // re-arms a 1s timer while the network is undetected, so the event loop
+    // never drains and the job runs to its full timeout — the exact 60-minute
+    // burn the preflight exists to prevent. destroy() releases that timer;
+    // exit() guarantees it regardless of what else is still pending.
+    provider.destroy();
+    process.exit(1);
+  });

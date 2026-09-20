@@ -17,20 +17,32 @@ name: AuthiChain on-chain ledger reconstruction
 # printed in clear text, so a keyed archive URL must go in the secret and never
 # in the input.
 #
-# Hence: a bigger default chunk and a bigger budget. chunk_size is a dispatch
-# input rather than a constant so a range limit can be retried without another
-# commit — public RPCs cap getLogs ranges and the cap is not documented
-# consistently. If 50000 is rejected, re-dispatch with 25000, then 10000. A
-# range rejection fails fast and loudly, which is a better signal than a
-# timeout.
+# That scan is now opt-in. mode=state (the default) reads current contract
+# state instead — AuthiChainNFT is ERC721Enumerable, so totalSupply +
+# tokenByIndex reach every token without a single getLogs call, and no free
+# endpoint's log-retention or range policy applies. It completes in seconds.
+#
+# mode=logs keeps the event replay for when an endpoint that serves historical
+# logs is available; chunk_size applies only to that path, and exists as an
+# input because public RPCs cap getLogs ranges inconsistently — dRPC rejects
+# 9,001 blocks while quoting a 10,000 limit. The 60-minute budget below is
+# likewise only meaningful for mode=logs.
 
 on:
   workflow_dispatch:
     inputs:
-      chunk_size:
-        description: "Blocks per getLogs call. Lower this if the RPC rejects the range."
+      mode:
+        description: "state = read current contract state (default, free, seconds). logs = replay events, needs an endpoint that serves historical logs."
         required: false
-        default: "50000"
+        default: "state"
+        type: choice
+        options:
+          - state
+          - logs
+      chunk_size:
+        description: "Blocks per getLogs call. Only used when mode=logs. Lower it if the RPC rejects the range."
+        required: false
+        default: "9000"
         type: string
       rpc_url:
         description: "Polygon RPC. Public endpoints only — this value is printed in the logs, so never pass a URL with an API key in it."
@@ -58,7 +70,8 @@ jobs:
         run: pnpm ledger:authichain-nft
         env:
           POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL || inputs.rpc_url || 'https://polygon-bor-rpc.publicnode.com' }}
-          AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '50000' }}
+          AUTHICHAIN_LEDGER_MODE: ${{ inputs.mode || 'state' }}
+          AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '9000' }}
       - uses: actions/upload-artifact@v4
         with:
           name: authichain-nft-ledger
