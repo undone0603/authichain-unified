@@ -1,7 +1,7 @@
 # Michigan distillery outreach links
 
 One live AuthiChain intake URL per prospect for the manual outreach cycle.
-These replaced the `passport-demo.undone-k.workers.dev/?b=…` placeholders
+These replaced the retired `passport-demo` worker query placeholders
 on 2026-09-20. **Nothing here is a personalized passport claim.**
 
 Live check (HTTP 200 today): `https://authichain.com/onboard` and
@@ -14,23 +14,23 @@ Each URL is the live AuthiChain onboard form with UTM so a reply can be
 attributed to this list. Distilleries are a DPP / authenticity pitch, so the
 estate is authichain.com — not StrainChain genetics.
 
-| Prospect                   | Mark | Link                                                                                                      |
-| -------------------------- | ---- | --------------------------------------------------------------------------------------------------------- |
-| Coppercraft Distillery     | CD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=coppercraft`     |
-| Michigrain Distillery      | MD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=michigrain`      |
-| Iron Fish Distillery       | IF   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=iron-fish`       |
-| Eastern Market Brewing Co. | EM   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=eastern-market`  |
-| Off the Chain Brewstillery | OT   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=off-the-chain`   |
-| Detroit City Distillery    | DC   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=detroit-city`    |
-| Valentine Distilling Co.   | VD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=valentine`       |
-| Long Road Distillers       | LR   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=long-road`       |
+| Prospect                   | Mark | Link                                                                                                         |
+| -------------------------- | ---- | ------------------------------------------------------------------------------------------------------------ |
+| Coppercraft Distillery     | CD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=coppercraft`    |
+| Michigrain Distillery      | MD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=michigrain`     |
+| Iron Fish Distillery       | IF   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=iron-fish`      |
+| Eastern Market Brewing Co. | EM   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=eastern-market` |
+| Off the Chain Brewstillery | OT   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=off-the-chain`  |
+| Detroit City Distillery    | DC   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=detroit-city`   |
+| Valentine Distilling Co.   | VD   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=valentine`      |
+| Long Road Distillers       | LR   | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=long-road`      |
 
 ### Before / after
 
-| | URL |
-| --- | --- |
-| Before | `https://passport-demo.undone-k.workers.dev/?b=…` (worker demo, not an estate) |
-| After | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=<slug>` |
+|        | URL                                                                                                  |
+| ------ | ---------------------------------------------------------------------------------------------------- |
+| Before | retired `passport-demo` worker `?b=` query URLs (not an estate)                                      |
+| After  | `https://authichain.com/onboard?utm_source=outreach&utm_campaign=mi-distilleries&utm_content=<slug>` |
 
 The retired worker URLs rendered a template with the prospect's name and
 placeholder product / town / batch fields. They are not linked from this list
