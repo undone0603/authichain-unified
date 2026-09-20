@@ -160,10 +160,10 @@ function farmPage(): string {
   <h2>StrainChain Passport — $49</h2>
   <p>One cultivar genetics passport: CoA chemistry with totals derived at render, lineage edges tagged by evidence, public verify URL. First dollar for LT-63 (or any one cultivar) when the panel is in hand.</p>
   <div class="cta">
-    <a class="btn btn-primary" href="https://authichain.com/pricing">View pricing / buy Passport</a>
+    <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+    <a class="btn btn-outline" href="https://authichain.com/m/mendo">LT-63 licensing microsite</a>
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>
-  <p style="margin-top:.75rem;font-size:.85rem">Direct <code>/api/checkout/plan/strainchain_passport</code> may 500 until Stripe Checkout promotions ToS is accepted — use <code>/pricing</code> until cleared.</p>
 </div>
 `;
 
@@ -186,7 +186,8 @@ function geneticsIndex(): string {
   <p>VT / LT THCV line · ${MENDO.distinctCoas} CoAs on file · LT-63 licensing cultivar still missing a panel.</p>
 </div>
 <div class="cta">
-  <a class="btn btn-primary" href="https://authichain.com/pricing">Passport $49 on pricing</a>
+  <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+  <a class="btn btn-outline" href="https://authichain.com/m/mendo">Mendo / LT-63 microsite</a>
 </div>
 `;
   return shell({
@@ -212,8 +213,9 @@ function passportIndex(): string {
   <p style="margin-top:.5rem"><a href="/genetics/${MENDO.farmSlug}">${esc(MENDO.farmName)} genetics →</a></p>
 </div>
 <div class="cta">
-  <a class="btn btn-primary" href="https://authichain.com/pricing">Buy Passport on pricing</a>
+  <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
   <a class="btn btn-outline" href="/genetics/${MENDO.farmSlug}">Open Mendo library</a>
+  <a class="btn btn-outline" href="https://authichain.com/m/mendo">LT-63 licensing microsite</a>
 </div>
 `;
   return shell({

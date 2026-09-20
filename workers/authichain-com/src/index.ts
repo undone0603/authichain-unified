@@ -17,6 +17,10 @@ import {
   renderTrumarkPage,
 } from "./money-surfaces.ts";
 import {
+  micrositeSitemapUrls,
+  tryHandleMicrosite,
+} from "./microsite-routes.ts";
+import {
   listMilestones,
   milestoneStatus,
   formatMilestoneDate,
@@ -2274,7 +2278,7 @@ function originMoneySurfaces() {
   <div class="wrap">
     <p class="section-tag">Money surfaces</p>
     <h2>TruMark seals and Made in America claims</h2>
-    <p class="section-sub">Two live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims are documentation under FTC 16 CFR Part 323. No call booking.</p>
+    <p class="section-sub">Live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims are documentation under FTC 16 CFR Part 323. Mendo / LT-63 is the genetics passport. No call booking.</p>
     <div class="estate-grid">
       <article class="estate-card card">
         <h3>TruMark</h3>
@@ -2290,6 +2294,14 @@ function originMoneySurfaces() {
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           <a class="btn btn-outline" href="/api/checkout/dpp">DPP checkout — $299</a>
+        </div>
+      </article>
+      <article class="estate-card card">
+        <h3>Mendo / LT-63</h3>
+        <p>Hot licensing lead. Genetics library is live. The campaign microsite sends Mike to Passport $49 checkout — no call.</p>
+        <div class="estate-actions" style="margin-top:1rem">
+          <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
+          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
         </div>
       </article>
     </div>
@@ -2340,6 +2352,7 @@ function ecosystemFooter() {
           { href: "/contact", label: "Contact" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
+          { href: "/m/mendo", label: "Mendo / LT-63" },
           { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
           { href: "/x402", label: "Agent pay (x402)" },
@@ -3196,6 +3209,8 @@ export default {
       url.hostname = 'authichain.com';
       return Response.redirect(url.toString(), 301);
     }
+    const hostMicrosite = tryHandleMicrosite(request);
+    if (hostMicrosite && url.hostname !== 'authichain.com') return hostMicrosite;
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
@@ -3231,6 +3246,7 @@ export default {
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
+        ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
@@ -3269,6 +3285,8 @@ export default {
       });
     }
 
+    const microsite = tryHandleMicrosite(request);
+    if (microsite) return microsite;
     const genetics = tryHandleGeneticsRoutes(request);
     if (genetics) return genetics;
     if (p === '/digital-product-passport' || p === '/dpp') {

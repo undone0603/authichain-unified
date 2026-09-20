@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "updated": "2026-09-20",
+  "binding": "MICROSITES_KV",
+  "namespaceId": "a992900da1db4b998af1cdf4eccf550a",
+  "kvWorker": "authichain",
+  "liveWorker": "authichain-com",
+  "note": "authichain.com is served by workers/authichain-com (routes authichain.com/*). The root worker named authichain binds MICROSITES_KV and has subdomain HTML routing, but *.authichain.com currently 522/523 — no worker is attached. Live money path is /m/<slug> on authichain-com. KV keys are documented for a later bind; do not enable Workers Paid to make wildcards work.",
+  "checkouts": {
+    "passport": {
+      "sku": "strainchain_passport",
+      "priceUsd": 49,
+      "href": "https://authichain.com/api/checkout/plan/strainchain_passport"
+    },
+    "dpp": {
+      "sku": "dpp_readiness",
+      "priceUsd": 299,
+      "href": "https://authichain.com/api/checkout/dpp"
+    }
+  },
+  "packs": [
+    {
+      "slug": "mendo",
+      "file": "mendo/index.html",
+      "canonicalPath": "/m/mendo",
+      "aliases": ["/m/realthcv", "/m/lt-63"],
+      "hosts": ["mendo.authichain.com", "realthcv.authichain.com"],
+      "kvKeys": ["mendo/index.html", "realthcv/index.html"],
+      "primaryCta": "passport"
+    },
+    {
+      "slug": "trumark",
+      "file": "trumark/index.html",
+      "canonicalPath": "/m/trumark",
+      "aliases": [],
+      "hosts": ["trumark.authichain.com"],
+      "kvKeys": ["trumark/index.html"],
+      "primaryCta": "passport"
+    },
+    {
+      "slug": "musa",
+      "file": "musa/index.html",
+      "canonicalPath": "/m/musa",
+      "aliases": ["/m/made-in-america"],
+      "hosts": ["musa.authichain.com"],
+      "kvKeys": ["musa/index.html", "made-in-america/index.html"],
+      "primaryCta": "dpp"
+    },
+    {
+      "slug": "strainchain",
+      "file": "strainchain/index.html",
+      "canonicalPath": "/m/strainchain",
+      "aliases": [],
+      "hosts": ["strainchain.authichain.com"],
+      "kvKeys": ["strainchain/index.html"],
+      "primaryCta": "passport"
+    }
+  ]
+}

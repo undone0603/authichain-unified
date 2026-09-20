@@ -22,7 +22,8 @@ describe("genetics routes", () => {
     const html = await res.text();
     assert.match(html, /LT-63/);
     assert.match(html, /no CoA/i);
-    assert.match(html, /authichain\.com\/pricing/);
+    assert.match(html, /authichain\.com\/api\/checkout\/plan\/strainchain_passport/);
+    assert.match(html, /authichain\.com\/m\/mendo/);
   });
 
   it("serves /passport landing", async () => {
