@@ -849,10 +849,14 @@ export async function flushQueuedLeads(): Promise<number> {
     segment && segment !== "all"
       ? `b2b_outreach_${segment}`
       : "b2b_outreach_%";
+  // Cap leftovers are saved as `draft` then skipped; the log says "queued"
+  // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
+  // unsent-again while 4imprint/Signarama drafts can go out.
   let query = supabase
     .from("leads")
     .select("*")
-    .eq("status", "queued");
+    .in("status", ["queued", "draft"])
+    .order("createdAt", { ascending: false });
   query =
     sourceFilter.endsWith("%")
       ? query.like("source", sourceFilter)
@@ -875,6 +879,15 @@ export async function flushQueuedLeads(): Promise<number> {
     }
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
+    const leadEmail = String(lead.email ?? "").toLowerCase();
+    if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
+    if (
+      leadEmail === "franchiseinfo@fastsigns.com" ||
+      leadEmail === "inquiries@moo.com"
+    ) {
+      console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
+      continue;
+    }
 
     // Recover the segment the draft was written for so the flush sends under
     // the same brand the copy was written in. checkSender caches per address,

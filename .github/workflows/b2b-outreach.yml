@@ -108,7 +108,7 @@ jobs:
           echo "Resolved dry_run=true"
 
       - name: Run B2B cold outreach
-        if: ${{ inputs.flush_queued != 'true' }}
+        if: ${{ inputs.flush_queued != true }}
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -140,7 +140,7 @@ jobs:
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
-        if: ${{ inputs.flush_queued == 'true' && steps.mode.outputs.dry_run == 'false' }}
+        if: ${{ inputs.flush_queued == true && steps.mode.outputs.dry_run == 'false' }}
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
