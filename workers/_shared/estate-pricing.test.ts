@@ -1,10 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { listedPlans } from "../../src/lib/plans";
+import { listedPlans } from "../../src/lib/plans.ts";
+import { PAYMENT_LINKS } from "../../server/payment-links.ts";
 import {
   isPricingPath,
   planCheckoutCta,
   renderEstatePricingPage,
+  STRAINCHAIN_BASIC,
   tryHandleEstatePricing,
 } from "./estate-pricing.ts";
 
@@ -82,4 +84,37 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
     ),
     null,
   );
+});
+
+test("strainchain origin reuses the live Basic Payment Link, not catalogue SKUs", () => {
+  assert.equal(STRAINCHAIN_BASIC.url, PAYMENT_LINKS.strainchain.basic.url);
+  assert.equal(STRAINCHAIN_BASIC.price, "$199/mo");
+  assert.equal(listedPlans("strainchain").length, 0);
+});
+
+test("strainchain /pricing HTML cites the live Basic Payment Link only", () => {
+  const html = renderEstatePricingPage("strainchain");
+  assert.match(html, /<title>Pricing — StrainChain<\/title>/);
+  assert.match(html, new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(html, /\$199/);
+  assert.match(html, /StrainChain Basic/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /href="\/genetics\/mendo-love-farms"/);
+  assert.doesNotMatch(html, /Publish one passport/);
+  assert.doesNotMatch(html, /Start a Farm Plan/);
+  assert.doesNotMatch(html, /\$49/);
+  assert.doesNotMatch(html, /\$149/);
+  assert.doesNotMatch(html, /\$2,990/);
+});
+
+test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () => {
+  const hit = tryHandleEstatePricing(
+    new Request("https://strainchain.io/pricing"),
+    "strainchain",
+  );
+  assert.ok(hit);
+  assert.equal(hit.status, 200);
+  assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
+  const html = await hit.text();
+  assert.match(html, new RegExp(STRAINCHAIN_BASIC.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });

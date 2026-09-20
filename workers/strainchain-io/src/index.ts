@@ -11,6 +11,10 @@ import {
   estateTrust,
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
+import {
+  estatePricingGrid,
+  tryHandleEstatePricing,
+} from "../../_shared/estate-pricing.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <circle cx="32" cy="32" r="30" fill="#030c04" stroke="#10b981" stroke-width="1.5"/>
@@ -2120,6 +2124,7 @@ export default {
       return new Response(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://strainchain.io/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://strainchain.io/pricing</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
   <url><loc>https://strainchain.io/genetics/mendo-love-farms</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://strainchain.io/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
 </urlset>`, {
@@ -2133,6 +2138,8 @@ export default {
     }
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
+    const pricing = tryHandleEstatePricing(request, "strainchain");
+    if (pricing) return pricing;
     // Only the apex renders marketing HTML. Passport and genetics paths were
     // already routed out above; everything left is a 404, not a 200 homepage.
     if (p !== '/') return notFound(p);
@@ -2166,6 +2173,7 @@ ${estateNav(
   [
     { href: "#how", label: "How it works" },
     { href: "#advantages", label: "Capabilities" },
+    { href: "/pricing", label: "Pricing" },
     { href: "/genetics/mendo-love-farms", label: "Genetics" },
     { href: "#start", label: "Start" },
   ],
@@ -2175,9 +2183,10 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "Seed-to-shelf tracking on Polygon.",
-  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. Onboard is the live conversion path.",
+  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. StrainChain Basic is the live checkout path.",
   actions: [
     { href: "/onboard", label: "Request demo", primary: true },
+    { href: "/pricing", label: "View pricing", primary: false },
     { href: "/genetics/mendo-love-farms", label: "View genetics library", primary: false },
   ],
 })}
@@ -2266,12 +2275,22 @@ ${estateFeatures(
   </div>
 </section>
 
+<section class="estate-section" id="pricing">
+  <div class="wrap">
+    <h2>Pricing</h2>
+    <p class="section-sub">StrainChain Basic is the live $199/month Stripe Payment Link. Genetics passport SKUs stay in the catalogue until they have a Stripe price — they are not checkout here.</p>
+    ${estatePricingGrid("strainchain")}
+    <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
+  </div>
+</section>
+
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">StrainChain passport SKUs are defined in the catalogue but are not purchasable until a live Stripe price exists. Request a demo on /onboard — the same intake production already proxies.</p>
+    <p class="section-sub">Buy StrainChain Basic on the published Payment Link, or request a demo on /onboard — the same intake production already proxies.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="/onboard">Request demo</a>
+      <a class="btn btn-primary" href="/pricing">View pricing</a>
+      <a class="btn btn-outline" href="/onboard">Request demo</a>
       <a class="btn btn-outline" href="/genetics/mendo-love-farms">View genetics library</a>
     </div>
   </div>
@@ -2279,9 +2298,10 @@ ${estateFeatures(
 
 ${estateCtaBand({
   title: "Ready for regulator-proof tracking?",
-  lede: "Onboard is the live conversion path for strainchain.io. Genetics passports stay on /genetics.",
+  lede: "StrainChain Basic is the live checkout path. Onboard remains the demo intake. Genetics passports stay on /genetics.",
   actions: [
-    { href: "/onboard", label: "Request demo", primary: true },
+    { href: "/pricing", label: "View pricing", primary: true },
+    { href: "/onboard", label: "Request demo", primary: false },
     { href: "/genetics/mendo-love-farms", label: "View genetics library", primary: false },
   ],
 })}
@@ -2292,6 +2312,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
+        { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
         { href: "/genetics/mendo-love-farms", label: "Genetics library" },
       ],
@@ -2311,7 +2332,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Powered by AuthiChain · onboard is the conversion path",
+  "Powered by AuthiChain · StrainChain Basic is the live Payment Link",
 )}
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });
