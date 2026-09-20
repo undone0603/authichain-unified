@@ -7,6 +7,7 @@
 //   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=partners
 // Live partner sends also need ALLOW_PARTNER_SENDS=true (or --allow-partner-sends)
 // and stay under MAX_LIVE_SENDS. Do not mix partners into govchain/strainchain/qron.
+// Existo + ICS are on PARTNER_ALREADY_SENT after two live Resend sends 2026-09-20.
 //
 // Usage:
 //   DRY_RUN=true pnpm exec tsx scripts/b2b-cold-outreach.ts
@@ -20,7 +21,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { guardrailCheck, guardrailRecord } from "./lib/guardrail-client";
 import {
-  isAlreadyContacted,
+  existingLeadBlocksLiveSend,
+  nextLeadWriteStatus,
+  normalizeLeadEmail,
   shouldNotLiveResend,
 } from "./lib/b2b-send-policy";
 import {
@@ -579,6 +582,29 @@ function highLeverageEmail(t: HighLeverageTarget): {
   return { subject, html };
 }
 
+function escapeIlikeExact(email: string): string {
+  return normalizeLeadEmail(email)
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+}
+
+async function loadLeadRowsByEmail(
+  email: string
+): Promise<Array<{ email?: string | null; status?: string | null }>> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("email,status")
+    .ilike("email", escapeIlikeExact(email));
+  if (error) {
+    console.warn(
+      `  ⚠️  Lead lookup failed for ${email}: ${error.message} — treating as already contacted`
+    );
+    return [{ email, status: "contacted" }];
+  }
+  return data ?? [];
+}
+
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
 async function processTargets<
@@ -670,26 +696,32 @@ async function processTargets<
       console.log(`  ⏭️  Do-not-resend list — ${email}`);
       continue;
     }
+    let existingStatus: string | null = null;
     if (email && !isDryRun) {
-      const { data: existing } = await supabase
-        .from("leads")
-        .select("status")
-        .eq("email", email)
-        .maybeSingle();
-      if (isAlreadyContacted(existing?.status)) {
+      const existingRows = await loadLeadRowsByEmail(email);
+      if (existingLeadBlocksLiveSend(existingRows, email)) {
         console.log(`  ⏭️  Already contacted ${email} — not re-sending`);
         continue;
       }
+      existingStatus =
+        existingRows.find(
+          (row) =>
+            normalizeLeadEmail(String(row.email ?? "")) ===
+            normalizeLeadEmail(email)
+        )?.status ?? null;
     }
 
     // Determine initial status
-    const dbStatus = isDryRun
-      ? "draft"
-      : !email
-        ? "pending_email" // Apollo found nothing; manual lookup needed
-        : !senderOk
-          ? "queued" // No usable credential for this sender; drain later
-          : "draft"; // Ready to send
+    const dbStatus = nextLeadWriteStatus(
+      existingStatus,
+      isDryRun
+        ? "draft"
+        : !email
+          ? "pending_email" // Apollo found nothing; manual lookup needed
+          : !senderOk
+            ? "queued" // No usable credential for this sender; drain later
+            : "draft" // Ready to send
+    );
 
     const { error: dbErr } = await supabase.from("leads").upsert(
       {
