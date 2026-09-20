@@ -93,3 +93,34 @@ def test_fail_closed_classifier():
     assert is_fail_closed_workflow("architect_cycle") is True
     assert is_fail_closed_workflow("strainchain_email_pitch") is True
     assert is_fail_closed_workflow("stripe_mcp") is False
+
+
+def test_live_flag_without_mode_promotes_social_to_auto():
+    mode, coerced, live = resolve_execution_mode(
+        live_query=True,
+        workflow_id="authichain_social_launch_orchestrated",
+    )
+    assert mode == "auto"
+    assert live is True
+    assert coerced is False
+
+
+def test_explicit_dry_run_wins_even_with_live_flag():
+    mode, coerced, live = resolve_execution_mode(
+        query_mode="dry-run",
+        live_query=True,
+        workflow_id="linkedin_post",
+    )
+    assert mode == "dry-run"
+    assert live is True
+    assert coerced is False
+
+
+def test_live_flag_without_mode_does_not_promote_email():
+    mode, coerced, live = resolve_execution_mode(
+        live_query=True,
+        workflow_id="strainchain_email_pitch",
+    )
+    assert mode == "dry-run"
+    assert live is True
+    assert coerced is False

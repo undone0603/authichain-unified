@@ -158,6 +158,21 @@ Two gotchas:
   replies to; if Tweet 1 fails, Tweets 2–3 error on the missing reply ID (that
   run just doesn't post the thread — acceptable, the next run retries).
 
+## Manual posting vs scheduled dry-run
+
+Owner-approved **manual** live posts only. Scheduled marketing does **not** post.
+
+| Path | How | Live? |
+| --- | --- | --- |
+| **AgentZ** | Actions → `agentz-manual-post` → `live=true` (default is `false`) | Only on that dispatch. Calls `POST https://agentz.authichain.com/workflows/{id}/run?live=…` with `AGENT_SECRET`. For LinkedIn-first use `workflow_id=linkedin_post` and a payload such as `{"bundle":"content/social/2026-09-20-consumer-verify-flow-a.json"}` (or paste `linkedin` text). |
+| **content-publish** | Dispatch with `dry_run=false`, or a push of a validated bundle to `content/social/**` on `main` | Yes, for channels whose OAuth secrets exist. |
+| **content-publish schedule** | Monday/Thursday cron | **Always dry-run** (fail-closed). Does not post. |
+| **Grok Bot** | — | Does **not** post to X. |
+
+LinkedIn browser session (AgentZ): GitHub already has `LINKEDIN_SESSION_COOKIE` + `LINKEDIN_JSESSIONID`. Dispatch `sync-agentz-linkedin-session` first so AgentZ stores them (`POST /credentials/linkedin_session` + `/linkedin_jsessionid`). Then dispatch `agentz-manual-post` with `live=true`. `content-publish` still uses OAuth when present; if OAuth is empty but the session cookie is set, it skips with `session cookie present — use AgentZ browser path` instead of a silent skip.
+
+Do not invent prices. Do not enable silent scheduled live social.
+
 ## Ledger
 
 `.published.json` is the idempotency record — a bundle listed there is never

@@ -113,7 +113,11 @@ def resolve_order(
 
 
 def execute(
-    wf: Workflow, mode: Mode, verbose: bool = True, audit_log_path: Path = DEFAULT_AUDIT_LOG
+    wf: Workflow,
+    mode: Mode,
+    verbose: bool = True,
+    audit_log_path: Path = DEFAULT_AUDIT_LOG,
+    parameters: dict[str, Any] | None = None,
 ) -> RunResult:
     started = time.time()
     started_iso = datetime.now(timezone.utc).isoformat()
@@ -164,7 +168,12 @@ def execute(
     if wf.description:
         print(f"   {wf.description.strip().splitlines()[0]}")
 
-    ctx = ExecutionContext(mode=effective_mode, workflow_id=wf.id, verbose=verbose)
+    ctx = ExecutionContext(
+        mode=effective_mode,
+        workflow_id=wf.id,
+        verbose=verbose,
+        parameters=parameters or {},
+    )
 
     # 3. Context Fetcher
     if wf.context_fetcher and mode != Mode.DRY_RUN:

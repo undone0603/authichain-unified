@@ -59,4 +59,11 @@ def resolve_execution_mode(
     fail_closed = is_fail_closed_workflow(workflow_id, endpoint)
     if fail_closed and requested != DEFAULT_MODE and not live:
         return DEFAULT_MODE, True, live
+    # ?live=true with no explicit mode means run, except fail-closed
+    # surfaces (architect / *email*) which still default dry-run.
+    mode_was_omitted = not (query_mode or "").strip() and not str(
+        payload.get("mode") or ""
+    ).strip()
+    if live and mode_was_omitted and not fail_closed:
+        return "auto", False, live
     return requested, False, live

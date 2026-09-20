@@ -1,0 +1,91 @@
+name: AgentZ — Manual post
+
+# Owner-approved MANUAL live posting via AgentZ. Dispatch only.
+# Does NOT schedule. live defaults to false (dry-run).
+# Scheduled content-publish stays dry-run — this workflow does not change that.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_id:
+        description: "AgentZ workflow id"
+        required: true
+        default: authichain_social_launch_orchestrated
+        type: string
+      live:
+        description: "Post live (false = dry-run). Scheduled marketing is never live."
+        required: false
+        default: false
+        type: boolean
+      payload:
+        description: "Optional JSON body (linkedin text, or {\"bundle\":\"content/social/...json\"})"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentz-manual-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    name: Call AgentZ /workflows/{id}/run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+      WORKFLOW_ID: ${{ inputs.workflow_id }}
+      LIVE: ${{ inputs.live }}
+      PAYLOAD: ${{ inputs.payload }}
+    steps:
+      - name: POST AgentZ workflow
+        run: |
+          set -euo pipefail
+          if [ -z "${AGENT_SECRET:-}" ]; then
+            echo "::error::AGENT_SECRET is missing or empty. Set the repo Actions secret before dispatching."
+            exit 1
+          fi
+          if [[ ! "${WORKFLOW_ID}" =~ ^[A-Za-z0-9_]+$ ]]; then
+            echo "::error::workflow_id must be alphanumeric/underscore."
+            exit 1
+          fi
+
+          if [ -z "${PAYLOAD:-}" ]; then
+            PAYLOAD='{}'
+          fi
+          python3 - <<'PY'
+          import json, os, sys
+          raw = os.environ.get("PAYLOAD", "{}")
+          try:
+              json.loads(raw)
+          except Exception as exc:
+              print(f"::error::payload is not valid JSON: {exc}", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+          LIVE_Q="false"
+          MODE_Q="dry-run"
+          if [ "${LIVE}" = "true" ]; then
+            LIVE_Q="true"
+            MODE_Q="auto"
+          fi
+
+          URL="https://agentz.authichain.com/workflows/${WORKFLOW_ID}/run?live=${LIVE_Q}&mode=${MODE_Q}"
+          echo "POST ${URL}"
+          HTTP=$(curl -sS -o /tmp/agentz-manual-post.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${AGENT_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}" \
+            "${URL}") || true
+
+          echo "HTTP ${HTTP}"
+          echo "Response body:"
+          cat /tmp/agentz-manual-post.json || true
+          echo
+          if [[ ! "${HTTP}" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::AgentZ returned HTTP ${HTTP} (expected 2xx)."
+            exit 1
+          fi

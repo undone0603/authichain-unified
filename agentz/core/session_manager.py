@@ -57,6 +57,18 @@ def get_browser_with_session(platform_keys: list[str]) -> Browser:
                 "secure": True,
                 "sameSite": "Lax"
             })
+        if platform == "linkedin_session":
+            jsid = get("linkedin_jsessionid", required=False)
+            if jsid and jsid not in ["TODO_PASTE", ""]:
+                cookies.append({
+                    "name": "JSESSIONID",
+                    "value": jsid,
+                    "domain": ".linkedin.com",
+                    "path": "/",
+                    "httpOnly": False,
+                    "secure": True,
+                    "sameSite": "Lax",
+                })
             
     if not cookies:
         return Browser()

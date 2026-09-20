@@ -1,0 +1,81 @@
+name: AgentZ — Sync LinkedIn session
+
+# Pushes GitHub secrets LINKEDIN_SESSION_COOKIE + LINKEDIN_JSESSIONID
+# into live AgentZ via POST /credentials/{key}. Dispatch only.
+# Never prints cookie values — HTTP status codes only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-agentz-linkedin-session
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: POST session cookies to AgentZ
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+      LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
+      LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}
+    steps:
+      - name: Sync LinkedIn session (no cookie echo)
+        run: |
+          set -euo pipefail
+          if [ -z "${AGENT_SECRET:-}" ]; then
+            echo "::error::AGENT_SECRET is missing or empty."
+            exit 1
+          fi
+          if [ -z "${LINKEDIN_SESSION_COOKIE:-}" ]; then
+            echo "::error::LINKEDIN_SESSION_COOKIE is missing or empty."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json, os, pathlib
+          pathlib.Path("/tmp/li_at.json").write_text(
+              json.dumps({"value": os.environ["LINKEDIN_SESSION_COOKIE"]}),
+              encoding="utf-8",
+          )
+          jsid = os.environ.get("LINKEDIN_JSESSIONID", "")
+          if jsid.strip():
+              pathlib.Path("/tmp/li_jsid.json").write_text(
+                  json.dumps({"value": jsid}),
+                  encoding="utf-8",
+              )
+          PY
+
+          HTTP_AT=$(curl -sS -o /tmp/li_at_resp.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${AGENT_SECRET}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/li_at.json \
+            "https://agentz.authichain.com/credentials/linkedin_session") || true
+          echo "linkedin_session HTTP ${HTTP_AT}"
+          rm -f /tmp/li_at.json
+          if [[ ! "${HTTP_AT}" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::linkedin_session sync failed (HTTP ${HTTP_AT})."
+            exit 1
+          fi
+
+          if [ -f /tmp/li_jsid.json ]; then
+            HTTP_JS=$(curl -sS -o /tmp/li_jsid_resp.json -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer ${AGENT_SECRET}" \
+              -H "Content-Type: application/json" \
+              --data-binary @/tmp/li_jsid.json \
+              "https://agentz.authichain.com/credentials/linkedin_jsessionid") || true
+            echo "linkedin_jsessionid HTTP ${HTTP_JS}"
+            rm -f /tmp/li_jsid.json
+            if [[ ! "${HTTP_JS}" =~ ^2[0-9][0-9]$ ]]; then
+              echo "::error::linkedin_jsessionid sync failed (HTTP ${HTTP_JS})."
+              exit 1
+            fi
+          else
+            echo "linkedin_jsessionid HTTP skipped (secret empty)"
+          fi
