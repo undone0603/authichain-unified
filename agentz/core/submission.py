@@ -34,7 +34,8 @@ async def submit_proposal_via_browser(
     1. Navigate to {target_url}.
     2. Search for or locate the submission page for Notice ID: {notice_id}.
     3. Fill out the submission form with these official company details:
-       - Company Name: AUTHICHAIN
+       - Legal Name: ZACHARY KIETZMAN
+       - Brand: AuthiChain (do not submit as AuthiChain, Inc. — no such corporation exists)
        - UEI: R34XKWRJY9A5
        - CAGE Code: 1PUJ6
        - Physical Address: 109 N 4th St, Roscommon, MI 48653-9090 USA

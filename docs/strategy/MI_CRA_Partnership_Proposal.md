@@ -2,7 +2,8 @@
 ## Powered by GovChain.us & AuthiChain Protocol
 
 **Date:** May 16, 2026  
-**Entity:** AuthiChain, Inc.  
+**Legal Entity:** ZACHARY KIETZMAN  
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6  
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653
@@ -10,7 +11,7 @@
 ---
 
 ### **Executive Summary**
-AuthiChain, Inc. proposes the implementation of the **Michigan Audit Integrity Shield (MAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Michigan Cannabis Regulatory Agency (CRA)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for the state’s multi-billion dollar cannabis industry.
+AuthiChain proposes the implementation of the **Michigan Audit Integrity Shield (MAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Michigan Cannabis Regulatory Agency (CRA)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for the state’s multi-billion dollar cannabis industry.
 
 ### **The Problem: The "Provenance Gap"**
 Current seed-to-sale tracking systems (METRC) provide essential data but lack **cryptographic finality** at the consumer and secondary-market levels. Manual audits remain labor-intensive, taking state officials hundreds of hours per year per license.
@@ -35,7 +36,7 @@ The GovChain protocol provides three core pillars of trust for Michigan:
 ---
 
 ### **Next Steps**
-AuthiChain, Inc. is prepared to deploy a **Phase I Pilot** targeting 20 Tier-1 cultivators in the Detroit metro area.
+AuthiChain is prepared to deploy a **Phase I Pilot** targeting 20 Tier-1 cultivators in the Detroit metro area.
 
 **Contact:**  
 **Z@authichain.com**  

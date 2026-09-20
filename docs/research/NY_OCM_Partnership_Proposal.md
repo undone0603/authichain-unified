@@ -3,7 +3,8 @@
 ## Powered by GovChain.us & AuthiChain Protocol
 
 **Date:** May 16, 2026  
-**Entity:** AuthiChain, Inc.  
+**Legal Entity:** ZACHARY KIETZMAN  
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6  
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653
@@ -12,7 +13,7 @@
 
 ### **Executive Summary**
 
-AuthiChain, Inc. proposes the implementation of the **New York Audit Integrity Shield (NYAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **New York Office of Cannabis Management (OCM)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and provide the OCM with the tools needed to secure the state's social equity and commercial market integrity.
+AuthiChain proposes the implementation of the **New York Audit Integrity Shield (NYAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **New York Office of Cannabis Management (OCM)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and provide the OCM with the tools needed to secure the state's social equity and commercial market integrity.
 
 ### **The Problem: The "Authenticity Crisis"**
 
@@ -36,7 +37,7 @@ The GovChain protocol provides three core pillars of trust for New York:
 
 ### **Next Steps**
 
-AuthiChain, Inc. is prepared to deploy a **Phase I Pilot** targeting 20 licensed CAURD retailers and cultivators in the New York City and Albany areas.
+AuthiChain is prepared to deploy a **Phase I Pilot** targeting 20 licensed CAURD retailers and cultivators in the New York City and Albany areas.
 
 **Contact:**  
 **Z@authichain.com**  

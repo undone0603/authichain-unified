@@ -33,7 +33,8 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
     
     # Official Company Metadata
     company_meta = {
-        "name": "AUTHICHAIN",
+        "name": "ZACHARY KIETZMAN",
+        "brand": "AuthiChain",
         "uei": "R34XKWRJY9A5",
         "cage": "1PUJ6",
     }
@@ -43,7 +44,8 @@ async def draft_federal_proposal(grant_data: Dict[str, str]) -> str:
     Title: {grant_data['title']}
     Agency: {grant_data['agency']}
     
-    Company: {company_meta['name']} (CAGE: {company_meta['cage']})
+    Official applicant: {company_meta['name']} (CAGE: {company_meta['cage']}; UEI: {company_meta['uei']})
+    Brand: {company_meta['brand']} (brand only; there is no AuthiChain, Inc. corporation)
     Tech: Blockchain-based supply chain audit, AI anomaly detection, W3C VCs.
 
     Draft using this structure:

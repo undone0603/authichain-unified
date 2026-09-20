@@ -1,5 +1,6 @@
 # NSF SBIR Project Pitch: The Truth Protocol for Industrial Supply Chains
-## Submitting Entity: AuthiChain, Inc.
+## Submitting Entity: ZACHARY KIETZMAN
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 ## Target Award: Phase I ($275,000)
 
 ---
