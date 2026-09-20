@@ -118,6 +118,9 @@ export async function createDppCheckoutSession(opts: {
         plan: PLAN.id,
         brand: "authichain",
         offer: DPP_OFFER_KEY,
+        ...(PLAN.stripe_price_id
+          ? { stripe_price_id: PLAN.stripe_price_id }
+          : {}),
         prospect_id: visitId,
         visit_id: visitId,
         source,

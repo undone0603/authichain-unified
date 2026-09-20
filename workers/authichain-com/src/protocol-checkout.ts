@@ -106,6 +106,7 @@ export async function tryHandleProtocolCheckout(
   body.set("metadata[plan]", "dpp_readiness");
   body.set("metadata[brand]", "authichain");
   body.set("metadata[offer]", DPP_OFFER_KEY);
+  body.set("metadata[stripe_price_id]", priceId);
   body.set("metadata[prospect_id]", visitId);
   body.set("metadata[visit_id]", visitId);
   body.set("metadata[source]", source);

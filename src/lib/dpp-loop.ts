@@ -88,7 +88,7 @@ export async function recordDppLoopEvent(
   if (!visitId) return;
 
   try {
-    await supabase.from("funnel_events").insert({
+    const { error } = await supabase.from("funnel_events").insert({
       prospect_id: visitId,
       stage: STAGE_TO_FUNNEL[input.stage],
       source: normalizeSource(input.source),
@@ -105,6 +105,9 @@ export async function recordDppLoopEvent(
       },
       timestamp: new Date().toISOString(),
     });
+    if (error) {
+      console.error("[dpp-loop] record failed:", input.stage, error);
+    }
   } catch (err) {
     console.error("[dpp-loop] record failed:", input.stage, err);
   }
@@ -520,6 +523,19 @@ export const DPP_SMOKE_PROMO = "DPP-SMOKE-E2E";
 
 export function isDppSmokePromo(value: string | null | undefined): boolean {
   return (value || "").trim().toUpperCase() === DPP_SMOKE_PROMO;
+}
+
+/**
+ * Stripe metadata flag for DPP-SMOKE / $0 checkout. Demo may skip Resend
+ * and customer-funnel counts. It must never skip fulfill or access grant.
+ * Stripe metadata is stringly typed (`"true"`), so accept both forms.
+ */
+export function isDppDemoSession(
+  metadata: Record<string, unknown> | null | undefined
+): boolean {
+  const demo = metadata?.is_demo ?? metadata?.demo;
+  if (demo === true || demo === "true" || demo === "1") return true;
+  return isDppSmokePromo(String(metadata?.promo || ""));
 }
 
 export function isDppOffer(

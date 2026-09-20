@@ -53,6 +53,7 @@ describe("createDppCheckoutSession", () => {
     expect(arg.allow_promotion_codes).toBe(true);
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
     expect(arg.metadata.plan).toBe("dpp_readiness");
+    expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.success_url).toContain(
       "/dpp/thanks?session_id={CHECKOUT_SESSION_ID}"
     );
@@ -79,6 +80,7 @@ describe("createDppCheckoutSession", () => {
     expect(arg.metadata.is_demo).toBe("true");
     expect(arg.metadata.promo).toBe("DPP-SMOKE-E2E");
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
+    expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.payment_method_types).toBeUndefined();
   });
 });

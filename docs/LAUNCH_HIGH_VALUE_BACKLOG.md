@@ -121,6 +121,18 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 - **Owner / secrets:** Stripe Dashboard. Worker secrets on **`authichain-edge-router`**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and/or `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`, `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 - **Done when:** Stripe event deliveries for a smoke/paid session are 2xx on `https://authichain.com/api/stripe/webhook`; a `funnel_events` row with `loop_stage=provisioned` exists.
 
+### P0-1b. Edge webhook threw before fulfill — harden observability + replay (2026-09-20)
+
+- **Problem:** Apex `handleStripeWebhook` called Drizzle `getDb()` (requires `DATABASE_URL`) for idempotency/audit _before_ `fulfillDppPaidSession`. `authichain-edge-router` hydrates Stripe + Supabase only — not `DATABASE_URL`. Paid `checkout.session.completed` then 400'd and never wrote `payment_succeeded` / `provisioned`. Live `stripe_events` stayed empty even for prior successes (edge wrote Drizzle `activity_log`, which also failed).
+- **Not the cause (do not invent an `is_demo` skip fix):** `isDppOffer` matches live `smoke_check_1789786486` (`cs_live_a1y4Tu…`) — metadata has `offer` + `plan`. `$0` promo / `is_demo` / `smoke_*` visit id are not fulfill filters (`is_demo` only skips Resend email). Funnel only has `checkout_started` because fulfill never ran.
+- **7d shape:** ~41 `checkout_started` vs 1 `payment_succeeded` / 1 `provisioned`. Stripe 7d: 3 complete/paid sessions, all $0 smoke; 0 nonzero charges.
+- **Contrast:** `dpp_smoke_1789591727` has `payment_succeeded` → `provisioned` → `merchant_activated` (Next handler, 2026-09-17, before apex was canonical).
+- **Owner Dashboard (do not block on login):** `we_1UGTCS…` → Resend `checkout.session.completed` for `cs_live_a1y4Tu…`. Expect historical non-2xx; after deploy expect 2xx + funnel rows.
+- **Fix (this PR):**
+  1. Persist every verified delivery into `stripe_events` (event id, type, session id, HTTP outcome, error). Optional migration adds the extra columns; handler falls back to the live 3-col table. A row is **not** a fulfill lock.
+  2. Fail-open Drizzle; fulfill every paid DPP `checkout.session.completed` / `async_payment_succeeded`, including $0 promo (`payment_succeeded` still writes before provision).
+  3. Replay-safe: Drizzle `alreadyProcessed` still re-runs DPP fulfill (idempotent via session-id dedupe).
+
 ### P0-2. Deploy this PR so `/api/funnel` is no longer 404
 
 - **Problem:** `/dpp` JS POSTs `attributed_visit` to `/api/funnel`. Unregistered `/api/*` on the edge router falls through to ASSETS → **404**. Loop never starts; exception report looks empty at stage 1.
