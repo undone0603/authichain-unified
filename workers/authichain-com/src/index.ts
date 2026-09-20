@@ -16,6 +16,7 @@ import {
   renderMadeInAmericaPage,
   renderTrumarkPage,
 } from "./money-surfaces.ts";
+import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -3268,6 +3269,9 @@ export default {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
+
+    const miniapp = tryHandleTelegramMiniApp(request);
+    if (miniapp) return miniapp;
 
     const genetics = tryHandleGeneticsRoutes(request);
     if (genetics) return genetics;
