@@ -45,6 +45,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { listedPlans } from "../src/lib/plans";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -1189,10 +1190,33 @@ function renderAuthenticate(c: Context): Response {
 
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
 
+function generatePackLinksHtml(): string {
+  const packs = listedPlans("qron").filter(
+    p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
+  );
+  return packs
+    .map(p => {
+      const href =
+        p.id === "dpp_readiness"
+          ? "/api/checkout/dpp"
+          : p.stripe_payment_link || "/pricing";
+      return (
+        '<a href="' +
+        escapeHtml(href) +
+        '">' +
+        escapeHtml(p.name) +
+        " — $" +
+        p.price +
+        "</a>"
+      );
+    })
+    .join(" · ");
+}
+
 function generateFormHtml(error?: string): string {
   const errorBlock = error
-    ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
-    : "";
+    ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
+    : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
@@ -1201,16 +1225,54 @@ function generateFormHtml(error?: string): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
-      "<p>Target URL and a short prompt. This queues a QRON generate request and hands you the onboard intake for a pilot seal.</p>\n" +
+      "<p>Target URL and a short prompt. Signed-in packs spend a generation credit via <code>POST /api/generate</code>. Without a session this form still queues a QRON onboard for a pilot seal.</p>\n" +
       errorBlock +
-      '<form action="/generate" method="post">\n' +
+      '<p id="generate-result" hidden></p>\n' +
+      '<form id="generate-form" action="/generate" method="post">\n' +
       '<label for="targetUrl">Product or verify URL</label>\n' +
       '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
       '<label for="prompt">Style prompt (optional)</label>\n' +
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
-      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a></p>\n' +
+      "<p>Need credits? " +
+      generatePackLinksHtml() +
+      ' · <a href="/pricing">All pricing</a></p>\n' +
+      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +
+      "<script>\n" +
+      "(function(){\n" +
+      "var form=document.getElementById('generate-form');\n" +
+      "var err=document.getElementById('generate-error');\n" +
+      "var out=document.getElementById('generate-result');\n" +
+      "if(!form)return;\n" +
+      "form.addEventListener('submit',function(e){\n" +
+      "e.preventDefault();\n" +
+      "var targetUrl=document.getElementById('targetUrl').value.trim();\n" +
+      "var prompt=document.getElementById('prompt').value.trim();\n" +
+      "err.hidden=true; out.hidden=true;\n" +
+      "fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUrl:targetUrl,prompt:prompt,mode:'static'})})\n" +
+      ".then(function(res){return res.json().then(function(data){return {res:res,data:data};});})\n" +
+      ".then(function(r){\n" +
+      "if(r.res.status===401||r.res.status===403){\n" +
+      "err.hidden=false;\n" +
+      "err.textContent=r.data.message||'Sign in or buy a generation pack.';\n" +
+      "return;\n" +
+      "}\n" +
+      "if(!r.res.ok){\n" +
+      "err.hidden=false;\n" +
+      "err.textContent=r.data.message||'Generation failed.';\n" +
+      "return;\n" +
+      "}\n" +
+      "var url=r.data.qron&&r.data.qron.imageUrl;\n" +
+      "if(!url){err.hidden=false;err.textContent='No image returned.';return;}\n" +
+      "if(url.indexOf('data:image/')!==0&&url.indexOf('https://')!==0){err.hidden=false;err.textContent='Unexpected image URL.';return;}\n" +
+      "out.hidden=false;\n" +
+      'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
+      "})\n" +
+      ".catch(function(){err.hidden=false;err.textContent='Network error. Queuing onboard instead.';form.submit();});\n" +
+      "});\n" +
+      "})();\n" +
+      "</script>\n" +
       "</main>",
   });
 }

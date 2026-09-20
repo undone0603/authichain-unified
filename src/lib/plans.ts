@@ -221,6 +221,24 @@ export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
+/** Look up a live catalogue plan by Stripe price ID. */
+export function planByStripePriceId(
+  priceId: string | null | undefined
+): Plan | undefined {
+  if (!priceId) return undefined;
+  return PLANS.find(p => p.stripe_price_id === priceId);
+}
+
+/** Match a paid amount to a unique live catalogue price (cents). */
+export function planByAmountCents(
+  amountCents: number | null | undefined
+): Plan | undefined {
+  if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
+  const dollars = amountCents / 100;
+  const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 // Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {
   free: 0,

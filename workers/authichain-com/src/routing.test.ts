@@ -180,6 +180,12 @@ test("other /api paths still proxy to the app", async () => {
   assert.equal(await res.text(), "app");
 });
 
+test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogue", async () => {
+  const res = await get("/demo");
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "https://authichain.com/pricing");
+});
+
 test("app.authichain.com/ 302s to /dashboard", async () => {
   const res = await worker.fetch(
     new Request("https://app.authichain.com/", {
@@ -192,7 +198,12 @@ test("app.authichain.com/ 302s to /dashboard", async () => {
 });
 
 test("/dashboard and /generate are proxied to the app", async () => {
-  for (const path of ["/dashboard", "/generate", "/api/automation/cron"]) {
+  for (const path of [
+    "/dashboard",
+    "/generate",
+    "/api/automation/cron",
+    "/api/generate",
+  ]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     assert.equal(

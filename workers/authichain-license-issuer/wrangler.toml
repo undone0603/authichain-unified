@@ -23,14 +23,17 @@ binding = "SESSIONS"
 id = "48d7f33917be4a7fb86c852ae0ef7033"
 
 # Secrets — set via: wrangler secret put <NAME>
-# STRIPE_SECRET_KEY
-# STRIPE_WEBHOOK_SECRET
+# Probe presence (never values) with GET /health after deploy.
+# Required for a D1 license write:
+#   STRIPE_WEBHOOK_SECRET
+#   LICENSE_PRIVATE_KEY_PEM
+# Optional: STRIPE_SECRET_KEY (read-only session retrieve to expand line_items)
 # STRIPE_AGENT_BROWSER_PRO_PRICE_ID
 # STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID
-# LICENSE_PRIVATE_KEY_PEM               (openssl ecparam -name prime256v1 ...)
 # LICENSE_PUBLIC_KEY_PEM
 # TELEGRAM_BOT_TOKEN
 # TELEGRAM_ADMIN_CHAT_ID
+# RESEND_API_KEY
 
 [vars]
 ENVIRONMENT = "production"

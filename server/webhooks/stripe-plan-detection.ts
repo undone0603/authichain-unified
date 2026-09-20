@@ -3,6 +3,7 @@ import {
   lookupPlanByPriceId,
   type B2BPlanKey,
 } from "../../shared/pricing";
+import { planByStripePriceId } from "../../src/lib/plans";
 
 /** B2B plans only; webhook-side helper. */
 function isB2BPlan(key: string): key is B2BPlanKey {
@@ -29,11 +30,15 @@ function detectPlanFromAmount(amountCents: number): B2BPlanKey {
  */
 export function detectPlan(
   priceId: string | null | undefined,
-  amountCents: number,
+  amountCents: number
 ): B2BPlanKey {
   if (priceId) {
     const known = lookupPlanByPriceId(priceId);
     if (known && isB2BPlan(known)) return known;
+    // Live QRON/DPP catalogue IDs must not be amount-mapped onto B2B SKUs
+    // ($299 is below the $499 professional threshold and used to become
+    // B2B starter).
+    if (planByStripePriceId(priceId)) return "starter";
   }
   return detectPlanFromAmount(amountCents);
 }

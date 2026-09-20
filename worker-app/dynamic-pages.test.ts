@@ -278,9 +278,7 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain(
-      "Issue seals. Bind products. Verify anywhere."
-    );
+    expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
   });
 });
 
@@ -361,7 +359,11 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
         redirect: "manual",
       },
       makeEnv({ RESEND_API_KEY2: "re_test" }) as any,
-      { waitUntil: (p: Promise<unknown>) => { pending.push(p); } } as any
+      {
+        waitUntil: (p: Promise<unknown>) => {
+          pending.push(p);
+        },
+      } as any
     );
 
     expect(res.status).toBe(303);
@@ -442,8 +444,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain("Generate a Living QR");
-    expect(body).toContain('<form action="/generate" method="post">');
+    expect(body).toContain(
+      '<form id="generate-form" action="/generate" method="post">'
+    );
     expect(body).toContain('name="targetUrl"');
+    expect(body).toContain("fetch('/api/generate'");
+    expect(body).toContain("$29");
+    expect(body).toContain("$99");
+    expect(body).toContain("$299");
   });
 
   it("303s a valid URL to /onboard", async () => {

@@ -5,6 +5,8 @@ import {
   PLAN_TIER,
   isPurchasable,
   listedPlans,
+  planByAmountCents,
+  planByStripePriceId,
 } from "./plans";
 
 describe("plan catalogue integrity", () => {
@@ -93,5 +95,24 @@ describe("listedPlans", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
+  });
+
+  it("keeps the live self-serve money path at $29 / $99 / $299", () => {
+    const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
+    expect(byId.starter.price).toBe(29);
+    expect(byId.creator.price).toBe(99);
+    expect(byId.dpp_readiness.price).toBe(299);
+    expect(planByStripePriceId("price_1TGOM9GqTruSqV8TdV7j3DuL")?.id).toBe(
+      "starter"
+    );
+    expect(planByStripePriceId("price_1TGAiZGqTruSqV8Tb4ZdCVKr")?.id).toBe(
+      "creator"
+    );
+    expect(planByStripePriceId("price_1TwmD8GqTruSqV8TpAF8dfyA")?.id).toBe(
+      "dpp_readiness"
+    );
+    expect(planByAmountCents(2900)?.id).toBe("starter");
+    expect(planByAmountCents(9900)?.id).toBe("creator");
+    expect(planByAmountCents(29900)?.id).toBe("dpp_readiness");
   });
 });

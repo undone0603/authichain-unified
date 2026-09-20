@@ -14,6 +14,9 @@ compatibility_flags = ["nodejs_compat"]
 # DATABASE_URL is NOT required for DPP fulfill (Drizzle audit is fail-open).
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
+# Optional QRON_WORKER_URL for POST /api/generate (defaults to
+# https://qron-image-gen.undone-k.workers.dev). Optional
+# NEXT_PUBLIC_SUPABASE_ANON_KEY to resolve generate sessions.
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
@@ -96,6 +99,16 @@ zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/checkout/*"
+zone_name = "authichain.com"
+
+# More specific than landing authichain.com/* so POST /api/generate is not
+# answered by ASSETS 404 when APP_WORKER is unbound. Same pattern as checkout.
+[[routes]]
+pattern = "authichain.com/api/generate"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/generate/*"
 zone_name = "authichain.com"
 
 # Canonical Stripe Dashboard endpoint. Live account we_1UGTCS… already

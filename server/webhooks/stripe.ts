@@ -94,6 +94,66 @@ async function getWebhookSupabase() {
   return createClient(url, key);
 }
 
+async function fulfillCatalogCreditsIfPaid(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  if (session.payment_status !== "paid") return;
+  const linePriceId = checkoutLinePriceId(session);
+  const { isDppOffer } = await import("../../src/lib/dpp-loop");
+  if (isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  const { PLAN_CREDITS, planByAmountCents, planByStripePriceId } =
+    await import("../../src/lib/plans");
+  const metaPlan =
+    typeof session.metadata?.plan === "string" ? session.metadata.plan : "";
+  let catalog =
+    planByStripePriceId(linePriceId)?.id ||
+    planByAmountCents(session.amount_total ?? undefined)?.id;
+  if (
+    !catalog &&
+    metaPlan &&
+    metaPlan in PLAN_CREDITS &&
+    metaPlan !== "starter"
+  ) {
+    catalog = metaPlan as typeof catalog;
+  }
+  if (!catalog && metaPlan === "starter" && session.mode === "payment") {
+    catalog = "starter";
+  }
+  if (!catalog) return;
+
+  const supabase = await getWebhookSupabase();
+  if (!supabase) {
+    console.error(
+      "[stripe-webhook] catalogue session paid but Supabase is not configured"
+    );
+    return;
+  }
+
+  const { provisionPurchase } = await import("../../src/lib/provisioning");
+  const email =
+    session.customer_details?.email ||
+    session.customer_email ||
+    (typeof session.metadata?.customer_email === "string"
+      ? session.metadata.customer_email
+      : null);
+  const prov = await provisionPurchase(supabase, {
+    email,
+    userId: session.metadata?.user_id || null,
+    plan: catalog,
+    brand: (session.metadata?.brand as "authichain") || "authichain",
+    stripeCustomerId:
+      typeof session.customer === "string" ? session.customer : null,
+    stripeSubscriptionId:
+      typeof session.subscription === "string" ? session.subscription : null,
+  });
+  if (prov.status === "upsert_failed") {
+    throw new Error(
+      `Catalogue provision failed: ${prov.error || "profiles upsert failed"}`
+    );
+  }
+}
+
 async function fulfillDppCheckoutIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<void> {
@@ -661,8 +721,9 @@ export async function handleStripeWebhook(
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
           await fulfillDppCheckoutIfPaid(session);
+          await fulfillCatalogCreditsIfPaid(session);
         } catch (dppErr) {
-          console.error("[stripe-webhook] DPP fulfill failed", dppErr);
+          console.error("[stripe-webhook] checkout fulfill failed", dppErr);
           throw dppErr;
         }
 
