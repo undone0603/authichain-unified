@@ -6,6 +6,7 @@
  * `src/lib/plans.ts` only.
  */
 
+import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
@@ -97,6 +98,7 @@ export async function createDppCheckoutSession(opts: {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      ...hostedCheckoutRecoveryParams("payment"),
       line_items: smoke
         ? [
             {
