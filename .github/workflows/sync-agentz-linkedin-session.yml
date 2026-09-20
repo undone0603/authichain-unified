@@ -1,8 +1,6 @@
-name: AgentZ — Sync LinkedIn session
-
-# Pushes GitHub secrets LINKEDIN_SESSION_COOKIE + LINKEDIN_JSESSIONID
-# into live AgentZ via POST /credentials/{key}. Dispatch only.
-# Never prints cookie values — HTTP status codes only.
+# Push LinkedIn session cookies from GitHub Secrets onto live AgentZ.
+# Never prints cookie values. Dispatch-only.
+name: Sync AgentZ LinkedIn session
 
 on:
   workflow_dispatch:
@@ -11,71 +9,64 @@ permissions:
   contents: read
 
 concurrency:
-  group: sync-agentz-linkedin-session
+  group: sync-agentz-linkedin
   cancel-in-progress: false
 
 jobs:
   sync:
-    name: POST session cookies to AgentZ
+    name: Push LINKEDIN_* session to AgentZ
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
-      LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
-      LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}
     steps:
-      - name: Sync LinkedIn session (no cookie echo)
+      - name: Sync cookies to AgentZ
+        env:
+          AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+          LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
+          LINKEDIN_JSESSIONID: ${{ secrets.LINKEDIN_JSESSIONID }}
+          AGENTZ_URL: https://agentz.authichain.com
         run: |
           set -euo pipefail
           if [ -z "${AGENT_SECRET:-}" ]; then
-            echo "::error::AGENT_SECRET is missing or empty."
+            echo "::error::AGENT_SECRET is empty"
             exit 1
           fi
           if [ -z "${LINKEDIN_SESSION_COOKIE:-}" ]; then
-            echo "::error::LINKEDIN_SESSION_COOKIE is missing or empty."
+            echo "::error::LINKEDIN_SESSION_COOKIE is empty"
             exit 1
           fi
 
-          python3 - <<'PY'
-          import json, os, pathlib
-          pathlib.Path("/tmp/li_at.json").write_text(
-              json.dumps({"value": os.environ["LINKEDIN_SESSION_COOKIE"]}),
-              encoding="utf-8",
-          )
-          jsid = os.environ.get("LINKEDIN_JSESSIONID", "")
-          if jsid.strip():
-              pathlib.Path("/tmp/li_jsid.json").write_text(
-                  json.dumps({"value": jsid}),
-                  encoding="utf-8",
-              )
+          post_cred() {
+            local key="$1"
+            local value="$2"
+            # Build JSON without printing value
+            python3 - "$key" "$value" <<'PY' > /tmp/cred.json
+          import json,sys
+          print(json.dumps({"value": sys.argv[2]}))
+          open("/tmp/cred.key","w").write(sys.argv[1])
           PY
-
-          HTTP_AT=$(curl -sS -o /tmp/li_at_resp.json -w "%{http_code}" \
-            -X POST \
-            -H "Authorization: Bearer ${AGENT_SECRET}" \
-            -H "Content-Type: application/json" \
-            --data-binary @/tmp/li_at.json \
-            "https://agentz.authichain.com/credentials/linkedin_session") || true
-          echo "linkedin_session HTTP ${HTTP_AT}"
-          rm -f /tmp/li_at.json
-          if [[ ! "${HTTP_AT}" =~ ^2[0-9][0-9]$ ]]; then
-            echo "::error::linkedin_session sync failed (HTTP ${HTTP_AT})."
-            exit 1
-          fi
-
-          if [ -f /tmp/li_jsid.json ]; then
-            HTTP_JS=$(curl -sS -o /tmp/li_jsid_resp.json -w "%{http_code}" \
-              -X POST \
+            local http
+            http=$(curl -sS -o /tmp/cred.out -w '%{http_code}' \
+              -X POST "${AGENTZ_URL}/credentials/$(cat /tmp/cred.key)" \
               -H "Authorization: Bearer ${AGENT_SECRET}" \
               -H "Content-Type: application/json" \
-              --data-binary @/tmp/li_jsid.json \
-              "https://agentz.authichain.com/credentials/linkedin_jsessionid") || true
-            echo "linkedin_jsessionid HTTP ${HTTP_JS}"
-            rm -f /tmp/li_jsid.json
-            if [[ ! "${HTTP_JS}" =~ ^2[0-9][0-9]$ ]]; then
-              echo "::error::linkedin_jsessionid sync failed (HTTP ${HTTP_JS})."
+              --data-binary @/tmp/cred.json)
+            echo "POST /credentials/$(cat /tmp/cred.key) → HTTP ${http}"
+            if [ "$http" != "200" ]; then
+              echo "::error::AgentZ rejected credential $(cat /tmp/cred.key)"
+              head -c 200 /tmp/cred.out || true
               exit 1
             fi
+            rm -f /tmp/cred.json /tmp/cred.out /tmp/cred.key
+          }
+
+          post_cred linkedin_session "$LINKEDIN_SESSION_COOKIE"
+          if [ -n "${LINKEDIN_JSESSIONID:-}" ]; then
+            post_cred linkedin_jsessionid "$LINKEDIN_JSESSIONID"
           else
-            echo "linkedin_jsessionid HTTP skipped (secret empty)"
+            echo "LINKEDIN_JSESSIONID empty — skipped (li_at alone may still work)"
           fi
+
+          # Status only (no values)
+          curl -sS -H "Authorization: Bearer ${AGENT_SECRET}" \
+            "${AGENTZ_URL}/credentials/linkedin_session/status"
+          echo

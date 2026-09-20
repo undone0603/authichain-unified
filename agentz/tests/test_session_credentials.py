@@ -8,6 +8,7 @@ import pytest
 from agentz.api.session_credentials import (
     ALLOWED_SESSION_KEYS,
     apply_session_credential,
+    session_credential_status,
 )
 from agentz.core import credentials as creds
 
@@ -61,3 +62,30 @@ def test_apply_rejects_unknown_key():
 def test_apply_rejects_empty_value():
     with pytest.raises(ValueError, match="empty"):
         apply_session_credential("linkedin_session", "   ")
+
+
+def test_status_reports_presence_without_echoing_value():
+    secret = "li_at_super_secret_cookie_value"
+    apply_session_credential("linkedin_session", secret)
+    status = session_credential_status("linkedin_session")
+    assert status["ok"] is True
+    assert status["key"] == "linkedin_session"
+    assert status["present"] is True
+    assert status["length"] == len(secret)
+    blob = json.dumps(status)
+    assert secret not in blob
+
+
+def test_status_missing_key_is_not_present():
+    status = session_credential_status("reddit_session")
+    assert status == {
+        "ok": True,
+        "key": "reddit_session",
+        "present": False,
+        "length": 0,
+    }
+
+
+def test_status_rejects_unknown_key():
+    with pytest.raises(ValueError, match="not allowed"):
+        session_credential_status("stripe_secret")

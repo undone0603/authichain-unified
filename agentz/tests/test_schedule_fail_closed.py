@@ -111,12 +111,13 @@ def test_sync_agentz_linkedin_session_is_dispatch_only():
     assert "secrets.AGENT_SECRET" in yml
     assert "secrets.LINKEDIN_SESSION_COOKIE" in yml
     assert "secrets.LINKEDIN_JSESSIONID" in yml
-    assert "https://agentz.authichain.com/credentials/linkedin_session" in yml
+    assert "AGENTZ_URL: https://agentz.authichain.com" in yml
+    assert "/credentials/" in yml
+    assert "linkedin_session" in yml
     assert "linkedin_jsessionid" in yml
-    # Must not print cookie values
+    assert "/credentials/linkedin_session/status" in yml
     assert "echo \"$LINKEDIN_SESSION_COOKIE\"" not in yml
     assert "echo $LINKEDIN_SESSION_COOKIE" not in yml
-    assert "cat " not in yml or "do not print cookie" in yml.lower() or "HTTP" in yml
 
 
 def test_content_publish_passes_linkedin_session_secrets():

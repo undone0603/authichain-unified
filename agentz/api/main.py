@@ -10,7 +10,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
 from agentz.api.mode_contract import resolve_execution_mode
-from agentz.api.session_credentials import apply_session_credential
+from agentz.api.session_credentials import (
+    apply_session_credential,
+    session_credential_status,
+)
 import asyncio
 
 from agentz.core.credentials import get
@@ -270,6 +273,15 @@ async def api_set_session_credential(key: str, request: Request):
         raise HTTPException(status_code=400, detail="body.value must be a string")
     try:
         return apply_session_credential(key, value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/credentials/{key}/status", dependencies=[Depends(verify_token)])
+async def api_session_credential_status(key: str):
+    """Presence/length of an allowlisted session cookie. Never returns the value."""
+    try:
+        return session_credential_status(key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
