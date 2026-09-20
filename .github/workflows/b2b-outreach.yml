@@ -55,7 +55,7 @@ env:
 
 jobs:
   outreach:
-    name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
+    name: B2B Cold Outreach — ${{ github.event_name == 'schedule' && 'qron' || inputs.segment || 'all' }}
     # Enabling this workflow is not live send. Resolve-mode stays dry-run
     # unless vars.OWNER_LIVE_SEND=true (and dispatch also unchecks dry_run).
     runs-on: ubuntu-latest
@@ -107,9 +107,20 @@ jobs:
           echo "dry_run=true" >> "$GITHUB_OUTPUT"
           echo "Resolved dry_run=true"
 
+      - name: Resolve segment
+        id: segment
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "segment=qron" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run → segment=qron (never all)"
+            exit 0
+          fi
+          echo "segment=${{ inputs.segment || 'all' }}" >> "$GITHUB_OUTPUT"
+
       - name: Run B2B cold outreach
         if: ${{ inputs.flush_queued != true }}
-        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ steps.segment.outputs.segment }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -141,7 +152,7 @@ jobs:
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == true && steps.mode.outputs.dry_run == 'false' }}
-        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ steps.segment.outputs.segment }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
