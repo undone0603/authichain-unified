@@ -37,6 +37,27 @@ describe("GET /api/x402/health", () => {
     expect(body.facilitator.configured).toBe(false);
   });
 
+  it("GET /api/x402/catalog lists paid endpoints from the same health config", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    const res = await app().request("/api/x402/catalog");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      protocol: string;
+      payTo: string;
+      pricePerCall: { usd: number };
+    };
+    expect(body.protocol).toBe("x402");
+    expect(body.payTo).toBe(process.env.X402_PAY_TO);
+    expect(body.pricePerCall.usd).toBe(0.05);
+  });
+
+  it("GET /.well-known/x402.json is the catalog", async () => {
+    const res = await app().request("/.well-known/x402.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { catalog: string };
+    expect(body.catalog).toBe("/api/x402/catalog");
+  });
+
   it("GET /api/x402 is the same health document", async () => {
     const res = await app().request("/api/x402");
     expect(res.status).toBe(200);

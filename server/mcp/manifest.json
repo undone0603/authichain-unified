@@ -8,15 +8,50 @@
   "command": "npx",
   "args": ["tsx", "server/mcp/index.ts"],
   "tools": [
-    { "name": "verify_authenticity", "description": "Verify a product by AuthiChain certificate number." },
-    { "name": "mint_certificate", "description": "Initiate a trust certificate mint (5-agent consensus)." },
-    { "name": "classify_product", "description": "Classify a product into an industry vertical + suggested workflow." },
-    { "name": "verify_sovereign_deal", "description": "Verify a sovereign deal by TrueMark ID." },
-    { "name": "get_pricing", "description": "Discover metered verification price + subscription plans." },
-    { "name": "verify_paid", "description": "Pay-per-call verification via x402 (returns 402 requirements until paid)." }
+    {
+      "name": "verify_authenticity",
+      "description": "Verify a product by AuthiChain certificate number."
+    },
+    {
+      "name": "mint_certificate",
+      "description": "Initiate a trust certificate mint (5-agent consensus)."
+    },
+    {
+      "name": "classify_product",
+      "description": "Classify a product into an industry vertical + suggested workflow."
+    },
+    {
+      "name": "verify_sovereign_deal",
+      "description": "Verify a sovereign deal by TrueMark ID."
+    },
+    {
+      "name": "get_pricing",
+      "description": "Discover metered verification price + subscription plans."
+    },
+    {
+      "name": "verify_paid",
+      "description": "Pay-per-call verification via x402 (returns 402 requirements until paid)."
+    }
   ],
   "pricing": {
-    "meteredVerification": { "protocol": "x402", "network": "polygon", "pricePerCall": "$0.05 USDC", "endpoint": "POST /api/v1/agent-verify" }
+    "meteredVerification": {
+      "protocol": "x402",
+      "network": "base",
+      "chainId": "8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "pricePerCall": "$0.05 USDC",
+      "endpoint": "POST /api/v1/agent-verify",
+      "health": "https://authichain.com/api/x402/health",
+      "catalog": "https://authichain.com/api/x402/catalog"
+    }
   },
-  "keywords": ["authentication", "provenance", "blockchain", "x402", "agent-commerce", "verification", "trust"]
+  "keywords": [
+    "authentication",
+    "provenance",
+    "blockchain",
+    "x402",
+    "agent-commerce",
+    "verification",
+    "trust"
+  ]
 }
