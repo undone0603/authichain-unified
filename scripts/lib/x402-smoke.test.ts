@@ -33,7 +33,10 @@ describe("usdc balance decode", () => {
 
 describe("signExactPayment", () => {
   it("builds a header our server can parse and recovers the signer", async () => {
-    const wallet = ethers.Wallet.createRandom();
+    // Well-known Hardhat #0 — not a secret. Avoid createRandom() under jsdom.
+    const wallet = new ethers.Wallet(
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    );
     const { headerB64, proof } = await signExactPayment({
       wallet,
       payTo: OPS_PAY_TO,
