@@ -1,0 +1,18 @@
+{
+  "linkedin": "Scan a signed QR code on an AuthiChain-registered product and your phone's own camera app opens authichain.com/verify — no separate app to install, no login. The page reads a product ID and a cryptographic hash straight out of the QR data, checks the hash, and returns one of three plain-language states: Authentic Product Verified, a Counterfeit Alert with an explanation of what failed, or Product Found — No Hash Signature, when the item is on the registry but the scan didn't carry a signature to check.\n\nUnderneath the badge sits the product card itself — name, brand, manufacturer, serial number, category, and the date the item was registered — so the person holding the product sees what's actually on file, not just a checkmark. It's SHA-256 verification under the hood, and the page states its own status plainly rather than dressing an unverified scan up as a pass.\n\nWe think the right test for a customer-facing verification page isn't how it looks — it's whether someone who's never heard of QR signing schemes can read the result and trust it.\n\nhttps://authichain.com/verify?utm_source=linkedin&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=a",
+  "reddit": {
+    "subreddit": "retail",
+    "title": "What a customer sees after scanning our product QR — a three-state plain-language verify page, no app required",
+    "body": "AuthiChain issues signed QR codes for physical products. Scanning one opens authichain.com/verify with the product ID and a cryptographic hash encoded in the URL — no app to install, it just opens in whatever camera/QR reader the phone already has.\n\nThe page checks the hash against what's on file and returns one of three states: Authentic Product Verified, a Counterfeit Alert (with the specific reason the hash didn't check out), or Product Found — No Hash Signature, for items that are registered but the scan didn't carry a signature to verify. Below that badge is the actual product record — name, brand, manufacturer, serial number, category, registration date — so the shopper sees the data, not just a badge.\n\nQuestion for people who've built customer-facing authenticity pages: how much do you show below the pass/fail badge? We landed on showing the full record, on the theory that a bare checkmark asks for blind trust, but I'd like to hear where others draw that line.\n\nhttps://authichain.com/verify?utm_source=reddit&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "Scan an AuthiChain-registered product's QR code and your phone's own camera opens authichain.com/verify — no app to install, no login. It reads the product ID + a cryptographic hash out of the URL and checks it against the registry.",
+    "Three plain-language outcomes, not a black-box badge: Authentic Product Verified, a Counterfeit Alert with the specific reason, or Product Found — No Hash Signature when the item's registered but the scan carried no signature to check.",
+    "Below the badge sits the actual product record — name, brand, manufacturer, serial, registration date — so a shopper sees the data on file, not just a checkmark: https://authichain.com/verify?utm_source=twitter&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "consumer-verify-flow",
+    "variant": "a",
+    "hypothesis": "leading with the no-app/no-login mechanic (a camera scan just opens a web page) outperforms a trust/authenticity-badge-led hook on click-through to /verify"
+  }
+}
