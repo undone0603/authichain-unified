@@ -108,6 +108,7 @@ jobs:
           echo "Resolved dry_run=true"
 
       - name: Run B2B cold outreach
+        if: ${{ inputs.flush_queued != true }}
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -139,8 +140,8 @@ jobs:
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
-        if: ${{ inputs.flush_queued == 'true' && steps.mode.outputs.dry_run == 'false' }}
-        run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
+        if: ${{ inputs.flush_queued == true && steps.mode.outputs.dry_run == 'false' }}
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -152,6 +153,7 @@ jobs:
           OUTREACH_FROM_QRON: ${{ secrets.OUTREACH_FROM_QRON }}
           CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+          FLUSH_QUEUED_ONLY: "true"
           MAX_LIVE_SENDS: "2"
           GUARDRAIL_API_URL: ${{ vars.GUARDRAIL_API_URL || 'https://app.authichain.com' }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}

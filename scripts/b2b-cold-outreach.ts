@@ -833,32 +833,61 @@ async function processTargets<
 // ── Flush queued leads: send emails that were saved with status=queued ─────────
 // Run this after fixing the sender to drain the queue without re-running the
 // full outreach script and risking duplicate outreach.
-export async function flushQueuedLeads(): Promise<void> {
+export async function flushQueuedLeads(): Promise<number> {
   if (isDryRun) {
     console.log("[DRY RUN] Skipping flushQueuedLeads — no live send");
-    return;
+    return 0;
   }
   if (!hasResendKey) {
     console.warn(
       `No Resend credential set (${CREDENTIAL_ENV_VARS.join(" / ")}) — nothing to flush`
     );
-    return;
+    return 0;
   }
 
-  const { data: leads } = await supabase
+  const sourceFilter =
+    segment && segment !== "all"
+      ? `b2b_outreach_${segment}`
+      : "b2b_outreach_%";
+  // Cap leftovers are saved as `draft` then skipped; the log says "queued"
+  // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
+  // unsent-again while 4imprint/Signarama drafts can go out.
+  let query = supabase
     .from("leads")
     .select("*")
-    .eq("status", "queued")
-    .like("source", "b2b_outreach_%");
+    .in("status", ["queued", "draft"])
+    .order("createdAt", { ascending: false });
+  query =
+    sourceFilter.endsWith("%")
+      ? query.like("source", sourceFilter)
+      : query.eq("source", sourceFilter);
+
+  const { data: leads } = await query;
 
   if (!leads?.length) {
-    console.log("No queued leads to flush.");
-    return;
+    console.log(`No queued leads to flush (${sourceFilter}).`);
+    return 0;
   }
 
+  let flushed = 0;
   for (const lead of leads) {
+    if (flushed >= maxLiveSends) {
+      console.log(
+        `     ⏭️  Live cap reached (MAX_LIVE_SENDS=${maxLiveSends}) — leaving ${lead.email} queued`
+      );
+      continue;
+    }
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
+    const leadEmail = String(lead.email ?? "").toLowerCase();
+    if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
+    if (
+      leadEmail === "franchiseinfo@fastsigns.com" ||
+      leadEmail === "inquiries@moo.com"
+    ) {
+      console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
+      continue;
+    }
 
     // Recover the segment the draft was written for so the flush sends under
     // the same brand the copy was written in. checkSender caches per address,
@@ -918,6 +947,7 @@ export async function flushQueuedLeads(): Promise<void> {
           .from("leads")
           .update({ status: "contacted", updatedAt: new Date().toISOString() })
           .eq("email", lead.email);
+        flushed++;
         console.log(`  ✉️  Flushed: ${lead.email}`);
         await guardrailRecord({
           channel: GUARDRAIL_CHANNEL,
@@ -949,6 +979,28 @@ export async function flushQueuedLeads(): Promise<void> {
       });
     }
   }
+  return flushed;
+}
+
+const flushQueuedOnly = process.env.FLUSH_QUEUED_ONLY === "true";
+
+if (flushQueuedOnly) {
+  console.log(
+    `\n🚀 B2B FLUSH QUEUED — segment: ${segment} | dry-run: ${isDryRun}`
+  );
+  if (!isDryRun) {
+    console.log(`Live send cap this run: ${maxLiveSends} (MAX_LIVE_SENDS)`);
+    try {
+      await ensureLiveB2bChannel(supabase);
+      console.log("  ✅ Guardrail channel email.b2b-cold enabled (cap 25/day)");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`  ⚠️  Could not enable email.b2b-cold channel: ${message}`);
+    }
+  }
+  const n = await flushQueuedLeads();
+  console.log(`Flushed ${n} leads`);
+  process.exit(0);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
