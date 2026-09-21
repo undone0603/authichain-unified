@@ -127,6 +127,7 @@ test("sitemap lists canonical microsite URLs", () => {
   const urls = micrositeSitemapUrls().map((raw) => new URL(raw));
   assert.ok(hasSitemapPath(urls, "/m"));
   assert.ok(hasSitemapPath(urls, "/m/mendo"));
+  assert.ok(hasSitemapPath(urls, "/telegram"));
   assert.equal(Object.keys(MICROSITES).length, 4);
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
   assert.equal(DPP_CHECKOUT.endsWith("/api/checkout/dpp"), true);
