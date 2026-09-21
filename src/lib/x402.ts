@@ -617,6 +617,9 @@ export type X402HealthEnv = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  // Index signature so Node's ProcessEnv (the default arg) stays assignable.
+  // Types-only: no runtime behavior change.
+  [key: string]: string | undefined;
 };
 
 export type X402FacilitatorStatus = {
