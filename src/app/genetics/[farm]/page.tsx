@@ -108,6 +108,19 @@ export default async function FarmIndex({
         </div>
       </header>
 
+      <div className="note note-teal">
+        <strong style={{ color: "var(--ink)" }}>
+          Keep this library current — Farm Plan, $149/mo.
+        </strong>{" "}
+        Unlimited cultivars and passports, updated on every new certificate.{" "}
+        <a
+          href="/api/checkout/plan/strainchain_farm"
+          style={{ color: "var(--teal)", fontWeight: 600 }}
+        >
+          Start a Farm Plan →
+        </a>
+      </div>
+
       <section>
         <SectionRule>Chemistry across the family</SectionRule>
         <ThcvTimeline certificates={d.certificates} />
