@@ -22,6 +22,7 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/mcp");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).toContain(planPaymentLink("strainchain_passport"));
+    expect(text).toContain(planPaymentLink("strainchain_farm"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
   });
