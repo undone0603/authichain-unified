@@ -15,6 +15,7 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
+import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2173,12 +2174,14 @@ export default {
   <url><loc>https://qron.space/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://qron.space/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://qron.space/generate</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://qron.space/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://qron.space/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://qron.space/sitemap.xml\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://qron.space/sitemap.xml\n# https://qron.space/llms.txt\n# https://qron.space/openapi.json\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
@@ -2186,6 +2189,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
+    const discovery = tryHandleEstateAgentDiscovery(request, "qron");
+    if (discovery) return discovery;
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
     // Only the apex renders HTML here. Anything else is a 404 rather than a

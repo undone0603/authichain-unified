@@ -9,6 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import worker from "./index.ts";
 
 const APP = "https://app.example.com";
@@ -135,6 +136,8 @@ test("marketing paths stay on this worker", async () => {
       "/sitemap.xml",
       "/favicon.svg",
       "/authichain2026indexnow.txt",
+      "/llms.txt",
+      "/openapi.json",
     ]) {
       f.calls.length = 0;
       const res = await get(path);
@@ -218,6 +221,43 @@ test("the sitemap advertises the genetics library", async () => {
   assert.ok(xml.includes("/genetics/mendo-love-farms"));
   assert.ok(xml.includes("/onboard"));
   assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://strainchain.io/llms.txt</loc>"));
+  assert.ok(xml.includes("<loc>https://strainchain.io/openapi.json</loc>"));
+});
+
+test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
+  const llms = await get("/llms.txt");
+  assert.equal(llms.status, 200);
+  const text = await llms.text();
+  assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+  assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.equal(
+    `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
+      'href="https://buy.stripe.com'
+    ),
+    true
+  );
+  assert.doesNotMatch(text, /GET \/api\/checkout/);
+
+  const specRes = await get("/openapi.json");
+  assert.equal(specRes.status, 200);
+  const spec = (await specRes.json()) as {
+    openapi: string;
+    paths: {
+      "/api/x402": {
+        post: {
+          "x-payment-info": { protocols: string[] };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
 });
 
 test("/pricing is a real catalogue page, not a 404", async () => {

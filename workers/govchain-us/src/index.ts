@@ -21,6 +21,7 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
+import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2249,12 +2250,14 @@ export default {
   <url><loc>https://govchain.us/opportunities</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://govchain.us/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://govchain.us/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
@@ -2262,6 +2265,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
+    const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
+    if (discovery) return discovery;
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
