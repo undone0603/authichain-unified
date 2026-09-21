@@ -78,6 +78,13 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /The authentic agentic economy/);
+  const faqStart = html.indexOf('"@type":"FAQPage"');
+  assert.ok(faqStart > 0, "homepage JSON-LD should include FAQPage");
+  const faqSlice = html.slice(faqStart, faqStart + 4000);
+  assert.ok(faqSlice.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.ok(faqSlice.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.ok(faqSlice.includes(planPaymentLink("starter") ?? ""));
+  assert.ok(faqSlice.includes(planPaymentLink("creator") ?? ""));
   assert.match(html, /href="\/authentic-agentic-economy"/);
   assert.match(html, /not a payment rail/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
@@ -690,6 +697,8 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   const robotsText = await robots.text();
   assert.match(robotsText, /Sitemap: https:\/\/authichain.com\/sitemap.xml/);
   assert.ok(robotsText.includes("https://authichain.com/llms.txt"));
+  assert.ok(robotsText.includes("https://authichain.com/openapi.json"));
+  assert.ok(robotsText.includes("https://authichain.com/.well-known/x402"));
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

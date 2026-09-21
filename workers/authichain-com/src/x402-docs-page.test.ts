@@ -60,6 +60,10 @@ describe("x402 public docs page", () => {
     expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
+    expect(html).toContain(X402_PUBLIC.fanoutUrl);
+    expect(html).toContain(X402_PUBLIC.openApiUrl);
+    expect(html).toContain("<dt>Fan-out</dt>");
+    expect(html).toContain("<dt>OpenAPI</dt>");
     expect(html).toContain(X402_PUBLIC.identityUrl);
     expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');

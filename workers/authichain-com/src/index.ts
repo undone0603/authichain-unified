@@ -44,6 +44,7 @@ import {
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
 import { catalogPaymentLinkHtml, checkoutEmailFormHtml, CHECKOUT_EMAIL_FORM_CSS, emailCheckoutWithPaymentLinkHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
+import { planPaymentLink } from "../../../src/lib/plans";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -134,7 +135,7 @@ const SEO = {
     },
     {
       q: 'How much does AuthiChain cost?',
-      a: 'The live self-serve offer is EU DPP Readiness at $299 one-time on a published Stripe Payment Link (or enter a work email so Stripe can recover the cart). QRON Starter is $29 and Creator is $99 on published Stripe Payment Links. See /pricing.',
+      a: `The live self-serve offer is EU DPP Readiness at $299 one-time at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover the cart). StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. QRON Starter is $29 at ${planPaymentLink("starter") ?? ""} and Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -3496,7 +3497,7 @@ export default {
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n# https://authichain.com/llms.txt\n', { headers: { 'Content-Type': 'text/plain' } });
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n# https://authichain.com/llms.txt\n# https://authichain.com/openapi.json\n# https://authichain.com/.well-known/x402\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;

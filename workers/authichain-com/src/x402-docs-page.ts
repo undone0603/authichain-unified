@@ -186,6 +186,18 @@ export function renderX402DocsPage(): string {
       href: p.wellKnownUrl,
       mono: true,
     },
+    {
+      label: "Fan-out",
+      value: p.fanoutUrl,
+      href: p.fanoutUrl,
+      mono: true,
+    },
+    {
+      label: "OpenAPI",
+      value: p.openApiUrl,
+      href: p.openApiUrl,
+      mono: true,
+    },
     { label: "Pay endpoint", value: p.payUrl, href: p.payUrl, mono: true },
     { label: "Alias", value: p.verifyUrl, mono: true },
     {
@@ -351,6 +363,8 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <dl class="spec">
         <dt>Catalog</dt><dd class="mono"><a href="${esc(p.catalogUrl)}">${esc(p.catalogUrl)}</a></dd>
         <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
+        <dt>Fan-out</dt><dd class="mono"><a href="${esc(p.fanoutUrl)}">${esc(p.fanoutUrl)}</a></dd>
+        <dt>OpenAPI</dt><dd class="mono"><a href="${esc(p.openApiUrl)}">${esc(p.openApiUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
         <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
         <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
