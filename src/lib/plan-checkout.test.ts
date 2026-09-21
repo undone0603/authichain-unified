@@ -144,4 +144,44 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBeUndefined();
   });
+
+  it("carries aff_ref + ref_code cookies into session and subscription metadata", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff",
+    });
+    const result = await createPlanCheckoutSession({
+      request: new Request(
+        "https://authichain.com/api/checkout/plan/strainchain_farm",
+        {
+          method: "GET",
+          headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
+        }
+      ),
+      body: { planId: "strainchain_farm" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.metadata.affiliate_code).toBe("AFF-COOKIE");
+    expect(arg.metadata.ref_code).toBe("USER-456");
+    expect(arg.subscription_data.metadata.affiliate_code).toBe("AFF-COOKIE");
+    expect(arg.subscription_data.metadata.ref_code).toBe("USER-456");
+  });
+
+  it("prefers an explicit affiliateCode over the cookie", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_farm_aff2",
+    });
+    await createPlanCheckoutSession({
+      request: new Request(
+        "https://authichain.com/api/checkout/plan/strainchain_farm",
+        { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
+      ),
+      body: { planId: "strainchain_farm", affiliateCode: "AFF-EXPLICIT" },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].metadata.affiliate_code).toBe(
+      "AFF-EXPLICIT"
+    );
+  });
 });
