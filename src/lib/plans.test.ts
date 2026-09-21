@@ -98,6 +98,9 @@ describe("listedPlans", () => {
     const byId = Object.fromEntries(PLANS.map(p => [p.id, p]));
     expect(byId.strainchain_passport.price).toBe(49);
     expect(byId.strainchain_passport.stripe_mode).toBe("payment");
+    expect(byId.strainchain_passport.stripe_payment_link).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
     expect(byId.strainchain_farm.price).toBe(149);
     expect(byId.strainchain_farm.price_suffix).toBe("/month");
     expect(byId.strainchain_farm.stripe_mode).toBe("subscription");

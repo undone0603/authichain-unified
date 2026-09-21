@@ -162,6 +162,7 @@ export const PLANS: Plan[] = [
       "One published genetics passport, built from your existing CoAs",
     generations: 0,
     stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
+    stripe_payment_link: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",

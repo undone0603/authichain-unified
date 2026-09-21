@@ -161,6 +161,10 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
     planCheckoutCta(passport, "strainchain").href,
     "https://authichain.com/api/checkout/plan/strainchain_passport"
   );
+  assert.equal(
+    passport.stripe_payment_link,
+    "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+  );
 });
 
 test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {

@@ -76,6 +76,19 @@ export function planCheckoutCta(
       external: origin !== "authichain",
     };
   }
+  // StrainChain SKUs keep attributed Checkout Sessions (abandoned-cart
+  // recovery). The durable Payment Link lives on the plan for email/ops.
+  if (plan.brand === "strainchain" && plan.stripe_price_id) {
+    const path = `/api/checkout/plan/${plan.id}`;
+    if (origin === "authichain") {
+      return { href: path, label: plan.cta, external: false };
+    }
+    return {
+      href: `https://authichain.com${path}`,
+      label: plan.cta,
+      external: true,
+    };
+  }
   if (plan.stripe_payment_link) {
     return { href: plan.stripe_payment_link, label: plan.cta, external: true };
   }
