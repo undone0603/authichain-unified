@@ -25,6 +25,7 @@ import {
   renderTrumarkPage,
 } from "./money-surfaces.ts";
 import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
+import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import {
   isDppManufacturerArticlePath,
@@ -3510,6 +3511,7 @@ export default {
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: 'https://authichain.com/telegram', freq: 'weekly', pri: '0.75' },
+        ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3557,6 +3559,8 @@ export default {
     if (microsite) return microsite;
     const miniapp = tryHandleTelegramMiniApp(request);
     if (miniapp) return miniapp;
+    const desk = tryHandleDesk(request);
+    if (desk) return desk;
 
     const genetics = tryHandleGeneticsRoutes(request);
     if (genetics) return genetics;
