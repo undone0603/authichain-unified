@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHECKOUT_REDIRECT_HEADERS,
   checkoutEmailFormHtml,
+  checkoutRedirectResponse,
   looksLikeCheckoutEmail,
   pickCheckoutEmail,
 } from "./checkout-email";
@@ -42,5 +44,20 @@ describe("checkoutEmailFormHtml", () => {
     expect(html).toContain("required");
     expect(html).toContain("Not a newsletter");
     expect(html).not.toContain("javascript:");
+  });
+});
+
+describe("checkoutRedirectResponse", () => {
+  it("303s with noindex so Bing cannot rank the session URL", () => {
+    const res = checkoutRedirectResponse(
+      "https://checkout.stripe.com/c/pay/cs_test"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test"
+    );
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(CHECKOUT_REDIRECT_HEADERS["X-Robots-Tag"]).toBe("noindex, nofollow");
   });
 });

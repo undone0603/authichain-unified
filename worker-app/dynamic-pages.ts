@@ -47,6 +47,7 @@ import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
+import { CHECKOUT_EMAIL_FORM_CSS } from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
@@ -120,7 +121,10 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     extraHead:
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
-      "</script>\n",
+      "</script>\n" +
+      "<style>" +
+      CHECKOUT_EMAIL_FORM_CSS +
+      "</style>\n",
     bodyHtml:
       "<main>\n<h1>" +
       escapeHtml(page.h1) +

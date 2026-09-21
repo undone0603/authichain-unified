@@ -28,6 +28,8 @@ describe("authentic agentic economy page", () => {
       "Agents can pay. They still need to know if it is real."
     );
     expect(html).toContain('href="/api/checkout/dpp"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('action="/api/checkout/dpp"');
     expect(html).toContain('href="/x402"');
     expect(html).toContain('href="/onboard"');
     expect(html).toContain('href="/pricing"');

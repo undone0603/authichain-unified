@@ -81,6 +81,7 @@ describe("GET /api/checkout/dpp", () => {
     expect(res.headers.get("location")).toBe(
       "https://checkout.stripe.com/c/pay/cs_test_worker"
     );
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(dppCreate).toHaveBeenCalledOnce();
     const arg = dppCreate.mock.calls[0][0];
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
@@ -118,6 +119,7 @@ describe("GET /api/checkout/plan/:planId", () => {
     expect(res.headers.get("location")).toBe(
       "https://checkout.stripe.com/c/pay/cs_test_passport"
     );
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(dppCreate).toHaveBeenCalledOnce();
     const arg = dppCreate.mock.calls[0][0];
     expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");

@@ -209,8 +209,12 @@ ${estateHero({
   eyebrow: "The authentic agentic economy",
   title: "Agents can pay. They still need to know if it is real.",
   lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
+  emailCheckout: {
+    action: "/api/checkout/dpp",
+    label: "Start DPP checkout — $299",
+    skipHref: "/api/checkout/dpp",
+  },
   actions: [
-    { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
     { href: "/onboard", label: "Onboard", primary: false },
   ],

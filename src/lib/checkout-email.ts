@@ -6,6 +6,25 @@
  * Landing pages collect the address and pass `?email=`.
  */
 
+export const CHECKOUT_REDIRECT_HEADERS: Record<string, string> = {
+  "Cache-Control": "private, no-store",
+  "CDN-Cache-Control": "no-store",
+  "X-Robots-Tag": "noindex, nofollow",
+};
+
+/** Minimal form chrome for SEO hubs that do not load estate CSS. */
+export const CHECKOUT_EMAIL_FORM_CSS = `.checkout-email-form{display:flex;flex-direction:column;gap:8px;max-width:22rem;margin:1rem 0 0;text-align:left}.checkout-email-label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600}.checkout-email-form input[type=email]{padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.checkout-email-hint{font-size:.82rem;opacity:.8;margin:0}.checkout-email-form button{cursor:pointer;font:inherit;padding:12px 20px;border-radius:8px;border:0;background:#4F46E5;color:#fff;font-weight:700}`;
+
+export function checkoutRedirectResponse(url: string): Response {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: url,
+      ...CHECKOUT_REDIRECT_HEADERS,
+    },
+  });
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function looksLikeCheckoutEmail(value: string): boolean {

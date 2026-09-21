@@ -50,6 +50,11 @@
     .card h3{margin-bottom:8px}
     .card p{color:var(--muted);font-size:.95rem}
     .cta{padding:48px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .checkout-email-form{display:flex;flex-direction:column;gap:8px;min-width:min(100%,22rem)}
+    .checkout-email-label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:var(--muted)}
+    .checkout-email-form input[type=email]{padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font:inherit}
+    .checkout-email-hint{font-size:.82rem;color:var(--muted);margin:0}
+    .checkout-email-form button{cursor:pointer;font:inherit}
     footer{padding:36px 0 28px;color:var(--muted);font-size:.82rem}
     footer a{color:var(--muted)}
   </style>
@@ -70,7 +75,13 @@
       <h1>The seal is what they scan. Checkout is the SKU.</h1>
       <p class="lede">TruMark is the physical mark — tag, label, or passport QR. It is not a Stripe price. A cannabis brand publishes one genetics passport for <strong>$49</strong>. Origin and EU documentation run on EU DPP Readiness at <strong>$299</strong>.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+        <form class="checkout-email-form" action="https://authichain.com/api/checkout/plan/strainchain_passport" method="get">
+          <label class="checkout-email-label" for="trumark-email">Work email
+            <input id="trumark-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+          </label>
+          <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+          <button class="btn btn-primary" type="submit">Start Passport checkout — $49</button>
+        </form>
         <a class="btn btn-outline" href="https://authichain.com/api/checkout/dpp">DPP checkout — $299</a>
         <a class="btn btn-outline" href="https://authichain.com/pricing">View pricing</a>
       </div>
@@ -104,7 +115,13 @@
       <h2>Publish a passport or start DPP</h2>
       <p class="sub">Self-serve Stripe checkout. Enterprise tag program: email hello@authichain.com for the written packet. Async only.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Start Passport checkout</a>
+        <form class="checkout-email-form" action="https://authichain.com/api/checkout/plan/strainchain_passport" method="get">
+          <label class="checkout-email-label" for="trumark-email-footer">Work email
+            <input id="trumark-email-footer" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+          </label>
+          <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+          <button class="btn btn-primary" type="submit">Start Passport checkout</button>
+        </form>
         <a class="btn btn-outline" href="https://authichain.com/api/checkout/dpp">Start DPP checkout</a>
       </div>
     </div>

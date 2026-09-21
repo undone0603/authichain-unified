@@ -224,6 +224,8 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('href="https://authichain.com/api/checkout/dpp"');
+    expect(body).toContain('name="email"');
+    expect(body).toContain('action="https://authichain.com/api/checkout/dpp"');
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();

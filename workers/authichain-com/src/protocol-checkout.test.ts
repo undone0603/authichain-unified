@@ -65,6 +65,7 @@ describe("tryHandleProtocolCheckout", () => {
     expect(res!.headers.get("location")).toBe(
       "https://checkout.stripe.com/c/pay/cs_test_1"
     );
+    expect(res!.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock).toHaveBeenCalledOnce();
     const init = fetchMock.mock.calls[0][1] as {

@@ -5,7 +5,11 @@
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
-import { pickCheckoutEmail } from "../../../src/lib/checkout-email";
+import {
+  CHECKOUT_REDIRECT_HEADERS,
+  checkoutRedirectResponse,
+  pickCheckoutEmail,
+} from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
 
@@ -51,10 +55,7 @@ export async function tryHandleProtocolCheckout(
   if (request.method === "HEAD") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Cache-Control": "private, no-store",
-        "CDN-Cache-Control": "no-store",
-      },
+      headers: CHECKOUT_REDIRECT_HEADERS,
     });
   }
   if (request.method !== "GET") {
@@ -141,12 +142,5 @@ export async function tryHandleProtocolCheckout(
       detail: data.error?.message || `stripe ${stripeRes.status}`,
     });
   }
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: data.url,
-      "Cache-Control": "private, no-store",
-      "CDN-Cache-Control": "no-store",
-    },
-  });
+  return checkoutRedirectResponse(data.url);
 }

@@ -119,6 +119,10 @@ describe("generated SEO money-path CTAs", () => {
     expect(batteries?.bodyHtml).toContain(
       'href="https://authichain.com/api/checkout/dpp"'
     );
+    expect(batteries?.bodyHtml).toContain('name="email"');
+    expect(batteries?.bodyHtml).toContain(
+      'action="https://authichain.com/api/checkout/dpp"'
+    );
     expect(textiles?.bodyHtml).toContain(
       'href="https://authichain.com/api/checkout/dpp"'
     );
@@ -151,6 +155,10 @@ describe("generated SEO money-path CTAs", () => {
     expect(trumark?.bodyHtml).toContain(
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
+    expect(trumark?.bodyHtml).toContain('name="email"');
+    expect(trumark?.bodyHtml).toContain(
+      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
     expect(trumark?.bodyHtml).toContain(
       'href="https://authichain.com/trumark"'
     );
@@ -160,6 +168,10 @@ describe("generated SEO money-path CTAs", () => {
     const cannabis = getSeoPageBySlug("blockchain-qr-code-for-cannabis");
     expect(cannabis?.bodyHtml).toContain(
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(cannabis?.bodyHtml).toContain('name="email"');
+    expect(cannabis?.bodyHtml).toContain(
+      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'
@@ -202,6 +214,7 @@ describe("generated SEO money-path CTAs", () => {
     expect(dpp?.bodyHtml).toContain(
       'href="https://authichain.com/api/checkout/dpp"'
     );
+    expect(dpp?.bodyHtml).toContain('name="email"');
     expect(dpp?.bodyHtml).toContain('href="https://authichain.com/pricing"');
 
     const cannabis = getSeoPageBySlug("cannabis-blockchain-provenance");
