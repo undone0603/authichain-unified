@@ -63,6 +63,7 @@ export function micrositeSitemapUrls(): string[] {
     ...Object.values(MICROSITES).map(
       (def) => `https://authichain.com${def.canonicalPath}`,
     ),
+    "https://authichain.com/telegram",
   ];
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyAdvance, applyCapture, applySamImport, stamp } from "@/lib/dreamdash/cycle";
 import { leadToRowPatch, rowToLead, type LeadCaptureRow } from "@/lib/dreamdash/map-row";
+import { notifyDraft } from "@/lib/dreamdash/notify-draft";
 import type { ActivityKind, CaptureInput, Lead } from "@/lib/dreamdash/types";
 import { DOMAINS } from "@/lib/dreamdash/types";
 import { logAutomation } from "@/lib/automation";
@@ -64,11 +65,13 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase.from("lead_captures").update(patch).eq("id", lead.id);
       if (error) throw error;
       await logAutomation("lead-capture-sync", "manual", "success", { merged: true, email: lead.email });
+      if (lead.draftPending) await notifyDraft(lead, "capture");
       return NextResponse.json({ merged: true, lead });
     }
 
     const saved = await persistNew(supabase, lead);
     await logAutomation("lead-capture-sync", "manual", "success", { merged: false, email: saved.email });
+    if (saved.draftPending) await notifyDraft(saved, "capture");
     return NextResponse.json({ merged: false, lead: saved });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "An unknown error occurred";
@@ -125,6 +128,14 @@ export async function PATCH(request: NextRequest) {
     const patch = leadToRowPatch(lead);
     const { error: upErr } = await supabase.from("lead_captures").update(patch).eq("id", lead.id);
     if (upErr) throw upErr;
+
+    if (body.action === "followup" && lead.draftPending) {
+      await logAutomation("send-followups", "manual", "success", { id: lead.id, company: lead.company });
+      await notifyDraft(lead, "followup");
+    } else if (body.action === "send") {
+      await logAutomation("dreamdash-draft-sent", "manual", "success", { id: lead.id, company: lead.company });
+    }
+
     return NextResponse.json({ lead });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "An unknown error occurred";
