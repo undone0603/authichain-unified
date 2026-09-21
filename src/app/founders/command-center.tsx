@@ -154,7 +154,7 @@ export function FoundersCommand() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [captureOpen, digestOpen, selectedId]);
 
   const scoped = useMemo(() => filterLeads(leads, domainFilter, "all"), [leads, domainFilter]);
   const dash = useMemo(() => computeDashboard(scoped, events), [scoped, events]);
@@ -201,7 +201,7 @@ export function FoundersCommand() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" className="rounded-full bg-[#d4b45a] px-3 py-2 text-xs text-[#0c0c0d]" onClick={() => void mutate(l.id, "advance")}>Advance</button>
                   <button type="button" className="rounded-full bg-[#0c0c0d] px-3 py-2 text-xs" onClick={() => void mutate(l.id, "send")}>Send draft</button>
-                  <button type="button" className="rounded-full bg-[#0c0c0d] px-3 py-2 text-xs" onClick={() => void mutate(l.id, "followup")}>Queue + Open</button>
+                  <button type="button" className="rounded-full bg-[#0c0c0d] px-3 py-2 text-xs" onClick={() => { setSelectedId(l.id); void mutate(l.id, "followup"); }}>Queue + Open</button>
                 </div>
               </article>
             ))}
