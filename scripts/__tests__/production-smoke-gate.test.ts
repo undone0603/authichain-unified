@@ -20,7 +20,9 @@ describe("production smoke gate", () => {
 
   it("does not POST to Stripe or write events", () => {
     for (const step of smokeSteps()) {
-      expect(step.url.startsWith("https://authichain.com")).toBe(true);
+      const parsed = new URL(step.url);
+      expect(parsed.protocol).toBe("https:");
+      expect(parsed.hostname).toBe("authichain.com");
     }
   });
 

@@ -16,16 +16,18 @@ permissions:
 
 jobs:
   classify:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    # Only repair the integration baseline. Never check out a PR head_sha —
+    # that is untrusted on workflow_run even with a branches: [main] filter.
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: main
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: "10.28.2"
       - uses: actions/setup-node@v7
@@ -38,7 +40,7 @@ jobs:
         id: fix
         run: |
           set -euo pipefail
-          pnpm exec prettier --write "src/**/*.{ts,tsx}" "scripts/**/*.{ts,mjs}" || true
+          pnpm exec prettier --write "src/**/*.{ts,tsx}" "scripts/**/*.{ts,mjs}"
           if git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No deterministic format changes. Escalating — not merging."
