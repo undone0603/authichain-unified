@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+# PR Workers Builds uses `npx wrangler versions upload` (dashboard deploy
+# command). That updates the latest version; govchain.us/* keeps serving the
+# last `wrangler deploy` from .github/workflows/deploy-workers.yml on main.
 
 [[routes]]
 pattern = "govchain.us/*"

@@ -27,23 +27,26 @@ function req(path: string, host = "authichain.com") {
 
 function hasSitemapPath(urls: URL[], pathname: string): boolean {
   return urls.some(
-    (u) => u.protocol === "https:" && u.hostname === "authichain.com" && u.pathname === pathname,
+    u =>
+      u.protocol === "https:" &&
+      u.hostname === "authichain.com" &&
+      u.pathname === pathname
   );
 }
 
 test("embedded packs stay in sync with content/microsites HTML", () => {
   const manifest = JSON.parse(
-    readFileSync(join(ROOT, "content/microsites/manifest.json"), "utf8"),
+    readFileSync(join(ROOT, "content/microsites/manifest.json"), "utf8")
   );
   for (const pack of manifest.packs) {
     const disk = readFileSync(
       join(ROOT, "content/microsites", pack.file),
-      "utf8",
+      "utf8"
     );
     assert.equal(
       MICROSITE_HTML[pack.slug],
       disk,
-      `${pack.slug} drifted — run node scripts/sync-microsite-packs.mjs`,
+      `${pack.slug} drifted — run node scripts/sync-microsite-packs.mjs`
     );
   }
 });
@@ -56,14 +59,43 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
     assert.doesNotMatch(html, /AuthiChain Inc/i, slug);
     assert.match(html, /ZACHARY KIETZMAN/, slug);
     const hasPassport = html.includes(
-      "/api/checkout/plan/strainchain_passport",
+      "/api/checkout/plan/strainchain_passport"
     );
     const hasDpp = html.includes("/api/checkout/dpp");
     assert.ok(hasPassport || hasDpp, `${slug} needs a live checkout CTA`);
+    assert.match(html, /name="email"/, slug);
+    assert.doesNotMatch(html, /GET \/api\/checkout/, slug);
   }
   assert.match(MICROSITE_HTML.mendo, /\$49/);
   assert.match(MICROSITE_HTML.mendo, /LT-63/);
   assert.match(MICROSITE_HTML.mendo, /no CoA/);
+  assert.match(MICROSITE_HTML.mendo, /id="license-outline"/);
+  assert.match(MICROSITE_HTML.mendo, /StrainChain does not breed/);
+  assert.match(MICROSITE_HTML.mendo, /name="email"/);
+  assert.ok(
+    MICROSITE_HTML.mendo.includes(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    )
+  );
+  assert.ok(
+    MICROSITE_HTML.trumark.includes(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    )
+  );
+  assert.ok(
+    MICROSITE_HTML.strainchain.includes(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    )
+  );
+  assert.ok(
+    MICROSITE_HTML.musa.includes(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    )
+  );
+  assert.match(
+    MICROSITE_HTML.mendo,
+    /ZACHARY KIETZMAN \(AuthiChain \/ StrainChain are brands\)/
+  );
 });
 
 test("path and host aliases resolve to the right pack", () => {
@@ -75,13 +107,10 @@ test("path and host aliases resolve to the right pack", () => {
   assert.equal(resolveMicrositePack("/m/made-in-america"), "musa");
   assert.equal(resolveMicrositePack("/m/strainchain"), "strainchain");
   assert.equal(resolveMicrositePack("/pricing"), null);
-  assert.equal(
-    resolveMicrositePack("/", "mendo.authichain.com"),
-    "mendo",
-  );
+  assert.equal(resolveMicrositePack("/", "mendo.authichain.com"), "mendo");
   assert.equal(
     resolveMicrositePack("/anything", "trumark.authichain.com"),
-    "trumark",
+    "trumark"
   );
 });
 
@@ -92,7 +121,20 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   const hubHtml = await hub.text();
   assert.match(hubHtml, /Mendo \/ RealTHCV/);
   assert.match(hubHtml, /Passport checkout — \$49/);
+  assert.match(hubHtml, /name="email"/);
+  assert.match(hubHtml, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.ok(
+    hubHtml.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    hubHtml.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
   assert.match(hubHtml, /ZACHARY KIETZMAN/);
+  assert.doesNotMatch(
+    hubHtml,
+    /<a class="btn"[^>]*href="\/api\/checkout/,
+    "hub cards must capture email before checkout"
+  );
 
   const mendo = tryHandleMicrosite(req("/m/mendo"));
   assert.ok(mendo);
@@ -110,7 +152,13 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
 });
 
 test("apex worker serves /m pages and does not steal /p", async () => {
-  for (const path of ["/m", "/m/mendo", "/m/trumark", "/m/musa", "/m/strainchain"]) {
+  for (const path of [
+    "/m",
+    "/m/mendo",
+    "/m/trumark",
+    "/m/musa",
+    "/m/strainchain",
+  ]) {
     const res = await worker.fetch(req(path), ENV);
     assert.equal(res.status, 200, path);
     const html = await res.text();
@@ -124,7 +172,7 @@ test("apex worker serves /m pages and does not steal /p", async () => {
 });
 
 test("sitemap lists canonical microsite URLs", () => {
-  const urls = micrositeSitemapUrls().map((raw) => new URL(raw));
+  const urls = micrositeSitemapUrls().map(raw => new URL(raw));
   assert.ok(hasSitemapPath(urls, "/m"));
   assert.ok(hasSitemapPath(urls, "/m/mendo"));
   assert.equal(Object.keys(MICROSITES).length, 4);

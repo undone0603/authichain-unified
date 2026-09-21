@@ -42,7 +42,9 @@
       "pricePerCall": "$0.05 USDC",
       "endpoint": "POST /api/v1/agent-verify",
       "health": "https://authichain.com/api/x402/health",
-      "catalog": "https://authichain.com/api/x402/catalog"
+      "catalog": "https://authichain.com/api/x402/catalog",
+      "identity": "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
+      "note": "$QRON is not this rail. Runtime payTo is env X402_PAY_TO."
     }
   },
   "keywords": [

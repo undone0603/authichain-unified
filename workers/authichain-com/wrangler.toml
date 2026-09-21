@@ -3,6 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+# Not on PR Workers Builds. Live checkout, x402 402, and /m/* update only via
+# deploy-authichain-com.yml / deploy-workers.yml `wrangler deploy` on main.
 
 # Apex + www — the wildcard covers all paths including static assets.
 # The separate per-asset routes were redundant (the /* wildcard already

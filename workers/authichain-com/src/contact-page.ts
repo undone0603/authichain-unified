@@ -10,8 +10,12 @@
 
 /** Escapes text interpolated into the document. */
 function esc(value: unknown): string {
-  return String(value ?? "").replace(/[<>&"']/g, (c) =>
-    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c] as string,
+  return String(value ?? "").replace(
+    /[<>&"']/g,
+    c =>
+      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ] as string
   );
 }
 
@@ -21,28 +25,31 @@ const CONTACT_ROUTES = [
   {
     label: "General & partnerships",
     address: "hello@authichain.com",
-    blurb: "Pilots, integrations, press, and anything that does not fit the boxes below.",
+    blurb:
+      "Pilots, integrations, press, and anything that does not fit the boxes below.",
   },
   {
     label: "Technical support",
     address: "support@authichain.com",
-    blurb: "Existing customers: anchoring failures, verification issues, API and SDK questions.",
+    blurb:
+      "Existing customers: anchoring failures, verification issues, API and SDK questions.",
   },
   {
     label: "Government & federal",
     address: "proposals@authichain.com",
-    blurb: "Capability statements, FAR/DFARS questions, and GovChain federal pursuits.",
+    blurb:
+      "Capability statements, FAR/DFARS questions, and GovChain federal pursuits.",
   },
 ];
 
 /** Renders the contact page. */
 export function renderContactPage(): string {
   const cards = CONTACT_ROUTES.map(
-    (r) => `<div class="card">
+    r => `<div class="card">
 <h2>${esc(r.label)}</h2>
 <p>${esc(r.blurb)}</p>
 <a href="mailto:${esc(r.address)}">${esc(r.address)}</a>
-</div>`,
+</div>`
   ).join("");
 
   return `<!DOCTYPE html><html lang="en"><head>
@@ -77,7 +84,7 @@ h1{font-size:clamp(2rem,5vw,3rem);font-weight:600;letter-spacing:-.03em;margin-b
 .note{border:1px solid #e2e8f0;border-radius:10px;padding:1.75rem;background:#f8fafc;margin-bottom:4rem;color:#475569;font-size:.86rem}
 footer{border-top:1px solid #e2e8f0;padding:3rem 1.5rem;text-align:left;color:#64748b;font-size:.8rem}
 </style></head><body>
-<div class="nav"><a href="/" class="logo">AuthiChain</a><span><a href="/pricing">Pricing</a> · <a href="/x402">x402</a> · <a href="/api/checkout/dpp">DPP checkout</a></span></div>
+<div class="nav"><a href="/" class="logo">AuthiChain</a><span><a href="/pricing">Pricing</a> · <a href="/x402">x402</a> · <a href="/dpp">DPP brief</a></span></div>
 <div class="wrap">
 <section class="hero">
   <h1>Contact</h1>

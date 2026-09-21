@@ -3,8 +3,12 @@
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
-import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import {
+  tryHandleApiCheckoutEmailGate,
+  tryHandleProtocolCheckout,
+} from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import {
   isAuthenticAgenticEconomyPath,
@@ -24,6 +28,7 @@ import {
   MINIAPP_CANONICAL,
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
+import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import {
   isDppManufacturerArticlePath,
   renderDppManufacturerArticle,
@@ -41,6 +46,8 @@ import {
   mostRecentInForce,
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
+import { catalogPaymentLinkHtml, checkoutEmailFormHtml, CHECKOUT_EMAIL_FORM_CSS, emailCheckoutWithPaymentLinkHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
+import { planById, planPaymentLink, type PlanId } from "../../../src/lib/plans";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -131,7 +138,7 @@ const SEO = {
     },
     {
       q: 'How much does AuthiChain cost?',
-      a: 'The live self-serve offer is EU DPP Readiness at $299 one-time via GET /api/checkout/dpp. QRON Starter is $29 and Creator is $99 on published Stripe Payment Links. See /pricing.',
+      a: `The live self-serve offer is EU DPP Readiness at $299 one-time at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover the cart). StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. QRON Starter is $29 at ${planPaymentLink("starter") ?? ""} and Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -2133,11 +2140,36 @@ function pngResponse(b64: string): Response {
   });
 }
 
+/** JSON-LD Offer.url for crawlers. Payment Link only — never GET checkout. */
+function catalogJsonLdOffer(id: PlanId) {
+  const plan = planById(id);
+  const offerUrl = planPaymentLink(id);
+  if (!plan || !offerUrl) return null;
+  return {
+    '@type': 'Offer' as const,
+    name: plan.name,
+    description: plan.description,
+    price: plan.price,
+    priceCurrency: 'USD',
+    url: offerUrl,
+  };
+}
+
 function seoMeta(): string {
   const url = BRANDS.authichain.url;
   const title = `${BRANDS.authichain.name} — ${BRANDS.authichain.tagline}`;
   const ld = (obj: object) =>
     `<script type="application/ld+json">${JSON.stringify(obj).replace(/<\/script/gi, '<\\/script')}</script>`;
+  const makesOffer = (
+    [
+      'dpp_readiness',
+      'strainchain_passport',
+      'starter',
+      'creator',
+    ] as const
+  )
+    .map(catalogJsonLdOffer)
+    .filter((o): o is NonNullable<typeof o> => o !== null);
   return `
   <meta name="description" content="${SEO.description}">
   <meta name="keywords" content="${SEO.keywords}">
@@ -2171,6 +2203,7 @@ function seoMeta(): string {
       'https://www.linkedin.com/company/authichain',
       'https://github.com/AuthiChain2026',
     ],
+    makesOffer,
   })}
   ${ld({
     '@context': 'https://schema.org',
@@ -2232,7 +2265,7 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "Ecosystem utilities",
     "QRON and Bitcoin Ordinals sit beside AuthiChain certificates. Use them when you need a living QR or a high-value on-chain anchor.",
     [
-      { title: "$QRON utility", body: "Native Polygon utility used for TrueMark minting fees and authentication activity in the estate." },
+      { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "Optional permanent provenance for high-value certificates via Bitcoin Ordinals." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],
@@ -2283,7 +2316,7 @@ function techStack() {
     "Claims limited to capabilities that are live on this estate.",
     [
       { title: "Signed seals", body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable." },
-      { title: "EU DPP Readiness", body: "Live Stripe checkout at GET /api/checkout/dpp. $299 one-time from the published plan catalogue, credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2303,7 +2336,16 @@ function originMoneySurfaces() {
         <p>Physical scan seal already used in the StrainChain demo and enterprise tag-mint copy. Cannabis brands publish one genetics passport.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/trumark">TruMark brief</a>
-          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/plan/strainchain_passport",
+            label: "Passport checkout — $49",
+            inputId: "origin-trumark-email",
+            formId: "origin-trumark-checkout",
+          })}
+          ${catalogPaymentLinkHtml({
+            planId: "strainchain_passport",
+            label: "Pay $49 on Stripe",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2311,7 +2353,16 @@ function originMoneySurfaces() {
         <p>Signed per-unit origin evidence for Made in USA labels. Partner brief at /partners/brief. EU DPP Readiness is the live checkout.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
-          <a class="btn btn-outline" href="/api/checkout/dpp">DPP checkout — $299</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/dpp",
+            label: "DPP checkout — $299",
+            inputId: "origin-musa-email",
+            formId: "origin-musa-checkout",
+          })}
+          ${catalogPaymentLinkHtml({
+            planId: "dpp_readiness",
+            label: "Pay $299 on Stripe",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2319,7 +2370,16 @@ function originMoneySurfaces() {
         <p>Hot licensing lead. Genetics library is live. The campaign microsite sends Mike to Passport $49 checkout — no call.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
-          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/plan/strainchain_passport",
+            label: "Passport checkout — $49",
+            inputId: "origin-mendo-email",
+            formId: "origin-mendo-checkout",
+          })}
+          ${catalogPaymentLinkHtml({
+            planId: "strainchain_passport",
+            label: "Pay $49 on Stripe",
+          })}
         </div>
       </article>
     </div>
@@ -2335,7 +2395,16 @@ function marketReality() {
     <h2>EU Digital Product Passport</h2>
     <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. AuthiChain issues the certificate and the DPP audit path without claiming another company's logo as a customer.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="/api/checkout/dpp">Start DPP checkout</a>
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/dpp",
+        label: "Start DPP checkout",
+        inputId: "compliance-dpp-email",
+        formId: "compliance-dpp-checkout",
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "dpp_readiness",
+        label: "Pay $299 on Stripe",
+      })}
       <a class="btn btn-outline" href="/digital-product-passport">Read the DPP brief</a>
       <a class="btn btn-outline" href="/anchor">Anchor a product</a>
     </div>
@@ -2350,7 +2419,7 @@ function ecosystemFooter() {
       {
         heading: "Start",
         links: [
-          { href: "/api/checkout/dpp", label: "DPP checkout" },
+          { href: "/pricing", label: "DPP checkout" },
           { href: "/pricing", label: "Pricing" },
           { href: "/onboard", label: "Onboard" },
           { href: "/dashboard", label: "Dashboard" },
@@ -2401,7 +2470,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. <a href="/api/checkout/dpp">Start DPP checkout</a> or <a href="/pricing">view pricing</a></div>
+  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. Enter a work email on <a href="/pricing">pricing</a> so Stripe can recover the cart, or <a href="#hero">start from the form below</a>.</div>
   ${estateNav(
     "authichain",
     [
@@ -2412,15 +2481,18 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+    { href: "/pricing", label: "View pricing" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Issue seals. Bind products. Verify anywhere.",
-    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
+    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart.",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+    },
     actions: [
-      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/onboard", label: "Onboard", primary: false },
     ],
@@ -2509,9 +2581,12 @@ const HTML = `<!DOCTYPE html>
   ${marketReality()}
   ${estateCtaBand({
     title: "Start EU DPP Readiness",
-    lede: "GET /api/checkout/dpp opens the live Stripe session. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout",
+    },
     actions: [
-      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],
@@ -2976,6 +3051,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     .industry-card { background: var(--bg2); border: 1px solid var(--border-dim); border-radius: 10px; padding: 20px; }
     .industry-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
     .industry-deadline { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+    .checkout-email-form { display:flex; flex-direction:column; align-items:stretch; gap:8px; max-width:22rem; margin:0 auto; text-align:left; }
+    .checkout-email-label { display:flex; flex-direction:column; gap:6px; font-size:.85rem; font-weight:600; color:var(--text-dim); }
+    .checkout-email-form input[type="email"] { padding:10px 12px; border:1px solid var(--border-dim); border-radius:8px; font:inherit; background:var(--bg2); color:var(--text); }
+    .checkout-email-hint { font-size:.82rem; color:var(--text-dim); margin:0; }
+    .checkout-email-form button.btn { border:0; cursor:pointer; font:inherit; }
+    .dpp-cancelled { display:none; max-width:36rem; margin:0 auto 16px; padding:12px 16px; border:1px solid #f59e0b; border-radius:10px; background:rgba(245,158,11,.12); color:#fbbf24; font-size:.92rem; }
+    .dpp-cancelled.is-visible { display:block; }
   </style>
 </head>
 <body>
@@ -2988,7 +3070,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3001,8 +3083,20 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <p class="hero-sub" style="max-width:600px">
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
+      <div id="dpp-cancelled-banner" class="dpp-cancelled">Checkout was not finished. Leave a work email so Stripe can send a recovery link if this session expires.</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" id="dpp-checkout-cta" href="/protocol/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
+          className: "btn btn-primary",
+        })}
+        ${checkoutEmailFormHtml({
+          action: "/protocol/checkout/dpp",
+          label: "Start Your DPP Readiness Audit — $299",
+          formId: "dpp-checkout-form",
+          inputId: "dpp-email",
+          buttonClass: "btn btn-outline",
+        })}
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
@@ -3016,11 +3110,11 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     try {
       var params = new URLSearchParams(window.location.search);
       var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
-      var visitId = localStorage.getItem('dpp_visit_id');
+      var visitId = params.get('visit_id') || localStorage.getItem('dpp_visit_id');
       if (!visitId) {
         visitId = 'dpp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem('dpp_visit_id', visitId);
       }
+      try { localStorage.setItem('dpp_visit_id', visitId); } catch (e0) {}
       var q = new URLSearchParams();
       q.set('visit_id', visitId);
       keys.forEach(function (k) {
@@ -3030,11 +3124,45 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
-      var checkout = '/protocol/checkout/dpp?' + q.toString();
-      ['dpp-checkout-cta','nav-dpp-cta'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.setAttribute('href', checkout);
-      });
+      function decorateForm(form) {
+        if (!form) return;
+        function setHidden(name, value) {
+          var el = form.querySelector('input[name="'+name+'"]');
+          if (!el) {
+            el = document.createElement('input');
+            el.type = 'hidden';
+            el.name = name;
+            form.appendChild(el);
+          }
+          el.value = value;
+        }
+        q.forEach(function (value, key) {
+          if (key === 'email') return;
+          setHidden(key, value);
+        });
+        var input = form.querySelector('input[name="email"]');
+        try {
+          var saved = localStorage.getItem('dpp_checkout_email');
+          if (saved && input && !input.value) input.value = saved;
+        } catch (e2) {}
+        form.addEventListener('submit', function () {
+          if (input && input.value) {
+            try { localStorage.setItem('dpp_checkout_email', input.value.trim()); } catch (e3) {}
+          }
+        });
+      }
+      document.querySelectorAll('form.checkout-email-form').forEach(decorateForm);
+      if (params.get('cancelled') === '1' || params.get('need_email') === '1') {
+        var banner = document.getElementById('dpp-cancelled-banner');
+        if (banner) {
+          if (params.get('need_email') === '1') {
+            banner.textContent = 'Enter a work email so Stripe can recover this cart. Checkout does not start without it.';
+          }
+          banner.classList.add('is-visible');
+        }
+        var emailInput = document.getElementById('dpp-email');
+        if (emailInput) emailInput.focus();
+      }
       // attributed_visit — best-effort; never blocks CTA
       fetch('/api/funnel', {
         method: 'POST',
@@ -3147,9 +3275,20 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/onboard">Start Free — Get DPP Compliant</a>
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
+          className: "btn btn-primary",
+        })}
+        ${checkoutEmailFormHtml({
+          action: "/protocol/checkout/dpp",
+          label: "Start DPP Readiness Audit — $299",
+          formId: "dpp-checkout-form-footer",
+          inputId: "dpp-email-footer",
+          buttonClass: "btn btn-outline",
+        })}
       </div>
-      <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
+      <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">Work email enables Stripe abandoned-cart recovery if you leave checkout unfinished.</p>
     </div>
   </section>
 
@@ -3177,6 +3316,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
  */
 interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+  /** Test-only override. Live default is 4000ms. */
+  APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
   X402_PAY_TO?: string;
@@ -3186,6 +3327,83 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+}
+
+const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
+
+function appWorkerTimeoutMs(env: Env): number {
+  const n = Number(env.APP_WORKER_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : APP_WORKER_TIMEOUT_MS_DEFAULT;
+}
+
+/** Live Hyperdrive lookups on unknown /p/<serial> hang; crawlers wait forever. */
+function passportLookupTimeoutResponse(pathname: string): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Passport not found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+code{background:#09090b;border:1px solid #27272a;border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:#d4d4d8;word-break:break-all}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:#00FFD1;color:#000;text-decoration:none}
+a.btn.ghost{background:transparent;border:1px solid #27272a;color:#fff}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1.25rem auto;text-align:left}
+</style></head><body><main>
+<h1>No passport at this URL</h1>
+<p><code>${escapeHtml(pathname)}</code> is not a published product passport.</p>
+${emailCheckoutWithPaymentLinkHtml({
+  action: "/api/checkout/plan/strainchain_passport",
+  label: "Publish a passport — $49",
+  formId: "p-timeout-passport",
+  inputId: "p-timeout-passport-email",
+})}
+${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness — $299" })}
+<div class="links"><a class="btn ghost" href="/">Home</a><a class="btn ghost" href="/dpp">EU DPP</a></div>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
+ * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
+ * published Payment Links. GET /api/checkout without email is already
+ * bounced; this covers HTML that still points at those URLs
+ * (/p SEO hubs, /landing/*) until edge-router deploys.
+ */
+async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
+  if (!env.APP_WORKER) {
+    return new Response("App worker not bound (local dev)", { status: 502 });
+  }
+  const pathname = new URL(request.url).pathname;
+  const timeoutMs = appWorkerTimeoutMs(env);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const proxied = await Promise.race([
+      env.APP_WORKER.fetch(request),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("APP_WORKER_TIMEOUT")),
+          timeoutMs
+        );
+      }),
+    ]);
+    return rewriteProxiedCheckoutHtml(proxied);
+  } catch (err) {
+    if (pathname === "/p" || pathname.startsWith("/p/")) {
+      return passportLookupTimeoutResponse(pathname);
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /** Escapes text interpolated into the 404 document. */
@@ -3215,16 +3433,25 @@ function notFound(pathname: string): Response {
 body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
 .code{font-size:clamp(3rem,12vw,6rem);font-weight:900;color:#00FFD1;line-height:1}
 h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
-p{color:#a1a1aa;margin-bottom:1.75rem}
+p{color:#a1a1aa;margin-bottom:1rem}
 code{background:#09090b;border:1px solid #27272a;border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:#d4d4d8;word-break:break-all}
-.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
 a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:#00FFD1;color:#000;text-decoration:none}
 a.btn.ghost{background:transparent;border:1px solid #27272a;color:#fff}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1.25rem auto;text-align:left}
 </style></head><body><main>
 <div class="code">404</div>
 <h1>This page does not exist</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a page on authichain.com.</p>
-<div class="links"><a class="btn" href="/">Home</a><a class="btn ghost" href="/anchor">Verify a product</a><a class="btn ghost" href="/contact">Contact</a></div>
+${emailCheckoutWithPaymentLinkHtml({
+  action: "/api/checkout/plan/strainchain_passport",
+  label: "Publish a passport — $49",
+  formId: "404-passport",
+  inputId: "404-passport-email",
+})}
+${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness — $299" })}
+<div class="links"><a class="btn" href="/">Home</a><a class="btn ghost" href="/pricing">Pricing</a><a class="btn ghost" href="/x402">x402</a></div>
 </main></body></html>`;
   return new Response(html, {
     status: 404,
@@ -3279,9 +3506,13 @@ export default {
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/.well-known/x402', freq: 'weekly', pri: '0.7' },
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3291,8 +3522,10 @@ export default {
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n# https://authichain.com/llms.txt\n# https://authichain.com/openapi.json\n# https://authichain.com/.well-known/x402\n', { headers: { 'Content-Type': 'text/plain' } });
     }
+    const llms = tryHandleLlmsTxt(request);
+    if (llms) return llms;
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
@@ -3345,10 +3578,18 @@ export default {
     if (dppPage) return dppPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
+    // Intercept before APP_PREFIXES — live sister sites still one-click
+    // https://authichain.com/api/checkout/*, which APP_WORKER opens as
+    // anonymous Stripe sessions. Bounce GET without ?email= here so an
+    // authichain-com deploy stops those carts even if APP_WORKER is stale.
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
-    // and unmounted GET /api/x402 answers an empty ASSETS 404.
+    // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env);
     if (x402) return x402;
+    const mcp = await tryHandleMcp(request, env);
+    if (mcp) return mcp;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3365,10 +3606,7 @@ export default {
     // Handled by worker-app's renderLanding (worker-app/dynamic-pages.ts),
     // registered in DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
     if (p === '/landing' || p.startsWith('/landing/')) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
+      return proxyAppWorker(request, env);
     }
     // Proxy app routes to the native Cloudflare app Worker (authichain-edge-router,
     // see worker-app/index.ts) via a service binding, replacing the old Vercel
@@ -3392,10 +3630,7 @@ export default {
       return notFound(p);
     }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
+      return proxyAppWorker(request, env);
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;

@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { CHECKOUT_REDIRECT_HEADERS } from "@/lib/checkout-email";
 import { createDppCheckoutSession } from "@/lib/dpp-checkout";
 import { logAutomation } from "@/lib/automation";
 
@@ -25,10 +26,7 @@ async function getServiceSupabase() {
 export async function HEAD() {
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Cache-Control": "private, no-store",
-      "CDN-Cache-Control": "no-store",
-    },
+    headers: CHECKOUT_REDIRECT_HEADERS,
   });
 }
 
@@ -40,6 +38,13 @@ export async function GET(request: NextRequest) {
       supabase: await getServiceSupabase(),
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        const redirect = NextResponse.redirect(result.url, 303);
+        for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+          redirect.headers.set(key, value);
+        }
+        return redirect;
+      }
       return NextResponse.json(
         {
           error: result.error,
@@ -48,7 +53,11 @@ export async function GET(request: NextRequest) {
         { status: result.status }
       );
     }
-    return NextResponse.redirect(result.url, 303);
+    const redirect = NextResponse.redirect(result.url, 303);
+    for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+      redirect.headers.set(key, value);
+    }
+    return redirect;
   } catch (error: unknown) {
     const err = error as { type?: string; message?: string };
     console.error("[checkout/dpp] Error:", error);

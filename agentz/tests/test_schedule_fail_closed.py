@@ -66,10 +66,10 @@ def test_marketing_autonomous_schedule_is_inbound_only():
 
 
 INDEXNOW_MONEY_URLS = (
-    "https://authichain.com/",
     "https://authichain.com/pricing",
-    "https://authichain.com/dpp",
-    "https://authichain.com/x402",
+    "https://authichain.com/.well-known/x402",
+    "https://authichain.com/openapi.json",
+    "https://authichain.com/llms.txt",
     "https://authichain.com/onboard",
     "https://authichain.com/blog/eu-dpp-manufacturer",
     "https://strainchain.io/",
@@ -80,6 +80,14 @@ INDEXNOW_MONEY_URLS = (
     "https://qron.space/generate",
     "https://govchain.us/",
     "https://govchain.us/onboard",
+)
+
+# Live HTML on these paths still carries one-click /api/checkout hrefs.
+# Do not IndexNow them until the authichain-com Payment Links deploy.
+INDEXNOW_LEAKY_UNTIL_DEPLOY = (
+    "https://authichain.com/",
+    "https://authichain.com/dpp",
+    "https://authichain.com/x402",
 )
 
 INDEXNOW_SITEMAPS = (
@@ -139,3 +147,7 @@ def test_marketing_autonomous_indexnow_pings_sitemaps_and_money_urls():
     for url in INDEXNOW_SITEMAPS + INDEXNOW_MONEY_URLS:
         # Quoted so apex "/" is not satisfied by "/sitemap.xml".
         assert f'"{url}"' in yml, f"IndexNow should ping {url}"
+    for url in INDEXNOW_LEAKY_UNTIL_DEPLOY:
+        assert f'"{url}"' not in yml, (
+            f"IndexNow must not ping leaky {url} until Payment Links deploy"
+        )

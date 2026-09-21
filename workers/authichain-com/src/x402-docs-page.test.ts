@@ -13,6 +13,9 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
+      "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
+    );
     expect(X402_PUBLIC.chainId).toBe("8453");
     expect(X402_PUBLIC.priceUsd).toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(
@@ -24,7 +27,13 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.wellKnownUrl).toBe(
       "https://authichain.com/.well-known/x402.json"
     );
+    expect(X402_PUBLIC.fanoutUrl).toBe(
+      "https://authichain.com/.well-known/x402"
+    );
+    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.com/openapi.json");
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
+    expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
+    expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");
   });
 
   it("recognizes /x402 and /docs/x402 only", () => {
@@ -46,8 +55,17 @@ describe("x402 public docs page", () => {
       "curl -sS -i -X POST https://authichain.com/api/x402"
     );
     expect(html).toContain("HTTP 402");
+    expect(html).toContain("extensions.bazaar");
+    expect(html).toContain("PAYMENT-REQUIRED");
+    expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
+    expect(html).toContain(X402_PUBLIC.fanoutUrl);
+    expect(html).toContain(X402_PUBLIC.openApiUrl);
+    expect(html).toContain("<dt>Fan-out</dt>");
+    expect(html).toContain("<dt>OpenAPI</dt>");
+    expect(html).toContain(X402_PUBLIC.identityUrl);
+    expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');
     expect(html).toContain("ZACHARY KIETZMAN");
     expect(html).not.toMatch(/AuthiChain Inc/i);
@@ -65,5 +83,14 @@ describe("x402 public docs page", () => {
     expect(html).toContain("--ac-rail: #0b1220");
     expect(html).toContain("Plus Jakarta Sans");
     expect(html).toContain('href="/pricing"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="/api/checkout/plan/strainchain_passport"');
+    expect(html).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
   });
 });

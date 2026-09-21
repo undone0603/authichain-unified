@@ -66,9 +66,32 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /\$299/);
   assert.match(html, /\$29/);
   assert.match(html, /\$99/);
-  assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /Start DPP Readiness Audit/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  const dppPay =
+    listedPlans("qron").find(p => p.id === "dpp_readiness")
+      ?.stripe_payment_link ?? "";
+  const starterPay =
+    listedPlans("qron").find(p => p.id === "starter")?.stripe_payment_link ??
+    "";
+  const creatorPay =
+    listedPlans("qron").find(p => p.id === "creator")?.stripe_payment_link ??
+    "";
+  assert.equal(html.includes(`"url":"${dppPay}"`), true);
+  assert.equal(html.includes(`"url":"${starterPay}"`), true);
+  assert.equal(html.includes(`"url":"${creatorPay}"`), true);
+  const acLdStart = html.indexOf("application/ld+json");
+  const acLd = html.slice(acLdStart, html.indexOf("</script>", acLdStart));
+  assert.equal(acLd.includes("/api/checkout"), false);
+  assert.match(html, /id="checkout-need-email-banner"/);
+  assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
   assert.doesNotMatch(html, /Publish one passport/);
@@ -161,10 +184,18 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
     planCheckoutCta(passport, "strainchain").href,
     "https://authichain.com/api/checkout/plan/strainchain_passport"
   );
+  assert.equal(
+    passport.stripe_payment_link,
+    "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+  );
 });
 
 test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
   const html = renderEstatePricingPage("strainchain");
+  const passport = listedPlans("strainchain").find(
+    p => p.id === "strainchain_passport"
+  );
+  assert.ok(passport?.stripe_payment_link);
   assert.match(html, /<title>Pricing — StrainChain<\/title>/);
   assert.match(
     html,
@@ -184,8 +215,20 @@ test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
     html,
     /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_farm/
   );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  const passportPay = passport.stripe_payment_link ?? "";
+  assert.equal(html.includes(`"url":"${passportPay}"`), true);
+  const strainLdStart = html.indexOf("application/ld+json");
+  const strainLd = html.slice(
+    strainLdStart,
+    html.indexOf("</script>", strainLdStart)
+  );
+  assert.equal(strainLd.includes("/api/checkout"), false);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(html, /\$2,990/);
 });
 
@@ -196,12 +239,14 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /No GovChain self-serve price/);
   assert.match(html, /href="\/onboard"/);
+  assert.match(html, /name="email"/);
   assert.match(
     html,
     new RegExp(
-      `href="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+      `action="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
     )
   );
+  assert.match(html, /id="checkout-need-email-banner"/);
   assert.equal(
     GOVCHAIN_DPP_CHECKOUT,
     "https://authichain.com/api/checkout/dpp"
@@ -209,6 +254,20 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, new RegExp(`\\$${dpp.price}`));
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  const dppPay = dpp.stripe_payment_link ?? "";
+  assert.equal(html.includes(`"url":"${dppPay}"`), true);
+  const govLdStart = html.indexOf("application/ld+json");
+  const govLd = html.slice(govLdStart, html.indexOf("</script>", govLdStart));
+  assert.equal(govLd.includes("/api/checkout"), false);
+  assert.doesNotMatch(
+    html,
+    new RegExp(
+      `href="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+    )
+  );
   assert.doesNotMatch(html, /GovChain Starter/);
   assert.doesNotMatch(html, /\$199\/mo/);
   assert.doesNotMatch(html, /\$2,990/);

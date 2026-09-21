@@ -1,4 +1,9 @@
-/** Shared EVM chain targets for GovChain / AuthiChain mint scripts. */
+/**
+ * Shared EVM chain targets and AuthiChain web3 identity constants.
+ *
+ * Canonical names and “do not mix” rules: docs/strategy/WEB3_IDENTITY.md
+ * Do not invent addresses. Do not rebind X402_PAY_TO. $QRON is not x402.
+ */
 
 export type ChainKey = "base" | "base-sepolia" | "polygon" | "polygon-amoy";
 
@@ -51,9 +56,50 @@ export const CHAINS: Record<ChainKey, ChainTarget> = {
   },
 };
 
-export const POLYGON_AUTHICHAIN_NFT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-export const GOVCHAIN_SIGNER = "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
-export const POLYGON_DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
+/** AuthiChainNFT ERC-721 — Polygon 137 only. Empty getCode on Base 8453. */
+export const POLYGON_AUTHICHAIN_NFT =
+  "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+
+/**
+ * Coinbase Smart Wallet (ERC-4337). $QRON owner/tax. Human Coinbase actions
+ * only. Cannot sign with ethers.Wallet.
+ */
+export const COINBASE_SMART_WALLET =
+  "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
+/** Alias: GovChain recipient / optional verifyManufacturer only. */
+export const GOVCHAIN_SIGNER = COINBASE_SMART_WALLET;
+
+/**
+ * NFT deployer EOA. WALLET_PRIVATE_KEY / POLYGON_PRIVATE_KEY.
+ * Distinct from the payTo / tokenomics EOA.
+ */
+export const NFT_DEPLOYER_EOA = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
+/** Alias kept for existing mint/deploy scripts. */
+export const POLYGON_DEPLOYER = NFT_DEPLOYER_EOA;
+
+/**
+ * payTo / tokenomics EOA. Holds nearly all Polygon $QRON. Same address
+ * receives Base USDC for x402 (X402_PAY_TO). Do not rebind.
+ */
+export const TOKENOMICS_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+
+/** Historical $QRON Smithii factory caller. Not an ops wallet. */
+export const QRON_FACTORY_CALLER = "0x8df0057ffb210444b927511b2d416ad7854fb81e";
+
+/** $QRON ERC-20 contract on Polygon. Not a wallet. Not an x402 asset. */
+export const QRON_ERC20 = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
+
+/** Circle USDC on Base 8453. Live x402 asset. Do not rebind. */
+export const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+/**
+ * Additional known AuthiChainNFT recipient-cluster address
+ * (scripts/ledger/reconstruct-authichain-nft-ledger.ts). Not an ops wallet.
+ */
+export const NFT_CLUSTER_KNOWN = "0x52981cd11973f954d9ea084a784650f65d052235";
+
+export const QRON_DECIMALS = 18;
+export const QRON_TOTAL_SUPPLY = 1_000_000_000;
 
 export function resolveChain(): ChainTarget {
   const raw = (process.env.CHAIN || process.env.CHAIN_ID || "base").toLowerCase();

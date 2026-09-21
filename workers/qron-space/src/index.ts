@@ -49,7 +49,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="108" font-weight="800" letter-spacing="4" fill="#e2e8f0">$QRON</text>
   <line x1="240" y1="416" x2="460" y2="416" stroke="#06b6d4" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="36" font-weight="300" fill="#94a3b8">Stake · Govern · Bridge</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#64748b">ERC-20 on Polygon PoS · Up to 42.1% APY</text>
+  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#64748b">ERC-20 on Polygon PoS · not a payment rail</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#06b6d4">QRON.SPACE</text>
 </svg>`;
 
@@ -2284,7 +2284,7 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
+        { href: "https://authichain.com/pricing", label: "DPP checkout" },
       ],
     },
     {

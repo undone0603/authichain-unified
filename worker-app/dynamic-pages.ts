@@ -47,6 +47,10 @@ import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
+import {
+  CHECKOUT_EMAIL_FORM_CSS,
+  emailCheckoutWithPaymentLinkHtml,
+} from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
@@ -120,7 +124,10 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     extraHead:
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
-      "</script>\n",
+      "</script>\n" +
+      "<style>" +
+      CHECKOUT_EMAIL_FORM_CSS +
+      "</style>\n",
     bodyHtml:
       "<main>\n<h1>" +
       escapeHtml(page.h1) +
@@ -284,7 +291,24 @@ async function renderProductPassport(c: Context): Promise<Response> {
     }
 
     const db = getHyperdriveDb(c.env as any);
-    const result = await findPassportBySerial(db, serial);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        2500
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
@@ -356,6 +380,17 @@ async function renderProductPassport(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /p lookup failed", err);
+    if (err instanceof Error && err.message === "passport-lookup-timeout") {
+      return htmlResponse(
+        c,
+        notFoundHtml(
+          "Product Not Found",
+          "The registry lookup timed out. Publish a StrainChain passport from the live Payment Link on /pricing.",
+          pathname
+        ),
+        404
+      );
+    }
     return serveSpaShell(c);
   }
 }
@@ -548,7 +583,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live self-serve checkout via GET /api/checkout/dpp. $299 credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
       },
       {
         icon: "🌍",
@@ -772,6 +807,20 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
+  const primaryIsCheckout = /\/api\/checkout\//.test(content.primaryCta.href);
+  const primaryHtml = primaryIsCheckout
+    ? emailCheckoutWithPaymentLinkHtml({
+        action: content.primaryCta.href,
+        label: content.primaryCta.label,
+        inputId: "landing-checkout-email",
+        formId: "landing-checkout",
+      })
+    : '<a href="' +
+      escapeHtml(content.primaryCta.href) +
+      '">' +
+      escapeHtml(content.primaryCta.label) +
+      "</a>\n";
+
   const body =
     "<main>\n" +
     "<header>\n" +
@@ -787,11 +836,7 @@ function renderLanding(c: Context): Response {
     escapeHtml(content.subhead) +
     "</p>\n" +
     "<p>\n" +
-    '<a href="' +
-    escapeHtml(content.primaryCta.href) +
-    '">' +
-    escapeHtml(content.primaryCta.label) +
-    "</a>\n" +
+    primaryHtml +
     '<a href="' +
     escapeHtml(content.secondaryCta.href) +
     '">' +
@@ -831,6 +876,9 @@ function renderLanding(c: Context): Response {
       title: brand.displayName + " -- " + content.eyebrow,
       description: brand.description,
       canonicalPath,
+      extraHead: primaryIsCheckout
+        ? "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>"
+        : "",
       bodyHtml: body,
     }),
     200
@@ -1021,10 +1069,15 @@ function renderOnboardReceived(c: Context): Response {
     " in " +
     escapeHtml(vertical) +
     ".</p>\n" +
-    "<p>Next: verify a production JWS against live JWKS, then complete a DPP smoke checkout when ready to pay.</p>\n" +
+    "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
+    emailCheckoutWithPaymentLinkHtml({
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+      formId: "onboard-dpp-checkout",
+      inputId: "onboard-dpp-email",
+    }) +
     "<ul>\n" +
     '<li><a href="/verify">Verify a seal</a></li>\n' +
-    '<li><a href="/api/checkout/dpp">DPP checkout</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1034,6 +1087,7 @@ function renderOnboardReceived(c: Context): Response {
       title: "Pilot request received | AuthiChain",
       description: "AuthiChain pilot intake confirmation.",
       canonicalPath: "/onboard/received",
+      extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
       bodyHtml: body,
     }),
     200
@@ -1201,6 +1255,7 @@ function authenticateHtml(): string {
     description:
       "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
+    extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
@@ -1209,8 +1264,13 @@ function authenticateHtml(): string {
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
-      '<li><a href="/api/checkout/dpp">Start DPP checkout</a></li>\n' +
       "</ul>\n" +
+      emailCheckoutWithPaymentLinkHtml({
+        action: "/api/checkout/dpp",
+        label: "Start DPP checkout — $299",
+        formId: "auth-dpp-checkout",
+        inputId: "auth-dpp-email",
+      }) +
       "</main>",
   });
 }
@@ -1229,7 +1289,7 @@ function generatePackLinksHtml(): string {
     .map(p => {
       const href =
         p.id === "dpp_readiness"
-          ? "/api/checkout/dpp"
+          ? "/pricing"
           : p.stripe_payment_link || "/pricing";
       return (
         '<a href="' +

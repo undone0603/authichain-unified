@@ -36,10 +36,10 @@ export default function StakingHub() {
         
         {/* Header */}
         <div className="text-center mb-12">
-          <Badge className="protocol-badge mb-4 mx-auto">Truth Validator Program</Badge>
+          <Badge className="protocol-badge mb-4 mx-auto">Theater — not live tokenomics</Badge>
           <h1 className="text-4xl font-extrabold tracking-tight gradient-text">QRON Staking & Reputation</h1>
           <p className="text-muted-foreground text-lg mt-2">
-            Stake $QRON to increase your Protocol Agent's consensus weight and earn validation rewards.
+            Demo UI only. $QRON staking is not a live product. Agent settlement is Base USDC $0.05 via x402. Human SKUs are Stripe (Passport $49 / DPP $299).
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export default function StakingHub() {
             <CardContent className="space-y-6">
               <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                  <span className="text-muted-foreground">Staking APY</span>
+                  <span className="text-muted-foreground">Staking APY (theater)</span>
                   <span className="text-primary">12.5%</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider">

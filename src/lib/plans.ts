@@ -151,9 +151,9 @@ export const PLANS: Plan[] = [
   },
   // --- StrainChain passport SKUs -------------------------------------------
   //
-  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Checkout
-  // via GET /api/checkout/plan/:planId on authichain.com. See
-  // docs/strategy/strainchain-genetics-passport.md section 3.
+  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Passport
+  // has a published Payment Link; Farm Plan uses email-gated checkout on
+  // authichain.com. See docs/strategy/strainchain-genetics-passport.md §3.
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
@@ -162,6 +162,7 @@ export const PLANS: Plan[] = [
       "One published genetics passport, built from your existing CoAs",
     generations: 0,
     stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
+    stripe_payment_link: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",
@@ -216,6 +217,23 @@ export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
 
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
+
+/** Look up a live catalogue plan by id. */
+export function planById(id: PlanId): Plan | undefined {
+  return PLANS.find(p => p.id === id);
+}
+
+/** Durable Stripe Payment Link for a catalogue plan, if one exists. */
+export function planPaymentLink(id: PlanId): string | undefined {
+  return planById(id)?.stripe_payment_link;
+}
+
+/** Dollar amount for a catalogue plan. Charge source of truth is this file. */
+export function planUsd(id: PlanId): number {
+  const plan = planById(id);
+  if (!plan) throw new Error(`plans.ts has no ${id}`);
+  return plan.price;
+}
 
 /** Look up a live catalogue plan by Stripe price ID. */
 export function planByStripePriceId(

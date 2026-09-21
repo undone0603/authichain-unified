@@ -1,15 +1,32 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import {
+  QRON_ERC20,
+  QRON_TOTAL_SUPPLY,
+  WEB3_IDENTITY_DOC,
+} from '@/lib/authentic-economy';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/governance
- * Returns governance proposals, token stats, and voting status
+ * Theater stats for the govchain.us staking UI — not live tokenomics.
+ * $QRON total supply is 1,000,000,000 (18 decimals) at 0xAebf….
+ * See docs/strategy/WEB3_IDENTITY.md. Do not thaw gov-mint to make these real.
+ * The `governance` figures below are display theater, not circulating supply.
  */
 export async function GET() {
   return NextResponse.json({
     success: true,
+    theater: true,
+    liveTokenomics: false,
+    identity: WEB3_IDENTITY_DOC,
+    actual: {
+      token: '$QRON',
+      contract: QRON_ERC20,
+      totalSupply: String(QRON_TOTAL_SUPPLY),
+      isPaymentRail: false,
+    },
     governance: {
       token: '$QRON',
       totalSupply: '100,000,000',
@@ -18,7 +35,8 @@ export async function GET() {
       stakedPercent: '44.0%',
       votingPower: 'pro-rata staked $QRON',
       quorum: '5%',
-      proposalThreshold: '10,000 $QRON staked'
+      proposalThreshold: '10,000 $QRON staked',
+      theater: true,
     },
     proposals: [
       {
@@ -61,8 +79,8 @@ export async function GET() {
 
 /**
  * POST /api/governance/stake
- * 
- * Stake $QRON tokens for governance power.
+ *
+ * Theater stake intent. Not on-chain. Do not thaw gov-mint.
  */
 export async function POST(request: Request) {
   try {
@@ -72,29 +90,31 @@ export async function POST(request: Request) {
 
     const { amount, duration_days } = await request.json();
 
-    // In a real app, this would verify a blockchain transaction.
-    // For now, we log the intent and update the brand/profile.
     const { error } = await supabase
       .from('automation_logs')
       .insert({
         workflow_name: 'governance_staking',
         trigger_type: 'manual',
         status: 'success',
-        payload: JSON.stringify({ user_id: user.id, amount, duration_days })
+        payload: JSON.stringify({ user_id: user.id, amount, duration_days, theater: true })
       });
 
     if (error) throw error;
 
-    return NextResponse.json({ ok: true, message: 'Stake recognized by protocol' });
+    return NextResponse.json({
+      ok: true,
+      theater: true,
+      message: 'Theater stake logged — not on-chain, not live tokenomics',
+    });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
 /**
- * POST /api/governance/vote
- * 
- * Cast a vote on a proposal.
+ * PUT /api/governance
+ *
+ * Theater vote. Not on-chain.
  */
 export async function PUT(request: Request) {
   try {
@@ -110,12 +130,16 @@ export async function PUT(request: Request) {
         workflow_name: 'governance_voting',
         trigger_type: 'manual',
         status: 'success',
-        payload: JSON.stringify({ user_id: user.id, proposal_id, vote_type })
+        payload: JSON.stringify({ user_id: user.id, proposal_id, vote_type, theater: true })
       });
 
     if (error) throw error;
 
-    return NextResponse.json({ ok: true, message: 'Vote recorded on-chain' });
+    return NextResponse.json({
+      ok: true,
+      theater: true,
+      message: 'Theater vote logged — not on-chain, not live tokenomics',
+    });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }

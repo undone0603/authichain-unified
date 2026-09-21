@@ -83,7 +83,12 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /<title>Pricing — QRON<\/title>/);
   assert.match(html, /\$299/);
   assert.match(html, /href="\/generate"/);
-  assert.match(html, /https:\/\/authichain\.com\/api\/checkout\/dpp/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain\.com\/api\/checkout\/dpp"/
+  );
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {

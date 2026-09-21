@@ -1,21 +1,23 @@
 # Base chain integration — GovChain pilots
 
-Date: 2026-09-19 (item 5 still open)
+Date: 2026-09-19 (item 5 still open) · Wallet names: [`docs/strategy/WEB3_IDENTITY.md`](../strategy/WEB3_IDENTITY.md)
 
 Funding complete since 2026-09-01. **AuthiChainNFT is not on Base yet.** Public apex / Access is a separate blocker (`docs/operations/PUBLIC_LOOP_FREEZE.md`).
+
+The signer for deploy + mint is the **NFT deployer EOA** (`0xbad4…`), not the payTo / tokenomics EOA (`0x5db5…`) and not the Coinbase Smart Wallet (`0xC0D2…`). Do not call two different keys “ops EOA”.
 
 ## Live probe (2026-09-19)
 
 | Account | Base 8453 ETH | nonce | notes |
 |---|---|---|---|
-| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 (2026-09-17) | 1 | recipient / optional `verifyManufacturer` only |
-| Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | **0.002** | **0** | signer for deploy + mint |
+| Coinbase Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 (2026-09-17) | 1 | recipient / optional `verifyManufacturer` only; cannot sign with `ethers.Wallet` |
+| NFT deployer EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | **0.002** | **0** | signer for deploy + mint (`WALLET_PRIVATE_KEY`) |
 
 Fund tx: [`0x4c9ce401…b2145`](https://basescan.org/tx/0x4c9ce401ae191aa48a2703dc21a33638fe2e08a0922344638bcc0febeb2b2145).
 
 Reconfirmed 2026-09-19 against `https://mainnet.base.org`:
 
-- Ops EOA `eth_getBalance` = `0x71afd498d0000` (0.002 ETH), `eth_getTransactionCount` = `0x0`.
+- NFT deployer EOA `eth_getBalance` = `0x71afd498d0000` (0.002 ETH), `eth_getTransactionCount` = `0x0`.
 - Polygon AuthiChainNFT `0x4da4D2675e52374639C9c954f4f653887A9972BE` has **`eth_getCode = 0x` on Base 8453**. That address is live on Polygon 137 only.
 
 `GOVCHAIN_NFT_CONTRACT` is **not set to a Base address**. `gov-mint.yml` (id `304825951`) stays **disabled** until a Base getCode proof exists.
@@ -24,7 +26,7 @@ Reconfirmed 2026-09-19 against `https://mainnet.base.org`:
 
 | Gate | Status |
 |---|---|
-| Ops EOA funded on Base | yes |
+| NFT deployer EOA funded on Base | yes |
 | Actions secrets `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | owner-confirmed present |
 | `ALCHEMY_API_KEY` | owner: likely present (public Base RPC is the fallback) |
 | AuthiChainNFT bytecode on 8453 | **no** |
@@ -44,7 +46,7 @@ Hardhat `npx hardhat compile` does **not** emit AuthiChainNFT (sources stay `con
 
 | Secret | Required for live deploy | Role |
 |---|---|---|
-| `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | yes | ops EOA `0xbad4…` (not the Smart Wallet) |
+| `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | yes | NFT deployer EOA `0xbad4…` (not the Coinbase Smart Wallet, not the payTo / tokenomics EOA) |
 | `ALCHEMY_API_KEY` | no | Base RPC; falls back to `https://mainnet.base.org` |
 | `GOVCHAIN_NFT_CONTRACT` | no | if set and `getCode != 0x`, **grant-only** (no new create) |
 
@@ -59,7 +61,7 @@ gh workflow run deploy-govchain-nft-base.yml --ref main \
 
 UI: Actions → **Deploy AuthiChainNFT (GovChain) to Base** → leave **dry_run checked**, `chain=base`, **grant_smart_wallet checked**.
 
-2. Signed live deploy (spends ops EOA gas; do this once):
+2. Signed live deploy (spends NFT deployer EOA gas; do this once):
 
 ```bash
 gh workflow run deploy-govchain-nft-base.yml --ref main \
@@ -86,7 +88,7 @@ Optional Basescan API: `https://api.basescan.org/api?module=proxy&action=eth_get
 
 Success: `chain=Base Mainnet (8453)` in the deploy logs, `getCode_bytes` > 0, explorer page shows a contract.
 
-`verifyManufacturer(opsEOA)` runs on every live deploy. `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…`.
+`verifyManufacturer` of the NFT deployer EOA runs on every live deploy. `GRANT_SMART_WALLET=true` also verifies Coinbase Smart Wallet `0xC0D26735…`.
 
 ## Enable gov-mint (dry-run only)
 
@@ -129,14 +131,14 @@ CHAIN=base DRY_RUN=true  GRANT_SMART_WALLET=true pnpm gov:deploy-base
 CHAIN=base DRY_RUN=false GRANT_SMART_WALLET=true pnpm gov:deploy-base
 ```
 
-Required to send a tx: `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY`, funded ops EOA. Optional: `ALCHEMY_API_KEY`, `GOVCHAIN_NFT_CONTRACT` (grant-only), `ARTIFACT_PATH`.
+Required to send a tx: `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY`, funded NFT deployer EOA. Optional: `ALCHEMY_API_KEY`, `GOVCHAIN_NFT_CONTRACT` (grant-only), `ARTIFACT_PATH`.
 
 Then mint dry-run:
 
 ```
 CHAIN=base
 GOVCHAIN_NFT_CONTRACT=<new Base address>
-WALLET_PRIVATE_KEY=<ops EOA>
+WALLET_PRIVATE_KEY=<NFT deployer EOA>
 ALCHEMY_API_KEY=<Base app>
 DRY_RUN=true
 pnpm exec tsx scripts/mint-govchain-nfts.ts

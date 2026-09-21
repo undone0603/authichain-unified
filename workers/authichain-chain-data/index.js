@@ -1,10 +1,14 @@
 /**
  * authichain-chain-data v2.2 — Apr 9 2026
  * MIGRATED: api.polygonscan.com (v1 DEPRECATED) → api.etherscan.io/v2 (chainid=137)
+ *
+ * Addresses match scripts/lib/evm-chains.ts (QRON_ERC20, POLYGON_AUTHICHAIN_NFT).
+ * Standalone JS worker — keep literals identical to those named exports.
+ * $QRON is not an x402 asset. See docs/strategy/WEB3_IDENTITY.md.
  */
 
-const TOKEN = '0xAebfA6b08fb25b59748c93273aB8880e20FfE437';
-const NFT   = '0x4da4D2675e52374639C9c954f4f653887A9972BE';
+const TOKEN = '0xAebfA6b08fb25b59748c93273aB8880e20FfE437'; // QRON_ERC20 (Polygon)
+const NFT   = '0x4da4D2675e52374639C9c954f4f653887A9972BE'; // POLYGON_AUTHICHAIN_NFT
 const ESCAN_QRON = 'EXRH7JMZ8RV21ZQPVG9CHDR9TA4IKAGDSD';
 const ESCAN_NFT  = 'ZP7IGREASZ15GCY478KDNQYKP5XHKWVPWI';
 const ESCAN_SC   = '4KWEVSEIX2XBIM1AJB1KDKUQP7NKYWI4F9';

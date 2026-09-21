@@ -2,7 +2,7 @@
  * @file route.ts
  * @project qron-platform
  * @author AuthiChain Ops
- * @copyright (c) 2026 AuthiChain Inc. All rights reserved.
+ * Brand AuthiChain (not AuthiChain Inc.). SAM legal: ZACHARY KIETZMAN.
  */
 
 import { NextResponse } from 'next/server';
@@ -67,9 +67,12 @@ export async function GET(_request: Request) {
         total_certifications: certCount || 0,
       },
       governance: {
+        theater: true,
+        liveTokenomics: false,
         total_staked_qron: totalStaked,
         total_burned_qron: totalBurned,
         active_brands: brands?.length || 0,
+        note: 'fee_flows / brands staking are speculative $QRON theater, not x402 USDC.',
       },
       pipeline: {
         total_leads: leadCount || 0,

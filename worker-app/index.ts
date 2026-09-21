@@ -18,6 +18,10 @@ import { registerAttestationApi } from "./attestation-api";
 import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { scheduled } from "./cron-dispatch";
+import {
+  CHECKOUT_REDIRECT_HEADERS,
+  checkoutRedirectResponse,
+} from "../src/lib/checkout-email";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -197,8 +201,9 @@ function isAppHostname(host: string): boolean {
 // authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
 app.get("/api/checkout/dpp", async c => {
   if (c.req.method === "HEAD") {
-    c.header("Cache-Control", "private, no-store");
-    c.header("CDN-Cache-Control", "no-store");
+    for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+      c.header(key, value);
+    }
     return c.body(null, 204);
   }
   try {
@@ -222,6 +227,9 @@ app.get("/api/checkout/dpp", async c => {
       supabase,
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        return checkoutRedirectResponse(result.url);
+      }
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
@@ -231,7 +239,7 @@ app.get("/api/checkout/dpp", async c => {
         result.status
       );
     }
-    return c.redirect(result.url, 303);
+    return checkoutRedirectResponse(result.url);
   } catch (err: any) {
     console.error("[checkout/dpp] Error:", err?.message || err);
     return c.json(
@@ -245,8 +253,9 @@ app.get("/api/checkout/dpp", async c => {
 // src/app/api/checkout/plan/[planId].
 app.get("/api/checkout/plan/:planId", async c => {
   if (c.req.method === "HEAD") {
-    c.header("Cache-Control", "private, no-store");
-    c.header("CDN-Cache-Control", "no-store");
+    for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+      c.header(key, value);
+    }
     return c.body(null, 204);
   }
   try {
@@ -267,8 +276,12 @@ app.get("/api/checkout/plan/:planId", async c => {
       },
       stripeSecretKey:
         c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+      requireEmail: true,
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        return checkoutRedirectResponse(result.url);
+      }
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
@@ -278,7 +291,7 @@ app.get("/api/checkout/plan/:planId", async c => {
         result.status
       );
     }
-    return c.redirect(result.url, 303);
+    return checkoutRedirectResponse(result.url);
   } catch (err: any) {
     console.error("[checkout/plan] Error:", err?.message || err);
     return c.json(
@@ -603,12 +616,18 @@ app.post("/api/dpp/publish", async c => {
   }
 });
 
-async function dppVerify(c: {
-  env?: Env;
-  req: { json: () => Promise<unknown>; query: (name: string) => string | undefined };
-  header: (name: string, value: string) => void;
-  json: (body: unknown, status?: number) => Response;
-}, params: { dppId: string; visitId: string | null; source: string }) {
+async function dppVerify(
+  c: {
+    env?: Env;
+    req: {
+      json: () => Promise<unknown>;
+      query: (name: string) => string | undefined;
+    };
+    header: (name: string, value: string) => void;
+    json: (body: unknown, status?: number) => Response;
+  },
+  params: { dppId: string; visitId: string | null; source: string }
+) {
   hydrateProcessEnv(c.env);
   const supabase = await edgeSupabase(c.env);
   const { verifyDpp } = await import("../src/lib/dpp-verify");

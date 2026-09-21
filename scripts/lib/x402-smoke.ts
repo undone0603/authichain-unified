@@ -4,8 +4,10 @@
  */
 import { ethers } from "ethers";
 import { BASE_USDC_ASSET, BASE_USDC_EIP712 } from "../../src/lib/x402.ts";
+import { TOKENOMICS_PAY_TO } from "./evm-chains.ts";
 
-export const OPS_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+/** payTo / tokenomics EOA. Alias kept for existing smoke tests. Not the NFT deployer. */
+export const OPS_PAY_TO = TOKENOMICS_PAY_TO;
 export const MIN_ATOMIC = 50000n;
 export const BASE_CHAIN_ID = 8453;
 export const DEFAULT_ENDPOINT = "https://authichain.com/api/x402";
@@ -97,6 +99,7 @@ export type SmokePaymentProof = {
   x402Version: 1;
   scheme: "exact";
   network: string;
+  resource?: string;
   payer: string;
   amount: string;
   signature: string;
@@ -104,6 +107,7 @@ export type SmokePaymentProof = {
     signature: string;
     authorization: ExactAuthorization;
   };
+  extensions?: unknown;
 };
 
 export function eip712Domain(opts: {
@@ -128,6 +132,8 @@ export async function signExactPayment(opts: {
   validAfter?: number;
   validBefore?: number;
   nonce?: string;
+  resource?: string;
+  extensions?: unknown;
 }): Promise<{ headerB64: string; proof: SmokePaymentProof }> {
   const from = await opts.wallet.getAddress();
   const asset = opts.asset ?? BASE_USDC_ASSET;
@@ -156,6 +162,8 @@ export async function signExactPayment(opts: {
     amount: opts.amountAtomic,
     signature,
     payload: { signature, authorization },
+    ...(opts.resource ? { resource: opts.resource } : {}),
+    ...(opts.extensions ? { extensions: opts.extensions } : {}),
   };
   return {
     headerB64: Buffer.from(JSON.stringify(proof)).toString("base64"),

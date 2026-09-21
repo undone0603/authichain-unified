@@ -298,7 +298,9 @@ export class AutonomousController {
 
   /**
    * Phase 7 - Step 2: Autonomous Revenue Recycling
-   * Calculates daily protocol revenue and triggers a buyback/burn log.
+   * Speculative $QRON buyback/burn log from fee_flows theater — not x402 USDC
+   * settlement and not live circulating supply. Identity: WEB3_IDENTITY.md.
+   * Do not treat these inserts as on-chain burns.
    */
   private async runRevenueRecyclingAgent() {
     const workflowName = 'agent_revenue_recycling';

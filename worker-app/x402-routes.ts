@@ -4,6 +4,8 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
  *      (200, not_configured OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
+ * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
  *
  * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
@@ -15,11 +17,15 @@ import type { Hono } from "hono";
 import {
   buildPaymentRequired,
   parsePaymentHeader,
+  paymentResponseHeaders,
+  readPaymentProofHeader,
   settlePayment,
   verifyPaymentProof,
   x402Catalog,
   x402HealthReport,
+  x402OpenApiDocument,
   x402PriceUsd,
+  x402ScanFanout,
   type X402HealthEnv,
 } from "../src/lib/x402";
 
@@ -85,6 +91,28 @@ async function catalog(c: {
   return c.json(await x402Catalog(healthEnv(c.env)), 200, NO_STORE);
 }
 
+async function fanout(c: {
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  return c.json(x402ScanFanout(), 200, NO_STORE);
+}
+
+async function openapi(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  return c.json(await x402OpenApiDocument(healthEnv(c.env)), 200, NO_STORE);
+}
+
 async function agentVerify(c: {
   env?: X402Bindings;
   req: {
@@ -120,33 +148,33 @@ async function agentVerify(c: {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(c.req.header("x-payment"));
+  const proofHeader = readPaymentProofHeader(name => c.req.header(name));
+  const proof = parsePaymentHeader(proofHeader);
   if (!proof) {
-    return c.json(required.body, 402, NO_STORE);
+    return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
-    return c.json(
-      { ...required.body, error: verification.reason },
-      402,
-      NO_STORE
-    );
+    return c.json({ ...required.v2, error: verification.reason }, 402, {
+      ...NO_STORE,
+      ...required.headers,
+    });
   }
 
   const settlement = await settlePayment(
-    c.req.header("x-payment") ?? "",
+    proofHeader ?? "",
     required.body.accepts[0]
   );
   if (!settlement.settled || !settlement.trustless) {
     return c.json(
       {
-        ...required.body,
+        ...required.v2,
         error: settlement.reason ?? "not_configured",
         status: settlement.trustless ? "unpaid" : "not_configured",
       },
       402,
-      NO_STORE
+      { ...NO_STORE, ...required.headers }
     );
   }
 
@@ -176,7 +204,15 @@ async function agentVerify(c: {
       timestamp: new Date().toISOString(),
     },
     200,
-    NO_STORE
+    {
+      ...NO_STORE,
+      ...paymentResponseHeaders({
+        success: true,
+        transaction: settlement.txHash ?? proof.txHash,
+        network: required.body.accepts[0].network,
+        payer: proof.payer,
+      }),
+    }
   );
 }
 
@@ -187,8 +223,9 @@ export function registerX402Routes<
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
   app.get("/api/x402/catalog", c => catalog(c));
-  app.get("/.well-known/x402", c => catalog(c));
+  app.get("/.well-known/x402", c => fanout(c));
   app.get("/.well-known/x402.json", c => catalog(c));
+  app.get("/openapi.json", c => openapi(c));
   app.get("/api/v1/agent-verify", c => health(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));

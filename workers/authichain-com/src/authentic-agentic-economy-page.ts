@@ -103,7 +103,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
           },
         },
         {
@@ -202,15 +202,18 @@ ${estateNav(
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
   ],
-  { href: "/api/checkout/dpp", label: "Start DPP checkout" }
+  { href: "/pricing", label: "View pricing" }
 )}
 <main id="main">
 ${estateHero({
   eyebrow: "The authentic agentic economy",
   title: "Agents can pay. They still need to know if it is real.",
   lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
+  emailCheckout: {
+    action: "/api/checkout/dpp",
+    label: "Start DPP checkout — $299",
+  },
   actions: [
-    { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
     { href: "/onboard", label: "Onboard", primary: false },
   ],
@@ -243,7 +246,7 @@ ${estateFeatures(
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. GET /api/checkout/dpp opens the live Stripe session at $299, credited toward AuthiChain Basic on conversion.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
     },
     {
       title: "Machine-readable passports",
@@ -274,9 +277,12 @@ ${estateSteps(
 ${sources()}
 ${estateCtaBand({
   title: "Start on a live path",
-  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer.",
+  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
+  emailCheckout: {
+    action: "/api/checkout/dpp",
+    label: "Start DPP checkout",
+  },
   actions: [
-    { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
     { href: "/pricing", label: "View pricing", primary: false },
   ],
@@ -288,7 +294,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: "/api/checkout/dpp", label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],

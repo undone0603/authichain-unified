@@ -5,6 +5,10 @@
  * only — published payTo / asset / price, health URL, and unpaid 402 curls.
  * No facilitator URL, no private keys, no settle steps.
  *
+ * payTo is the tokenomics EOA (X402_PUBLISHED_PAY_TO), not the NFT
+ * deployer and not the Coinbase Smart Wallet. Asset is Circle USDC on
+ * Base — not $QRON. Map: docs/strategy/WEB3_IDENTITY.md.
+ *
  * Visual system (interim): light-enterprise chrome + a dark Web3-adjacent
  * rail/code surface. Markup is semantic and uses Tailwind-shaped utilities
  * bound to `--ac-*` tokens so a later Wonder export can restyle without
@@ -17,6 +21,12 @@
  */
 
 import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
+import {
+  CHECKOUT_EMAIL_FORM_CSS,
+  catalogPaymentLinkHtml,
+  checkoutEmailFormHtml,
+} from "../../../src/lib/checkout-email";
+import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 export const X402_DOCS_PATHS = [
   "/x402",
@@ -31,16 +41,22 @@ export const X402_PUBLIC = {
   healthUrl: "https://authichain.com/api/x402/health",
   catalogUrl: "https://authichain.com/api/x402/catalog",
   wellKnownUrl: "https://authichain.com/.well-known/x402.json",
+  fanoutUrl: "https://authichain.com/.well-known/x402",
+  openApiUrl: "https://authichain.com/openapi.json",
   payUrl: "https://authichain.com/api/x402",
   verifyUrl: "https://authichain.com/api/v1/agent-verify",
+  identityUrl:
+    "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
   tokenomicsUrl:
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
   priceUsd: "$0.05",
   priceUsdNumber: "0.05",
   network: "Base",
   chainId: "8453",
-  payTo: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
-  asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  /** payTo / tokenomics EOA — not the NFT deployer. Do not rebind. */
+  payTo: X402_PUBLISHED_PAY_TO,
+  /** Circle USDC on Base. Not $QRON. */
+  asset: BASE_USDC_ASSET,
   assetName: "Circle USDC",
   dailyCapUsd: "$10",
   legalEntity: "ZACHARY KIETZMAN",
@@ -170,6 +186,18 @@ export function renderX402DocsPage(): string {
       href: p.wellKnownUrl,
       mono: true,
     },
+    {
+      label: "Fan-out",
+      value: p.fanoutUrl,
+      href: p.fanoutUrl,
+      mono: true,
+    },
+    {
+      label: "OpenAPI",
+      value: p.openApiUrl,
+      href: p.openApiUrl,
+      mono: true,
+    },
     { label: "Pay endpoint", value: p.payUrl, href: p.payUrl, mono: true },
     { label: "Alias", value: p.verifyUrl, mono: true },
     {
@@ -241,6 +269,9 @@ export function renderX402DocsPage(): string {
 ${ESTATE_FONTS_LINK}
 <style>
 ${X402_TOKEN_CSS}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1rem 0}
+.checkout-email-form button{background:var(--ac-accent,#4F46E5)}
 </style>
 </head>
 <body class="shell">
@@ -254,7 +285,6 @@ ${X402_TOKEN_CSS}
         <li><a href="${esc(p.catalogUrl)}">Catalog</a></li>
         <li><a href="/authentic-agentic-economy">Agentic economy</a></li>
         <li><a href="/pricing">Pricing</a></li>
-        <li><a href="/api/checkout/dpp">DPP checkout</a></li>
         <li><a href="/dpp">DPP brief</a></li>
       </ul>
     </nav>
@@ -285,8 +315,8 @@ ${X402_TOKEN_CSS}
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 1</code> and an <code>accepts[]</code> requirement: scheme <code>exact</code>, ${esc(p.network)} USDC, payTo above, plus EIP-712 extra for Circle USDC.</li>
-        <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code>.</li>
+        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement (<code>outputSchema</code> on <code>accepts[0]</code>) internally.</li>
+        <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>
       <p>Do not send private keys to AuthiChain. Settlement happens in the agent’s wallet. This page only shows the unpaid challenge.</p>
@@ -312,7 +342,7 @@ ${X402_TOKEN_CSS}
         <figure>
           <figcaption>curl — catalog</figcaption>
           <pre><code>curl -sS https://authichain.com/api/x402/catalog</code></pre>
-          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>.</p>
+          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Catalog also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>. x402scan fan-out is <a href="${esc(p.fanoutUrl)}"><code>/.well-known/x402</code></a>. OpenAPI with <code>x-payment-info</code> is <a href="${esc(p.openApiUrl)}"><code>/openapi.json</code></a>.</p>
         </figure>
         <figure>
           <figcaption>curl — settle retry (Agent A → AuthiChain)</figcaption>
@@ -333,18 +363,41 @@ ${X402_TOKEN_CSS}
       <dl class="spec">
         <dt>Catalog</dt><dd class="mono"><a href="${esc(p.catalogUrl)}">${esc(p.catalogUrl)}</a></dd>
         <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
+        <dt>Fan-out</dt><dd class="mono"><a href="${esc(p.fanoutUrl)}">${esc(p.fanoutUrl)}</a></dd>
+        <dt>OpenAPI</dt><dd class="mono"><a href="${esc(p.openApiUrl)}">${esc(p.openApiUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
         <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
+        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
       </dl>
     </section>
     <section class="card" aria-labelledby="human-title">
       <h2 id="human-title">Human checkout vs agent rail</h2>
       <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
       <ul>
-        <li>StrainChain Passport — <strong>$49</strong> one-time, <a href="/api/checkout/plan/strainchain_passport">Stripe checkout</a>.</li>
-        <li>EU DPP Readiness — <strong>$299</strong> one-time, <a href="/api/checkout/dpp">Stripe checkout</a>.</li>
-        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}.</li>
+        <li>StrainChain Passport — <strong>$49</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
+        <li>EU DPP Readiness — <strong>$299</strong> one-time. Same recovery path.</li>
+        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/plan/strainchain_passport",
+        label: "Passport checkout — $49",
+        inputId: "x402-passport-email",
+        formId: "x402-passport-checkout",
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_passport",
+        label: "Pay $49 on Stripe",
+      })}
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/dpp",
+        label: "DPP checkout — $299",
+        inputId: "x402-dpp-email",
+        formId: "x402-dpp-checkout",
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "dpp_readiness",
+        label: "Pay $299 on Stripe",
+      })}
     </section>
   </div>
 
