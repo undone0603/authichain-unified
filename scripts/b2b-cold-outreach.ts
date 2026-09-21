@@ -65,6 +65,8 @@ import {
   shouldLoadHighLeverageTargets,
   type HighLeverageTarget,
 } from "./lib/high-leverage";
+import { paymentLinkWithPrefilledEmail } from "../src/lib/checkout-email";
+import { planPaymentLink } from "../src/lib/plans";
 
 export {
   CHANNEL_PARTNER_LEAD_SOURCE,
@@ -141,6 +143,7 @@ const STRAINCHAIN_PAY =
   "https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"; // StrainChain Basic
 const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
+  planPaymentLink("creator") ??
   "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
 
 const hubspotToken =
@@ -413,7 +416,10 @@ function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
   and no integration needed to see it working.
   <a href="${CALENDLY}">Book 20 minutes</a> and I'll walk through it against your own
   ${t.states.split(",")[0].trim()} data — or
-  <a href="${STRAINCHAIN_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=strainchain">
+  <a href="${paymentLinkWithPrefilledEmail(
+    `${STRAINCHAIN_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=strainchain`,
+    t.email
+  )}">
   start StrainChain Basic self-serve</a> if you'd rather click than calendar.</p>
 
   <p>Best,<br>
@@ -489,7 +495,10 @@ function qronEmail(t: (typeof QRON_TARGETS)[0]): {
   <p>Worth 10 minutes?
   <a href="${CALENDLY}?company=${encodeURIComponent(t.company)}">Book here</a>,
   grab the
-  <a href="${QRON_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=qron">Creator Pack ($99 / 500 gens)</a>
+  <a href="${paymentLinkWithPrefilledEmail(
+    `${QRON_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=qron`,
+    t.email
+  )}">Creator Pack ($99 / 500 gens)</a>
   self-serve, or reply and I'll send the API docs — happy to set up a sandbox on
   your account before any call.</p>
 
@@ -705,7 +714,7 @@ async function processTargets<
       }
       existingStatus =
         existingRows.find(
-          (row) =>
+          row =>
             normalizeLeadEmail(String(row.email ?? "")) ===
             normalizeLeadEmail(email)
         )?.status ?? null;
@@ -902,9 +911,7 @@ export async function flushQueuedLeads(): Promise<number> {
   }
 
   const sourceFilter =
-    segment && segment !== "all"
-      ? `b2b_outreach_${segment}`
-      : "b2b_outreach_%";
+    segment && segment !== "all" ? `b2b_outreach_${segment}` : "b2b_outreach_%";
   // Cap leftovers are saved as `draft` then skipped; the log says "queued"
   // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
   // unsent-again while 4imprint/Signarama drafts can go out.
@@ -913,10 +920,9 @@ export async function flushQueuedLeads(): Promise<number> {
     .select("*")
     .in("status", ["queued", "draft"])
     .order("createdAt", { ascending: false });
-  query =
-    sourceFilter.endsWith("%")
-      ? query.like("source", sourceFilter)
-      : query.eq("source", sourceFilter);
+  query = sourceFilter.endsWith("%")
+    ? query.like("source", sourceFilter)
+    : query.eq("source", sourceFilter);
 
   const { data: leads } = await query;
 

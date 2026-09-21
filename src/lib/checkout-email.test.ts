@@ -8,7 +8,9 @@ import {
   checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
   emailCheckoutWithPaymentLinkHtml,
+  emailPaymentLinkHtml,
   looksLikeCheckoutEmail,
+  paymentLinkWithPrefilledEmail,
   pickCheckoutEmail,
   planIdFromCheckoutAction,
   rewriteCheckoutHref,
@@ -114,6 +116,59 @@ describe("emailCheckoutWithPaymentLinkHtml", () => {
     );
     expect(html).toContain("Pay $299 on Stripe");
     expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).not.toContain("prefilled_email=");
+  });
+});
+
+describe("paymentLinkWithPrefilledEmail", () => {
+  const dpp = "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c";
+
+  it("appends encoded prefilled_email when an address is present", () => {
+    const url = paymentLinkWithPrefilledEmail(dpp, "buyer@brand.com");
+    expect(url).toContain("prefilled_email=buyer%40brand.com");
+    expect(url).toContain("locked_prefilled_email=buyer%40brand.com");
+    expect(url.startsWith(`${dpp}?`)).toBe(true);
+    expect(url).not.toContain("??");
+  });
+
+  it("returns the bare slug when email is absent or invalid", () => {
+    expect(paymentLinkWithPrefilledEmail(dpp)).toBe(dpp);
+    expect(paymentLinkWithPrefilledEmail(dpp, "")).toBe(dpp);
+    expect(paymentLinkWithPrefilledEmail(dpp, "not-an-email")).toBe(dpp);
+  });
+
+  it("does not introduce a second ? when the slug already has a query", () => {
+    const withUtm = `${dpp}?utm_source=email`;
+    const url = paymentLinkWithPrefilledEmail(withUtm, "buyer@brand.com");
+    expect(url).toContain("utm_source=email");
+    expect(url).toContain("prefilled_email=buyer%40brand.com");
+    expect(url).not.toContain("??");
+    expect(url.split("?").length).toBe(2);
+  });
+});
+
+describe("emailPaymentLinkHtml", () => {
+  it("puts prefilled_email on the quoted Payment Link when email is present", () => {
+    const html = emailPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "Pay $299 on Stripe",
+      email: "buyer@brand.com",
+    });
+    expect(html).toContain('href="https://buy.stripe.com');
+    expect(html).toContain("prefilled_email=");
+    expect(html).toContain("buyer%40brand.com");
+    expect(html).toContain("Pay $299 on Stripe");
+  });
+
+  it("keeps the bare slug when email is absent", () => {
+    const html = emailPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "Pay $299 on Stripe",
+    });
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
+    expect(html).not.toContain("prefilled_email=");
   });
 });
 

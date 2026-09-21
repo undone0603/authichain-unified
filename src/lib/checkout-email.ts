@@ -127,6 +127,27 @@ export function checkoutEmailFormHtml(opts: {
 </form>`;
 }
 
+/**
+ * Append Stripe Payment Link query params so hosted Checkout opens with
+ * the recipient's email filled (and locked). Outbound email only — site
+ * CTAs must keep the bare catalogue slug from `planPaymentLink()`.
+ *
+ * Stripe documents both `prefilled_email` and `locked_prefilled_email` as
+ * email addresses on Payment Links (not a boolean). Invalid values are
+ * ignored; the slug stays the same.
+ * https://docs.stripe.com/payment-links/customize
+ */
+export function paymentLinkWithPrefilledEmail(
+  url: string,
+  email?: string | null
+): string {
+  const trimmed = (email || "").trim();
+  if (!url || !looksLikeCheckoutEmail(trimmed)) return url;
+  const encoded = encodeURIComponent(trimmed);
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}prefilled_email=${encoded}&locked_prefilled_email=${encoded}`;
+}
+
 /** Secondary CTA: the catalogue Payment Link from `src/lib/plans.ts`. */
 export function catalogPaymentLinkHtml(opts: {
   planId: PlanId;
@@ -137,6 +158,23 @@ export function catalogPaymentLinkHtml(opts: {
   if (!href) return "";
   const cls = opts.className || "btn btn-outline";
   return `<a class="${esc(cls)}" href="${esc(href)}">${esc(opts.label)}</a>`;
+}
+
+/**
+ * Outbound-email Payment Link. Prefills (and locks) the recipient address
+ * when one is known. Site/CTA callers must keep using `catalogPaymentLinkHtml`.
+ */
+export function emailPaymentLinkHtml(opts: {
+  planId: PlanId;
+  label: string;
+  email?: string | null;
+  className?: string;
+}): string {
+  const href = planPaymentLink(opts.planId);
+  if (!href) return "";
+  const withEmail = paymentLinkWithPrefilledEmail(href, opts.email);
+  const cls = opts.className || "btn btn-outline";
+  return `<a class="${esc(cls)}" href="${esc(withEmail)}">${esc(opts.label)}</a>`;
 }
 
 /** Map a live checkout action to the catalogue plan it charges. */
