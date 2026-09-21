@@ -325,7 +325,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         ...(passport
           ? [
               {
-                href: planCheckoutCta(passport, "strainchain").href,
+                href: "https://strainchain.io/pricing",
                 label: passport.name,
               },
             ]
@@ -405,7 +405,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       ctaLede:
         "GET /api/checkout/dpp opens the live Stripe session. AuthiChain Starter is the monthly Payment Link on this page.",
       footerStart: [
-        { href: "/api/checkout/dpp", label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: starter.url, label: starter.name },
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
@@ -430,7 +430,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.com/api/checkout/dpp",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
@@ -438,7 +438,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroLede:
       "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
     secondary: {
-      href: "https://authichain.com/api/checkout/dpp",
+      href: "https://authichain.com/pricing",
       label: "Start DPP checkout",
       primary: false,
     },
@@ -451,7 +451,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
       {
-        href: "https://authichain.com/api/checkout/dpp",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
@@ -514,7 +514,6 @@ ${estateHero({
     ? {
         action: page.primary.href,
         label: page.primary.label,
-        skipHref: page.primary.href,
       }
     : undefined,
   actions: checkoutPrimary
@@ -538,7 +537,6 @@ ${estateCtaBand({
     ? {
         action: page.primary.href,
         label: page.primary.label,
-        skipHref: page.primary.href,
       }
     : undefined,
   actions: checkoutPrimary
@@ -666,14 +664,11 @@ ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
   lede: "GovChain does not publish a catalogue SKU. Request access on the live /onboard intake, or start EU DPP Readiness on AuthiChain — the same $299 checkout already used on authichain.com.",
-  actions: [
-    { href: "/onboard", label: "Request access", primary: true },
-    {
-      href: GOVCHAIN_DPP_CHECKOUT,
-      label: dppCta,
-      primary: false,
-    },
-  ],
+  emailCheckout: {
+    action: GOVCHAIN_DPP_CHECKOUT,
+    label: dppCta,
+  },
+  actions: [{ href: "/onboard", label: "Request access", primary: true }],
 })}
 <section class="estate-section" id="pricing">
   <div class="wrap">
@@ -693,14 +688,24 @@ ${estateHero({
         <div class="price-period">one-time</div>
         <p class="section-sub" style="margin-bottom:16px">${esc(dppDesc)}</p>
         <ul class="price-features">${features}</ul>
-        <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(GOVCHAIN_DPP_CHECKOUT)}" target="_blank" rel="noopener">${esc(dppCta)}</a>
+        ${checkoutEmailFormHtml({
+          action: GOVCHAIN_DPP_CHECKOUT,
+          label: dppCta,
+          buttonClass: "btn btn-outline",
+          formId: "govchain-dpp-card",
+          inputId: "govchain-dpp-card-email",
+        })}
       </article>
     </div>
   </div>
 </section>
 ${estateCtaBand({
   title: "Start on a live path",
-  lede: "Onboard is the GovChain conversion path. EU DPP Readiness is the published AuthiChain checkout.",
+  lede: "Onboard is the GovChain conversion path. EU DPP Readiness is the published AuthiChain checkout. Enter a work email so Stripe can recover the cart.",
+  emailCheckout: {
+    action: GOVCHAIN_DPP_CHECKOUT,
+    label: dppCta,
+  },
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
@@ -718,7 +723,7 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: GOVCHAIN_DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "https://authichain.com/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
       ],
     },

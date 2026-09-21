@@ -32,18 +32,14 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
     html,
     /rel="canonical" href="https:\/\/authichain.com\/trumark"/
   );
-  assert.match(
-    html,
-    new RegExp(`href="${PASSPORT_CHECKOUT_PATH.replace(/\//g, "\\/")}"`)
-  );
-  assert.match(
-    html,
-    new RegExp(`href="${DPP_CHECKOUT.replace(/\//g, "\\/")}"`)
-  );
+  assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_PATH}"`), true);
+  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /Passport checkout — \$49/);
   assert.match(html, /DPP checkout — \$299/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout/);
   assert.match(html, /href="\/pricing"/);
   assert.match(
     html,
@@ -67,10 +63,7 @@ test("Made in America page uses live DPP checkout and partner-brief alias story"
   );
   assert.match(html, /16 CFR Part 323/);
   assert.match(html, /EO 14392|Executive Order 14392/);
-  assert.match(
-    html,
-    new RegExp(`href="${DPP_CHECKOUT.replace(/\//g, "\\/")}"`)
-  );
+  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/partners\/brief"/);

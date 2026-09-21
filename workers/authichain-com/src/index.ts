@@ -2368,7 +2368,7 @@ function ecosystemFooter() {
       {
         heading: "Start",
         links: [
-          { href: "/api/checkout/dpp", label: "DPP checkout" },
+          { href: "/pricing", label: "DPP checkout" },
           { href: "/pricing", label: "Pricing" },
           { href: "/onboard", label: "Onboard" },
           { href: "/dashboard", label: "Dashboard" },
@@ -2440,8 +2440,6 @@ const HTML = `<!DOCTYPE html>
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
-      skipHref: "/api/checkout/dpp",
-      skipLabel: "Checkout without saving a recovery email",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
@@ -2536,7 +2534,6 @@ const HTML = `<!DOCTYPE html>
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout",
-      skipHref: "/api/checkout/dpp",
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },

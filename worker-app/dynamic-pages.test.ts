@@ -223,9 +223,11 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
-    expect(body).toContain('href="https://authichain.com/api/checkout/dpp"');
     expect(body).toContain('name="email"');
     expect(body).toContain('action="https://authichain.com/api/checkout/dpp"');
+    expect(body).not.toContain(
+      'href="https://authichain.com/api/checkout/dpp"'
+    );
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();
@@ -242,6 +244,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("What you get");
     expect(body).toContain(
+      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(body).not.toContain(
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
     expect(body).toContain('href="https://strainchain.io/pricing"');

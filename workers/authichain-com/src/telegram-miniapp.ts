@@ -6,10 +6,8 @@
  * or paying for Workers. Checkout is the live Passport rail — do not invent
  * TruMark prices or ship the May 2025 Inc / Series A claims.
  */
-export const PASSPORT_CHECKOUT_PATH =
-  "/api/checkout/plan/strainchain_passport";
-export const PASSPORT_CHECKOUT_URL =
-  `https://authichain.com${PASSPORT_CHECKOUT_PATH}`;
+export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
+export const PASSPORT_CHECKOUT_URL = `https://authichain.com${PASSPORT_CHECKOUT_PATH}`;
 export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
 
 const MINIAPP_PATHS = new Set([
@@ -99,10 +97,12 @@ export function renderTelegramMiniApp(): string {
     .btn-primary { background: var(--accent); color: var(--accent-text); }
     .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
     label { display: block; font-size: .78rem; font-weight: 650; margin-bottom: .4rem; }
-    input[type="text"] {
+    input[type="text"], input[type="email"] {
       width: 100%; border-radius: 10px; border: 1px solid var(--line);
       background: var(--bg); color: var(--text); padding: .7rem .75rem; font-size: 1rem;
     }
+    .checkout-email-form { display: flex; flex-direction: column; gap: .45rem; }
+    .checkout-email-hint { font-size: .78rem; color: var(--muted); margin: 0; }
     .row { display: flex; gap: .5rem; margin-top: .55rem; }
     .row input { flex: 1; }
     .row .btn { width: auto; padding: .7rem .9rem; }
@@ -129,7 +129,13 @@ export function renderTelegramMiniApp(): string {
     </section>
 
     <div class="actions">
-      <a class="btn btn-primary" id="checkout" href="${PASSPORT_CHECKOUT_URL}">Publish Passport — $49</a>
+      <form class="checkout-email-form" id="checkout-form" action="${PASSPORT_CHECKOUT_URL}" method="get">
+        <label for="checkout-email">Work email
+          <input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+        </label>
+        <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+        <button class="btn btn-primary" id="checkout" type="submit">Publish Passport — $49</button>
+      </form>
       <a class="btn btn-ghost" id="pricing" href="https://authichain.com/pricing">View pricing</a>
     </div>
 
@@ -176,10 +182,28 @@ export function renderTelegramMiniApp(): string {
         }
         window.location.href = url;
       }
-      function openCheckout() { openExternal(CHECKOUT); }
-      var checkout = document.getElementById("checkout");
-      if (checkout) {
-        checkout.addEventListener("click", function (ev) {
+      function looksLikeEmail(value) {
+        var email = String(value || "").trim();
+        return email.length >= 3 && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+      function checkoutUrlWithEmail() {
+        var input = document.getElementById("checkout-email");
+        var email = input ? String(input.value || "").trim() : "";
+        if (!looksLikeEmail(email)) return "";
+        return CHECKOUT + (CHECKOUT.indexOf("?") >= 0 ? "&" : "?") + "email=" + encodeURIComponent(email);
+      }
+      function openCheckout() {
+        var url = checkoutUrlWithEmail();
+        if (!url) {
+          var input = document.getElementById("checkout-email");
+          if (input && typeof input.focus === "function") input.focus();
+          return;
+        }
+        openExternal(url);
+      }
+      var form = document.getElementById("checkout-form");
+      if (form) {
+        form.addEventListener("submit", function (ev) {
           ev.preventDefault();
           openCheckout();
         });

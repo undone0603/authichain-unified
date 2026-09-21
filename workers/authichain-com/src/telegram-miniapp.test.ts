@@ -27,8 +27,12 @@ test("Mini App copy is Passport $49 AuthiChain, not the 2025 Inc deck", () => {
   assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
   assert.match(html, new RegExp(`rel="canonical" href="${MINIAPP_CANONICAL}"`));
   assert.match(html, /noindex/);
-  assert.match(html, new RegExp(`href="${PASSPORT_CHECKOUT_URL.replace(/\//g, "\\/")}"`));
-  assert.equal(PASSPORT_CHECKOUT_PATH, "/api/checkout/plan/strainchain_passport");
+  assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_URL}"`), true);
+  assert.equal(
+    PASSPORT_CHECKOUT_PATH,
+    "/api/checkout/plan/strainchain_passport"
+  );
+  assert.match(html, /name="email"/);
   assert.match(html, /Publish Passport — \$49/);
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.match(html, /action="https:\/\/authichain.com\/verify"/);

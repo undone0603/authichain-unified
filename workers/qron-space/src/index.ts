@@ -2284,7 +2284,7 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/api/checkout/dpp", label: "DPP checkout" },
+        { href: "https://authichain.com/pricing", label: "DPP checkout" },
       ],
     },
     {

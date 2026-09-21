@@ -123,7 +123,6 @@ export function renderDppManufacturerArticle(): string {
     emailCheckout: {
       action: DPP_CHECKOUT,
       label: "Start DPP checkout",
-      skipHref: DPP_CHECKOUT,
     },
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   })}
@@ -211,12 +210,11 @@ export function renderDppManufacturerArticle(): string {
     emailCheckout: {
       action: DPP_CHECKOUT,
       label: "Start DPP checkout",
-      skipHref: DPP_CHECKOUT,
     },
     actions: [
       { href: "/pricing", label: "View pricing", primary: false },
       {
-        href: "/api/checkout/plan/strainchain_passport",
+        href: "/pricing",
         label: "Genetics passport — $49",
         primary: false,
       },
@@ -229,7 +227,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],

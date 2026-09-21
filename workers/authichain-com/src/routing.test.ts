@@ -42,7 +42,9 @@ test("the apex still renders the homepage", async () => {
   const html = await res.text();
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
-  assert.match(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /href="\/trumark"/);
@@ -70,7 +72,8 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /\$299\/mo/);
   assert.match(html, /https:\/\/buy\.stripe\.com\/28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
-  assert.match(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
 });
 
@@ -143,7 +146,8 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
       html,
       /Agents can pay\. They still need to know if it is real\./
     );
-    assert.match(html, /href="\/api\/checkout\/dpp"/);
+    assert.match(html, /action="\/api\/checkout\/dpp"/);
+    assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
     assert.match(html, /href="\/x402"/);
     assert.match(html, /arxiv\.org\/abs\/2602\.14219/);
     assert.ok(
@@ -274,6 +278,10 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
     assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
     assert.match(
       html,
+      /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    );
+    assert.doesNotMatch(
+      html,
       /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
     );
     assert.match(html, /Publish Passport — \$49/);
@@ -301,6 +309,10 @@ test("money-path microsites are live with checkout CTAs", async () => {
   const mendoHtml = await mendo.text();
   assert.match(
     mendoHtml,
+    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+  );
+  assert.doesNotMatch(
+    mendoHtml,
     /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
   );
   assert.match(mendoHtml, /Passport checkout — \$49/);
@@ -324,9 +336,10 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
   const trumarkHtml = await trumark.text();
   assert.match(
     trumarkHtml,
-    /href="\/api\/checkout\/plan\/strainchain_passport"/
+    /action="\/api\/checkout\/plan\/strainchain_passport"/
   );
-  assert.match(trumarkHtml, /href="\/api\/checkout\/dpp"/);
+  assert.match(trumarkHtml, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(trumarkHtml, /href="\/api\/checkout/);
   assert.doesNotMatch(trumarkHtml, /calendly/i);
   assert.doesNotMatch(trumarkHtml, /schedule a (call|demo)/i);
 
@@ -334,7 +347,8 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /href="\/api\/checkout\/dpp"/, path);
+    assert.match(html, /action="\/api\/checkout\/dpp"/, path);
+    assert.doesNotMatch(html, /href="\/api\/checkout/, path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /schedule a (call|demo)/i);
   }
@@ -466,7 +480,8 @@ test("EU DPP manufacturer article is a public page with live checkout CTA", asyn
       html,
       /Why AuthiChain is built for the next generation of product trust/
     );
-    assert.match(html, /href="\/api\/checkout\/dpp"/);
+    assert.match(html, /action="\/api\/checkout\/dpp"/);
+    assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
     assert.match(html, /Start DPP checkout/);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
     assert.match(html, /ZACHARY KIETZMAN/);

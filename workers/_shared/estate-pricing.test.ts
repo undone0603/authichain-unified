@@ -66,11 +66,11 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /\$299/);
   assert.match(html, /\$29/);
   assert.match(html, /\$99/);
-  assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /Start DPP Readiness Audit/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
   assert.doesNotMatch(html, /Publish one passport/);
@@ -202,10 +202,11 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /No GovChain self-serve price/);
   assert.match(html, /href="\/onboard"/);
+  assert.match(html, /name="email"/);
   assert.match(
     html,
     new RegExp(
-      `href="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+      `action="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
     )
   );
   assert.equal(
@@ -215,6 +216,12 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, new RegExp(`\\$${dpp.price}`));
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
+  assert.doesNotMatch(
+    html,
+    new RegExp(
+      `href="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+    )
+  );
   assert.doesNotMatch(html, /GovChain Starter/);
   assert.doesNotMatch(html, /\$199\/mo/);
   assert.doesNotMatch(html, /\$2,990/);

@@ -212,7 +212,6 @@ ${estateHero({
   emailCheckout: {
     action: "/api/checkout/dpp",
     label: "Start DPP checkout — $299",
-    skipHref: "/api/checkout/dpp",
   },
   actions: [
     { href: "/x402", label: "x402 agent pay", primary: false },
@@ -282,7 +281,6 @@ ${estateCtaBand({
   emailCheckout: {
     action: "/api/checkout/dpp",
     label: "Start DPP checkout",
-    skipHref: "/api/checkout/dpp",
   },
   actions: [
     { href: "/x402", label: "x402 agent pay", primary: false },
@@ -296,7 +294,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: "/api/checkout/dpp", label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],

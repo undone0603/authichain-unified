@@ -111,13 +111,13 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   }
 
   if (isCheckoutUrl(primaryHref)) {
-    const skip =
-      `<a href="${primaryHref}">Checkout without saving a recovery email</a>` +
-      (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
+    const extra = secondaryHref
+      ? `<p><a href="${secondaryHref}">${esc(secondaryLabel)}</a>. ${esc(brand.price)}</p>`
+      : `<p>${esc(brand.price)}</p>`;
     return (
       `<h2>Get started</h2>` +
       checkoutEmailFormHtml(primaryHref, primaryLabel) +
-      `<p>${skip}. ${esc(brand.price)}</p>`
+      extra
     );
   }
 

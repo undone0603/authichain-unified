@@ -100,8 +100,8 @@ function surfaceFooter() {
       {
         heading: "Start",
         links: [
-          { href: PASSPORT_CHECKOUT_PATH, label: "Passport checkout" },
-          { href: DPP_CHECKOUT, label: "DPP checkout" },
+          { href: "/pricing", label: "Passport checkout" },
+          { href: "/pricing", label: "DPP checkout" },
           { href: "/pricing", label: "Pricing" },
         ],
       },
@@ -144,12 +144,8 @@ export function renderTrumarkPage(): string {
     emailCheckout: {
       action: PASSPORT_CHECKOUT_PATH,
       label: "Start Passport checkout — $49",
-      skipHref: PASSPORT_CHECKOUT_PATH,
     },
-    actions: [
-      { href: DPP_CHECKOUT, label: "DPP checkout — $299", primary: false },
-      { href: "/pricing", label: "View pricing", primary: false },
-    ],
+    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   })}
   ${estateSteps(
     "How a TruMark scan works",
@@ -192,12 +188,11 @@ export function renderTrumarkPage(): string {
     title: "Publish a passport or start DPP",
     lede: "Enter a work email so abandoned-checkout recovery can reach you. For an enterprise tag program, email hello@authichain.com and ask for the written packet. Async only — no scheduled calls.",
     emailCheckout: {
-      action: PASSPORT_CHECKOUT_PATH,
-      label: "Start Passport checkout",
-      skipHref: PASSPORT_CHECKOUT_PATH,
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout — $299",
     },
     actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: false },
+      { href: "/pricing", label: "View pricing", primary: false },
       {
         href: "mailto:hello@authichain.com?subject=TruMark%20written%20packet",
         label: "Request a written packet",
@@ -227,7 +222,6 @@ export function renderMadeInAmericaPage(): string {
     emailCheckout: {
       action: DPP_CHECKOUT,
       label: "Start DPP checkout — $299",
-      skipHref: DPP_CHECKOUT,
     },
     actions: [
       { href: "/partners/brief", label: "Partner brief", primary: false },
@@ -277,11 +271,10 @@ export function renderMadeInAmericaPage(): string {
     emailCheckout: {
       action: DPP_CHECKOUT,
       label: "Start DPP checkout",
-      skipHref: DPP_CHECKOUT,
     },
     actions: [
       {
-        href: PASSPORT_CHECKOUT_PATH,
+        href: "/pricing",
         label: "Passport checkout — $49",
         primary: false,
       },

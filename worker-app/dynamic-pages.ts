@@ -786,10 +786,7 @@ function renderLanding(c: Context): Response {
         label: content.primaryCta.label,
         inputId: "landing-checkout-email",
         formId: "landing-checkout",
-      }) +
-      '<p><a href="' +
-      escapeHtml(content.primaryCta.href) +
-      '">Checkout without saving a recovery email</a></p>\n'
+      })
     : '<a href="' +
       escapeHtml(content.primaryCta.href) +
       '">' +
@@ -1051,8 +1048,6 @@ function renderOnboardReceived(c: Context): Response {
       formId: "onboard-dpp-checkout",
       inputId: "onboard-dpp-email",
     }) +
-    "\n" +
-    '<p><a href="/api/checkout/dpp">Checkout without saving a recovery email</a></p>\n' +
     "<ul>\n" +
     '<li><a href="/verify">Verify a seal</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
@@ -1248,8 +1243,6 @@ function authenticateHtml(): string {
         formId: "auth-dpp-checkout",
         inputId: "auth-dpp-email",
       }) +
-      "\n" +
-      '<p><a href="/api/checkout/dpp">Checkout without saving a recovery email</a></p>\n' +
       "</main>",
   });
 }
@@ -1268,7 +1261,7 @@ function generatePackLinksHtml(): string {
     .map(p => {
       const href =
         p.id === "dpp_readiness"
-          ? "/api/checkout/dpp"
+          ? "/pricing"
           : p.stripe_payment_link || "/pricing";
       return (
         '<a href="' +
