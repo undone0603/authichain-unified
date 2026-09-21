@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   );
   const proof = parsePaymentHeader(paymentHeader);
   if (!proof) {
-    return NextResponse.json(required.body, {
+    return NextResponse.json(required.v2, {
       status: 402,
       headers: required.headers,
     });
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
     return NextResponse.json(
-      { ...required.body, error: verification.reason },
+      { ...required.v2, error: verification.reason },
       { status: 402, headers: required.headers }
     );
   }
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     (!settlement.trustless && process.env.NODE_ENV === "production")
   ) {
     return NextResponse.json(
-      { ...required.body, error: settlement.reason ?? "payment_not_settled" },
+      { ...required.v2, error: settlement.reason ?? "payment_not_settled" },
       { status: 402, headers: required.headers }
     );
   }

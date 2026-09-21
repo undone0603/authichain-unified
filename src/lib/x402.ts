@@ -321,7 +321,14 @@ function buildPaymentRequiredV2(opts: {
   };
 }
 
-/** Build the 402 payment-requirements body an unpaid agent receives. */
+/**
+ * Build the 402 payment-requirements an unpaid agent receives.
+ *
+ * HTTP JSON is `v2` (CDP Bazaar validate reads the JSON body's
+ * `x402Version`; a v1 body is rejected as "expected 2"). `body` stays the
+ * v1 requirement PayAI `/settle` needs (`outputSchema` on accepts[0]).
+ * Do not rebind `X402_FACILITATOR_URL` to chase CDP listing.
+ */
 export function buildPaymentRequired(opts: {
   resource: string;
   priceUsd: number;

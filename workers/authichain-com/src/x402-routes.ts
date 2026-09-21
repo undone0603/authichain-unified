@@ -151,14 +151,14 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     readPaymentProofHeader(name => request.headers.get(name))
   );
   if (!proof) {
-    return json(402, required.body, required.headers);
+    return json(402, required.v2, required.headers);
   }
 
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
     return json(
       402,
-      { ...required.body, error: verification.reason },
+      { ...required.v2, error: verification.reason },
       required.headers
     );
   }
@@ -171,7 +171,7 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     return json(
       402,
       {
-        ...required.body,
+        ...required.v2,
         error: settlement.reason ?? "not_configured",
         status: settlement.trustless ? "unpaid" : "not_configured",
       },

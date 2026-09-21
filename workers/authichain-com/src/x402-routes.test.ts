@@ -117,10 +117,20 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(402);
     const body = (await res!.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+      }>;
       extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.resource?.url).toContain("/api/v1/agent-verify");
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
@@ -142,6 +152,8 @@ describe("tryHandleX402", () => {
     expect(v2.accepts[0].network).toBe("eip155:8453");
     expect(v2.accepts[0].resource).toBeUndefined();
     expect(v2.extensions?.bazaar).toBeTruthy();
+    expect(body.x402Version).toBe(v2.x402Version);
+    expect(body.accepts[0].amount).toBe(v2.accepts[0].amount);
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {

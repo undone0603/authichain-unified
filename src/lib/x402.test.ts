@@ -90,13 +90,14 @@ describe("buildPaymentRequired", () => {
     expect(blob).not.toContain("x402_facilitator_url");
   });
 
-  it("puts a v2 PAYMENT-REQUIRED header beside the v1 JSON body", () => {
+  it("puts a v2 PAYMENT-REQUIRED header that matches the unpaid JSON crawlers read", () => {
     const r = buildPaymentRequired({
       resource: "https://authichain.com/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc0000000000000000000000000000000000001",
     });
     expect(r.headers["PAYMENT-REQUIRED"]).toBeTruthy();
+    expect(r.body.x402Version).toBe(1);
     expect(r.v2.x402Version).toBe(2);
     expect(r.v2.resource.url).toBe("https://authichain.com/api/x402");
     expect(r.v2.resource.serviceName).toBe("AuthiChain");

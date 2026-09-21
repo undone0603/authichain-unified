@@ -125,12 +125,12 @@ async function agentVerify(c: {
   const proofHeader = readPaymentProofHeader(name => c.req.header(name));
   const proof = parsePaymentHeader(proofHeader);
   if (!proof) {
-    return c.json(required.body, 402, { ...NO_STORE, ...required.headers });
+    return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
-    return c.json({ ...required.body, error: verification.reason }, 402, {
+    return c.json({ ...required.v2, error: verification.reason }, 402, {
       ...NO_STORE,
       ...required.headers,
     });
@@ -143,7 +143,7 @@ async function agentVerify(c: {
   if (!settlement.settled || !settlement.trustless) {
     return c.json(
       {
-        ...required.body,
+        ...required.v2,
         error: settlement.reason ?? "not_configured",
         status: settlement.trustless ? "unpaid" : "not_configured",
       },

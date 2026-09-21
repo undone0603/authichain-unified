@@ -89,10 +89,20 @@ describe("POST /api/x402", () => {
     expect(res.status).toBe(402);
     const body = (await res.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string; asset: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        asset: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+      }>;
       extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(process.env.X402_PAY_TO);
     expect(body.accepts[0].asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
