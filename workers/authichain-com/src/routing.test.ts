@@ -45,8 +45,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
-  assert.match(html, /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
-  assert.match(html, /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
+  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
+  assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /href="\/trumark"/);
@@ -76,7 +76,7 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /\$299/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
-  assert.match(html, /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
+  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
   assert.match(html, /href="\/x402"/);
 });
 
@@ -210,7 +210,7 @@ test("DPP landing collects email before protocol checkout", async () => {
   assert.match(html, /id="dpp-cancelled-banner"/);
   assert.match(html, /params.get\('visit_id'\)/);
   assert.doesNotMatch(html, /href="\/protocol\/checkout\/dpp"/);
-  assert.match(html, /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
+  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
   assert.ok(!html.includes('href="/authenticate"'));
 });
 

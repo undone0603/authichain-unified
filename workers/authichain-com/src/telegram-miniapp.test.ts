@@ -35,7 +35,7 @@ test("Mini App copy is Passport $49 AuthiChain, not the 2025 Inc deck", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /Publish Passport — \$49/);
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
-  assert.match(html, /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
+  assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
   assert.match(html, /action="https:\/\/authichain.com\/verify"/);
   assert.match(html, /ZACHARY KIETZMAN/);
   assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);

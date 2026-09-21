@@ -71,21 +71,25 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.match(MICROSITE_HTML.mendo, /id="license-outline"/);
   assert.match(MICROSITE_HTML.mendo, /StrainChain does not breed/);
   assert.match(MICROSITE_HTML.mendo, /name="email"/);
-  assert.match(
-    MICROSITE_HTML.mendo,
-    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  assert.ok(
+    MICROSITE_HTML.mendo.includes(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    )
   );
-  assert.match(
-    MICROSITE_HTML.trumark,
-    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  assert.ok(
+    MICROSITE_HTML.trumark.includes(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    )
   );
-  assert.match(
-    MICROSITE_HTML.strainchain,
-    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  assert.ok(
+    MICROSITE_HTML.strainchain.includes(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    )
   );
-  assert.match(
-    MICROSITE_HTML.musa,
-    /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/
+  assert.ok(
+    MICROSITE_HTML.musa.includes(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    )
   );
   assert.match(
     MICROSITE_HTML.mendo,
@@ -118,8 +122,8 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.match(hubHtml, /Passport checkout — \$49/);
   assert.match(hubHtml, /name="email"/);
   assert.match(hubHtml, /action="\/api\/checkout\/plan\/strainchain_passport"/);
-  assert.match(hubHtml, /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
-  assert.match(hubHtml, /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
+  assert.ok(hubHtml.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+  assert.ok(hubHtml.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
   assert.match(hubHtml, /ZACHARY KIETZMAN/);
   assert.doesNotMatch(
     hubHtml,
