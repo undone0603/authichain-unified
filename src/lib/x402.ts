@@ -487,6 +487,24 @@ export function toFacilitatorV1Payload(decoded: unknown): unknown {
   };
 }
 
+/**
+ * Bazaar catalogs attach metadata to `paymentPayload.resource`. Clients often
+ * omit it; copy the 402 requirement URL so PayAI/CDP have a row key.
+ */
+export function attachResourceToPaymentPayload(
+  payload: unknown,
+  resource: string
+): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+  const raw = payload as Record<string, unknown>;
+  if (typeof raw.resource === "string" && raw.resource.length > 0) {
+    return payload;
+  }
+  return { ...raw, resource };
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
   requirement: PaymentRequirement
@@ -500,8 +518,9 @@ export async function settlePayment(
     };
   }
   try {
-    const paymentPayload = toFacilitatorV1Payload(
-      decodeFacilitatorPaymentPayload(paymentHeaderB64)
+    const paymentPayload = attachResourceToPaymentPayload(
+      toFacilitatorV1Payload(decodeFacilitatorPaymentPayload(paymentHeaderB64)),
+      requirement.resource
     );
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",

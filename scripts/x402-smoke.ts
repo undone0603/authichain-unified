@@ -142,6 +142,7 @@ export async function runX402Smoke(): Promise<void> {
     payTo: challengePayTo,
     amountAtomic,
     asset,
+    resource: endpoint,
     extensions: challenge.extensions,
   });
   const parsed = parsePaymentHeader(signed.headerB64);

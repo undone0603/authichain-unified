@@ -217,6 +217,8 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
 
+Listing is not automatic from `GET /api/x402/catalog`. PayAI Bazaar upserts on the first `/settle` whose `paymentRequirements` include `outputSchema.input` with `type` + `method`, and whose `paymentPayload.resource` is the paid URL (`settlePayment` copies it from the 402 requirement when the client omits it). Coinbase CDP `POST /v2/x402/validate` currently fails live `x402_version` (expects v2 `PAYMENT-REQUIRED`); that header ships on this branch. CDP Bazaar still indexes after a settle through the **CDP** Facilitator — do not rebind `X402_FACILITATOR_URL` to chase it. After `authichain-com` deploys the bazaar 402, one settle (including owner smoke) should list on PayAI. Do not dispatch another self-pay until that deploy.
+
 Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
 
 ---

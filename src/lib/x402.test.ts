@@ -9,6 +9,7 @@ import {
   dailyCapUsd,
   settlePayment,
   decodeFacilitatorPaymentPayload,
+  attachResourceToPaymentPayload,
   resolveX402Asset,
   x402HealthReport,
   x402Catalog,
@@ -315,6 +316,66 @@ describe("settlePayment (facilitator)", () => {
       amount: "50000",
     });
     expect(typeof body.paymentPayload).toBe("object");
+    expect(body.paymentPayload.resource).toBe(req.resource);
+  });
+
+  it("forwards paymentRequirements.outputSchema.input so PayAI can catalog v1 skills", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, txHash: "0xdead" }),
+    } as Response);
+    const requirement = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc",
+    }).body.accepts[0];
+    const header = proofHeader({
+      x402Version: 1,
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+      signature: "0xsig",
+    });
+    await settlePayment(header, requirement);
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
+      paymentPayload?: { resource?: string };
+      paymentRequirements?: {
+        resource?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      };
+    };
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://facilitator.example/settle"
+    );
+    expect(body.paymentRequirements?.outputSchema?.input?.type).toBe("http");
+    expect(body.paymentRequirements?.outputSchema?.input?.method).toBe("POST");
+    expect(body.paymentPayload?.resource).toBe(requirement.resource);
+    expect(body.paymentRequirements?.resource).toBe(
+      "https://authichain.com/api/x402"
+    );
+  });
+
+  it("attachResourceToPaymentPayload fills a missing resource and keeps a present one", () => {
+    expect(attachResourceToPaymentPayload("proof", "https://x/y")).toBe(
+      "proof"
+    );
+    expect(
+      attachResourceToPaymentPayload(
+        { scheme: "exact" },
+        "https://authichain.com/api/x402"
+      )
+    ).toEqual({
+      scheme: "exact",
+      resource: "https://authichain.com/api/x402",
+    });
+    expect(
+      attachResourceToPaymentPayload(
+        { resource: "https://client.example/skill" },
+        "https://authichain.com/api/x402"
+      )
+    ).toEqual({ resource: "https://client.example/skill" });
   });
 
   it("decodeFacilitatorPaymentPayload leaves non-JSON as the raw string", () => {
