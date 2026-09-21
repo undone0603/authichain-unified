@@ -773,7 +773,7 @@ describe("handleStripeWebhook — fulfillment collision guard ($299 recurring vs
     expect(vi.mocked(logAutomationAudit)).toHaveBeenCalledWith(
       "billing_unfulfillable_subscription",
       expect.objectContaining({ stripeSessionId: "cs_collision_sub" }),
-      null
+      undefined
     );
   });
 
