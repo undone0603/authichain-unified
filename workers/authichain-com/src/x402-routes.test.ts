@@ -72,6 +72,47 @@ describe("tryHandleX402", () => {
     expect(body.catalog).toBe("/api/x402/catalog");
   });
 
+  it("GET /.well-known/x402 is the x402scan fan-out", async () => {
+    const res = await tryHandleX402(req("/.well-known/x402"));
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      version: number;
+      resources: string[];
+      protocol?: string;
+    };
+    expect(body.version).toBe(1);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.protocol).toBeUndefined();
+  });
+
+  it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
+    const res = await tryHandleX402(req("/openapi.json"), {
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const spec = (await res!.json()) as {
+      openapi: string;
+      paths: {
+        "/api/x402": {
+          post: {
+            "x-payment-info": {
+              protocols: string[];
+              price: { amount: string };
+            };
+          };
+        };
+      };
+    };
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
+      "x402",
+    ]);
+    expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
+      "0.05"
+    );
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+  });
+
   it("POST /api/x402/catalog is 405", async () => {
     const res = await tryHandleX402(
       req("/api/x402/catalog", { method: "POST" }),

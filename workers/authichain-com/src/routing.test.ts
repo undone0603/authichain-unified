@@ -37,6 +37,21 @@ test("an unknown path is a 404, not the homepage at 200", async () => {
   }
 });
 
+test("unknown 404s still offer catalogue Payment Links", async () => {
+  const res = await get("/nope-xyz123");
+  assert.equal(res.status, 404);
+  const html = await res.text();
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  assert.equal(html.includes('href="/api/checkout'), false);
+  assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(html, /name="robots" content="noindex"/);
+});
+
 test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
@@ -307,6 +322,41 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
   }
+});
+
+test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () => {
+  const res = await get("/.well-known/x402");
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    version: number;
+    resources: string[];
+    protocol?: string;
+  };
+  assert.equal(body.version, 1);
+  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
+  assert.equal(body.protocol, undefined);
+});
+
+test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", async () => {
+  const res = await get("/openapi.json");
+  assert.equal(res.status, 200);
+  const spec = (await res.json()) as {
+    openapi: string;
+    paths: {
+      "/api/x402": {
+        post: {
+          "x-payment-info": { protocols: string[]; price: { amount: string } };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
+  assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
 });
 
 test("other /api paths still proxy to the app", async () => {
@@ -601,6 +651,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   );
   assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/openapi.json</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

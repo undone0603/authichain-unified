@@ -27,6 +27,10 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.wellKnownUrl).toBe(
       "https://authichain.com/.well-known/x402.json"
     );
+    expect(X402_PUBLIC.fanoutUrl).toBe(
+      "https://authichain.com/.well-known/x402"
+    );
+    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.com/openapi.json");
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
     expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
     expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");

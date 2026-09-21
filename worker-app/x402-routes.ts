@@ -4,6 +4,8 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
  *      (200, not_configured OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
+ * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
  *
  * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
@@ -21,7 +23,9 @@ import {
   verifyPaymentProof,
   x402Catalog,
   x402HealthReport,
+  x402OpenApiDocument,
   x402PriceUsd,
+  x402ScanFanout,
   type X402HealthEnv,
 } from "../src/lib/x402";
 
@@ -85,6 +89,28 @@ async function catalog(c: {
 }) {
   hydrateX402(c.env);
   return c.json(await x402Catalog(healthEnv(c.env)), 200, NO_STORE);
+}
+
+async function fanout(c: {
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  return c.json(x402ScanFanout(), 200, NO_STORE);
+}
+
+async function openapi(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  return c.json(await x402OpenApiDocument(healthEnv(c.env)), 200, NO_STORE);
 }
 
 async function agentVerify(c: {
@@ -197,8 +223,9 @@ export function registerX402Routes<
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
   app.get("/api/x402/catalog", c => catalog(c));
-  app.get("/.well-known/x402", c => catalog(c));
+  app.get("/.well-known/x402", c => fanout(c));
   app.get("/.well-known/x402.json", c => catalog(c));
+  app.get("/openapi.json", c => openapi(c));
   app.get("/api/v1/agent-verify", c => health(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));

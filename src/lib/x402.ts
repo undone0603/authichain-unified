@@ -836,6 +836,8 @@ export async function x402Catalog(
       free("/api/x402", "Health alias"),
       free("/api/x402/catalog", "Paid-endpoint catalog for agents and MCP"),
       free("/.well-known/x402.json", "Well-known catalog document"),
+      free("/.well-known/x402", "x402scan fan-out (version + resources)"),
+      free("/openapi.json", "OpenAPI 3.1 with x-payment-info for x402scan"),
       free(
         "/api/v1/agent-verify",
         "Health alias on GET; POST is the paid skill"
@@ -863,5 +865,95 @@ export async function x402Catalog(
       paymentRequiredHeader: true,
     },
     timestamp: health.timestamp,
+  };
+}
+
+/**
+ * x402scan compatibility fan-out (`GET /.well-known/x402`). Keep this
+ * document tiny — scanners expect `version` + `resources`, not the catalog.
+ * Rich catalog stays at `/.well-known/x402.json`.
+ */
+export type X402ScanFanout = {
+  version: 1;
+  resources: string[];
+};
+
+export function x402ScanFanout(
+  origin = "https://authichain.com"
+): X402ScanFanout {
+  const base = origin.replace(/\/+$/, "") || "https://authichain.com";
+  return {
+    version: 1,
+    resources: [`${base}/api/x402`],
+  };
+}
+
+type X402OpenApiDocument = {
+  openapi: "3.1.0";
+  info: { title: string; version: string; description: string };
+  servers: Array<{ url: string }>;
+  paths: Record<string, unknown>;
+};
+
+/**
+ * OpenAPI-first discovery for x402scan. Price comes from the same health
+ * report as the catalog — never a second schedule. Do not list GET checkout.
+ */
+export async function x402OpenApiDocument(
+  env: X402HealthEnv = process.env,
+  origin = "https://authichain.com"
+): Promise<X402OpenApiDocument> {
+  const health = await x402HealthReport(env);
+  const amount = String(health.pricePerCall.usd);
+  const paymentInfo = {
+    protocols: ["x402"],
+    price: { mode: "fixed", currency: "USD", amount },
+  };
+  const jsonBody = {
+    type: "object",
+    properties: {
+      sealId: { type: "string" },
+      productId: { type: "string" },
+      serial: { type: "string" },
+    },
+  };
+  const paidPost = {
+    operationId: "agentVerify",
+    summary: "AuthiChain agent verification",
+    "x-payment-info": paymentInfo,
+    requestBody: {
+      required: false,
+      content: { "application/json": { schema: jsonBody } },
+    },
+    responses: {
+      "402": { description: "Payment required (x402)" },
+      "200": { description: "Paid verification result" },
+    },
+  };
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "AuthiChain x402",
+      version: "1.0.0",
+      description:
+        "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing.",
+    },
+    servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
+    paths: {
+      "/api/x402": {
+        get: {
+          summary: "Rail health (free)",
+          responses: { "200": { description: "Health" } },
+        },
+        post: paidPost,
+      },
+      "/api/v1/agent-verify": {
+        get: {
+          summary: "Rail health alias (free)",
+          responses: { "200": { description: "Health" } },
+        },
+        post: { ...paidPost, operationId: "agentVerifyAlias" },
+      },
+    },
   };
 }

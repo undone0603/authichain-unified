@@ -41,6 +41,8 @@ export const X402_PUBLIC = {
   healthUrl: "https://authichain.com/api/x402/health",
   catalogUrl: "https://authichain.com/api/x402/catalog",
   wellKnownUrl: "https://authichain.com/.well-known/x402.json",
+  fanoutUrl: "https://authichain.com/.well-known/x402",
+  openApiUrl: "https://authichain.com/openapi.json",
   payUrl: "https://authichain.com/api/x402",
   verifyUrl: "https://authichain.com/api/v1/agent-verify",
   identityUrl:
@@ -328,7 +330,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <figure>
           <figcaption>curl — catalog</figcaption>
           <pre><code>curl -sS https://authichain.com/api/x402/catalog</code></pre>
-          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>.</p>
+          <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Catalog also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>. x402scan fan-out is <a href="${esc(p.fanoutUrl)}"><code>/.well-known/x402</code></a>. OpenAPI with <code>x-payment-info</code> is <a href="${esc(p.openApiUrl)}"><code>/openapi.json</code></a>.</p>
         </figure>
         <figure>
           <figcaption>curl — settle retry (Agent A → AuthiChain)</figcaption>

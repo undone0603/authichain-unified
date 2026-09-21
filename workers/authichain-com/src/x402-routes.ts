@@ -9,6 +9,8 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
  *      (not_configured is OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
+ * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 503/402 until facilitator + payTo
  *
  * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
@@ -22,7 +24,9 @@ import {
   verifyPaymentProof,
   x402Catalog,
   x402HealthReport,
+  x402OpenApiDocument,
   x402PriceUsd,
+  x402ScanFanout,
   type X402HealthEnv,
 } from "../../../src/lib/x402";
 
@@ -60,7 +64,8 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/x402/catalog" ||
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
-    p === "/.well-known/x402.json"
+    p === "/.well-known/x402.json" ||
+    p === "/openapi.json"
   );
 }
 
@@ -75,11 +80,15 @@ function isHealthPath(pathname: string): boolean {
 
 function isCatalogPath(pathname: string): boolean {
   const p = normalizePath(pathname);
-  return (
-    p === "/api/x402/catalog" ||
-    p === "/.well-known/x402" ||
-    p === "/.well-known/x402.json"
-  );
+  return p === "/api/x402/catalog" || p === "/.well-known/x402.json";
+}
+
+function isFanoutPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/x402";
+}
+
+function isOpenApiPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/openapi.json";
 }
 
 function isPaidPath(pathname: string): boolean {
@@ -126,6 +135,15 @@ async function healthResponse(env?: X402Env): Promise<Response> {
 async function catalogResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
   return json(200, await x402Catalog(healthEnv(env)));
+}
+
+function fanoutResponse(): Response {
+  return json(200, x402ScanFanout());
+}
+
+async function openApiResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  return json(200, await x402OpenApiDocument(healthEnv(env)));
 }
 
 async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
@@ -235,6 +253,14 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isCatalogPath(url.pathname)) {
     return catalogResponse(env);
+  }
+
+  if (request.method === "GET" && isFanoutPath(url.pathname)) {
+    return fanoutResponse();
+  }
+
+  if (request.method === "GET" && isOpenApiPath(url.pathname)) {
+    return openApiResponse(env);
   }
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {

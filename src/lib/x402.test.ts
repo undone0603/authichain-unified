@@ -13,6 +13,8 @@ import {
   resolveX402Asset,
   x402HealthReport,
   x402Catalog,
+  x402OpenApiDocument,
+  x402ScanFanout,
   BASE_USDC_ASSET,
   toFacilitatorV1Payload,
   readPaymentProofHeader,
@@ -552,6 +554,49 @@ describe("x402Catalog", () => {
     );
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
+      "facilitator.payai"
+    );
+  });
+});
+
+describe("x402ScanFanout", () => {
+  it("is the x402scan version+resources document, not the catalog", () => {
+    const doc = x402ScanFanout();
+    expect(doc.version).toBe(1);
+    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(JSON.stringify(doc)).not.toContain("/api/checkout");
+    expect(JSON.stringify(doc)).not.toContain("buy.stripe.com");
+  });
+});
+
+describe("x402OpenApiDocument", () => {
+  it("copies price from health and marks POST /api/x402 as x402", async () => {
+    const spec = await x402OpenApiDocument(
+      { X402_PRICE_USD: "0.10", X402_NETWORK: "base" },
+      "https://authichain.com"
+    );
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.servers[0].url).toBe("https://authichain.com");
+    const post = (
+      spec.paths["/api/x402"] as {
+        post: {
+          "x-payment-info": {
+            protocols: string[];
+            price: { mode: string; currency: string; amount: string };
+          };
+          responses: Record<string, unknown>;
+        };
+      }
+    ).post;
+    expect(post["x-payment-info"].protocols).toEqual(["x402"]);
+    expect(post["x-payment-info"].price).toEqual({
+      mode: "fixed",
+      currency: "USD",
+      amount: "0.1",
+    });
+    expect(post.responses["402"]).toBeTruthy();
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+    expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
   });

@@ -3409,16 +3409,25 @@ function notFound(pathname: string): Response {
 body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
 .code{font-size:clamp(3rem,12vw,6rem);font-weight:900;color:#00FFD1;line-height:1}
 h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
-p{color:#a1a1aa;margin-bottom:1.75rem}
+p{color:#a1a1aa;margin-bottom:1rem}
 code{background:#09090b;border:1px solid #27272a;border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:#d4d4d8;word-break:break-all}
-.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
 a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:#00FFD1;color:#000;text-decoration:none}
 a.btn.ghost{background:transparent;border:1px solid #27272a;color:#fff}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1.25rem auto;text-align:left}
 </style></head><body><main>
 <div class="code">404</div>
 <h1>This page does not exist</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a page on authichain.com.</p>
-<div class="links"><a class="btn" href="/">Home</a><a class="btn ghost" href="/anchor">Verify a product</a><a class="btn ghost" href="/contact">Contact</a></div>
+${emailCheckoutWithPaymentLinkHtml({
+  action: "/api/checkout/plan/strainchain_passport",
+  label: "Publish a passport — $49",
+  formId: "404-passport",
+  inputId: "404-passport-email",
+})}
+${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness — $299" })}
+<div class="links"><a class="btn" href="/">Home</a><a class="btn ghost" href="/pricing">Pricing</a><a class="btn ghost" href="/x402">x402</a></div>
 </main></body></html>`;
   return new Response(html, {
     status: 404,
@@ -3477,6 +3486,7 @@ export default {
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
