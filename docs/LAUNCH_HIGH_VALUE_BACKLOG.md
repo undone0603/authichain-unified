@@ -46,7 +46,7 @@ Secret **names** only. No values.
 | Funnel mount + `isDppOffer` priceId | #1067. Live `POST /api/funnel` → 400 (mounted, not 404).                                                                                                                                                                                                                                                                          |
 | Orchestration schedule fail-closed  | #1065 + this PR. Schedule sets `dry_run=true`; never `inputs.dry_run \|\| 'false'`.                                                                                                                                                                                                                                               |
 | `app.authichain.com/` 302           | #1068. Edge-router + landing redirect `/` → `/dashboard`.                                                                                                                                                                                                                                                                         |
-| x402 health mount                   | #1068. `GET /api/x402/health` on landing + edge. Bind workflow #1072/#1074 (payTo / tokenomics EOA + PayAI) — do not invent pay-to. See `docs/strategy/WEB3_IDENTITY.md`.                                                                                                                                                          |
+| x402 health mount                   | #1068. `GET /api/x402/health` on landing + edge. Bind workflow #1072/#1074 (payTo / tokenomics EOA + PayAI) — do not invent pay-to. See `docs/strategy/WEB3_IDENTITY.md`.                                                                                                                                                         |
 | x402 live rail                      | Health **ready** / trustless; unpaid `POST /api/x402` **402**. PayTo + Circle USDC + PayAI already bound — **do not rebind**. Self-pay smokes succeeded (proof only).                                                                                                                                                             |
 | x402 public docs                    | `GET https://authichain.com/x402` (and `/docs/x402`) → 200 HTML: price, payTo, health URL, unpaid 402 curls. No facilitator URL, no keys.                                                                                                                                                                                         |
 | Claw ↔ AgentZ `mode` contract       | This PR. Query + JSON body; architect/cold-email fail-closed without `live`.                                                                                                                                                                                                                                                      |
@@ -240,8 +240,8 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 **claw / AgentZ:**  
 `AGENTZ_API_URL` (secret-only), `AGENTZ_API_KEY`, `AGENT_SECRET`, optional owner `OPENCLAW_GATEWAY_URL` + `OPENCLAW_API_KEY`. Access service token names if policy requires (owner). Do not invent the gateway URL.
 
-**x402 (already bound — do not rebind):**  
-`X402_PAY_TO`, `X402_FACILITATOR_URL`, `X402_USDC_ASSET` on `authichain-com` and `authichain-edge-router`. Names only.
+**x402 (already bound on landing — do not rebind the URL):**  
+`X402_PAY_TO`, `X402_FACILITATOR_URL`, `X402_USDC_ASSET` on `authichain-com` and `authichain-edge-router`. Same names on sister apexes `qron-space`, `strainchain-io`, `govchain-us` so a third-party pay can settle. Names only.
 
 **Do not set:** guessed `GOVCHAIN_NFT_CONTRACT` if `eth_getCode` is empty.
 

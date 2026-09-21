@@ -91,13 +91,93 @@ test("GET /api/x402 and /api/x402/health are 200 health", async () => {
       assert.equal(res.status, 200, `${host} ${path}`);
       const body = (await res.json()) as {
         payTo: string;
+        status: string;
+        ready: boolean;
+        mode: string;
+        facilitator: { configured: boolean; reachable: boolean };
         pricePerCall: { usd: number; atomic: string };
         aliases?: string[];
       };
       assert.equal(body.payTo, X402_PUBLISHED_PAY_TO, `${host} ${path}`);
       assert.equal(body.pricePerCall.usd, 0.05, `${host} ${path}`);
       assert.equal(body.pricePerCall.atomic, "50000", `${host} ${path}`);
+      assert.equal(body.status, "not_configured", `${host} ${path}`);
+      assert.equal(body.ready, false, `${host} ${path}`);
+      assert.equal(body.mode, "not_configured", `${host} ${path}`);
+      assert.equal(body.facilitator.configured, false, `${host} ${path}`);
     }
+  }
+});
+
+function proofHeader(p: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(p)).toString("base64");
+}
+
+const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
+
+test("POST with a structural proof and no facilitator is 402 not_configured", async () => {
+  const header = proofHeader({
+    scheme: "exact",
+    network: "base",
+    payer: PAYER,
+    amount: "50000",
+  });
+  const res = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", {
+      method: "POST",
+      headers: { "x-payment": header, "content-type": "application/json" },
+      body: JSON.stringify({ sealId: "seal-1" }),
+    })
+  );
+  assert.ok(res);
+  assert.equal(res.status, 402);
+  const body = (await res.json()) as { status: string; error?: string };
+  assert.equal(body.status, "not_configured");
+  assert.equal(body.error, "dev_mode_no_facilitator");
+});
+
+test("POST with a facilitator mock settles trustless (no live /settle)", async () => {
+  const orig = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.endsWith("/settle")) {
+      return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  }) as typeof fetch;
+  try {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+      signature: "0xdead",
+    });
+    const res = await tryHandleSisterX402(
+      req("strainchain.io", "/api/x402", {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      }),
+      { X402_FACILITATOR_URL: "https://facilitator.example" }
+    );
+    assert.ok(res);
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as {
+      settlement?: { trustless?: boolean; txHash?: string };
+    };
+    assert.equal(body.settlement?.trustless, true);
+    assert.equal(body.settlement?.txHash, "0xabc");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0], "https://facilitator.example/settle");
+  } finally {
+    globalThis.fetch = orig;
+    delete process.env.X402_FACILITATOR_URL;
   }
 });
 
