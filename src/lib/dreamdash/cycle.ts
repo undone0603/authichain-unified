@@ -151,7 +151,7 @@ export function applyCycle(
   if (stale.length) {
     const ids = new Set(stale.map((s) => s.id));
     leads = leads.map((l) =>
-      ids.has(l.id) ? stamp(l, "followup", "Stale 3-day follow-up queued") : l,
+      ids.has(l.id) ? stamp(l, "followup", "Stale 3-day follow-up queued", { draftPending: true }) : l,
     );
   }
   push(

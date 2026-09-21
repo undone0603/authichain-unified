@@ -8,13 +8,14 @@ export interface LeadCaptureRow {
   product_interest?: string | null;
   status?: string | null;
   score?: number | null;
-  metadata?: string | null;
+  metadata?: string | LeadMeta | Record<string, unknown> | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
 
-function parseMeta(raw: string | null | undefined): LeadMeta {
+export function parseMeta(raw: LeadCaptureRow["metadata"]): LeadMeta {
   if (!raw) return {};
+  if (typeof raw === "object") return raw as LeadMeta;
   try {
     const parsed = JSON.parse(raw) as LeadMeta;
     return parsed && typeof parsed === "object" ? parsed : {};
