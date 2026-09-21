@@ -10,6 +10,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import worker from "./index.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
@@ -257,8 +258,8 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.match(res.headers.get("content-type") ?? "", /text\/plain/, path);
     const text = await res.text();
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
-    assert.match(text, /https:\/\/buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
-    assert.match(text, /https:\/\/buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
+    assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+    assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
   }
 });
@@ -500,6 +501,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(
     xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
   );
+  assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

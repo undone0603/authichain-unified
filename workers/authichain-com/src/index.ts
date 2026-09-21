@@ -3392,6 +3392,7 @@ export default {
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));

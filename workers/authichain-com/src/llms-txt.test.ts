@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { isLlmsTxtPath, renderLlmsTxt, tryHandleLlmsTxt } from "./llms-txt";
 
 describe("llms.txt", () => {
@@ -16,8 +17,8 @@ describe("llms.txt", () => {
     expect(text).toContain("POST https://authichain.com/api/x402");
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
-    expect(text).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
-    expect(text).toContain("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
+    expect(text).toContain(planPaymentLink("dpp_readiness"));
+    expect(text).toContain(planPaymentLink("strainchain_passport"));
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
   });
