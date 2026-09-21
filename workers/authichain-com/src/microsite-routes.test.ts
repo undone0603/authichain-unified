@@ -92,6 +92,25 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
       'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
     )
   );
+  const bat = MICROSITE_HTML["bat-2026-001"];
+  assert.match(bat, /BAT-2026-001/);
+  assert.match(bat, /Insulin Vial 100IU/);
+  assert.match(bat, /MVCL-MQWQ2MR7-I7L0/);
+  assert.match(
+    bat,
+    /2b6b1c38ade800f639b98307509e6004adab6dbeea0f66474083276b6269dbb2/
+  );
+  assert.match(bat, /Annex II Certification Requi/);
+  assert.doesNotMatch(bat, /Annex II Certification Required/);
+  assert.doesNotMatch(bat, /WHO GMP Certification \(Global/);
+  assert.match(bat, /name="email"/);
+  assert.match(bat, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
+  assert.ok(
+    bat.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  assert.ok(
+    bat.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
   assert.match(
     MICROSITE_HTML.mendo,
     /ZACHARY KIETZMAN \(AuthiChain \/ StrainChain are brands\)/
@@ -106,6 +125,8 @@ test("path and host aliases resolve to the right pack", () => {
   assert.equal(resolveMicrositePack("/m/musa"), "musa");
   assert.equal(resolveMicrositePack("/m/made-in-america"), "musa");
   assert.equal(resolveMicrositePack("/m/strainchain"), "strainchain");
+  assert.equal(resolveMicrositePack("/m/bat-2026-001"), "bat-2026-001");
+  assert.equal(resolveMicrositePack("/m/insulin-vial"), "bat-2026-001");
   assert.equal(resolveMicrositePack("/pricing"), null);
   assert.equal(resolveMicrositePack("/", "mendo.authichain.com"), "mendo");
   assert.equal(
@@ -148,6 +169,27 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.ok(host);
   assert.match(await host.text(), /RealTHCV/);
 
+  const batPage = tryHandleMicrosite(req("/m/bat-2026-001"));
+  assert.ok(batPage);
+  assert.equal(batPage.status, 200);
+  const batHtml = await batPage.text();
+  assert.match(batHtml, /MVCL-MQWQ2MR7-I7L0/);
+  assert.match(
+    batHtml,
+    /action="https:\/\/authichain.com\/api\/checkout\/dpp"/
+  );
+  assert.doesNotMatch(
+    batHtml,
+    /<a class="btn"[^>]*href="\/api\/checkout/,
+    "BAT gift page must capture email before checkout"
+  );
+
+  const batAlias = tryHandleMicrosite(req("/m/insulin-vial"));
+  assert.ok(batAlias);
+  assert.match(await batAlias.text(), /Insulin Vial 100IU/);
+
+  assert.match(hubHtml, /BAT-2026-001 \/ Insulin Vial 100IU/);
+
   assert.equal(tryHandleMicrosite(req("/pricing")), null);
 });
 
@@ -158,6 +200,8 @@ test("apex worker serves /m pages and does not steal /p", async () => {
     "/m/trumark",
     "/m/musa",
     "/m/strainchain",
+    "/m/bat-2026-001",
+    "/m/insulin-vial",
   ]) {
     const res = await worker.fetch(req(path), ENV);
     assert.equal(res.status, 200, path);
@@ -175,8 +219,9 @@ test("sitemap lists canonical microsite URLs", () => {
   const urls = micrositeSitemapUrls().map(raw => new URL(raw));
   assert.ok(hasSitemapPath(urls, "/m"));
   assert.ok(hasSitemapPath(urls, "/m/mendo"));
+  assert.ok(hasSitemapPath(urls, "/m/bat-2026-001"));
   assert.ok(hasSitemapPath(urls, "/telegram"));
-  assert.equal(Object.keys(MICROSITES).length, 4);
+  assert.equal(Object.keys(MICROSITES).length, 5);
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
   assert.equal(DPP_CHECKOUT.endsWith("/api/checkout/dpp"), true);
 });
