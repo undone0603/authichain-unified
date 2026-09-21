@@ -53,6 +53,7 @@ import {
   tryHandleEstateIndexNow,
 } from '../../_shared/estate-landing.ts';
 import { tryHandleEstatePricing } from '../../_shared/estate-pricing.ts';
+import { tryRedirectSeoRootCanonical } from '../../_shared/seo-hub-routes.ts';
 
 /**
  * Escapes text interpolated into the worker's HTML. The timeline data is
@@ -3392,6 +3393,8 @@ export default {
       }
       return new Response('App worker not bound (local dev)', { status: 502 });
     }
+    const seoRedirect = tryRedirectSeoRootCanonical(request);
+    if (seoRedirect) return seoRedirect;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }

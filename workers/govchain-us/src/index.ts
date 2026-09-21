@@ -21,6 +21,10 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
+import {
+  isSeoPassportPath,
+  tryRedirectSeoRootCanonical,
+} from "../../_shared/seo-hub-routes.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect x="2" y="2" width="60" height="60" rx="8" fill="#05060b" stroke="#3b82f6" stroke-width="1.5"/>
@@ -2220,13 +2224,13 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
     }
-    if (/^\/onboard(?:\/|$)/.test(url.pathname)) {
+    if (/^\/onboard(?:\/|$)/.test(url.pathname) || isSeoPassportPath(url.pathname)) {
       if (!env?.APP_ORIGIN) {
         return Response.json(
           {
             error: "app_origin_not_configured",
             detail:
-              "govchain.us cannot reach the onboard form. Set APP_ORIGIN in workers/govchain-us/wrangler.toml.",
+              "govchain.us cannot reach the app. Set APP_ORIGIN in workers/govchain-us/wrangler.toml.",
             path: url.pathname,
           },
           { status: 503, headers: { "cache-control": "no-store" } },
@@ -2293,6 +2297,8 @@ export default {
       if (noticeId) return opportunityDetailPage(env, noticeId);
     }
 
+    const seoRedirect = tryRedirectSeoRootCanonical(request);
+    if (seoRedirect) return seoRedirect;
     // Only the apex renders the marketing page. Everything unmatched is a 404.
     if (p !== '/') return notFound(p);
 
