@@ -211,7 +211,7 @@ export function FoundersCommand() {
           </>
         ) : null}
         {view === "board" ? <BoardView dash={dash} visible={visible} query={query} setQuery={setQuery} stageFilter={stageFilter} setStageFilter={setStageFilter} selectedId={selectedId} onSelect={setSelectedId} onAdvance={(id) => void mutate(id, "advance")} /> : null}
-        {view === "ops" ? <OpsView dash={dash} events={events} leads={leads} onDigest={() => setDigestOpen(true)} onImport={() => void importSam()} /> : null}
+        {view === "ops" ? <OpsView dash={dash} events={events} leads={leads} onDigest={() => { setDigestOpen(true); void fetch("/api/founders/digest", { method: "POST" }).then(() => load()); }} onImport={() => void importSam()} /> : null}
         <p className="pb-8 text-xs text-[#b8b4aa]/70">Empty pipeline is valid. Capture is the path. <Link href="/admin/leads" className="text-[#d4b45a]">/admin/leads</Link> · c capture · r cycle · 1–3 views · / search</p>
       </main>
       {selected ? <Sheet lead={selected} onClose={() => setSelectedId(null)} onAction={(action, extra) => void mutate(selected.id, action, extra)} /> : null}

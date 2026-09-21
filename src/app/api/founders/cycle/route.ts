@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyCycle } from "@/lib/dreamdash/cycle";
 import { leadToRowPatch, rowToLead, type LeadCaptureRow } from "@/lib/dreamdash/map-row";
+import { newlyDrafted, notifyDrafts } from "@/lib/dreamdash/notify-draft";
 import { logAutomation } from "@/lib/automation";
 import { createClient } from "@/utils/supabase/server";
 
@@ -37,9 +38,19 @@ export async function POST() {
       if (upErr) throw upErr;
     }
 
+    for (const event of events) {
+      await logAutomation(event.workflow, "manual", "success", {
+        status: event.status,
+        detail: event.detail,
+        at: event.timestamp,
+      });
+    }
     await logAutomation("dreamdash-cycle", "manual", "success", report);
 
-    return NextResponse.json({ leads, events, report });
+    const queued = newlyDrafted(current, leads);
+    const notified = await notifyDrafts(queued, "cycle");
+
+    return NextResponse.json({ leads, events, report, notified });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "An unknown error occurred";
     await logAutomation("dreamdash-cycle", "manual", "failure", null, message);
