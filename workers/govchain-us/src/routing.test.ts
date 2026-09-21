@@ -51,6 +51,16 @@ async function get(path: string, env: Partial<typeof ENV> = ENV) {
   );
 }
 
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "govchain.us");
+    return url;
+  });
+}
+
 const ROW = {
   notice_id: "ABC123",
   title: "Cyber support services",
@@ -86,13 +96,16 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await res.text();
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/llms.txt</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/openapi.json</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/opportunities"));
+  assert.ok(paths.includes("/onboard"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
   assert.ok(!xml.includes("/rfp"));
   assert.ok(!xml.includes("/compliance"));
+  assert.equal(xml.includes("/api/checkout"), false);
 });
 
 test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
@@ -182,7 +195,13 @@ test("/pricing is a live money page, not a 404", async () => {
 });
 
 test("landing-owned sitemap URLs resolve on this worker", async () => {
-  for (const path of ["/", "/pricing"]) {
+  for (const path of [
+    "/",
+    "/pricing",
+    "/llms.txt",
+    "/openapi.json",
+    "/api/x402",
+  ]) {
     const res = await get(path);
     assert.ok(
       res.status >= 200 && res.status < 400,
@@ -203,10 +222,12 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/govchain.us\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/govchain.us\/sitemap.xml/);
+  assert.ok(robotsText.includes("https://govchain.us/llms.txt"));
+  assert.ok(robotsText.includes("https://govchain.us/openapi.json"));
+  assert.ok(robotsText.includes("https://govchain.us/api/x402"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
