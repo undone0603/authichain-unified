@@ -2184,12 +2184,13 @@ export default {
   <url><loc>https://qron.space/generate</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://qron.space/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://qron.space/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://qron.space/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://qron.space/sitemap.xml\n# https://qron.space/llms.txt\n# https://qron.space/openapi.json\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://qron.space/sitemap.xml\n# https://qron.space/llms.txt\n# https://qron.space/openapi.json\n# https://qron.space/api/x402\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }

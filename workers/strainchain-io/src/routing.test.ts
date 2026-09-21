@@ -45,6 +45,26 @@ async function get(
   return worker.fetch(new Request(`https://strainchain.io${path}`), env);
 }
 
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "strainchain.io");
+    return url;
+  });
+}
+
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "strainchain.io");
+    return url.pathname;
+  });
+}
+
 test("verification paths are proxied to the app, not answered with marketing", async () => {
   const f = stubFetch();
   try {
@@ -139,6 +159,7 @@ test("marketing paths stay on this worker", async () => {
       "/authichain2026indexnow.txt",
       "/llms.txt",
       "/openapi.json",
+      "/api/x402",
     ]) {
       f.calls.length = 0;
       const res = await get(path);
@@ -207,10 +228,13 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/strainchain.io\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/strainchain.io\/sitemap.xml/);
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -219,11 +243,14 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
 test("the sitemap advertises the genetics library", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
-  assert.ok(xml.includes("/genetics/mendo-love-farms"));
-  assert.ok(xml.includes("/onboard"));
-  assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://strainchain.io/llms.txt</loc>"));
-  assert.ok(xml.includes("<loc>https://strainchain.io/openapi.json</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/genetics/mendo-love-farms"));
+  assert.ok(paths.includes("/onboard"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
+  assert.equal(xml.includes("/api/checkout"), false);
 });
 
 test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {

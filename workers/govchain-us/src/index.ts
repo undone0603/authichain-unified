@@ -2253,12 +2253,13 @@ export default {
   <url><loc>https://govchain.us/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://govchain.us/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://govchain.us/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n# https://govchain.us/api/x402\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }

@@ -30,6 +30,26 @@ async function get(path: string, env?: { APP_ORIGIN?: string }) {
   return worker.fetch(new Request(`https://qron.space${path}`), env);
 }
 
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "qron.space");
+    return url;
+  });
+}
+
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "qron.space");
+    return url.pathname;
+  });
+}
+
 test("an unknown path is a 404, not the homepage at 200", async () => {
   for (const path of ["/nope-xyz123", "/staking", "/deep/unknown/path"]) {
     const res = await get(path);
@@ -73,11 +93,21 @@ test("/health still answers", async () => {
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/generate</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/llms.txt</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/openapi.json</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/generate"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
+  assert.equal(xml.includes("/api/checkout"), false);
+  for (const path of ["/llms.txt", "/openapi.json", "/api/x402"]) {
+    const res = await get(path);
+    assert.ok(
+      res.status >= 200 && res.status < 400,
+      `${path} answered ${res.status}`
+    );
+  }
 });
 
 test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
@@ -178,10 +208,13 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/qron.space\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/qron.space\/sitemap.xml/);
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
