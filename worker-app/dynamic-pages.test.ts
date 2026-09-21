@@ -373,6 +373,18 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    expect(body).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"'
+    );
   });
 
   it("returns 400 when required fields are missing", async () => {
