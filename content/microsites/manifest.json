@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-20",
+  "updated": "2026-09-21",
   "binding": "MICROSITES_KV",
   "namespaceId": "a992900da1db4b998af1cdf4eccf550a",
   "kvWorker": "authichain",
@@ -54,6 +54,15 @@
       "hosts": ["strainchain.authichain.com"],
       "kvKeys": ["strainchain/index.html"],
       "primaryCta": "passport"
+    },
+    {
+      "slug": "bat-2026-001",
+      "file": "bat-2026-001/index.html",
+      "canonicalPath": "/m/bat-2026-001",
+      "aliases": ["/m/insulin-vial"],
+      "hosts": ["bat-2026-001.authichain.com"],
+      "kvKeys": ["bat-2026-001/index.html", "insulin-vial/index.html"],
+      "primaryCta": "dpp"
     }
   ]
 }

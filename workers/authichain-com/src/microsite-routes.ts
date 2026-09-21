@@ -16,7 +16,8 @@ export const PASSPORT_CHECKOUT =
   "https://authichain.com/api/checkout/plan/strainchain_passport";
 export const DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
 
-export type MicrositePackId = "mendo" | "trumark" | "musa" | "strainchain";
+export type MicrositePackId =
+  "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
 
 export interface MicrositeDef {
   pack: MicrositePackId;
@@ -49,6 +50,12 @@ export const MICROSITES: Record<string, MicrositeDef> = {
     canonicalPath: "/m/strainchain",
     aliases: [],
     hosts: ["strainchain.authichain.com"],
+  },
+  "bat-2026-001": {
+    pack: "bat-2026-001",
+    canonicalPath: "/m/bat-2026-001",
+    aliases: ["/m/insulin-vial"],
+    hosts: ["bat-2026-001.authichain.com"],
   },
 };
 
@@ -92,23 +99,32 @@ const HTML_HEADERS: Record<string, string> = {
     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
 };
 
+function hubCardCopy(pack: MicrositePackId): {
+  title: string;
+  dpp: boolean;
+} {
+  switch (pack) {
+    case "mendo":
+      return { title: "Mendo / RealTHCV / LT-63", dpp: false };
+    case "trumark":
+      return { title: "TruMark seal", dpp: false };
+    case "musa":
+      return { title: "Made in America", dpp: true };
+    case "strainchain":
+      return { title: "StrainChain genetics hub", dpp: false };
+    case "bat-2026-001":
+      return { title: "BAT-2026-001 / Insulin Vial 100IU", dpp: true };
+  }
+}
+
 function renderHub(): string {
   const cards = Object.values(MICROSITES)
     .map(def => {
-      const title =
-        def.pack === "mendo"
-          ? "Mendo / RealTHCV / LT-63"
-          : def.pack === "trumark"
-            ? "TruMark seal"
-            : def.pack === "musa"
-              ? "Made in America"
-              : "StrainChain genetics hub";
-      const cta =
-        def.pack === "musa" ? "DPP checkout — $299" : "Passport checkout — $49";
-      const action =
-        def.pack === "musa"
-          ? "/api/checkout/dpp"
-          : "/api/checkout/plan/strainchain_passport";
+      const { title, dpp } = hubCardCopy(def.pack);
+      const cta = dpp ? "DPP checkout — $299" : "Passport checkout — $49";
+      const action = dpp
+        ? "/api/checkout/dpp"
+        : "/api/checkout/plan/strainchain_passport";
       return `<article class="card"><h2><a href="${def.canonicalPath}">${title}</a></h2>${checkoutEmailFormHtml(
         {
           action,
@@ -118,8 +134,8 @@ function renderHub(): string {
           extraClass: "hub-checkout",
         }
       )}${catalogPaymentLinkHtml({
-        planId: def.pack === "musa" ? "dpp_readiness" : "strainchain_passport",
-        label: def.pack === "musa" ? "Pay $299 on Stripe" : "Pay $49 on Stripe",
+        planId: dpp ? "dpp_readiness" : "strainchain_passport",
+        label: dpp ? "Pay $299 on Stripe" : "Pay $49 on Stripe",
       })}</article>`;
     })
     .join("");
