@@ -13,6 +13,8 @@ import {
   x402HealthReport,
   x402Catalog,
   BASE_USDC_ASSET,
+  toFacilitatorV1Payload,
+  readPaymentProofHeader,
   type PaymentRequirement,
 } from "./x402";
 
@@ -84,6 +86,32 @@ describe("buildPaymentRequired", () => {
     expect(blob).not.toContain("facilitator.payai");
     expect(blob).not.toContain("x402_facilitator_url");
   });
+
+  it("puts a v2 PAYMENT-REQUIRED header beside the v1 JSON body", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(r.headers["PAYMENT-REQUIRED"]).toBeTruthy();
+    expect(r.v2.x402Version).toBe(2);
+    expect(r.v2.resource.url).toBe("https://authichain.com/api/x402");
+    expect(r.v2.resource.serviceName).toBe("AuthiChain");
+    expect(r.v2.accepts[0].network).toBe("eip155:8453");
+    expect(r.v2.accepts[0].amount).toBe("50000");
+    expect(r.v2.accepts[0]).not.toHaveProperty("resource");
+    expect(r.v2.accepts[0]).not.toHaveProperty("description");
+    expect(r.v2.accepts[0]).not.toHaveProperty("mimeType");
+    expect(r.v2.accepts[0]).not.toHaveProperty("maxAmountRequired");
+    expect(r.v2.extensions.bazaar.info.input.method).toBe("POST");
+    const decoded = JSON.parse(
+      Buffer.from(r.headers["PAYMENT-REQUIRED"], "base64").toString("utf8")
+    ) as typeof r.v2;
+    expect(decoded).toEqual(r.v2);
+    expect(JSON.stringify(r.v2).toLowerCase()).not.toContain(
+      "facilitator.payai"
+    );
+  });
 });
 
 describe("resolveX402Asset", () => {
@@ -131,6 +159,29 @@ describe("parsePaymentHeader", () => {
       signature: "0xabc",
     });
   });
+  it("flattens an x402 v2 PAYMENT-SIGNATURE envelope", () => {
+    const p = parsePaymentHeader(
+      proofHeader({
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:8453",
+          amount: "50000",
+        },
+        payload: {
+          signature: "0xabc",
+          authorization: { from: PAYER, to: "0xdef", value: "50000" },
+        },
+      })
+    );
+    expect(p).toMatchObject({
+      scheme: "exact",
+      network: "eip155:8453",
+      payer: PAYER,
+      amount: "50000",
+      signature: "0xabc",
+    });
+  });
 });
 
 describe("verifyPaymentProof", () => {
@@ -141,6 +192,23 @@ describe("verifyPaymentProof", () => {
     );
     expect(v.valid).toBe(true);
     expect(v.amount).toBe(50000n);
+  });
+  it("treats Base CAIP-2 as the same network as v1 base", () => {
+    const baseReq = {
+      ...req,
+      network: "base",
+      asset: BASE_USDC_ASSET,
+    };
+    const v = verifyPaymentProof(
+      {
+        scheme: "exact",
+        network: "eip155:8453",
+        payer: PAYER,
+        amount: "50000",
+      },
+      baseReq
+    );
+    expect(v.valid).toBe(true);
   });
   it("rejects underpayment, wrong network, bad payer", () => {
     expect(
@@ -253,6 +321,37 @@ describe("settlePayment (facilitator)", () => {
     expect(decodeFacilitatorPaymentPayload("proof")).toBe("proof");
   });
 
+  it("maps a v2 PAYMENT-SIGNATURE envelope onto the v1 facilitator payload", () => {
+    const mapped = toFacilitatorV1Payload({
+      x402Version: 2,
+      accepted: {
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "50000",
+      },
+      payload: {
+        signature: "0xsig",
+        authorization: { from: PAYER, to: "0xabc", value: "50000" },
+      },
+    }) as {
+      x402Version: number;
+      network: string;
+      payload: { signature: string };
+    };
+    expect(mapped.x402Version).toBe(1);
+    expect(mapped.network).toBe("base");
+    expect(mapped.payload.signature).toBe("0xsig");
+  });
+
+  it("readPaymentProofHeader prefers X-PAYMENT then PAYMENT-SIGNATURE", () => {
+    const headers = new Headers({
+      "PAYMENT-SIGNATURE": "sig-only",
+    });
+    expect(readPaymentProofHeader(n => headers.get(n))).toBe("sig-only");
+    headers.set("X-PAYMENT", "v1-proof");
+    expect(readPaymentProofHeader(n => headers.get(n))).toBe("v1-proof");
+  });
+
   it("refuses when the facilitator rejects the payment", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -318,6 +417,7 @@ describe("x402Catalog", () => {
       catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
     ).toBe(0.1);
     expect(catalog.discovery.bazaarDeclared).toBe(true);
+    expect(catalog.discovery.paymentRequiredHeader).toBe(true);
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "facilitator.payai"
     );

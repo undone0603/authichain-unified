@@ -47,6 +47,7 @@ describe("x402 public docs page", () => {
     );
     expect(html).toContain("HTTP 402");
     expect(html).toContain("extensions.bazaar");
+    expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
     expect(html).toContain('rel="alternate"');

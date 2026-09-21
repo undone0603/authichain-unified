@@ -128,6 +128,20 @@ describe("tryHandleX402", () => {
     expect(JSON.stringify(body).toLowerCase()).not.toContain(
       "facilitator.payai"
     );
+    const required = res!.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as {
+      x402Version: number;
+      accepts: Array<{ amount?: string; network?: string; resource?: string }>;
+      extensions?: { bazaar?: unknown };
+    };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
+    expect(v2.accepts[0].network).toBe("eip155:8453");
+    expect(v2.accepts[0].resource).toBeUndefined();
+    expect(v2.extensions?.bazaar).toBeTruthy();
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {
@@ -142,6 +156,34 @@ describe("tryHandleX402", () => {
         method: "POST",
         headers: { "x-payment": header, "content-type": "application/json" },
         body: JSON.stringify({ sealId: "seal-1" }),
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as { status: string };
+    expect(body.status).toBe("not_configured");
+  });
+
+  it("reads a v2 PAYMENT-SIGNATURE header the same as X-PAYMENT", async () => {
+    const header = proofHeader({
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:8453", amount: "50000" },
+      payload: {
+        signature: "0xabc",
+        authorization: { from: PAYER, to: "0xdef", value: "50000" },
+      },
+    });
+    const res = await tryHandleX402(
+      req("/api/x402", {
+        method: "POST",
+        headers: {
+          "PAYMENT-SIGNATURE": header,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ sealId: "demo" }),
       }),
       {
         X402_PAY_TO: "0xabc0000000000000000000000000000000000001",

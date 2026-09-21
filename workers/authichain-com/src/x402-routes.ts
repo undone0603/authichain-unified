@@ -16,6 +16,8 @@
 import {
   buildPaymentRequired,
   parsePaymentHeader,
+  paymentResponseHeaders,
+  readPaymentProofHeader,
   settlePayment,
   verifyPaymentProof,
   x402Catalog,
@@ -32,8 +34,15 @@ const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+function json(
+  status: number,
+  body: unknown,
+  extraHeaders?: Record<string, string>
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...JSON_HEADERS, ...extraHeaders },
+  });
 }
 
 function normalizePath(pathname: string): string {
@@ -138,26 +147,36 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(request.headers.get("x-payment"));
+  const proof = parsePaymentHeader(
+    readPaymentProofHeader(name => request.headers.get(name))
+  );
   if (!proof) {
-    return json(402, required.body);
+    return json(402, required.body, required.headers);
   }
 
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
-    return json(402, { ...required.body, error: verification.reason });
+    return json(
+      402,
+      { ...required.body, error: verification.reason },
+      required.headers
+    );
   }
 
   const settlement = await settlePayment(
-    request.headers.get("x-payment") ?? "",
+    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
     required.body.accepts[0]
   );
   if (!settlement.settled || !settlement.trustless) {
-    return json(402, {
-      ...required.body,
-      error: settlement.reason ?? "not_configured",
-      status: settlement.trustless ? "unpaid" : "not_configured",
-    });
+    return json(
+      402,
+      {
+        ...required.body,
+        error: settlement.reason ?? "not_configured",
+        status: settlement.trustless ? "unpaid" : "not_configured",
+      },
+      required.headers
+    );
   }
 
   let input: Record<string, unknown> = {};
@@ -171,21 +190,30 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     input.productId ??
     input.serial) as string | undefined;
 
-  return json(200, {
-    verified: false,
-    authenticityScore: 0,
-    subject: subject ?? null,
-    details: {
-      note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
+  return json(
+    200,
+    {
+      verified: false,
+      authenticityScore: 0,
+      subject: subject ?? null,
+      details: {
+        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
+      },
+      settlement: {
+        payer: proof.payer,
+        amountAtomic: verification.amount.toString(),
+        txHash: settlement.txHash ?? proof.txHash ?? null,
+        trustless: settlement.trustless,
+      },
+      timestamp: new Date().toISOString(),
     },
-    settlement: {
+    paymentResponseHeaders({
+      success: true,
+      transaction: settlement.txHash ?? proof.txHash,
+      network: required.body.accepts[0].network,
       payer: proof.payer,
-      amountAtomic: verification.amount.toString(),
-      txHash: settlement.txHash ?? proof.txHash ?? null,
-      trustless: settlement.trustless,
-    },
-    timestamp: new Date().toISOString(),
-  });
+    })
+  );
 }
 
 export async function tryHandleX402(

@@ -195,6 +195,116 @@ export function usdToAtomic(usd: number): string {
   return Math.round(usd * 10 ** USDC_DECIMALS).toString();
 }
 
+/** Map a v1 network nickname onto CAIP-2 for the v2 PAYMENT-REQUIRED header. */
+export function x402Caip2Network(network: string): string {
+  const n = network.trim();
+  const lower = n.toLowerCase();
+  if (lower === "base" || lower === "eip155:8453") return "eip155:8453";
+  if (lower === "polygon" || lower === "eip155:137") return "eip155:137";
+  return n;
+}
+
+/** v1 `base` and v2 `eip155:8453` are the same rail. */
+export function x402NetworksEquivalent(a: string, b: string): boolean {
+  if (a === b) return true;
+  return x402Caip2Network(a) === x402Caip2Network(b);
+}
+
+export type PaymentRequiredV2 = {
+  x402Version: 2;
+  error?: string;
+  resource: {
+    url: string;
+    description: string;
+    mimeType: "application/json";
+    serviceName: "AuthiChain";
+    tags: string[];
+  };
+  accepts: Array<{
+    scheme: "exact";
+    network: string;
+    amount: string;
+    asset: string;
+    payTo: string;
+    maxTimeoutSeconds: number;
+    extra?: { name?: string; version?: string };
+  }>;
+  extensions: X402BazaarExtension;
+};
+
+export function encodeX402HeaderJson(value: unknown): string {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
+}
+
+export function paymentRequiredHeaders(
+  v2: PaymentRequiredV2
+): Record<string, string> {
+  return {
+    "PAYMENT-REQUIRED": encodeX402HeaderJson(v2),
+    "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+  };
+}
+
+export function paymentResponseHeaders(opts: {
+  success: boolean;
+  transaction?: string | null;
+  network: string;
+  payer: string;
+}): Record<string, string> {
+  return {
+    "PAYMENT-RESPONSE": encodeX402HeaderJson({
+      success: opts.success,
+      transaction: opts.transaction ?? "",
+      network: x402Caip2Network(opts.network),
+      payer: opts.payer,
+    }),
+    "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+  };
+}
+
+/** X-PAYMENT (v1) or PAYMENT-SIGNATURE (v2). Header names are case-insensitive. */
+export function readPaymentProofHeader(
+  getHeader: (name: string) => string | null | undefined
+): string | null {
+  const raw = getHeader("x-payment") || getHeader("payment-signature");
+  return raw && raw.trim() ? raw.trim() : null;
+}
+
+function buildPaymentRequiredV2(opts: {
+  resource: string;
+  description: string;
+  payTo: string;
+  network: string;
+  asset: string;
+  amountAtomic: string;
+  extra?: { name?: string; version?: string };
+  extensions: X402BazaarExtension;
+}): PaymentRequiredV2 {
+  return {
+    x402Version: 2,
+    error: "X-PAYMENT or PAYMENT-SIGNATURE header is required",
+    resource: {
+      url: opts.resource,
+      description: opts.description,
+      mimeType: "application/json",
+      serviceName: "AuthiChain",
+      tags: ["verification", "authenticity"],
+    },
+    accepts: [
+      {
+        scheme: "exact",
+        network: x402Caip2Network(opts.network),
+        amount: opts.amountAtomic,
+        asset: opts.asset,
+        payTo: opts.payTo,
+        maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
+        ...(opts.extra ? { extra: opts.extra } : {}),
+      },
+    ],
+    extensions: opts.extensions,
+  };
+}
+
 /** Build the 402 payment-requirements body an unpaid agent receives. */
 export function buildPaymentRequired(opts: {
   resource: string;
@@ -210,17 +320,21 @@ export function buildPaymentRequired(opts: {
     accepts: PaymentRequirement[];
     extensions: X402BazaarExtension;
   };
+  v2: PaymentRequiredV2;
+  headers: Record<string, string>;
 } {
   const network = opts.network ?? process.env.X402_NETWORK ?? "base";
   const asset = resolveX402Asset(network, opts.asset);
   const extra = requirementExtra(network, asset);
   const extensions = x402BazaarDiscovery();
+  const description = opts.description ?? "AuthiChain verification";
+  const amountAtomic = usdToAtomic(opts.priceUsd);
   const requirement: PaymentRequirement = {
     scheme: "exact",
     network,
-    maxAmountRequired: usdToAtomic(opts.priceUsd),
+    maxAmountRequired: amountAtomic,
     resource: opts.resource,
-    description: opts.description ?? "AuthiChain verification",
+    description,
     payTo: opts.payTo,
     asset,
     mimeType: "application/json",
@@ -228,13 +342,25 @@ export function buildPaymentRequired(opts: {
     outputSchema: extensions.bazaar.info,
     ...(extra ? { extra } : {}),
   };
+  const v2 = buildPaymentRequiredV2({
+    resource: opts.resource,
+    description,
+    payTo: opts.payTo,
+    network,
+    asset,
+    amountAtomic,
+    extra,
+    extensions,
+  });
   return {
     status: 402,
     body: { x402Version: 1, accepts: [requirement], extensions },
+    v2,
+    headers: paymentRequiredHeaders(v2),
   };
 }
 
-/** Decode the base64-encoded JSON `X-PAYMENT` header into a PaymentProof. */
+/** Decode the base64-encoded JSON `X-PAYMENT` / `PAYMENT-SIGNATURE` header. */
 export function parsePaymentHeader(
   header: string | null | undefined
 ): PaymentProof | null {
@@ -242,6 +368,10 @@ export function parsePaymentHeader(
   try {
     const json = Buffer.from(header, "base64").toString("utf8");
     const raw = JSON.parse(json) as Record<string, unknown>;
+    const accepted =
+      raw.accepted && typeof raw.accepted === "object"
+        ? (raw.accepted as Record<string, unknown>)
+        : undefined;
     const nested =
       raw.payload && typeof raw.payload === "object"
         ? (raw.payload as Record<string, unknown>)
@@ -251,11 +381,11 @@ export function parsePaymentHeader(
         ? (nested.authorization as Record<string, unknown>)
         : undefined;
     const payer = String(raw.payer ?? auth?.from ?? "");
-    const amount = String(raw.amount ?? auth?.value ?? "");
-    const network = String(raw.network ?? "");
+    const amount = String(raw.amount ?? auth?.value ?? accepted?.amount ?? "");
+    const network = String(raw.network ?? accepted?.network ?? "");
     if (!payer || !amount || !network) return null;
     const proof: PaymentProof = {
-      scheme: String(raw.scheme ?? "exact"),
+      scheme: String(raw.scheme ?? accepted?.scheme ?? "exact"),
       network,
       payer,
       amount,
@@ -290,7 +420,8 @@ export function verifyPaymentProof(
     reason,
   });
 
-  if (proof.network !== requirement.network) return fail("network mismatch");
+  if (!x402NetworksEquivalent(proof.network, requirement.network))
+    return fail("network mismatch");
   let amount: bigint;
   try {
     amount = BigInt(proof.amount);
@@ -335,6 +466,27 @@ export function decodeFacilitatorPaymentPayload(
   }
 }
 
+/**
+ * PayAI's live /settle path is x402 v1. A v2 PAYMENT-SIGNATURE still settles
+ * there after we flatten `accepted` + `payload` into the v1 envelope.
+ */
+export function toFacilitatorV1Payload(decoded: unknown): unknown {
+  if (!decoded || typeof decoded !== "object") return decoded;
+  const raw = decoded as Record<string, unknown>;
+  if (raw.x402Version !== 2) return decoded;
+  const accepted =
+    raw.accepted && typeof raw.accepted === "object"
+      ? (raw.accepted as Record<string, unknown>)
+      : {};
+  const network = String(accepted.network ?? raw.network ?? "base");
+  return {
+    x402Version: 1,
+    scheme: accepted.scheme ?? raw.scheme ?? "exact",
+    network: network.toLowerCase() === "eip155:8453" ? "base" : network,
+    payload: raw.payload,
+  };
+}
+
 export async function settlePayment(
   paymentHeaderB64: string,
   requirement: PaymentRequirement
@@ -348,7 +500,9 @@ export async function settlePayment(
     };
   }
   try {
-    const paymentPayload = decodeFacilitatorPaymentPayload(paymentHeaderB64);
+    const paymentPayload = toFacilitatorV1Payload(
+      decodeFacilitatorPaymentPayload(paymentHeaderB64)
+    );
     const res = await fetch(`${facilitator.replace(/\/$/, "")}/settle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -577,7 +731,8 @@ export type X402CatalogBody = {
   };
   discovery: {
     bazaarDeclared: true;
-    declaredOn: "POST /api/x402 402 body extensions.bazaar";
+    declaredOn: "POST /api/x402 402 body extensions.bazaar and PAYMENT-REQUIRED header";
+    paymentRequiredHeader: true;
   };
   timestamp: string;
 };
@@ -651,7 +806,9 @@ export async function x402Catalog(
     },
     discovery: {
       bazaarDeclared: true,
-      declaredOn: "POST /api/x402 402 body extensions.bazaar",
+      declaredOn:
+        "POST /api/x402 402 body extensions.bazaar and PAYMENT-REQUIRED header",
+      paymentRequiredHeader: true,
     },
     timestamp: health.timestamp,
   };

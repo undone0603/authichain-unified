@@ -98,6 +98,13 @@ describe("POST /api/x402", () => {
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    const required = res.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as { x402Version: number; accepts: Array<{ amount?: string }> };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {

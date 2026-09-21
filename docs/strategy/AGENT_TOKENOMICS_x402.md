@@ -73,10 +73,10 @@ Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`
 
 ### 4.2 Paid skill
 
-| Method | Path                   | Unpaid                                 | Invalid / unsettled proof | Paid + trustless settle |
-| ------ | ---------------------- | -------------------------------------- | ------------------------- | ----------------------- |
-| POST   | `/api/x402`            | **402** `x402Version: 1` + `accepts[]` | 402                       | 200 JSON                |
-| POST   | `/api/v1/agent-verify` | **402** (same body shape)              | 402                       | 200 JSON                |
+| Method | Path                   | Unpaid                                                     | Invalid / unsettled proof | Paid + trustless settle |
+| ------ | ---------------------- | ---------------------------------------------------------- | ------------------------- | ----------------------- |
+| POST   | `/api/x402`            | **402** v1 JSON `accepts[]` + v2 `PAYMENT-REQUIRED` header | 402                       | 200 JSON                |
+| POST   | `/api/v1/agent-verify` | **402** (same body shape)                                  | 402                       | 200 JSON                |
 
 If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the $0 / unbound path). Live production has `payTo` set — unpaid callers get 402, not 503.
 
@@ -206,14 +206,14 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 
 ## 6. Discovery surfaces
 
-| URL                                        | Audience                                                                                                                       |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `https://authichain.com/x402`              | Humans + crawlers. JSON-LD Service/Offer. Already in `sitemap.xml` and IndexNow (`marketing-autonomous.yml`).                  |
-| `GET /api/x402/health`                     | Agents. Live bindings.                                                                                                         |
-| `GET /api/x402/catalog`                    | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                          |
-| `GET /.well-known/x402.json`               | Same catalog, well-known path.                                                                                                 |
-| Unpaid `POST /api/x402` 402 body           | `extensions.bazaar` (info + schema) so a facilitator that supports Bazaar can index the skill. No facilitator URL in the body. |
-| `server/mcp` `get_pricing` / `verify_paid` | MCP tools. Must point at **Base**, not Polygon.                                                                                |
+| URL                                                          | Audience                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https://authichain.com/x402`                                | Humans + crawlers. JSON-LD Service/Offer. Already in `sitemap.xml` and IndexNow (`marketing-autonomous.yml`).                                                                                                                 |
+| `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                        |
+| `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                         |
+| `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                |
+| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema). v1 JSON body keeps `x402Version: 1`; the header is the v2 envelope (`resource` + `accepts[].amount` + CAIP-2 `eip155:8453`) so PayAI/v2 clients can index the skill. No facilitator URL. |
+| `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                               |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
 

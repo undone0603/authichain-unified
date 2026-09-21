@@ -15,6 +15,8 @@ import type { Hono } from "hono";
 import {
   buildPaymentRequired,
   parsePaymentHeader,
+  paymentResponseHeaders,
+  readPaymentProofHeader,
   settlePayment,
   verifyPaymentProof,
   x402Catalog,
@@ -120,22 +122,22 @@ async function agentVerify(c: {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(c.req.header("x-payment"));
+  const proofHeader = readPaymentProofHeader(name => c.req.header(name));
+  const proof = parsePaymentHeader(proofHeader);
   if (!proof) {
-    return c.json(required.body, 402, NO_STORE);
+    return c.json(required.body, 402, { ...NO_STORE, ...required.headers });
   }
 
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
-    return c.json(
-      { ...required.body, error: verification.reason },
-      402,
-      NO_STORE
-    );
+    return c.json({ ...required.body, error: verification.reason }, 402, {
+      ...NO_STORE,
+      ...required.headers,
+    });
   }
 
   const settlement = await settlePayment(
-    c.req.header("x-payment") ?? "",
+    proofHeader ?? "",
     required.body.accepts[0]
   );
   if (!settlement.settled || !settlement.trustless) {
@@ -146,7 +148,7 @@ async function agentVerify(c: {
         status: settlement.trustless ? "unpaid" : "not_configured",
       },
       402,
-      NO_STORE
+      { ...NO_STORE, ...required.headers }
     );
   }
 
@@ -176,7 +178,15 @@ async function agentVerify(c: {
       timestamp: new Date().toISOString(),
     },
     200,
-    NO_STORE
+    {
+      ...NO_STORE,
+      ...paymentResponseHeaders({
+        success: true,
+        transaction: settlement.txHash ?? proof.txHash,
+        network: required.body.accepts[0].network,
+        payer: proof.payer,
+      }),
+    }
   );
 }
 
