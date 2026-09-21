@@ -484,6 +484,25 @@ test("/p and /p/<serial> are proxied to the app, not marketing 404", async () =>
   assert.match(await pricing.text(), /<title>Pricing — AuthiChain<\/title>/);
 });
 
+test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", async () => {
+  const env = {
+    APP_WORKER_TIMEOUT_MS: "40",
+    APP_WORKER: { fetch: () => new Promise(() => {}) },
+  } as unknown as Env;
+  const res = await get("/p/not-a-real-serial", env);
+  assert.equal(res.status, 404);
+  const html = await res.text();
+  assert.match(html, /No passport at this URL/);
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  assert.equal(html.includes('href="/api/checkout'), false);
+  assert.match(html, /name="robots" content="noindex"/);
+});
+
 test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const passport = planPaymentLink("strainchain_passport") ?? "";

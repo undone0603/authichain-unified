@@ -43,7 +43,7 @@ import {
   mostRecentInForce,
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
-import { catalogPaymentLinkHtml, checkoutEmailFormHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
+import { catalogPaymentLinkHtml, checkoutEmailFormHtml, CHECKOUT_EMAIL_FORM_CSS, emailCheckoutWithPaymentLinkHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -3292,6 +3292,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
  */
 interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+  /** Test-only override. Live default is 4000ms. */
+  APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
   X402_PAY_TO?: string;
@@ -3301,6 +3303,49 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+}
+
+const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
+
+function appWorkerTimeoutMs(env: Env): number {
+  const n = Number(env.APP_WORKER_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : APP_WORKER_TIMEOUT_MS_DEFAULT;
+}
+
+/** Live Hyperdrive lookups on unknown /p/<serial> hang; crawlers wait forever. */
+function passportLookupTimeoutResponse(pathname: string): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Passport not found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+code{background:#09090b;border:1px solid #27272a;border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:#d4d4d8;word-break:break-all}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:#00FFD1;color:#000;text-decoration:none}
+a.btn.ghost{background:transparent;border:1px solid #27272a;color:#fff}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1.25rem auto;text-align:left}
+</style></head><body><main>
+<h1>No passport at this URL</h1>
+<p><code>${escapeHtml(pathname)}</code> is not a published product passport.</p>
+${emailCheckoutWithPaymentLinkHtml({
+  action: "/api/checkout/plan/strainchain_passport",
+  label: "Publish a passport — $49",
+  formId: "p-timeout-passport",
+  inputId: "p-timeout-passport-email",
+})}
+${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness — $299" })}
+<div class="links"><a class="btn ghost" href="/">Home</a><a class="btn ghost" href="/dpp">EU DPP</a></div>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
 }
 
 /**
@@ -3313,7 +3358,28 @@ async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   if (!env.APP_WORKER) {
     return new Response("App worker not bound (local dev)", { status: 502 });
   }
-  return rewriteProxiedCheckoutHtml(await env.APP_WORKER.fetch(request));
+  const pathname = new URL(request.url).pathname;
+  const timeoutMs = appWorkerTimeoutMs(env);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const proxied = await Promise.race([
+      env.APP_WORKER.fetch(request),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("APP_WORKER_TIMEOUT")),
+          timeoutMs
+        );
+      }),
+    ]);
+    return rewriteProxiedCheckoutHtml(proxied);
+  } catch (err) {
+    if (pathname === "/p" || pathname.startsWith("/p/")) {
+      return passportLookupTimeoutResponse(pathname);
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /** Escapes text interpolated into the 404 document. */

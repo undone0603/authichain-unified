@@ -291,7 +291,24 @@ async function renderProductPassport(c: Context): Promise<Response> {
     }
 
     const db = getHyperdriveDb(c.env as any);
-    const result = await findPassportBySerial(db, serial);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        2500
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
@@ -363,6 +380,17 @@ async function renderProductPassport(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /p lookup failed", err);
+    if (err instanceof Error && err.message === "passport-lookup-timeout") {
+      return htmlResponse(
+        c,
+        notFoundHtml(
+          "Product Not Found",
+          "The registry lookup timed out. Publish a StrainChain passport from the live Payment Link on /pricing.",
+          pathname
+        ),
+        404
+      );
+    }
     return serveSpaShell(c);
   }
 }
