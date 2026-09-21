@@ -177,6 +177,10 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
 
 test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
   const html = renderEstatePricingPage("strainchain");
+  const passport = listedPlans("strainchain").find(
+    p => p.id === "strainchain_passport"
+  );
+  assert.ok(passport?.stripe_payment_link);
   assert.match(html, /<title>Pricing — StrainChain<\/title>/);
   assert.match(
     html,
@@ -199,6 +203,14 @@ test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
   assert.ok(
     html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
   );
+  const passportPay = passport.stripe_payment_link ?? "";
+  assert.equal(html.includes(`"url":"${passportPay}"`), true);
+  const strainLdStart = html.indexOf("application/ld+json");
+  const strainLd = html.slice(
+    strainLdStart,
+    html.indexOf("</script>", strainLdStart)
+  );
+  assert.equal(strainLd.includes("/api/checkout"), false);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
@@ -230,6 +242,11 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
+  const dppPay = dpp.stripe_payment_link ?? "";
+  assert.equal(html.includes(`"url":"${dppPay}"`), true);
+  const govLdStart = html.indexOf("application/ld+json");
+  const govLd = html.slice(govLdStart, html.indexOf("</script>", govLdStart));
+  assert.equal(govLd.includes("/api/checkout"), false);
   assert.doesNotMatch(
     html,
     new RegExp(

@@ -56,6 +56,15 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * JSON-LD Offer.url is followed by crawlers. Never put a GET checkout path
+ * there — live GET /api/checkout opens an anonymous Stripe cart. Prefer the
+ * published Payment Link; otherwise the public pricing page.
+ */
+function planJsonLdOfferUrl(plan: Plan, listingUrl: string): string {
+  return plan.stripe_payment_link ?? listingUrl;
+}
+
 function attributedCheckoutCta(
   plan: Plan,
   cta: { href: string; label: string; external: boolean },
@@ -302,7 +311,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       description: p.description,
       price: p.price,
       priceCurrency: "USD" as const,
-      url: planCheckoutCta(p, "strainchain").href,
+      url: planJsonLdOfferUrl(p, "https://strainchain.io/pricing"),
     }));
     return {
       brand: "strainchain",
@@ -652,7 +661,7 @@ ${ESTATE_FONTS_LINK}
         description: dppDesc,
         price: dppPrice,
         priceCurrency: "USD",
-        url: GOVCHAIN_DPP_CHECKOUT,
+        url: planJsonLdOfferUrl(dpp, "https://govchain.us/pricing"),
       },
     ],
   }).replace(/<\/script/gi, "<\\/script")}</script>
