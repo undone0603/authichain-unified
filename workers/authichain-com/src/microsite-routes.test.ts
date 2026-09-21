@@ -73,6 +73,10 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.match(MICROSITE_HTML.mendo, /name="email"/);
   assert.match(
     MICROSITE_HTML.mendo,
+    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  );
+  assert.match(
+    MICROSITE_HTML.mendo,
     /ZACHARY KIETZMAN \(AuthiChain \/ StrainChain are brands\)/
   );
 });

@@ -33,6 +33,7 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 
 const CHECKOUT =
   "https://authichain.com/api/checkout/plan/strainchain_passport";
+const PASSPORT_PAYMENT_LINK = "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y";
 const MENDO_MICRO = "https://authichain.com/m/mendo";
 
 const PROVENANCE_LABEL: Record<Provenance, string> = {
@@ -149,7 +150,10 @@ function checkoutCard(): string {
     ${checkoutEmailFormHtml({
       action: CHECKOUT,
       label: "Passport checkout — $49",
+      inputId: "genetics-passport-email",
+      formId: "genetics-passport-checkout",
     })}
+    <a class="btn btn-outline" href="${PASSPORT_PAYMENT_LINK}">Pay $49 on Stripe</a>
     <a class="btn btn-outline" href="${MENDO_MICRO}">LT-63 licensing microsite</a>
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>
@@ -383,10 +387,7 @@ function geneticsIndex(): string {
 <h1>StrainChain genetics libraries</h1>
 <p class="lede">Public, CoA-reconciled cultivar indexes. Farms keep ownership; AuthiChain publishes the defensive record. Totals are derived at render.</p>
 ${farms}
-<div class="cta">
-  <a class="btn btn-primary" href="${CHECKOUT}">Passport checkout — $49</a>
-  <a class="btn btn-outline" href="${MENDO_MICRO}">Mendo / LT-63 microsite</a>
-</div>
+${checkoutCard()}
 `;
   const d = getDossier("mendo-love-farms");
   return shell({
@@ -413,10 +414,9 @@ function passportIndex(): string {
   <p>Cultivars that already have panels are linked from the farm index. Totals there are recomputed, not transcribed.</p>
   <p style="margin-top:.5rem"><a href="/genetics/mendo-love-farms">${esc(d?.farm.name ?? "Mendo Love Farms")} genetics →</a></p>
 </div>
+${checkoutCard()}
 <div class="cta">
-  <a class="btn btn-primary" href="${CHECKOUT}">Passport checkout — $49</a>
   <a class="btn btn-outline" href="/genetics/mendo-love-farms">Open Mendo library</a>
-  <a class="btn btn-outline" href="${MENDO_MICRO}">LT-63 licensing microsite</a>
 </div>
 `;
   return shell({
