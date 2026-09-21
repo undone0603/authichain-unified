@@ -539,6 +539,7 @@ describe("x402Catalog", () => {
     expect(
       catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
     ).toBe(0.1);
+    expect(catalog.endpoints.some(e => e.paid && e.path === "/mcp")).toBe(true);
     expect(catalog.discovery.bazaarDeclared).toBe(true);
     expect(catalog.discovery.paymentRequiredHeader).toBe(true);
     expect(catalog.humanCheckout.passportPaymentLink).toBe(

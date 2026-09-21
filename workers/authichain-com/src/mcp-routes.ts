@@ -2,9 +2,9 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * Intercept both on authichain-com (before APP_PREFIXES) with public
- * get_pricing discovery. Paid verify is unpaid POST /api/x402, not a
- * fake "SECURED" JSON. Do not tell agents to GET /api/checkout.
+ * GET is free discovery (Payment Links + unpaid POST /api/x402).
+ * tools/call verify is the same unpaid 402 as /api/x402 — not a fake
+ * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
  * landing worker. plans.ts + x402.ts are already on this worker.
@@ -13,8 +13,16 @@ import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
+  buildPaymentRequired,
+  parsePaymentHeader,
+  paymentResponseHeaders,
+  readPaymentProofHeader,
+  settlePayment,
+  verifyPaymentProof,
   x402PriceUsd,
+  type X402HealthEnv,
 } from "../../../src/lib/x402.ts";
+import type { X402Env } from "./x402-routes";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -30,6 +38,19 @@ const TOOLS = [
       "Live AuthiChain prices: StrainChain Passport and EU DPP Payment Links for humans; unpaid POST /api/x402 ($0.05 USDC on Base) for agents.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "verify",
+    description:
+      "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sealId: { type: "string" },
+        productId: { type: "string" },
+        serial: { type: "string" },
+      },
+    },
+  },
 ];
 
 function normalizePath(pathname: string): string {
@@ -44,11 +65,32 @@ export function isMcpPath(pathname: string): boolean {
   return p === "/mcp" || p === "/api/mcp" || p === "/.well-known/mcp.json";
 }
 
-function json(status: number, body: unknown): Response {
+function json(
+  status: number,
+  body: unknown,
+  extraHeaders?: Record<string, string>
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: JSON_HEADERS,
+    headers: { ...JSON_HEADERS, ...extraHeaders },
   });
+}
+
+function hydrateX402(env?: X402Env) {
+  if (!env) return;
+  const keys: Array<keyof X402HealthEnv> = [
+    "X402_PAY_TO",
+    "X402_FACILITATOR_URL",
+    "X402_NETWORK",
+    "X402_CHAIN_ID",
+    "X402_USDC_ASSET",
+    "X402_PRICE_USD",
+    "X402_DAILY_CAP_USD",
+  ];
+  for (const name of keys) {
+    const value = env[name];
+    if (value && !process.env[name]) process.env[name] = value;
+  }
 }
 
 export function mcpPricingDiscovery() {
@@ -64,8 +106,9 @@ export function mcpPricingDiscovery() {
       pricePerCall: `$${x402PriceUsd()} USDC`,
       catalog: "https://authichain.com/api/x402/catalog",
       wellKnown: "https://authichain.com/.well-known/x402.json",
+      mcp: "https://authichain.com/mcp",
       docs: "https://authichain.com/x402",
-      note: "Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT.",
+      note: "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT.",
     },
     humanCheckout: {
       rail: "stripe",
@@ -91,6 +134,7 @@ function discoveryBody() {
     pricing: mcpPricingDiscovery(),
     pay: {
       x402: "POST https://authichain.com/api/x402",
+      mcpVerify: "POST https://authichain.com/mcp tools/call verify",
       catalog: "https://authichain.com/api/x402/catalog",
       wellKnown: "https://authichain.com/.well-known/x402.json",
       docs: "https://authichain.com/x402",
@@ -110,7 +154,102 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
   });
 }
 
-async function handleRpc(request: Request): Promise<Response> {
+async function unpaidOrSettledVerify(
+  request: Request,
+  env: X402Env | undefined,
+  args: Record<string, unknown>
+): Promise<Response> {
+  hydrateX402(env);
+  const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
+  const resource = new URL(request.url).toString();
+  const priceUsd = x402PriceUsd(env?.X402_PRICE_USD);
+  if (!payTo) {
+    return json(503, {
+      error: "payments_not_configured",
+      status: "not_configured",
+      health: "/api/x402/health",
+    });
+  }
+
+  const required = buildPaymentRequired({
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain MCP verify",
+  });
+  const proof = parsePaymentHeader(
+    readPaymentProofHeader(name => request.headers.get(name))
+  );
+  if (!proof) {
+    return json(402, required.v2, required.headers);
+  }
+
+  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
+  if (!verification.valid) {
+    return json(
+      402,
+      { ...required.v2, error: verification.reason },
+      required.headers
+    );
+  }
+
+  const settlement = await settlePayment(
+    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
+    required.body.accepts[0]
+  );
+  if (!settlement.settled || !settlement.trustless) {
+    return json(
+      402,
+      {
+        ...required.v2,
+        error: settlement.reason ?? "not_configured",
+        status: settlement.trustless ? "unpaid" : "not_configured",
+      },
+      required.headers
+    );
+  }
+
+  const subject = (args.sealId ??
+    args.seal_id ??
+    args.productId ??
+    args.serial) as string | undefined;
+
+  return json(
+    200,
+    {
+      jsonrpc: "2.0",
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              verified: false,
+              authenticityScore: 0,
+              subject: subject ?? null,
+              details: {
+                note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
+              },
+              settlement: {
+                payer: proof.payer,
+                amountAtomic: verification.amount.toString(),
+                txHash: settlement.txHash ?? proof.txHash ?? null,
+                trustless: settlement.trustless,
+              },
+            }),
+          },
+        ],
+      },
+    },
+    paymentResponseHeaders({
+      success: true,
+      transaction: settlement.txHash ?? proof.txHash,
+      network: required.body.accepts[0].network,
+      payer: proof.payer,
+    })
+  );
+}
+
+async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
   let body: {
     jsonrpc?: string;
     id?: unknown;
@@ -138,7 +277,10 @@ async function handleRpc(request: Request): Promise<Response> {
   }
 
   if (method === "tools/call") {
-    const params = (body.params ?? {}) as { name?: string };
+    const params = (body.params ?? {}) as {
+      name?: string;
+      arguments?: Record<string, unknown>;
+    };
     const name = params.name ?? "";
     if (name === "get_pricing" || name === "authichain_get_pricing") {
       return rpcResult(id, {
@@ -150,11 +292,14 @@ async function handleRpc(request: Request): Promise<Response> {
         ],
       });
     }
+    if (name === "verify" || name === "authichain_verify_product") {
+      return unpaidOrSettledVerify(request, env, params.arguments ?? {});
+    }
     return rpcResult(id, {
       content: [
         {
           type: "text",
-          text: "Paid verify is unpaid POST https://authichain.com/api/x402 ($0.05 USDC on Base). Retry with X-PAYMENT. Humans use catalogue Payment Links from get_pricing.",
+          text: "Unknown tool. Use get_pricing (free) or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,
@@ -164,7 +309,10 @@ async function handleRpc(request: Request): Promise<Response> {
   return rpcError(id, `Method not found: ${method}`);
 }
 
-export async function tryHandleMcp(request: Request): Promise<Response | null> {
+export async function tryHandleMcp(
+  request: Request,
+  env: X402Env = {}
+): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;
 
   if (request.method === "OPTIONS") {
@@ -174,7 +322,7 @@ export async function tryHandleMcp(request: Request): Promise<Response | null> {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, HEAD, OPTIONS",
         "Access-Control-Allow-Headers":
-          "Content-Type, Authorization, X-PAYMENT",
+          "Content-Type, Authorization, X-PAYMENT, PAYMENT-SIGNATURE",
         "Access-Control-Max-Age": "86400",
       },
     });
@@ -195,7 +343,7 @@ export async function tryHandleMcp(request: Request): Promise<Response | null> {
   }
 
   if (request.method === "POST") {
-    return handleRpc(request);
+    return handleRpc(request, env);
   }
 
   return json(405, { error: "method not allowed" });

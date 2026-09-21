@@ -3464,7 +3464,7 @@ export default {
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env);
     if (x402) return x402;
-    const mcp = await tryHandleMcp(request);
+    const mcp = await tryHandleMcp(request, env);
     if (mcp) return mcp;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

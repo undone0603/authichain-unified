@@ -844,6 +844,8 @@ export async function x402Catalog(
         "/api/v1/agent-verify",
         "AuthiChain agent verification (seal / product)"
       ),
+      paid("/mcp", "MCP tools/call verify (GET is free discovery)"),
+      paid("/api/mcp", "MCP tools/call verify alias"),
     ],
     humanCheckout: {
       rail: "stripe",
