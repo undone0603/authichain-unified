@@ -104,6 +104,7 @@ export type SmokePaymentProof = {
     signature: string;
     authorization: ExactAuthorization;
   };
+  extensions?: unknown;
 };
 
 export function eip712Domain(opts: {
@@ -128,6 +129,7 @@ export async function signExactPayment(opts: {
   validAfter?: number;
   validBefore?: number;
   nonce?: string;
+  extensions?: unknown;
 }): Promise<{ headerB64: string; proof: SmokePaymentProof }> {
   const from = await opts.wallet.getAddress();
   const asset = opts.asset ?? BASE_USDC_ASSET;
@@ -156,6 +158,7 @@ export async function signExactPayment(opts: {
     amount: opts.amountAtomic,
     signature,
     payload: { signature, authorization },
+    ...(opts.extensions ? { extensions: opts.extensions } : {}),
   };
   return {
     headerB64: Buffer.from(JSON.stringify(proof)).toString("base64"),

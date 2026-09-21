@@ -27,6 +27,125 @@ export interface PaymentRequirement {
   mimeType: "application/json";
   maxTimeoutSeconds?: number;
   extra?: { name?: string; version?: string };
+  /** x402 v1 unofficial discovery field; facilitators map this to extensions.bazaar. */
+  outputSchema?: X402BazaarInfo;
+}
+
+/** Bazaar discovery `info` (HTTP POST skill). Schema must validate this object. */
+export type X402BazaarInfo = {
+  input: {
+    type: "http";
+    method: "POST";
+    bodyType: "json";
+    body: {
+      sealId: string;
+      productId?: string;
+      serial?: string;
+    };
+  };
+  output: {
+    type: "json";
+    example: {
+      verified: boolean;
+      authenticityScore: number;
+      subject: string | null;
+      details: { note: string };
+      settlement: {
+        payer: string;
+        amountAtomic: string;
+        txHash: string;
+        trustless: boolean;
+      };
+    };
+  };
+};
+
+export type X402BazaarExtension = {
+  bazaar: {
+    info: X402BazaarInfo;
+    schema: Record<string, unknown>;
+  };
+};
+
+/**
+ * Discovery metadata for PayAI / x402 Bazaar. Declared on the unpaid 402 so a
+ * compatible client can echo `extensions.bazaar` in X-PAYMENT. Do not put a
+ * facilitator URL here.
+ */
+export function x402BazaarDiscovery(): X402BazaarExtension {
+  const info: X402BazaarInfo = {
+    input: {
+      type: "http",
+      method: "POST",
+      bodyType: "json",
+      body: { sealId: "demo" },
+    },
+    output: {
+      type: "json",
+      example: {
+        verified: false,
+        authenticityScore: 0,
+        subject: "demo",
+        details: {
+          note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
+        },
+        settlement: {
+          payer: "0x0000000000000000000000000000000000000000",
+          amountAtomic: "50000",
+          txHash: "0x",
+          trustless: true,
+        },
+      },
+    },
+  };
+  return {
+    bazaar: {
+      info,
+      schema: {
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        required: ["input"],
+        additionalProperties: false,
+        properties: {
+          input: {
+            type: "object",
+            required: ["type", "method", "bodyType", "body"],
+            additionalProperties: false,
+            properties: {
+              type: { type: "string", const: "http" },
+              method: {
+                type: "string",
+                enum: ["POST", "PUT", "PATCH"],
+              },
+              bodyType: {
+                type: "string",
+                enum: ["json", "form-data", "text"],
+              },
+              body: {
+                type: "object",
+                properties: {
+                  sealId: {
+                    type: "string",
+                    description: "Optional seal id to verify",
+                  },
+                  productId: { type: "string" },
+                  serial: { type: "string" },
+                },
+              },
+            },
+          },
+          output: {
+            type: "object",
+            required: ["type"],
+            properties: {
+              type: { type: "string", const: "json" },
+              example: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+  };
 }
 
 export interface PaymentProof {
@@ -86,11 +205,16 @@ export function buildPaymentRequired(opts: {
   description?: string;
 }): {
   status: 402;
-  body: { x402Version: number; accepts: PaymentRequirement[] };
+  body: {
+    x402Version: number;
+    accepts: PaymentRequirement[];
+    extensions: X402BazaarExtension;
+  };
 } {
   const network = opts.network ?? process.env.X402_NETWORK ?? "base";
   const asset = resolveX402Asset(network, opts.asset);
   const extra = requirementExtra(network, asset);
+  const extensions = x402BazaarDiscovery();
   const requirement: PaymentRequirement = {
     scheme: "exact",
     network,
@@ -101,9 +225,13 @@ export function buildPaymentRequired(opts: {
     asset,
     mimeType: "application/json",
     maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
+    outputSchema: extensions.bazaar.info,
     ...(extra ? { extra } : {}),
   };
-  return { status: 402, body: { x402Version: 1, accepts: [requirement] } };
+  return {
+    status: 402,
+    body: { x402Version: 1, accepts: [requirement], extensions },
+  };
 }
 
 /** Decode the base64-encoded JSON `X-PAYMENT` header into a PaymentProof. */
@@ -447,6 +575,10 @@ export type X402CatalogBody = {
     dppUsd: number;
     source: string;
   };
+  discovery: {
+    bazaarDeclared: true;
+    declaredOn: "POST /api/x402 402 body extensions.bazaar";
+  };
   timestamp: string;
 };
 
@@ -516,6 +648,10 @@ export async function x402Catalog(
       passportUsd: 49,
       dppUsd: 299,
       source: "src/lib/plans.ts",
+    },
+    discovery: {
+      bazaarDeclared: true,
+      declaredOn: "POST /api/x402 402 body extensions.bazaar",
     },
     timestamp: health.timestamp,
   };

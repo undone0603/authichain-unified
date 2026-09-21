@@ -52,4 +52,22 @@ describe("signExactPayment", () => {
     expect(parsed?.signature).toMatch(/^0x[0-9a-fA-F]+$/);
     expect(recoverExactSigner(proof)).toBe(wallet.address);
   });
+
+  it("echoes bazaar extensions into the payment header when given", async () => {
+    const wallet = new ethers.Wallet(
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    );
+    const extensions = { bazaar: { info: { input: { method: "POST" } } } };
+    const { headerB64, proof } = await signExactPayment({
+      wallet,
+      payTo: OPS_PAY_TO,
+      amountAtomic: "50000",
+      extensions,
+    });
+    expect(proof.extensions).toEqual(extensions);
+    const decoded = JSON.parse(
+      Buffer.from(headerB64, "base64").toString("utf8")
+    ) as { extensions?: { bazaar?: unknown } };
+    expect(decoded.extensions).toEqual(extensions);
+  });
 });

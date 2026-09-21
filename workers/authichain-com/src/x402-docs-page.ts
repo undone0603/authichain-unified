@@ -285,7 +285,7 @@ ${X402_TOKEN_CSS}
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 1</code> and an <code>accepts[]</code> requirement: scheme <code>exact</code>, ${esc(p.network)} USDC, payTo above, plus EIP-712 extra for Circle USDC.</li>
+        <li>The edge answers <code>402</code> with <code>x402Version: 1</code> and an <code>accepts[]</code> requirement: scheme <code>exact</code>, ${esc(p.network)} USDC, payTo above, plus EIP-712 extra for Circle USDC. The same body declares <code>extensions.bazaar</code> so discovery clients can catalog the skill.</li>
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code>.</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>

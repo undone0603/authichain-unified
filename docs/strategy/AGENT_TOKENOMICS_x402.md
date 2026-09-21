@@ -206,13 +206,14 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 
 ## 6. Discovery surfaces
 
-| URL                                        | Audience                                                                                                      |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `https://authichain.com/x402`              | Humans + crawlers. JSON-LD Service/Offer. Already in `sitemap.xml` and IndexNow (`marketing-autonomous.yml`). |
-| `GET /api/x402/health`                     | Agents. Live bindings.                                                                                        |
-| `GET /api/x402/catalog`                    | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                         |
-| `GET /.well-known/x402.json`               | Same catalog, well-known path.                                                                                |
-| `server/mcp` `get_pricing` / `verify_paid` | MCP tools. Must point at **Base**, not Polygon.                                                               |
+| URL                                        | Audience                                                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `https://authichain.com/x402`              | Humans + crawlers. JSON-LD Service/Offer. Already in `sitemap.xml` and IndexNow (`marketing-autonomous.yml`).                  |
+| `GET /api/x402/health`                     | Agents. Live bindings.                                                                                                         |
+| `GET /api/x402/catalog`                    | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                          |
+| `GET /.well-known/x402.json`               | Same catalog, well-known path.                                                                                                 |
+| Unpaid `POST /api/x402` 402 body           | `extensions.bazaar` (info + schema) so a facilitator that supports Bazaar can index the skill. No facilitator URL in the body. |
+| `server/mcp` `get_pricing` / `verify_paid` | MCP tools. Must point at **Base**, not Polygon.                                                                                |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
 

@@ -118,10 +118,15 @@ describe("tryHandleX402", () => {
     const body = (await res!.json()) as {
       x402Version: number;
       accepts: Array<{ payTo: string }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
     expect(body.x402Version).toBe(1);
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
+    );
+    expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    expect(JSON.stringify(body).toLowerCase()).not.toContain(
+      "facilitator.payai"
     );
   });
 

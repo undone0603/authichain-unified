@@ -46,6 +46,7 @@ describe("x402 public docs page", () => {
       "curl -sS -i -X POST https://authichain.com/api/x402"
     );
     expect(html).toContain("HTTP 402");
+    expect(html).toContain("extensions.bazaar");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
     expect(html).toContain('rel="alternate"');

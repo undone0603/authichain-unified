@@ -67,6 +67,23 @@ describe("buildPaymentRequired", () => {
       version: "2",
     });
   });
+
+  it("declares bazaar discovery on the 402 without a facilitator URL", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc",
+    });
+    expect(r.body.extensions.bazaar.info.input.method).toBe("POST");
+    expect(r.body.extensions.bazaar.info.input.bodyType).toBe("json");
+    expect(r.body.extensions.bazaar.schema["required"]).toEqual(["input"]);
+    expect(r.body.accepts[0].outputSchema).toEqual(
+      r.body.extensions.bazaar.info
+    );
+    const blob = JSON.stringify(r.body).toLowerCase();
+    expect(blob).not.toContain("facilitator.payai");
+    expect(blob).not.toContain("x402_facilitator_url");
+  });
 });
 
 describe("resolveX402Asset", () => {
@@ -300,5 +317,9 @@ describe("x402Catalog", () => {
     expect(
       catalog.endpoints.find(e => e.path === "/api/x402" && e.paid)?.priceUsd
     ).toBe(0.1);
+    expect(catalog.discovery.bazaarDeclared).toBe(true);
+    expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
+      "facilitator.payai"
+    );
   });
 });
