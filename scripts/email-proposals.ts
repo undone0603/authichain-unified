@@ -4,6 +4,8 @@
 // sends personalized HTML emails via Resend, updates delivery status.
 
 import { createClient } from "@supabase/supabase-js";
+import { paymentLinkWithPrefilledEmail } from "../src/lib/checkout-email";
+import { planPaymentLink } from "../src/lib/plans";
 import {
   checkSender,
   reportSenderFailure,
@@ -29,6 +31,7 @@ const SALES_EMAIL = process.env.SALES_EMAIL ?? "sales@authichain.com";
 // Prefer env override so ops can swap without a code change.
 const PILOT_PAYMENT_LINK =
   process.env.GOVCHAIN_PILOT_PAYMENT_LINK ??
+  planPaymentLink("dpp_readiness") ??
   "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"; // DPP Readiness Audit $299
 
 // Gracefully skip if no Resend credential is configured. The two accounts hold
@@ -73,7 +76,10 @@ function generateEmailHtml(proposal: Proposal): string {
     opportunityId
   );
   const calendarUrl = withAttribution(CALENDAR_LINK, opportunityId);
-  const pilotUrl = withAttribution(PILOT_PAYMENT_LINK, opportunityId);
+  const pilotUrl = withAttribution(
+    paymentLinkWithPrefilledEmail(PILOT_PAYMENT_LINK, proposal.contact_email),
+    opportunityId
+  );
 
   return `
 <!DOCTYPE html>
