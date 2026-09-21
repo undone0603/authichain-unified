@@ -10,6 +10,7 @@ import {
   checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
   pickCheckoutEmail,
+  planIdFromCheckoutAction,
 } from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
@@ -146,4 +147,44 @@ export async function tryHandleProtocolCheckout(
     });
   }
   return checkoutRedirectResponse(data.url);
+}
+
+/**
+ * Live GET /api/checkout/* is proxied to APP_WORKER, which still opens
+ * anonymous Stripe sessions on the last edge-router deploy. Sister sites
+ * (strainchain.io, qron.space, govchain.us) one-click those URLs today.
+ * Bounce GET without ?email= here so an authichain-com deploy stops
+ * anonymous carts even if APP_WORKER is stale. HEAD stays 204. GET with
+ * a recovery email falls through to APP_WORKER to create the session.
+ */
+export function isApiCheckoutPath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  return p === "/api/checkout/dpp" || p.startsWith("/api/checkout/plan/");
+}
+
+export function tryHandleApiCheckoutEmailGate(
+  request: Request
+): Response | null {
+  const url = new URL(request.url);
+  if (!isApiCheckoutPath(url.pathname)) return null;
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: 204,
+      headers: CHECKOUT_REDIRECT_HEADERS,
+    });
+  }
+  if (request.method !== "GET") return null;
+  const email = pickCheckoutEmail(url.searchParams.get("email"));
+  const smoke = isDppSmokePromo(url.searchParams.get("promo"));
+  if (email || smoke) return null;
+  const visitId = (
+    url.searchParams.get("visit_id") ||
+    url.searchParams.get("prospect_id") ||
+    ""
+  ).trim();
+  const kind =
+    planIdFromCheckoutAction(url.pathname) === "dpp_readiness" ? "dpp" : "plan";
+  return checkoutRedirectResponse(
+    checkoutNeedEmailRedirect(kind, visitId || undefined)
+  );
 }

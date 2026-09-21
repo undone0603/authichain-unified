@@ -315,6 +315,26 @@ test("other /api paths still proxy to the app", async () => {
   assert.equal(await res.text(), "app");
 });
 
+test("GET /api/checkout without email bounces here, not to APP_WORKER", async () => {
+  const dpp = await get("/api/checkout/dpp?visit_id=dpp_live_anon");
+  assert.equal(dpp.status, 303);
+  assert.equal(
+    dpp.headers.get("location"),
+    "https://authichain.com/dpp?need_email=1&visit_id=dpp_live_anon"
+  );
+  const passport = await get("/api/checkout/plan/strainchain_passport");
+  assert.equal(passport.status, 303);
+  assert.equal(
+    passport.headers.get("location"),
+    "https://authichain.com/pricing?need_email=1"
+  );
+  const head = await worker.fetch(
+    new Request("https://authichain.com/api/checkout/dpp", { method: "HEAD" }),
+    ENV
+  );
+  assert.equal(head.status, 204);
+});
+
 test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogue", async () => {
   const res = await get("/demo");
   assert.equal(res.status, 302);

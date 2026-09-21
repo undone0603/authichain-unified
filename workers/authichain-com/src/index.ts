@@ -3,7 +3,10 @@
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
-import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import {
+  tryHandleApiCheckoutEmailGate,
+  tryHandleProtocolCheckout,
+} from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
@@ -3460,6 +3463,12 @@ export default {
     if (dppPage) return dppPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
+    // Intercept before APP_PREFIXES — live sister sites still one-click
+    // https://authichain.com/api/checkout/*, which APP_WORKER opens as
+    // anonymous Stripe sessions. Bounce GET without ?email= here so an
+    // authichain-com deploy stops those carts even if APP_WORKER is stale.
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env);
