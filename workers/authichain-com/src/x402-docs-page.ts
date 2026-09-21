@@ -5,6 +5,10 @@
  * only — published payTo / asset / price, health URL, and unpaid 402 curls.
  * No facilitator URL, no private keys, no settle steps.
  *
+ * payTo is the tokenomics EOA (X402_PUBLISHED_PAY_TO), not the NFT
+ * deployer and not the Coinbase Smart Wallet. Asset is Circle USDC on
+ * Base — not $QRON. Map: docs/strategy/WEB3_IDENTITY.md.
+ *
  * Visual system (interim): light-enterprise chrome + a dark Web3-adjacent
  * rail/code surface. Markup is semantic and uses Tailwind-shaped utilities
  * bound to `--ac-*` tokens so a later Wonder export can restyle without
@@ -17,6 +21,7 @@
  */
 
 import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
+import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 export const X402_DOCS_PATHS = [
   "/x402",
@@ -39,8 +44,10 @@ export const X402_PUBLIC = {
   priceUsdNumber: "0.05",
   network: "Base",
   chainId: "8453",
-  payTo: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
-  asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  /** payTo / tokenomics EOA — not the NFT deployer. Do not rebind. */
+  payTo: X402_PUBLISHED_PAY_TO,
+  /** Circle USDC on Base. Not $QRON. */
+  asset: BASE_USDC_ASSET,
   assetName: "Circle USDC",
   dailyCapUsd: "$10",
   legalEntity: "ZACHARY KIETZMAN",

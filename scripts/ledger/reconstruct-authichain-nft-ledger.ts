@@ -1,8 +1,16 @@
 import { JsonRpcProvider, Contract, Interface, ZeroAddress, getAddress } from "ethers";
 import { writeFile, mkdir } from "node:fs/promises";
+import {
+  COINBASE_SMART_WALLET,
+  NFT_CLUSTER_KNOWN,
+  NFT_DEPLOYER_EOA,
+  POLYGON_AUTHICHAIN_NFT,
+  QRON_FACTORY_CALLER,
+  TOKENOMICS_PAY_TO,
+} from "../lib/evm-chains.ts";
 
-const CONTRACT_ADDRESS = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
+const CONTRACT_ADDRESS = POLYGON_AUTHICHAIN_NFT;
+const DEPLOYER = NFT_DEPLOYER_EOA;
 const DEPLOY_BLOCK = 77535676;
 const DEFAULT_RPC = "https://polygon-rpc.com";
 const CHUNK_SIZE = Number(process.env.AUTHICHAIN_LEDGER_CHUNK ?? 8_000);
@@ -134,13 +142,15 @@ async function main() {
 
   rows.sort((a, b) => Number(a.tokenId) - Number(b.tokenId));
   const recipients = new Set(rows.map((r) => r.recipient.toLowerCase()).filter(Boolean));
+  // Known AuthiChainNFT recipient cluster — not a single “ops” wallet.
+  // Names: docs/strategy/WEB3_IDENTITY.md
   const cluster = new Set([
-    "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d",
-    "0x8df0057ffb210444b927511b2d416ad7854fb81e",
-    "0xc0d26735fd9e868eacc60400ef3171fa4161177f",
-    "0x52981cd11973f954d9ea084a784650f65d052235",
-    "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2",
-  ]);
+    NFT_DEPLOYER_EOA,
+    QRON_FACTORY_CALLER,
+    COINBASE_SMART_WALLET,
+    NFT_CLUSTER_KNOWN,
+    TOKENOMICS_PAY_TO,
+  ].map((a) => a.toLowerCase()));
 
   const summary = {
     contract: CONTRACT_ADDRESS,

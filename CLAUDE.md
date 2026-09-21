@@ -25,9 +25,11 @@ reaching an agent session. The import above reconnects it.
 - **Totals are derived, never transcribed.** Every THCV/THC figure on a passport
   is recomputed from the raw panel at render time. Do not add a code path that
   displays a stored total.
-- **`src/lib/plans.ts` is the source of truth for anything that charges.**
-  `shared/pricing.ts` is a Stripe plan-detection reference holding test-mode
-  IDs, despite what it used to call itself.
+- **`src/lib/plans.ts` is the source of truth for anything that charges a
+  human.** `shared/pricing.ts` is a Stripe plan-detection reference holding
+  test-mode IDs, despite what it used to call itself. Agent pay is x402 Base
+  USDC (`src/lib/x402.ts`). Wallets, chains, `$QRON`, and “do not mix” rules:
+  `docs/strategy/WEB3_IDENTITY.md`. Do not call two different EOAs “ops”.
 - **Chrome colours and data colours are not interchangeable.** The botanical
   accents in `src/app/genetics/genetics.css` fail the chroma floor as data
   marks; charts use the validated `--viz-*` slots.

@@ -13,6 +13,7 @@ import {
   x402HealthReport,
   x402Catalog,
   BASE_USDC_ASSET,
+  X402_PUBLISHED_PAY_TO,
   type PaymentRequirement,
 } from "./x402";
 
@@ -251,6 +252,23 @@ describe("settlePayment (facilitator)", () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("down"));
     expect((await settlePayment("proof", req)).settled).toBe(false);
+  });
+});
+
+describe("published rail identity", () => {
+  it("documents payTo / tokenomics EOA and Base USDC without rebinding env", () => {
+    expect(X402_PUBLISHED_PAY_TO).toBe(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
+    expect(BASE_USDC_ASSET).toBe(
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    );
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
+      "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
+    );
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
+      "0xc0d26735fd9e868eacc60400ef3171fa4161177f"
+    );
   });
 });
 

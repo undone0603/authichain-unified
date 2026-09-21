@@ -8,8 +8,11 @@
  * spend cap, then serve the resource. Autonomous at runtime; the wallet must be
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
  * `$QRON` and any governance token stay off this rail (see
- * docs/strategy/AGENT_TOKENOMICS_x402.md). Do not rebind X402_PAY_TO,
- * X402_FACILITATOR_URL, or X402_USDC_ASSET.
+ * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO,
+ * X402_FACILITATOR_URL, or X402_USDC_ASSET. payTo is the tokenomics EOA
+ * (0x5db5…), not the NFT deployer EOA (0xbad4…) and not the Coinbase
+ * Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
@@ -40,8 +43,18 @@ export interface PaymentProof {
 
 export const USDC_DECIMALS = 6;
 
-/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. */
+/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. Do not rebind. $QRON is not this asset. */
 export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+/**
+ * Live published X402_PAY_TO — payTo / tokenomics EOA.
+ * Same address holds nearly all Polygon $QRON and receives Base USDC.
+ * Distinct from NFT deployer EOA 0xbad4…. Canonical map:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rotate. Runtime health still
+ * reads the Worker/env binding; this constant documents the live value.
+ */
+export const X402_PUBLISHED_PAY_TO =
+  "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
 
 export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" } as const;
 

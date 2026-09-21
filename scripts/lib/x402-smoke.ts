@@ -4,8 +4,10 @@
  */
 import { ethers } from "ethers";
 import { BASE_USDC_ASSET, BASE_USDC_EIP712 } from "../../src/lib/x402.ts";
+import { TOKENOMICS_PAY_TO } from "./evm-chains.ts";
 
-export const OPS_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+/** payTo / tokenomics EOA. Alias kept for existing smoke tests. Not the NFT deployer. */
+export const OPS_PAY_TO = TOKENOMICS_PAY_TO;
 export const MIN_ATOMIC = 50000n;
 export const BASE_CHAIN_ID = 8453;
 export const DEFAULT_ENDPOINT = "https://authichain.com/api/x402";

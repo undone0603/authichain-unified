@@ -1,5 +1,7 @@
 # AuthiChain Smart Contracts (Polygon Mainnet, chain ID 137)
 
+Wallet and rail names: [`docs/strategy/WEB3_IDENTITY.md`](../docs/strategy/WEB3_IDENTITY.md). The deployer below is the **NFT deployer EOA**, not the payTo / tokenomics EOA and not the Coinbase Smart Wallet. `$QRON` is not the x402 payment rail.
+
 ## 1. AuthiChainNFT — Product Authentication NFT
 
 | | |
@@ -9,7 +11,7 @@
 | **Standard** | ERC721 (URIStorage + Enumerable) + AccessControl + Pausable + ReentrancyGuard |
 | **Compiler** | Solidity 0.8.19 |
 | **Deployed via** | thirdweb |
-| **Deployer wallet** | [`0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`](https://polygonscan.com/address/0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d) |
+| **NFT deployer EOA** | [`0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`](https://polygonscan.com/address/0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d) |
 | **Deploy tx** | [`0xc13c04dab7342b81e6e65af399bf4ff6d5093e392029d4e5df37e97c418747e3`](https://polygonscan.com/tx/0xc13c04dab7342b81e6e65af399bf4ff6d5093e392029d4e5df37e97c418747e3) |
 | **Deploy block** | 77,535,676 (Oct 11, 2025) |
 | **Current supply** | 16 NFTs minted |
@@ -38,7 +40,7 @@
 | **Name / Symbol** | QRON / $QRON |
 | **Total supply** | 1,000,000,000 (18 decimals) |
 | **Deployer wallet** | [`0x8df0057ffb210444b927511b2d416ad7854fb81e`](https://polygonscan.com/address/0x8df0057ffb210444b927511b2d416ad7854fb81e) (factory caller) |
-| **Owner / tax address** | [`0xc0d26735fd9e868eacc60400ef3171fa4161177f`](https://polygonscan.com/address/0xc0d26735fd9e868eacc60400ef3171fa4161177f) |
+| **Owner / tax address** | [`0xc0d26735fd9e868eacc60400ef3171fa4161177f`](https://polygonscan.com/address/0xc0d26735fd9e868eacc60400ef3171fa4161177f) — Coinbase Smart Wallet (ERC-4337; cannot sign with `ethers.Wallet`) |
 | **Factory** | [`0x46be54bbe239de5a6280c715017c10fc0a323353`](https://polygonscan.com/address/0x46be54bbe239de5a6280c715017c10fc0a323353) — Smithii `ERC20TokenFactory` |
 | **Deploy tx** | [`0x900e18687b41d325108792da4a46318cae09a3a8bd93aa87bc69de4eb323f213`](https://polygonscan.com/tx/0x900e18687b41d325108792da4a46318cae09a3a8bd93aa87bc69de4eb323f213) |
 | **Deploy block** | 81,887,002 (Jan 20, 2026) |

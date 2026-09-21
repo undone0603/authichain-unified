@@ -13,6 +13,9 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
+      "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
+    );
     expect(X402_PUBLIC.chainId).toBe("8453");
     expect(X402_PUBLIC.priceUsd).toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(

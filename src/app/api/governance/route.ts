@@ -5,7 +5,9 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/governance
- * Returns governance proposals, token stats, and voting status
+ * Theater stats for the govchain.us staking UI — not live tokenomics.
+ * $QRON total supply is 1,000,000,000 (18 decimals) at 0xAebf….
+ * See docs/strategy/WEB3_IDENTITY.md. Do not thaw gov-mint to make these real.
  */
 export async function GET() {
   return NextResponse.json({

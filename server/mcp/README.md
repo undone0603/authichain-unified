@@ -41,7 +41,7 @@ High-volume agents use the metered HTTP endpoint **`POST /api/v1/agent-verify`**
 4. The edge verifies settlement (PayAI facilitator). Daily cap $10 / payer.
 
 Do not rebind `X402_PAY_TO`, the facilitator, or the USDC asset. `$QRON` is not the unit of account.
-Canonical economics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. HTML: `https://authichain.com/x402`.
+Canonical economics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Identity (wallets vs rails): `docs/strategy/WEB3_IDENTITY.md`. HTML: `https://authichain.com/x402`.
 
 ## Publishing
 
