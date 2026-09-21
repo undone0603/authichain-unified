@@ -161,7 +161,7 @@ jobs:
         if: |
           steps.containers.outputs.needs == 'true' &&
           (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Docker info (Containers workers)
         if: |
