@@ -16,6 +16,32 @@ const BRANDS: SisterDiscoveryBrand[] = ["qron", "strainchain", "govchain"];
 const PASSPORT = planPaymentLink("strainchain_passport") ?? "";
 const DPP = planPaymentLink("dpp_readiness") ?? "";
 
+function httpsUrl(raw: string): URL {
+  const url = new URL(raw);
+  assert.equal(url.protocol, "https:");
+  return url;
+}
+
+function httpsUrlsIn(text: string): URL[] {
+  return [...text.matchAll(/https:\/\/[^\s"'<>]+/g)].map(match =>
+    httpsUrl(match[0])
+  );
+}
+
+function hasHttpsPath(
+  text: string,
+  hostname: string,
+  pathname: string
+): boolean {
+  return httpsUrlsIn(text).some(
+    url => url.hostname === hostname && url.pathname === pathname
+  );
+}
+
+function hasHttpsHost(text: string, hostname: string): boolean {
+  return httpsUrlsIn(text).some(url => url.hostname === hostname);
+}
+
 test("recognizes agent discovery paths and ignores marketing paths", () => {
   assert.equal(isEstateLlmsTxtPath("/llms.txt"), true);
   assert.equal(isEstateLlmsTxtPath("/.well-known/llms.txt"), true);
@@ -34,20 +60,12 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     const text = renderEstateLlmsTxt(brand);
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
-    assert.ok(text.includes("https://authichain.com/mcp"));
-    assert.ok(text.includes("https://authichain.com/openapi.json"));
-    assert.ok(text.includes(PASSPORT), 'href="https://buy.stripe.com');
-    assert.ok(text.includes(DPP), 'href="https://buy.stripe.com');
-    assert.ok(PASSPORT.startsWith("https://buy.stripe.com"));
-    assert.ok(DPP.startsWith("https://buy.stripe.com"));
-    assert.equal(
-      `href="${PASSPORT}"`.startsWith('href="https://buy.stripe.com'),
-      true
-    );
-    assert.equal(
-      `href="${DPP}"`.startsWith('href="https://buy.stripe.com'),
-      true
-    );
+    assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
+    assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
+    assert.ok(text.includes(PASSPORT));
+    assert.ok(text.includes(DPP));
+    assert.equal(httpsUrl(PASSPORT).hostname, "buy.stripe.com");
+    assert.equal(httpsUrl(DPP).hostname, "buy.stripe.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
     assert.equal(text.toLowerCase().includes("facilitator.payai"), false);
   }
@@ -96,7 +114,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     );
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
-    assert.ok(body.includes("https://buy.stripe.com"));
+    assert.ok(hasHttpsHost(body, "buy.stripe.com"));
   }
 });
 
