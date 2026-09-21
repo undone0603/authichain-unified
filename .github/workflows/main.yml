@@ -49,8 +49,18 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      # next/font/google sometimes 404s mid-build (null CSS parse at
+      # google/loader.js:122 on Public_Sans). Same layout just passed on
+      # sibling PRs; one retry is cheaper than a red required gate.
+      # Second `pnpm build` keeps the step's exit code — do not `set +e`.
       - name: Production build
-        run: pnpm build
+        run: |
+          if pnpm build; then
+            exit 0
+          fi
+          echo "Production build failed; retrying once for next/font fetch flake"
+          sleep 15
+          pnpm build
 
   production-proof:
     name: Production launch proof
