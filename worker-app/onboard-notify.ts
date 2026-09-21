@@ -1,5 +1,7 @@
 // Inbound-only pilot-intake alert. Does not thaw frozen outbound workflows.
-// ntfy is always attempted; Resend is optional when a key is bound on the Worker.
+// ntfy + founder SMS gateways; Resend optional when a key is bound.
+
+import { publishFounderAlert } from "../src/lib/founder-alerts";
 
 export type PilotIntakePayload = {
   company: string;
@@ -13,11 +15,6 @@ export type PilotIntakePayload = {
     RESEND_API_KEY2?: string;
   };
 };
-
-const NTFY_URL = "https://ntfy.sh/zk_live_alerts_99";
-const RESEND_URL = "https://api.resend.com/emails";
-const RESEND_FROM = "AuthiChain <hello@authichain.com>";
-const RESEND_TO = ["authichain@gmail.com", "undone.k@gmail.com"] as const;
 
 export function formatPilotIntakeBody(payload: PilotIntakePayload): string {
   return [
@@ -36,39 +33,14 @@ export async function notifyPilotIntake(
   try {
     console.log("[onboard-notify]", payload.company, payload.ref);
     const body = formatPilotIntakeBody(payload);
-    const jobs: Promise<unknown>[] = [
-      fetch(NTFY_URL, {
-        method: "POST",
-        headers: {
-          Title: "AuthiChain onboard",
-          "Content-Type": "text/plain",
-        },
-        body,
-      }),
-    ];
-    const apiKey = (
-      payload.env?.RESEND_API_KEY2 ||
-      payload.env?.RESEND_API_KEY ||
-      ""
-    ).trim();
-    if (apiKey) {
-      jobs.push(
-        fetch(RESEND_URL, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: RESEND_FROM,
-            to: [...RESEND_TO],
-            subject: `[onboard] ${payload.company} ${payload.ref}`,
-            text: body,
-          }),
-        })
-      );
-    }
-    await Promise.allSettled(jobs);
+    await publishFounderAlert(
+      {
+        title: "AuthiChain onboard",
+        subject: `[onboard] ${payload.company} ${payload.ref}`,
+        text: body,
+      },
+      payload.env,
+    );
   } catch {
     // Swallow — intake 303 must not depend on alert delivery.
   }
