@@ -21,6 +21,7 @@ import {
   renderTrumarkPage,
 } from "./money-surfaces.ts";
 import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
+import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import {
   isDppManufacturerArticlePath,
   renderDppManufacturerArticle,
@@ -3402,6 +3403,8 @@ export default {
     if (p === '/robots.txt') {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
     }
+    const llms = tryHandleLlmsTxt(request);
+    if (llms) return llms;
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");

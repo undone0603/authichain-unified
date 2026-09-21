@@ -250,6 +250,19 @@ test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async
   }
 });
 
+test("/llms.txt points agents at Payment Links and unpaid POST x402", async () => {
+  for (const path of ["/llms.txt", "/.well-known/llms.txt"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/plain/, path);
+    const text = await res.text();
+    assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+    assert.match(text, /https:\/\/buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
+    assert.match(text, /https:\/\/buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
+    assert.doesNotMatch(text, /GET \/api\/checkout/);
+  }
+});
+
 test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async () => {
   for (const path of ["/api/x402/catalog", "/.well-known/x402.json"]) {
     const res = await get(path);
