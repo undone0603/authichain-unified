@@ -81,6 +81,10 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   assert.match(emailHero, /name="email"/);
   assert.match(emailHero, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(emailHero, /Checkout without saving a recovery email/);
+  assert.ok(
+    emailHero.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c")
+  );
+  assert.match(emailHero, /id="hero-checkout-email"/);
 
   const trust = estateTrust([{ value: "Polygon", label: "On-chain anchor" }]);
   assert.doesNotMatch(trust, /847\+/);
@@ -105,6 +109,10 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   assert.match(emailCta, /name="email"/);
   assert.match(emailCta, /action="\/api\/checkout\/dpp"/);
   assert.match(emailCta, /href="\/pricing"/);
+  assert.ok(
+    emailCta.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c")
+  );
+  assert.match(emailCta, /id="cta-checkout-email"/);
 
   const footer = estateFooter(
     "qron",

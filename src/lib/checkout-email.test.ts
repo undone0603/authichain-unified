@@ -7,8 +7,10 @@ import {
   checkoutEmailFormHtml,
   checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
+  emailCheckoutWithPaymentLinkHtml,
   looksLikeCheckoutEmail,
   pickCheckoutEmail,
+  planIdFromCheckoutAction,
 } from "./checkout-email";
 
 describe("looksLikeCheckoutEmail", () => {
@@ -68,6 +70,40 @@ describe("catalogPaymentLinkHtml", () => {
       label: "Pay $299 on Stripe",
     });
     expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+  });
+});
+
+describe("planIdFromCheckoutAction", () => {
+  it("maps DPP, protocol DPP, and plan checkout paths", () => {
+    expect(planIdFromCheckoutAction("/api/checkout/dpp")).toBe("dpp_readiness");
+    expect(
+      planIdFromCheckoutAction("https://authichain.com/api/checkout/dpp")
+    ).toBe("dpp_readiness");
+    expect(planIdFromCheckoutAction("/protocol/checkout/dpp")).toBe(
+      "dpp_readiness"
+    );
+    expect(
+      planIdFromCheckoutAction("/api/checkout/plan/strainchain_passport")
+    ).toBe("strainchain_passport");
+  });
+
+  it("ignores generate and unknown plan ids", () => {
+    expect(planIdFromCheckoutAction("/generate")).toBeUndefined();
+    expect(planIdFromCheckoutAction("/api/checkout/plan/nope")).toBeUndefined();
+  });
+});
+
+describe("emailCheckoutWithPaymentLinkHtml", () => {
+  it("keeps the email form and appends the catalogue Payment Link", () => {
+    const html = emailCheckoutWithPaymentLinkHtml({
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+    });
+    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(html).toContain("Pay $299 on Stripe");
+    expect(html).not.toContain('href="/api/checkout/dpp"');
   });
 });
 

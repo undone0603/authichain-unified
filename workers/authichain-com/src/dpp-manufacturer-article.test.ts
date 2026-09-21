@@ -35,6 +35,7 @@ test("article HTML uses the live DPP checkout and no AuthiChain Inc", () => {
   );
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);

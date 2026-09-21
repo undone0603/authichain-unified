@@ -7,7 +7,7 @@
  * conversion paths that already exist in the estate.
  */
 
-import { checkoutEmailFormHtml } from "../../src/lib/checkout-email";
+import { emailCheckoutWithPaymentLinkHtml } from "../../src/lib/checkout-email";
 
 export type EstateBrandId = "authichain" | "qron" | "govchain" | "strainchain";
 
@@ -575,9 +575,11 @@ export function estateHero(opts: {
   };
 }): string {
   const emailForm = opts.emailCheckout
-    ? checkoutEmailFormHtml({
+    ? emailCheckoutWithPaymentLinkHtml({
         action: opts.emailCheckout.action,
         label: opts.emailCheckout.label,
+        formId: "hero-checkout",
+        inputId: "hero-checkout-email",
       })
     : "";
   const actions = opts.actions
@@ -664,9 +666,11 @@ export function estateCtaBand(opts: {
   };
 }): string {
   const emailForm = opts.emailCheckout
-    ? checkoutEmailFormHtml({
+    ? emailCheckoutWithPaymentLinkHtml({
         action: opts.emailCheckout.action,
         label: opts.emailCheckout.label,
+        formId: "cta-checkout",
+        inputId: "cta-checkout-email",
       })
     : "";
   const actions = opts.actions

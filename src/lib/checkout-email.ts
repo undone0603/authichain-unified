@@ -6,7 +6,7 @@
  * Landing pages collect the address and pass `?email=`.
  */
 
-import { type PlanId, planPaymentLink } from "./plans";
+import { type PlanId, planById, planPaymentLink } from "./plans";
 
 export const CHECKOUT_REDIRECT_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store",
@@ -137,4 +137,51 @@ export function catalogPaymentLinkHtml(opts: {
   if (!href) return "";
   const cls = opts.className || "btn btn-outline";
   return `<a class="${esc(cls)}" href="${esc(href)}">${esc(opts.label)}</a>`;
+}
+
+/** Map a live checkout action to the catalogue plan it charges. */
+export function planIdFromCheckoutAction(action: string): PlanId | undefined {
+  let path = action.trim();
+  try {
+    if (/^https?:\/\//i.test(path)) path = new URL(path).pathname;
+  } catch {
+    return undefined;
+  }
+  path = path.replace(/\/+$/, "") || "/";
+  if (path === "/api/checkout/dpp" || path === "/protocol/checkout/dpp") {
+    return "dpp_readiness";
+  }
+  const match = path.match(/^\/api\/checkout\/plan\/([a-z0-9_]+)$/);
+  if (!match) return undefined;
+  const id = match[1] as PlanId;
+  return planById(id) ? id : undefined;
+}
+
+/**
+ * Email-gated checkout plus the durable Payment Link for that SKU, so a
+ * visitor can pay on Stripe without the attributed session.
+ */
+export function emailCheckoutWithPaymentLinkHtml(opts: {
+  action: string;
+  label: string;
+  required?: boolean;
+  formId?: string;
+  inputId?: string;
+  hint?: string;
+  extraClass?: string;
+  buttonClass?: string;
+  planId?: PlanId;
+  paymentLinkClassName?: string;
+}): string {
+  const form = checkoutEmailFormHtml(opts);
+  const planId = opts.planId ?? planIdFromCheckoutAction(opts.action);
+  if (!planId) return form;
+  const plan = planById(planId);
+  const pay = catalogPaymentLinkHtml({
+    planId,
+    label: plan ? `Pay $${plan.price} on Stripe` : "Pay on Stripe",
+    className: opts.paymentLinkClassName,
+  });
+  if (!pay) return form;
+  return `${form}<div class="checkout-payment-link" style="margin-top:8px">${pay}</div>`;
 }
