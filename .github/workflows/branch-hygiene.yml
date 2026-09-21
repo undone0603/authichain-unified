@@ -1,0 +1,42 @@
+name: Branch hygiene
+
+# Classify open PRs vs main. Default report-only.
+# apply=true closes already_merged / duplicate_superseded only.
+# Never merges because a branch is green. Never deploys.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Close superseded/already-merged PRs (label + comment). Does not merge."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  classify:
+    name: Classify open PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Classify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          args=(--run)
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            args+=(--apply)
+          fi
+          node scripts/classify-branches.mjs "${args[@]}"

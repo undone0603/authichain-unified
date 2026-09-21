@@ -1,0 +1,79 @@
+name: CI repair loop
+
+# On Main quality gate failure: classify, optional deterministic format repair
+# on a new branch, open a draft PR. Never merges. Never weakens permissions,
+# deletes tests, applies production migrations, or deploys to Vercel/Cloudflare.
+on:
+  workflow_run:
+    workflows: ["CI Main"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  classify:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Attempt safe prettier write (source only)
+        id: fix
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write "src/**/*.{ts,tsx}" "scripts/**/*.{ts,mjs}" || true
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No deterministic format changes. Escalating — not merging."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse unsafe repair diffs
+        if: steps.fix.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          FILES="$(git diff --name-only | tr '\n' ' ')"
+          PATCH="$(git diff)"
+          export FILES PATCH
+          node --input-type=module <<'EOF'
+          import { classifyRepair } from './scripts/lib/ci-repair-classify.mjs';
+          const files = process.env.FILES.trim().split(/\s+/).filter(Boolean);
+          const r = classifyRepair({ files, patch: process.env.PATCH, jobName: 'Lint' });
+          console.log(JSON.stringify(r));
+          if (!r.safe) process.exit(2);
+          EOF
+
+      - name: Open draft repair PR
+        if: steps.fix.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          branch="cursor/ci-repair-${{ github.event.workflow_run.run_id }}-c802"
+          git checkout -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src scripts
+          git commit -m "chore(ci): deterministic prettier repair (draft, no auto-merge)"
+          git push -u origin "$branch"
+          gh pr create --draft --base main --head "$branch" \
+            --title "chore(ci): repair loop for failed CI Main" \
+            --body "Deterministic format repair only. Green checks are not sufficient to merge. Human review required. No migrations, no Vercel, no permission changes, no test deletions."

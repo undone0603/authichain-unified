@@ -1,0 +1,30 @@
+name: Cloudflare production health
+
+# Read-only probes of authichain.com + optional Workers API list.
+# Never deploys. Never prints secret values.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Public edge + Workers inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Probe production
+        env:
+          AUTHICHAIN_ORIGIN: https://authichain.com
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare-production-health.mjs --run
