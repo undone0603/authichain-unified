@@ -1,21 +1,16 @@
 // Founder-only DreamDash draft alert. Never emails the lead.
-// ntfy is always attempted; Resend is optional when a key is present.
-// Does not thaw outbound AgentZ / outreach workflows.
+// Goes through publishFounderAlert only. Does not thaw outreach.
 
+import { FOUNDER_INBOXES, publishFounderAlert, type FounderAlertEnv } from "@/lib/founder-alerts";
 import { draftFor, mailtoFor } from "./metrics";
 import type { Lead } from "./types";
 
-const NTFY_URL = "https://ntfy.sh/zk_live_alerts_99";
-const RESEND_URL = "https://api.resend.com/emails";
-const RESEND_FROM = "AuthiChain <hello@authichain.com>";
-export const FOUNDER_INBOXES = ["authichain@gmail.com", "undone.k@gmail.com"] as const;
+export { FOUNDER_INBOXES };
 
 export type DraftNotifyReason = "cycle" | "capture" | "followup" | "digest";
+export type DraftNotifyEnv = FounderAlertEnv;
 
-export type DraftNotifyEnv = {
-  RESEND_API_KEY?: string;
-  RESEND_API_KEY2?: string;
-};
+const CYCLE_FANOUT_CAP = 2;
 
 export function newlyDrafted(prev: Lead[], next: Lead[]): Lead[] {
   return next.filter((lead) => {
@@ -29,6 +24,7 @@ export function formatDraftAlert(lead: Lead, reason: DraftNotifyReason): {
   title: string;
   text: string;
   subject: string;
+  kind: "draft";
 } {
   const draft = draftFor(lead);
   const mailto = mailtoFor(lead);
@@ -48,57 +44,27 @@ export function formatDraftAlert(lead: Lead, reason: DraftNotifyReason): {
     "",
     "Founder-only. Do not send from AgentZ. Open the mailto from your inbox.",
   ].join("\n");
-  return { title, text, subject };
+  return { title, text, subject, kind: "draft" };
 }
 
 export function formatDigestAlert(digest: string): {
   title: string;
   text: string;
   subject: string;
+  kind: "digest";
 } {
   return {
     title: "DreamDash digest",
     subject: "[dreamdash] founders digest",
     text: `${digest}\n\nFounder-only. Local copy + this alert. No Slack webhook.`,
+    kind: "digest",
   };
-}
-
-async function deliver(alert: { title: string; text: string; subject: string }, env?: DraftNotifyEnv) {
-  const jobs: Promise<unknown>[] = [
-    fetch(NTFY_URL, {
-      method: "POST",
-      headers: {
-        Title: alert.title,
-        "Content-Type": "text/plain",
-      },
-      body: alert.text,
-    }),
-  ];
-  const apiKey = (env?.RESEND_API_KEY2 || env?.RESEND_API_KEY || process.env.RESEND_API_KEY2 || process.env.RESEND_API_KEY || "").trim();
-  if (apiKey) {
-    jobs.push(
-      fetch(RESEND_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: RESEND_FROM,
-          to: [...FOUNDER_INBOXES],
-          subject: alert.subject,
-          text: alert.text,
-        }),
-      }),
-    );
-  }
-  await Promise.allSettled(jobs);
 }
 
 export async function notifyDraft(lead: Lead, reason: DraftNotifyReason, env?: DraftNotifyEnv): Promise<void> {
   if (!lead.draftPending || lead.lost) return;
   try {
-    await deliver(formatDraftAlert(lead, reason), env);
+    await publishFounderAlert(formatDraftAlert(lead, reason), env);
   } catch {
     // Swallow — cycle / capture must not depend on alert delivery.
   }
@@ -106,6 +72,11 @@ export async function notifyDraft(lead: Lead, reason: DraftNotifyReason, env?: D
 
 export async function notifyDrafts(leads: Lead[], reason: DraftNotifyReason, env?: DraftNotifyEnv): Promise<number> {
   const pending = leads.filter((l) => l.draftPending && !l.lost);
+  if (pending.length > CYCLE_FANOUT_CAP) {
+    const lines = pending.map((l) => `${l.company} (${l.score})`).join(", ");
+    await notifyDigest(`DreamDash: ${pending.length} drafts ready — ${lines}`, env);
+    return pending.length;
+  }
   for (const lead of pending) {
     await notifyDraft(lead, reason, env);
   }
@@ -114,7 +85,7 @@ export async function notifyDrafts(leads: Lead[], reason: DraftNotifyReason, env
 
 export async function notifyDigest(digest: string, env?: DraftNotifyEnv): Promise<void> {
   try {
-    await deliver(formatDigestAlert(digest), env);
+    await publishFounderAlert(formatDigestAlert(digest), env);
   } catch {
     // Swallow — digest UI still renders locally.
   }
