@@ -97,7 +97,8 @@ test("/pricing is a live money page, not a 404", async () => {
   const html = await res.text();
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
-  assert.match(html, /href="https:\/\/authichain.com\/api\/checkout\/dpp"/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.doesNotMatch(html, /does not exist/);
