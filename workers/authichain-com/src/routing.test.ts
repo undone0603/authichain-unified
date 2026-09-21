@@ -265,13 +265,19 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
-    assert.match(html, /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/);
+    assert.match(
+      html,
+      /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    );
     assert.match(html, /Publish Passport — \$49/);
     assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
     assert.doesNotMatch(html, /Series A/i);
-    assert.match(res.headers.get("content-security-policy") ?? "", /telegram\.org/);
+    assert.match(
+      res.headers.get("content-security-policy") ?? "",
+      /telegram\.org/
+    );
     assert.equal(res.headers.get("x-frame-options"), null);
   }
 });
@@ -286,7 +292,10 @@ test("money-path microsites are live with checkout CTAs", async () => {
   const mendo = await get("/m/mendo");
   assert.equal(mendo.status, 200);
   const mendoHtml = await mendo.text();
-  assert.match(mendoHtml, /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(
+    mendoHtml,
+    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+  );
   assert.match(mendoHtml, /Passport checkout — \$49/);
   assert.match(mendoHtml, /LT-63/);
   assert.doesNotMatch(mendoHtml, /calendly/i);
@@ -296,7 +305,7 @@ test("money-path microsites are live with checkout CTAs", async () => {
     new Request("https://mendo.authichain.com/", {
       headers: { host: "mendo.authichain.com" },
     }),
-    ENV,
+    ENV
   );
   assert.equal(host.status, 200);
   assert.match(await host.text(), /RealTHCV/);
@@ -368,6 +377,18 @@ test("/p and /p/<serial> are proxied to the app, not marketing 404", async () =>
   assert.match(await pricing.text(), /<title>Pricing — AuthiChain<\/title>/);
 });
 
+test("seed SEO canonicals 301 to /p/<slug>, except authentic-agentic-economy", async () => {
+  const res = await get("/what-is-a-digital-product-passport");
+  assert.equal(res.status, 301);
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.com/p/what-is-a-digital-product-passport"
+  );
+  const live = await get("/authentic-agentic-economy");
+  assert.equal(live.status, 200);
+  assert.match(await live.text(), /Authentic Agentic Economy|agentic economy/i);
+});
+
 test("/authenticate is proxied to the app rather than answered with marketing", async () => {
   const res = await get("/authenticate");
   assert.equal(res.status, 200);
@@ -417,7 +438,9 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>"));
+  assert.ok(
+    xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>")
+  );
   assert.ok(
     xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
   );
@@ -425,11 +448,17 @@ test("the sitemap no longer lists pages that do not exist", async () => {
 });
 
 test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {
-  for (const path of ["/blog/eu-dpp-manufacturer", "/blog/eu-dpp-manufacturer/"]) {
+  for (const path of [
+    "/blog/eu-dpp-manufacturer",
+    "/blog/eu-dpp-manufacturer/",
+  ]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /Why AuthiChain is built for the next generation of product trust/);
+    assert.match(
+      html,
+      /Why AuthiChain is built for the next generation of product trust/
+    );
     assert.match(html, /href="\/api\/checkout\/dpp"/);
     assert.match(html, /Start DPP checkout/);
     assert.doesNotMatch(html, /AuthiChain Inc/i);

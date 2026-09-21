@@ -13,7 +13,7 @@ pattern = "www.qron.space/*"
 zone_name = "qron.space"
 
 [vars]
-# Origin that renders /generate (worker-app Living QR intake).
+# Origin that renders /generate (Living QR intake) and /p (SEO hubs).
 APP_ORIGIN = "https://authichain.com"
 
 [observability]

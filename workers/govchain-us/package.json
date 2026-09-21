@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "deploy": "npx wrangler deploy"
+    "deploy": "npx wrangler deploy",
+    "test": "npx tsx --test src/routing.test.ts ../_shared/seo-hub-routes.test.ts"
   }
 }

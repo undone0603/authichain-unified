@@ -15,6 +15,10 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
+import {
+  isSeoPassportPath,
+  tryRedirectSeoRootCanonical,
+} from "../../_shared/seo-hub-routes.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <circle cx="32" cy="32" r="30" fill="#030c04" stroke="#10b981" stroke-width="1.5"/>
@@ -2101,7 +2105,10 @@ export default {
     // the marketing page. A misconfigured origin fails loudly here rather than
     // quietly serving the wrong document — silently answering a verification
     // request with marketing copy is worse than answering with an error.
-    if (APP_PATHS.some((re) => re.test(url.pathname))) {
+    if (
+      APP_PATHS.some((re) => re.test(url.pathname)) ||
+      isSeoPassportPath(url.pathname)
+    ) {
       if (!env?.APP_ORIGIN) {
         return Response.json(
           {
@@ -2140,6 +2147,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "strainchain");
     if (pricing) return pricing;
+    const seoRedirect = tryRedirectSeoRootCanonical(request);
+    if (seoRedirect) return seoRedirect;
     // Only the apex renders marketing HTML. Passport and genetics paths were
     // already routed out above; everything left is a 404, not a 200 homepage.
     if (p !== '/') return notFound(p);

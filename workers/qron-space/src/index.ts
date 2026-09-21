@@ -15,6 +15,10 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
+import {
+  isSeoPassportPath,
+  tryRedirectSeoRootCanonical,
+} from "../../_shared/seo-hub-routes.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <circle cx="32" cy="32" r="30" fill="#030c18" stroke="#06b6d4" stroke-width="1.5"/>
@@ -2142,13 +2146,16 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
-    if (/^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname)) {
+    if (
+      /^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname) ||
+      isSeoPassportPath(url.pathname)
+    ) {
       if (!env?.APP_ORIGIN) {
         return Response.json(
           {
             error: "app_origin_not_configured",
             detail:
-              "qron.space cannot reach the generate form. Set APP_ORIGIN in workers/qron-space/wrangler.toml.",
+              "qron.space cannot reach the app. Set APP_ORIGIN in workers/qron-space/wrangler.toml.",
             path: url.pathname,
           },
           { status: 503, headers: { "cache-control": "no-store" } },
@@ -2179,6 +2186,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
+    const seoRedirect = tryRedirectSeoRootCanonical(request);
+    if (seoRedirect) return seoRedirect;
     // Only the apex renders HTML here. Anything else is a 404 rather than a
     // 200 homepage — see notFound above.
     if (p !== '/') return notFound(p);

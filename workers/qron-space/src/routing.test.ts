@@ -167,6 +167,39 @@ test("POST /api/generate is proxied to the app, not landing HTML 404", async () 
   }
 });
 
+test("/p SEO hubs are proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("hub", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/p/ai-qr-code-art-generator", {
+      APP_ORIGIN: "https://app.example.com",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "qron-space-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).pathname, "/p/ai-qr-code-art-generator");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("seed canonicals 301 to /p/<slug>", async () => {
+  const res = await get("/ai-qr-code-art-generator");
+  assert.equal(res.status, 301);
+  assert.equal(
+    res.headers.get("location"),
+    "https://qron.space/p/ai-qr-code-art-generator"
+  );
+});
+
 test("the 404 escapes the path, so a hostile URL cannot inject markup", async () => {
   const html = await (await get("/%3Cscript%3Ealert(1)%3C/script%3E")).text();
   assert.ok(

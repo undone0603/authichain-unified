@@ -134,6 +134,40 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.match(await sitemap.text(), /<urlset/);
 });
 
+test("/p SEO hubs are proxied to the app, not answered with a 404", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("hub", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await get("/p/government-document-verification-blockchain");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+    assert.equal(calls.length, 1);
+    assert.equal(
+      new URL(calls[0].url).pathname,
+      "/p/government-document-verification-blockchain"
+    );
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("seed canonicals 301 to /p/<slug>", async () => {
+  const res = await get("/government-document-verification-blockchain");
+  assert.equal(res.status, 301);
+  assert.equal(
+    res.headers.get("location"),
+    "https://govchain.us/p/government-document-verification-blockchain"
+  );
+});
+
 test("/onboard is proxied to the app, not answered with a 404", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];
