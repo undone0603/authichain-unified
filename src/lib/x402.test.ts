@@ -60,6 +60,7 @@ describe("buildPaymentRequired", () => {
       payTo: "0xabc",
     });
     expect(r.status).toBe(402);
+    expect(r.body.accepts).toHaveLength(1);
     expect(r.body.accepts[0].maxAmountRequired).toBe("50000");
     expect(r.body.accepts[0].network).toBe("base");
     expect(r.body.accepts[0].asset).toBe(BASE_USDC_ASSET);
@@ -270,6 +271,18 @@ describe("published rail identity", () => {
       "0xc0d26735fd9e868eacc60400ef3171fa4161177f"
     );
   });
+
+  it("does not put $QRON in accepts[]", async () => {
+    const { QRON_ERC20 } = await import("../../scripts/lib/evm-chains");
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: X402_PUBLISHED_PAY_TO,
+    });
+    expect(r.body.accepts.map(a => a.asset.toLowerCase())).not.toContain(
+      QRON_ERC20.toLowerCase()
+    );
+  });
 });
 
 describe("dailyCapUsd", () => {
@@ -293,6 +306,7 @@ describe("x402HealthReport", () => {
     expect(report.asset).toBe(BASE_USDC_ASSET);
     expect(report.catalog).toBe("/api/x402/catalog");
     expect(report.docs).toBe("/x402");
+    expect(report.payTo).toBeNull();
   });
 });
 

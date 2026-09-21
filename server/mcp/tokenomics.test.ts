@@ -26,5 +26,9 @@ describe("MCP tokenomics identity", () => {
     expect(d.agentRail.asset).toBe(BASE_USDC_ASSET);
     expect(d.agentRail.publishedPayTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(d.qron.isPaymentRail).toBe(false);
+    expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
+    expect(d.nft.deployer.toLowerCase()).not.toBe(
+      X402_PUBLISHED_PAY_TO.toLowerCase()
+    );
   });
 });

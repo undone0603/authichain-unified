@@ -44,6 +44,11 @@ export async function GET(request: Request) {
     }, {});
 
     return NextResponse.json({
+      theater: true,
+      liveTokenomics: false,
+      unit: 'QRON',
+      identity:
+        'https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md',
       infrastructure: {
         database: 'Connected (D1 Mirror)',
         workers: '21 Active',
@@ -55,6 +60,7 @@ export async function GET(request: Request) {
         burned_qron: totals.burned.toFixed(4),
         treasury_qron: totals.treasury.toFixed(4),
         staker_rewards_qron: totals.rewards.toFixed(4),
+        note: 'Speculative $QRON fee_flows theater — not x402 Base USDC.',
       },
       pipeline: {
         total_leads: leadCount || 0,

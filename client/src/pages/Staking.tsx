@@ -56,7 +56,7 @@ export default function StakingHub() {
             <CardContent className="space-y-6">
               <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                  <span className="text-muted-foreground">Staking APY</span>
+                  <span className="text-muted-foreground">Staking APY (theater)</span>
                   <span className="text-primary">12.5%</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider">

@@ -35,7 +35,7 @@ Checksum as written. Same 20 bytes on every EVM chain; **role is chain-specific*
 | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | **Circle USDC (Base)** | Contract | x402 `asset`. **Do not rebind.** |
 | `0x52981cd11973f954d9ea084a784650f65d052235` | **NFT-cluster address** | EOA | Known AuthiChainNFT recipient cluster (`scripts/ledger/reconstruct-authichain-nft-ledger.ts`). Not an ops wallet; do not grant it new roles by default. |
 
-Named exports that match this table live in `scripts/lib/evm-chains.ts`. Published x402 payTo / USDC also live in `src/lib/x402.ts` (`X402_PUBLISHED_PAY_TO`, `BASE_USDC_ASSET`) and `workers/authichain-com/src/x402-docs-page.ts` (`X402_PUBLIC`). Values must stay identical. Runtime x402 still reads `X402_PAY_TO` from the Worker binding — do not hardcode a new default that changes 503-vs-402 behavior.
+Named exports that match this table live in `scripts/lib/evm-chains.ts`. `src/lib/x402.ts` re-exports the same bytes as `X402_PUBLISHED_PAY_TO` (`TOKENOMICS_PAY_TO`) and `BASE_USDC_ASSET` (`BASE_USDC`). Public HTML copies them via `workers/authichain-com/src/x402-docs-page.ts` (`X402_PUBLIC`). Values must stay identical. Runtime x402 still reads `X402_PAY_TO` from the Worker binding — do not hardcode a new default that changes 503-vs-402 behavior. Stripe dollar amounts on catalogs come from `src/lib/plans.ts` (`planUsd`).
 
 ---
 

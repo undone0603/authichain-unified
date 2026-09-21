@@ -13,6 +13,8 @@
  */
 
 import {
+  NFT_DEPLOYER_EOA,
+  POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
   QRON_TOTAL_SUPPLY,
@@ -22,9 +24,12 @@ import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
 } from "./x402";
+import { planUsd } from "./plans";
 import { supabaseAdmin as admin } from "./supabase-admin";
 
 export {
+  NFT_DEPLOYER_EOA,
+  POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
   QRON_TOTAL_SUPPLY,
@@ -48,7 +53,10 @@ export const MONEY_RAILS = {
     rail: "stripe",
     buyer: "human",
     source: "src/lib/plans.ts",
-    skus: { passportUsd: 49, dppUsd: 299 },
+    skus: {
+      passportUsd: planUsd("strainchain_passport"),
+      dppUsd: planUsd("dpp_readiness"),
+    },
     isSettlement: true,
   },
   x402: {
@@ -127,8 +135,8 @@ export function agentPricingDiscovery() {
     humanCheckout: {
       rail: MONEY_RAILS.stripe.rail,
       source: MONEY_RAILS.stripe.source,
-      strainchain_passport: "$49 one-time",
-      dpp_readiness: "$299 one-time",
+      strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
+      dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
       checkout: {
         passport:
           "https://authichain.com/api/checkout/plan/strainchain_passport",
@@ -138,11 +146,20 @@ export function agentPricingDiscovery() {
     qron: {
       isPaymentRail: false,
       theater: true,
+      network: MONEY_RAILS.qron.network,
+      chainId: MONEY_RAILS.qron.chainId,
       contract: MONEY_RAILS.qron.contract,
       decimals: MONEY_RAILS.qron.decimals,
       totalSupply: MONEY_RAILS.qron.totalSupply,
       holder: MONEY_RAILS.qron.holder,
       identity: WEB3_IDENTITY_DOC,
+    },
+    nft: {
+      network: "polygon",
+      chainId: "137",
+      contract: POLYGON_AUTHICHAIN_NFT,
+      deployer: NFT_DEPLOYER_EOA,
+      note: "ERC-721 on Polygon only. Distinct from payTo / tokenomics EOA. Not an x402 asset.",
     },
   } as const;
 }

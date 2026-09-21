@@ -19,6 +19,9 @@
  * facilitator or an on-chain check.
  */
 
+import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
+import { planUsd } from "./plans";
+
 export interface PaymentRequirement {
   scheme: "exact";
   network: string; // e.g. 'base'
@@ -44,7 +47,7 @@ export interface PaymentProof {
 export const USDC_DECIMALS = 6;
 
 /** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. Do not rebind. $QRON is not this asset. */
-export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
  * Live published X402_PAY_TO — payTo / tokenomics EOA.
@@ -52,9 +55,9 @@ export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
  * Distinct from NFT deployer EOA 0xbad4…. Canonical map:
  * docs/strategy/WEB3_IDENTITY.md. Do not rotate. Runtime health still
  * reads the Worker/env binding; this constant documents the live value.
+ * It is NOT a fallback when X402_PAY_TO is unset (that stays 503).
  */
-export const X402_PUBLISHED_PAY_TO =
-  "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+export const X402_PUBLISHED_PAY_TO = TOKENOMICS_PAY_TO;
 
 export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" } as const;
 
@@ -529,8 +532,8 @@ export async function x402Catalog(
     ],
     humanCheckout: {
       rail: "stripe",
-      passportUsd: 49,
-      dppUsd: 299,
+      passportUsd: planUsd("strainchain_passport"),
+      dppUsd: planUsd("dpp_readiness"),
       source: "src/lib/plans.ts",
     },
     timestamp: health.timestamp,

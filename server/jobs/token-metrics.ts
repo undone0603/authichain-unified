@@ -5,8 +5,10 @@
 // a queryable trend over time; workers/authichain-chain-data already
 // serves this data on-demand, but nothing was tracking it historically.
 import { logActivity } from "../db";
+import { QRON_ERC20 } from "../../scripts/lib/evm-chains";
 
-const QRON_TOKEN = process.env.POLYGON_QRON_TOKEN || "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
+/** Polygon $QRON contract. Env override is observability only — not an x402 rebind. */
+const QRON_TOKEN = process.env.POLYGON_QRON_TOKEN || QRON_ERC20;
 const POLYGON_RPC = "https://polygon-bor-rpc.publicnode.com";
 
 interface TokenMetricsSnapshot {

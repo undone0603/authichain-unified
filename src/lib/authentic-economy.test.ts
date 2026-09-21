@@ -7,6 +7,7 @@ import {
   BASE_AUTH_FEE_UNIT,
   FEE_SPLIT_RATIOS,
   MONEY_RAILS,
+  POLYGON_AUTHICHAIN_NFT,
   QRON_ERC20,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
@@ -59,6 +60,10 @@ describe("authentic-economy identity join", () => {
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);
+    expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
+    expect(d.nft.deployer.toLowerCase()).not.toBe(
+      TOKENOMICS_PAY_TO.toLowerCase()
+    );
   });
 });
 
