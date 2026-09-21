@@ -382,9 +382,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       description: p.description,
       price: p.price,
       priceCurrency: "USD" as const,
-      url: isAuthichain
-        ? "https://authichain.com/pricing"
-        : "https://qron.space/pricing",
+      url: planJsonLdOfferUrl(
+        p,
+        isAuthichain
+          ? "https://authichain.com/pricing"
+          : "https://qron.space/pricing"
+      ),
     }));
   const offers = isAuthichain
     ? [

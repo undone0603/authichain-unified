@@ -44,7 +44,7 @@ import {
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
 import { catalogPaymentLinkHtml, checkoutEmailFormHtml, CHECKOUT_EMAIL_FORM_CSS, emailCheckoutWithPaymentLinkHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
-import { planPaymentLink } from "../../../src/lib/plans";
+import { planById, planPaymentLink, type PlanId } from "../../../src/lib/plans";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -2137,11 +2137,36 @@ function pngResponse(b64: string): Response {
   });
 }
 
+/** JSON-LD Offer.url for crawlers. Payment Link only — never GET checkout. */
+function catalogJsonLdOffer(id: PlanId) {
+  const plan = planById(id);
+  const offerUrl = planPaymentLink(id);
+  if (!plan || !offerUrl) return null;
+  return {
+    '@type': 'Offer' as const,
+    name: plan.name,
+    description: plan.description,
+    price: plan.price,
+    priceCurrency: 'USD',
+    url: offerUrl,
+  };
+}
+
 function seoMeta(): string {
   const url = BRANDS.authichain.url;
   const title = `${BRANDS.authichain.name} — ${BRANDS.authichain.tagline}`;
   const ld = (obj: object) =>
     `<script type="application/ld+json">${JSON.stringify(obj).replace(/<\/script/gi, '<\\/script')}</script>`;
+  const makesOffer = (
+    [
+      'dpp_readiness',
+      'strainchain_passport',
+      'starter',
+      'creator',
+    ] as const
+  )
+    .map(catalogJsonLdOffer)
+    .filter((o): o is NonNullable<typeof o> => o !== null);
   return `
   <meta name="description" content="${SEO.description}">
   <meta name="keywords" content="${SEO.keywords}">
@@ -2175,6 +2200,7 @@ function seoMeta(): string {
       'https://www.linkedin.com/company/authichain',
       'https://github.com/AuthiChain2026',
     ],
+    makesOffer,
   })}
   ${ld({
     '@context': 'https://schema.org',

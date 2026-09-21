@@ -75,6 +75,21 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
+  const dppPay =
+    listedPlans("qron").find(p => p.id === "dpp_readiness")
+      ?.stripe_payment_link ?? "";
+  const starterPay =
+    listedPlans("qron").find(p => p.id === "starter")?.stripe_payment_link ??
+    "";
+  const creatorPay =
+    listedPlans("qron").find(p => p.id === "creator")?.stripe_payment_link ??
+    "";
+  assert.equal(html.includes(`"url":"${dppPay}"`), true);
+  assert.equal(html.includes(`"url":"${starterPay}"`), true);
+  assert.equal(html.includes(`"url":"${creatorPay}"`), true);
+  const acLdStart = html.indexOf("application/ld+json");
+  const acLd = html.slice(acLdStart, html.indexOf("</script>", acLdStart));
+  assert.equal(acLd.includes("/api/checkout"), false);
   assert.match(html, /id="checkout-need-email-banner"/);
   assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
