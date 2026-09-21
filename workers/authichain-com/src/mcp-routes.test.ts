@@ -34,6 +34,7 @@ describe("mcp discovery", () => {
           humanCheckout: {
             passportPaymentLink?: string;
             dppPaymentLink?: string;
+            farmPaymentLink?: string;
           };
         };
       };
@@ -45,6 +46,12 @@ describe("mcp discovery", () => {
       expect(body.pricing.humanCheckout.passportPaymentLink).toBe(
         planPaymentLink("strainchain_passport")
       );
+      expect(body.pricing.humanCheckout.farmPaymentLink).toBe(
+        planPaymentLink("strainchain_farm")
+      );
+      expect(
+        new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
+      ).toBe("buy.stripe.com");
       expect(JSON.stringify(body)).not.toContain("/api/checkout");
     }
   });
@@ -85,6 +92,12 @@ describe("mcp discovery", () => {
     );
     expect(priced.result.content[0].text).toContain(
       planPaymentLink("strainchain_passport")
+    );
+    expect(priced.result.content[0].text).toContain(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
+      "buy.stripe.com"
     );
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
   });
