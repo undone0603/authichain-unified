@@ -264,19 +264,26 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
-    assert.match(
-      html,
-      /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    assert.ok(
+      html.includes("<title>StrainChain Passport | AuthiChain</title>"),
+      path
     );
-    assert.match(html, /Publish Passport — \$49/);
-    assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
+    assert.ok(
+      html.includes(
+        'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      ),
+      path
+    );
+    assert.ok(html.includes("Publish Passport — $49"), path);
+    assert.ok(html.includes("telegram.org/js/telegram-web-app.js"), path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
     assert.doesNotMatch(html, /Series A/i);
-    assert.match(
-      res.headers.get("content-security-policy") ?? "",
-      /telegram\.org/
+    assert.ok(
+      (res.headers.get("content-security-policy") ?? "").includes(
+        "telegram.org"
+      ),
+      path
     );
     assert.equal(res.headers.get("x-frame-options"), null);
   }
@@ -292,9 +299,10 @@ test("money-path microsites are live with checkout CTAs", async () => {
   const mendo = await get("/m/mendo");
   assert.equal(mendo.status, 200);
   const mendoHtml = await mendo.text();
-  assert.match(
-    mendoHtml,
-    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+  assert.ok(
+    mendoHtml.includes(
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    )
   );
   assert.match(mendoHtml, /Passport checkout — \$49/);
   assert.match(mendoHtml, /LT-63/);
