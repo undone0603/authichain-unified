@@ -51,6 +51,8 @@ test("verification paths are proxied to the app, not answered with marketing", a
       "/genetics/mendo-love-farms/vt-26",
       "/passport/AC-DEMO-001",
       "/onboard",
+      "/p/cannabis-blockchain-provenance",
+      "/p/blockchain-qr-code-for-cannabis",
     ]) {
       f.calls.length = 0;
       const res = await get(path);
@@ -103,7 +105,14 @@ test("query strings survive the hop", async () => {
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {
-    for (const path of ["/", "/pricing", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/authichain2026indexnow.txt"]) {
+    for (const path of [
+      "/",
+      "/pricing",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/favicon.svg",
+      "/authichain2026indexnow.txt",
+    ]) {
       f.calls.length = 0;
       const res = await get(path);
       assert.equal(res.status, 200, path);
@@ -171,7 +180,10 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Sitemap: https:\/\/strainchain.io\/sitemap.xml/);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/strainchain.io\/sitemap.xml/
+  );
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -210,6 +222,43 @@ test("a configured origin with trailing slashes does not double up the path", as
     });
     assert.equal(new URL(f.calls[0].url).pathname, "/passport/AC-1");
     assert.ok(!f.calls[0].url.includes("//passport"));
+  } finally {
+    f.restore();
+  }
+});
+
+test("/p SEO hubs are proxied to the app, not answered with a 404", async () => {
+  const f = stubFetch();
+  try {
+    for (const path of ["/p", "/p/", "/p/cannabis-blockchain-provenance"]) {
+      f.calls.length = 0;
+      const res = await get(path);
+      assert.equal(res.status, 200, path);
+      assert.equal(
+        res.headers.get("x-served-by"),
+        "strainchain-io-proxy",
+        path
+      );
+      assert.equal(f.calls.length, 1, path);
+    }
+  } finally {
+    f.restore();
+  }
+});
+
+test("seed canonicals 301 to /p/<slug>", async () => {
+  const f = stubFetch();
+  try {
+    const res = await get("/cannabis-blockchain-provenance");
+    assert.equal(res.status, 301);
+    assert.equal(
+      res.headers.get("location"),
+      "https://strainchain.io/p/cannabis-blockchain-provenance"
+    );
+    assert.equal(f.calls.length, 0, "301 must not proxy");
+    const pricing = await get("/pricing");
+    assert.equal(pricing.status, 200);
+    assert.notEqual(pricing.headers.get("location"), "/p/pricing");
   } finally {
     f.restore();
   }
