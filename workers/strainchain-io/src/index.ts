@@ -12,6 +12,7 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import {
+  STRAINCHAIN_BASIC,
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
@@ -2186,17 +2187,20 @@ ${estateNav(
     { href: "/genetics/mendo-love-farms", label: "Genetics" },
     { href: "#start", label: "Start" },
   ],
-  { href: "/onboard", label: "Request demo" },
+  { href: "/pricing", label: "View pricing" },
 )}
 <main id="main">
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "Seed-to-shelf tracking on Polygon.",
-  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. StrainChain Basic is the live checkout path.",
+  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. StrainChain Basic is the live $199/mo Payment Link.",
+  emailCheckout: {
+    action: "https://authichain.com/api/checkout/plan/strainchain_passport",
+    label: "Passport checkout — $49",
+  },
   actions: [
-    { href: "/onboard", label: "Request demo", primary: true },
     { href: "/pricing", label: "View pricing", primary: false },
-    { href: "/genetics/mendo-love-farms", label: "View genetics library", primary: false },
+    { href: "/onboard", label: "Request demo", primary: false },
   ],
 })}
 ${estateTrust([
@@ -2296,22 +2300,29 @@ ${estateFeatures(
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">Buy StrainChain Basic on the published Payment Link, or request a demo on /onboard — the same intake production already proxies.</p>
+    <p class="section-sub">Publish one cultivar for $49, or buy StrainChain Basic on the published Payment Link. Onboard stays the demo intake.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="/pricing">View pricing</a>
+      <a class="btn btn-primary" href="${STRAINCHAIN_BASIC.url}" target="_blank" rel="noopener">${STRAINCHAIN_BASIC.name} ${STRAINCHAIN_BASIC.price}</a>
+      <a class="btn btn-outline" href="/pricing">View pricing</a>
       <a class="btn btn-outline" href="/onboard">Request demo</a>
-      <a class="btn btn-outline" href="/genetics/mendo-love-farms">View genetics library</a>
     </div>
   </div>
 </section>
 
 ${estateCtaBand({
-  title: "Ready for regulator-proof tracking?",
-  lede: "StrainChain Basic is the live checkout path. Onboard remains the demo intake. Genetics passports stay on /genetics.",
+  title: "Publish one cultivar passport",
+  lede: "Enter a work email so Stripe can recover the cart. StrainChain Basic remains the $199/mo Payment Link. Onboard stays the demo intake.",
+  emailCheckout: {
+    action: "https://authichain.com/api/checkout/plan/strainchain_passport",
+    label: "Passport checkout — $49",
+  },
   actions: [
-    { href: "/pricing", label: "View pricing", primary: true },
+    {
+      href: STRAINCHAIN_BASIC.url,
+      label: `${STRAINCHAIN_BASIC.name} ${STRAINCHAIN_BASIC.price}`,
+      primary: false,
+    },
     { href: "/onboard", label: "Request demo", primary: false },
-    { href: "/genetics/mendo-love-farms", label: "View genetics library", primary: false },
   ],
 })}
 </main>
