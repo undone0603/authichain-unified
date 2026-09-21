@@ -7,6 +7,8 @@
  * conversion paths that already exist in the estate.
  */
 
+import { checkoutEmailFormHtml } from "../../src/lib/checkout-email";
+
 export type EstateBrandId = "authichain" | "qron" | "govchain" | "strainchain";
 
 export interface EstateBrand {
@@ -248,6 +250,40 @@ nav.estate-nav, .nav {
 }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 .btn-sm { padding: 8px 14px; font-size: 0.85rem; width: auto; }
+button.btn { font: inherit; }
+.checkout-email-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: min(100%, 22rem);
+  text-align: left;
+}
+.hero-cta .checkout-email-form,
+.estate-actions .checkout-email-form { flex: 1 1 100%; max-width: 22rem; }
+.price-card .checkout-email-form { width: 100%; }
+.price-card .checkout-email-form .btn { width: 100%; }
+.checkout-email-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.checkout-email-form input[type="email"] {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+  color: var(--text);
+}
+.checkout-email-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
 .hero, .estate-hero {
   padding: 72px 20px 56px;
   text-align: left;
@@ -521,7 +557,23 @@ export function estateHero(opts: {
   title: string;
   lede: string;
   actions: EstateCta[];
+  emailCheckout?: {
+    action: string;
+    label: string;
+    skipHref?: string;
+    skipLabel?: string;
+  };
 }): string {
+  const emailForm = opts.emailCheckout
+    ? `${checkoutEmailFormHtml({
+        action: opts.emailCheckout.action,
+        label: opts.emailCheckout.label,
+      })}${
+        opts.emailCheckout.skipHref
+          ? `<a class="btn btn-outline" href="${esc(opts.emailCheckout.skipHref)}">${esc(opts.emailCheckout.skipLabel || "Checkout without saving a recovery email")}</a>`
+          : ""
+      }`
+    : "";
   const actions = opts.actions
     .map(
       a =>
@@ -533,7 +585,7 @@ export function estateHero(opts: {
     <p class="estate-badge hero-badge">${esc(opts.eyebrow)}</p>
     <h1>${opts.title}</h1>
     <p class="estate-lede hero-sub">${opts.lede}</p>
-    <div class="estate-actions hero-cta">${actions}</div>
+    <div class="estate-actions hero-cta">${emailForm}${actions}</div>
   </div>
 </header>`;
 }

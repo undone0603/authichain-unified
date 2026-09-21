@@ -51,6 +51,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /The authentic agentic economy/);
   assert.match(html, /href="\/authentic-agentic-economy"/);
   assert.match(html, /--bg: #ffffff/);
@@ -119,6 +121,9 @@ test("homepage and /dpp link to /x402", async () => {
   assert.match(home, /href="\/x402"/);
   const dpp = await (await get("/dpp")).text();
   assert.match(dpp, /href="\/x402"/);
+  assert.match(dpp, /name="email"/);
+  assert.match(dpp, /action="\/protocol\/checkout\/dpp"/);
+  assert.match(dpp, /id="dpp-cancelled-banner"/);
 });
 
 test("/authentic-agentic-economy is a real positioning page", async () => {
@@ -191,9 +196,11 @@ test("anchor Sign In stays on an apex path, not app.login", async () => {
   assert.match(html, /href="\/onboard"/);
 });
 
-test("DPP landing CTA uses /onboard, not a dead /authenticate", async () => {
+test("DPP landing collects email before protocol checkout", async () => {
   const html = await (await get("/digital-product-passport")).text();
-  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/protocol\/checkout\/dpp"/);
+  assert.match(html, /id="dpp-cancelled-banner"/);
   assert.ok(!html.includes('href="/authenticate"'));
 });
 

@@ -38,6 +38,7 @@ import {
   mostRecentInForce,
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
+import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -2416,8 +2417,13 @@ const HTML = `<!DOCTYPE html>
     eyebrow: "The authentic agentic economy",
     title: "Issue seals. Bind products. Verify anywhere.",
     lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+      skipHref: "/api/checkout/dpp",
+      skipLabel: "Checkout without saving a recovery email",
+    },
     actions: [
-      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/onboard", label: "Onboard", primary: false },
     ],
@@ -2973,6 +2979,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     .industry-card { background: var(--bg2); border: 1px solid var(--border-dim); border-radius: 10px; padding: 20px; }
     .industry-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
     .industry-deadline { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+    .checkout-email-form { display:flex; flex-direction:column; align-items:stretch; gap:8px; max-width:22rem; margin:0 auto; text-align:left; }
+    .checkout-email-label { display:flex; flex-direction:column; gap:6px; font-size:.85rem; font-weight:600; color:var(--text-dim); }
+    .checkout-email-form input[type="email"] { padding:10px 12px; border:1px solid var(--border-dim); border-radius:8px; font:inherit; background:var(--bg2); color:var(--text); }
+    .checkout-email-hint { font-size:.82rem; color:var(--text-dim); margin:0; }
+    .checkout-email-form button.btn { border:0; cursor:pointer; font:inherit; }
+    .dpp-cancelled { display:none; max-width:36rem; margin:0 auto 16px; padding:12px 16px; border:1px solid #f59e0b; border-radius:10px; background:rgba(245,158,11,.12); color:#fbbf24; font-size:.92rem; }
+    .dpp-cancelled.is-visible { display:block; }
   </style>
 </head>
 <body>
@@ -2998,8 +3011,14 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <p class="hero-sub" style="max-width:600px">
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
+      <div id="dpp-cancelled-banner" class="dpp-cancelled">Checkout was not finished. Leave a work email so Stripe can send a recovery link if this session expires.</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" id="dpp-checkout-cta" href="/protocol/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
+        ${checkoutEmailFormHtml({
+          action: "/protocol/checkout/dpp",
+          label: "Start Your DPP Readiness Audit — $299",
+          formId: "dpp-checkout-form",
+          inputId: "dpp-email",
+        })}
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
@@ -3028,10 +3047,51 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
       var checkout = '/protocol/checkout/dpp?' + q.toString();
-      ['dpp-checkout-cta','nav-dpp-cta'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.setAttribute('href', checkout);
-      });
+      var nav = document.getElementById('nav-dpp-cta');
+      if (nav) nav.setAttribute('href', checkout);
+      function decorateForm(form) {
+        if (!form) return;
+        function setHidden(name, value) {
+          var el = form.querySelector('input[name="'+name+'"]');
+          if (!el) {
+            el = document.createElement('input');
+            el.type = 'hidden';
+            el.name = name;
+            form.appendChild(el);
+          }
+          el.value = value;
+        }
+        q.forEach(function (value, key) {
+          if (key === 'email') return;
+          setHidden(key, value);
+        });
+        var input = form.querySelector('input[name="email"]');
+        try {
+          var saved = localStorage.getItem('dpp_checkout_email');
+          if (saved && input && !input.value) input.value = saved;
+        } catch (e2) {}
+        form.addEventListener('submit', function () {
+          if (input && input.value) {
+            try { localStorage.setItem('dpp_checkout_email', input.value.trim()); } catch (e3) {}
+          }
+        });
+        if (input) {
+          input.addEventListener('input', function () {
+            if (nav && input.value) {
+              var withEmail = new URLSearchParams(q.toString());
+              withEmail.set('email', input.value.trim());
+              nav.setAttribute('href', '/protocol/checkout/dpp?' + withEmail.toString());
+            }
+          });
+        }
+      }
+      document.querySelectorAll('form.checkout-email-form').forEach(decorateForm);
+      if (params.get('cancelled') === '1') {
+        var banner = document.getElementById('dpp-cancelled-banner');
+        if (banner) banner.classList.add('is-visible');
+        var emailInput = document.getElementById('dpp-email');
+        if (emailInput) emailInput.focus();
+      }
       // attributed_visit — best-effort; never blocks CTA
       fetch('/api/funnel', {
         method: 'POST',
@@ -3144,9 +3204,14 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="/onboard">Start Free — Get DPP Compliant</a>
+        ${checkoutEmailFormHtml({
+          action: "/protocol/checkout/dpp",
+          label: "Start DPP Readiness Audit — $299",
+          formId: "dpp-checkout-form-footer",
+          inputId: "dpp-email-footer",
+        })}
       </div>
-      <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
+      <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">Work email enables Stripe abandoned-cart recovery if you leave checkout unfinished.</p>
     </div>
   </section>
 

@@ -7,6 +7,7 @@
  */
 
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
+import { pickCheckoutEmail } from "./checkout-email";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
@@ -61,7 +62,7 @@ export async function createDppCheckoutSession(opts: {
     pick(searchParams, "visit_id") ||
     pick(searchParams, "prospect_id") ||
     newDppVisitId();
-  const email = pick(searchParams, "email", 254);
+  const email = pickCheckoutEmail(pick(searchParams, "email", 254));
   const utmSource = pick(searchParams, "utm_source", 64);
   const utmMedium = pick(searchParams, "utm_medium", 64);
   const utmCampaign = pick(searchParams, "utm_campaign", 128);

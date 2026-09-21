@@ -13,6 +13,7 @@
  */
 import { listedPlans, type Plan } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
+import { checkoutEmailFormHtml } from "../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -48,6 +49,21 @@ function esc(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function attributedCheckoutCta(
+  cta: { href: string; label: string; external: boolean },
+  featured: boolean
+): string {
+  if (!/\/api\/checkout\//.test(cta.href)) {
+    const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
+    return `<a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>`;
+  }
+  return checkoutEmailFormHtml({
+    action: cta.href,
+    label: cta.label,
+    buttonClass: featured ? "btn btn-primary" : "btn btn-outline",
+  });
 }
 
 function usdAmount(price: string): number {
@@ -152,7 +168,6 @@ function cataloguePricingGrid(
       );
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
-      const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
       const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
       return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(plan.name)}</h3>
@@ -160,7 +175,7 @@ function cataloguePricingGrid(
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  <a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>
+  ${attributedCheckoutCta(cta, featured)}
 </article>`;
     })
     .join("");
@@ -171,7 +186,6 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
   const cta = planCheckoutCta(plan, "strainchain");
   const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
   const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
-  const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
   const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
   return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(plan.name)}</h3>
@@ -179,7 +193,7 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
   <div class="price-period">${esc(suffix || "per purchase")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  <a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>
+  ${attributedCheckoutCta(cta, featured)}
 </article>`;
 }
 

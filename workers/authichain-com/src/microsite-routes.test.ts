@@ -69,6 +69,7 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.match(MICROSITE_HTML.mendo, /no CoA/);
   assert.match(MICROSITE_HTML.mendo, /id="license-outline"/);
   assert.match(MICROSITE_HTML.mendo, /StrainChain does not breed/);
+  assert.match(MICROSITE_HTML.mendo, /name="email"/);
   assert.match(
     MICROSITE_HTML.mendo,
     /ZACHARY KIETZMAN \(AuthiChain \/ StrainChain are brands\)/

@@ -20,6 +20,7 @@ import {
   type DerivedCertificate,
   type Provenance,
 } from "../../../src/lib/genetics";
+import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
 
 const HTML_SECURITY_HEADERS: Record<string, string> = {
   "content-type": "text/html; charset=utf-8",
@@ -111,6 +112,11 @@ td strong{color:var(--text)}
 .btn-primary:hover{text-decoration:none;filter:brightness(1.05)}
 .btn-outline{border:1px solid var(--border);color:var(--text)}
 .btn-outline:hover{border-color:var(--green);text-decoration:none}
+.checkout-email-form{display:flex;flex-direction:column;align-items:flex-start;gap:.45rem;margin-top:.35rem;min-width:min(100%,22rem)}
+.checkout-email-label{display:flex;flex-direction:column;gap:.35rem;font-size:.85rem;color:var(--muted)}
+.checkout-email-form input[type=email]{width:100%;padding:.55rem .7rem;border-radius:.4rem;border:1px solid var(--border);background:#041208;color:var(--text);font:inherit}
+.checkout-email-hint{font-size:.8rem;color:var(--muted);margin:0}
+.checkout-email-form button.btn{border:0;cursor:pointer;font:inherit}
 footer{margin-top:2.5rem;padding-top:1.25rem;border-top:1px solid var(--border);color:var(--muted);font-size:.8rem}
 code{font-size:.85em;background:rgba(148,163,184,.1);padding:.1rem .35rem;border-radius:.25rem}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -140,7 +146,10 @@ function checkoutCard(): string {
   <h2>StrainChain Passport — $49</h2>
   <p>One cultivar genetics passport: CoA chemistry with totals derived at render, lineage edges tagged by evidence, public verify URL. LT-63 still has no panel — Passport publishes the first verified lot when it arrives.</p>
   <div class="cta">
-    <a class="btn btn-primary" href="${CHECKOUT}">Passport checkout — $49</a>
+    ${checkoutEmailFormHtml({
+      action: CHECKOUT,
+      label: "Passport checkout — $49",
+    })}
     <a class="btn btn-outline" href="${MENDO_MICRO}">LT-63 licensing microsite</a>
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>

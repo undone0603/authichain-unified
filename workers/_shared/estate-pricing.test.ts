@@ -69,6 +69,8 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/x402"/);
   assert.match(html, /Start DPP Readiness Audit/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
   assert.doesNotMatch(html, /Publish one passport/);

@@ -30,6 +30,7 @@ describe("genetics routes", () => {
     assert.match(html, /\/genetics\/mendo-love-farms\/vt-26/);
     assert.match(html, /\/genetics\/mendo-love-farms\/lt-63/);
     assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
+    assert.match(html, /name="email"/);
     assert.ok(html.includes("/m/mendo"));
     assert.match(html, /11\.618%/);
   });

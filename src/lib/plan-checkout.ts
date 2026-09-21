@@ -5,6 +5,7 @@
  */
 import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
+import { pickCheckoutEmail } from "./checkout-email";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -68,8 +69,9 @@ export async function createPlanCheckoutSession(opts: {
   const refCode = (cookieReferral ? decodeURIComponent(cookieReferral) : "")
     .trim()
     .slice(0, 64);
-  const email =
-    typeof body.email === "string" ? body.email.trim().slice(0, 254) : "";
+  const email = pickCheckoutEmail(
+    typeof body.email === "string" ? body.email : ""
+  );
   const prospectId =
     typeof body.prospectId === "string"
       ? body.prospectId.trim().slice(0, 128)

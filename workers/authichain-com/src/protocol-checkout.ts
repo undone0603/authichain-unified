@@ -5,6 +5,7 @@
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
+import { pickCheckoutEmail } from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
 
@@ -68,7 +69,7 @@ export async function tryHandleProtocolCheckout(
   const params = url.searchParams;
   const visitId =
     pick(params, "visit_id") || pick(params, "prospect_id") || newVisitId();
-  const email = pick(params, "email", 254);
+  const email = pickCheckoutEmail(pick(params, "email", 254));
   const utmSource = pick(params, "utm_source", 64);
   const utmMedium = pick(params, "utm_medium", 64);
   const utmCampaign = pick(params, "utm_campaign", 128);

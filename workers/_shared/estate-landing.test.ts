@@ -17,7 +17,9 @@ import {
 } from "./estate-landing.ts";
 
 test("light tokens stay on white for every estate brand", () => {
-  for (const id of Object.keys(ESTATE_BRANDS) as Array<keyof typeof ESTATE_BRANDS>) {
+  for (const id of Object.keys(ESTATE_BRANDS) as Array<
+    keyof typeof ESTATE_BRANDS
+  >) {
     const css = estateCssVars(id);
     assert.match(css, /--bg: #ffffff/);
     assert.match(css, /--text: #0f172a/);
@@ -31,15 +33,11 @@ test("light tokens stay on white for every estate brand", () => {
 });
 
 test("how-it-works steps keep Issue → Bind → Verify copy verbatim", () => {
-  const html = estateSteps(
-    "How it works",
-    "Three realized steps.",
-    [
-      { title: "Issue", body: "Issue a signed seal." },
-      { title: "Bind", body: "Bind it to the product." },
-      { title: "Verify", body: "Verify from any camera." },
-    ],
-  );
+  const html = estateSteps("How it works", "Three realized steps.", [
+    { title: "Issue", body: "Issue a signed seal." },
+    { title: "Bind", body: "Bind it to the product." },
+    { title: "Verify", body: "Verify from any camera." },
+  ]);
   assert.match(html, /id="how"/);
   assert.match(html, /Issue/);
   assert.match(html, /Bind/);
@@ -47,10 +45,14 @@ test("how-it-works steps keep Issue → Bind → Verify copy verbatim", () => {
 });
 
 test("shared chrome keeps conversion hrefs verbatim", () => {
-  const nav = estateNav("authichain", [{ href: "/onboard", label: "Onboard" }], {
-    href: "/dashboard",
-    label: "Open dashboard",
-  });
+  const nav = estateNav(
+    "authichain",
+    [{ href: "/onboard", label: "Onboard" }],
+    {
+      href: "/dashboard",
+      label: "Open dashboard",
+    }
+  );
   assert.match(nav, /href="\/dashboard"/);
   assert.match(nav, /href="\/onboard"/);
 
@@ -66,6 +68,21 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   assert.match(hero, /href="\/generate"/);
   assert.match(hero, /href="\/api\/checkout\/dpp"/);
 
+  const emailHero = estateHero({
+    eyebrow: "Test",
+    title: "Headline",
+    lede: "Lede",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+      skipHref: "/api/checkout/dpp",
+    },
+    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
+  });
+  assert.match(emailHero, /name="email"/);
+  assert.match(emailHero, /action="\/api\/checkout\/dpp"/);
+  assert.match(emailHero, /Checkout without saving a recovery email/);
+
   const trust = estateTrust([{ value: "Polygon", label: "On-chain anchor" }]);
   assert.doesNotMatch(trust, /847\+/);
   assert.match(trust, /Polygon/);
@@ -80,7 +97,7 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   const footer = estateFooter(
     "qron",
     [{ heading: "Start", links: [{ href: "/generate", label: "Generate" }] }],
-    "note",
+    "note"
   );
   assert.match(footer, /href="\/generate"/);
 });
@@ -95,32 +112,32 @@ test("IndexNow key file is exact-path plain text with a short cache", async () =
   assert.equal(ESTATE_INDEXNOW_KEY, "authichain2026indexnow");
 
   const hit = tryHandleEstateIndexNow(
-    new Request("https://authichain.com/authichain2026indexnow.txt"),
+    new Request("https://authichain.com/authichain2026indexnow.txt")
   );
   assert.ok(hit);
   assert.equal(await hit.text(), ESTATE_INDEXNOW_KEY);
 
   assert.equal(
     tryHandleEstateIndexNow(
-      new Request("https://qron.space/authichain2026indexnow.txt/"),
+      new Request("https://qron.space/authichain2026indexnow.txt/")
     ),
     null,
-    "trailing slash is not the key file",
+    "trailing slash is not the key file"
   );
   assert.equal(
     tryHandleEstateIndexNow(
-      new Request("https://govchain.us/authichain2026indexnow"),
+      new Request("https://govchain.us/authichain2026indexnow")
     ),
     null,
-    "extensionless path is not the key file",
+    "extensionless path is not the key file"
   );
   assert.equal(
     tryHandleEstateIndexNow(
       new Request("https://strainchain.io/authichain2026indexnow.txt", {
         method: "POST",
-      }),
+      })
     ),
     null,
-    "non-GET is left to the worker",
+    "non-GET is left to the worker"
   );
 });

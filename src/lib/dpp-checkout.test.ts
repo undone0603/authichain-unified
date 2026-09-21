@@ -66,6 +66,36 @@ describe("createDppCheckoutSession", () => {
     expect(arg.customer_creation).toBe("always");
   });
 
+  it("forwards a valid email as Stripe customer_email", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_email",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_paid_2",
+        email: "ops@brand.com",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].customer_email).toBe("ops@brand.com");
+  });
+
+  it("omits customer_email when the query is not an address", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_bad",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_paid_3",
+        email: "not-an-email",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].customer_email).toBeUndefined();
+  });
+
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
     create.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",

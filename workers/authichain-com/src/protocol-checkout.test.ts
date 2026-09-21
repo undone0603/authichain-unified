@@ -90,6 +90,59 @@ describe("tryHandleProtocolCheckout", () => {
     expect(body).toContain("customer_creation");
   });
 
+  it("forwards a valid email as Stripe customer_email", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              url: "https://checkout.stripe.com/c/pay/cs_test_email",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+      )
+    );
+    const res = await tryHandleProtocolCheckout(
+      req("/protocol/checkout/dpp?visit_id=dpp_abc&email=buyer%40brand.com"),
+      { STRIPE_SECRET_KEY: "sk_test_x" }
+    );
+    expect(res!.status).toBe(303);
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const init = fetchMock.mock.calls[0][1] as { body: URLSearchParams };
+    const params = new URLSearchParams(String(init.body));
+    expect(params.get("customer_email")).toBe("buyer@brand.com");
+  });
+
+  it("does not send an invalid email to Stripe", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              url: "https://checkout.stripe.com/c/pay/cs_test_noemail",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+      )
+    );
+    await tryHandleProtocolCheckout(
+      req("/protocol/checkout/dpp?visit_id=dpp_abc&email=not-an-email"),
+      { STRIPE_SECRET_KEY: "sk_test_x" }
+    );
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const init = fetchMock.mock.calls[0][1] as { body: URLSearchParams };
+    const params = new URLSearchParams(String(init.body));
+    expect(params.get("customer_email")).toBeNull();
+  });
+
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
     vi.stubGlobal(
       "fetch",

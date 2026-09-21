@@ -87,6 +87,24 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.customer_creation).toBe("always");
   });
 
+  it("forwards a valid email as Stripe customer_email", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_passport_email",
+    });
+    await createPlanCheckoutSession({
+      request: new Request(
+        "https://authichain.com/api/checkout/plan/strainchain_passport",
+        { method: "GET" }
+      ),
+      body: {
+        planId: "strainchain_passport",
+        email: "mike@example.com",
+      },
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].customer_email).toBe("mike@example.com");
+  });
+
   it("does not set customer_creation on Farm Plan subscription checkout", async () => {
     create.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_farm",

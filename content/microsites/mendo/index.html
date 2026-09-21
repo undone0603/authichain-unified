@@ -56,6 +56,11 @@
     th,td{text-align:left;padding:.55rem .35rem;border-bottom:1px solid var(--border);vertical-align:top}
     th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
     .cta{padding:48px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .checkout-email-form{display:flex;flex-direction:column;gap:8px;min-width:min(100%,22rem)}
+    .checkout-email-label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:var(--muted)}
+    .checkout-email-form input[type=email]{padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font:inherit}
+    .checkout-email-hint{font-size:.82rem;color:var(--muted);margin:0}
+    .checkout-email-form button{cursor:pointer;font:inherit}
     footer{padding:36px 0 28px;color:var(--muted);font-size:.82rem}
     footer a{color:var(--muted)}
   </style>
@@ -77,7 +82,13 @@
       <h1>One licensing passport for LT-63. Forty-nine dollars. No call.</h1>
       <p class="lede">Mike’s written lineage (2026-09-10): VT-26 × VT-41 produced the LT males and females <strong>LT-35</strong> / <strong>LT-63</strong>. LT-63 is the cultivar offered for licensing. It still has no CoA — so there is no live LT-63 seal. Passport is the instrument that publishes the first verified lot when the panel arrives.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Start Passport checkout — $49</a>
+        <form class="checkout-email-form" action="https://authichain.com/api/checkout/plan/strainchain_passport" method="get">
+          <label class="checkout-email-label" for="mendo-email">Work email
+            <input id="mendo-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+          </label>
+          <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+          <button class="btn btn-primary" type="submit">Start Passport checkout — $49</button>
+        </form>
         <a class="btn btn-outline" href="https://authichain.com/genetics/mendo-love-farms">Open the CoA library</a>
         <a class="btn btn-outline" href="#license-outline">Read the license outline</a>
       </div>
@@ -159,7 +170,13 @@
       <h2>Publish the first verified cultivar</h2>
       <p class="sub">Self-serve. Stripe hosted checkout. Mark up the <a href="#license-outline">LT-63 outline</a> by email. AuthiChain is a brand — the SAM legal entity is ZACHARY KIETZMAN.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+        <form class="checkout-email-form" action="https://authichain.com/api/checkout/plan/strainchain_passport" method="get">
+          <label class="checkout-email-label" for="mendo-email-footer">Work email
+            <input id="mendo-email-footer" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+          </label>
+          <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+          <button class="btn btn-primary" type="submit">Passport checkout — $49</button>
+        </form>
         <a class="btn btn-outline" href="https://authichain.com/api/checkout/dpp">EU DPP Readiness — $299</a>
         <a class="btn btn-outline" href="https://authichain.com/passport">Passport status</a>
       </div>
