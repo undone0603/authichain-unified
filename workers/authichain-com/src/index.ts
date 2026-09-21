@@ -43,7 +43,7 @@ import {
   mostRecentInForce,
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
-import { catalogPaymentLinkHtml, checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
+import { catalogPaymentLinkHtml, checkoutEmailFormHtml, rewriteProxiedCheckoutHtml } from "../../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -3303,6 +3303,19 @@ interface Env {
   X402_DAILY_CAP_USD?: string;
 }
 
+/**
+ * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
+ * published Payment Links. GET /api/checkout without email is already
+ * bounced; this covers HTML that still points at those URLs
+ * (/p SEO hubs, /landing/*) until edge-router deploys.
+ */
+async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
+  if (!env.APP_WORKER) {
+    return new Response("App worker not bound (local dev)", { status: 502 });
+  }
+  return rewriteProxiedCheckoutHtml(await env.APP_WORKER.fetch(request));
+}
+
 /** Escapes text interpolated into the 404 document. */
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(/[<>&"']/g, (c) =>
@@ -3407,7 +3420,7 @@ export default {
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n# https://authichain.com/llms.txt\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;
@@ -3491,10 +3504,7 @@ export default {
     // Handled by worker-app's renderLanding (worker-app/dynamic-pages.ts),
     // registered in DYNAMIC_HANDLER_PATHS (worker-app/route-manifest.ts).
     if (p === '/landing' || p.startsWith('/landing/')) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
+      return proxyAppWorker(request, env);
     }
     // Proxy app routes to the native Cloudflare app Worker (authichain-edge-router,
     // see worker-app/index.ts) via a service binding, replacing the old Vercel
@@ -3518,10 +3528,7 @@ export default {
       return notFound(p);
     }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
-      if (env.APP_WORKER) {
-        return env.APP_WORKER.fetch(request);
-      }
-      return new Response('App worker not bound (local dev)', { status: 502 });
+      return proxyAppWorker(request, env);
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;

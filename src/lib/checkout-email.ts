@@ -185,3 +185,58 @@ export function emailCheckoutWithPaymentLinkHtml(opts: {
   if (!pay) return form;
   return `${form}<div class="checkout-payment-link" style="margin-top:8px">${pay}</div>`;
 }
+
+/**
+ * Map a one-click checkout <a href> to the catalogue Payment Link for that
+ * SKU. Stale APP_WORKER HTML still one-clicks /api/checkout; the landing
+ * worker rewrites those anchors so Bing SEO hubs can pay before edge-router
+ * deploys. Form actions stay email-gated.
+ */
+export function rewriteCheckoutHref(href: string): string | undefined {
+  const raw = href.trim();
+  if (!raw || raw.startsWith("#") || raw.startsWith("mailto:")) {
+    return undefined;
+  }
+  let pathname = raw;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase();
+      if (host !== "authichain.com" && host !== "www.authichain.com") {
+        return undefined;
+      }
+      pathname = url.pathname;
+    } else {
+      pathname = raw.split("?")[0].split("#")[0];
+    }
+  } catch {
+    return undefined;
+  }
+  const planId = planIdFromCheckoutAction(pathname);
+  if (!planId) return undefined;
+  return planPaymentLink(planId);
+}
+
+/** Replace checkout <a href> only. Leave <form action> so email capture still posts. */
+export function rewriteCheckoutHrefsInHtml(html: string): string {
+  return html.replace(/href=(["'])([^"']*)\1/gi, (full, quote, href) => {
+    const next = rewriteCheckoutHref(String(href));
+    return next ? `href=${quote}${next}${quote}` : full;
+  });
+}
+
+export async function rewriteProxiedCheckoutHtml(
+  response: Response
+): Promise<Response> {
+  const contentType = (
+    response.headers.get("content-type") || ""
+  ).toLowerCase();
+  if (!contentType.includes("text/html")) return response;
+  const html = await response.text();
+  const rewritten = rewriteCheckoutHrefsInHtml(html);
+  return new Response(rewritten, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}

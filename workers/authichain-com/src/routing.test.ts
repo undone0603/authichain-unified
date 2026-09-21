@@ -484,6 +484,35 @@ test("/p and /p/<serial> are proxied to the app, not marketing 404", async () =>
   assert.match(await pricing.text(), /<title>Pricing — AuthiChain<\/title>/);
 });
 
+test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
+  const dpp = planPaymentLink("dpp_readiness") ?? "";
+  const passport = planPaymentLink("strainchain_passport") ?? "";
+  const env = {
+    APP_WORKER: {
+      fetch: async () =>
+        new Response(
+          '<a href="/api/checkout/dpp">DPP</a>' +
+            '<a href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport</a>' +
+            '<form action="/api/checkout/dpp"><input name="email"></form>',
+          {
+            status: 200,
+            headers: { "Content-Type": "text/html; charset=UTF-8" },
+          }
+        ),
+    },
+  } as unknown as Env;
+  for (const path of [
+    "/p/what-is-a-digital-product-passport",
+    "/landing/authichain",
+  ]) {
+    const html = await (await get(path, env)).text();
+    assert.ok(html.includes(`href="${dpp}"`), path);
+    assert.ok(html.includes(`href="${passport}"`), path);
+    assert.equal(html.includes('href="/api/checkout/dpp"'), false, path);
+    assert.ok(html.includes('action="/api/checkout/dpp"'), path);
+  }
+});
+
 test("seed SEO canonicals 301 to /p/<slug>, except authentic-agentic-economy", async () => {
   const res = await get("/what-is-a-digital-product-passport");
   assert.equal(res.status, 301);
@@ -588,10 +617,9 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/authichain.com\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/authichain.com\/sitemap.xml/);
+  assert.ok(robotsText.includes("https://authichain.com/llms.txt"));
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

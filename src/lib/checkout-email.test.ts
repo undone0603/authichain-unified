@@ -11,7 +11,11 @@ import {
   looksLikeCheckoutEmail,
   pickCheckoutEmail,
   planIdFromCheckoutAction,
+  rewriteCheckoutHref,
+  rewriteCheckoutHrefsInHtml,
+  rewriteProxiedCheckoutHtml,
 } from "./checkout-email";
+import { planPaymentLink } from "./plans";
 
 describe("looksLikeCheckoutEmail", () => {
   it("accepts a normal work address", () => {
@@ -144,5 +148,71 @@ describe("checkoutRedirectResponse", () => {
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(res.headers.get("cache-control")).toMatch(/no-store/);
     expect(CHECKOUT_REDIRECT_HEADERS["X-Robots-Tag"]).toBe("noindex, nofollow");
+  });
+});
+
+describe("rewriteCheckoutHref", () => {
+  const dpp = planPaymentLink("dpp_readiness");
+  const passport = planPaymentLink("strainchain_passport");
+
+  it("maps DPP and Passport checkout paths to catalogue Payment Links", () => {
+    expect(rewriteCheckoutHref("/api/checkout/dpp")).toBe(dpp);
+    expect(
+      rewriteCheckoutHref("/protocol/checkout/dpp?visit_id=dpp_anon")
+    ).toBe(dpp);
+    expect(
+      rewriteCheckoutHref(
+        "https://authichain.com/api/checkout/plan/strainchain_passport"
+      )
+    ).toBe(passport);
+  });
+
+  it("leaves email forms, foreign hosts, and SKUs without a Payment Link", () => {
+    expect(rewriteCheckoutHref("/pricing")).toBeUndefined();
+    expect(
+      rewriteCheckoutHref("https://strainchain.io/api/checkout/dpp")
+    ).toBeUndefined();
+    expect(
+      rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")
+    ).toBeUndefined();
+  });
+});
+
+describe("rewriteCheckoutHrefsInHtml", () => {
+  it("rewrites anchors and leaves form actions for email capture", () => {
+    const dpp = planPaymentLink("dpp_readiness") ?? "";
+    const html =
+      '<a href="/api/checkout/dpp">DPP</a>' +
+      '<form action="/api/checkout/dpp"><input name="email"></form>';
+    const out = rewriteCheckoutHrefsInHtml(html);
+    expect(out).toContain(`href="${dpp}"`);
+    expect(out).toContain('action="/api/checkout/dpp"');
+    expect(out).not.toContain('href="/api/checkout/dpp"');
+  });
+});
+
+describe("rewriteProxiedCheckoutHtml", () => {
+  it("skips JSON so API bodies are not rewritten", async () => {
+    const body = JSON.stringify({ href: "/api/checkout/dpp" });
+    const res = await rewriteProxiedCheckoutHtml(
+      new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    expect(await res.text()).toBe(body);
+  });
+
+  it("rewrites HTML proxied from a stale APP_WORKER", async () => {
+    const dpp = planPaymentLink("dpp_readiness") ?? "";
+    const res = await rewriteProxiedCheckoutHtml(
+      new Response('<a href="/api/checkout/dpp">DPP checkout</a>', {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      })
+    );
+    const html = await res.text();
+    expect(html).toContain(`href="${dpp}"`);
+    expect(html).not.toContain('href="/api/checkout/dpp"');
   });
 });

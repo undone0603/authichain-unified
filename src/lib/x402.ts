@@ -747,7 +747,8 @@ export type X402CatalogEndpoint = {
 
 export type X402CatalogBody = {
   protocol: "x402";
-  x402Version: 1;
+  /** Unpaid HTTP JSON version (v2). PayAI /settle still uses the v1 requirement. */
+  x402Version: 2;
   brand: "AuthiChain";
   docs: string;
   health: string;
@@ -810,7 +811,7 @@ export async function x402Catalog(
   });
   return {
     protocol: "x402",
-    x402Version: 1,
+    x402Version: 2,
     brand: "AuthiChain",
     docs: "/x402",
     health: "/api/x402/health",
