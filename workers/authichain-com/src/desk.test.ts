@@ -27,6 +27,18 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.doesNotMatch(html, /Aura|MediLedger|Walmart/);
   assert.doesNotMatch(html, /1369/);
   assert.match(html, /\$QRON is not a payment rail/);
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
+  );
 });
 
 test("desk subpaths in DESK_SITEMAP all 200", async () => {

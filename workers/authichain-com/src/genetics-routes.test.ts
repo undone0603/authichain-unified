@@ -22,6 +22,9 @@ describe("genetics routes", () => {
     assert.ok(
       html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
     );
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+    );
   });
 
   it("serves Mendo farm library with derived peaks and LT-63 gap", async () => {

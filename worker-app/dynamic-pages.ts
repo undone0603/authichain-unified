@@ -49,6 +49,7 @@ import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
+  catalogPaymentLinkHtml,
   emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
@@ -901,6 +902,40 @@ const ONBOARD_VERTICALS = [
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+function onboardPayNowHtml(): string {
+  const basic = PAYMENT_LINKS.strainchain.basic;
+  return (
+    '<section aria-label="Live checkout" class="onboard-pay">\n' +
+    "<h2>Or pay now — no call</h2>\n" +
+    "<p>Published catalogue. Pilot intake stays free.</p>\n" +
+    '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "Passport $49",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_farm",
+      label: "Farm $149/mo",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "DPP $299",
+    }) +
+    "\n" +
+    '<a class="btn btn-outline" href="' +
+    escapeHtml(basic.url) +
+    '">' +
+    escapeHtml(basic.name) +
+    " " +
+    escapeHtml(basic.price) +
+    "</a>\n" +
+    "</p>\n" +
+    "</section>\n"
+  );
+}
+
 function onboardFormHtml(error?: string): string {
   const errorBlock = error
     ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
@@ -911,8 +946,13 @@ function onboardFormHtml(error?: string): string {
   return htmlDocument({
     title: "Onboard a Pilot | AuthiChain",
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
     canonicalPath: "/onboard",
+    extraHead:
+      "<style>" +
+      CHECKOUT_EMAIL_FORM_CSS +
+      ".onboard-pay{margin-top:2rem;padding-top:1.25rem;border-top:1px solid #cbd5e1}.onboard-pay h2{font-size:1.1rem;margin:0 0 .4rem}.onboard-pay p{margin:0 0 .75rem}.onboard-pay-links{display:flex;flex-wrap:wrap;gap:.6rem}.onboard-pay-links a{display:inline-block;padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;text-decoration:none;font-weight:600}" +
+      "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Onboard a Pilot</h1>\n" +
@@ -937,6 +977,7 @@ function onboardFormHtml(error?: string): string {
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
       '<button type="submit">Request pilot seal</button>\n' +
       "</form>\n" +
+      onboardPayNowHtml() +
       '<p><a href="/verify">Verify an existing seal</a></p>\n' +
       "</main>",
   });

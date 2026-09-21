@@ -210,7 +210,7 @@ describe("rewriteCheckoutHref", () => {
   const dpp = planPaymentLink("dpp_readiness");
   const passport = planPaymentLink("strainchain_passport");
 
-  it("maps DPP and Passport checkout paths to catalogue Payment Links", () => {
+  it("maps DPP, Passport, and Farm checkout paths to catalogue Payment Links", () => {
     expect(rewriteCheckoutHref("/api/checkout/dpp")).toBe(dpp);
     expect(
       rewriteCheckoutHref("/protocol/checkout/dpp?visit_id=dpp_anon")
@@ -220,6 +220,9 @@ describe("rewriteCheckoutHref", () => {
         "https://authichain.com/api/checkout/plan/strainchain_passport"
       )
     ).toBe(passport);
+    expect(rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")).toBe(
+      planPaymentLink("strainchain_farm")
+    );
   });
 
   it("leaves email forms, foreign hosts, and SKUs without a Payment Link", () => {
@@ -227,9 +230,7 @@ describe("rewriteCheckoutHref", () => {
     expect(
       rewriteCheckoutHref("https://strainchain.io/api/checkout/dpp")
     ).toBeUndefined();
-    expect(
-      rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")
-    ).toBeUndefined();
+    expect(rewriteCheckoutHref("/api/checkout/plan/theater_1")).toBeUndefined();
   });
 });
 
