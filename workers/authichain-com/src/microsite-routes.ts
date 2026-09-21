@@ -6,7 +6,10 @@
  * prefix (APP_WORKER). These pages are /m/<slug> on authichain-com —
  * the worker that actually serves authichain.com.
  */
-import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
+import {
+  catalogPaymentLinkHtml,
+  checkoutEmailFormHtml,
+} from "../../../src/lib/checkout-email";
 import { MICROSITE_HTML } from "./microsite-packs.ts";
 
 export const PASSPORT_CHECKOUT =
@@ -113,7 +116,10 @@ function renderHub(): string {
           formId: `hub-${def.pack}-checkout`,
           extraClass: "hub-checkout",
         }
-      )}</article>`;
+      )}${catalogPaymentLinkHtml({
+        planId: def.pack === "musa" ? "dpp_readiness" : "strainchain_passport",
+        label: def.pack === "musa" ? "Pay $299 on Stripe" : "Pay $49 on Stripe",
+      })}</article>`;
     })
     .join("");
   return `<!DOCTYPE html>
@@ -149,11 +155,19 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
     inputId: "hub-footer-passport-email",
     formId: "hub-footer-passport-checkout",
   })}
+  ${catalogPaymentLinkHtml({
+    planId: "strainchain_passport",
+    label: "Pay $49 on Stripe",
+  })}
   ${checkoutEmailFormHtml({
     action: "/api/checkout/dpp",
     label: "DPP checkout — $299",
     inputId: "hub-footer-dpp-email",
     formId: "hub-footer-dpp-checkout",
+  })}
+  ${catalogPaymentLinkHtml({
+    planId: "dpp_readiness",
+    label: "Pay $299 on Stripe",
   })}
   <footer>ZACHARY KIETZMAN · brand AuthiChain · not a corporation.</footer>
 </main>

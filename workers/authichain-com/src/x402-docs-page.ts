@@ -19,6 +19,7 @@
 import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
+  catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
 
@@ -357,11 +358,19 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
       })}
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_passport",
+        label: "Pay $49 on Stripe",
+      })}
       ${checkoutEmailFormHtml({
         action: "/api/checkout/dpp",
         label: "DPP checkout — $299",
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "dpp_readiness",
+        label: "Pay $299 on Stripe",
       })}
     </section>
   </div>

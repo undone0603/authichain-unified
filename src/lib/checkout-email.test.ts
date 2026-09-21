@@ -3,6 +3,7 @@ import {
   CHECKOUT_NEED_EMAIL_BANNER_HTML,
   CHECKOUT_NEED_EMAIL_DECORATE_JS,
   CHECKOUT_REDIRECT_HEADERS,
+  catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
   checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
@@ -47,6 +48,26 @@ describe("checkoutEmailFormHtml", () => {
     expect(html).toContain("required");
     expect(html).toContain("Not a newsletter");
     expect(html).not.toContain("javascript:");
+  });
+});
+
+describe("catalogPaymentLinkHtml", () => {
+  it("uses the live Passport Payment Link from plans.ts", () => {
+    const html = catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "Pay $49 on Stripe",
+    });
+    expect(html).toContain("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
+    expect(html).toContain("Pay $49 on Stripe");
+    expect(html).not.toContain("/api/checkout");
+  });
+
+  it("uses the live DPP Payment Link from plans.ts", () => {
+    const html = catalogPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "Pay $299 on Stripe",
+    });
+    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
   });
 });
 

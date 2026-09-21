@@ -6,7 +6,9 @@ import {
   isPurchasable,
   listedPlans,
   planByAmountCents,
+  planById,
   planByStripePriceId,
+  planPaymentLink,
 } from "./plans";
 
 describe("plan catalogue integrity", () => {
@@ -20,6 +22,17 @@ describe("plan catalogue integrity", () => {
   it("has no duplicate ids", () => {
     const ids = PLANS.map(p => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("exposes live Payment Links for Passport and DPP", () => {
+    expect(planById("strainchain_passport")?.price).toBe(49);
+    expect(planPaymentLink("strainchain_passport")).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
+    expect(planPaymentLink("dpp_readiness")).toBe(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    );
+    expect(planPaymentLink("strainchain_farm")).toBeUndefined();
   });
 });
 

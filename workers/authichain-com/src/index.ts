@@ -38,7 +38,7 @@ import {
   mostRecentInForce,
   timelineUpdatedAt,
 } from '../../../src/lib/dpp-timeline';
-import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
+import { catalogPaymentLinkHtml, checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -2307,6 +2307,10 @@ function originMoneySurfaces() {
             inputId: "origin-trumark-email",
             formId: "origin-trumark-checkout",
           })}
+          ${catalogPaymentLinkHtml({
+            planId: "strainchain_passport",
+            label: "Pay $49 on Stripe",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2320,6 +2324,10 @@ function originMoneySurfaces() {
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
           })}
+          ${catalogPaymentLinkHtml({
+            planId: "dpp_readiness",
+            label: "Pay $299 on Stripe",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2332,6 +2340,10 @@ function originMoneySurfaces() {
             label: "Passport checkout — $49",
             inputId: "origin-mendo-email",
             formId: "origin-mendo-checkout",
+          })}
+          ${catalogPaymentLinkHtml({
+            planId: "strainchain_passport",
+            label: "Pay $49 on Stripe",
           })}
         </div>
       </article>
@@ -2353,6 +2365,10 @@ function marketReality() {
         label: "Start DPP checkout",
         inputId: "compliance-dpp-email",
         formId: "compliance-dpp-checkout",
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "dpp_readiness",
+        label: "Pay $299 on Stripe",
       })}
       <a class="btn btn-outline" href="/digital-product-passport">Read the DPP brief</a>
       <a class="btn btn-outline" href="/anchor">Anchor a product</a>
@@ -3040,6 +3056,10 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           formId: "dpp-checkout-form",
           inputId: "dpp-email",
         })}
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
+        })}
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
@@ -3233,6 +3253,10 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           label: "Start DPP Readiness Audit — $299",
           formId: "dpp-checkout-form-footer",
           inputId: "dpp-email-footer",
+        })}
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
         })}
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">Work email enables Stripe abandoned-cart recovery if you leave checkout unfinished.</p>

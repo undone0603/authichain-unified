@@ -218,6 +218,16 @@ export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
+/** Look up a live catalogue plan by id. */
+export function planById(id: PlanId): Plan | undefined {
+  return PLANS.find(p => p.id === id);
+}
+
+/** Durable Stripe Payment Link for a catalogue plan, if one exists. */
+export function planPaymentLink(id: PlanId): string | undefined {
+  return planById(id)?.stripe_payment_link;
+}
+
 /** Look up a live catalogue plan by Stripe price ID. */
 export function planByStripePriceId(
   priceId: string | null | undefined

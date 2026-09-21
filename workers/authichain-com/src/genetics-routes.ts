@@ -20,7 +20,10 @@ import {
   type DerivedCertificate,
   type Provenance,
 } from "../../../src/lib/genetics";
-import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
+import {
+  checkoutEmailFormHtml,
+  catalogPaymentLinkHtml,
+} from "../../../src/lib/checkout-email";
 
 const HTML_SECURITY_HEADERS: Record<string, string> = {
   "content-type": "text/html; charset=utf-8",
@@ -33,7 +36,6 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 
 const CHECKOUT =
   "https://authichain.com/api/checkout/plan/strainchain_passport";
-const PASSPORT_PAYMENT_LINK = "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y";
 const MENDO_MICRO = "https://authichain.com/m/mendo";
 
 const PROVENANCE_LABEL: Record<Provenance, string> = {
@@ -153,7 +155,10 @@ function checkoutCard(): string {
       inputId: "genetics-passport-email",
       formId: "genetics-passport-checkout",
     })}
-    <a class="btn btn-outline" href="${PASSPORT_PAYMENT_LINK}">Pay $49 on Stripe</a>
+    ${catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "Pay $49 on Stripe",
+    })}
     <a class="btn btn-outline" href="${MENDO_MICRO}">LT-63 licensing microsite</a>
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>

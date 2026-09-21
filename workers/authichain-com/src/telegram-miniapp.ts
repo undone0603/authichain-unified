@@ -6,6 +6,8 @@
  * or paying for Workers. Checkout is the live Passport rail — do not invent
  * TruMark prices or ship the May 2025 Inc / Series A claims.
  */
+import { catalogPaymentLinkHtml } from "../../../src/lib/checkout-email";
+
 export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
 export const PASSPORT_CHECKOUT_URL = `https://authichain.com${PASSPORT_CHECKOUT_PATH}`;
 export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
@@ -136,6 +138,11 @@ export function renderTelegramMiniApp(): string {
         <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
         <button class="btn btn-primary" id="checkout" type="submit">Publish Passport — $49</button>
       </form>
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_passport",
+        label: "Pay $49 on Stripe",
+        className: "btn btn-ghost",
+      })}
       <a class="btn btn-ghost" id="pricing" href="https://authichain.com/pricing">View pricing</a>
     </div>
 

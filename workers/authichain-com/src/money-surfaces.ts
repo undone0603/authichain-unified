@@ -17,9 +17,12 @@ import {
   estateSkipLink,
   estateSteps,
 } from "../../_shared/estate-landing.ts";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 
 export const DPP_CHECKOUT = "/api/checkout/dpp";
 export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
+const PASSPORT_PAYMENT_LINK = planPaymentLink("strainchain_passport") ?? "";
+const DPP_PAYMENT_LINK = planPaymentLink("dpp_readiness") ?? "";
 
 const TRUMARK_PATHS = new Set(["/trumark", "/trumark/"]);
 const MADE_IN_AMERICA_PATHS = new Set([
@@ -145,7 +148,14 @@ export function renderTrumarkPage(): string {
       action: PASSPORT_CHECKOUT_PATH,
       label: "Start Passport checkout — $49",
     },
-    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
+    actions: [
+      {
+        href: PASSPORT_PAYMENT_LINK,
+        label: "Pay $49 on Stripe",
+        primary: false,
+      },
+      { href: "/pricing", label: "View pricing", primary: false },
+    ],
   })}
   ${estateSteps(
     "How a TruMark scan works",
@@ -192,6 +202,11 @@ export function renderTrumarkPage(): string {
       label: "Start DPP checkout — $299",
     },
     actions: [
+      {
+        href: DPP_PAYMENT_LINK,
+        label: "Pay $299 on Stripe",
+        primary: false,
+      },
       { href: "/pricing", label: "View pricing", primary: false },
       {
         href: "mailto:hello@authichain.com?subject=TruMark%20written%20packet",
@@ -224,6 +239,11 @@ export function renderMadeInAmericaPage(): string {
       label: "Start DPP checkout — $299",
     },
     actions: [
+      {
+        href: DPP_PAYMENT_LINK,
+        label: "Pay $299 on Stripe",
+        primary: false,
+      },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
     ],
@@ -274,8 +294,13 @@ export function renderMadeInAmericaPage(): string {
     },
     actions: [
       {
-        href: "/pricing",
-        label: "Passport checkout — $49",
+        href: DPP_PAYMENT_LINK,
+        label: "Pay $299 on Stripe",
+        primary: false,
+      },
+      {
+        href: PASSPORT_PAYMENT_LINK,
+        label: "Pay $49 on Stripe",
         primary: false,
       },
       {

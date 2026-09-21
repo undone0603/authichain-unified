@@ -16,6 +16,7 @@ import { PAYMENT_LINKS } from "../../server/payment-links.ts";
 import {
   CHECKOUT_NEED_EMAIL_BANNER_HTML,
   CHECKOUT_NEED_EMAIL_DECORATE_JS,
+  catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../src/lib/checkout-email";
 import {
@@ -56,6 +57,7 @@ function esc(value: string): string {
 }
 
 function attributedCheckoutCta(
+  plan: Plan,
   cta: { href: string; label: string; external: boolean },
   featured: boolean
 ): string {
@@ -63,11 +65,16 @@ function attributedCheckoutCta(
     const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
     return `<a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>`;
   }
-  return checkoutEmailFormHtml({
+  const form = checkoutEmailFormHtml({
     action: cta.href,
     label: cta.label,
     buttonClass: featured ? "btn btn-primary" : "btn btn-outline",
   });
+  const pay = catalogPaymentLinkHtml({
+    planId: plan.id,
+    label: `Pay $${plan.price} on Stripe`,
+  });
+  return pay ? `${form}<div style="margin-top:8px">${pay}</div>` : form;
 }
 
 function usdAmount(price: string): number {
@@ -179,7 +186,7 @@ function cataloguePricingGrid(
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(cta, featured)}
+  ${attributedCheckoutCta(plan, cta, featured)}
 </article>`;
     })
     .join("");
@@ -197,7 +204,7 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
   <div class="price-period">${esc(suffix || "per purchase")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(cta, featured)}
+  ${attributedCheckoutCta(plan, cta, featured)}
 </article>`;
 }
 
@@ -702,6 +709,10 @@ ${estateHero({
           formId: "govchain-dpp-card",
           inputId: "govchain-dpp-card-email",
         })}
+        <div style="margin-top:8px">${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: `Pay $${dppPrice} on Stripe`,
+        })}</div>
       </article>
     </div>
   </div>

@@ -6,6 +6,8 @@
  * Landing pages collect the address and pass `?email=`.
  */
 
+import { type PlanId, planPaymentLink } from "./plans";
+
 export const CHECKOUT_REDIRECT_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store",
   "CDN-Cache-Control": "no-store",
@@ -123,4 +125,16 @@ export function checkoutEmailFormHtml(opts: {
   <p class="checkout-email-hint">${esc(hint)}</p>
   <button class="${esc(buttonClass)}" type="submit">${esc(opts.label)}</button>
 </form>`;
+}
+
+/** Secondary CTA: the catalogue Payment Link from `src/lib/plans.ts`. */
+export function catalogPaymentLinkHtml(opts: {
+  planId: PlanId;
+  label: string;
+  className?: string;
+}): string {
+  const href = planPaymentLink(opts.planId);
+  if (!href) return "";
+  const cls = opts.className || "btn btn-outline";
+  return `<a class="${esc(cls)}" href="${esc(href)}">${esc(opts.label)}</a>`;
 }

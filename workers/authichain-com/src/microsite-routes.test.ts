@@ -76,6 +76,18 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
     /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
   );
   assert.match(
+    MICROSITE_HTML.trumark,
+    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  );
+  assert.match(
+    MICROSITE_HTML.strainchain,
+    /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/
+  );
+  assert.match(
+    MICROSITE_HTML.musa,
+    /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/
+  );
+  assert.match(
     MICROSITE_HTML.mendo,
     /ZACHARY KIETZMAN \(AuthiChain \/ StrainChain are brands\)/
   );
@@ -106,6 +118,8 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.match(hubHtml, /Passport checkout — \$49/);
   assert.match(hubHtml, /name="email"/);
   assert.match(hubHtml, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(hubHtml, /buy\.stripe\.com\/cNi9ATdrH4t811U4ba1ND3y/);
+  assert.match(hubHtml, /buy\.stripe\.com\/bJe7sLgDTaRwh0S9vu1ND0c/);
   assert.match(hubHtml, /ZACHARY KIETZMAN/);
   assert.doesNotMatch(
     hubHtml,
