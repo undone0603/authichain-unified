@@ -10,7 +10,7 @@ import {
   QRON_ERC20,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
-import { planUsd, PLANS } from "./plans";
+import { planPaymentLink, planUsd, PLANS } from "./plans";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -75,6 +75,12 @@ describe("canonical web3 identity lock", () => {
       planUsd("strainchain_passport")
     );
     expect(catalog.humanCheckout.dppUsd).toBe(planUsd("dpp_readiness"));
+    expect(catalog.humanCheckout.passportPaymentLink).toBe(
+      planPaymentLink("strainchain_passport")
+    );
+    expect(catalog.humanCheckout.dppPaymentLink).toBe(
+      planPaymentLink("dpp_readiness")
+    );
   });
 
   it("keeps $QRON out of x402 accepts[]", () => {
@@ -107,10 +113,7 @@ describe("canonical web3 identity lock", () => {
   });
 
   it("joins Next MCP get_pricing and chain-data literals to the named exports", () => {
-    const mcp = readFileSync(
-      join(root, "src/app/api/mcp/route.ts"),
-      "utf8"
-    );
+    const mcp = readFileSync(join(root, "src/app/api/mcp/route.ts"), "utf8");
     expect(mcp).toContain("agentPricingDiscovery");
     expect(mcp).not.toMatch(/register_product:\s*"\$0\.50"/);
     expect(mcp).not.toMatch(/check_eu_dpp:\s*"\$5\.00"/);

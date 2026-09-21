@@ -512,6 +512,13 @@ describe("x402Catalog", () => {
     ).toBe(0.1);
     expect(catalog.discovery.bazaarDeclared).toBe(true);
     expect(catalog.discovery.paymentRequiredHeader).toBe(true);
+    expect(catalog.humanCheckout.passportPaymentLink).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
+    expect(catalog.humanCheckout.dppPaymentLink).toBe(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    );
+    expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
       "facilitator.payai"
     );

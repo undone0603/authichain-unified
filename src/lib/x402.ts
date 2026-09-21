@@ -20,7 +20,7 @@
  */
 
 import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
-import { planUsd } from "./plans";
+import { planPaymentLink, planUsd } from "./plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -763,6 +763,8 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
+    passportPaymentLink?: string;
+    dppPaymentLink?: string;
     source: string;
   };
   discovery: {
@@ -840,6 +842,8 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
+      passportPaymentLink: planPaymentLink("strainchain_passport"),
+      dppPaymentLink: planPaymentLink("dpp_readiness"),
       source: "src/lib/plans.ts",
     },
     discovery: {
