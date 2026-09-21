@@ -61,6 +61,16 @@ function sitemapHttpsLocs(xml: string): URL[] {
   });
 }
 
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "govchain.us");
+    return url.pathname;
+  });
+}
+
 const ROW = {
   notice_id: "ABC123",
   title: "Cyber support services",
@@ -224,9 +234,10 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.equal(robots.status, 200);
   const robotsText = await robots.text();
   assert.match(robotsText, /Sitemap: https:\/\/govchain.us\/sitemap.xml/);
-  assert.ok(robotsText.includes("https://govchain.us/llms.txt"));
-  assert.ok(robotsText.includes("https://govchain.us/openapi.json"));
-  assert.ok(robotsText.includes("https://govchain.us/api/x402"));
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
   assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
