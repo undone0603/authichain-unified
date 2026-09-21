@@ -55,5 +55,7 @@ describe("runGenesisCycle freeze gate", () => {
     const results = await runGenesisCycle();
     expect(results.outbound).toBe("skipped_public_loop_freeze");
     expect(results.maintenance).toBe("ok");
+    const economy = results.economy as { theater?: boolean };
+    expect(economy.theater).toBe(true);
   });
 });

@@ -9,6 +9,7 @@ import { isCronAuthorized } from "./cron-auth";
  * (claw + AgentZ dry-run) — not this cron.
  * Maintenance + a read of fee_flows / brands staking is enough to prove
  * the authentic economy can run once CRON_SECRET is bound.
+ * fee_flows is speculative $QRON theater (`authentic-economy.ts`), not x402 USDC.
  */
 export function authorizeGenesis(request: Request): boolean {
   return isCronAuthorized(request);
@@ -41,9 +42,12 @@ export async function runGenesisCycle(): Promise<Record<string, unknown>> {
     ]);
     results.economy = {
       ok: !fees.error && !brands.error,
+      theater: true,
+      liveTokenomics: false,
       fee_flows: fees.count ?? fees.data?.length ?? 0,
       brands: brands.count ?? brands.data?.length ?? 0,
       staking_columns: "staking_tier,qron_staked",
+      note: "fee_flows is speculative $QRON theater, not x402 USDC",
       fee_error: fees.error?.message,
       brand_error: brands.error?.message,
     };

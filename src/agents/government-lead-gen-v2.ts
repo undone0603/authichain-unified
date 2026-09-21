@@ -13,11 +13,12 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { sendEmail } from '../lib/email';
+import { COINBASE_SMART_WALLET } from '../../scripts/lib/evm-chains';
 
 const ACTIVE_ENTITY = {
   name: 'GovChain',
   domain: 'govchain.us',
-  wallet: '0xC0D26735fd9e868eacc60400ef3171Fa4161177f',
+  wallet: COINBASE_SMART_WALLET,
   mission:
     'Government Document & Product Verification — American-built infrastructure for procurement transparency and lives saved globally.',
 } as const;

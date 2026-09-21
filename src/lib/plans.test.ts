@@ -7,6 +7,7 @@ import {
   listedPlans,
   planByAmountCents,
   planByStripePriceId,
+  planUsd,
 } from "./plans";
 
 describe("plan catalogue integrity", () => {
@@ -107,6 +108,12 @@ describe("listedPlans", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
+  });
+
+  it("exposes planUsd from the catalogue, not a second price table", () => {
+    expect(planUsd("strainchain_passport")).toBe(49);
+    expect(planUsd("dpp_readiness")).toBe(299);
+    expect(planUsd("starter")).toBe(29);
   });
 
   it("keeps the live self-serve money path at $29 / $99 / $299", () => {

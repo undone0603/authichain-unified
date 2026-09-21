@@ -7,6 +7,12 @@
 `docs/agentic-economy-strategy.md`, the 2026-07-12 site audit (commit `b31b2c2`), and
 direct inspection of the running surfaces.
 
+**Current rails (2026-09-21):** this document still describes a then-unbuilt Polygon
+paywall and $0.03–$0.49 tiers. Live agent pay is **$0.05 Circle USDC on Base**. `$QRON`
+is not a payment rail. Wallets: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md). Economics:
+[`AGENT_TOKENOMICS_x402.md`](./AGENT_TOKENOMICS_x402.md). Thesis (updated):
+[`docs/marketing/agentic-economy-strategy.md`](../marketing/agentic-economy-strategy.md).
+
 ---
 
 ## 1. The honest read

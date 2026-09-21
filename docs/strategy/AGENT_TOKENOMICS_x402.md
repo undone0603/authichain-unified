@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20 · **Status:** live rail, documented · **Brand:** AuthiChain · **SAM legal entity:** ZACHARY KIETZMAN (sole proprietor; AuthiChain is a brand, not a corporation).
 
-This is the canonical economics document for the **already live** x402 micropayment rail. It does not invent a token, a second `payTo`, or a new facilitator. Implementation lives in `src/lib/x402.ts` (shared helpers), `workers/authichain-com/src/x402-routes.ts` (apex intercept), `worker-app/x402-routes.ts` (edge-router mount), and the Next.js mirrors under `src/app/api/x402/`.
+This is the canonical economics document for the **already live** x402 micropayment rail. Wallet names, chains, and “do not mix with `$QRON` / Stripe / the NFT deployer” live in [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md). This file does not invent a token, a second `payTo`, or a new facilitator. Implementation lives in `src/lib/x402.ts` (shared helpers), `workers/authichain-com/src/x402-routes.ts` (apex intercept), `worker-app/x402-routes.ts` (edge-router mount), and the Next.js mirrors under `src/app/api/x402/`.
 
 **Do not change** `X402_PAY_TO`, `X402_FACILITATOR_URL`, or `X402_USDC_ASSET`. Bind workflow: `.github/workflows/bind-x402-secrets.yml`. Public HTML: `https://authichain.com/x402`. Machine catalog: `https://authichain.com/api/x402/catalog` and `https://authichain.com/.well-known/x402.json`.
 
@@ -30,7 +30,7 @@ There is **no new token launch** in this work and none is required for agent-to-
 - **Unit of account:** USD-denominated Circle USDC on **Base** (CAIP-2 / chain id `8453`).
 - **Asset (do not rebind):** `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
 - **Meter:** one priced **verification (or seal) call**. Default **$0.05** = **50000** atomic units (USDC 6 decimals). Override only via `X402_PRICE_USD` in the same config `x402HealthReport` / `x402Catalog` already read. Never display a second hardcoded schedule.
-- **Recipient / treasury (do not rebind):** ops/tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (`X402_PAY_TO`).
+- **Recipient / treasury (do not rebind):** payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (`X402_PAY_TO`). Same address holds nearly all Polygon `$QRON`; that does **not** make `$QRON` the rail. Distinct from the NFT deployer EOA `0xbad4…`. Map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
 - **Cap:** `dailyCapUsd` default **10** (`X402_DAILY_CAP_USD`). 200 calls/day at $0.05. Next.js `POST /api/v1/agent-verify` also rate-limits 120/window and writes `automation_logs` (`workflow_name = x402_spend`).
 - **Facilitator:** PayAI, reachable. URL is an operational secret/binding — **not republished** on `/x402` or in this file. The edge calls `/settle`; agents use any compatible x402 client.
 
@@ -38,16 +38,18 @@ There is **no new token launch** in this work and none is required for agent-to-
 
 ---
 
-## 3. Two money rails (do not mix)
+## 3. Three money rails (do not mix)
 
-|                 | Human checkout                       | Agent rail                                 |
-| --------------- | ------------------------------------ | ------------------------------------------ |
-| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop) |
-| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                    |
-| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call                        |
-| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   |
-| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       |
-| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | Base EOA above                             |
+Stripe, x402 USDC, and `$QRON` are **three** paths. Full wallet map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
+
+|                 | Human checkout                       | Agent rail                                 | `$QRON` ERC-20                          |
+| --------------- | ------------------------------------ | ------------------------------------------ | --------------------------------------- |
+| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop) | n/a — not a payment rail                |
+| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                    | Polygon ERC-20                          |
+| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater        |
+| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement    |
+| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`        |
+| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0x5db5…` on Base   | Same `0x5db5…` holds the Polygon token  |
 
 A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. Genetics public verify (`GET /api/genetics/verify`) remains **free** and is not a second paid skill.
 
@@ -222,7 +224,7 @@ Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
 
 ## 7. Forbidden changes
 
-- Do **not** invent or rotate `X402_PAY_TO`. Live treasury: `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`.
+- Do **not** invent or rotate `X402_PAY_TO`. Live treasury: payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (not the NFT deployer).
 - Do **not** rebind `X402_FACILITATOR_URL` or publish it on HTML/docs.
 - Do **not** replace Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` with a ticker-only asset or another chain.
 - Do **not** add `$QRON`, a governance token, or a mint to `accepts[]`.
@@ -231,14 +233,16 @@ Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
 
 ---
 
-## 8. Related documents (some are stale)
+## 8. Related documents
 
 | Doc                                                            | Role                                                                                                    |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| This file                                                      | **Canonical** A2A economics + live audit.                                                               |
-| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Stale on Polygon / `$QRON` settlement and $0.03–$0.49 tiers.                                    |
+| This file                                                      | **Canonical** A2A economics + live audit. Identity/wallets: `WEB3_IDENTITY.md`.             |
+| `docs/strategy/WEB3_IDENTITY.md`                               | Canonical wallets, chains, tokens, rails. Do not mix “ops EOA”.                             |
+| `src/lib/authentic-economy.ts`                                 | Speculative `$QRON` fee_flow math. Joins the three rails in code. Not settlement.           |
+| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Settlement = Base USDC; `$QRON` is not a rail.                                      |
 | `docs/superpowers/plans/2026-08-07-x402-agent-verification.md` | Original plan. Price $0.05 and “USDC only” still hold; “paywall unbuilt” and Polygon rail are outdated. |
-| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live.                                                       |
+| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live. Current rails: `WEB3_IDENTITY.md`.        |
 | `src/lib/plans.ts`                                             | Human Stripe source of truth.                                                                           |
 
 Supersedes conflicting price/network claims for the **agent** rail only. Human SKUs stay in `plans.ts`.

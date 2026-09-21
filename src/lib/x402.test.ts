@@ -13,6 +13,7 @@ import {
   x402HealthReport,
   x402Catalog,
   BASE_USDC_ASSET,
+  X402_PUBLISHED_PAY_TO,
   type PaymentRequirement,
 } from "./x402";
 
@@ -59,6 +60,7 @@ describe("buildPaymentRequired", () => {
       payTo: "0xabc",
     });
     expect(r.status).toBe(402);
+    expect(r.body.accepts).toHaveLength(1);
     expect(r.body.accepts[0].maxAmountRequired).toBe("50000");
     expect(r.body.accepts[0].network).toBe("base");
     expect(r.body.accepts[0].asset).toBe(BASE_USDC_ASSET);
@@ -254,6 +256,35 @@ describe("settlePayment (facilitator)", () => {
   });
 });
 
+describe("published rail identity", () => {
+  it("documents payTo / tokenomics EOA and Base USDC without rebinding env", () => {
+    expect(X402_PUBLISHED_PAY_TO).toBe(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
+    expect(BASE_USDC_ASSET).toBe(
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    );
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
+      "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
+    );
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
+      "0xc0d26735fd9e868eacc60400ef3171fa4161177f"
+    );
+  });
+
+  it("does not put $QRON in accepts[]", async () => {
+    const { QRON_ERC20 } = await import("../../scripts/lib/evm-chains");
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: X402_PUBLISHED_PAY_TO,
+    });
+    expect(r.body.accepts.map(a => a.asset.toLowerCase())).not.toContain(
+      QRON_ERC20.toLowerCase()
+    );
+  });
+});
+
 describe("dailyCapUsd", () => {
   it("defaults to 10 and honors the env override", () => {
     delete process.env.X402_DAILY_CAP_USD;
@@ -275,6 +306,7 @@ describe("x402HealthReport", () => {
     expect(report.asset).toBe(BASE_USDC_ASSET);
     expect(report.catalog).toBe("/api/x402/catalog");
     expect(report.docs).toBe("/x402");
+    expect(report.payTo).toBeNull();
   });
 });
 
@@ -294,6 +326,9 @@ describe("x402Catalog", () => {
     expect(catalog.asset).toBe(health.asset);
     expect(catalog.dailyCapUsd).toBe(health.dailyCapUsd);
     expect(catalog.protocol).toBe("x402");
+    expect(catalog.unitOfAccount).toBe("USDC");
+    expect(catalog.identity).toContain("WEB3_IDENTITY.md");
+    expect(catalog.tokenomics).toContain("AGENT_TOKENOMICS_x402.md");
     expect(catalog.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );

@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
 import { reportAgentUsage } from '@/lib/industrial/billing';
 import { logAutomation } from '@/lib/automation';
+import { agentPricingDiscovery } from '@/lib/authentic-economy';
 
 /**
  * MCP ENDPOINT (Model Context Protocol)
  * Implements the "Stripe for Product Authentication" AI distribution layer.
  * Pulled from AuthiChain2026/authichain-mcp-server
+ *
+ * Pricing is the three-rail join (plans.ts / x402 / $QRON theater), not a
+ * second Polygon schedule. Do not invent SKUs here.
  */
-
-const AUTHICHAIN_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const QRON_TOKEN = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 
 const TOOLS = [
   {
@@ -91,14 +92,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             content: [{
               type: "text",
-              text: JSON.stringify({
-                verify_product: "$0.05",
-                register_product: "$0.50",
-                check_eu_dpp: "$5.00",
-                network: "Polygon POS",
-                contract: AUTHICHAIN_CONTRACT,
-                token: QRON_TOKEN
-              }, null, 2)
+              text: JSON.stringify(agentPricingDiscovery(), null, 2)
             }]
           });
 

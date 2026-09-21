@@ -1,6 +1,6 @@
 # Genesis cron — safe autonomous tick
 
-`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. That freeze is **outbound-spend + gov-mint**, not Stripe/DPP checkout — the revenue path is live. Dry-run outreach and AgentZ orchestration are **separate** Actions enables; do not launch live cold send from this cron. See `PUBLIC_LOOP_FREEZE.md` and `AGENTZ_ORCHESTRATION.md`.
+`GET /api/automation/cron` is the agentic economy’s **safe** weekday tick: daily maintenance plus a read of `fee_flows` / brands staking. `fee_flows` is speculative `$QRON` theater (`src/lib/authentic-economy.ts`), not x402 USDC. Wallets: `docs/strategy/WEB3_IDENTITY.md`. That freeze is **outbound-spend + gov-mint**, not Stripe/DPP checkout — the revenue path is live. Dry-run outreach and AgentZ orchestration are **separate** Actions enables; do not launch live cold send from this cron. See `PUBLIC_LOOP_FREEZE.md` and `AGENTZ_ORCHESTRATION.md`.
 
 ## What fires it
 

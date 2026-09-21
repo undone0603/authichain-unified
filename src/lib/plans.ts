@@ -217,6 +217,13 @@ export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
+/** Dollar amount for a catalogue plan. Charge source of truth is this file. */
+export function planUsd(id: PlanId): number {
+  const plan = PLANS.find(p => p.id === id);
+  if (!plan) throw new Error(`plans.ts has no ${id}`);
+  return plan.price;
+}
+
 /** Look up a live catalogue plan by Stripe price ID. */
 export function planByStripePriceId(
   priceId: string | null | undefined

@@ -5,6 +5,10 @@
  * only — published payTo / asset / price, health URL, and unpaid 402 curls.
  * No facilitator URL, no private keys, no settle steps.
  *
+ * payTo is the tokenomics EOA (X402_PUBLISHED_PAY_TO), not the NFT
+ * deployer and not the Coinbase Smart Wallet. Asset is Circle USDC on
+ * Base — not $QRON. Map: docs/strategy/WEB3_IDENTITY.md.
+ *
  * Visual system (interim): light-enterprise chrome + a dark Web3-adjacent
  * rail/code surface. Markup is semantic and uses Tailwind-shaped utilities
  * bound to `--ac-*` tokens so a later Wonder export can restyle without
@@ -17,6 +21,7 @@
  */
 
 import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
+import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 export const X402_DOCS_PATHS = [
   "/x402",
@@ -33,14 +38,18 @@ export const X402_PUBLIC = {
   wellKnownUrl: "https://authichain.com/.well-known/x402.json",
   payUrl: "https://authichain.com/api/x402",
   verifyUrl: "https://authichain.com/api/v1/agent-verify",
+  identityUrl:
+    "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
   tokenomicsUrl:
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
   priceUsd: "$0.05",
   priceUsdNumber: "0.05",
   network: "Base",
   chainId: "8453",
-  payTo: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
-  asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  /** payTo / tokenomics EOA — not the NFT deployer. Do not rebind. */
+  payTo: X402_PUBLISHED_PAY_TO,
+  /** Circle USDC on Base. Not $QRON. */
+  asset: BASE_USDC_ASSET,
   assetName: "Circle USDC",
   dailyCapUsd: "$10",
   legalEntity: "ZACHARY KIETZMAN",
@@ -335,6 +344,7 @@ ${X402_TOKEN_CSS}
         <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
         <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
+        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
       </dl>
     </section>
     <section class="card" aria-labelledby="human-title">
@@ -343,7 +353,7 @@ ${X402_TOKEN_CSS}
       <ul>
         <li>StrainChain Passport — <strong>$49</strong> one-time, <a href="/api/checkout/plan/strainchain_passport">Stripe checkout</a>.</li>
         <li>EU DPP Readiness — <strong>$299</strong> one-time, <a href="/api/checkout/dpp">Stripe checkout</a>.</li>
-        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}.</li>
+        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
     </section>
   </div>
