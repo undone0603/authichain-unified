@@ -1,5 +1,5 @@
 // Inbound-only pilot-intake alert. Does not thaw frozen outbound workflows.
-// ntfy + founder SMS gateways; Resend optional when a key is bound.
+// Single publisher: ntfy + optional Resend + Verizon SMS.
 
 import { publishFounderAlert } from "../src/lib/founder-alerts";
 
@@ -13,6 +13,7 @@ export type PilotIntakePayload = {
   env?: {
     RESEND_API_KEY?: string;
     RESEND_API_KEY2?: string;
+    NTFY_TOKEN?: string;
   };
 };
 
@@ -38,6 +39,7 @@ export async function notifyPilotIntake(
         title: "AuthiChain onboard",
         subject: `[onboard] ${payload.company} ${payload.ref}`,
         text: body,
+        kind: "intake",
       },
       payload.env,
     );

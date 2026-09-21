@@ -1,5 +1,5 @@
 // Founder-only DreamDash draft alert. Never emails the lead.
-// ntfy topic + SMS gateways + optional Resend. Does not thaw outreach.
+// Goes through publishFounderAlert only. Does not thaw outreach.
 
 import { FOUNDER_INBOXES, publishFounderAlert, type FounderAlertEnv } from "@/lib/founder-alerts";
 import { draftFor, mailtoFor } from "./metrics";
@@ -9,6 +9,8 @@ export { FOUNDER_INBOXES };
 
 export type DraftNotifyReason = "cycle" | "capture" | "followup" | "digest";
 export type DraftNotifyEnv = FounderAlertEnv;
+
+const CYCLE_FANOUT_CAP = 2;
 
 export function newlyDrafted(prev: Lead[], next: Lead[]): Lead[] {
   return next.filter((lead) => {
@@ -22,6 +24,7 @@ export function formatDraftAlert(lead: Lead, reason: DraftNotifyReason): {
   title: string;
   text: string;
   subject: string;
+  kind: "draft";
 } {
   const draft = draftFor(lead);
   const mailto = mailtoFor(lead);
@@ -41,18 +44,20 @@ export function formatDraftAlert(lead: Lead, reason: DraftNotifyReason): {
     "",
     "Founder-only. Do not send from AgentZ. Open the mailto from your inbox.",
   ].join("\n");
-  return { title, text, subject };
+  return { title, text, subject, kind: "draft" };
 }
 
 export function formatDigestAlert(digest: string): {
   title: string;
   text: string;
   subject: string;
+  kind: "digest";
 } {
   return {
     title: "DreamDash digest",
     subject: "[dreamdash] founders digest",
     text: `${digest}\n\nFounder-only. Local copy + this alert. No Slack webhook.`,
+    kind: "digest",
   };
 }
 
@@ -67,6 +72,11 @@ export async function notifyDraft(lead: Lead, reason: DraftNotifyReason, env?: D
 
 export async function notifyDrafts(leads: Lead[], reason: DraftNotifyReason, env?: DraftNotifyEnv): Promise<number> {
   const pending = leads.filter((l) => l.draftPending && !l.lost);
+  if (pending.length > CYCLE_FANOUT_CAP) {
+    const lines = pending.map((l) => `${l.company} (${l.score})`).join(", ");
+    await notifyDigest(`DreamDash: ${pending.length} drafts ready — ${lines}`, env);
+    return pending.length;
+  }
   for (const lead of pending) {
     await notifyDraft(lead, reason, env);
   }
