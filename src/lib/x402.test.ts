@@ -116,6 +116,34 @@ describe("buildPaymentRequired", () => {
       "facilitator.payai"
     );
   });
+
+  it("unpaid v2 JSON has the CDP Bazaar validate preflight fields", () => {
+    const r = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc0000000000000000000000000000000000001",
+    });
+    const unpaid = r.v2;
+    const accept = unpaid.accepts[0];
+    expect(unpaid.x402Version).toBe(2);
+    expect(unpaid.resource.url).toMatch(/^https:\/\//);
+    expect(unpaid.resource.description).toBeTruthy();
+    expect(unpaid.resource.mimeType).toBe("application/json");
+    expect(accept.scheme).toBe("exact");
+    expect(accept.network).toBe("eip155:8453");
+    expect(accept.asset).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    expect(accept.amount).toMatch(/^[1-9][0-9]*$/);
+    expect(accept.payTo).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    expect(accept.maxTimeoutSeconds).toBeGreaterThan(0);
+    expect(unpaid.extensions.bazaar.info.input.type).toBe("http");
+    expect(unpaid.extensions.bazaar.info.input.method).toBe("POST");
+    expect(unpaid.extensions.bazaar.info.output.example).toBeTruthy();
+    expect(unpaid.extensions.bazaar.schema).toMatchObject({
+      type: "object",
+      required: ["input"],
+    });
+    expect(unpaid.extensions.bazaar.schema.properties).toHaveProperty("input");
+  });
 });
 
 describe("resolveX402Asset", () => {
