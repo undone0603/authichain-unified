@@ -1,27 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { compileDigest } from "@/lib/dreamdash/metrics";
 import { notifyDigest } from "@/lib/dreamdash/notify-draft";
+import { resolveFoundersAccess } from "@/lib/dreamdash/founders-access";
 import { rowToLead, type LeadCaptureRow } from "@/lib/dreamdash/map-row";
 import type { HeartbeatEvent } from "@/lib/dreamdash/types";
 import { logAutomation } from "@/lib/automation";
-import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const access = await resolveFoundersAccess(request);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-    const { data: rows, error } = await supabase.from("lead_captures").select("*");
+    const { data: rows, error } = await access.supabase.from("lead_captures").select("*");
     if (error) throw error;
     const leads = ((rows ?? []) as LeadCaptureRow[]).map(rowToLead);
 
     let events: HeartbeatEvent[] = [];
-    const { data: logs } = await supabase
+    const { data: logs } = await access.supabase
       .from("automation_logs")
       .select("id, workflow_name, status, payload, created_at")
       .order("created_at", { ascending: false })
@@ -38,11 +35,12 @@ export async function POST() {
 
     const digest = compileDigest(leads, events);
     await notifyDigest(digest);
-    await logAutomation("dreamdash-digest", "manual", "success", {
+    await logAutomation("dreamdash-digest", access.actor === "agentz" ? "agentz" : "manual", "success", {
       leads: leads.length,
       drafts: leads.filter((l) => l.draftPending && !l.lost).length,
+      actor: access.actor,
     });
-    return NextResponse.json({ digest });
+    return NextResponse.json({ digest, actor: access.actor });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "An unknown error occurred";
     await logAutomation("dreamdash-digest", "manual", "failure", null, message);
