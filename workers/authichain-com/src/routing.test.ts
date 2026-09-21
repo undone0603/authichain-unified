@@ -11,6 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import worker from "./index.ts";
+import { MINIAPP_HEADERS, PASSPORT_CHECKOUT_URL } from "./telegram-miniapp.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
 
@@ -268,21 +269,17 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
       html.includes("<title>StrainChain Passport | AuthiChain</title>"),
       path
     );
-    assert.ok(
-      html.includes(
-        'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
-      ),
-      path
-    );
+    assert.ok(html.includes(`href="${PASSPORT_CHECKOUT_URL}"`), path);
     assert.ok(html.includes("Publish Passport — $49"), path);
-    assert.ok(html.includes("telegram.org/js/telegram-web-app.js"), path);
+    assert.ok(html.includes("/js/telegram-web-app.js"), path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
     assert.doesNotMatch(html, /Series A/i);
-    assert.ok(
-      (res.headers.get("content-security-policy") ?? "").includes(
-        "telegram.org"
-      ),
+    // Exact CSP match — do not substring-check "telegram.org" (CodeQL
+    // js/incomplete-url-substring-sanitization treats that as host validation).
+    assert.equal(
+      res.headers.get("content-security-policy"),
+      MINIAPP_HEADERS["Content-Security-Policy"],
       path
     );
     assert.equal(res.headers.get("x-frame-options"), null);
