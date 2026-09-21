@@ -16,6 +16,7 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
+import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2135,12 +2136,14 @@ export default {
   <url><loc>https://strainchain.io/pricing</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
   <url><loc>https://strainchain.io/genetics/mendo-love-farms</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://strainchain.io/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://strainchain.io/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strainchain.io/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://strainchain.io/sitemap.xml\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://strainchain.io/sitemap.xml\n# https://strainchain.io/llms.txt\n# https://strainchain.io/openapi.json\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
@@ -2148,6 +2151,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "strainchain");
     if (pricing) return pricing;
+    const discovery = tryHandleEstateAgentDiscovery(request, "strainchain");
+    if (discovery) return discovery;
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
     // Only the apex renders marketing HTML. Passport and genetics paths were

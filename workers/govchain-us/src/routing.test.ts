@@ -9,6 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import worker from "./index.ts";
 
 const ENV = {
@@ -87,8 +88,45 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
   assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://govchain.us/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://govchain.us/llms.txt</loc>"));
+  assert.ok(xml.includes("<loc>https://govchain.us/openapi.json</loc>"));
   assert.ok(!xml.includes("/rfp"));
   assert.ok(!xml.includes("/compliance"));
+});
+
+test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
+  const llms = await get("/llms.txt");
+  assert.equal(llms.status, 200);
+  const text = await llms.text();
+  assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+  assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.equal(
+    `href="${planPaymentLink("dpp_readiness")}"`.startsWith(
+      'href="https://buy.stripe.com'
+    ),
+    true
+  );
+  assert.doesNotMatch(text, /GET \/api\/checkout/);
+
+  const specRes = await get("/openapi.json");
+  assert.equal(specRes.status, 200);
+  const spec = (await specRes.json()) as {
+    openapi: string;
+    paths: {
+      "/api/x402": {
+        post: {
+          "x-payment-info": { protocols: string[] };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
 });
 
 test("/pricing is a live money page, not a 404", async () => {
