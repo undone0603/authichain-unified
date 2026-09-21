@@ -83,6 +83,29 @@ function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
   );
 }
 
+/**
+ * Fulfillment-collision guard: a $299/mo subscription Checkout Session (e.g.
+ * via buy.stripe.com/28E8wP0) carries no PLANS price ID and no metadata.plan,
+ * so planByAmountCents(29900) would resolve it to the one-time dpp_readiness
+ * plan and grant DPP credits for a recurring subscription. Any Checkout
+ * Session that is subscription-mode or otherwise recurring must never fall
+ * back to a one-time plan by amount.
+ */
+function isRecurringCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  if (session.mode === "subscription") return true;
+  const sub = session.subscription;
+  if (typeof sub === "string" ? sub : sub?.id) return true;
+  const price = (
+    session.line_items?.data?.[0] as unknown as
+      | {
+          price?: { recurring?: { interval?: string } | null } | null;
+        }
+      | undefined
+  )?.price;
+  if (price?.recurring?.interval) return true;
+  return false;
+}
+
 function isReplayableCheckoutEvent(type: string): boolean {
   return (
     type === "checkout.session.completed" ||
@@ -110,9 +133,14 @@ async function fulfillCatalogCreditsIfPaid(
     await import("../../src/lib/plans");
   const metaPlan =
     typeof session.metadata?.plan === "string" ? session.metadata.plan : "";
-  let catalog =
-    planByStripePriceId(linePriceId)?.id ||
-    planByAmountCents(session.amount_total ?? undefined)?.id;
+  // Collision guard: a recurring Session must never resolve a one-time plan
+  // by amount. Only an explicit PLANS price ID (or explicit metadata below)
+  // may provision a subscription-mode checkout.
+  const recurring = isRecurringCheckoutSession(session);
+  let catalog = planByStripePriceId(linePriceId)?.id;
+  if (!catalog && !recurring) {
+    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
+  }
   if (
     !catalog &&
     metaPlan &&
@@ -124,7 +152,42 @@ async function fulfillCatalogCreditsIfPaid(
   if (!catalog && metaPlan === "starter" && session.mode === "payment") {
     catalog = "starter";
   }
-  if (!catalog) return;
+  if (!catalog) {
+    if (recurring) {
+      // Explicit unfulfillable-subscription path: record the exception for
+      // ops and return WITHOUT granting credits (no throw — an unknown
+      // recurring price can never succeed on Stripe retry).
+      console.error(
+        "[stripe-webhook] unfulfillable recurring checkout: no PLANS price ID " +
+          `for session=${session.id} mode=${session.mode ?? "unknown"} ` +
+          `amount_total=${session.amount_total ?? "unknown"}`
+      );
+      try {
+        await db.logAutomationAudit(
+          "billing_unfulfillable_subscription",
+          {
+            eventId: null,
+            stripeSessionId: session.id,
+            stripeCustomerId:
+              typeof session.customer === "string" ? session.customer : null,
+            stripeSubscriptionId:
+              typeof session.subscription === "string"
+                ? session.subscription
+                : null,
+            amountTotal: session.amount_total ?? null,
+            linePriceId,
+          },
+          undefined
+        );
+      } catch (auditErr) {
+        console.warn(
+          "[stripe-webhook] unfulfillable-subscription audit skipped:",
+          auditErr instanceof Error ? auditErr.message : String(auditErr)
+        );
+      }
+    }
+    return;
+  }
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
@@ -169,6 +232,35 @@ async function fulfillDppCheckoutIfPaid(
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   const linePriceId = checkoutLinePriceId(session);
   if (!isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  // Collision guard: DPP readiness is a one-time $299 audit. A recurring
+  // (subscription-mode) Session must never enter the DPP grant path, even
+  // when its metadata claims the DPP offer — the subscription lifecycle
+  // handler owns recurring entitlements.
+  if (isRecurringCheckoutSession(session)) {
+    console.error(
+      "[stripe-webhook] refusing DPP fulfill for recurring checkout: " +
+        `session=${session.id} mode=${session.mode ?? "unknown"}`
+    );
+    try {
+      await db.logAutomationAudit(
+        "billing_unfulfillable_subscription",
+        {
+          eventId: null,
+          stripeSessionId: session.id,
+          reason: "recurring_session_claimed_dpp_offer",
+          linePriceId,
+        },
+        undefined
+      );
+    } catch (auditErr) {
+      console.warn(
+        "[stripe-webhook] unfulfillable-subscription audit skipped:",
+        auditErr instanceof Error ? auditErr.message : String(auditErr)
+      );
+    }
+    return;
+  }
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
