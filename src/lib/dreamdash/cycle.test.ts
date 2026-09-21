@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyCapture, applyCycle } from "./cycle";
+import { parseMeta, rowToLead } from "./map-row";
 import { closeOrder, closePriority, scoreLead } from "./metrics";
 import type { Lead } from "./types";
 
@@ -85,6 +86,29 @@ describe("cycle skip-lost", () => {
     expect(leads.find((l) => l.id === "ld-conv")?.stage).toBe("converted");
   });
 
+  it("queues draftPending on contacted leads stale past 3 days", () => {
+    const stale = lead({
+      id: "ld-stale",
+      email: "stale@x.test",
+      stage: "contacted",
+      score: 40,
+      lastTouch: "2026-09-01T00:00:00.000Z",
+      company: "Stale Co",
+    });
+    const fresh = lead({
+      id: "ld-fresh",
+      email: "fresh@x.test",
+      stage: "contacted",
+      score: 40,
+      lastTouch: "2026-09-21T12:00:00.000Z",
+      company: "Fresh Co",
+    });
+    const { leads, report } = applyCycle([stale, fresh], Date.parse("2026-09-21T14:00:00.000Z"));
+    expect(report.followups).toBe(1);
+    expect(leads.find((l) => l.id === "ld-stale")?.draftPending).toBe(true);
+    expect(leads.find((l) => l.id === "ld-fresh")?.draftPending).toBe(false);
+  });
+
   it("advances qualified >= 85 to demoed and skips lost qualified", () => {
     const hot = lead({ id: "ld-hot", email: "hot@x.test", stage: "qualified", score: 86, company: "Hot Co" });
     const lostHot = lead({
@@ -137,5 +161,24 @@ describe("close-order ranking", () => {
       company: "Stale Draft",
     });
     expect(closePriority(staleDraft)).toBe(40 + 18 + 14);
+  });
+});
+
+describe("row metadata", () => {
+  it("accepts object metadata from jsonb as well as stringified JSON", () => {
+    expect(parseMeta({ company: "Acme", draftPending: true }).company).toBe("Acme");
+    expect(parseMeta(JSON.stringify({ city: "Detroit" })).city).toBe("Detroit");
+    const mapped = rowToLead({
+      id: "ld-json",
+      email: "ops@acme.test",
+      name: "Alex",
+      product_interest: "govchain",
+      status: "contacted",
+      score: 55,
+      metadata: { company: "Acme", title: "CEO", draftPending: true },
+    });
+    expect(mapped.company).toBe("Acme");
+    expect(mapped.domain).toBe("govchain");
+    expect(mapped.draftPending).toBe(true);
   });
 });
