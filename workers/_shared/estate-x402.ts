@@ -22,11 +22,16 @@ import {
   verifyPaymentProof,
   x402HealthReport,
   x402PriceUsd,
+  x402ScanFanout,
   X402_PUBLISHED_PAY_TO,
   type X402HealthEnv,
 } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
+import {
+  sisterBrandFromHost,
+  sisterX402Catalog,
+} from "./estate-x402-catalog.ts";
 
 export type SisterX402Env = X402HealthEnv;
 
@@ -61,12 +66,27 @@ export function sisterOrigin(brand: SisterDiscoveryBrand): string {
 
 export function isSisterX402Path(pathname: string): boolean {
   const p = normalizePath(pathname);
-  return p === "/api/x402" || p === "/api/x402/health";
+  return (
+    p === "/api/x402" ||
+    p === "/api/x402/health" ||
+    p === "/api/x402/catalog" ||
+    p === "/.well-known/x402.json" ||
+    p === "/.well-known/x402"
+  );
 }
 
 function isHealthPath(pathname: string): boolean {
   const p = normalizePath(pathname);
   return p === "/api/x402" || p === "/api/x402/health";
+}
+
+function isCatalogPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/api/x402/catalog" || p === "/.well-known/x402.json";
+}
+
+function isFanoutPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/x402";
 }
 
 function isPaidPath(pathname: string): boolean {
@@ -120,6 +140,21 @@ function paidResourceUrl(request: Request): string {
 async function healthResponse(env?: SisterX402Env): Promise<Response> {
   hydrateX402(env);
   return json(200, await x402HealthReport(healthEnv(env)));
+}
+
+async function catalogResponse(
+  request: Request,
+  env?: SisterX402Env
+): Promise<Response> {
+  hydrateX402(env);
+  const brand = sisterBrandFromHost(new URL(request.url).hostname);
+  return json(200, await sisterX402Catalog(brand, healthEnv(env)));
+}
+
+function fanoutResponse(request: Request): Response {
+  const url = new URL(request.url);
+  const origin = `${url.protocol}//${url.host}`;
+  return json(200, x402ScanFanout(origin));
 }
 
 async function agentVerify(
@@ -205,7 +240,7 @@ async function agentVerify(
   );
 }
 
-/** Serve GET/HEAD health and unpaid POST 402 on a sister landing worker. */
+/** Serve GET/HEAD health + catalog and unpaid POST 402 on a sister landing. */
 export async function tryHandleSisterX402(
   request: Request,
   env: SisterX402Env = {}
@@ -221,6 +256,14 @@ export async function tryHandleSisterX402(
         "CDN-Cache-Control": "no-store",
       },
     });
+  }
+
+  if (request.method === "GET" && isCatalogPath(url.pathname)) {
+    return catalogResponse(request, env);
+  }
+
+  if (request.method === "GET" && isFanoutPath(url.pathname)) {
+    return fanoutResponse(request);
   }
 
   if (request.method === "GET" && isHealthPath(url.pathname)) {
