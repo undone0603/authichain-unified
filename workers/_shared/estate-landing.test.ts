@@ -94,6 +94,20 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   });
   assert.match(cta, /href="\/onboard"/);
 
+  const emailCta = estateCtaBand({
+    title: "Go",
+    lede: "Now",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout",
+      skipHref: "/api/checkout/dpp",
+    },
+    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
+  });
+  assert.match(emailCta, /name="email"/);
+  assert.match(emailCta, /action="\/api\/checkout\/dpp"/);
+  assert.match(emailCta, /href="\/pricing"/);
+
   const footer = estateFooter(
     "qron",
     [{ heading: "Start", links: [{ href: "/generate", label: "Generate" }] }],

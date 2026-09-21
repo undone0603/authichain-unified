@@ -475,6 +475,10 @@ function pricingPage(origin: PricingOrigin): PricingPage {
 export function renderEstatePricingPage(origin: PricingOrigin): string {
   const page = pricingPage(origin);
   const brand: EstateBrandId = page.brand;
+  const checkoutPrimary = /\/api\/checkout\//.test(page.primary.href);
+  const navPrimary = checkoutPrimary
+    ? { href: "#pricing", label: page.primary.label }
+    : page.primary;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -500,16 +504,25 @@ ${ESTATE_BASE_CSS}
 </head>
 <body>
 ${estateSkipLink()}
-${estateNav(brand, page.nav, page.primary)}
+${estateNav(brand, page.nav, navPrimary)}
 <main id="main">
 ${estateHero({
   eyebrow: "Published catalogue",
   title: page.heroTitle,
   lede: page.heroLede,
-  actions: [
-    { href: page.primary.href, label: page.primary.label, primary: true },
-    page.secondary,
-  ],
+  emailCheckout: checkoutPrimary
+    ? {
+        action: page.primary.href,
+        label: page.primary.label,
+        skipHref: page.primary.href,
+      }
+    : undefined,
+  actions: checkoutPrimary
+    ? [page.secondary]
+    : [
+        { href: page.primary.href, label: page.primary.label, primary: true },
+        page.secondary,
+      ],
 })}
 <section class="estate-section" id="pricing">
   <div class="wrap">
@@ -521,9 +534,16 @@ ${estateHero({
 ${estateCtaBand({
   title: page.ctaTitle,
   lede: page.ctaLede,
-  actions: [
-    { href: page.primary.href, label: page.primary.label, primary: true },
-  ],
+  emailCheckout: checkoutPrimary
+    ? {
+        action: page.primary.href,
+        label: page.primary.label,
+        skipHref: page.primary.href,
+      }
+    : undefined,
+  actions: checkoutPrimary
+    ? []
+    : [{ href: page.primary.href, label: page.primary.label, primary: true }],
 })}
 </main>
 ${estateFooter(

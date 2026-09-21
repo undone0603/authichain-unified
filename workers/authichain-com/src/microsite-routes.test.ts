@@ -100,7 +100,14 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   const hubHtml = await hub.text();
   assert.match(hubHtml, /Mendo \/ RealTHCV/);
   assert.match(hubHtml, /Passport checkout — \$49/);
+  assert.match(hubHtml, /name="email"/);
+  assert.match(hubHtml, /action="\/api\/checkout\/plan\/strainchain_passport"/);
   assert.match(hubHtml, /ZACHARY KIETZMAN/);
+  assert.doesNotMatch(
+    hubHtml,
+    /<a class="btn"[^>]*href="\/api\/checkout/,
+    "hub cards must capture email before checkout"
+  );
 
   const mendo = tryHandleMicrosite(req("/m/mendo"));
   assert.ok(mendo);

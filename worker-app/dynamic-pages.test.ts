@@ -325,6 +325,8 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
+    expect(body).toContain('name="email"');
+    expect(body).toContain('action="/api/checkout/dpp"');
   });
 });
 

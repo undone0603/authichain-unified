@@ -652,7 +652,23 @@ export function estateCtaBand(opts: {
   title: string;
   lede: string;
   actions: EstateCta[];
+  emailCheckout?: {
+    action: string;
+    label: string;
+    skipHref?: string;
+    skipLabel?: string;
+  };
 }): string {
+  const emailForm = opts.emailCheckout
+    ? `${checkoutEmailFormHtml({
+        action: opts.emailCheckout.action,
+        label: opts.emailCheckout.label,
+      })}${
+        opts.emailCheckout.skipHref
+          ? `<a class="btn btn-outline" href="${esc(opts.emailCheckout.skipHref)}">${esc(opts.emailCheckout.skipLabel || "Checkout without saving a recovery email")}</a>`
+          : ""
+      }`
+    : "";
   const actions = opts.actions
     .map(
       a =>
@@ -663,7 +679,7 @@ export function estateCtaBand(opts: {
   <div class="wrap">
     <h2>${opts.title}</h2>
     <p class="section-sub">${opts.lede}</p>
-    <div class="estate-actions">${actions}</div>
+    <div class="estate-actions">${emailForm}${actions}</div>
   </div>
 </section>`;
 }

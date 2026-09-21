@@ -67,5 +67,8 @@ describe("x402 public docs page", () => {
     expect(html).toContain("--ac-rail: #0b1220");
     expect(html).toContain("Plus Jakarta Sans");
     expect(html).toContain('href="/pricing"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="/api/checkout/plan/strainchain_passport"');
   });
 });

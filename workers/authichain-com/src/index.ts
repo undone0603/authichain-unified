@@ -2301,7 +2301,12 @@ function originMoneySurfaces() {
         <p>Physical scan seal already used in the StrainChain demo and enterprise tag-mint copy. Cannabis brands publish one genetics passport.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/trumark">TruMark brief</a>
-          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/plan/strainchain_passport",
+            label: "Passport checkout — $49",
+            inputId: "origin-trumark-email",
+            formId: "origin-trumark-checkout",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2309,7 +2314,12 @@ function originMoneySurfaces() {
         <p>Signed per-unit origin evidence for Made in USA labels. Partner brief at /partners/brief. EU DPP Readiness is the live checkout.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
-          <a class="btn btn-outline" href="/api/checkout/dpp">DPP checkout — $299</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/dpp",
+            label: "DPP checkout — $299",
+            inputId: "origin-musa-email",
+            formId: "origin-musa-checkout",
+          })}
         </div>
       </article>
       <article class="estate-card card">
@@ -2317,7 +2327,12 @@ function originMoneySurfaces() {
         <p>Hot licensing lead. Genetics library is live. The campaign microsite sends Mike to Passport $49 checkout — no call.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
-          <a class="btn btn-outline" href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a>
+          ${checkoutEmailFormHtml({
+            action: "/api/checkout/plan/strainchain_passport",
+            label: "Passport checkout — $49",
+            inputId: "origin-mendo-email",
+            formId: "origin-mendo-checkout",
+          })}
         </div>
       </article>
     </div>
@@ -2333,7 +2348,12 @@ function marketReality() {
     <h2>EU Digital Product Passport</h2>
     <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. AuthiChain issues the certificate and the DPP audit path without claiming another company's logo as a customer.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="/api/checkout/dpp">Start DPP checkout</a>
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/dpp",
+        label: "Start DPP checkout",
+        inputId: "compliance-dpp-email",
+        formId: "compliance-dpp-checkout",
+      })}
       <a class="btn btn-outline" href="/digital-product-passport">Read the DPP brief</a>
       <a class="btn btn-outline" href="/anchor">Anchor a product</a>
     </div>
@@ -2399,7 +2419,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. <a href="/api/checkout/dpp">Start DPP checkout</a> or <a href="/pricing">view pricing</a></div>
+  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. Enter a work email on <a href="/pricing">pricing</a> so Stripe can recover the cart, or <a href="#hero">start from the form below</a>.</div>
   ${estateNav(
     "authichain",
     [
@@ -2410,7 +2430,7 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+    { href: "/pricing", label: "View pricing" },
   )}
   <main id="main">
   ${estateHero({
@@ -2512,9 +2532,13 @@ const HTML = `<!DOCTYPE html>
   ${marketReality()}
   ${estateCtaBand({
     title: "Start EU DPP Readiness",
-    lede: "GET /api/checkout/dpp opens the live Stripe session. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    emailCheckout: {
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout",
+      skipHref: "/api/checkout/dpp",
+    },
     actions: [
-      { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],

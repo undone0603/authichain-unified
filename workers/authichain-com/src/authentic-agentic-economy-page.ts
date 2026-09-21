@@ -202,7 +202,7 @@ ${estateNav(
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
   ],
-  { href: "/api/checkout/dpp", label: "Start DPP checkout" }
+  { href: "/pricing", label: "View pricing" }
 )}
 <main id="main">
 ${estateHero({
@@ -278,9 +278,13 @@ ${estateSteps(
 ${sources()}
 ${estateCtaBand({
   title: "Start on a live path",
-  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer.",
+  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
+  emailCheckout: {
+    action: "/api/checkout/dpp",
+    label: "Start DPP checkout",
+    skipHref: "/api/checkout/dpp",
+  },
   actions: [
-    { href: "/api/checkout/dpp", label: "Start DPP checkout", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
     { href: "/pricing", label: "View pricing", primary: false },
   ],

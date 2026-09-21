@@ -135,7 +135,7 @@ export function renderTrumarkPage(): string {
     canonical: "https://authichain.com/trumark",
     keywords:
       "TruMark, product authentication seal, StrainChain passport, blockchain QR seal",
-    body: `${surfaceNav({ href: PASSPORT_CHECKOUT_PATH, label: "Start Passport checkout" })}
+    body: `${surfaceNav({ href: "/pricing", label: "View pricing" })}
 <main id="main">
   ${estateHero({
     eyebrow: "01 / TruMark",
@@ -190,13 +190,13 @@ export function renderTrumarkPage(): string {
   )}
   ${estateCtaBand({
     title: "Publish a passport or start DPP",
-    lede: "Self-serve Stripe checkout. For an enterprise tag program, email hello@authichain.com and ask for the written packet. Async only — no scheduled calls.",
+    lede: "Enter a work email so abandoned-checkout recovery can reach you. For an enterprise tag program, email hello@authichain.com and ask for the written packet. Async only — no scheduled calls.",
+    emailCheckout: {
+      action: PASSPORT_CHECKOUT_PATH,
+      label: "Start Passport checkout",
+      skipHref: PASSPORT_CHECKOUT_PATH,
+    },
     actions: [
-      {
-        href: PASSPORT_CHECKOUT_PATH,
-        label: "Start Passport checkout",
-        primary: true,
-      },
       { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: false },
       {
         href: "mailto:hello@authichain.com?subject=TruMark%20written%20packet",
@@ -218,7 +218,7 @@ export function renderMadeInAmericaPage(): string {
     canonical: "https://authichain.com/made-in-america",
     keywords:
       "Made in America, Made in USA, FTC 16 CFR Part 323, EO 14392, origin claims, Buy American",
-    body: `${surfaceNav({ href: DPP_CHECKOUT, label: "Start DPP checkout" })}
+    body: `${surfaceNav({ href: "/pricing", label: "View pricing" })}
 <main id="main">
   ${estateHero({
     eyebrow: "Made in America",
@@ -273,9 +273,13 @@ export function renderMadeInAmericaPage(): string {
   )}
   ${estateCtaBand({
     title: "Start EU DPP Readiness",
-    lede: "Live self-serve checkout at $299. Channel partners and label printers: request the written packet at hello@authichain.com. No call booking.",
+    lede: "Enter a work email so abandoned-checkout recovery can reach you. Channel partners and label printers: request the written packet at hello@authichain.com. No call booking.",
+    emailCheckout: {
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout",
+      skipHref: DPP_CHECKOUT,
+    },
     actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: true },
       {
         href: PASSPORT_CHECKOUT_PATH,
         label: "Passport checkout — $49",

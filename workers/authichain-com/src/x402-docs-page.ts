@@ -17,6 +17,10 @@
  */
 
 import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
+import {
+  CHECKOUT_EMAIL_FORM_CSS,
+  checkoutEmailFormHtml,
+} from "../../../src/lib/checkout-email";
 
 export const X402_DOCS_PATHS = [
   "/x402",
@@ -241,6 +245,9 @@ export function renderX402DocsPage(): string {
 ${ESTATE_FONTS_LINK}
 <style>
 ${X402_TOKEN_CSS}
+${CHECKOUT_EMAIL_FORM_CSS}
+.checkout-email-form{margin:1rem 0}
+.checkout-email-form button{background:var(--ac-accent,#4F46E5)}
 </style>
 </head>
 <body class="shell">
@@ -254,7 +261,6 @@ ${X402_TOKEN_CSS}
         <li><a href="${esc(p.catalogUrl)}">Catalog</a></li>
         <li><a href="/authentic-agentic-economy">Agentic economy</a></li>
         <li><a href="/pricing">Pricing</a></li>
-        <li><a href="/api/checkout/dpp">DPP checkout</a></li>
         <li><a href="/dpp">DPP brief</a></li>
       </ul>
     </nav>
@@ -341,10 +347,22 @@ ${X402_TOKEN_CSS}
       <h2 id="human-title">Human checkout vs agent rail</h2>
       <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
       <ul>
-        <li>StrainChain Passport — <strong>$49</strong> one-time, <a href="/api/checkout/plan/strainchain_passport">Stripe checkout</a>.</li>
-        <li>EU DPP Readiness — <strong>$299</strong> one-time, <a href="/api/checkout/dpp">Stripe checkout</a>.</li>
+        <li>StrainChain Passport — <strong>$49</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
+        <li>EU DPP Readiness — <strong>$299</strong> one-time. Same recovery path.</li>
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}.</li>
       </ul>
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/plan/strainchain_passport",
+        label: "Passport checkout — $49",
+        inputId: "x402-passport-email",
+        formId: "x402-passport-checkout",
+      })}
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/dpp",
+        label: "DPP checkout — $299",
+        inputId: "x402-dpp-email",
+        formId: "x402-dpp-checkout",
+      })}
     </section>
   </div>
 

@@ -14,7 +14,10 @@ function req(path: string) {
 test("path helper recognizes the published manufacturer article", () => {
   assert.equal(DPP_MANUFACTURER_ARTICLE_PATH, "/blog/eu-dpp-manufacturer");
   assert.equal(isDppManufacturerArticlePath("/blog/eu-dpp-manufacturer"), true);
-  assert.equal(isDppManufacturerArticlePath("/blog/eu-dpp-manufacturer/"), true);
+  assert.equal(
+    isDppManufacturerArticlePath("/blog/eu-dpp-manufacturer/"),
+    true
+  );
   assert.equal(isDppManufacturerArticlePath("/eu-dpp"), false);
   assert.equal(isDppManufacturerArticlePath("/dpp"), false);
   assert.equal(isDppManufacturerArticlePath("/blog"), false);
@@ -32,6 +35,8 @@ test("article HTML uses the live DPP checkout and no AuthiChain Inc", () => {
   );
   assert.match(html, /href="\/api\/checkout\/dpp"/);
   assert.match(html, /Start DPP checkout/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /Everledger/);
   assert.match(html, /18 Feb 2027/);

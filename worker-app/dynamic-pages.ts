@@ -779,6 +779,23 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
+  const primaryIsCheckout = /\/api\/checkout\//.test(content.primaryCta.href);
+  const primaryHtml = primaryIsCheckout
+    ? checkoutEmailFormHtml({
+        action: content.primaryCta.href,
+        label: content.primaryCta.label,
+        inputId: "landing-checkout-email",
+        formId: "landing-checkout",
+      }) +
+      '<p><a href="' +
+      escapeHtml(content.primaryCta.href) +
+      '">Checkout without saving a recovery email</a></p>\n'
+    : '<a href="' +
+      escapeHtml(content.primaryCta.href) +
+      '">' +
+      escapeHtml(content.primaryCta.label) +
+      "</a>\n";
+
   const body =
     "<main>\n" +
     "<header>\n" +
@@ -794,11 +811,7 @@ function renderLanding(c: Context): Response {
     escapeHtml(content.subhead) +
     "</p>\n" +
     "<p>\n" +
-    '<a href="' +
-    escapeHtml(content.primaryCta.href) +
-    '">' +
-    escapeHtml(content.primaryCta.label) +
-    "</a>\n" +
+    primaryHtml +
     '<a href="' +
     escapeHtml(content.secondaryCta.href) +
     '">' +
@@ -838,6 +851,9 @@ function renderLanding(c: Context): Response {
       title: brand.displayName + " -- " + content.eyebrow,
       description: brand.description,
       canonicalPath,
+      extraHead: primaryIsCheckout
+        ? "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>"
+        : "",
       bodyHtml: body,
     }),
     200
