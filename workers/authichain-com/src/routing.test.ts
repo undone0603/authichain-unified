@@ -444,6 +444,11 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(
     xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
   );
+  assert.ok(xml.includes("<loc>https://authichain.com/telegram</loc>"));
+  assert.ok(
+    !xml.includes("<loc>https://authichain.com/miniapp</loc>"),
+    "/miniapp is an alias; sitemap lists the canonical /telegram only"
+  );
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

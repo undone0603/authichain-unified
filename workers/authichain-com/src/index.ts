@@ -20,7 +20,10 @@ import {
   renderMadeInAmericaPage,
   renderTrumarkPage,
 } from "./money-surfaces.ts";
-import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
+import {
+  MINIAPP_CANONICAL,
+  tryHandleTelegramMiniApp,
+} from "./telegram-miniapp.ts";
 import {
   isDppManufacturerArticlePath,
   renderDppManufacturerArticle,
@@ -3276,6 +3279,7 @@ export default {
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
+        { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
