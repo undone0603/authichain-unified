@@ -83,7 +83,7 @@ function shell(opts: {
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
 <style>
-:root{--bg:#030c04;--card:#071209;--border:#0f2b12;--green:#10b981;--text:#e2e8f0;--muted:#64748b;--warn:#f87171;--viz:#38bdf8}
+:root{--bg:#030c04;--card:#071209;--border:#0f2b12;--green:#10b981;--text:#e2e8f0;--muted:#64748b;--warn:#f87171}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.55;min-height:100vh}
 a{color:var(--green);text-decoration:none}
