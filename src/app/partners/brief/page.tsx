@@ -155,18 +155,21 @@ export default function PartnerBriefPage() {
             </div>
         </section>
 
-        {/* Call to Action */}
+        {/* Call to Action — async only: live checkout or written packet */}
         <footer className="text-center py-20 border-t border-zinc-100">
-            <h2 className="text-4xl font-black uppercase tracking-tighter mb-8">Initiate Partnership <span className="text-gold italic">Dialogue</span></h2>
+            <h2 className="text-4xl font-black uppercase tracking-tighter mb-8">Start with a <span className="text-gold italic">live checkout</span></h2>
             <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mb-12">
-                Limited Pilot Slots Available for 2026.Q3
+                Self-serve rails. Written packet on request. No call booking.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-                <a href="mailto:partners@authichain.com" className="bg-black text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
-                    Email Partnership Lead <ArrowRight className="w-3 h-3" />
+                <a href="/api/checkout/dpp" className="bg-black text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                    DPP checkout — $299 <ArrowRight className="w-3 h-3" />
                 </a>
-                <a href="https://qron.space/ftc-shield" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
-                    View Compliance Portal <ArrowRight className="w-3 h-3" />
+                <a href="/api/checkout/plan/strainchain_passport" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
+                    Passport checkout — $49 <ArrowRight className="w-3 h-3" />
+                </a>
+                <a href="mailto:hello@authichain.com?subject=Made%20in%20America%20written%20packet" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
+                    Request a written packet <ArrowRight className="w-3 h-3" />
                 </a>
             </div>
         </footer>

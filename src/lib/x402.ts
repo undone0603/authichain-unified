@@ -3,10 +3,13 @@
  * x402 (HTTP 402 "Payment Required") helpers for autonomous agent micropayments.
  *
  * Flow: an agent calls a paid endpoint with no payment -> we return 402 + the
- * payment requirements. The agent's wallet pays (USDC on Polygon / $QRON) and
+ * payment requirements. The agent's wallet pays Base USDC (Circle, 8453) and
  * retries with an `X-PAYMENT` proof header -> we verify + enforce a per-payer
  * spend cap, then serve the resource. Autonomous at runtime; the wallet must be
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
+ * `$QRON` and any governance token stay off this rail (see
+ * docs/strategy/AGENT_TOKENOMICS_x402.md). Do not rebind X402_PAY_TO,
+ * X402_FACILITATOR_URL, or X402_USDC_ASSET.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
@@ -313,6 +316,8 @@ export type X402HealthBody = {
   dailyCapUsd: number;
   endpoint: string;
   aliases: string[];
+  catalog: string;
+  docs: string;
   facilitator: X402FacilitatorStatus;
   warnings: string[];
   timestamp: string;
@@ -398,8 +403,120 @@ export async function x402HealthReport(
     dailyCapUsd: dailyCapUsd(),
     endpoint: "/api/v1/agent-verify",
     aliases: ["/api/x402", "/api/x402/health", "/api/v1/agent-verify"],
+    catalog: "/api/x402/catalog",
+    docs: "/x402",
     facilitator,
     warnings,
     timestamp: new Date().toISOString(),
+  };
+}
+
+export type X402CatalogEndpoint = {
+  method: "GET" | "POST";
+  path: string;
+  paid: boolean;
+  description: string;
+  priceUsd: number | null;
+  priceAtomic: string | null;
+  unpaidStatus?: number;
+};
+
+export type X402CatalogBody = {
+  protocol: "x402";
+  x402Version: 1;
+  brand: "AuthiChain";
+  docs: string;
+  health: string;
+  catalog: string;
+  wellKnown: string;
+  tokenomics: string;
+  unitOfAccount: "USDC";
+  network: string;
+  chainId: string;
+  asset: string;
+  payTo: string | null;
+  pricePerCall: { usd: number; atomic: string };
+  dailyCapUsd: number;
+  status: X402HealthBody["status"];
+  ready: boolean;
+  mode: X402HealthBody["mode"];
+  endpoints: X402CatalogEndpoint[];
+  humanCheckout: {
+    rail: "stripe";
+    passportUsd: number;
+    dppUsd: number;
+    source: string;
+  };
+  timestamp: string;
+};
+
+/**
+ * Machine-readable catalog for MCP / OpenAPI-style discovery.
+ * Price, payTo, asset, and caps are copied from x402HealthReport — never
+ * a second hardcoded schedule.
+ */
+export async function x402Catalog(
+  env: X402HealthEnv = process.env
+): Promise<X402CatalogBody> {
+  const health = await x402HealthReport(env);
+  const paid = (path: string, description: string): X402CatalogEndpoint => ({
+    method: "POST",
+    path,
+    paid: true,
+    description,
+    priceUsd: health.pricePerCall.usd,
+    priceAtomic: health.pricePerCall.atomic,
+    unpaidStatus: 402,
+  });
+  const free = (path: string, description: string): X402CatalogEndpoint => ({
+    method: "GET",
+    path,
+    paid: false,
+    description,
+    priceUsd: null,
+    priceAtomic: null,
+  });
+  return {
+    protocol: "x402",
+    x402Version: 1,
+    brand: "AuthiChain",
+    docs: "/x402",
+    health: "/api/x402/health",
+    catalog: "/api/x402/catalog",
+    wellKnown: "/.well-known/x402.json",
+    tokenomics:
+      "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
+    unitOfAccount: "USDC",
+    network: health.network,
+    chainId: health.chainId,
+    asset: health.asset,
+    payTo: health.payTo,
+    pricePerCall: health.pricePerCall,
+    dailyCapUsd: health.dailyCapUsd,
+    status: health.status,
+    ready: health.ready,
+    mode: health.mode,
+    endpoints: [
+      free("/api/x402/health", "Public rail health (no secrets)"),
+      free("/api/x402", "Health alias"),
+      free("/api/x402/catalog", "Paid-endpoint catalog for agents and MCP"),
+      free("/.well-known/x402.json", "Well-known catalog document"),
+      free(
+        "/api/v1/agent-verify",
+        "Health alias on GET; POST is the paid skill"
+      ),
+      paid("/api/x402", "AuthiChain agent verification (seal / product)"),
+      paid(
+        "/api/v1/agent-verify",
+        "AuthiChain agent verification (seal / product)"
+      ),
+    ],
+    humanCheckout: {
+      rail: "stripe",
+      passportUsd: 49,
+      dppUsd: 299,
+      source: "src/lib/plans.ts",
+    },
+    timestamp: health.timestamp,
   };
 }

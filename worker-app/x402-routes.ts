@@ -3,7 +3,10 @@
  *
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
  *      (200, not_configured OK — GET must not 404)
+ * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
+ *
+ * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
  * `not_configured` and paid settlement stays closed ($0 path).
@@ -14,6 +17,7 @@ import {
   parsePaymentHeader,
   settlePayment,
   verifyPaymentProof,
+  x402Catalog,
   x402HealthReport,
   x402PriceUsd,
   type X402HealthEnv,
@@ -43,6 +47,20 @@ function hydrateX402(env?: X402Bindings) {
   }
 }
 
+function healthEnv(env?: X402Bindings): X402HealthEnv {
+  return {
+    X402_PAY_TO: env?.X402_PAY_TO || process.env.X402_PAY_TO,
+    X402_FACILITATOR_URL:
+      env?.X402_FACILITATOR_URL || process.env.X402_FACILITATOR_URL,
+    X402_NETWORK: env?.X402_NETWORK || process.env.X402_NETWORK,
+    X402_CHAIN_ID: env?.X402_CHAIN_ID || process.env.X402_CHAIN_ID,
+    X402_USDC_ASSET: env?.X402_USDC_ASSET || process.env.X402_USDC_ASSET,
+    X402_PRICE_USD: env?.X402_PRICE_USD || process.env.X402_PRICE_USD,
+    X402_DAILY_CAP_USD:
+      env?.X402_DAILY_CAP_USD || process.env.X402_DAILY_CAP_USD,
+  };
+}
+
 async function health(c: {
   env?: X402Bindings;
   json: (
@@ -52,18 +70,19 @@ async function health(c: {
   ) => Response;
 }) {
   hydrateX402(c.env);
-  const body = await x402HealthReport({
-    X402_PAY_TO: c.env?.X402_PAY_TO || process.env.X402_PAY_TO,
-    X402_FACILITATOR_URL:
-      c.env?.X402_FACILITATOR_URL || process.env.X402_FACILITATOR_URL,
-    X402_NETWORK: c.env?.X402_NETWORK || process.env.X402_NETWORK,
-    X402_CHAIN_ID: c.env?.X402_CHAIN_ID || process.env.X402_CHAIN_ID,
-    X402_USDC_ASSET: c.env?.X402_USDC_ASSET || process.env.X402_USDC_ASSET,
-    X402_PRICE_USD: c.env?.X402_PRICE_USD || process.env.X402_PRICE_USD,
-    X402_DAILY_CAP_USD:
-      c.env?.X402_DAILY_CAP_USD || process.env.X402_DAILY_CAP_USD,
-  });
-  return c.json(body, 200, NO_STORE);
+  return c.json(await x402HealthReport(healthEnv(c.env)), 200, NO_STORE);
+}
+
+async function catalog(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  return c.json(await x402Catalog(healthEnv(c.env)), 200, NO_STORE);
 }
 
 async function agentVerify(c: {
@@ -167,6 +186,9 @@ export function registerX402Routes<
 >(app: Hono<{ Bindings: E; Variables: V }>): void {
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
+  app.get("/api/x402/catalog", c => catalog(c));
+  app.get("/.well-known/x402", c => catalog(c));
+  app.get("/.well-known/x402.json", c => catalog(c));
   app.get("/api/v1/agent-verify", c => health(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));

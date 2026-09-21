@@ -211,6 +211,40 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
       "CERT-001"
     );
   });
+
+  it("serves a committed SEO hub before the certificate lookup", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("What a DPP contains");
+    expect(body).toContain("<h2>Get started</h2>");
+    expect(body).toContain('href="https://authichain.com/api/checkout/dpp"');
+    expect(body).toContain('type="application/ld+json"');
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+    expect(getHyperdriveDb).not.toHaveBeenCalled();
+  });
+
+  it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
+    const res = await app.request(
+      "/p/cannabis-blockchain-provenance",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("What you get");
+    expect(body).toContain(
+      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(body).toContain('href="https://strainchain.io/pricing"');
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+  });
 });
 
 describe("renderDynamicPage: /verify verification landing", () => {
@@ -464,6 +498,16 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("$29");
     expect(body).toContain("$99");
     expect(body).toContain("$299");
+    expect(body).toContain("https://buy.stripe.com/3cIaEX73jcZE5ia2321Nu1l");
+    expect(body).toContain("https://buy.stripe.com/9B69AT73j9NseSKazy1Nu1m");
+    expect(body).toContain("https://buy.stripe.com/9B600j73jcZE6megXW1Nu1n");
+    expect(body).toContain("50 Credits");
+    expect(body).toContain("$9.99");
+    expect(body).toContain("250 Credits");
+    expect(body).toContain("$39.99");
+    expect(body).toContain("1000 Credits");
+    expect(body).toContain("$99.99");
+    expect(body).toContain("Need generation credits");
   });
 
   it("303s a valid URL to /onboard", async () => {

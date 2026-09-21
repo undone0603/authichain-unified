@@ -61,7 +61,7 @@ const ROW = {
 };
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
-  for (const path of ["/nope-xyz123", "/pricing", "/deep/unknown/path"]) {
+  for (const path of ["/nope-xyz123", "/deep/unknown/path"]) {
     const res = await get(path);
     assert.equal(res.status, 404, `${path} should 404`);
     const body = await res.text();
@@ -86,6 +86,31 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
   assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
   assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
+  assert.ok(xml.includes("<loc>https://govchain.us/pricing</loc>"));
+  assert.ok(!xml.includes("/rfp"));
+  assert.ok(!xml.includes("/compliance"));
+});
+
+test("/pricing is a live money page, not a 404", async () => {
+  const res = await get("/pricing");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<title>Pricing — GovChain<\/title>/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(html, /href="https:\/\/authichain.com\/api\/checkout\/dpp"/);
+  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\//);
+  assert.doesNotMatch(html, /does not exist/);
+});
+
+test("landing-owned sitemap URLs resolve on this worker", async () => {
+  for (const path of ["/", "/pricing"]) {
+    const res = await get(path);
+    assert.ok(
+      res.status >= 200 && res.status < 400,
+      `${path} answered ${res.status}`
+    );
+  }
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {
@@ -100,7 +125,10 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Sitemap: https:\/\/govchain.us\/sitemap.xml/);
+  assert.match(
+    await robots.text(),
+    /Sitemap: https:\/\/govchain.us\/sitemap.xml/
+  );
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -109,7 +137,10 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
 test("/onboard is proxied to the app, not answered with a 404", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];
-  globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
     const req = input instanceof Request ? input : new Request(input, init);
     calls.push(req);
     return new Response("onboard", { status: 200 });
@@ -231,8 +262,9 @@ test("reads go through the public views, never the base tables", async () => {
     for (const url of f.calls) {
       const table = new URL(url).pathname.split("/rest/v1/")[1] ?? "";
       assert.ok(
-        table.startsWith("gov_opportunities_public") || table.startsWith("gov_proposals_public"),
-        `query hit ${table}, expected a *_public view`,
+        table.startsWith("gov_opportunities_public") ||
+          table.startsWith("gov_proposals_public"),
+        `query hit ${table}, expected a *_public view`
       );
     }
   } finally {

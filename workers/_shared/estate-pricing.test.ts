@@ -4,11 +4,14 @@ import { listedPlans } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
 import {
   AUTHICHAIN_STARTER,
+  GOVCHAIN_DPP_CHECKOUT,
   isPricingPath,
   planCheckoutCta,
   renderEstatePricingPage,
+  renderGovchainPricingPage,
   STRAINCHAIN_BASIC,
   tryHandleEstatePricing,
+  tryHandleGovchainPricing,
 } from "./estate-pricing.ts";
 
 test("pricing paths are exact /pricing only", () => {
@@ -184,6 +187,50 @@ test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
   assert.doesNotMatch(html, /\$2,990/);
+});
+
+test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SKU", () => {
+  const dpp = listedPlans("qron").find(p => p.id === "dpp_readiness");
+  assert.ok(dpp);
+  const html = renderGovchainPricingPage();
+  assert.match(html, /<title>Pricing — GovChain<\/title>/);
+  assert.match(html, /No GovChain self-serve price/);
+  assert.match(html, /href="\/onboard"/);
+  assert.match(
+    html,
+    new RegExp(
+      `href="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
+    )
+  );
+  assert.equal(
+    GOVCHAIN_DPP_CHECKOUT,
+    "https://authichain.com/api/checkout/dpp"
+  );
+  assert.match(html, new RegExp(`\\$${dpp.price}`));
+  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout\//);
+  assert.doesNotMatch(html, /GovChain Starter/);
+  assert.doesNotMatch(html, /\$199\/mo/);
+  assert.doesNotMatch(html, /\$2,990/);
+});
+
+test("tryHandleGovchainPricing answers GET /pricing and ignores other paths", async () => {
+  const hit = tryHandleGovchainPricing(
+    new Request("https://govchain.us/pricing")
+  );
+  assert.ok(hit);
+  assert.equal(hit.status, 200);
+  assert.match(await hit.text(), /href="\/onboard"/);
+  assert.equal(
+    tryHandleGovchainPricing(new Request("https://govchain.us/onboard")),
+    null
+  );
+  assert.equal(
+    tryHandleGovchainPricing(
+      new Request("https://govchain.us/pricing", { method: "POST" })
+    ),
+    null
+  );
 });
 
 test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () => {

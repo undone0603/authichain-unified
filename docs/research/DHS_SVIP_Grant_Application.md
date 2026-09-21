@@ -2,8 +2,8 @@
 
 ## AuthiChain — Blockchain-AI Platform for Preventing Forgery and Counterfeiting
 
-**SAM legal business name:** ZACHARY KIETZMAN
-**Brand / product:** AuthiChain
+**Legal Applicant / SAM Entity:** ZACHARY KIETZMAN
+**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653
@@ -11,7 +11,7 @@
 **Program:** DHS Science and Technology Directorate — Silicon Valley Innovation Program (SVIP)
 **Topic:** Preventing Forgery and Counterfeiting of Certificates and Licenses
 **Requested Amount:** Phase I — $200,000 (up to $800,000 across all 4 phases)
-**Applicant:** ZACHARY KIETZMAN (SAM legal name; AuthiChain, Inc. is not the current SAM registrant)
+**Applicant:** ZACHARY KIETZMAN
 **Website:** https://authichain.com
 **Contact:** Z@authichain.com
 **Date:** March 2026
@@ -237,7 +237,7 @@ VERIFICATION FLOW:
 
 ## 9. Intellectual Property
 
-All core technology is developed and owned by ZACHARY KIETZMAN. We will grant DHS a non-exclusive, royalty-free license to use technology developed under this award in accordance with SBIR/SVIP standard IP provisions. AuthiChain retains commercial rights to deploy the technology commercially following program completion. AuthiChain, Inc. is the IRS / tax name only and is not the SAM or contracting party.
+All core technology is developed and owned by ZACHARY KIETZMAN and marketed under the AuthiChain brand. We will grant DHS a non-exclusive, royalty-free license to use technology developed under this award in accordance with SBIR/SVIP standard IP provisions. The applicant retains commercial rights to deploy the technology commercially following program completion.
 
 Key IP assets:
 

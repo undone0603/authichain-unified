@@ -1,0 +1,42 @@
+# Remote-applied versions on QRON-v2 (nhdnkzhtadfkkluiulhs)
+# Captured 2026-09-20 from supabase_migrations.schema_migrations.
+# Every version here MUST have a matching supabase/migrations/<version>_*.sql
+# or GitHub branching / `supabase db push` fails with:
+#   Remote migration versions not found in local migrations directory.
+00001
+00002
+00003
+00006
+00007
+00008
+00009
+20260706000001
+20260711000001
+20260715000001
+20260717150000
+20260807000001
+20260819000001
+20260819000002
+20260819000003
+20260819000004
+20260819000005
+20260820000001
+20260821000001
+20260821000002
+20260821000003
+20260821000004
+20260821000005
+20260821000006
+20260828000001
+20260918000001
+20260918000002
+20260919000001
+20260919000002
+20260920000002
+20260920143338
+
+# Not on remote (keep in migrations.archive only; do not restore):
+# 20260706000003_affiliate_program
+# 20260829_add_tenant_isolation
+# 20260829_create_evidence_table
+# Local-only pending apply (safe IF NOT EXISTS): 20260920000001

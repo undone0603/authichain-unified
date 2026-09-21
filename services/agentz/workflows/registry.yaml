@@ -908,8 +908,9 @@ workflows:
     prerequisites: []
     confirm_before_run: true
     description: |
-      Links CAGE code 1PUJ6 to the AuthiChain, Inc. SAM.gov entity
-      registration, then submits a $200,000 Phase I application to the DHS
+      Confirms CAGE code 1PUJ6 on the ZACHARY KIETZMAN SAM.gov entity
+      (AuthiChain is a brand only; do not rename SAM to AuthiChain, Inc.),
+      then submits a $200,000 Phase I application to the DHS
       Science & Technology Directorate Silicon Valley Innovation Program
       (SVIP) for "Preventing Forgery and Counterfeiting." Browser-automated;
       real government submission — always review dry-run output first.

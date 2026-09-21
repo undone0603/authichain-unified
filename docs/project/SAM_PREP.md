@@ -1,33 +1,44 @@
-# SAM.gov registration — live record
+# SAM.gov entity record (live)
 
-Verified against the SAM Entity Management API on **2026-09-20** (UEI `R34XKWRJY9A5` / CAGE `1PUJ6`).
+**There is no AuthiChain, Inc. corporation.** AuthiChain is a brand only.
+Do not incorporate a company for this filing, do not invent a legal entity,
+and do not rename this SAM registration to AuthiChain, Inc.
 
-## Naming ruling (2026-09-21)
+## Live SAM record
 
-| Use | Name |
+The federal applicant for this UEI is the individual SAM entity:
+
+| Field | Live value |
 | --- | --- |
-| SAM, federal applications, contracts, LOIs, signature blocks | **ZACHARY KIETZMAN** |
-| IRS / tax filings only | **AuthiChain, Inc.** |
-| Product / marketing brand | AuthiChain |
+| Legal business name | ZACHARY KIETZMAN |
+| UEI | R34XKWRJY9A5 |
+| CAGE | 1PUJ6 |
+| Registration status | Active through 2027-04-20 |
+| Physical address | 109 N 4th St, Roscommon, MI 48653 |
 
-Do not put AuthiChain, Inc. on SAM or on a contract signature block. Do not file federal applications naming AuthiChain, Inc. as the applicant for this UEI. AuthiChain, Inc. is **not** on SAM.
+## Brand vs legal framing
 
-Do not invent or transcribe an EIN in this repository.
+- **Legal applicant / SAM entity / contracting party:** ZACHARY KIETZMAN
+- **Brand / product / marketing name:** AuthiChain (and vertical brands such as GovChain, StrainChain, QRON)
+- AuthiChain may appear in marketing, websites, and product copy.
+- AuthiChain must **not** be written as "AuthiChain, Inc." on SAM.gov, SBIR/SVIP applications, or any filing that names the legal applicant for UEI R34XKWRJY9A5 / CAGE 1PUJ6.
 
-## Confirmed
+## Do not do
 
-- [x] Legal business name: **ZACHARY KIETZMAN**
-- [x] Registration status: **Active**
-- [x] Expiration: **2027-04-20**
-- [x] UEI: **R34XKWRJY9A5**
-- [x] CAGE: **1PUJ6**
-- [x] Physical address: **Roscommon, MI 48653**
+These items are **out of scope and incorrect**. They previously appeared as
+prep checklist rows; they must not be executed:
 
-Registration is complete. Do not start a second SAM entity for the AuthiChain brand.
+- Confirm or change the SAM legal business name to AuthiChain, Inc.
+- Rename the live SAM entity to AuthiChain, Inc.
+- Gather Articles of Incorporation for AuthiChain, Inc. (no such corporation exists)
+- File SBIR, SVIP, or other federal applications as if AuthiChain, Inc. is the current SAM legal applicant for this UEI
 
-## Open (optional only)
+## Maintenance checklist
 
-These items are **not** required to use the existing Active registration. Current ruling keeps SAM and contracts on **ZACHARY KIETZMAN**.
-
-- [ ] Optional SAM Update: change the legal business name to AuthiChain, Inc. **only** if SAM should later match the IRS taxpayer name, and **only** with IRS-matching formation documents (articles, EIN letter, and any other evidence SAM/IRS require for that exact name).
-- [ ] If that update is filed: keep grant, SBIR, and contract headers in this repo in lockstep with the new SAM legal name. Until then, keep **ZACHARY KIETZMAN** as the SAM and contracting party on this UEI.
+- [ ] Confirm SAM legal business name still reads **ZACHARY KIETZMAN** (do not change it)
+- [ ] Confirm UEI R34XKWRJY9A5 and CAGE 1PUJ6 still match this entity
+- [ ] Confirm registration remains Active through 2027-04-20 (renew before expiration)
+- [ ] Confirm physical address: 109 N 4th St, Roscommon, MI 48653
+- [ ] Confirm Entity Administrator Login.gov access for this entity
+- [ ] Keep TIN and bank validation current for this individual entity
+- [ ] Prepare a notarized letter only if SAM requests one for *this* entity

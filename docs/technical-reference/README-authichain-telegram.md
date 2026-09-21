@@ -2,6 +2,8 @@
 
 Cloudflare Worker bot for AuthiChain product verification via Telegram.
 
+Live Mini App (Menu Button): https://authichain.com/telegram — see `docs/integrations/telegram-miniapp.md`. This worker is optional webhook only.
+
 Users can send a TrueMark™ ID (e.g. `TM-1720000000000-ABCD1234`) directly or via `/verify` to authenticate any registered product inline.
 
 ## Setup

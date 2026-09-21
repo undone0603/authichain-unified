@@ -46,6 +46,8 @@ import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
+import { PAYMENT_LINKS } from "../server/payment-links";
+import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -76,8 +78,10 @@ function htmlDocument(opts: {
   description: string;
   canonicalPath: string;
   bodyHtml: string;
+  extraHead?: string;
 }): string {
   const { title, description, canonicalPath, bodyHtml } = opts;
+  const extraHead = opts.extraHead ?? "";
   return (
     "<!doctype html>\n" +
     '<html lang="en">\n' +
@@ -93,6 +97,7 @@ function htmlDocument(opts: {
     '<link rel="canonical" href="' +
     escapeHtml(canonicalPath) +
     '">\n' +
+    extraHead +
     "</head>\n" +
     "<body>\n" +
     bodyHtml +
@@ -100,6 +105,29 @@ function htmlDocument(opts: {
     "</body>\n" +
     "</html>"
   );
+}
+
+function renderSeoHubHtml(page: SeoPage, pathname: string): string {
+  const canonical =
+    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
+  // bodyHtml is committed in content/seo/pages.json and stripped of <script>
+  // at generation (src/lib/seo-pages.test.ts). Same contract as the Next
+  // /p/[serial] page.
+  return htmlDocument({
+    title: page.title,
+    description: page.metaDescription,
+    canonicalPath: canonical,
+    extraHead:
+      '<script type="application/ld+json">' +
+      JSON.stringify(page.jsonLd) +
+      "</script>\n",
+    bodyHtml:
+      "<main>\n<h1>" +
+      escapeHtml(page.h1) +
+      "</h1>\n" +
+      page.bodyHtml +
+      "\n</main>",
+  });
 }
 
 function htmlResponse(
@@ -186,11 +214,9 @@ async function renderShortlink(c: Context): Promise<Response> {
 
 // --- /p/<serial> - product passport ------------------------------------------
 // Source: src/app/p/[serial]/page.tsx. That page treats `serial` as EITHER a
-// committed SEO slug OR a certification serial number. Our schema has no SEO
-// slug table and no `certifications.serial_number` column; the closest
-// analogs are certificates.certificateNumber (server/content-db-helpers.ts's
-// getCertificateByNumber) and products.serialNumber. Try both so a link
-// minted either way resolves.
+// committed SEO slug (content/seo/pages.json) OR a certification serial.
+// Check the slug first — no DB — so organic hubs can convert. Certificate
+// lookup still uses certificates.certificateNumber and products.serialNumber.
 async function findPassportBySerial(
   db: ReturnType<typeof getHyperdriveDb>,
   serial: string
@@ -250,6 +276,11 @@ async function renderProductPassport(c: Context): Promise<Response> {
         ),
         404
       );
+    }
+
+    const seoPage = getSeoPageBySlug(serial);
+    if (seoPage) {
+      return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
     const db = getHyperdriveDb(c.env as any);
@@ -1213,6 +1244,33 @@ function generatePackLinksHtml(): string {
     .join(" · ");
 }
 
+const QRON_CREDIT_LINKS = [
+  PAYMENT_LINKS.qron.credits50,
+  PAYMENT_LINKS.qron.credits250,
+  PAYMENT_LINKS.qron.credits1000,
+] as const;
+
+function generateCreditLinksHtml(): string {
+  const buttons = QRON_CREDIT_LINKS.map(offer => {
+    return (
+      '<a class="credit-btn" href="' +
+      escapeHtml(offer.url) +
+      '" target="_blank" rel="noopener">Buy ' +
+      escapeHtml(offer.name) +
+      " — " +
+      escapeHtml(offer.price) +
+      "</a>"
+    );
+  }).join("\n");
+  return (
+    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
+    "<p>Need generation credits? Buy a credit pack on the published Stripe Payment Link. These are not Starter or Creator packs.</p>\n" +
+    '<p class="credit-ctas">\n' +
+    buttons +
+    "\n</p>\n"
+  );
+}
+
 function generateFormHtml(error?: string): string {
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
@@ -1235,7 +1293,8 @@ function generateFormHtml(error?: string): string {
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
       '<button type="submit">Queue Living QR</button>\n' +
       "</form>\n" +
-      "<p>Need credits? " +
+      generateCreditLinksHtml() +
+      "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
       '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +

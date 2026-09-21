@@ -86,6 +86,8 @@ describe("GET /api/checkout/dpp", () => {
     expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.client_reference_id).toBe("dpp_worker_1");
     expect(arg.metadata.plan).toBe("dpp_readiness");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.customer_creation).toBe("always");
   });
 });
 
@@ -121,6 +123,9 @@ describe("GET /api/checkout/plan/:planId", () => {
     expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
     expect(arg.metadata.plan).toBe("strainchain_passport");
     expect(arg.metadata.brand).toBe("strainchain");
+    expect(arg.after_expiration.recovery.enabled).toBe(true);
+    expect(arg.consent_collection).toBeUndefined();
+    expect(arg.allow_promotion_codes).toBeUndefined();
   });
 });
 

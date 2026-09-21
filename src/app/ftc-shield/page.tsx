@@ -51,12 +51,15 @@ export default function FtcShieldPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard" className="bg-red-600 hover:bg-red-500 text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
-              Secure Your Brand <ArrowRight className="w-4 h-4" />
+            <Link href="/api/checkout/dpp" className="bg-red-600 hover:bg-red-500 text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
+              DPP checkout — $299 <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/docs" className="btn-outline-gold border-zinc-800 text-zinc-300 inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs">
-              View Legal Spec <ArrowRight className="w-4 h-4" />
+            <Link href="/made-in-america" className="btn-outline-gold border-zinc-800 text-zinc-300 inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs">
+              Made in America brief <ArrowRight className="w-4 h-4" />
             </Link>
+            <a href="mailto:hello@authichain.com?subject=Made%20in%20America%20written%20packet" className="btn-outline-gold border-zinc-800 text-zinc-300 inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs">
+              Request a written packet <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
         </div>
 

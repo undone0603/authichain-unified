@@ -66,6 +66,16 @@ jobs:
             "https://authichain.com/dpp" \
             "https://authichain.com/x402" \
             "https://authichain.com/onboard" \
+            "https://authichain.com/trumark" \
+            "https://authichain.com/made-in-america" \
+            "https://authichain.com/passport" \
+            "https://authichain.com/genetics/mendo-love-farms" \
+            "https://authichain.com/m" \
+            "https://authichain.com/m/mendo" \
+            "https://authichain.com/m/trumark" \
+            "https://authichain.com/m/musa" \
+            "https://authichain.com/m/strainchain" \
+            "https://authichain.com/blog/eu-dpp-manufacturer" \
             "https://strainchain.io/" \
             "https://strainchain.io/pricing" \
             "https://strainchain.io/onboard" \
@@ -73,7 +83,8 @@ jobs:
             "https://qron.space/pricing" \
             "https://qron.space/generate" \
             "https://govchain.us/" \
-            "https://govchain.us/onboard"
+            "https://govchain.us/onboard" \
+            "https://govchain.us/pricing"
           do
             ping_indexnow "$URL"
           done

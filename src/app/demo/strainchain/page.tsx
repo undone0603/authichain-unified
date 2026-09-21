@@ -30,6 +30,18 @@ export default function StrainChainDemo() {
             >
               Simulate TruMark Scan
             </button>
+            <a
+              href="/trumark"
+              className="w-full py-3 mt-3 border border-gray-700 text-gray-300 font-bold rounded-full hover:bg-gray-800 transition-all text-center"
+            >
+              TruMark brief
+            </a>
+            <a
+              href="/api/checkout/plan/strainchain_passport"
+              className="w-full py-3 mt-3 border border-gray-700 text-gray-300 font-bold rounded-full hover:bg-gray-800 transition-all text-center"
+            >
+              Passport checkout — $49
+            </a>
           </div>
         )}
 
@@ -68,9 +80,21 @@ export default function StrainChainDemo() {
               </div>
             </div>
 
+            <a
+              href="/api/checkout/plan/strainchain_passport"
+              className="w-full py-4 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-all text-center"
+            >
+              Passport checkout — $49
+            </a>
+            <a
+              href="/api/checkout/dpp"
+              className="w-full py-3 border border-gray-700 text-gray-300 font-bold rounded-full hover:bg-gray-800 transition-all text-center mt-3"
+            >
+              DPP checkout — $299
+            </a>
             <button
               onClick={() => setStep('initial')}
-              className="w-full py-3 border border-gray-700 text-gray-300 font-bold rounded-full hover:bg-gray-800 transition-all"
+              className="w-full py-3 border border-gray-700 text-gray-300 font-bold rounded-full hover:bg-gray-800 transition-all mt-3"
             >
               Reset Demo
             </button>

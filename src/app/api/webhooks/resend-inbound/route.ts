@@ -6,12 +6,29 @@
  * - Domain: authichain.com
  * - Route name: proposals@authichain.com
  * - Forward to: https://api.authichain.com/api/webhooks/resend-inbound (or your domain)
+ *
+ * Audit (reply classifier path):
+ * - Classification always runs for legitimate, non-duplicate inbound.
+ * - Side effects here are local only: insert inbound_replies, update the
+ *   matched leads row, console.log domain + sentiment. This route does
+ *   **not** write HubSpot (HUBSPOT_ACCESS_TOKEN is unused here; CRM sync
+ *   is `/api/crm/sync`) and does **not** draft or send a reply.
+ * - Actionability: positive/objection + matched lead → nurture cron
+ *   (`/api/cron/nurture-replies`) auto-sends later. Neutral/negative or
+ *   unmatched → `/dashboard/inbound-replies` for manual review.
+ * - Paid LLM is optional. Missing OPENAI_API_KEY is reported on GET/POST
+ *   as `classifier.missingSecret`; Ollama then heuristic keep the path live.
  */
 
 import { db } from '@/db';
 import { inboundReplies, leads } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { classifyReplyEmail, isProbablyLegitimateReply } from '@/lib/sentiment-classifier';
+import {
+  classifyReplyEmail,
+  inboundReplyAction,
+  isProbablyLegitimateReply,
+  resolveReplyClassifierBackend,
+} from '@/lib/sentiment-classifier';
 import { matchReplyToProposal, normalizeEmail } from '@/lib/proposal-matcher';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -47,6 +64,29 @@ function extractSenderName(emailString: string): string | null {
   return null;
 }
 
+/**
+ * Ops probe: which classifier backend will run, and the exact missing
+ * paid secret if any. Does not send mail or write the database.
+ */
+export async function GET() {
+  const backend = resolveReplyClassifierBackend();
+  return NextResponse.json({
+    ok: true,
+    classifier: backend,
+    sideEffects: {
+      hubspotWrite: false,
+      draftReply: false,
+      persistInboundReply: true,
+      nurtureCron: '/api/cron/nurture-replies',
+      dashboard: '/dashboard/inbound-replies',
+    },
+    autoflow: {
+      industryClassifier: 'shared/industries.ts',
+      strategyDoc: 'docs/knowledge/AI_AUTOFLOW_STRATEGY.md',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const payload = (await request.json()) as ResendInboundPayload;
@@ -80,7 +120,8 @@ export async function POST(request: NextRequest) {
     // Match reply to proposal
     const match = await matchReplyToProposal(senderEmail, payload.subject, payload.messageId, payload.inReplyTo);
 
-    // Classify sentiment
+    // Classify sentiment (OpenAI → Ollama → heuristic → fail-closed neutral)
+    const backend = resolveReplyClassifierBackend();
     const sentimentResult = await classifyReplyEmail(emailBody, payload.subject);
 
     // Find or reference lead
@@ -121,6 +162,8 @@ export async function POST(request: NextRequest) {
           matchMethod: match.method,
           matchReason: match.reason,
           sentimentReasoning: sentimentResult.reasoning,
+          classifierProvider: sentimentResult.provider,
+          classifierMissingSecret: backend.missingSecret ?? null,
           originalHeaders: payload.headers || {},
           replyTo: payload.replyTo,
         },
@@ -132,6 +175,7 @@ export async function POST(request: NextRequest) {
     }
 
     const reply = replyInsert[0];
+    const action = inboundReplyAction(sentimentResult.sentiment, leadId);
 
     // Update leads table if matched
     if (leadId) {
@@ -160,6 +204,12 @@ export async function POST(request: NextRequest) {
         sentiment: sentimentResult.sentiment,
         matchConfidence: match.confidence,
         leadId,
+        action,
+        classifier: {
+          provider: sentimentResult.provider,
+          missingSecret: backend.missingSecret ?? null,
+          paidLlmAvailable: backend.paidLlmAvailable,
+        },
       },
       { status: 201 },
     );

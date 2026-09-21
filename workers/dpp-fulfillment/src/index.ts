@@ -342,6 +342,14 @@ async function handleCompleted(env: Env, session: any): Promise<void> {
 }
 
 async function handleExpired(env: Env, session: any): Promise<void> {
+  const recoveryUrl =
+    typeof session?.after_expiration?.recovery?.url === "string"
+      ? session.after_expiration.recovery.url
+      : "";
+  console.log(
+    `[dpp-fulfillment] checkout.session.expired session=${session?.id || "unknown"} recovery_url=${recoveryUrl || "none"}`
+  );
+
   const offer = sessionOffer(session);
   if (offer && offer !== env.OFFER_KEY && offer !== OFFER) return;
 
@@ -363,7 +371,7 @@ async function handleExpired(env: Env, session: any): Promise<void> {
     env,
     email,
     "Finish your EU DPP Readiness Audit",
-    recoveryBody(name, env.PAYMENT_LINK_URL)
+    recoveryBody(name, recoveryUrl || env.PAYMENT_LINK_URL)
   );
   if (result.ok) {
     await bumpCounter(env, "recovery_sent");

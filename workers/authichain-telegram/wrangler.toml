@@ -20,6 +20,7 @@ id = "ef040f1eb8ca4d6f9f7fe4e908cdfd69"
 
 [vars]
 ENVIRONMENT = "production"
+MINIAPP_URL = "https://authichain.com/telegram"
 
 [observability]
 enabled = true

@@ -28,3 +28,16 @@
 
 ## Moat: Automated Workflows
 AI AutoFlow™ auto-generates industry-specific workflows (e.g., METRC sync for Cannabis, DSCSA for Pharma), making it impossible for generic competitors to match the vertical depth at scale.
+
+## Related runtime (do not conflate)
+
+AutoFlow here is the **industry / vertical** classifier (`shared/industries.ts`, ten sectors). It is not the inbound outreach **reply** classifier.
+
+Reply classification is already wired on the live inbound path:
+
+- `src/lib/sentiment-classifier.ts` — OpenAI → local Ollama → heuristic, fail-closed to `neutral`
+- `POST /api/webhooks/resend-inbound` — classifies every legitimate reply
+- Sales UI: `/dashboard/inbound-replies`
+- Verify with a sample inbound: [`docs/strategy/QUICK_START_EMAIL_REPLIES.md`](../strategy/QUICK_START_EMAIL_REPLIES.md)
+
+`docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` notes ten AutoFlow verticals and zero customers. Do not invent a second AutoFlow product surface; keep industry workflows in `shared/industries.ts` and keep reply sentiment on the inbound webhook.

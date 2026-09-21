@@ -35,6 +35,10 @@ API_PROBES: tuple[tuple[str, str], ...] = (
 )
 
 CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
+CHECKOUT_PASSPORT_URL = (
+    "https://authichain.com/api/checkout/plan/strainchain_passport"
+)
+CHECKOUT_URLS = frozenset({CHECKOUT_DPP_URL, CHECKOUT_PASSPORT_URL})
 CHECKOUT_OK_STATUSES = frozenset({302, 303})
 
 # Public money paths. Checkout is redirect-only: 302/303 = OK, 200 HTML fails.
@@ -43,7 +47,16 @@ MONEY_PATHS = (
     "https://authichain.com/dpp",
     "https://authichain.com/x402",
     "https://authichain.com/onboard",
+    "https://authichain.com/trumark",
+    "https://authichain.com/made-in-america",
+    "https://authichain.com/passport",
+    "https://authichain.com/genetics/mendo-love-farms",
+    "https://authichain.com/m/mendo",
+    "https://authichain.com/m/trumark",
+    "https://authichain.com/m/musa",
+    "https://authichain.com/m/strainchain",
     CHECKOUT_DPP_URL,
+    CHECKOUT_PASSPORT_URL,
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",
     "https://qron.space/pricing",
@@ -76,7 +89,7 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
     # Checkout: do not follow 303 to checkout.stripe.com (creates no charge,
     # but we only need the redirect status). Other probes keep urlopen's
     # default follow so a hop-to-5xx still fails.
-    open_fn = _OPENER.open if url == CHECKOUT_DPP_URL else urllib.request.urlopen
+    open_fn = _OPENER.open if url in CHECKOUT_URLS else urllib.request.urlopen
     try:
         with open_fn(req, timeout=timeout) as resp:
             return int(resp.status)
@@ -85,7 +98,7 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
 
 
 def _status_is_failure(url: str, status: int) -> bool:
-    if url == CHECKOUT_DPP_URL:
+    if url in CHECKOUT_URLS:
         return status not in CHECKOUT_OK_STATUSES
     return status >= 500
 
@@ -125,7 +138,7 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"{method} {url} -> {status}")
         if _status_is_failure(url, status):
             detail = f"{method} {url} -> {status}"
-            if url == CHECKOUT_DPP_URL:
+            if url in CHECKOUT_URLS:
                 detail += " (expected 302 or 303)"
             failures.append(detail)
 

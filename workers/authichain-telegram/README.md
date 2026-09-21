@@ -1,8 +1,16 @@
 # AuthiChain Telegram Worker
 
-Cloudflare Worker bot for AuthiChain product verification via Telegram.
+Optional Cloudflare Worker bot for AuthiChain product verification via Telegram.
 
-Users can send a TrueMark™ ID (e.g. `TM-1720000000000-ABCD1234`) directly or via `/verify` to authenticate any registered product inline.
+**Mini App HTML lives on the apex worker**, not here:
+
+- https://authichain.com/telegram (alias `/miniapp`)
+- BotFather Menu Button URL — works **without** deploying this worker
+- Setup: `docs/integrations/telegram-miniapp.md`
+
+Users can send a TruMark™ ID (e.g. `TM-1720000000000-ABCD1234`) directly or via `/verify` to authenticate a registered product. `/start` opens the Passport Mini App (`web_app`) and links live `$49` checkout.
+
+Do **not** set the webhook to `https://authichain.com/api/telegram` (QRON Nightstamp).
 
 ## Setup
 
@@ -48,6 +56,7 @@ curl -X POST https://authichain-telegram.<your-subdomain>.workers.dev/api/telegr
 ```
 src/
   index.ts                    Worker entrypoint + Env interface
+  miniapp.ts                  Mini App URL, /start markup, setChatMenuButton payload
   utils/
     router.ts                 Tiny method+path route matcher
     crypto.ts                 X-Telegram-Secret-Token verification
@@ -55,11 +64,11 @@ src/
     telegram.ts               Typed Telegram Bot API wrapper
     db.ts                     D1 message logging + KV session helpers
     commands.ts               /start /help /verify /status + admin gate
-    inline.ts                 Inline query handler (live TrueMark lookup)
+    inline.ts                 Inline query handler (live TruMark lookup)
     admin.ts                  Admin notifications + daily digest helper
   routes/
     telegram-webhook.ts       POST /api/telegram/webhook
-    telegram-setup.ts         POST /api/telegram/setup-webhook
+    telegram-setup.ts         POST /api/telegram/setup-webhook (+ Menu Button)
 migrations/
   0001_initial.sql            messages table
 ```
@@ -72,5 +81,6 @@ migrations/
 | `TELEGRAM_WEBHOOK_SECRET` | Secret | Request signature validation |
 | `TELEGRAM_ADMIN_CHAT_ID` | Secret | Admin-only commands |
 | `SITE_URL` | Secret | AuthiChain API base URL for live verification |
+| `MINIAPP_URL` | Var | Default `https://authichain.com/telegram` |
 | `DATABASE` | D1 | Message logs |
 | `SESSIONS` | KV | User session state (24h TTL) |

@@ -1,5 +1,6 @@
 /**
- * Apex /pricing HTML for authichain.com, qron.space, and strainchain.io.
+ * Apex /pricing HTML for authichain.com, qron.space, strainchain.io, and
+ * govchain.us (intake + AuthiChain DPP only — no invented GovChain SKU).
  *
  * Landing workers own marketing HTML and 404 unknown paths, so the Next.js
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
@@ -534,6 +535,12 @@ export function isPricingPath(pathname: string): boolean {
   return pathname === "/pricing" || pathname === "/pricing/";
 }
 
+const pricingHeaders = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "private, no-store",
+  "CDN-Cache-Control": "no-store",
+} as const;
+
 /** Serve GET/HEAD /pricing from an estate landing worker. */
 export function tryHandleEstatePricing(
   request: Request,
@@ -542,10 +549,159 @@ export function tryHandleEstatePricing(
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   if (!isPricingPath(new URL(request.url).pathname)) return null;
   return new Response(renderEstatePricingPage(origin), {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "private, no-store",
-      "CDN-Cache-Control": "no-store",
+    headers: pricingHeaders,
+  });
+}
+
+/** Live AuthiChain DPP checkout — absolute so it works off govchain.us. */
+export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+
+/**
+ * GovChain has no self-serve SKU. /pricing must not invent one and must not
+ * reuse the AuthiChain catalogue (relative /api/checkout/dpp 404s here).
+ * Intake stays on /onboard; the published money path is AuthiChain DPP.
+ */
+export function renderGovchainPricingPage(): string {
+  const dpp = listedPlans("qron").find(p => p.id === "dpp_readiness");
+  if (!dpp) {
+    throw new Error("dpp_readiness missing from src/lib/plans.ts catalogue");
+  }
+  const dppPrice = dpp.price;
+  const dppName = dpp.name;
+  const dppCta = dpp.cta;
+  const dppDesc = dpp.description;
+  const features = dpp.features.map(f => `<li>${esc(f)}</li>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — GovChain</title>
+<meta name="description" content="GovChain does not publish a self-serve SKU. Request access on /onboard, or start the live EU DPP Readiness checkout at $${dppPrice}.">
+<link rel="canonical" href="https://govchain.us/pricing">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#1d4ed8">
+${ESTATE_FONTS_LINK}
+<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "OfferCatalog",
+    name: "Pricing — GovChain",
+    itemListElement: [
+      {
+        "@type": "Offer",
+        name: dppName,
+        description: dppDesc,
+        price: dppPrice,
+        priceCurrency: "USD",
+        url: GOVCHAIN_DPP_CHECKOUT,
+      },
+    ],
+  }).replace(/<\/script/gi, "<\\/script")}</script>
+<style>
+${estateCssVars("govchain")}
+${ESTATE_BASE_CSS}
+</style>
+</head>
+<body>
+${estateSkipLink()}
+${estateNav(
+  "govchain",
+  [
+    { href: "/", label: "Home" },
+    { href: "/opportunities", label: "Opportunities" },
+    { href: "/onboard", label: "Onboard" },
+  ],
+  { href: "/onboard", label: "Request access" }
+)}
+<main id="main">
+${estateHero({
+  eyebrow: "Published paths only",
+  title: "No GovChain self-serve price.",
+  lede: "GovChain does not publish a catalogue SKU. Request access on the live /onboard intake, or start EU DPP Readiness on AuthiChain — the same $299 checkout already used on authichain.com.",
+  actions: [
+    { href: "/onboard", label: "Request access", primary: true },
+    {
+      href: GOVCHAIN_DPP_CHECKOUT,
+      label: dppCta,
+      primary: false,
     },
+  ],
+})}
+<section class="estate-section" id="pricing">
+  <div class="wrap">
+    <h2>How to start</h2>
+    <p class="section-sub">These are the two live conversion paths. Nothing here invents a GovChain subscription.</p>
+    <div class="pricing-grid">
+      <article class="price-card featured">
+        <h3>GovChain access</h3>
+        <div class="price-amount">Intake</div>
+        <div class="price-period">no published SKU</div>
+        <p class="section-sub" style="margin-bottom:16px">The same /onboard form production already proxies to the AuthiChain app. Public-sector pricing is not listed as a self-serve plan.</p>
+        <a class="btn btn-primary" style="width:100%;text-align:center" href="/onboard">Request access</a>
+      </article>
+      <article class="price-card">
+        <h3>${esc(dppName)}</h3>
+        <div class="price-amount">$${dppPrice}</div>
+        <div class="price-period">one-time</div>
+        <p class="section-sub" style="margin-bottom:16px">${esc(dppDesc)}</p>
+        <ul class="price-features">${features}</ul>
+        <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(GOVCHAIN_DPP_CHECKOUT)}" target="_blank" rel="noopener">${esc(dppCta)}</a>
+      </article>
+    </div>
+  </div>
+</section>
+${estateCtaBand({
+  title: "Start on a live path",
+  lede: "Onboard is the GovChain conversion path. EU DPP Readiness is the published AuthiChain checkout.",
+  actions: [
+    { href: "/onboard", label: "Request access", primary: true },
+    {
+      href: "https://authichain.com/pricing",
+      label: "AuthiChain pricing",
+      primary: false,
+    },
+  ],
+})}
+</main>
+${estateFooter(
+  "govchain",
+  [
+    {
+      heading: "Start",
+      links: [
+        { href: "/onboard", label: "Onboard" },
+        { href: GOVCHAIN_DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "/pricing", label: "Pricing" },
+      ],
+    },
+    {
+      heading: "Estate",
+      links: [
+        { href: "https://authichain.com/pricing", label: "AuthiChain pricing" },
+        { href: "https://qron.space/generate", label: "QRON generate" },
+        {
+          href: "https://strainchain.io/onboard",
+          label: "StrainChain onboard",
+        },
+      ],
+    },
+    {
+      heading: "More",
+      links: [{ href: "/opportunities", label: "Opportunities" }],
+    },
+  ],
+  "GovChain has no self-serve SKU — onboard or AuthiChain DPP"
+)}
+</body>
+</html>`;
+}
+
+/** Serve GET/HEAD /pricing on govchain.us with absolute AuthiChain checkout. */
+export function tryHandleGovchainPricing(request: Request): Response | null {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  if (!isPricingPath(new URL(request.url).pathname)) return null;
+  return new Response(renderGovchainPricingPage(), {
+    headers: pricingHeaders,
   });
 }

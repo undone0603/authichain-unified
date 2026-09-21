@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "workers/authichain-com/**"
+      - "content/microsites/**"
+      - "scripts/sync-microsite-packs.mjs"
       - ".github/workflows/deploy-authichain-com.yml"
 permissions:
   contents: read
@@ -24,6 +26,8 @@ jobs:
           cache: "pnpm"
       - name: Install
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Embed microsite HTML
+        run: node scripts/sync-microsite-packs.mjs
       - name: Publish authichain-com
         working-directory: workers/authichain-com
         env:
