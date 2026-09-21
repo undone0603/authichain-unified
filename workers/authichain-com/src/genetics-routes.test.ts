@@ -49,8 +49,11 @@ describe("genetics routes", () => {
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /260320S005-001/);
+    assert.match(html, /251104R041-001/);
     assert.match(html, /11\.618%/);
+    assert.match(html, /11\.373%/);
     assert.match(html, /Recomputed/);
+    assert.doesNotMatch(html, /Totals only/);
     assert.match(html, /Confirmed in writing|Claimed/);
     assert.match(html, /never transcribed/i);
     assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));

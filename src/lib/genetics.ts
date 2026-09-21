@@ -61,6 +61,10 @@ export interface Certificate {
   arithmetic_check: ArithmeticCheck;
   breeder_claimed_ratio?: number;
   open_question?: string;
+  /** Repo-relative path of the canonical source PDF, when bytes are on file. */
+  source_pdf?: string;
+  source_pdf_sha256?: string;
+  verified_against_pdf?: string;
 }
 
 export interface Cultivar {
