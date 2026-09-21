@@ -246,7 +246,7 @@ ${estateFeatures(
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. GET /api/checkout/dpp opens the live Stripe session at $299, credited toward AuthiChain Basic on conversion.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
     },
     {
       title: "Machine-readable passports",

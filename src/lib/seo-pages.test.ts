@@ -50,6 +50,7 @@ describe("seo-pages loader", () => {
     );
     expect(page?.bodyHtml).toContain('name="email"');
     expect(page?.bodyHtml).toContain('href="https://authichain.com/x402"');
+    expect(page?.bodyHtml).not.toContain("GET /api/checkout");
     expect(page?.jsonLd.url).toBe(
       "https://authichain.com/authentic-agentic-economy"
     );

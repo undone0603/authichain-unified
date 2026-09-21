@@ -129,7 +129,7 @@ const SEO = {
     },
     {
       q: 'How much does AuthiChain cost?',
-      a: 'The live self-serve offer is EU DPP Readiness at $299 one-time via GET /api/checkout/dpp. QRON Starter is $29 and Creator is $99 on published Stripe Payment Links. See /pricing.',
+      a: 'The live self-serve offer is EU DPP Readiness at $299 one-time on a published Stripe Payment Link (or enter a work email so Stripe can recover the cart). QRON Starter is $29 and Creator is $99 on published Stripe Payment Links. See /pricing.',
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -2281,7 +2281,7 @@ function techStack() {
     "Claims limited to capabilities that are live on this estate.",
     [
       { title: "Signed seals", body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable." },
-      { title: "EU DPP Readiness", body: "Live Stripe checkout at GET /api/checkout/dpp. $299 one-time from the published plan catalogue, credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2452,7 +2452,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Issue seals. Bind products. Verify anywhere.",
-    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout, $299, the same GET /api/checkout/dpp production already uses.",
+    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart.",
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",

@@ -64,6 +64,7 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /The authentic agentic economy/);
   assert.match(html, /href="\/authentic-agentic-economy"/);
   assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(
     html,
     /used for TrueMark minting fees and authentication activity/
@@ -89,6 +90,7 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
   assert.match(html, /href="\/x402"/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
 });
 
 test("/contact is a real page, not the homepage", async () => {
@@ -163,6 +165,7 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
     assert.match(html, /action="\/api\/checkout\/dpp"/);
     assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
     assert.match(html, /href="\/x402"/);
+    assert.doesNotMatch(html, /GET \/api\/checkout/);
     assert.match(html, /arxiv\.org\/abs\/2602\.14219/);
     assert.ok(
       !html.toLowerCase().includes("facilitator.payai"),

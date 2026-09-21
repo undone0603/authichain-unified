@@ -40,6 +40,7 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.ok(
     html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
   );

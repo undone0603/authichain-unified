@@ -5,11 +5,11 @@
  * Landing workers own marketing HTML and 404 unknown paths, so the Next.js
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
  * render the same customer-facing catalogue as `src/lib/plans.ts` (`listedPlans`)
- * with live Payment Links or GET /api/checkout/dpp. AuthiChain also shows
- * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain does not use
+ * with live Payment Links or email-gated checkout. AuthiChain also shows
+ * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain uses
  * `strainchain_passport` / `strainchain_farm` from `listedPlans('strainchain')`
- * (GET /api/checkout/plan/:planId) plus the live Basic Payment Link in
- * `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
+ * (Passport Payment Link plus email-gated checkout) and the live Basic
+ * Payment Link in `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
  */
 import { listedPlans, type Plan } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
@@ -327,7 +327,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "StrainChain Basic uses the published Payment Link. Genetics passport SKUs checkout via live Stripe sessions — figures from the catalogue only.",
       secondary: { href: "/onboard", label: "Request demo", primary: false },
       plansNote:
-        "Basic is the $199/mo Payment Link. Passport and Farm Plan use GET /api/checkout/plan on authichain.com with the live Stripe prices from the catalogue.",
+        "Basic is the $199/mo Payment Link. Passport is $49 on the published Payment Link. Farm Plan uses email-gated live Stripe checkout on authichain.com from the catalogue.",
       ctaTitle: passport ? passport.cta : `Start ${basic.name}`,
       ctaLede: passport
         ? "$49 one-time per cultivar — live Stripe checkout."
@@ -414,7 +414,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "AuthiChain Starter is the live $299/mo Payment Link. Catalogue plans with a Stripe price or Payment Link stay listed. Theater subscriptions without a Payment Link use Contact.",
       ctaTitle: "Start EU DPP Readiness",
       ctaLede:
-        "GET /api/checkout/dpp opens the live Stripe session. AuthiChain Starter is the monthly Payment Link on this page.",
+        "EU DPP Readiness is $299 on the published Payment Link, or enter a work email so Stripe can recover the cart. AuthiChain Starter is the monthly Payment Link on this page.",
       footerStart: [
         { href: "/pricing", label: "DPP checkout" },
         { href: starter.url, label: starter.name },

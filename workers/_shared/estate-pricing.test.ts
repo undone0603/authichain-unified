@@ -71,6 +71,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
@@ -200,6 +201,7 @@ test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
   );
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(html, /\$2,990/);
 });
 

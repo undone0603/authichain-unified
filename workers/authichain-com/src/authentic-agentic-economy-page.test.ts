@@ -39,6 +39,7 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain("$0.05");
     expect(html).toContain("HTTP 402");
     expect(html).toContain("not Polygon $QRON");
+    expect(html).not.toContain("GET /api/checkout");
     expect(html).toContain('<main id="main">');
     expect(html).toContain(
       'rel="canonical" href="https://authichain.com/authentic-agentic-economy"'

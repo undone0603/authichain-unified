@@ -64,6 +64,7 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
     const hasDpp = html.includes("/api/checkout/dpp");
     assert.ok(hasPassport || hasDpp, `${slug} needs a live checkout CTA`);
     assert.match(html, /name="email"/, slug);
+    assert.doesNotMatch(html, /GET \/api\/checkout/, slug);
   }
   assert.match(MICROSITE_HTML.mendo, /\$49/);
   assert.match(MICROSITE_HTML.mendo, /LT-63/);

@@ -151,9 +151,9 @@ export const PLANS: Plan[] = [
   },
   // --- StrainChain passport SKUs -------------------------------------------
   //
-  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Checkout
-  // via GET /api/checkout/plan/:planId on authichain.com. See
-  // docs/strategy/strainchain-genetics-passport.md section 3.
+  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Passport
+  // has a published Payment Link; Farm Plan uses email-gated checkout on
+  // authichain.com. See docs/strategy/strainchain-genetics-passport.md §3.
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
