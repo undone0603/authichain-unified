@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import { computeDashboard } from "@/lib/dreamdash/metrics";
+import { rowToLead, type LeadCaptureRow } from "@/lib/dreamdash/map-row";
+import type { HeartbeatEvent } from "@/lib/dreamdash/types";
+import { createClient } from "@/utils/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { data: rows, error } = await supabase
+      .from("lead_captures")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const leads = ((rows ?? []) as LeadCaptureRow[]).map(rowToLead);
+
+    let events: HeartbeatEvent[] = [];
+    const { data: logs } = await supabase
+      .from("automation_logs")
+      .select("id, workflow_name, status, payload, created_at")
+      .order("created_at", { ascending: false })
+      .limit(24);
+    if (logs) {
+      events = logs.map((log) => ({
+        id: String(log.id),
+        workflow: String(log.workflow_name ?? "workflow"),
+        status: log.status === "failure" ? "skipped" : "ok",
+        timestamp: String(log.created_at ?? new Date().toISOString()),
+        detail: typeof log.payload === "string" ? log.payload.slice(0, 180) : String(log.status ?? ""),
+      }));
+    }
+
+    const dash = computeDashboard(leads, events);
+    return NextResponse.json({ leads, events, dash });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "An unknown error occurred";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
