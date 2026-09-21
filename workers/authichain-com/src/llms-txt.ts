@@ -30,6 +30,7 @@ export function renderLlmsTxt(): string {
     `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
     "- Catalog: https://authichain.com/api/x402/catalog",
     "- Well-known: https://authichain.com/.well-known/x402.json",
+    "- MCP: GET https://authichain.com/mcp (get_pricing; pay via unpaid POST /api/x402)",
     "- Docs: https://authichain.com/x402",
     "",
     "## Human checkout (Stripe Payment Links)",

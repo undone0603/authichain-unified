@@ -264,6 +264,36 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
+test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+  for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      protocol: string;
+      pay: { x402: string };
+      pricing: {
+        humanCheckout: {
+          passportPaymentLink?: string;
+          dppPaymentLink?: string;
+        };
+      };
+    };
+    assert.equal(body.protocol, "mcp", path);
+    assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
+    assert.equal(
+      body.pricing.humanCheckout.dppPaymentLink,
+      planPaymentLink("dpp_readiness"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.passportPaymentLink,
+      planPaymentLink("strainchain_passport"),
+      path
+    );
+    assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
+  }
+});
+
 test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async () => {
   for (const path of ["/api/x402/catalog", "/.well-known/x402.json"]) {
     const res = await get(path);
@@ -502,6 +532,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
   );
   assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 

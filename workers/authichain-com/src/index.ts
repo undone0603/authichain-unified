@@ -5,6 +5,7 @@
 import { tryHandleDppRoute } from "./dpp-routes";
 import { tryHandleProtocolCheckout } from "./protocol-checkout";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
+import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import {
   isAuthenticAgenticEconomyPath,
@@ -3393,6 +3394,7 @@ export default {
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
@@ -3459,9 +3461,11 @@ export default {
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
-    // and unmounted GET /api/x402 answers an empty ASSETS 404.
+    // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
     const x402 = await tryHandleX402(request, env);
     if (x402) return x402;
+    const mcp = await tryHandleMcp(request);
+    if (mcp) return mcp;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }

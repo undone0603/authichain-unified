@@ -17,6 +17,7 @@ describe("llms.txt", () => {
     expect(text).toContain("POST https://authichain.com/api/x402");
     expect(text).toContain("https://authichain.com/api/x402/catalog");
     expect(text).toContain("https://authichain.com/.well-known/x402.json");
+    expect(text).toContain("https://authichain.com/mcp");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).toContain(planPaymentLink("strainchain_passport"));
     expect(text).not.toContain("GET /api/checkout");
