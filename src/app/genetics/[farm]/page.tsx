@@ -169,7 +169,9 @@ export default async function FarmIndex({
                         color: "var(--ink)",
                       }}
                     >
-                      {(v.peakThcvPct ?? 0).toFixed(3)}%
+                      {v.peakThcvPct == null
+                        ? "—"
+                        : `${v.peakThcvPct.toFixed(3)}%`}
                     </b>
                     <span style={{ color: "var(--muted)" }}>Peak THCV</span>
                   </div>
@@ -182,7 +184,9 @@ export default async function FarmIndex({
                         color: "var(--ink)",
                       }}
                     >
-                      {(v.peakRatio ?? 0).toFixed(2)}:1
+                      {v.peakRatio == null
+                        ? "—"
+                        : `${v.peakRatio.toFixed(2)}:1`}
                     </b>
                     <span style={{ color: "var(--muted)" }}>Best ratio</span>
                   </div>
