@@ -26,6 +26,13 @@ export interface SupabaseEnv {
   SUPABASE_ANON_KEY?: string;
   /** Origin that renders /onboard. Set in wrangler.toml. */
   APP_ORIGIN?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 }
 
 /**

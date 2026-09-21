@@ -16,6 +16,7 @@ import {
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
+import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2111,6 +2112,13 @@ a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:60
 
 type Env = {
   APP_ORIGIN?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 };
 
 function stripTrailingSlashes(value: string): string {
@@ -2189,6 +2197,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
+    const x402 = await tryHandleSisterX402(request, env);
+    if (x402) return x402;
     const discovery = tryHandleEstateAgentDiscovery(request, "qron");
     if (discovery) return discovery;
     const seoRedirect = tryRedirectSeoRootCanonical(request);

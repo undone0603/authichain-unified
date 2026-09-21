@@ -11,6 +11,7 @@ import {
   tryHandleEstateAgentDiscovery,
   type SisterDiscoveryBrand,
 } from "./estate-agent-discovery.ts";
+import { sisterOrigin } from "./estate-x402.ts";
 
 const BRANDS: SisterDiscoveryBrand[] = ["qron", "strainchain", "govchain"];
 const PASSPORT = planPaymentLink("strainchain_passport") ?? "";
@@ -58,7 +59,10 @@ test("recognizes agent discovery paths and ignores marketing paths", () => {
 test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
   for (const brand of BRANDS) {
     const text = renderEstateLlmsTxt(brand);
-    assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/api/x402")
+    );
+    assert.ok(hasHttpsPath(text, "authichain.com", "/api/x402"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
@@ -89,13 +93,15 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
   for (const brand of BRANDS) {
     const spec = renderEstateOpenApi(brand);
     assert.equal(spec.openapi, "3.1.0");
-    assert.deepEqual(spec.servers, [{ url: "https://authichain.com" }]);
+    assert.deepEqual(spec.servers, [{ url: sisterOrigin(brand) }]);
     const post = spec.paths["/api/x402"] as {
+      get?: { responses: { "200": unknown } };
       post: {
         "x-payment-info": { protocols: string[]; price: { amount: string } };
         responses: { "402": unknown };
       };
     };
+    assert.ok(post.get?.responses["200"]);
     assert.deepEqual(post.post["x-payment-info"].protocols, ["x402"]);
     assert.equal(
       post.post["x-payment-info"].price.amount,
@@ -126,9 +132,7 @@ test("tryHandleEstateAgentDiscovery answers GET and ignores other paths", async 
   assert.ok(llms);
   assert.equal(llms.status, 200);
   assert.match(llms.headers.get("content-type") ?? "", /text\/plain/);
-  assert.ok(
-    (await llms.text()).includes("POST https://authichain.com/api/x402")
-  );
+  assert.ok((await llms.text()).includes("POST https://qron.space/api/x402"));
 
   const spec = tryHandleEstateAgentDiscovery(
     new Request("https://strainchain.io/openapi.json"),
