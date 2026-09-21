@@ -9,7 +9,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [AGENTS.md](../AGENTS.md) — Next.js agent rules
 - [project/START_HERE.md](project/START_HERE.md) — conversion funnel tracking quickstart
 - [project/todo.md](project/todo.md) — platform TODO / progress tracker
-- [project/SAM_PREP.md](project/SAM_PREP.md) — SAM.gov registration checklist
+- [project/SAM_PREP.md](project/SAM_PREP.md) — live SAM.gov record (legal name ZACHARY KIETZMAN) + optional corp-name update
 
 ## Integrations
 - [integrations/hubspot.md](integrations/hubspot.md) — Grok-connected HubSpot portal (Authichain `245112265`, NA2)

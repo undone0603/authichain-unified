@@ -2,7 +2,8 @@
 ## Powered by GovChain.us & AuthiChain Protocol
 
 **Date:** May 16, 2026  
-**Entity:** AuthiChain, Inc.  
+**SAM legal business name:** ZACHARY KIETZMAN
+**Brand / product:** AuthiChain
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6  
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653

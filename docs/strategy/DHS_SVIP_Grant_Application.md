@@ -1,7 +1,8 @@
 # DHS SVIP Grant Application
 ## AuthiChain — Blockchain-AI Platform for Preventing Forgery and Counterfeiting
 
-**Entity:** AuthiChain, Inc.  
+**SAM legal business name:** ZACHARY KIETZMAN
+**Brand / product:** AuthiChain
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653
@@ -9,7 +10,7 @@
 **Program:** DHS Science and Technology Directorate — Silicon Valley Innovation Program (SVIP)
 **Topic:** Preventing Forgery and Counterfeiting of Certificates and Licenses
 **Requested Amount:** Phase I — $200,000 (up to $800,000 across all 4 phases)
-**Applicant:** AuthiChain, Inc.
+**Applicant:** ZACHARY KIETZMAN (SAM legal name; AuthiChain, Inc. is not the current SAM registrant)
 **Website:** https://authichain.com
 **Contact:** Z@authichain.com
 **Date:** March 2026
@@ -256,9 +257,9 @@ Key IP assets:
 
 ## 12. Application Checklist
 
-- [ ] SAM.gov registration (required — register at sam.gov before submission)
-- [ ] CAGE code obtained
-- [ ] DUNS/UEI number confirmed
+- [x] SAM.gov registration — Active; legal name ZACHARY KIETZMAN (AuthiChain, Inc. is not the current SAM registrant)
+- [x] CAGE code obtained (1PUJ6)
+- [x] UEI confirmed (R34XKWRJY9A5)
 - [ ] sbir.gov account created
 - [ ] Technical Volume (this document, formatted per SVIP template)
 - [ ] Cost Volume (budget spreadsheet)
@@ -266,4 +267,4 @@ Key IP assets:
 - [ ] Letters of support attached
 - [ ] Submit at: https://www.dhs.gov/science-and-technology/svip-application-process
 
-**Next step:** Register on SAM.gov if not already registered. SAM registration takes 1-3 business days and is required before DHS SVIP submission.
+**Next step:** SAM is already Active under ZACHARY KIETZMAN (see `docs/project/SAM_PREP.md`). Create the sbir.gov account and submit using that SAM legal name — do not list AuthiChain, Inc. as the SAM applicant for this UEI.
