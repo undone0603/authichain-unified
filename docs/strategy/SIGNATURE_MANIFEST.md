@@ -34,7 +34,9 @@ Hi Team, I've autonomously deployed a personalized digital twin for Casa Verde t
 This Service Agreement ("Agreement") is entered into as of the date signed below, between:
 
 ## Service Provider
-**Company:** AuthiChain, LLC  
+**Legal name:** ZACHARY KIETZMAN
+**Doing business as:** AuthiChain
+**IRS / tax name (not the contracting party):** AuthiChain, Inc.
 **Address:** Roscommon, Michigan, USA
 **Website:** www.authichain.com
 **Email:** admin@authichain.com
@@ -76,7 +78,7 @@ This Agreement commences on the date of signing and continues for **twelve (12) 
 ---
 
 ## 4. INTELLECTUAL PROPERTY
-All AuthiChain platform technology, algorithms, smart contracts, and blockchain infrastructure remain the **exclusive property of AuthiChain, LLC**. Client retains full ownership of their product data, brand assets, and business information.
+All AuthiChain platform technology, algorithms, smart contracts, and blockchain infrastructure remain the **exclusive property of ZACHARY KIETZMAN**. Client retains full ownership of their product data, brand assets, and business information.
 
 ---
 
@@ -111,10 +113,10 @@ This Agreement constitutes the entire understanding between the parties regardin
 ---
 
 ## SIGNATURES
-### Service Provider — AuthiChain, LLC
+### Service Provider — ZACHARY KIETZMAN
 **Authorized Signature:** ___________________________
-**Printed Name:** ___________________________
-**Title:** Founder & CEO
+**Printed Name:** ZACHARY KIETZMAN
+**Title:** Founder
 **Date:** ___________________________
 
 ### Client
@@ -124,4 +126,4 @@ This Agreement constitutes the entire understanding between the parties regardin
 **Company:** ___________________________
 **Date:** ___________________________
 
-**AuthiChain LLC** | www.authichain.com | admin@authichain.com | Roscommon, MI
+**ZACHARY KIETZMAN d/b/a AuthiChain** | www.authichain.com | admin@authichain.com | Roscommon, MI

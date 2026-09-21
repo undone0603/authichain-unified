@@ -257,9 +257,9 @@ Key IP assets:
 
 ## 12. Application Checklist
 
-- [ ] SAM.gov registration (required — register at sam.gov before submission)
-- [ ] CAGE code obtained
-- [ ] DUNS/UEI number confirmed
+- [x] SAM.gov registration — Active; legal name ZACHARY KIETZMAN (AuthiChain, Inc. is not the current SAM registrant)
+- [x] CAGE code obtained (1PUJ6)
+- [x] UEI confirmed (R34XKWRJY9A5)
 - [ ] sbir.gov account created
 - [ ] Technical Volume (this document, formatted per SVIP template)
 - [ ] Cost Volume (budget spreadsheet)
@@ -267,4 +267,4 @@ Key IP assets:
 - [ ] Letters of support attached
 - [ ] Submit at: https://www.dhs.gov/science-and-technology/svip-application-process
 
-**Next step:** Register on SAM.gov if not already registered. SAM registration takes 1-3 business days and is required before DHS SVIP submission.
+**Next step:** SAM is already Active under ZACHARY KIETZMAN (see `docs/project/SAM_PREP.md`). Create the sbir.gov account and submit using that SAM legal name — do not list AuthiChain, Inc. as the SAM applicant for this UEI.

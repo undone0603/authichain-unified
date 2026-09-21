@@ -1,8 +1,8 @@
 # DHS SVIP Grant Application: AuthiChain Autonomous Launch Infrastructure
 ## Preventing Forgery and Counterfeiting of Federal Credentials
 
-**Applicant Entity:** ZACHARY KIETZMAN
-**Brand:** AuthiChain (brand only — there is no AuthiChain, Inc. corporation)
+**Applicant (SAM legal business name):** ZACHARY KIETZMAN
+**Brand / product:** AuthiChain
 **UEI:** R34XKWRJY9A5
 **CAGE Code:** 1PUJ6
 **Physical Address:** 109 N 4th St, Roscommon, MI 48653-9090 USA
@@ -106,7 +106,7 @@ AuthiChain leverages a dual-layer trust infrastructure:
 
 ## 7. Intellectual Property
 
-AuthiChain retains all intellectual property rights. DHS receives a non-exclusive, royalty-free license to use technology developed under this award, adhering to standard SBIR/SVIP IP provisions. Proprietary assets include the QRON system, the Adversarial Trust Loop AI model, and the Atomic Idempotency verification module.
+ZACHARY KIETZMAN retains all intellectual property rights. DHS receives a non-exclusive, royalty-free license to use technology developed under this award, adhering to standard SBIR/SVIP IP provisions. Proprietary assets include the QRON system, the Adversarial Trust Loop AI model, and the Atomic Idempotency verification module. AuthiChain, Inc. is the IRS / tax name only and is not the SAM or contracting party.
 
 ---
 
@@ -118,4 +118,4 @@ AuthiChain retains all intellectual property rights. DHS receives a non-exclusiv
 - **Infrastructure Status:** Fully operational on Vercel/Supabase/Polygon.
 
 ---
-*End of Submission - Authichain, Inc.*
+*End of Submission — ZACHARY KIETZMAN (AuthiChain product brand)*
