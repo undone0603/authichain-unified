@@ -1,0 +1,119 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { BASE_USDC } from "../../scripts/lib/evm-chains.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../src/lib/x402.ts";
+import {
+  isSisterX402Path,
+  sisterOrigin,
+  tryHandleSisterX402,
+} from "./estate-x402.ts";
+import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
+
+const BRANDS: Array<{ brand: SisterDiscoveryBrand; host: string }> = [
+  { brand: "qron", host: "qron.space" },
+  { brand: "strainchain", host: "strainchain.io" },
+  { brand: "govchain", host: "govchain.us" },
+];
+
+function req(host: string, path: string, init?: RequestInit): Request {
+  return new Request(`https://${host}${path}`, init);
+}
+
+test("recognizes sister x402 paths and ignores marketing paths", () => {
+  assert.equal(isSisterX402Path("/api/x402"), true);
+  assert.equal(isSisterX402Path("/api/x402/"), true);
+  assert.equal(isSisterX402Path("/api/x402/health"), true);
+  assert.equal(isSisterX402Path("/api/x402/health/"), true);
+  assert.equal(isSisterX402Path("/openapi.json"), false);
+  assert.equal(isSisterX402Path("/api/checkout/dpp"), false);
+  assert.equal(isSisterX402Path("/pricing"), false);
+});
+
+test("sisterOrigin is the live apex, not authichain.com", () => {
+  assert.equal(sisterOrigin("qron"), "https://qron.space");
+  assert.equal(sisterOrigin("strainchain"), "https://strainchain.io");
+  assert.equal(sisterOrigin("govchain"), "https://govchain.us");
+});
+
+test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource", async () => {
+  for (const { host } of BRANDS) {
+    const res = await tryHandleSisterX402(
+      req(host, "/api/x402", { method: "POST" })
+    );
+    assert.ok(res, host);
+    assert.equal(res.status, 402, host);
+    const body = (await res.json()) as {
+      x402Version: number;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+        asset?: string;
+      }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
+    };
+    assert.equal(body.x402Version, 2, host);
+    assert.equal(body.resource?.url, `https://${host}/api/x402`, host);
+    assert.equal(body.accepts[0].amount, "50000", host);
+    assert.equal(body.accepts[0].maxAmountRequired, undefined, host);
+    assert.equal(body.accepts[0].network, "eip155:8453", host);
+    assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO, host);
+    assert.equal(body.accepts[0].asset, BASE_USDC, host);
+    assert.equal(body.extensions?.bazaar?.info?.input?.method, "POST", host);
+    const blob = JSON.stringify(body).toLowerCase();
+    assert.equal(blob.includes("facilitator.payai"), false, host);
+    assert.equal(blob.includes("/api/checkout"), false, host);
+
+    const required = res.headers.get("PAYMENT-REQUIRED");
+    assert.ok(required, host);
+    const v2 = JSON.parse(Buffer.from(required, "base64").toString("utf8")) as {
+      x402Version: number;
+      resource?: { url?: string };
+      accepts: Array<{ amount?: string; payTo?: string; network?: string }>;
+      extensions?: { bazaar?: unknown };
+    };
+    assert.equal(v2.x402Version, 2, host);
+    assert.equal(v2.resource?.url, `https://${host}/api/x402`, host);
+    assert.equal(v2.accepts[0].amount, "50000", host);
+    assert.equal(v2.accepts[0].payTo, X402_PUBLISHED_PAY_TO, host);
+    assert.equal(v2.accepts[0].network, "eip155:8453", host);
+    assert.ok(v2.extensions?.bazaar, host);
+  }
+});
+
+test("GET /api/x402 and /api/x402/health are 200 health", async () => {
+  for (const { host } of BRANDS) {
+    for (const path of ["/api/x402", "/api/x402/health"]) {
+      const res = await tryHandleSisterX402(req(host, path));
+      assert.ok(res, `${host} ${path}`);
+      assert.equal(res.status, 200, `${host} ${path}`);
+      const body = (await res.json()) as {
+        payTo: string;
+        pricePerCall: { usd: number; atomic: string };
+        aliases?: string[];
+      };
+      assert.equal(body.payTo, X402_PUBLISHED_PAY_TO, `${host} ${path}`);
+      assert.equal(body.pricePerCall.usd, 0.05, `${host} ${path}`);
+      assert.equal(body.pricePerCall.atomic, "50000", `${host} ${path}`);
+    }
+  }
+});
+
+test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
+  const head = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", { method: "HEAD" })
+  );
+  assert.ok(head);
+  assert.equal(head.status, 204);
+
+  assert.equal(
+    await tryHandleSisterX402(req("qron.space", "/openapi.json")),
+    null
+  );
+  assert.equal(
+    await tryHandleSisterX402(req("qron.space", "/api/checkout/dpp")),
+    null
+  );
+});

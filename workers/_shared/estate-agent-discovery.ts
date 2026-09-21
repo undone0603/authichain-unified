@@ -2,12 +2,14 @@
  * Agent discovery on sister apexes (qron.space, strainchain.io, govchain.us).
  *
  * Live those hosts 404 /llms.txt and /openapi.json, so crawlers never see
- * Payment Links or unpaid POST /api/x402. Point them at the AuthiChain rails
- * from plans.ts. Do not tell them to GET /api/checkout.
+ * Payment Links or unpaid POST /api/x402. OpenAPI servers.url is this
+ * origin so x402scan probing `{origin}/api/x402` matches the spec. The
+ * unpaid 402 itself is served by estate-x402.ts. Do not tell them to GET
+ * /api/checkout.
  */
 import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
 import { x402PriceUsd } from "../../src/lib/x402.ts";
-import type { EstateBrandId } from "./estate-landing.ts";
+import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
@@ -82,7 +84,8 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     `> ${meta.lede}`,
     "",
     "## Agent pay (x402)",
-    `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
+    `- Unpaid POST ${ESTATE_BRANDS[brand].url}/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
+    "- Canonical rail: https://authichain.com/api/x402",
     "- Catalog: https://authichain.com/api/x402/catalog",
     "- Well-known catalog: https://authichain.com/.well-known/x402.json",
     "- x402scan fan-out: https://authichain.com/.well-known/x402",
@@ -119,13 +122,13 @@ export function renderEstateOpenApi(
   brand: SisterDiscoveryBrand
 ): EstateOpenApiDocument {
   const meta = BRAND_COPY[brand];
+  const origin = ESTATE_BRANDS[brand].url;
   return {
     openapi: "3.1.0",
     info: {
       title: `${meta.title} agent pay (AuthiChain rails)`,
       version: "1.0.0",
-      description:
-        "Unpaid POST https://authichain.com/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical spec: https://authichain.com/openapi.json.",
+      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical spec: https://authichain.com/openapi.json.`,
       "x-human-checkout": {
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),
@@ -134,9 +137,13 @@ export function renderEstateOpenApi(
         dppPaymentLink: DPP_LINK,
       },
     },
-    servers: [{ url: "https://authichain.com" }],
+    servers: [{ url: origin }],
     paths: {
       "/api/x402": {
+        get: {
+          summary: "Rail health (free)",
+          responses: { "200": { description: "Health" } },
+        },
         post: {
           operationId: "agentVerify",
           summary: "AuthiChain agent verification",

@@ -8,6 +8,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
 /** The homepage fetches a YouTube RSS feed; tests must not reach the network. */
@@ -84,7 +85,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.equal(llms.status, 200);
   assert.match(llms.headers.get("content-type") ?? "", /text\/plain/);
   const text = await llms.text();
-  assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+  assert.match(text, /POST https:\/\/qron\.space\/api\/x402/);
   assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
   assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
   assert.equal(
@@ -99,8 +100,10 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.equal(specRes.status, 200);
   const spec = (await specRes.json()) as {
     openapi: string;
+    servers: Array<{ url: string }>;
     paths: {
       "/api/x402": {
+        get?: { responses: { "200": unknown } };
         post: {
           "x-payment-info": { protocols: string[] };
           responses: { "402": unknown };
@@ -109,11 +112,43 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
     };
   };
   assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.servers, [{ url: "https://qron.space" }]);
+  assert.ok(spec.paths["/api/x402"].get?.responses["200"]);
   assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
     "x402",
   ]);
   assert.ok(spec.paths["/api/x402"].post.responses["402"]);
   assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
+});
+
+test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
+  const unpaid = await worker.fetch(
+    new Request("https://qron.space/api/x402", { method: "POST" })
+  );
+  assert.equal(unpaid.status, 402);
+  const body = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string; amount?: string }>;
+    extensions?: { bazaar?: unknown };
+  };
+  assert.equal(body.x402Version, 2);
+  assert.equal(body.resource?.url, "https://qron.space/api/x402");
+  assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+  assert.equal(body.accepts[0].amount, "50000");
+  assert.ok(body.extensions?.bazaar);
+  assert.ok(unpaid.headers.get("PAYMENT-REQUIRED"));
+  assert.equal(
+    JSON.stringify(body).toLowerCase().includes("facilitator.payai"),
+    false
+  );
+
+  for (const path of ["/api/x402", "/api/x402/health"]) {
+    const health = await get(path);
+    assert.equal(health.status, 200, path);
+    const report = (await health.json()) as { payTo: string };
+    assert.equal(report.payTo, X402_PUBLISHED_PAY_TO, path);
+  }
 });
 
 test("/pricing is a real catalogue page, not a 404", async () => {

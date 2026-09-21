@@ -17,6 +17,7 @@ import {
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
+import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -1996,6 +1997,13 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 type Env = {
   /** Origin of the Next app that renders passports. Set in wrangler.toml. */
   APP_ORIGIN?: string;
+  X402_PAY_TO?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
 };
 
 /**
@@ -2151,6 +2159,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "strainchain");
     if (pricing) return pricing;
+    const x402 = await tryHandleSisterX402(request, env);
+    if (x402) return x402;
     const discovery = tryHandleEstateAgentDiscovery(request, "strainchain");
     if (discovery) return discovery;
     const seoRedirect = tryRedirectSeoRootCanonical(request);

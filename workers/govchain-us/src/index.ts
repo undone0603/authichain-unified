@@ -22,6 +22,7 @@ import {
 } from "../../_shared/estate-landing.ts";
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
+import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2265,6 +2266,8 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
+    const x402 = await tryHandleSisterX402(request, env);
+    if (x402) return x402;
     const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
     if (discovery) return discovery;
     // The homepage already fetches both of these endpoints; until now they fell
