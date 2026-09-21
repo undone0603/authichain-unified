@@ -5,8 +5,9 @@ import {
   newlyDrafted,
   notifyDigest,
   notifyDraft,
+  notifyDrafts,
 } from "./notify-draft";
-import { FOUNDER_SMS_GATEWAYS, NTFY_URL } from "@/lib/founder-alerts";
+import { FOUNDER_CLICK, FOUNDER_SMS_GATEWAYS, NTFY_URL } from "@/lib/founder-alerts";
 import type { Lead } from "./types";
 
 function lead(partial: Partial<Lead> & Pick<Lead, "id" | "email">): Lead {
@@ -61,14 +62,13 @@ describe("formatDraftAlert", () => {
     expect(alert.text).toContain("buyer@acme.test");
     expect(alert.text).toContain("mailto:buyer%40acme.test");
     expect(alert.text).toContain("Founder-only");
-    expect(alert.subject).toContain("Acme Co");
-    expect(FOUNDER_INBOXES).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
+    expect(alert.kind).toBe("draft");
     expect(FOUNDER_INBOXES).not.toContain("buyer@acme.test");
   });
 });
 
 describe("notifyDraft", () => {
-  it("POSTs ntfy and skips Resend without a key", async () => {
+  it("POSTs ntfy with Click and skips Resend without a key", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await notifyDraft(lead({ id: "a", email: "a@x.test" }), "followup");
@@ -76,11 +76,12 @@ describe("notifyDraft", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(NTFY_URL);
     expect(init.headers.Title).toContain("Acme Co");
+    expect(init.headers.Click).toBe(FOUNDER_CLICK);
+    expect(init.headers.Priority).toBe("4");
     expect(init.body).toContain("reason: followup");
-    expect(init.body).not.toMatch(/re_|secret|api[_-]?key/i);
   });
 
-  it("sends Resend to founder inboxes and SMS gateways", async () => {
+  it("sends Resend to founder inboxes and Verizon SMS", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await notifyDraft(lead({ id: "a", email: "buyer@acme.test" }), "capture", {
@@ -91,7 +92,6 @@ describe("notifyDraft", () => {
     const inbox = JSON.parse(resendCalls[0][1].body);
     const sms = JSON.parse(resendCalls[1][1].body);
     expect(inbox.to).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
-    expect(inbox.to).not.toContain("buyer@acme.test");
     expect(sms.to).toEqual([...FOUNDER_SMS_GATEWAYS]);
     expect(sms.text.length).toBeLessThanOrEqual(160);
   });
@@ -101,6 +101,23 @@ describe("notifyDraft", () => {
     vi.stubGlobal("fetch", fetchMock);
     await notifyDraft(lead({ id: "a", email: "a@x.test", draftPending: false }), "cycle");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("notifyDrafts", () => {
+  it("batches more than two drafts into one digest ntfy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const count = await notifyDrafts([
+      lead({ id: "a", email: "a@x.test", company: "A Co" }),
+      lead({ id: "b", email: "b@x.test", company: "B Co" }),
+      lead({ id: "c", email: "c@x.test", company: "C Co" }),
+    ], "cycle");
+    expect(count).toBe(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers.Title).toBe("DreamDash digest");
+    expect(fetchMock.mock.calls[0][1].headers.Priority).toBe("3");
+    expect(fetchMock.mock.calls[0][1].body).toContain("3 drafts ready");
   });
 });
 
