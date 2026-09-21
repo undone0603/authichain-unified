@@ -6,7 +6,7 @@
 //   OR hold DEFAULT_ADMIN_ROLE. verifyManufacturer() sets both.
 //
 // The Coinbase Smart Wallet (0xC0D26735…) cannot sign with ethers.Wallet.
-// Deploy + mint from an ops EOA. Optionally verifyManufacturer(Smart Wallet)
+// Deploy + mint from the NFT deployer EOA. Optionally verifyManufacturer(Smart Wallet)
 // so a human can mint from Coinbase Wallet later.
 //
 // Env (never log secret values):
@@ -16,8 +16,11 @@
 //   ARTIFACT_PATH         override compiled AuthiChainNFT.json
 //   GOVCHAIN_NFT_CONTRACT / CONTRACT_ADDRESS  — skip deploy, grant only when getCode != 0x.
 //                                               Empty bytecode is treated as unset (stale secret).
-//   WALLET_PRIVATE_KEY | MINTER_PRIVATE_KEY | POLYGON_PRIVATE_KEY  (ops EOA)
+//   WALLET_PRIVATE_KEY | MINTER_PRIVATE_KEY | POLYGON_PRIVATE_KEY  (NFT deployer EOA)
 //   ALCHEMY_API_KEY       optional; falls back to the chain public RPC
+//
+// Do not use the payTo / tokenomics EOA (0x5db5…) as this signer.
+// Identity: docs/strategy/WEB3_IDENTITY.md.
 //
 // Usage:
 //   node scripts/compile-authichain-nft.cjs
@@ -129,7 +132,7 @@ async function main() {
     `[deploy-nft] env CHAIN DRY_RUN GRANT_SMART_WALLET ARTIFACT_PATH GOVCHAIN_NFT_CONTRACT`
   );
   console.log(
-    `[deploy-nft] secrets expected: WALLET_PRIVATE_KEY|POLYGON_PRIVATE_KEY (ops EOA), ALCHEMY_API_KEY optional`
+    `[deploy-nft] secrets expected: WALLET_PRIVATE_KEY|POLYGON_PRIVATE_KEY (NFT deployer EOA), ALCHEMY_API_KEY optional`
   );
   console.log(
     `[deploy-nft] hasOpsKey=${Boolean(key)} hasAlchemy=${Boolean(process.env.ALCHEMY_API_KEY)} existing=${existing || "none"} artifact=${artifactFile}`
@@ -144,8 +147,8 @@ async function main() {
 
   if (!key) {
     const hint =
-      `[deploy-nft] No ops EOA key. Set WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY (NOT the Smart Wallet). ` +
-      `Known Polygon deployer (preferred ops EOA): ${POLYGON_DEPLOYER}. Smart Wallet recipient only: ${GOVCHAIN_SIGNER}.`;
+      `[deploy-nft] No NFT deployer key. Set WALLET_PRIVATE_KEY or POLYGON_PRIVATE_KEY (NOT the Coinbase Smart Wallet, NOT the payTo / tokenomics EOA). ` +
+      `Known NFT deployer EOA: ${POLYGON_DEPLOYER}. Smart Wallet recipient only: ${GOVCHAIN_SIGNER}.`;
     if (!DRY_RUN) fail(hint);
     console.warn(hint);
     if (IN_ACTIONS && !existing) {
@@ -159,12 +162,12 @@ async function main() {
     wallet = new ethers.Wallet(key, provider);
     if (wallet.address.toLowerCase() === GOVCHAIN_SIGNER.toLowerCase()) {
       fail(
-        "This key resolves to the Coinbase Smart Wallet address. ethers.Wallet cannot operate that account. Use the Polygon deployer EOA or a new ops EOA."
+        "This key resolves to the Coinbase Smart Wallet address. ethers.Wallet cannot operate that account. Use the NFT deployer EOA (POLYGON_DEPLOYER / WALLET_PRIVATE_KEY)."
       );
     }
     balance = await provider.getBalance(wallet.address);
     console.log(
-      `[deploy-nft] opsEOA=${wallet.address} balance=${ethers.formatEther(balance)} ${chain.currency}`
+      `[deploy-nft] nftDeployerEOA=${wallet.address} balance=${ethers.formatEther(balance)} ${chain.currency}`
     );
   }
 
@@ -185,7 +188,7 @@ async function main() {
   }
 
   if (!DRY_RUN && !address && wallet && balance === 0n) {
-    fail(`ops EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`);
+    fail(`NFT deployer EOA ${wallet.address} has 0 ${chain.currency} on ${chain.name}; fund it before a live deploy`);
   }
 
   let deployTxHash = "";
@@ -202,7 +205,7 @@ async function main() {
           address: null,
           chainId: chain.chainId,
           network: chain.key,
-          opsEOA: null,
+          nftDeployerEOA: null,
           smartWallet: GOVCHAIN_SIGNER,
           grantedSmartWallet: GRANT_SMART_WALLET,
           dryRun: DRY_RUN,
@@ -241,7 +244,7 @@ async function main() {
           address: null,
           chainId: chain.chainId,
           network: chain.key,
-          opsEOA: wallet.address,
+          nftDeployerEOA: wallet.address,
           smartWallet: GOVCHAIN_SIGNER,
           grantedSmartWallet: GRANT_SMART_WALLET,
           dryRun: true,
@@ -281,7 +284,7 @@ async function main() {
         address,
         chainId: chain.chainId,
         network: chain.key,
-        opsEOA: null,
+        nftDeployerEOA: null,
         smartWallet: GOVCHAIN_SIGNER,
         grantedSmartWallet: GRANT_SMART_WALLET,
         dryRun: DRY_RUN,
@@ -299,7 +302,7 @@ async function main() {
   }
 
   const nft = new ethers.Contract(address, ROLE_ABI, wallet);
-  await grantIfNeeded(nft, wallet.address, "opsEOA", DRY_RUN);
+  await grantIfNeeded(nft, wallet.address, "nftDeployerEOA", DRY_RUN);
   if (GRANT_SMART_WALLET) {
     await grantIfNeeded(nft, GOVCHAIN_SIGNER, "smartWallet", DRY_RUN);
   } else {
@@ -314,7 +317,7 @@ async function main() {
       address,
       chainId: chain.chainId,
       network: chain.key,
-      opsEOA: wallet.address,
+      nftDeployerEOA: wallet.address,
       smartWallet: GOVCHAIN_SIGNER,
       grantedSmartWallet: GRANT_SMART_WALLET,
       dryRun: DRY_RUN,
@@ -337,7 +340,7 @@ async function main() {
   console.log("Next secrets:");
   console.log(`  CHAIN=${chain.key}`);
   console.log(`  GOVCHAIN_NFT_CONTRACT=${address}`);
-  console.log(`  WALLET_PRIVATE_KEY=<ops EOA, same as this run — do not paste into logs>`);
+  console.log(`  WALLET_PRIVATE_KEY=<NFT deployer EOA, same as this run — do not paste into logs>`);
   console.log(`  DRY_RUN=true pnpm exec tsx scripts/mint-govchain-nfts.ts`);
   if (!DRY_RUN) {
     console.log("");

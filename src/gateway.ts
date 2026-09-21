@@ -42,6 +42,36 @@ function getSupabase(env: Env): SupabaseClient {
 
 // ai-catalog is loaded from an env var for production‑grade control.
 // Set AI_CATALOG_JSON in Cloudflare if you want to override the default.
+// Default minimal catalog – safe to ship.
+// x402 payTo is NOT hardcoded here: runtime still reads env X402_PAY_TO.
+// Agents should GET /api/x402/catalog for live price + payTo.
+export const DEFAULT_AI_CATALOG = {
+  version: "1.0",
+  services: [
+    {
+      id: "authichain-gateway",
+      name: "AuthiChain Verification & Anchoring",
+      endpoints: [
+        "/api/v1/verify",
+        "/api/v1/anchor",
+      ],
+    },
+    {
+      id: "authichain-x402",
+      name: "AuthiChain x402 agent verification",
+      protocol: "x402",
+      network: "base",
+      chainId: "8453",
+      unitOfAccount: "USDC",
+      health: "https://authichain.com/api/x402/health",
+      catalog: "https://authichain.com/api/x402/catalog",
+      identity:
+        "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
+      note: "$QRON is not this rail. Runtime payTo is env X402_PAY_TO.",
+    },
+  ],
+} as const;
+
 function getAiCatalog(env: Env): JsonValue {
   try {
     const raw = env.AI_CATALOG_JSON;
@@ -50,20 +80,7 @@ function getAiCatalog(env: Env): JsonValue {
     // fall through to default
   }
 
-  // Default minimal catalog – safe to ship.
-  return {
-    version: "1.0",
-    services: [
-      {
-        id: "authichain-gateway",
-        name: "AuthiChain Verification & Anchoring",
-        endpoints: [
-          "/api/v1/verify",
-          "/api/v1/anchor",
-        ],
-      },
-    ],
-  };
+  return DEFAULT_AI_CATALOG as JsonValue;
 }
 
 // llms.txt is also controlled via env for easy mutation.

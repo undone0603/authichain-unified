@@ -35,7 +35,7 @@ export default function Governance() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 1000, duration_days: 180 }),
       });
-      if (res.ok) alert('Successfully staked 1,000 $QRON');
+      if (res.ok) alert('Theater stake logged — not on-chain');
     } catch (err) {
       console.error(err);
     } finally {
@@ -51,7 +51,7 @@ export default function Governance() {
     setTimeout(() => {
         setIsActionLoading(false);
         setSimulatedVote(null);
-        alert(`Vote simulated for ${proposalId} (Requires Wallet Connection for Mainnet)`);
+        alert(`Theater vote for ${proposalId} — not on-chain`);
     }, 2000);
   };
 
@@ -62,14 +62,16 @@ export default function Governance() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-bold uppercase tracking-widest mb-4">
               <Shield className="w-3 h-3" />
-              GovChain.us — AuthiChain Ecosystem Governance
+              Theater — not live tokenomics
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4 uppercase">
               The <span className="gold-text">Protocol</span> DAO
             </h1>
             <p className="text-zinc-500 text-lg leading-relaxed">
-              Stake your $QRON to earn protocol fees, unlock premium brand
-              discounts, and vote on the future of the visual internet.
+              Demo UI only. These circulating / staked figures are not live.
+              $QRON total supply is 1,000,000,000 on Polygon and is not an
+              agent payment rail. Live settlement is Stripe (Passport $49 /
+              DPP $299) and x402 Base USDC $0.05.
             </p>
           </div>
           <div className="shrink-0 flex flex-col items-end gap-4">
@@ -89,8 +91,8 @@ export default function Governance() {
               }}
             />
             <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[9px] font-black text-zinc-500 uppercase tracking-widest">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Network: SECURED BY 8,420 NODES
+                <div className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                Theater display — not a live network
             </div>
           </div>
         </header>
@@ -285,9 +287,9 @@ export default function Governance() {
                 Governance Rules
               </h3>
               <p className="text-xs text-zinc-500 leading-relaxed font-medium">
-                Governance is strictly enforced by the QRON Smart Contract on
-                Polygon POS. Proposals require a minimum stake of 100,000 $QRON
-                to initiate and a simple majority to execute.
+                This page is theater. It does not stake, vote, or circulate
+                $QRON. Live agent pay is Base USDC $0.05. Human SKUs are Stripe
+                via src/lib/plans.ts.
               </p>
             </div>
           </div>

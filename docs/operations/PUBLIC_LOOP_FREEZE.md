@@ -139,7 +139,7 @@ If the HTTP guardrail path returns 404 or any 5xx (including 503 `INTERNAL_API_S
 
 ## Update - 2026-09-19 GovChain NFT deploy path (item 5)
 
-Item 5 is **not met yet**. Public Base RPC (`https://mainnet.base.org`) still returns `eth_getCode = 0x` for the Polygon AuthiChainNFT `0x4da4D2675e52374639C9c954f4f653887A9972BE` on chain 8453. No other AuthiChainNFT address is documented on Base. Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` remains funded (~0.002 ETH, nonce 0 as of 2026-09-19).
+Item 5 is **not met yet**. Public Base RPC (`https://mainnet.base.org`) still returns `eth_getCode = 0x` for the Polygon AuthiChainNFT `0x4da4D2675e52374639C9c954f4f653887A9972BE` on chain 8453. No other AuthiChainNFT address is documented on Base. NFT deployer EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` remains funded (~0.002 ETH, nonce 0 as of 2026-09-19). That is **not** the payTo / tokenomics EOA `0x5db5…`. Map: `docs/strategy/WEB3_IDENTITY.md`.
 
 What changed: the signed-deploy path is now in-repo and Actions-ready (`.github/workflows/deploy-govchain-nft-base.yml`). After this lands on `main`, the **only remaining human step** for item 5 is a `workflow_dispatch` with `dry_run=false` (ops key + likely Alchemy already in repo secrets). Until that run prints an address with `getCode != 0x`:
 
@@ -204,7 +204,7 @@ Judge progress on:
 2. ~~`GET /api/checkout/dpp` is a **303 to Stripe** (or JSON error), never marketing HTML~~ **done (2026-09-19)**
 3. ~~One DPP-SMOKE-E2E (or paid) certificate: webhook `provisionPurchase` → thanks → activate~~ **met on owner attestation (2026-09-18)** — agent did not independently verify the webhook row or activate step
 4. ~~`GET /api/cron/dpp-exceptions` returns JSON (`exceptions` / `funnel` / `demoVisits`), dispatched live~~ **done (2026-09-19) - returns 401 JSON when unauthenticated, not cached HTML**
-5. One signed Base deploy from ops EOA — **still open**. No AuthiChainNFT bytecode on 8453 yet. Path: merge the deploy workflow, dispatch `deploy-govchain-nft-base.yml` with `dry_run=false`, set secret `GOVCHAIN_NFT_CONTRACT`, prove `getCode != 0x`, then enable `gov-mint.yml` (`304825951`) with dry-run default true. Do not dispatch `gov-mint.yml` live (`dry_run=false`) until that proof exists.
+5. One signed Base deploy from the NFT deployer EOA — **still open**. No AuthiChainNFT bytecode on 8453 yet. Path: merge the deploy workflow, dispatch `deploy-govchain-nft-base.yml` with `dry_run=false`, set secret `GOVCHAIN_NFT_CONTRACT`, prove `getCode != 0x`, then enable `gov-mint.yml` (`304825951`) with dry-run default true. Do not dispatch `gov-mint.yml` live (`dry_run=false`) until that proof exists. Do not thaw gov-mint from this freeze note.
 
 ## Frozen (historical — 2026-09-16 disable)
 

@@ -1,7 +1,7 @@
 # Plan: pay-per-call verification for autonomous agents (x402)
 
 **Created:** 2026-08-07 · Implements Move 2 of `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md`.
-**Status:** decisions made; step 1 built. See "Decisions" and "Progress" below.
+**Status:** historical plan. Current rails and wallets: [`docs/strategy/WEB3_IDENTITY.md`](../../strategy/WEB3_IDENTITY.md). Live economics: [`docs/strategy/AGENT_TOKENOMICS_x402.md`](../../strategy/AGENT_TOKENOMICS_x402.md). The paywall is **live** on Base USDC $0.05; Polygon / `$QRON` settlement in the build-order section below is **outdated**. Do not add `$QRON` to `accepts[]`.
 
 ## Decisions (operator-approved 2026-08-07)
 

@@ -71,6 +71,8 @@ async function fulfillPlan(
 }
 
 // ─── Trigger Tokenomics Cycle ──────────────────────────────────────────
+// Speculative $QRON fee_flow after a Stripe charge. Not x402 USDC settlement.
+// Identity: docs/strategy/WEB3_IDENTITY.md. Live agent rail: src/lib/x402.ts.
 
 async function triggerTokenomics(
   userId: string | null | undefined,

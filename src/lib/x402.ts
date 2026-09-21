@@ -8,13 +8,19 @@
  * spend cap, then serve the resource. Autonomous at runtime; the wallet must be
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
  * `$QRON` and any governance token stay off this rail (see
- * docs/strategy/AGENT_TOKENOMICS_x402.md). Do not rebind X402_PAY_TO,
- * X402_FACILITATOR_URL, or X402_USDC_ASSET.
+ * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO,
+ * X402_FACILITATOR_URL, or X402_USDC_ASSET. payTo is the tokenomics EOA
+ * (0x5db5…), not the NFT deployer EOA (0xbad4…) and not the Coinbase
+ * Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
  * facilitator or an on-chain check.
  */
+
+import { BASE_USDC, TOKENOMICS_PAY_TO } from "../../scripts/lib/evm-chains";
+import { planUsd } from "./plans";
 
 export interface PaymentRequirement {
   scheme: "exact";
@@ -159,8 +165,18 @@ export interface PaymentProof {
 
 export const USDC_DECIMALS = 6;
 
-/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. */
-export const BASE_USDC_ASSET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+/** Official Circle USDC on Base mainnet (8453). PayAI settle needs this, not the ticker. Do not rebind. $QRON is not this asset. */
+export const BASE_USDC_ASSET = BASE_USDC;
+
+/**
+ * Live published X402_PAY_TO — payTo / tokenomics EOA.
+ * Same address holds nearly all Polygon $QRON and receives Base USDC.
+ * Distinct from NFT deployer EOA 0xbad4…. Canonical map:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rotate. Runtime health still
+ * reads the Worker/env binding; this constant documents the live value.
+ * It is NOT a fallback when X402_PAY_TO is unset (that stays 503).
+ */
+export const X402_PUBLISHED_PAY_TO = TOKENOMICS_PAY_TO;
 
 export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" } as const;
 
@@ -731,6 +747,7 @@ export type X402CatalogBody = {
   catalog: string;
   wellKnown: string;
   tokenomics: string;
+  identity: string;
   unitOfAccount: "USDC";
   network: string;
   chainId: string;
@@ -792,6 +809,8 @@ export async function x402Catalog(
     wellKnown: "/.well-known/x402.json",
     tokenomics:
       "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
+    identity:
+      "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
     unitOfAccount: "USDC",
     network: health.network,
     chainId: health.chainId,
@@ -819,8 +838,8 @@ export async function x402Catalog(
     ],
     humanCheckout: {
       rail: "stripe",
-      passportUsd: 49,
-      dppUsd: 299,
+      passportUsd: planUsd("strainchain_passport"),
+      dppUsd: planUsd("dpp_readiness"),
       source: "src/lib/plans.ts",
     },
     discovery: {

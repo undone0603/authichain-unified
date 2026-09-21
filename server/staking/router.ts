@@ -2,6 +2,11 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as db from "../db";
 
+/**
+ * In-app staking positions. APY / multiplier values are theater, not live
+ * $QRON tokenomics. Do not treat govchain.us staking numbers as circulating
+ * supply. Identity: docs/strategy/WEB3_IDENTITY.md.
+ */
 export const stakingRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getUserStakingPositions(ctx.user.id);

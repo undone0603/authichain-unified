@@ -13,6 +13,9 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
+      "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
+    );
     expect(X402_PUBLIC.chainId).toBe("8453");
     expect(X402_PUBLIC.priceUsd).toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(
@@ -25,6 +28,8 @@ describe("x402 public docs page", () => {
       "https://authichain.com/.well-known/x402.json"
     );
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
+    expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
+    expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");
   });
 
   it("recognizes /x402 and /docs/x402 only", () => {
@@ -50,6 +55,8 @@ describe("x402 public docs page", () => {
     expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
+    expect(html).toContain(X402_PUBLIC.identityUrl);
+    expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');
     expect(html).toContain("ZACHARY KIETZMAN");
     expect(html).not.toMatch(/AuthiChain Inc/i);

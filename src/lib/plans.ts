@@ -228,6 +228,13 @@ export function planPaymentLink(id: PlanId): string | undefined {
   return planById(id)?.stripe_payment_link;
 }
 
+/** Dollar amount for a catalogue plan. Charge source of truth is this file. */
+export function planUsd(id: PlanId): number {
+  const plan = planById(id);
+  if (!plan) throw new Error(`plans.ts has no ${id}`);
+  return plan.price;
+}
+
 /** Look up a live catalogue plan by Stripe price ID. */
 export function planByStripePriceId(
   priceId: string | null | undefined

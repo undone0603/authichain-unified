@@ -28,7 +28,8 @@ Add to an MCP client (`.mcp.json` / client config):
 | `classify_product`      | Map a product to an industry vertical + workflow |
 | `verify_sovereign_deal` | Verify a sovereign deal by TrueMark ID           |
 | `mint_certificate`      | Initiate a trust certificate mint                |
-| `get_pricing`           | Discover metered price + subscription plans      |
+| `get_pricing`           | Discover metered price + Stripe SKUs (`src/lib/authentic-economy.ts` `agentPricingDiscovery`) |
+
 | `verify_paid`           | **Pay-per-call** verification via x402           |
 
 ## Autonomous micropayments (x402)
@@ -41,7 +42,7 @@ High-volume agents use the metered HTTP endpoint **`POST /api/v1/agent-verify`**
 4. The edge verifies settlement (PayAI facilitator). Daily cap $10 / payer.
 
 Do not rebind `X402_PAY_TO`, the facilitator, or the USDC asset. `$QRON` is not the unit of account.
-Canonical economics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. HTML: `https://authichain.com/x402`.
+Canonical economics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Identity (wallets vs rails): `docs/strategy/WEB3_IDENTITY.md`. HTML: `https://authichain.com/x402`.
 
 ## Publishing
 
