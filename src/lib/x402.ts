@@ -822,7 +822,7 @@ export async function x402Catalog(
     identity:
       "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
     unitOfAccount: "USDC",
-    network: health.network,
+    network: x402Caip2Network(health.network),
     chainId: health.chainId,
     asset: health.asset,
     payTo: health.payTo,

@@ -531,6 +531,7 @@ describe("x402Catalog", () => {
     expect(catalog.dailyCapUsd).toBe(health.dailyCapUsd);
     expect(catalog.protocol).toBe("x402");
     expect(catalog.x402Version).toBe(2);
+    expect(catalog.network).toBe("eip155:8453");
     expect(catalog.unitOfAccount).toBe("USDC");
     expect(catalog.identity).toContain("WEB3_IDENTITY.md");
     expect(catalog.tokenomics).toContain("AGENT_TOKENOMICS_x402.md");
