@@ -1,28 +1,32 @@
-// Founder alert fan-out. ntfy topic stays public; SMS is email-to-SMS.
-// ntfy.sh Email/Call headers need a paid token. Textbelt free US is disabled.
-// Never include lead bodies longer than a pager line on SMS.
+// Founder alert fan-out. One publisher for DreamDash + onboard.
+// ntfy topic stays zk_live_alerts_99. Token optional (ntfy.sh free cannot reserve).
+// SMS is Verizon email-to-SMS only — extras were triple-texting.
+// Never email the lead. Never thaw outreach.
 
 export const NTFY_URL = "https://ntfy.sh/zk_live_alerts_99";
+export const NTFY_TOPIC = "zk_live_alerts_99";
 export const FOUNDER_INBOXES = ["authichain@gmail.com", "undone.k@gmail.com"] as const;
 export const FOUNDER_SMS_E164 = "+19895056723";
 export const FOUNDER_SMS_NATIONAL = "9895056723";
+export const FOUNDER_CLICK = "https://authichain.com/founders";
 
-/** US carrier email-to-SMS. First match that delivers wins; extras bounce. */
-export const FOUNDER_SMS_GATEWAYS = [
-  `${FOUNDER_SMS_NATIONAL}@vtext.com`,
-  `${FOUNDER_SMS_NATIONAL}@txt.att.net`,
-  `${FOUNDER_SMS_NATIONAL}@tmomail.net`,
-] as const;
+/** Single gateway until owner names another carrier. */
+export const FOUNDER_SMS_GATEWAYS = [`${FOUNDER_SMS_NATIONAL}@vtext.com`] as const;
+
+export type FounderAlertKind = "intake" | "draft" | "digest";
 
 export type FounderAlert = {
   title: string;
   text: string;
   subject: string;
+  kind?: FounderAlertKind;
+  click?: string;
 };
 
 export type FounderAlertEnv = {
   RESEND_API_KEY?: string;
   RESEND_API_KEY2?: string;
+  NTFY_TOKEN?: string;
 };
 
 export function smsBody(alert: FounderAlert): string {
@@ -40,6 +44,28 @@ export function resendKey(env?: FounderAlertEnv): string {
   ).trim();
 }
 
+export function ntfyToken(env?: FounderAlertEnv): string {
+  return (
+    env?.NTFY_TOKEN ||
+    (typeof process !== "undefined" ? process.env.NTFY_TOKEN : undefined) ||
+    ""
+  ).trim();
+}
+
+export function ntfyHeaders(alert: FounderAlert, env?: FounderAlertEnv): Record<string, string> {
+  const kind = alert.kind ?? "draft";
+  const headers: Record<string, string> = {
+    Title: alert.title,
+    "Content-Type": "text/plain",
+    Priority: kind === "digest" ? "3" : "4",
+    Tags: kind === "intake" ? "inbox_tray" : kind === "digest" ? "newspaper" : "envelope",
+    Click: alert.click ?? FOUNDER_CLICK,
+  };
+  const token = ntfyToken(env);
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export async function publishFounderAlert(
   alert: FounderAlert,
   env?: FounderAlertEnv,
@@ -47,10 +73,7 @@ export async function publishFounderAlert(
   const jobs: Promise<unknown>[] = [
     fetch(NTFY_URL, {
       method: "POST",
-      headers: {
-        Title: alert.title,
-        "Content-Type": "text/plain",
-      },
+      headers: ntfyHeaders(alert, env),
       body: alert.text,
     }),
   ];
