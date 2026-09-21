@@ -3,6 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+# Not on PR Workers Builds. strainchain.io/* updates only via
+# `wrangler deploy` from .github/workflows/deploy-workers.yml on main.
 
 [[routes]]
 pattern = "strainchain.io/*"
