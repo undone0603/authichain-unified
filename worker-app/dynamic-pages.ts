@@ -49,7 +49,7 @@ import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
-  checkoutEmailFormHtml,
+  emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
@@ -781,7 +781,7 @@ function renderLanding(c: Context): Response {
 
   const primaryIsCheckout = /\/api\/checkout\//.test(content.primaryCta.href);
   const primaryHtml = primaryIsCheckout
-    ? checkoutEmailFormHtml({
+    ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
         label: content.primaryCta.label,
         inputId: "landing-checkout-email",
@@ -1042,7 +1042,7 @@ function renderOnboardReceived(c: Context): Response {
     escapeHtml(vertical) +
     ".</p>\n" +
     "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
-    checkoutEmailFormHtml({
+    emailCheckoutWithPaymentLinkHtml({
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
       formId: "onboard-dpp-checkout",
@@ -1237,7 +1237,7 @@ function authenticateHtml(): string {
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
       "</ul>\n" +
-      checkoutEmailFormHtml({
+      emailCheckoutWithPaymentLinkHtml({
         action: "/api/checkout/dpp",
         label: "Start DPP checkout — $299",
         formId: "auth-dpp-checkout",

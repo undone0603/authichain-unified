@@ -26,9 +26,11 @@ const BRANDS = {
 // estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
   authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
+  authichainDppPay: 'https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c',
   authichainPricing: 'https://authichain.com/pricing',
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
   strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
+  strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
 };
 
 function isDppKeyword(keyword) {
@@ -111,12 +113,19 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   }
 
   if (isCheckoutUrl(primaryHref)) {
+    const pay =
+      primaryHref === LIVE_MONEY.strainchainPassportCheckout
+        ? `<p><a href="${LIVE_MONEY.strainchainPassportPay}">Pay $49 on Stripe</a></p>`
+        : primaryHref === LIVE_MONEY.authichainDppCheckout
+          ? `<p><a href="${LIVE_MONEY.authichainDppPay}">Pay $299 on Stripe</a></p>`
+          : '';
     const extra = secondaryHref
       ? `<p><a href="${secondaryHref}">${esc(secondaryLabel)}</a>. ${esc(brand.price)}</p>`
       : `<p>${esc(brand.price)}</p>`;
     return (
       `<h2>Get started</h2>` +
       checkoutEmailFormHtml(primaryHref, primaryLabel) +
+      pay +
       extra
     );
   }
