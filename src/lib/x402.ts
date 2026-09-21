@@ -443,6 +443,7 @@ export type X402CatalogBody = {
   catalog: string;
   wellKnown: string;
   tokenomics: string;
+  identity: string;
   unitOfAccount: "USDC";
   network: string;
   chainId: string;
@@ -499,6 +500,8 @@ export async function x402Catalog(
     wellKnown: "/.well-known/x402.json",
     tokenomics:
       "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
+    identity:
+      "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
     unitOfAccount: "USDC",
     network: health.network,
     chainId: health.chainId,

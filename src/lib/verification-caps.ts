@@ -19,10 +19,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 /**
  * Price per verification, in cents.
  *
- * $0.05 flat. Deliberately one number rather than the $0.03–$0.49 tier ladder
- * in REVENUE_STRATEGY.md: tiered pricing is a negotiation, and there is no
- * leverage to negotiate with before the first customer. One published price an
- * agent developer can read off a docs page beats a table they have to model.
+ * $0.05 flat USDC on the x402 rail (see src/lib/x402.ts and
+ * docs/strategy/WEB3_IDENTITY.md). Deliberately one number rather than the
+ * $0.03–$0.49 tier ladder in REVENUE_STRATEGY.md: tiered pricing is a
+ * negotiation, and there is no leverage to negotiate with before the first
+ * customer. One published price an agent developer can read off a docs page
+ * beats a table they have to model. This is not a $QRON fee.
  *
  * Override per-deployment with VERIFICATION_PRICE_CENTS. Never inline this at a
  * call site — the price must be changeable without touching request handling.

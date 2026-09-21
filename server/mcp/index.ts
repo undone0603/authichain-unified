@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { classifyIndustry } from "../../shared/industries";
 import { getCertificateByNumber, getProductById } from "../db";
+import { agentPricingDiscovery } from "../../src/lib/authentic-economy";
 
 /**
  * AuthiChain MCP Server
@@ -54,7 +55,9 @@ server.tool(
     bountyAmount: z
       .number()
       .optional()
-      .describe("Amount of $QRON to lock as a trust bounty"),
+      .describe(
+        "Optional speculative $QRON trust bounty (not x402 settlement; $QRON is not a payment rail)"
+      ),
   },
   async ({ productId }) => {
     // This calls our internal DB/Blockchain logic
@@ -126,40 +129,7 @@ server.tool("get_pricing", {}, async () => ({
   content: [
     {
       type: "text",
-      text: JSON.stringify(
-        {
-          agentRail: {
-            endpoint: "POST /api/v1/agent-verify",
-            alias: "POST /api/x402",
-            protocol: "x402",
-            network: "base",
-            chainId: "8453",
-            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-            pricePerCall: "$0.05 USDC",
-            dailyCapUsd: 10,
-            health: "https://authichain.com/api/x402/health",
-            catalog: "https://authichain.com/api/x402/catalog",
-            wellKnown: "https://authichain.com/.well-known/x402.json",
-            docs: "https://authichain.com/x402",
-            tokenomics:
-              "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
-            note: "Prefer GET catalog/health for live payTo and price. Unpaid POST returns HTTP 402; pay Base USDC and retry with X-PAYMENT. Do not use Polygon or $QRON on this rail.",
-          },
-          humanCheckout: {
-            rail: "stripe",
-            source: "src/lib/plans.ts",
-            strainchain_passport: "$49 one-time",
-            dpp_readiness: "$299 one-time",
-            checkout: {
-              passport:
-                "https://authichain.com/api/checkout/plan/strainchain_passport",
-              dpp: "https://authichain.com/api/checkout/dpp",
-            },
-          },
-        },
-        null,
-        2
-      ),
+      text: JSON.stringify(agentPricingDiscovery(), null, 2),
     },
   ],
 }));
@@ -194,6 +164,8 @@ server.tool(
                 chainId: "8453",
                 amount: "$0.05 USDC",
                 catalog: "https://authichain.com/api/x402/catalog",
+                identity:
+                  "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
               },
               then:
                 'Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { productId: "' +

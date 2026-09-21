@@ -233,15 +233,16 @@ Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
 
 ---
 
-## 8. Related documents (some are stale)
+## 8. Related documents
 
 | Doc                                                            | Role                                                                                                    |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | This file                                                      | **Canonical** A2A economics + live audit. Identity/wallets: `WEB3_IDENTITY.md`.             |
 | `docs/strategy/WEB3_IDENTITY.md`                               | Canonical wallets, chains, tokens, rails. Do not mix “ops EOA”.                             |
-| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Stale on Polygon / `$QRON` settlement and $0.03–$0.49 tiers.                                    |
+| `src/lib/authentic-economy.ts`                                 | Speculative `$QRON` fee_flow math. Joins the three rails in code. Not settlement.           |
+| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Settlement = Base USDC; `$QRON` is not a rail.                                      |
 | `docs/superpowers/plans/2026-08-07-x402-agent-verification.md` | Original plan. Price $0.05 and “USDC only” still hold; “paywall unbuilt” and Polygon rail are outdated. |
-| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live.                                                       |
+| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live. Current rails: `WEB3_IDENTITY.md`.        |
 | `src/lib/plans.ts`                                             | Human Stripe source of truth.                                                                           |
 
 Supersedes conflicting price/network claims for the **agent** rail only. Human SKUs stay in `plans.ts`.

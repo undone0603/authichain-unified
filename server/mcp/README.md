@@ -28,7 +28,8 @@ Add to an MCP client (`.mcp.json` / client config):
 | `classify_product`      | Map a product to an industry vertical + workflow |
 | `verify_sovereign_deal` | Verify a sovereign deal by TrueMark ID           |
 | `mint_certificate`      | Initiate a trust certificate mint                |
-| `get_pricing`           | Discover metered price + subscription plans      |
+| `get_pricing`           | Discover metered price + Stripe SKUs (`src/lib/authentic-economy.ts` `agentPricingDiscovery`) |
+
 | `verify_paid`           | **Pay-per-call** verification via x402           |
 
 ## Autonomous micropayments (x402)

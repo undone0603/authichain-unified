@@ -111,5 +111,6 @@ Use this tx when someone asks “which wallet is ops?” — it shows Smart Wall
 | `contracts/README.md` / `packages/contracts/` | Bytecode, deploy txs, roles. Pointers here for wallet names. |
 | `src/lib/plans.ts` | Anything that **charges a human**. |
 | `src/lib/x402.ts` | Anything that **charges an agent**. |
+| `src/lib/authentic-economy.ts` | Speculative `$QRON` fee_flow / staking-discount math. **Not** settlement. Consumes `TOKENOMICS_PAY_TO` / `QRON_ERC20` from `scripts/lib/evm-chains.ts` and `X402_PUBLISHED_PAY_TO` / `BASE_USDC_ASSET` from `src/lib/x402.ts`. |
 
 Code comments that still say “ops EOA” should be read as whichever row in §2 the address matches — then renamed when that file is touched.

@@ -312,6 +312,9 @@ describe("x402Catalog", () => {
     expect(catalog.asset).toBe(health.asset);
     expect(catalog.dailyCapUsd).toBe(health.dailyCapUsd);
     expect(catalog.protocol).toBe("x402");
+    expect(catalog.unitOfAccount).toBe("USDC");
+    expect(catalog.identity).toContain("WEB3_IDENTITY.md");
+    expect(catalog.tokenomics).toContain("AGENT_TOKENOMICS_x402.md");
     expect(catalog.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );

@@ -28,6 +28,8 @@ describe("x402 public docs page", () => {
       "https://authichain.com/.well-known/x402.json"
     );
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
+    expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
+    expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");
   });
 
   it("recognizes /x402 and /docs/x402 only", () => {
@@ -51,6 +53,8 @@ describe("x402 public docs page", () => {
     expect(html).toContain("HTTP 402");
     expect(html).toContain("application/ld+json");
     expect(html).toContain(X402_PUBLIC.catalogUrl);
+    expect(html).toContain(X402_PUBLIC.identityUrl);
+    expect(html).toContain("$QRON is not this rail");
     expect(html).toContain('rel="alternate"');
     expect(html).toContain("ZACHARY KIETZMAN");
     expect(html).not.toMatch(/AuthiChain Inc/i);

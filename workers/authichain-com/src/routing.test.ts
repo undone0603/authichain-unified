@@ -53,6 +53,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
   assert.match(html, /The authentic agentic economy/);
   assert.match(html, /href="\/authentic-agentic-economy"/);
+  assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /used for TrueMark minting fees and authentication activity/);
   assert.match(html, /--bg: #ffffff/);
   assert.match(html, /--accent: #4F46E5/);
   assert.doesNotMatch(html, /FedRAMP/);

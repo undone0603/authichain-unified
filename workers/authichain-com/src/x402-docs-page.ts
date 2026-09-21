@@ -38,6 +38,8 @@ export const X402_PUBLIC = {
   wellKnownUrl: "https://authichain.com/.well-known/x402.json",
   payUrl: "https://authichain.com/api/x402",
   verifyUrl: "https://authichain.com/api/v1/agent-verify",
+  identityUrl:
+    "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
   tokenomicsUrl:
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/AGENT_TOKENOMICS_x402.md",
   priceUsd: "$0.05",
@@ -342,6 +344,7 @@ ${X402_TOKEN_CSS}
         <dt>Well-known</dt><dd class="mono"><a href="${esc(p.wellKnownUrl)}">${esc(p.wellKnownUrl)}</a></dd>
         <dt>Health</dt><dd class="mono"><a href="${esc(p.healthUrl)}">${esc(p.healthUrl)}</a></dd>
         <dt>Tokenomics</dt><dd class="mono"><a href="${esc(p.tokenomicsUrl)}">AGENT_TOKENOMICS_x402.md</a></dd>
+        <dt>Wallets</dt><dd class="mono"><a href="${esc(p.identityUrl)}">WEB3_IDENTITY.md</a></dd>
       </dl>
     </section>
     <section class="card" aria-labelledby="human-title">
@@ -350,7 +353,7 @@ ${X402_TOKEN_CSS}
       <ul>
         <li>StrainChain Passport — <strong>$49</strong> one-time, <a href="/api/checkout/plan/strainchain_passport">Stripe checkout</a>.</li>
         <li>EU DPP Readiness — <strong>$299</strong> one-time, <a href="/api/checkout/dpp">Stripe checkout</a>.</li>
-        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}.</li>
+        <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
     </section>
   </div>

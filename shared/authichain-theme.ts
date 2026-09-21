@@ -439,7 +439,7 @@ export function growthBand(_unused_brand_438: keyof typeof BRANDS) {
   return `
 <section style="background: var(--primary); padding: 12px 24px; text-align: center; position: relative; z-index: 1001">
   <p style="color: #000; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; margin: 0">
-    🚀 JOIN THE AUTHENTIC ECONOMY: <a href="https://authichain.com/referral" style="color: #000; text-decoration: underline">EARN $QRON REWARDS BY REFERRING BRANDS</a>
+    JOIN THE AUTHENTIC AGENTIC ECONOMY: <a href="https://authichain.com/x402" style="color: #000; text-decoration: underline">AGENTS PAY $0.05 USDC ON BASE</a>
   </p>
 </section>`;
 }
@@ -456,7 +456,7 @@ export function communityHub(_unused_brand_447: keyof typeof BRANDS) {
       <div class="card glass">
         <div style="font-size:32px; margin-bottom:16px">💎</div>
         <h3 style="font-family:var(--display); font-size:24px; margin-bottom:12px">$QRON TOKEN</h3>
-        <p style="font-size:14px; color:var(--text-dim)">Native utility on Polygon. Earn $QRON for each successful authentication and use it for TrueMark minting fees and marketplace deals.</p>
+        <p style="font-size:14px; color:var(--text-dim)">Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe.</p>
       </div>
       <div class="card glass">
         <div style="font-size:32px; margin-bottom:16px">🟠</div>
@@ -466,7 +466,7 @@ export function communityHub(_unused_brand_447: keyof typeof BRANDS) {
       <div class="card glass">
         <div style="font-size:32px; margin-bottom:16px">🤝</div>
         <h3 style="font-family:var(--display); font-size:24px; margin-bottom:12px">GOVERNANCE</h3>
-        <p style="font-size:14px; color:var(--text-dim)">Stake $QRON to participate in protocol updates. Vote on new industry vertical expansion and official manufacturer partnerships.</p>
+        <p style="font-size:14px; color:var(--text-dim)">Demo / theater only. $QRON staking is not a live product. Do not quote govchain.us figures as circulating supply.</p>
       </div>
     </div>
   </div>

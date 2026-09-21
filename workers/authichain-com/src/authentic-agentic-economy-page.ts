@@ -103,7 +103,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
           },
         },
         {
