@@ -125,7 +125,7 @@ describe("generated SEO money-path CTAs", () => {
       'href="https://authichain.com/api/checkout/dpp"'
     );
     expect(batteries?.bodyHtml).toContain(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
     );
     expect(textiles?.bodyHtml).toContain(
       'action="https://authichain.com/api/checkout/dpp"'
@@ -144,7 +144,7 @@ describe("generated SEO money-path CTAs", () => {
       'action="https://authichain.com/api/checkout/dpp"'
     );
     expect(musa?.bodyHtml).toContain(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
     );
     expect(musa?.bodyHtml).toContain(
       'href="https://authichain.com/made-in-america"'
@@ -167,7 +167,7 @@ describe("generated SEO money-path CTAs", () => {
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
     expect(trumark?.bodyHtml).toContain(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
     );
     expect(trumark?.bodyHtml).toContain(
       'href="https://authichain.com/trumark"'
@@ -184,7 +184,7 @@ describe("generated SEO money-path CTAs", () => {
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'
@@ -233,7 +233,7 @@ describe("generated SEO money-path CTAs", () => {
       'href="https://authichain.com/api/checkout/dpp"'
     );
     expect(dpp?.bodyHtml).toContain(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
     );
 
     const cannabis = getSeoPageBySlug("cannabis-blockchain-provenance");
@@ -241,7 +241,7 @@ describe("generated SEO money-path CTAs", () => {
       'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'

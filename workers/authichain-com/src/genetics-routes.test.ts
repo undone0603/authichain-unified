@@ -19,7 +19,9 @@ describe("genetics routes", () => {
     assert.match(html, /never transcribed/i);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
-    assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    );
   });
 
   it("serves Mendo farm library with derived peaks and LT-63 gap", async () => {
@@ -35,7 +37,9 @@ describe("genetics routes", () => {
     assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
-    assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    );
     assert.ok(html.includes("/m/mendo"));
     assert.match(html, /11\.618%/);
   });
@@ -52,7 +56,9 @@ describe("genetics routes", () => {
     assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
-    assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    );
   });
 
   it("serves LT-63 as an empty dossier, not invented chemistry", async () => {
@@ -65,7 +71,9 @@ describe("genetics routes", () => {
     assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
-    assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    );
   });
 
   it("404s an unknown cultivar", async () => {
@@ -81,7 +89,9 @@ describe("genetics routes", () => {
     assert.match(html, /\/genetics\/mendo-love-farms\/lt-63/);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
-    assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    );
   });
 
   it("ignores unrelated paths", () => {

@@ -70,7 +70,11 @@ describe("x402 public docs page", () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('action="/api/checkout/dpp"');
     expect(html).toContain('action="/api/checkout/plan/strainchain_passport"');
-    expect(html).toContain("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
-    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(html).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
   });
 });

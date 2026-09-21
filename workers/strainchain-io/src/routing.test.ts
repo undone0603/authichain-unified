@@ -115,8 +115,12 @@ test("the apex offers Passport checkout and the live Basic Payment Link", async 
     html,
     /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
   );
-  assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
-  assert.ok(html.includes("https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"));
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
+  );
   assert.match(html, /Passport checkout — \$49/);
   assert.doesNotMatch(html, /calendly/i);
 });

@@ -30,7 +30,9 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('action="/api/checkout/dpp"');
     expect(html).not.toContain('href="/api/checkout/dpp"');
-    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
     expect(html).toContain('href="/x402"');
     expect(html).toContain('href="/onboard"');
     expect(html).toContain('href="/pricing"');

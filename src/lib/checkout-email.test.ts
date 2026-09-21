@@ -59,7 +59,9 @@ describe("catalogPaymentLinkHtml", () => {
       planId: "strainchain_passport",
       label: "Pay $49 on Stripe",
     });
-    expect(html).toContain("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
+    expect(html).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
     expect(html).toContain("Pay $49 on Stripe");
     expect(html).not.toContain("/api/checkout");
   });
@@ -69,7 +71,9 @@ describe("catalogPaymentLinkHtml", () => {
       planId: "dpp_readiness",
       label: "Pay $299 on Stripe",
     });
-    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
   });
 });
 
@@ -101,7 +105,9 @@ describe("emailCheckoutWithPaymentLinkHtml", () => {
     });
     expect(html).toContain('action="/api/checkout/dpp"');
     expect(html).toContain('name="email"');
-    expect(html).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
     expect(html).toContain("Pay $299 on Stripe");
     expect(html).not.toContain('href="/api/checkout/dpp"');
   });

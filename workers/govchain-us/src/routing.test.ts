@@ -101,7 +101,9 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
-  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
   assert.doesNotMatch(html, /does not exist/);
 });
 

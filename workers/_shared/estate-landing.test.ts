@@ -82,7 +82,7 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   assert.match(emailHero, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(emailHero, /Checkout without saving a recovery email/);
   assert.ok(
-    emailHero.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c")
+    emailHero.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
   assert.match(emailHero, /id="hero-checkout-email"/);
 
@@ -110,7 +110,7 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
   assert.match(emailCta, /action="\/api\/checkout\/dpp"/);
   assert.match(emailCta, /href="\/pricing"/);
   assert.ok(
-    emailCta.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c")
+    emailCta.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
   assert.match(emailCta, /id="cta-checkout-email"/);
 

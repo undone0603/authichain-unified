@@ -228,7 +228,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).not.toContain(
       'href="https://authichain.com/api/checkout/dpp"'
     );
-    expect(body).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(body).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();
@@ -250,7 +252,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).not.toContain(
       'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
     );
-    expect(body).toContain("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
+    expect(body).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
     expect(body).toContain('href="https://strainchain.io/pricing"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
   });
@@ -334,7 +338,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
     expect(body).toContain('name="email"');
     expect(body).toContain('action="/api/checkout/dpp"');
-    expect(body).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(body).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
   });
 });
 
@@ -466,7 +472,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
     expect(body).toContain('action="/api/checkout/dpp"');
-    expect(body).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+    expect(body).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
   });
 });
 
@@ -494,7 +502,9 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/dashboard");
       expect(body).toContain('name="email"');
       expect(body).toContain('action="/api/checkout/dpp"');
-      expect(body).toContain("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c");
+      expect(body).toContain(
+        'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      );
       expect(body).not.toContain("app.authichain.com/login");
     }
   });
@@ -516,9 +526,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("$29");
     expect(body).toContain("$99");
     expect(body).toContain("$299");
-    expect(body).toContain("https://buy.stripe.com/3cIaEX73jcZE5ia2321Nu1l");
-    expect(body).toContain("https://buy.stripe.com/9B69AT73j9NseSKazy1Nu1m");
-    expect(body).toContain("https://buy.stripe.com/9B600j73jcZE6megXW1Nu1n");
+    expect(body).toContain(
+      'href="https://buy.stripe.com/3cIaEX73jcZE5ia2321Nu1l"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/9B69AT73j9NseSKazy1Nu1m"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/9B600j73jcZE6megXW1Nu1n"'
+    );
     expect(body).toContain("50 Credits");
     expect(body).toContain("$9.99");
     expect(body).toContain("250 Credits");

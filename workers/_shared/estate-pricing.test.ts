@@ -71,7 +71,9 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
-  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
   assert.match(html, /id="checkout-need-email-banner"/);
   assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
@@ -193,7 +195,9 @@ test("strainchain /pricing HTML cites Basic, passport, and farm prices", () => {
     html,
     /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_farm/
   );
-  assert.ok(html.includes("https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"));
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /href="\/genetics\/mendo-love-farms"/);
   assert.doesNotMatch(html, /\$2,990/);
@@ -221,7 +225,9 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, new RegExp(`\\$${dpp.price}`));
   assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
-  assert.ok(html.includes("https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"));
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+  );
   assert.doesNotMatch(
     html,
     new RegExp(
