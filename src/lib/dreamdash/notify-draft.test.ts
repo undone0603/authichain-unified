@@ -6,6 +6,7 @@ import {
   notifyDigest,
   notifyDraft,
 } from "./notify-draft";
+import { FOUNDER_SMS_GATEWAYS, NTFY_URL } from "@/lib/founder-alerts";
 import type { Lead } from "./types";
 
 function lead(partial: Partial<Lead> & Pick<Lead, "id" | "email">): Lead {
@@ -73,25 +74,26 @@ describe("notifyDraft", () => {
     await notifyDraft(lead({ id: "a", email: "a@x.test" }), "followup");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://ntfy.sh/zk_live_alerts_99");
+    expect(url).toBe(NTFY_URL);
     expect(init.headers.Title).toContain("Acme Co");
     expect(init.body).toContain("reason: followup");
     expect(init.body).not.toMatch(/re_|secret|api[_-]?key/i);
   });
 
-  it("sends Resend only to founder inboxes", async () => {
+  it("sends Resend to founder inboxes and SMS gateways", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await notifyDraft(lead({ id: "a", email: "buyer@acme.test" }), "capture", {
       RESEND_API_KEY2: "re_test_key2",
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const resend = fetchMock.mock.calls.find(([url]) => url === "https://api.resend.com/emails");
-    expect(resend).toBeTruthy();
-    const body = JSON.parse(resend![1].body);
-    expect(body.to).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
-    expect(body.to).not.toContain("buyer@acme.test");
-    expect(body.from).toContain("authichain.com");
+    const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
+    expect(resendCalls).toHaveLength(2);
+    const inbox = JSON.parse(resendCalls[0][1].body);
+    const sms = JSON.parse(resendCalls[1][1].body);
+    expect(inbox.to).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
+    expect(inbox.to).not.toContain("buyer@acme.test");
+    expect(sms.to).toEqual([...FOUNDER_SMS_GATEWAYS]);
+    expect(sms.text.length).toBeLessThanOrEqual(160);
   });
 
   it("no-ops when draftPending is false", async () => {
