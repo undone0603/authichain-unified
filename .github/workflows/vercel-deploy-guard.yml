@@ -1,0 +1,30 @@
+name: Vercel deploy guard
+
+# Cloudflare is the deploy authority. Fail if a workflow reintroduces Vercel deploy.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "scripts/guard-vercel-deploy.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "scripts/guard-vercel-deploy.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: No Vercel deploy steps
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Scan workflows
+        run: node scripts/guard-vercel-deploy.mjs --run

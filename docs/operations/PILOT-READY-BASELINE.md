@@ -16,9 +16,9 @@ This gate is intentionally independent of Vercel. A Vercel deployment-rate or ca
 
 ## 2. Deployment architecture
 
-The unified Next.js network app is deployed through Vercel, with Cloudflare providing edge/fronting services and separately managed workers. `docs/NETWORK.md` is the canonical deployment map.
+Cloudflare Workers (GitHub Actions: `deploy-workers.yml`, `deploy-cloudflare.yml`, `deploy-authichain-com.yml`) are the deploy authority. Vercel workflows and `vercel deploy` are excluded unless a human explicitly requests them. See `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`.
 
-Vercel status failures such as `build-rate-limit` are classified as infrastructure/deployment-capacity events. They are not dependency regressions unless an application build is actually executed and fails for application-specific reasons.
+`docs/NETWORK.md` remains the live map. A Vercel `build-rate-limit` is not an application regression and is not a reason to merge or deploy.
 
 ## 3. Attestation contract
 

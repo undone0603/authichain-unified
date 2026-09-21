@@ -1,0 +1,66 @@
+name: Supabase baseline
+
+# History check then read-only schema drift. Never applies migrations.
+# Database repair stays off the application deploy path.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/REMOTE_APPLIED_VERSIONS.txt"
+      - "src/db/schema.ts"
+      - "scripts/verify-supabase-baseline.mjs"
+      - "scripts/check-schema-drift.mjs"
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Remote history coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Verify local files cover REMOTE_APPLIED_VERSIONS
+        run: node scripts/verify-supabase-baseline.mjs --run
+
+  drift:
+    name: Schema drift (read-only)
+    needs: baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Compare schema to database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "DATABASE_URL unset — history coverage already passed; drift skipped (not a migrate license)."
+            exit 0
+          fi
+          set +e
+          node scripts/check-schema-drift.mjs | tee "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 2 ]; then
+            echo "::warning::Could not reach DATABASE_URL; schema comparison skipped."
+            exit 0
+          fi
+          exit "$status"

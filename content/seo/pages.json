@@ -8467,5 +8467,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-digital-product-passport-registry-test-environment",
+    "keyword": "eu digital product passport registry test environment",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Registry Test | AuthiChain",
+    "metaDescription": "The EU’s Digital Product Passport Registry went live 20 July 2026 with a separate testing environment at its own address and login — a sandbox for practising.",
+    "h1": "EU Digital Product Passport Registry Test Environment",
+    "bodyHtml": "<p>The EU’s Digital Product Passport Registry went live 20 July 2026 with a separate testing environment at its own address and login — a sandbox for practising economic-operator registration before it counts, not a preview of what a consumer sees on scan.</p><h2>Why AuthiChain</h2><ul><li>The sandbox mirrors registration under Implementing Regulation (EU) 2026/1778 — enrolment, the eIDAS identity check, verified-operator status, passport registration — with no live-registry side effects</li><li>A signed AuthiChain record resolves at a permanent GS1 Digital Link URL independent of any registry account status; a verifier checks the record itself, not a sandbox or production login</li><li>The sandbox tests registration, not verification: nothing about it changes how protocol/SPEC.md §5 checks a signature, which needs no registry account at all, sandbox or production</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the sandbox show what a customer sees when they scan our product?</h3><p>No — it is for practising registry enrolment and passport registration, not for previewing consumer-facing verification. A signed record verifies on its own path, independent of registry account status.</p><h3>Is using the testing environment mandatory before registering in production?</h3><p>Not mandatory, but the Commission built it specifically so a team is not learning the registration and eIDAS identity-check flow under deadline pressure for its first real one — currently the battery passport mandate on 18 February 2027.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Registry Test Environment",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s Digital Product Passport Registry went live 20 July 2026 with a separate testing environment at its own address and login — a sandbox for practising economic-operator registration before it counts, not a preview of what a consumer sees on scan.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-registry-test-environment"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Registry Test Environment",
+              "item": "https://authichain.com/p/eu-digital-product-passport-registry-test-environment"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the sandbox show what a customer sees when they scan our product?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it is for practising registry enrolment and passport registration, not for previewing consumer-facing verification. A signed record verifies on its own path, independent of registry account status."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is using the testing environment mandatory before registering in production?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not mandatory, but the Commission built it specifically so a team is not learning the registration and eIDAS identity-check flow under deadline pressure for its first real one — currently the battery passport mandate on 18 February 2027."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-recycled-content-recyclability-electronics-2029",
+    "keyword": "espr recycled content recyclability electronics 2029",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Recycled Content Recyclability | AuthiChain",
+    "metaDescription": "Electronics get no dedicated ESPR delegated act of their own the way steel or textiles do — instead a horizontal measure on recycled content and.",
+    "h1": "ESPR Recycled Content Recyclability Electronics 2029",
+    "bodyHtml": "<p>Electronics get no dedicated ESPR delegated act of their own the way steel or textiles do — instead a horizontal measure on recycled content and recyclability, indicative 2029, applies across all electrical and electronic equipment at once, two years behind the separate repairability horizontal measure targeted for 2027.</p><h2>Why AuthiChain</h2><ul><li>Horizontal measures apply across every EEE category at once rather than one product group at a time — a phone, a washing machine, and an industrial control panel land under the same 2029 requirement instead of separate delegated acts</li><li>Repairability (2027) and recycled-content/recyclability (2029) are two separate horizontal measures with two separate adoption dates; planning against one covers only half of what applies to electronics</li><li>The record model AuthiChain already issues for steel’s embodied-carbon data and batteries’ recycled-content field carries over — adding an EEE recyclability figure is a new field in credentialSubject, not a new record type</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is there a dedicated Digital Product Passport delegated act for electronics?</h3><p>Not in the first ESPR Working Plan. Electronics are covered by two horizontal measures instead — repairability, indicative 2027, and recycled content and recyclability, indicative 2029 — that apply broadly across EEE rather than one act for the category alone.</p><h3>Does the 2029 date apply to all electronics equally?</h3><p>The measure is horizontal by design, meaning it is meant to apply broadly across electrical and electronic equipment rather than being scoped to a single sub-category the way steel or textiles get their own act.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Recycled Content Recyclability Electronics 2029",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Electronics get no dedicated ESPR delegated act of their own the way steel or textiles do — instead a horizontal measure on recycled content and recyclability, indicative 2029, applies across all electrical and electronic equipment at once, two years behind the separate repairability horizontal measure targeted for 2027.",
+          "url": "https://authichain.com/p/espr-recycled-content-recyclability-electronics-2029"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Recycled Content Recyclability Electronics 2029",
+              "item": "https://authichain.com/p/espr-recycled-content-recyclability-electronics-2029"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is there a dedicated Digital Product Passport delegated act for electronics?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not in the first ESPR Working Plan. Electronics are covered by two horizontal measures instead — repairability, indicative 2027, and recycled content and recyclability, indicative 2029 — that apply broadly across EEE rather than one act for the category alone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the 2029 date apply to all electronics equally?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The measure is horizontal by design, meaning it is meant to apply broadly across electrical and electronic equipment rather than being scoped to a single sub-category the way steel or textiles get their own act."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "w3c-verifiable-credential-render-method-physical-label",
+    "keyword": "w3c verifiable credential render method physical label",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "W3C Verifiable Credential Render Method | AuthiChain",
+    "metaDescription": "The W3C Verifiable Credentials Working Group is advancing Render Method toward Candidate Recommendation at TPAC 2026, defining how a Verifiable Credential.",
+    "h1": "W3C Verifiable Credential Render Method Physical Label",
+    "bodyHtml": "<p>The W3C Verifiable Credentials Working Group is advancing Render Method toward Candidate Recommendation at TPAC 2026, defining how a Verifiable Credential displays on a physical document, a screen, or a printed label — the exact question a signed provenance record raises once it has to fit onto packaging someone can actually scan.</p><h2>Why AuthiChain</h2><ul><li>Render Method lets an issuer attach a display template — SVG, image, or accessible text — so a credential renders consistently instead of every verifier inventing its own layout for the same signed data</li><li>A rendering template is presentation, not proof: changing how a record displays does not change what protocol/SPEC.md §3.2 signs, since the signature covers the canonicalized JSON, never the rendered output</li><li>AuthiChain’s printed carrier today is a GS1 Digital Link QR code, not a rendered document — Render Method matters most once a passport needs to show as a formatted certificate rather than only a scan target</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does Render Method change what gets signed in a Verifiable Credential?</h3><p>No — it defines how a credential displays to a person, as a document, image, or accessible text. The signature protocol/SPEC.md §3.2 defines covers the canonicalized JSON data, not any rendered presentation of it.</p><h3>Does AuthiChain support Render Method today?</h3><p>Not yet — the spec is still advancing toward Candidate Recommendation at TPAC 2026. AuthiChain’s printed carrier today is a GS1 Digital Link QR code resolving to the record itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — W3C Verifiable Credential Render Method Physical Label",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The W3C Verifiable Credentials Working Group is advancing Render Method toward Candidate Recommendation at TPAC 2026, defining how a Verifiable Credential displays on a physical document, a screen, or a printed label — the exact question a signed provenance record raises once it has to fit onto packaging someone can actually scan.",
+          "url": "https://authichain.com/p/w3c-verifiable-credential-render-method-physical-label"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Verifiable Credential Render Method Physical Label",
+              "item": "https://authichain.com/p/w3c-verifiable-credential-render-method-physical-label"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does Render Method change what gets signed in a Verifiable Credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it defines how a credential displays to a person, as a document, image, or accessible text. The signature protocol/SPEC.md §3.2 defines covers the canonicalized JSON data, not any rendered presentation of it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support Render Method today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — the spec is still advancing toward Candidate Recommendation at TPAC 2026. AuthiChain’s printed carrier today is a GS1 Digital Link QR code resolving to the record itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-confidence-method-identity-binding",
+    "keyword": "verifiable credential confidence method identity binding",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Confidence Method | AuthiChain",
+    "metaDescription": "W3C’s Verifiable Credential Confidence Method targets mechanisms a verifier uses to raise confidence that whoever is presenting a credential is the same.",
+    "h1": "Verifiable Credential Confidence Method Identity Binding",
+    "bodyHtml": "<p>W3C’s Verifiable Credential Confidence Method targets mechanisms a verifier uses to raise confidence that whoever is presenting a credential is the same party it was issued to — a different question from whether the credential’s signature is valid, and one protocol/SPEC.md does not answer at all.</p><h2>Why AuthiChain</h2><ul><li>Confidence Method is about the presenter, not the credential: it layers optional signals — proof of possession, device or biometric binding — on top of a Verifiable Credential that already verifies on its own</li><li>protocol/SPEC.md’s verdicts stop at the record: §5.1’s verified, valid-unanchored, and invalid all describe whether a signature and anchor check out, not whether the physical item in a scanner’s hand matches the record’s subject</li><li>That gap is named directly in protocol/SPEC.md §8 — a signature proves who issued a statement, never that the statement is true — and Confidence Method is one standardized way a layer above this specification could start closing it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a verified AuthiChain record prove the physical item in hand is genuine?</h3><p>It proves the record was signed by the claimed issuer and, if anchored, that the hash was committed to a mainnet chain. It does not prove the physical item matches the record — protocol/SPEC.md §8 states that limit directly: a signature proves authorship, not truth.</p><h3>Is Confidence Method a replacement for physical inspection?</h3><p>No — it standardizes signals a verifier can use to raise confidence that a presenter is a credential’s intended subject. It does not address whether a physical item corresponds to a credentialSubject at all, a separate problem this protocol also does not solve on its own.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Confidence Method Identity Binding",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s Verifiable Credential Confidence Method targets mechanisms a verifier uses to raise confidence that whoever is presenting a credential is the same party it was issued to — a different question from whether the credential’s signature is valid, and one protocol/SPEC.md does not answer at all.",
+          "url": "https://authichain.com/p/verifiable-credential-confidence-method-identity-binding"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Confidence Method Identity Binding",
+              "item": "https://authichain.com/p/verifiable-credential-confidence-method-identity-binding"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a verified AuthiChain record prove the physical item in hand is genuine?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It proves the record was signed by the claimed issuer and, if anchored, that the hash was committed to a mainnet chain. It does not prove the physical item matches the record — protocol/SPEC.md §8 states that limit directly: a signature proves authorship, not truth."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Confidence Method a replacement for physical inspection?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it standardizes signals a verifier can use to raise confidence that a presenter is a credential’s intended subject. It does not address whether a physical item corresponds to a credentialSubject at all, a separate problem this protocol also does not solve on its own."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "w3c-verifiable-credentials-data-model-2-1-changes",
+    "keyword": "w3c verifiable credentials data model 2.1 changes",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "W3C Verifiable Credentials Data Model 2.1 | AuthiChain",
+    "metaDescription": "W3C published a first public working draft of Verifiable Credentials Data Model v2.1 in 2026, and VC Data Model 2.0 — what protocol/SPEC.md §2 actually.",
+    "h1": "W3C Verifiable Credentials Data Model 2.1 Changes",
+    "bodyHtml": "<p>W3C published a first public working draft of Verifiable Credentials Data Model v2.1 in 2026, and VC Data Model 2.0 — what protocol/SPEC.md §2 actually specifies — stays the current Recommendation and the correct target for anything shipping today.</p><h2>Why AuthiChain</h2><ul><li>A first public working draft is an early-stage editor’s draft the working group is still actively changing; it is not a Recommendation and carries no conformance expectation for implementers</li><li>protocol/SPEC.md names VC Data Model 2.0 specifically in §2’s alignment table — a verifier built against 2.0 today does not need to track an in-progress 2.1 draft to stay conformant to this specification</li><li>When 2.1 does reach Recommendation, the pattern this spec already uses for version changes holds: records signed under 2.0 keep verifying under 2.0 rules, and a new field or proof type is how a future version gets adopted, not a rewrite of what already shipped</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><p><a href=\"https://authichain.com/api/checkout/dpp\">Start DPP readiness checkout</a> · <a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Should we build against VC Data Model 2.1 instead of 2.0?</h3><p>Not yet. 2.1 is a first public working draft — an early, still-changing document, not a Recommendation. VC Data Model 2.0 is the current standard and what protocol/SPEC.md §2 specifies.</p><h3>What is expected to change in 2.1?</h3><p>The working group has not finalized it — that is what “first public working draft” means. Checking the published draft directly, rather than a summary of it, is the only reliable way to see what is actually proposed as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — W3C Verifiable Credentials Data Model 2.1 Changes",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C published a first public working draft of Verifiable Credentials Data Model v2.1 in 2026, and VC Data Model 2.0 — what protocol/SPEC.md §2 actually specifies — stays the current Recommendation and the correct target for anything shipping today.",
+          "url": "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1-changes"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Verifiable Credentials Data Model 2.1 Changes",
+              "item": "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1-changes"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Should we build against VC Data Model 2.1 instead of 2.0?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. 2.1 is a first public working draft — an early, still-changing document, not a Recommendation. VC Data Model 2.0 is the current standard and what protocol/SPEC.md §2 specifies."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is expected to change in 2.1?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The working group has not finalized it — that is what “first public working draft” means. Checking the published draft directly, rather than a summary of it, is the only reliable way to see what is actually proposed as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
