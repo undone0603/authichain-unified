@@ -1,0 +1,18 @@
+{
+  "linkedin": "Authentic Product Verified. Counterfeit Alert, with the specific reason the hash didn't check out. Product Found — No Hash Signature, for a registered item whose scan carried no signature to check. Those are the only three outcomes an AuthiChain verification page will ever show — plain language, not a bare pass/fail badge.\n\nGetting there takes nothing extra: scan the signed QR code on an AuthiChain-registered product with your phone's own camera app and it opens authichain.com/verify directly. No separate app to install, no login. The page reads a product ID and a cryptographic hash out of the QR data and checks the hash against the registry on the spot.\n\nUnderneath the result sits the product card itself — name, brand, manufacturer, serial number, category, and the date the item was registered — so the person holding the product sees what's actually on file, not just a checkmark.\n\nWe think a verification result is only as trustworthy as its honesty about uncertainty — which is why \"no signature to check\" is its own stated outcome, not folded into a pass.\n\nhttps://authichain.com/verify?utm_source=linkedin&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=b",
+  "reddit": {
+    "subreddit": "retail",
+    "title": "Three honest outcomes for a product-authenticity scan — not just pass/fail — and how we decided what counts as a third state",
+    "body": "AuthiChain issues signed QR codes for physical products, and every scan lands on one of exactly three plain-language results: Authentic Product Verified, a Counterfeit Alert (with the specific reason the hash didn't check out), or Product Found — No Hash Signature, for items that are registered but the scan didn't carry a signature to verify.\n\nThat third state was the harder design call — it would've been simpler to just show pass/fail and quietly treat \"no signature\" as a fail. We didn't, because collapsing \"we couldn't check\" into \"this failed\" misrepresents what actually happened.\n\nGetting to the result takes no extra app: scanning the QR with a phone's own camera opens authichain.com/verify with the product ID and hash encoded in the URL, and below the result sits the actual product record — name, brand, manufacturer, serial number, category, registration date — not just the badge.\n\nCurious how others handle the \"we genuinely don't know\" case in a customer-facing verification flow — fold it into fail, or give it its own state?\n\nhttps://authichain.com/verify?utm_source=reddit&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "Authentic Product Verified. Counterfeit Alert, with the specific reason. Product Found — No Hash Signature, when there's nothing to check. Three honest outcomes, not a pass/fail badge — that's what an AuthiChain scan returns.",
+    "No separate app needed to get there: scan the signed QR on a registered product with your phone's own camera and it opens authichain.com/verify, reads the product ID + hash out of the URL, and checks it against the registry.",
+    "Below the result sits the actual product record — name, brand, manufacturer, serial, registration date — so you see the data on file, not just a checkmark: https://authichain.com/verify?utm_source=twitter&utm_medium=social&utm_campaign=consumer-verify-flow&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "consumer-verify-flow",
+    "variant": "b",
+    "hypothesis": "leading with the three-state honest-result badge (Authentic / Counterfeit / No Hash Signature) outperforms the no-app/no-login mechanic as the opening hook on click-through to /verify"
+  }
+}
