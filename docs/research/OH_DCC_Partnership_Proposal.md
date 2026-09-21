@@ -13,7 +13,7 @@
 
 ### **Executive Summary**
 
-AuthiChain, Inc. proposes the implementation of the **Ohio Audit Integrity Shield (OAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Ohio Division of Cannabis Control (DCC)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for Ohio's rapidly expanding adult-use market.
+ZACHARY KIETZMAN proposes the implementation of the **Ohio Audit Integrity Shield (OAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Ohio Division of Cannabis Control (DCC)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for Ohio's rapidly expanding adult-use market.
 
 ### **The Problem: The "Provenance Gap"**
 
@@ -37,7 +37,7 @@ The GovChain protocol provides three core pillars of trust for Ohio:
 
 ### **Next Steps**
 
-AuthiChain, Inc. is prepared to deploy a **Phase I Pilot** targeting 15 major cultivators in the Columbus and Cleveland regions.
+ZACHARY KIETZMAN is prepared to deploy a **Phase I Pilot** targeting 15 major cultivators in the Columbus and Cleveland regions.
 
 **Contact:**  
 **Z@authichain.com**  

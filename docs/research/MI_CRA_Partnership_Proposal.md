@@ -13,7 +13,7 @@
 
 ### **Executive Summary**
 
-AuthiChain, Inc. proposes the implementation of the **Michigan Audit Integrity Shield (MAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Michigan Cannabis Regulatory Agency (CRA)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for the state’s multi-billion dollar cannabis industry.
+ZACHARY KIETZMAN proposes the implementation of the **Michigan Audit Integrity Shield (MAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Michigan Cannabis Regulatory Agency (CRA)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for the state’s multi-billion dollar cannabis industry.
 
 ### **The Problem: The "Provenance Gap"**
 
@@ -43,7 +43,7 @@ The GovChain protocol provides three core pillars of trust for Michigan:
 
 ### **Next Steps**
 
-AuthiChain, Inc. is prepared to deploy a **Phase I Pilot** targeting 20 Tier-1 cultivators in the Detroit metro area.
+ZACHARY KIETZMAN is prepared to deploy a **Phase I Pilot** targeting 20 Tier-1 cultivators in the Detroit metro area.
 
 **Contact:**  
 **Z@authichain.com**  

@@ -5,7 +5,9 @@ Effective Date: May 14, 2026
 This Service Agreement ("Agreement") is entered into as of the date signed below, between:
 
 **Service Provider**  
-Company: AuthiChain, LLC  
+Legal name: ZACHARY KIETZMAN  
+Doing business as: AuthiChain  
+IRS / tax name (not the contracting party): AuthiChain, Inc.  
 Address: Roscommon, Michigan, USA  
 Website: www.authichain.com  
 Email: admin@authichain.com
@@ -41,7 +43,7 @@ This Agreement commences on the date of signing and continues for twelve (12) mo
 
 ## 4. INTELLECTUAL PROPERTY
 
-All AuthiChain platform technology, algorithms, smart contracts, and blockchain infrastructure remain the exclusive property of AuthiChain, LLC. Client retains full ownership of their product data, brand assets, and business information.
+All AuthiChain platform technology, algorithms, smart contracts, and blockchain infrastructure remain the exclusive property of ZACHARY KIETZMAN. Client retains full ownership of their product data, brand assets, and business information.
 
 ## 5. DATA & PRIVACY
 

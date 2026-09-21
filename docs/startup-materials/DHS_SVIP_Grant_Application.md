@@ -224,7 +224,7 @@ VERIFICATION FLOW:
 
 ## 9. Intellectual Property
 
-All core technology is developed and owned by AuthiChain, Inc. We will grant DHS a non-exclusive, royalty-free license to use technology developed under this award in accordance with SBIR/SVIP standard IP provisions. AuthiChain retains commercial rights to deploy the technology commercially following program completion.
+All core technology is developed and owned by ZACHARY KIETZMAN. We will grant DHS a non-exclusive, royalty-free license to use technology developed under this award in accordance with SBIR/SVIP standard IP provisions. AuthiChain retains commercial rights to deploy the technology commercially following program completion. AuthiChain, Inc. is the IRS / tax name only and is not the SAM or contracting party.
 
 Key IP assets:
 - QRON cryptographic QR system (trade secret, patent application in preparation)

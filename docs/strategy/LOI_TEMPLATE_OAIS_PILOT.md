@@ -8,7 +8,7 @@
 
 **Between:**
 
-- **ZACHARY KIETZMAN** (“Provider”), SAM legal business name; AuthiChain product brand; UEI R34XKWRJY9A5, CAGE 1PUJ6
+- **ZACHARY KIETZMAN** (“Provider”), contracting and SAM legal name; AuthiChain product brand; UEI R34XKWRJY9A5, CAGE 1PUJ6. IRS / tax name AuthiChain, Inc. is not the contracting party.
 - **Pilot Partner:** ________________________________ (“Partner”)
 
 ## 1. Purpose

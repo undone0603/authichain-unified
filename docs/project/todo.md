@@ -136,7 +136,7 @@
 ## DHS SVIP Grant Application
 - [x] Write complete Phase I application ($200K ask, FIPS 140-2, W3C VC, CBP field app)
 - [x] Prepare DHS SVIP grant application materials
-- [x] SAM.gov registration — Active under legal name ZACHARY KIETZMAN (UEI R34XKWRJY9A5, CAGE 1PUJ6; expires 2027-04-20). AuthiChain, Inc. is not the current SAM legal name. See `docs/project/SAM_PREP.md`.
+- [x] SAM.gov registration — Active under legal name ZACHARY KIETZMAN (UEI R34XKWRJY9A5, CAGE 1PUJ6; expires 2027-04-20). Contracts and SAM use ZACHARY KIETZMAN; AuthiChain, Inc. is IRS / tax name only. See `docs/project/SAM_PREP.md`.
 - [x] CAGE code + UEI number (CAGE 1PUJ6 / UEI R34XKWRJY9A5)
 - [ ] sbir.gov account creation
 - [ ] Submit at https://www.dhs.gov/science-and-technology/svip-application-process

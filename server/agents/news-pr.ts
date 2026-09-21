@@ -112,7 +112,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       technicalAngle: "Cryptographic batch-ancestry tracking isolates component-level failures in under 2 seconds."
     };
 
-    const prBody = `Roscommon, MI — AuthiChain, Inc. (CAGE 1PUJ6) has released a technical analysis in response to the FDA Class I designation of the Medtronic Bravo Esophageal pH Monitoring Capsules recall.
+    const prBody = `Roscommon, MI — AuthiChain (SAM: ZACHARY KIETZMAN, CAGE 1PUJ6) has released a technical analysis in response to the FDA Class I designation of the Medtronic Bravo Esophageal pH Monitoring Capsules recall.
 
 The recall, cited for detachment risks linked to adhesive failure, highlights a critical 'Provenance Gap' in medical device supply chains. AuthiChain's protocol addresses this by anchoring component-level metadata—including adhesive batch IDs and curing timestamps—directly to the Bitcoin L1 blockchain.
 
