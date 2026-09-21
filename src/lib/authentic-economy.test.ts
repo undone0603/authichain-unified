@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { BASE_USDC, TOKENOMICS_PAY_TO as EVM_PAY_TO } from "../../scripts/lib/evm-chains";
+import {
+  BASE_USDC,
+  TOKENOMICS_PAY_TO as EVM_PAY_TO,
+} from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
 import {
   AGENT_TOKENOMICS_DOC,
@@ -58,6 +61,13 @@ describe("authentic-economy identity join", () => {
     expect(d.agentRail.note).toMatch(/X402_PAY_TO/);
     expect(d.agentRail.note).toMatch(/\$QRON/);
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
+    expect(d.humanCheckout.checkout.passport).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
+    expect(d.humanCheckout.checkout.dpp).toBe(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    );
+    expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);

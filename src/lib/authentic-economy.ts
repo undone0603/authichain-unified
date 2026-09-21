@@ -20,11 +20,8 @@ import {
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
-import {
-  BASE_USDC_ASSET,
-  X402_PUBLISHED_PAY_TO,
-} from "./x402";
-import { planUsd } from "./plans";
+import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
+import { planPaymentLink, planUsd } from "./plans";
 import { supabaseAdmin as admin } from "./supabase-admin";
 
 export {
@@ -138,9 +135,12 @@ export function agentPricingDiscovery() {
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
       checkout: {
-        passport:
-          "https://authichain.com/api/checkout/plan/strainchain_passport",
-        dpp: "https://authichain.com/api/checkout/dpp",
+        passport: planPaymentLink("strainchain_passport"),
+        dpp: planPaymentLink("dpp_readiness"),
+        emailCapture: {
+          passport: "https://authichain.com/passport",
+          dpp: "https://authichain.com/dpp",
+        },
       },
     },
     qron: {
@@ -255,7 +255,10 @@ export async function processFeeFlow(params: {
     return { ok: true, flowId: flow.id, distribution: dist };
   } catch (err: unknown) {
     console.error("[authentic-economy] processFeeFlow failed:", err);
-    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
   }
 }
 
@@ -270,7 +273,10 @@ export async function processFeeFlow(params: {
  * on HTTP error responses), so a failed or never-attempted burn/treasury
  * swap still read as 'confirmed' on the admin revenue dashboard.
  */
-async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution) {
+async function triggerAutonomousExecution(
+  flowId: string,
+  dist: FeeDistribution
+) {
   const authichainApi = process.env.AUTHICHAIN_API_URL;
   const apiKey = process.env.AUTHICHAIN_API_SECRET;
 
@@ -310,8 +316,12 @@ async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution)
         .update({ status: "failed" })
         .eq("id", flowId);
       console.warn(
-        "[autonomous] fiatswap call failed for flow:", flowId,
-        "burn:", burnRes.status, "treasury:", treasuryRes.status,
+        "[autonomous] fiatswap call failed for flow:",
+        flowId,
+        "burn:",
+        burnRes.status,
+        "treasury:",
+        treasuryRes.status
       );
       return;
     }
@@ -321,10 +331,7 @@ async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution)
       .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
       .eq("id", flowId);
   } catch (err) {
-    await admin
-      .from("fee_flows")
-      .update({ status: "failed" })
-      .eq("id", flowId);
+    await admin.from("fee_flows").update({ status: "failed" }).eq("id", flowId);
     console.warn("[autonomous] Execution failed for flow:", flowId, err);
   }
 }

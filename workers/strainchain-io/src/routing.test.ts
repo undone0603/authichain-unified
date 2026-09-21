@@ -102,6 +102,29 @@ test("query strings survive the hop", async () => {
   }
 });
 
+test("the apex offers Passport checkout and the live Basic Payment Link", async () => {
+  const res = await get("/");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /name="email"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+  );
+  assert.doesNotMatch(
+    html,
+    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
+  );
+  assert.match(html, /Passport checkout — \$49/);
+  assert.doesNotMatch(html, /calendly/i);
+});
+
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {

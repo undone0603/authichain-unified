@@ -5,6 +5,13 @@
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
+import {
+  CHECKOUT_REDIRECT_HEADERS,
+  checkoutNeedEmailRedirect,
+  checkoutRedirectResponse,
+  pickCheckoutEmail,
+  planIdFromCheckoutAction,
+} from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
 
@@ -50,25 +57,17 @@ export async function tryHandleProtocolCheckout(
   if (request.method === "HEAD") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Cache-Control": "private, no-store",
-        "CDN-Cache-Control": "no-store",
-      },
+      headers: CHECKOUT_REDIRECT_HEADERS,
     });
   }
   if (request.method !== "GET") {
     return json(405, { error: "method not allowed" });
   }
 
-  const key = (env.STRIPE_SECRET_KEY || "").trim();
-  if (!key) {
-    return json(500, { error: "Stripe is not configured" });
-  }
-
   const params = url.searchParams;
   const visitId =
     pick(params, "visit_id") || pick(params, "prospect_id") || newVisitId();
-  const email = pick(params, "email", 254);
+  const email = pickCheckoutEmail(pick(params, "email", 254));
   const utmSource = pick(params, "utm_source", 64);
   const utmMedium = pick(params, "utm_medium", 64);
   const utmCampaign = pick(params, "utm_campaign", 128);
@@ -77,6 +76,13 @@ export async function tryHandleProtocolCheckout(
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(params, "promo", 32));
+  if (!email && !smoke) {
+    return checkoutRedirectResponse(checkoutNeedEmailRedirect("dpp", visitId));
+  }
+  const key = (env.STRIPE_SECRET_KEY || "").trim();
+  if (!key) {
+    return json(500, { error: "Stripe is not configured" });
+  }
   const priceId = (env.STRIPE_PRICE_ID || DPP_PRICE_ID).trim();
 
   const body = new URLSearchParams();
@@ -140,12 +146,45 @@ export async function tryHandleProtocolCheckout(
       detail: data.error?.message || `stripe ${stripeRes.status}`,
     });
   }
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: data.url,
-      "Cache-Control": "private, no-store",
-      "CDN-Cache-Control": "no-store",
-    },
-  });
+  return checkoutRedirectResponse(data.url);
+}
+
+/**
+ * Live GET /api/checkout/* is proxied to APP_WORKER, which still opens
+ * anonymous Stripe sessions on the last edge-router deploy. Sister sites
+ * (strainchain.io, qron.space, govchain.us) one-click those URLs today.
+ * Bounce GET without ?email= here so an authichain-com deploy stops
+ * anonymous carts even if APP_WORKER is stale. HEAD stays 204. GET with
+ * a recovery email falls through to APP_WORKER to create the session.
+ */
+export function isApiCheckoutPath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  return p === "/api/checkout/dpp" || p.startsWith("/api/checkout/plan/");
+}
+
+export function tryHandleApiCheckoutEmailGate(
+  request: Request
+): Response | null {
+  const url = new URL(request.url);
+  if (!isApiCheckoutPath(url.pathname)) return null;
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: 204,
+      headers: CHECKOUT_REDIRECT_HEADERS,
+    });
+  }
+  if (request.method !== "GET") return null;
+  const email = pickCheckoutEmail(url.searchParams.get("email"));
+  const smoke = isDppSmokePromo(url.searchParams.get("promo"));
+  if (email || smoke) return null;
+  const visitId = (
+    url.searchParams.get("visit_id") ||
+    url.searchParams.get("prospect_id") ||
+    ""
+  ).trim();
+  const kind =
+    planIdFromCheckoutAction(url.pathname) === "dpp_readiness" ? "dpp" : "plan";
+  return checkoutRedirectResponse(
+    checkoutNeedEmailRedirect(kind, visitId || undefined)
+  );
 }

@@ -42,14 +42,14 @@ There is **no new token launch** in this work and none is required for agent-to-
 
 Stripe, x402 USDC, and `$QRON` are **three** paths. Full wallet map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
 
-|                 | Human checkout                       | Agent rail                                 | `$QRON` ERC-20                          |
-| --------------- | ------------------------------------ | ------------------------------------------ | --------------------------------------- |
-| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop) | n/a — not a payment rail                |
-| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                    | Polygon ERC-20                          |
-| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater        |
-| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement    |
-| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`        |
-| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0x5db5…` on Base   | Same `0x5db5…` holds the Polygon token  |
+|                 | Human checkout                       | Agent rail                                 | `$QRON` ERC-20                         |
+| --------------- | ------------------------------------ | ------------------------------------------ | -------------------------------------- |
+| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop) | n/a — not a payment rail               |
+| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                    | Polygon ERC-20                         |
+| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater       |
+| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement   |
+| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`       |
+| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0x5db5…` on Base   | Same `0x5db5…` holds the Polygon token |
 
 A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. Genetics public verify (`GET /api/genetics/verify`) remains **free** and is not a second paid skill.
 
@@ -75,36 +75,48 @@ Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`
 
 ### 4.2 Paid skill
 
-| Method | Path                   | Unpaid                                 | Invalid / unsettled proof | Paid + trustless settle |
-| ------ | ---------------------- | -------------------------------------- | ------------------------- | ----------------------- |
-| POST   | `/api/x402`            | **402** `x402Version: 1` + `accepts[]` | 402                       | 200 JSON                |
-| POST   | `/api/v1/agent-verify` | **402** (same body shape)              | 402                       | 200 JSON                |
+| Method | Path                   | Unpaid                                               | Invalid / unsettled proof | Paid + trustless settle |
+| ------ | ---------------------- | ---------------------------------------------------- | ------------------------- | ----------------------- |
+| POST   | `/api/x402`            | **402** v2 JSON + matching `PAYMENT-REQUIRED` header | 402                       | 200 JSON                |
+| POST   | `/api/v1/agent-verify` | **402** (same body shape)                            | 402                       | 200 JSON                |
 
 If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the $0 / unbound path). Live production has `payTo` set — unpaid callers get 402, not 503.
 
-**402 body (shape):**
+**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. PayAI `/settle` still receives the v1 `paymentRequirements` (with `outputSchema`) from `buildPaymentRequired().body`.
 
 ```json
 {
-  "x402Version": 1,
+  "x402Version": 2,
+  "error": "X-PAYMENT or PAYMENT-SIGNATURE header is required",
+  "resource": {
+    "url": "https://authichain.com/api/x402",
+    "description": "AuthiChain agent verification",
+    "mimeType": "application/json",
+    "serviceName": "AuthiChain",
+    "tags": ["verification", "authenticity"]
+  },
   "accepts": [
     {
       "scheme": "exact",
-      "network": "base",
-      "maxAmountRequired": "50000",
-      "resource": "https://authichain.com/api/x402",
-      "description": "AuthiChain agent verification",
-      "payTo": "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
+      "network": "eip155:8453",
+      "amount": "50000",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "mimeType": "application/json",
+      "payTo": "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
       "maxTimeoutSeconds": 60,
       "extra": { "name": "USD Coin", "version": "2" }
     }
-  ]
+  ],
+  "extensions": {
+    "bazaar": {
+      "info": {
+        "input": { "type": "http", "method": "POST", "bodyType": "json" }
+      }
+    }
+  }
 }
 ```
 
-`extra` is the Circle USDC EIP-712 name/version PayAI needs on Base. `resource` is the request URL the agent actually posted.
+`extra` is the Circle USDC EIP-712 name/version PayAI needs on Base. `resource.url` is the request URL the agent actually posted.
 
 **Request body (optional JSON):** `sealId` / `seal_id` / `productId` / `serial`. Empty body is accepted.
 
@@ -208,17 +220,22 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 
 ## 6. Discovery surfaces
 
-| URL                                        | Audience                                                                                                      |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `https://authichain.com/x402`              | Humans + crawlers. JSON-LD Service/Offer. Already in `sitemap.xml` and IndexNow (`marketing-autonomous.yml`). |
-| `GET /api/x402/health`                     | Agents. Live bindings.                                                                                        |
-| `GET /api/x402/catalog`                    | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                         |
-| `GET /.well-known/x402.json`               | Same catalog, well-known path.                                                                                |
-| `server/mcp` `get_pricing` / `verify_paid` | MCP tools. Must point at **Base**, not Polygon.                                                               |
+| URL                                                          | Audience                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https://authichain.com/x402`                                | Humans + crawlers. JSON-LD Service/Offer. In `sitemap.xml`. Do **not** IndexNow this URL while live HTML still has one-click `/api/checkout` hrefs — wait for the `authichain-com` deploy that ships email + Payment Links.                                                           |
+| `GET /.well-known/x402`                                      | x402scan fan-out (`version` + `resources`). IndexNow + sitemap after that same deploy. Live today this path is still the catalog document.                                                                                                                                            |
+| `GET /openapi.json`                                          | OpenAPI 3.1 with `x-payment-info` on unpaid `POST /api/x402`. IndexNow after deploy (live is 404).                                                                                                                                                                                    |
+| `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                                                                                |
+| `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                                                                                 |
+| `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                                                                        |
+| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
+| `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                                                                                       |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
 
-Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
+Listing is not automatic from `GET /api/x402/catalog`. PayAI Bazaar upserts on the first `/settle` whose `paymentRequirements` include `outputSchema.input` with `type` + `method`, and whose `paymentPayload.resource` is the paid URL (`settlePayment` copies it from the 402 requirement when the client omits it). Coinbase CDP `POST /v2/x402/validate` currently fails live `x402_version` (JSON body is still v1 on production). This branch serves v2 as the unpaid JSON **and** the `PAYMENT-REQUIRED` header. CDP Bazaar still indexes after a settle through the **CDP** Facilitator — do not rebind `X402_FACILITATOR_URL` to chase it. After `authichain-com` deploys the bazaar 402, one settle (including owner smoke) should list on PayAI. Do not dispatch another self-pay until that deploy.
+
+Sitemap includes `/x402`, `/.well-known/x402`, `/openapi.json`, and `/llms.txt`. `marketing-autonomous.yml` IndexNows the last three after deploy — not live-stale `/x402`.
 
 ---
 
@@ -237,12 +254,12 @@ Sitemap already includes `/x402`. JSON endpoints are not sitemap URLs.
 
 | Doc                                                            | Role                                                                                                    |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| This file                                                      | **Canonical** A2A economics + live audit. Identity/wallets: `WEB3_IDENTITY.md`.             |
-| `docs/strategy/WEB3_IDENTITY.md`                               | Canonical wallets, chains, tokens, rails. Do not mix “ops EOA”.                             |
-| `src/lib/authentic-economy.ts`                                 | Speculative `$QRON` fee_flow math. Joins the three rails in code. Not settlement.           |
-| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Settlement = Base USDC; `$QRON` is not a rail.                                      |
+| This file                                                      | **Canonical** A2A economics + live audit. Identity/wallets: `WEB3_IDENTITY.md`.                         |
+| `docs/strategy/WEB3_IDENTITY.md`                               | Canonical wallets, chains, tokens, rails. Do not mix “ops EOA”.                                         |
+| `src/lib/authentic-economy.ts`                                 | Speculative `$QRON` fee_flow math. Joins the three rails in code. Not settlement.                       |
+| `docs/marketing/agentic-economy-strategy.md`                   | Thesis. Settlement = Base USDC; `$QRON` is not a rail.                                                  |
 | `docs/superpowers/plans/2026-08-07-x402-agent-verification.md` | Original plan. Price $0.05 and “USDC only” still hold; “paywall unbuilt” and Polygon rail are outdated. |
-| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live. Current rails: `WEB3_IDENTITY.md`.        |
+| `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md` §8.1 move 2    | Still says steps 2–5 remain. The paywall is live. Current rails: `WEB3_IDENTITY.md`.                    |
 | `src/lib/plans.ts`                                             | Human Stripe source of truth.                                                                           |
 
 Supersedes conflicting price/network claims for the **agent** rail only. Human SKUs stay in `plans.ts`.

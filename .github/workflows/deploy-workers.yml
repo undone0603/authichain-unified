@@ -173,6 +173,11 @@ jobs:
           docker buildx version
           docker buildx ls
 
+      # Promote path. Cloudflare Workers Builds on PRs for qron-space and
+      # govchain-us runs `npx wrangler versions upload`, which stores a new
+      # version but leaves custom-domain traffic on the last `wrangler deploy`.
+      # Email-capture pricing HTML reaches qron.space / govchain.us / strainchain.io
+      # / authichain.com only after this step on main.
       - name: Deploy Worker
         if: |
           env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != '' &&

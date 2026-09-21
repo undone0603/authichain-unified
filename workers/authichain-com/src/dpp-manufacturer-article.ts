@@ -18,8 +18,7 @@ import {
 
 export const DPP_CHECKOUT = "/api/checkout/dpp";
 export const DPP_MANUFACTURER_ARTICLE_PATH = "/blog/eu-dpp-manufacturer";
-export const DPP_MANUFACTURER_ARTICLE_CANONICAL =
-  `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
+export const DPP_MANUFACTURER_ARTICLE_CANONICAL = `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
 
 const ARTICLE_PATHS = new Set([
   DPP_MANUFACTURER_ARTICLE_PATH,
@@ -112,17 +111,20 @@ export function renderDppManufacturerArticle(): string {
         { href: "/vs/everledger", label: "vs Everledger" },
         { href: "/contact", label: "Contact" },
       ],
-      { href: DPP_CHECKOUT, label: "Start DPP checkout" },
+      { href: "/pricing", label: "View pricing" }
     )}
 <main id="main">
   ${estateHero({
-    eyebrow: "Digital Product Passports · Brand Protection · Blockchain Authentication",
-    title: "Why AuthiChain is built for the next generation of product trust infrastructure",
+    eyebrow:
+      "Digital Product Passports · Brand Protection · Blockchain Authentication",
+    title:
+      "Why AuthiChain is built for the next generation of product trust infrastructure",
     lede: "Digital product passports are moving from concept to requirement. Brands now need a way to authenticate products, preserve provenance, support compliance narratives, and give every scan a consumer-facing trust experience.",
-    actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: true },
-      { href: "/pricing", label: "View pricing", primary: false },
-    ],
+    emailCheckout: {
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout",
+    },
+    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   })}
   <section class="estate-section" id="article">
     <div class="wrap article-wrap article-prose">
@@ -204,11 +206,18 @@ export function renderDppManufacturerArticle(): string {
   </section>
   ${estateCtaBand({
     title: "Build your product passport stack on AuthiChain",
-    lede: "If your brand needs verifiable authentication, QR-linked product identity, and a digital product passport foundation that can scale into traceability and compliance, start with the live DPP checkout. Self-serve; no demo calendar required.",
+    lede: "If your brand needs verifiable authentication, QR-linked product identity, and a digital product passport foundation that can scale into traceability and compliance, start with the live DPP checkout. Enter a work email so Stripe can recover the cart. Self-serve; no demo calendar required.",
+    emailCheckout: {
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout",
+    },
     actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/api/checkout/plan/strainchain_passport", label: "Genetics passport — $49", primary: false },
+      {
+        href: "/pricing",
+        label: "Genetics passport — $49",
+        primary: false,
+      },
     ],
   })}
 </main>
@@ -218,7 +227,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],
@@ -239,7 +248,7 @@ ${estateFooter(
       ],
     },
   ],
-  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. No call booking — checkout or a written packet.",
+  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. No call booking — checkout or a written packet."
 )}`,
   });
 }

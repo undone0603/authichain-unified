@@ -5,14 +5,20 @@
  * Landing workers own marketing HTML and 404 unknown paths, so the Next.js
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
  * render the same customer-facing catalogue as `src/lib/plans.ts` (`listedPlans`)
- * with live Payment Links or GET /api/checkout/dpp. AuthiChain also shows
- * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain does not use
+ * with live Payment Links or email-gated checkout. AuthiChain also shows
+ * `PAYMENT_LINKS.authichain.starter` ($299/mo). StrainChain uses
  * `strainchain_passport` / `strainchain_farm` from `listedPlans('strainchain')`
- * (GET /api/checkout/plan/:planId) plus the live Basic Payment Link in
- * `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
+ * (Passport Payment Link plus email-gated checkout) and the live Basic
+ * Payment Link in `PAYMENT_LINKS.strainchain.basic`. Do not invent prices here.
  */
 import { listedPlans, type Plan } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
+import {
+  CHECKOUT_NEED_EMAIL_BANNER_HTML,
+  CHECKOUT_NEED_EMAIL_DECORATE_JS,
+  catalogPaymentLinkHtml,
+  checkoutEmailFormHtml,
+} from "../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -50,6 +56,36 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * JSON-LD Offer.url is followed by crawlers. Never put a GET checkout path
+ * there — live GET /api/checkout opens an anonymous Stripe cart. Prefer the
+ * published Payment Link; otherwise the public pricing page.
+ */
+function planJsonLdOfferUrl(plan: Plan, listingUrl: string): string {
+  return plan.stripe_payment_link ?? listingUrl;
+}
+
+function attributedCheckoutCta(
+  plan: Plan,
+  cta: { href: string; label: string; external: boolean },
+  featured: boolean
+): string {
+  if (!/\/api\/checkout\//.test(cta.href)) {
+    const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
+    return `<a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>`;
+  }
+  const form = checkoutEmailFormHtml({
+    action: cta.href,
+    label: cta.label,
+    buttonClass: featured ? "btn btn-primary" : "btn btn-outline",
+  });
+  const pay = catalogPaymentLinkHtml({
+    planId: plan.id,
+    label: `Pay $${plan.price} on Stripe`,
+  });
+  return pay ? `${form}<div style="margin-top:8px">${pay}</div>` : form;
+}
+
 function usdAmount(price: string): number {
   const n = Number(price.replace(/[^0-9.]/g, ""));
   return Number.isFinite(n) ? n : 0;
@@ -74,6 +110,19 @@ export function planCheckoutCta(
           : "https://authichain.com/api/checkout/dpp",
       label: plan.cta,
       external: origin !== "authichain",
+    };
+  }
+  // StrainChain SKUs keep attributed Checkout Sessions (abandoned-cart
+  // recovery). The durable Payment Link lives on the plan for email/ops.
+  if (plan.brand === "strainchain" && plan.stripe_price_id) {
+    const path = `/api/checkout/plan/${plan.id}`;
+    if (origin === "authichain") {
+      return { href: path, label: plan.cta, external: false };
+    }
+    return {
+      href: `https://authichain.com${path}`,
+      label: plan.cta,
+      external: true,
     };
   }
   if (plan.stripe_payment_link) {
@@ -139,7 +188,6 @@ function cataloguePricingGrid(
       );
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
-      const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
       const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
       return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(plan.name)}</h3>
@@ -147,7 +195,7 @@ function cataloguePricingGrid(
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  <a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>
+  ${attributedCheckoutCta(plan, cta, featured)}
 </article>`;
     })
     .join("");
@@ -158,7 +206,6 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
   const cta = planCheckoutCta(plan, "strainchain");
   const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
   const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
-  const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
   const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
   return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(plan.name)}</h3>
@@ -166,7 +213,7 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
   <div class="price-period">${esc(suffix || "per purchase")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  <a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>
+  ${attributedCheckoutCta(plan, cta, featured)}
 </article>`;
 }
 
@@ -264,7 +311,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       description: p.description,
       price: p.price,
       priceCurrency: "USD" as const,
-      url: planCheckoutCta(p, "strainchain").href,
+      url: planJsonLdOfferUrl(p, "https://strainchain.io/pricing"),
     }));
     return {
       brand: "strainchain",
@@ -289,7 +336,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "StrainChain Basic uses the published Payment Link. Genetics passport SKUs checkout via live Stripe sessions — figures from the catalogue only.",
       secondary: { href: "/onboard", label: "Request demo", primary: false },
       plansNote:
-        "Basic is the $199/mo Payment Link. Passport and Farm Plan use GET /api/checkout/plan on authichain.com with the live Stripe prices from the catalogue.",
+        "Basic is the $199/mo Payment Link. Passport is $49 on the published Payment Link. Farm Plan uses email-gated live Stripe checkout on authichain.com from the catalogue.",
       ctaTitle: passport ? passport.cta : `Start ${basic.name}`,
       ctaLede: passport
         ? "$49 one-time per cultivar — live Stripe checkout."
@@ -298,7 +345,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         ...(passport
           ? [
               {
-                href: planCheckoutCta(passport, "strainchain").href,
+                href: "https://strainchain.io/pricing",
                 label: passport.name,
               },
             ]
@@ -335,9 +382,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       description: p.description,
       price: p.price,
       priceCurrency: "USD" as const,
-      url: isAuthichain
-        ? "https://authichain.com/pricing"
-        : "https://qron.space/pricing",
+      url: planJsonLdOfferUrl(
+        p,
+        isAuthichain
+          ? "https://authichain.com/pricing"
+          : "https://qron.space/pricing"
+      ),
     }));
   const offers = isAuthichain
     ? [
@@ -376,9 +426,9 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "AuthiChain Starter is the live $299/mo Payment Link. Catalogue plans with a Stripe price or Payment Link stay listed. Theater subscriptions without a Payment Link use Contact.",
       ctaTitle: "Start EU DPP Readiness",
       ctaLede:
-        "GET /api/checkout/dpp opens the live Stripe session. AuthiChain Starter is the monthly Payment Link on this page.",
+        "EU DPP Readiness is $299 on the published Payment Link, or enter a work email so Stripe can recover the cart. AuthiChain Starter is the monthly Payment Link on this page.",
       footerStart: [
-        { href: "/api/checkout/dpp", label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: starter.url, label: starter.name },
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
@@ -403,7 +453,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.com/api/checkout/dpp",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
@@ -411,7 +461,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroLede:
       "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
     secondary: {
-      href: "https://authichain.com/api/checkout/dpp",
+      href: "https://authichain.com/pricing",
       label: "Start DPP checkout",
       primary: false,
     },
@@ -424,7 +474,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
       {
-        href: "https://authichain.com/api/checkout/dpp",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
@@ -448,6 +498,10 @@ function pricingPage(origin: PricingOrigin): PricingPage {
 export function renderEstatePricingPage(origin: PricingOrigin): string {
   const page = pricingPage(origin);
   const brand: EstateBrandId = page.brand;
+  const checkoutPrimary = /\/api\/checkout\//.test(page.primary.href);
+  const navPrimary = checkoutPrimary
+    ? { href: "#pricing", label: page.primary.label }
+    : page.primary;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -473,16 +527,25 @@ ${ESTATE_BASE_CSS}
 </head>
 <body>
 ${estateSkipLink()}
-${estateNav(brand, page.nav, page.primary)}
+${estateNav(brand, page.nav, navPrimary)}
 <main id="main">
+${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published catalogue",
   title: page.heroTitle,
   lede: page.heroLede,
-  actions: [
-    { href: page.primary.href, label: page.primary.label, primary: true },
-    page.secondary,
-  ],
+  emailCheckout: checkoutPrimary
+    ? {
+        action: page.primary.href,
+        label: page.primary.label,
+      }
+    : undefined,
+  actions: checkoutPrimary
+    ? [page.secondary]
+    : [
+        { href: page.primary.href, label: page.primary.label, primary: true },
+        page.secondary,
+      ],
 })}
 <section class="estate-section" id="pricing">
   <div class="wrap">
@@ -494,9 +557,15 @@ ${estateHero({
 ${estateCtaBand({
   title: page.ctaTitle,
   lede: page.ctaLede,
-  actions: [
-    { href: page.primary.href, label: page.primary.label, primary: true },
-  ],
+  emailCheckout: checkoutPrimary
+    ? {
+        action: page.primary.href,
+        label: page.primary.label,
+      }
+    : undefined,
+  actions: checkoutPrimary
+    ? []
+    : [{ href: page.primary.href, label: page.primary.label, primary: true }],
 })}
 </main>
 ${estateFooter(
@@ -527,6 +596,7 @@ ${estateFooter(
     ? "StrainChain prices from the published catalogue and Payment Links"
     : "Prices from the published AuthiChain plan catalogue"
 )}
+${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
 </html>`;
 }
@@ -594,7 +664,7 @@ ${ESTATE_FONTS_LINK}
         description: dppDesc,
         price: dppPrice,
         priceCurrency: "USD",
-        url: GOVCHAIN_DPP_CHECKOUT,
+        url: planJsonLdOfferUrl(dpp, "https://govchain.us/pricing"),
       },
     ],
   }).replace(/<\/script/gi, "<\\/script")}</script>
@@ -615,18 +685,16 @@ ${estateNav(
   { href: "/onboard", label: "Request access" }
 )}
 <main id="main">
+${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
   lede: "GovChain does not publish a catalogue SKU. Request access on the live /onboard intake, or start EU DPP Readiness on AuthiChain — the same $299 checkout already used on authichain.com.",
-  actions: [
-    { href: "/onboard", label: "Request access", primary: true },
-    {
-      href: GOVCHAIN_DPP_CHECKOUT,
-      label: dppCta,
-      primary: false,
-    },
-  ],
+  emailCheckout: {
+    action: GOVCHAIN_DPP_CHECKOUT,
+    label: dppCta,
+  },
+  actions: [{ href: "/onboard", label: "Request access", primary: true }],
 })}
 <section class="estate-section" id="pricing">
   <div class="wrap">
@@ -646,14 +714,28 @@ ${estateHero({
         <div class="price-period">one-time</div>
         <p class="section-sub" style="margin-bottom:16px">${esc(dppDesc)}</p>
         <ul class="price-features">${features}</ul>
-        <a class="btn btn-outline" style="width:100%;text-align:center" href="${esc(GOVCHAIN_DPP_CHECKOUT)}" target="_blank" rel="noopener">${esc(dppCta)}</a>
+        ${checkoutEmailFormHtml({
+          action: GOVCHAIN_DPP_CHECKOUT,
+          label: dppCta,
+          buttonClass: "btn btn-outline",
+          formId: "govchain-dpp-card",
+          inputId: "govchain-dpp-card-email",
+        })}
+        <div style="margin-top:8px">${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: `Pay $${dppPrice} on Stripe`,
+        })}</div>
       </article>
     </div>
   </div>
 </section>
 ${estateCtaBand({
   title: "Start on a live path",
-  lede: "Onboard is the GovChain conversion path. EU DPP Readiness is the published AuthiChain checkout.",
+  lede: "Onboard is the GovChain conversion path. EU DPP Readiness is the published AuthiChain checkout. Enter a work email so Stripe can recover the cart.",
+  emailCheckout: {
+    action: GOVCHAIN_DPP_CHECKOUT,
+    label: dppCta,
+  },
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
@@ -671,7 +753,7 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: GOVCHAIN_DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "https://authichain.com/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
       ],
     },
@@ -693,6 +775,7 @@ ${estateFooter(
   ],
   "GovChain has no self-serve SKU — onboard or AuthiChain DPP"
 )}
+${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
 </html>`;
 }

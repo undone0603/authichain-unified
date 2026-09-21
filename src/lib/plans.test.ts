@@ -6,7 +6,9 @@ import {
   isPurchasable,
   listedPlans,
   planByAmountCents,
+  planById,
   planByStripePriceId,
+  planPaymentLink,
   planUsd,
 } from "./plans";
 
@@ -21,6 +23,17 @@ describe("plan catalogue integrity", () => {
   it("has no duplicate ids", () => {
     const ids = PLANS.map(p => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("exposes live Payment Links for Passport and DPP", () => {
+    expect(planById("strainchain_passport")?.price).toBe(49);
+    expect(planPaymentLink("strainchain_passport")).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
+    expect(planPaymentLink("dpp_readiness")).toBe(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    );
+    expect(planPaymentLink("strainchain_farm")).toBeUndefined();
   });
 });
 
@@ -99,6 +112,9 @@ describe("listedPlans", () => {
     const byId = Object.fromEntries(PLANS.map(p => [p.id, p]));
     expect(byId.strainchain_passport.price).toBe(49);
     expect(byId.strainchain_passport.stripe_mode).toBe("payment");
+    expect(byId.strainchain_passport.stripe_payment_link).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
     expect(byId.strainchain_farm.price).toBe(149);
     expect(byId.strainchain_farm.price_suffix).toBe("/month");
     expect(byId.strainchain_farm.stripe_mode).toBe("subscription");

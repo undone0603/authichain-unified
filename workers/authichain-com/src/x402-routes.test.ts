@@ -72,6 +72,47 @@ describe("tryHandleX402", () => {
     expect(body.catalog).toBe("/api/x402/catalog");
   });
 
+  it("GET /.well-known/x402 is the x402scan fan-out", async () => {
+    const res = await tryHandleX402(req("/.well-known/x402"));
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      version: number;
+      resources: string[];
+      protocol?: string;
+    };
+    expect(body.version).toBe(1);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.protocol).toBeUndefined();
+  });
+
+  it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
+    const res = await tryHandleX402(req("/openapi.json"), {
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const spec = (await res!.json()) as {
+      openapi: string;
+      paths: {
+        "/api/x402": {
+          post: {
+            "x-payment-info": {
+              protocols: string[];
+              price: { amount: string };
+            };
+          };
+        };
+      };
+    };
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
+      "x402",
+    ]);
+    expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
+      "0.05"
+    );
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+  });
+
   it("POST /api/x402/catalog is 405", async () => {
     const res = await tryHandleX402(
       req("/api/x402/catalog", { method: "POST" }),
@@ -117,12 +158,43 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(402);
     const body = (await res!.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+      }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.resource?.url).toContain("/api/v1/agent-verify");
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
+    expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    expect(JSON.stringify(body).toLowerCase()).not.toContain(
+      "facilitator.payai"
+    );
+    const required = res!.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as {
+      x402Version: number;
+      accepts: Array<{ amount?: string; network?: string; resource?: string }>;
+      extensions?: { bazaar?: unknown };
+    };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
+    expect(v2.accepts[0].network).toBe("eip155:8453");
+    expect(v2.accepts[0].resource).toBeUndefined();
+    expect(v2.extensions?.bazaar).toBeTruthy();
+    expect(body.x402Version).toBe(v2.x402Version);
+    expect(body.accepts[0].amount).toBe(v2.accepts[0].amount);
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {
@@ -137,6 +209,34 @@ describe("tryHandleX402", () => {
         method: "POST",
         headers: { "x-payment": header, "content-type": "application/json" },
         body: JSON.stringify({ sealId: "seal-1" }),
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(402);
+    const body = (await res!.json()) as { status: string };
+    expect(body.status).toBe("not_configured");
+  });
+
+  it("reads a v2 PAYMENT-SIGNATURE header the same as X-PAYMENT", async () => {
+    const header = proofHeader({
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:8453", amount: "50000" },
+      payload: {
+        signature: "0xabc",
+        authorization: { from: PAYER, to: "0xdef", value: "50000" },
+      },
+    });
+    const res = await tryHandleX402(
+      req("/api/x402", {
+        method: "POST",
+        headers: {
+          "PAYMENT-SIGNATURE": header,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ sealId: "demo" }),
       }),
       {
         X402_PAY_TO: "0xabc0000000000000000000000000000000000001",

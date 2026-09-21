@@ -58,6 +58,39 @@ describe("GET /api/x402/health", () => {
     expect(body.catalog).toBe("/api/x402/catalog");
   });
 
+  it("GET /.well-known/x402 is the x402scan fan-out", async () => {
+    const res = await app().request("/.well-known/x402");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      version: number;
+      resources: string[];
+      protocol?: string;
+    };
+    expect(body.version).toBe(1);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.protocol).toBeUndefined();
+  });
+
+  it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
+    const res = await app().request("/openapi.json");
+    expect(res.status).toBe(200);
+    const spec = (await res.json()) as {
+      openapi: string;
+      paths: {
+        "/api/x402": {
+          post: {
+            "x-payment-info": { protocols: string[] };
+          };
+        };
+      };
+    };
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
+      "x402",
+    ]);
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+  });
+
   it("GET /api/x402 is the same health document", async () => {
     const res = await app().request("/api/x402");
     expect(res.status).toBe(200);
@@ -89,13 +122,32 @@ describe("POST /api/x402", () => {
     expect(res.status).toBe(402);
     const body = (await res.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string; asset: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        asset: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+      }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(process.env.X402_PAY_TO);
     expect(body.accepts[0].asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    const required = res.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as { x402Version: number; accepts: Array<{ amount?: string }> };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
   });
 
   it("refuses a structural proof when no facilitator is configured", async () => {

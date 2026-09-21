@@ -27,6 +27,13 @@ describe("MCP tokenomics identity", () => {
     expect(d.agentRail.publishedPayTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
+    expect(d.humanCheckout.checkout.passport).toBe(
+      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+    );
+    expect(d.humanCheckout.checkout.dpp).toBe(
+      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+    );
+    expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.nft.deployer.toLowerCase()).not.toBe(
       X402_PUBLISHED_PAY_TO.toLowerCase()
     );

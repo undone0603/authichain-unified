@@ -27,13 +27,19 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain(
       "Agents can pay. They still need to know if it is real."
     );
-    expect(html).toContain('href="/api/checkout/dpp"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
     expect(html).toContain('href="/x402"');
     expect(html).toContain('href="/onboard"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain("$0.05");
     expect(html).toContain("HTTP 402");
     expect(html).toContain("not Polygon $QRON");
+    expect(html).not.toContain("GET /api/checkout");
     expect(html).toContain('<main id="main">');
     expect(html).toContain(
       'rel="canonical" href="https://authichain.com/authentic-agentic-economy"'

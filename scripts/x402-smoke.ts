@@ -125,11 +125,27 @@ export async function runX402Smoke(): Promise<void> {
     }
   }
 
+  const challengeRes = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sealId: "x402-smoke-challenge" }),
+  });
+  const challenge = (await jsonOrText(challengeRes)) as {
+    x402Version?: number;
+    accepts?: Array<{ payTo?: string; maxAmountRequired?: string }>;
+    extensions?: unknown;
+  };
+  if (challengeRes.status !== 402) {
+    fail(`unpaid_challenge_not_402 http=${challengeRes.status}`);
+  }
+
   const signed = await signExactPayment({
     wallet: new ethers.Wallet(key),
     payTo: challengePayTo,
     amountAtomic,
     asset,
+    resource: endpoint,
+    extensions: challenge.extensions,
   });
   const parsed = parsePaymentHeader(signed.headerB64);
   if (!parsed?.signature) fail("signed_payload_unparseable");

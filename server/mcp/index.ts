@@ -156,7 +156,7 @@ server.tool(
             type: "text",
             text: JSON.stringify({
               status: 402,
-              x402Version: 1,
+              x402Version: 2,
               message: "Payment required for metered verification.",
               pay: {
                 endpoint: "POST /api/v1/agent-verify",

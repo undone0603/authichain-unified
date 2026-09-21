@@ -3,8 +3,8 @@
  * Deterministically generates the committed programmatic-SEO catalogue
  * (content/seo/pages.json). Re-running is idempotent: hand-authored seed pages
  * are preserved by slug (bespoke copy is not rewritten) and generated pages
- * are (re)built from the DATA table. Seeds that lack a Get started block
- * receive the same live money CTA as generated hubs.
+ * are (re)built from the DATA table. The Get started money CTA is always
+ * rebuilt so checkout landings collect a recovery email.
  *
  * Run:  node scripts/gen-seo-pages.cjs
  * CI:   .github/workflows/gen-seo-pages.yml — Friday 09:00 UTC and
@@ -26,9 +26,11 @@ const BRANDS = {
 // estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
   authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
+  authichainDppPay: 'https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c',
   authichainPricing: 'https://authichain.com/pricing',
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
   strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
+  strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
 };
 
 function isDppKeyword(keyword) {
@@ -53,6 +55,22 @@ function isTrumarkKeyword(keyword) {
  * strain / COA → StrainChain passport checkout + strainchain.io/pricing.
  * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
  */
+function isCheckoutUrl(href) {
+  return /\/api\/checkout\//.test(href);
+}
+
+function checkoutEmailFormHtml(action, label) {
+  return (
+    `<form class="checkout-email-form" action="${esc(action)}" method="get">` +
+    `<label class="checkout-email-label" for="checkout-email">Work email` +
+    `<input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">` +
+    `</label>` +
+    `<p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>` +
+    `<button class="btn btn-primary" type="submit">${esc(label)}</button>` +
+    `</form>`
+  );
+}
+
 function moneyCtaHtml(brandKey, keyword, brand) {
   let primaryHref;
   let primaryLabel;
@@ -94,6 +112,24 @@ function moneyCtaHtml(brandKey, keyword, brand) {
     primaryLabel = `View ${brand.name} pricing`;
   }
 
+  if (isCheckoutUrl(primaryHref)) {
+    const pay =
+      primaryHref === LIVE_MONEY.strainchainPassportCheckout
+        ? `<p><a href="${LIVE_MONEY.strainchainPassportPay}">Pay $49 on Stripe</a></p>`
+        : primaryHref === LIVE_MONEY.authichainDppCheckout
+          ? `<p><a href="${LIVE_MONEY.authichainDppPay}">Pay $299 on Stripe</a></p>`
+          : '';
+    const extra = secondaryHref
+      ? `<p><a href="${secondaryHref}">${esc(secondaryLabel)}</a>. ${esc(brand.price)}</p>`
+      : `<p>${esc(brand.price)}</p>`;
+    return (
+      `<h2>Get started</h2>` +
+      checkoutEmailFormHtml(primaryHref, primaryLabel) +
+      pay +
+      extra
+    );
+  }
+
   const links =
     `<a href="${primaryHref}">${esc(primaryLabel)}</a>` +
     (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
@@ -107,23 +143,33 @@ function brandKeyForPage(page) {
 }
 
 /**
- * Append the same live money CTA used by generated hubs. Never rewrite
- * bespoke seed copy — insert before FAQ when present, else at the end.
- * Idempotent: a page that already has <h2>Get started</h2> is left alone.
+ * Keep the Get started money CTA in lockstep with generated hubs.
+ * Bespoke seed copy above/below that heading is left alone. A seed
+ * that already has <h2>Get started</h2> has only that block replaced
+ * so Bing landings pick up the email form without a manual rewrite.
  */
-function appendMoneyCtaIfMissing(page) {
-  if (typeof page.bodyHtml !== 'string' || page.bodyHtml.includes('<h2>Get started</h2>')) {
-    return page;
-  }
+function ensureMoneyCta(page) {
+  if (typeof page.bodyHtml !== 'string') return page;
   const brandKey = brandKeyForPage(page);
   if (!brandKey) return page;
   const cta = moneyCtaHtml(brandKey, page.keyword || '', BRANDS[brandKey]);
-  const faq = page.bodyHtml.indexOf('<h2>FAQ</h2>');
-  const bodyHtml =
-    faq === -1
-      ? page.bodyHtml + cta
-      : page.bodyHtml.slice(0, faq) + cta + page.bodyHtml.slice(faq);
-  return { ...page, bodyHtml };
+  const startMarker = '<h2>Get started</h2>';
+  const start = page.bodyHtml.indexOf(startMarker);
+  if (start === -1) {
+    const faq = page.bodyHtml.indexOf('<h2>FAQ</h2>');
+    const bodyHtml =
+      faq === -1
+        ? page.bodyHtml + cta
+        : page.bodyHtml.slice(0, faq) + cta + page.bodyHtml.slice(faq);
+    return { ...page, bodyHtml };
+  }
+  const after = start + startMarker.length;
+  const nextH2 = page.bodyHtml.indexOf('<h2>', after);
+  const end = nextH2 === -1 ? page.bodyHtml.length : nextH2;
+  return {
+    ...page,
+    bodyHtml: page.bodyHtml.slice(0, start) + cta + page.bodyHtml.slice(end),
+  };
 }
 
 const slugify = (s) =>
@@ -838,7 +884,7 @@ if (clobberedSeeds.length > 0) {
 
 const seeds = existing
   .filter((e) => !genSlugs.has(e.slug))
-  .map(appendMoneyCtaIfMissing);
+  .map(ensureMoneyCta);
 const unprotectedSeeds = seeds.filter((e) => !PROTECTED_SEED_SLUGS.has(e.slug));
 if (unprotectedSeeds.length > 0) {
   console.warn(
