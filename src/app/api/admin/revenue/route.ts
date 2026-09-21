@@ -13,6 +13,8 @@ export async function GET(request: Request) {
 
   try {
     // 1. Fetch Aggregated Revenue & Tokenomics Stats
+    // fee_flows amounts are speculative $QRON theater (authentic-economy.ts),
+    // not x402 Base USDC. See docs/strategy/WEB3_IDENTITY.md.
     const { data: fees } = await admin.from('fee_flows').select('*');
 
     const totals = (fees || []).reduce(
