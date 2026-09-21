@@ -218,6 +218,9 @@ test("every comparison page renders, including the new /vs/everledger", async ()
   }
   const everledger = await (await get("/vs/everledger")).text();
   assert.match(everledger, /AuthiChain vs Everledger/);
+  const dppPay = planPaymentLink("dpp_readiness") ?? "";
+  assert.ok(everledger.includes(`href="${dppPay}"`));
+  assert.doesNotMatch(everledger, /Start Free Trial/);
 });
 
 test("the /vs index lists every comparison", async () => {
@@ -254,11 +257,18 @@ test("anchor Sign In stays on an apex path, not app.login", async () => {
 
 test("DPP landing collects email before protocol checkout", async () => {
   const html = await (await get("/digital-product-passport")).text();
+  const dppPay = planPaymentLink("dpp_readiness") ?? "";
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/protocol\/checkout\/dpp"/);
   assert.match(html, /id="dpp-cancelled-banner"/);
   assert.match(html, /params.get\('visit_id'\)/);
   assert.doesNotMatch(html, /href="\/protocol\/checkout\/dpp"/);
+  assert.ok(html.includes(`id="nav-dpp-cta" href="${dppPay}"`));
+  assert.ok(html.includes(`href="${dppPay}"`));
+  assert.equal(
+    html.includes("nav.setAttribute('href', '/protocol/checkout/dpp"),
+    false
+  );
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
@@ -648,6 +658,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     );
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/telegram</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));

@@ -3067,7 +3067,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="#hero">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3082,15 +3082,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </p>
       <div id="dpp-cancelled-banner" class="dpp-cancelled">Checkout was not finished. Leave a work email so Stripe can send a recovery link if this session expires.</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
+          className: "btn btn-primary",
+        })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
           label: "Start Your DPP Readiness Audit — $299",
           formId: "dpp-checkout-form",
           inputId: "dpp-email",
-        })}
-        ${catalogPaymentLinkHtml({
-          planId: "dpp_readiness",
-          label: "Pay $299 on Stripe",
+          buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
@@ -3119,7 +3121,6 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
-      var nav = document.getElementById('nav-dpp-cta');
       function decorateForm(form) {
         if (!form) return;
         function setHidden(name, value) {
@@ -3146,15 +3147,6 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
             try { localStorage.setItem('dpp_checkout_email', input.value.trim()); } catch (e3) {}
           }
         });
-        if (input) {
-          input.addEventListener('input', function () {
-            if (nav && input.value) {
-              var withEmail = new URLSearchParams(q.toString());
-              withEmail.set('email', input.value.trim());
-              nav.setAttribute('href', '/protocol/checkout/dpp?' + withEmail.toString());
-            }
-          });
-        }
       }
       document.querySelectorAll('form.checkout-email-form').forEach(decorateForm);
       if (params.get('cancelled') === '1' || params.get('need_email') === '1') {
@@ -3280,15 +3272,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
+        ${catalogPaymentLinkHtml({
+          planId: "dpp_readiness",
+          label: "Pay $299 on Stripe",
+          className: "btn btn-primary",
+        })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
           label: "Start DPP Readiness Audit — $299",
           formId: "dpp-checkout-form-footer",
           inputId: "dpp-email-footer",
-        })}
-        ${catalogPaymentLinkHtml({
-          planId: "dpp_readiness",
-          label: "Pay $299 on Stripe",
+          buttonClass: "btn btn-outline",
         })}
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">Work email enables Stripe abandoned-cart recovery if you leave checkout unfinished.</p>
@@ -3514,6 +3508,7 @@ export default {
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
+        { loc: 'https://authichain.com/telegram', freq: 'weekly', pri: '0.75' },
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));

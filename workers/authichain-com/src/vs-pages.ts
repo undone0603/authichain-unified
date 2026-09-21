@@ -1,3 +1,5 @@
+import { planPaymentLink } from "../../../src/lib/plans.ts";
+
 /**
  * Worker-native /vs/* comparison pages.
  *
@@ -36,22 +38,63 @@ export const VS_PAGES: VsDefinition[] = [
   {
     slug: "scantrust",
     competitor: "Scantrust",
-    title: "AuthiChain vs Scantrust: Which Is Better for Product Authentication? (2026)",
+    title:
+      "AuthiChain vs Scantrust: Which Is Better for Product Authentication? (2026)",
     description:
       "AuthiChain vs Scantrust compared feature-by-feature — blockchain anchoring, EU DPP compliance, pricing, and onboarding speed.",
     competitorSummary:
       "Scantrust is an established secure-QR and brand-protection platform focused on enterprise anti-counterfeiting.",
     rows: [
-      { feature: "On-chain cryptographic anchoring", authichain: true, competitor: false },
-      { feature: "Bitcoin L1 + Polygon finality", authichain: true, competitor: false },
-      { feature: "AI image analysis (5-agent consensus)", authichain: true, competitor: "Limited" },
-      { feature: "EU Digital Product Passport export", authichain: true, competitor: true },
-      { feature: "Self-serve onboarding < 1 day", authichain: true, competitor: false },
-      { feature: "Transparent public pricing", authichain: true, competitor: false },
-      { feature: "W3C Verifiable Credentials (you hold keys)", authichain: true, competitor: false },
-      { feature: "NFT certificates of authenticity", authichain: true, competitor: false },
-      { feature: "No minimum enterprise contract", authichain: true, competitor: false },
-      { feature: "Starts at", authichain: "$49/mo", competitor: "Enterprise quote" },
+      {
+        feature: "On-chain cryptographic anchoring",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Bitcoin L1 + Polygon finality",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "AI image analysis (5-agent consensus)",
+        authichain: true,
+        competitor: "Limited",
+      },
+      {
+        feature: "EU Digital Product Passport export",
+        authichain: true,
+        competitor: true,
+      },
+      {
+        feature: "Self-serve onboarding < 1 day",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Transparent public pricing",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "W3C Verifiable Credentials (you hold keys)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "NFT certificates of authenticity",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "No minimum enterprise contract",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Starts at",
+        authichain: "$49/mo",
+        competitor: "Enterprise quote",
+      },
     ],
     reasons: [
       {
@@ -71,22 +114,59 @@ export const VS_PAGES: VsDefinition[] = [
   {
     slug: "circularise",
     competitor: "Circularise",
-    title: "AuthiChain vs Circularise: Which Is Better for Product Authentication? (2026)",
+    title:
+      "AuthiChain vs Circularise: Which Is Better for Product Authentication? (2026)",
     description:
       "AuthiChain vs Circularise compared — product authentication and EU DPP for every brand vs enterprise material-traceability.",
     competitorSummary:
       "Circularise is an enterprise blockchain platform focused on supply-chain transparency and material traceability for large manufacturers.",
     rows: [
-      { feature: "Product authentication (anti-counterfeit)", authichain: true, competitor: "Limited" },
-      { feature: "EU Digital Product Passport export", authichain: true, competitor: true },
-      { feature: "On-chain cryptographic anchoring", authichain: true, competitor: true },
+      {
+        feature: "Product authentication (anti-counterfeit)",
+        authichain: true,
+        competitor: "Limited",
+      },
+      {
+        feature: "EU Digital Product Passport export",
+        authichain: true,
+        competitor: true,
+      },
+      {
+        feature: "On-chain cryptographic anchoring",
+        authichain: true,
+        competitor: true,
+      },
       { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
-      { feature: "AI image analysis (5-agent consensus)", authichain: true, competitor: false },
-      { feature: "Self-serve onboarding < 1 day", authichain: true, competitor: false },
-      { feature: "Serves SMB + enterprise", authichain: true, competitor: false },
-      { feature: "Transparent public pricing", authichain: true, competitor: false },
-      { feature: "NFT certificates of authenticity", authichain: true, competitor: false },
-      { feature: "Starts at", authichain: "$49/mo", competitor: "Enterprise quote" },
+      {
+        feature: "AI image analysis (5-agent consensus)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Self-serve onboarding < 1 day",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Serves SMB + enterprise",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Transparent public pricing",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "NFT certificates of authenticity",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Starts at",
+        authichain: "$49/mo",
+        competitor: "Enterprise quote",
+      },
     ],
     reasons: [
       {
@@ -106,22 +186,55 @@ export const VS_PAGES: VsDefinition[] = [
   {
     slug: "vechain",
     competitor: "VeChain",
-    title: "AuthiChain vs VeChain: Which Is Better for Product Authentication? (2026)",
+    title:
+      "AuthiChain vs VeChain: Which Is Better for Product Authentication? (2026)",
     description:
       "AuthiChain vs VeChain compared — turnkey product authentication vs a general-purpose L1 blockchain.",
     competitorSummary:
       "VeChain is a general-purpose enterprise L1 blockchain often used as infrastructure for supply-chain and authentication solutions.",
     rows: [
-      { feature: "Turnkey product (no dev team required)", authichain: true, competitor: false },
+      {
+        feature: "Turnkey product (no dev team required)",
+        authichain: true,
+        competitor: false,
+      },
       { feature: "On-chain anchoring", authichain: true, competitor: true },
       { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
-      { feature: "AI image analysis (5-agent consensus)", authichain: true, competitor: false },
-      { feature: "EU Digital Product Passport export", authichain: true, competitor: "Via partners" },
-      { feature: "Self-serve onboarding < 1 day", authichain: true, competitor: false },
-      { feature: "No native token / crypto to buy", authichain: true, competitor: false },
-      { feature: "Fiat pricing (USD, card)", authichain: true, competitor: false },
-      { feature: "W3C Verifiable Credentials", authichain: true, competitor: "Partial" },
-      { feature: "Starts at", authichain: "$49/mo", competitor: "Custom integration" },
+      {
+        feature: "AI image analysis (5-agent consensus)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "EU Digital Product Passport export",
+        authichain: true,
+        competitor: "Via partners",
+      },
+      {
+        feature: "Self-serve onboarding < 1 day",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "No native token / crypto to buy",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Fiat pricing (USD, card)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "W3C Verifiable Credentials",
+        authichain: true,
+        competitor: "Partial",
+      },
+      {
+        feature: "Starts at",
+        authichain: "$49/mo",
+        competitor: "Custom integration",
+      },
     ],
     reasons: [
       {
@@ -141,22 +254,59 @@ export const VS_PAGES: VsDefinition[] = [
   {
     slug: "everledger",
     competitor: "Everledger",
-    title: "AuthiChain vs Everledger: Which Is Better for Product Authentication? (2026)",
+    title:
+      "AuthiChain vs Everledger: Which Is Better for Product Authentication? (2026)",
     description:
       "AuthiChain vs Everledger compared — self-serve, multi-industry product authentication and EU DPP export vs asset-registry provenance for diamonds, wine and luxury goods.",
     competitorSummary:
       "Everledger built blockchain provenance registries for high-value assets — diamonds, wine, fine art and luxury goods — with a registry-first model aimed at industry consortia.",
     rows: [
-      { feature: "Self-serve signup (no consortium or sales gate)", authichain: true, competitor: false },
-      { feature: "Covers any product category", authichain: true, competitor: "High-value assets" },
-      { feature: "On-chain cryptographic anchoring", authichain: true, competitor: true },
+      {
+        feature: "Self-serve signup (no consortium or sales gate)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Covers any product category",
+        authichain: true,
+        competitor: "High-value assets",
+      },
+      {
+        feature: "On-chain cryptographic anchoring",
+        authichain: true,
+        competitor: true,
+      },
       { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
-      { feature: "AI image analysis (5-agent consensus)", authichain: true, competitor: "Asset-specific" },
-      { feature: "EU Digital Product Passport export", authichain: true, competitor: "Partial" },
-      { feature: "W3C Verifiable Credentials (you hold keys)", authichain: true, competitor: false },
-      { feature: "Customer-facing scan-to-verify page", authichain: true, competitor: "Via partners" },
-      { feature: "Transparent public pricing", authichain: true, competitor: false },
-      { feature: "Starts at", authichain: "$49/mo", competitor: "Enterprise quote" },
+      {
+        feature: "AI image analysis (5-agent consensus)",
+        authichain: true,
+        competitor: "Asset-specific",
+      },
+      {
+        feature: "EU Digital Product Passport export",
+        authichain: true,
+        competitor: "Partial",
+      },
+      {
+        feature: "W3C Verifiable Credentials (you hold keys)",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Customer-facing scan-to-verify page",
+        authichain: true,
+        competitor: "Via partners",
+      },
+      {
+        feature: "Transparent public pricing",
+        authichain: true,
+        competitor: false,
+      },
+      {
+        feature: "Starts at",
+        authichain: "$49/mo",
+        competitor: "Enterprise quote",
+      },
     ],
     reasons: [
       {
@@ -177,8 +327,12 @@ export const VS_PAGES: VsDefinition[] = [
 
 /** Escapes text interpolated into these documents. */
 function esc(value: unknown): string {
-  return String(value ?? "").replace(/[<>&"']/g, (c) =>
-    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c] as string,
+  return String(value ?? "").replace(
+    /[<>&"']/g,
+    c =>
+      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ] as string
   );
 }
 
@@ -218,7 +372,12 @@ h2{font-size:clamp(1.5rem,3.5vw,2.2rem);font-weight:900;text-transform:uppercase
 footer{border-top:1px solid #18181b;padding:3rem 1.5rem;text-align:center;color:#3f3f46;font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
 `;
 
-function shell(title: string, description: string, canonical: string, body: string): string {
+function shell(
+  title: string,
+  description: string,
+  canonical: string,
+  body: string
+): string {
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
@@ -248,12 +407,15 @@ export function renderVsPage(def: VsDefinition): string {
   const canonical = `https://authichain.com/vs/${def.slug}`;
   const rows = def.rows
     .map(
-      (r) =>
-        `<tr><td>${esc(r.feature)}</td><td class="c">${cell(r.authichain)}</td><td class="c">${cell(r.competitor)}</td></tr>`,
+      r =>
+        `<tr><td>${esc(r.feature)}</td><td class="c">${cell(r.authichain)}</td><td class="c">${cell(r.competitor)}</td></tr>`
     )
     .join("");
   const reasons = def.reasons
-    .map((r) => `<div class="reason"><h3>${esc(r.title)}</h3><p>${esc(r.desc)}</p></div>`)
+    .map(
+      r =>
+        `<div class="reason"><h3>${esc(r.title)}</h3><p>${esc(r.desc)}</p></div>`
+    )
     .join("");
 
   // A BreadcrumbList mirrors what the Next page emitted via JsonLd, so the
@@ -262,9 +424,24 @@ export function renderVsPage(def: VsDefinition): string {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://authichain.com" },
-      { "@type": "ListItem", position: 2, name: "Compare", item: "https://authichain.com/vs" },
-      { "@type": "ListItem", position: 3, name: `AuthiChain vs ${def.competitor}`, item: canonical },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://authichain.com",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Compare",
+        item: "https://authichain.com/vs",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: `AuthiChain vs ${def.competitor}`,
+        item: canonical,
+      },
     ],
   });
 
@@ -278,7 +455,7 @@ export function renderVsPage(def: VsDefinition): string {
   <span class="badge">Head-to-Head Comparison</span>
   <h1>AuthiChain vs ${esc(def.competitor)}:<br><span class="accent">Which Is Better for Product Authentication?</span></h1>
   <p class="lede">${esc(def.competitorSummary)} Below is a feature-by-feature comparison so you can decide which platform fits your supply chain, budget, and compliance timeline.</p>
-  <div class="ctas"><a class="cta" href="/digital-product-passport">Start Free Trial</a><a class="cta ghost" href="/anchor">See Live Demo</a></div>
+  <div class="ctas"><a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Pay $299 on Stripe</a><a class="cta ghost" href="/anchor">See Live Demo</a></div>
 </section>
 <table>
   <thead><tr><th>Feature</th><th class="ac">AuthiChain</th><th class="co">${esc(def.competitor)}</th></tr></thead>
@@ -286,15 +463,15 @@ export function renderVsPage(def: VsDefinition): string {
 </table>
 <h2>Why Brands Choose <span style="color:${ACCENT}">AuthiChain</span></h2>
 <div class="reasons">${reasons}</div>
-</div>`,
+</div>`
   );
 }
 
 /** Renders the /vs index listing every comparison. */
 export function renderVsIndex(): string {
   const cards = VS_PAGES.map(
-    (d) =>
-      `<div class="card"><h3>AuthiChain vs ${esc(d.competitor)}</h3><p>${esc(d.competitorSummary)}</p><a href="/vs/${esc(d.slug)}">Read the comparison &rarr;</a></div>`,
+    d =>
+      `<div class="card"><h3>AuthiChain vs ${esc(d.competitor)}</h3><p>${esc(d.competitorSummary)}</p><a href="/vs/${esc(d.slug)}">Read the comparison &rarr;</a></div>`
   ).join("");
 
   return shell(
@@ -308,16 +485,19 @@ export function renderVsIndex(): string {
   <p class="lede">Feature-by-feature comparisons against the platforms brands most often evaluate alongside AuthiChain.</p>
 </section>
 <div class="index">${cards}</div>
-</div>`,
+</div>`
   );
 }
 
 /** Looks up a comparison by slug, or null when there is no such page. */
 export function findVsPage(slug: string): VsDefinition | null {
-  return VS_PAGES.find((d) => d.slug === slug.toLowerCase()) ?? null;
+  return VS_PAGES.find(d => d.slug === slug.toLowerCase()) ?? null;
 }
 
 /** Every URL this module serves — used to build the sitemap. */
 export function vsUrls(): string[] {
-  return ["https://authichain.com/vs", ...VS_PAGES.map((d) => `https://authichain.com/vs/${d.slug}`)];
+  return [
+    "https://authichain.com/vs",
+    ...VS_PAGES.map(d => `https://authichain.com/vs/${d.slug}`),
+  ];
 }
