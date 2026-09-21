@@ -3,6 +3,7 @@
 _Navigable map of the documentation estate. The repo is `undone0603/authichain-unified`._
 
 ## Start here
+
 - [README.md](../README.md) — repo overview: QRON Platform + AuthiChain Unified Core
 - [CLAUDE.md](../CLAUDE.md) — AI context, essential commands, architecture summary
 - [GEMINI.md](../GEMINI.md) — AgentZ autonomous launch conventions
@@ -12,10 +13,12 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [project/SAM_PREP.md](project/SAM_PREP.md) — live SAM.gov record; contracts/SAM = ZACHARY KIETZMAN, IRS = AuthiChain, Inc.
 
 ## Integrations
+
 - [integrations/hubspot.md](integrations/hubspot.md) — Grok-connected HubSpot portal (Authichain `245112265`, NA2)
 - [integrations/openclaw-setup.md](integrations/openclaw-setup.md)
 
 ## Architecture & design
+
 - [NETWORK.md](NETWORK.md) — live deploy map (Vercel projects, CF workers, DB)
 - [CAPABILITIES.md](CAPABILITIES.md) — full capability catalog (tRPC routers, API routes, workers, schedulers, AgentZ)
 - [DEPLOY-RUNBOOK.md](DEPLOY-RUNBOOK.md) — one-command deploy paths + per-worker secrets
@@ -26,6 +29,9 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [architecture/threat-model.md](architecture/threat-model.md)
 
 ## Operations
+
+- [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — main-only integration, Cloudflare deploy authority, smoke + repair loop
+- [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verify is shared
 - [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist
 - [operations/PILOT-READY-BASELINE.md](operations/PILOT-READY-BASELINE.md) — engineering acceptance gate for the first real-product pilot
 - [operations/launch-staging.md](operations/launch-staging.md)
@@ -36,6 +42,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [operations/SBA_Disaster_Loan_Template.md](operations/SBA_Disaster_Loan_Template.md)
 
 ## Marketing, growth & outreach
+
 - [marketing/FUNNEL_QUICKSTART.md](marketing/FUNNEL_QUICKSTART.md) — 5-min funnel setup
 - [marketing/funnel-tracking.md](marketing/funnel-tracking.md) — complete funnel reference
 - [marketing/funnel-email-example.md](marketing/funnel-email-example.md)
@@ -48,9 +55,11 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [marketing/agentic-economy-strategy.md](marketing/agentic-economy-strategy.md)
 
 ## Compliance
+
 - [compliance/EU_DPP_COMPLIANCE_AUDIT.md](compliance/EU_DPP_COMPLIANCE_AUDIT.md)
 
 ## Strategy & proposals (`docs/strategy/`)
+
 - [strategy/ROADMAP.md](strategy/ROADMAP.md) — autonomous evolution roadmap
 - [strategy/REVENUE_STRATEGY.md](strategy/REVENUE_STRATEGY.md) — pricing, grants, partnerships
 - [strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md](strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md) — CashPing Compound: $0 autonomous buyer-traffic plan (no X Ads)
@@ -64,10 +73,12 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - More in `docs/strategy/` (DEMO_PROMPTS, DEPLOYMENT_LOG, FUNNEL_TRACKING_SUMMARY, MONUMENTAL_RELEASE, POSTAL_STRATEGY, SERIES_A_BOARDROOM_BRIEFING, SIGNATURE_MANIFEST, SIGNWELL_MIGRATION, STRATEGIC_EXPANSION, STRIPE_WEBHOOK_*, WORKSPACE, notes-progress, research-findings)
 
 ## Competitive research
+
 - [project/competitor-research-report.md](project/competitor-research-report.md) — full competitor analysis
 - [project/competitor-research-progress.md](project/competitor-research-progress.md) — research tracker
 
 ## Knowledge base (`docs/knowledge/`)
+
 - [knowledge/PRICING_TIERS.md](knowledge/PRICING_TIERS.md)
 - [knowledge/RELIABILITY_ARCHITECTURE.md](knowledge/RELIABILITY_ARCHITECTURE.md)
 - [knowledge/VERIFICATION_GUIDE.md](knowledge/VERIFICATION_GUIDE.md)
@@ -79,22 +90,26 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [knowledge/GPT_INSTRUCTIONS.md](knowledge/GPT_INSTRUCTIONS.md) · [knowledge/GPT_OPENAPI_SPEC.yaml](knowledge/GPT_OPENAPI_SPEC.yaml)
 
 ## Superpowers (plans & specs)
+
 - [superpowers/plans/worker-inventory.md](superpowers/plans/worker-inventory.md) — generated CF worker inventory (CI-checked)
 - [superpowers/plans/worker-status-2026-04-27.md](superpowers/plans/worker-status-2026-04-27.md)
 - Plans & specs in `docs/superpowers/plans/` and `docs/superpowers/specs/`
 
 ## Reference
+
 - [openapi.yaml](openapi.yaml) — API spec
 - [archive/](archive/) — archived cf-workers bundles & misc session artifacts
 - [submissions/](submissions/) — grant submission drafts
 
 ## AgentZ (separate tree, not under docs/)
+
 - `agentz/` — Python workflow orchestrator. CLI: `python -m agentz.cli list` / `run <id> --mode dry-run`
 - Conventions: [../GEMINI.md](../GEMINI.md) · State: [strategy/SYSTEM_STATE.md](strategy/SYSTEM_STATE.md)
 
 ---
 
 ### Notes
+
 - CI-pinned files kept in place: `superpowers/plans/worker-inventory.md` (regenerated by `scripts/gen-worker-inventory.sh`, checked by `.github/workflows/repo-maintenance.yml`) and `superpowers/plans/worker-status-2026-04-27.md` (referenced by worker STATUS files).
 - `docs/NETWORK.md`, `docs/CAPABILITIES.md`, `docs/DEPLOY-RUNBOOK.md` remain at docs root (mutually cross-referenced).
 - `docs/SECURITY-REMEDIATION-CRITICAL.md` is referenced but not present in the repo — pre-existing dangling link.
