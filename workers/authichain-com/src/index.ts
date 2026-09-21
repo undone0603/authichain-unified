@@ -3019,7 +3019,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
       <a class="nav-link" href="/x402">Agent pay</a>
-      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/protocol/checkout/dpp">Start DPP Audit — $299</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="#hero">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3053,11 +3053,11 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     try {
       var params = new URLSearchParams(window.location.search);
       var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
-      var visitId = localStorage.getItem('dpp_visit_id');
+      var visitId = params.get('visit_id') || localStorage.getItem('dpp_visit_id');
       if (!visitId) {
         visitId = 'dpp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem('dpp_visit_id', visitId);
       }
+      try { localStorage.setItem('dpp_visit_id', visitId); } catch (e0) {}
       var q = new URLSearchParams();
       q.set('visit_id', visitId);
       keys.forEach(function (k) {
@@ -3067,9 +3067,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
       var source = params.get('utm_source') || params.get('source') || 'direct';
       q.set('source', source);
-      var checkout = '/protocol/checkout/dpp?' + q.toString();
       var nav = document.getElementById('nav-dpp-cta');
-      if (nav) nav.setAttribute('href', checkout);
       function decorateForm(form) {
         if (!form) return;
         function setHidden(name, value) {
@@ -3107,9 +3105,14 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         }
       }
       document.querySelectorAll('form.checkout-email-form').forEach(decorateForm);
-      if (params.get('cancelled') === '1') {
+      if (params.get('cancelled') === '1' || params.get('need_email') === '1') {
         var banner = document.getElementById('dpp-cancelled-banner');
-        if (banner) banner.classList.add('is-visible');
+        if (banner) {
+          if (params.get('need_email') === '1') {
+            banner.textContent = 'Enter a work email so Stripe can recover this cart. Checkout does not start without it.';
+          }
+          banner.classList.add('is-visible');
+        }
         var emailInput = document.getElementById('dpp-email');
         if (emailInput) emailInput.focus();
       }

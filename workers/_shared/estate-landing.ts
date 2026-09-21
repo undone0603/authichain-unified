@@ -284,6 +284,18 @@ button.btn { font: inherit; }
   color: var(--muted);
   margin: 0;
 }
+.checkout-need-email {
+  display: none;
+  max-width: 36rem;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  font-size: 0.92rem;
+}
+.checkout-need-email.is-visible { display: block; }
 .hero, .estate-hero {
   padding: 72px 20px 56px;
   text-align: left;
@@ -560,19 +572,13 @@ export function estateHero(opts: {
   emailCheckout?: {
     action: string;
     label: string;
-    skipHref?: string;
-    skipLabel?: string;
   };
 }): string {
   const emailForm = opts.emailCheckout
-    ? `${checkoutEmailFormHtml({
+    ? checkoutEmailFormHtml({
         action: opts.emailCheckout.action,
         label: opts.emailCheckout.label,
-      })}${
-        opts.emailCheckout.skipHref
-          ? `<a class="btn btn-outline" href="${esc(opts.emailCheckout.skipHref)}">${esc(opts.emailCheckout.skipLabel || "Checkout without saving a recovery email")}</a>`
-          : ""
-      }`
+      })
     : "";
   const actions = opts.actions
     .map(
@@ -655,19 +661,13 @@ export function estateCtaBand(opts: {
   emailCheckout?: {
     action: string;
     label: string;
-    skipHref?: string;
-    skipLabel?: string;
   };
 }): string {
   const emailForm = opts.emailCheckout
-    ? `${checkoutEmailFormHtml({
+    ? checkoutEmailFormHtml({
         action: opts.emailCheckout.action,
         label: opts.emailCheckout.label,
-      })}${
-        opts.emailCheckout.skipHref
-          ? `<a class="btn btn-outline" href="${esc(opts.emailCheckout.skipHref)}">${esc(opts.emailCheckout.skipLabel || "Checkout without saving a recovery email")}</a>`
-          : ""
-      }`
+      })
     : "";
   const actions = opts.actions
     .map(

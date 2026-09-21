@@ -71,6 +71,8 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /id="checkout-need-email-banner"/);
+  assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
   assert.doesNotMatch(html, /Publish one passport/);
@@ -209,6 +211,7 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
       `action="${GOVCHAIN_DPP_CHECKOUT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`
     )
   );
+  assert.match(html, /id="checkout-need-email-banner"/);
   assert.equal(
     GOVCHAIN_DPP_CHECKOUT,
     "https://authichain.com/api/checkout/dpp"

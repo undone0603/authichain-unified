@@ -30,7 +30,7 @@ describe("tryHandleProtocolCheckout", () => {
 
   it("returns 500 JSON when Stripe is not bound", async () => {
     const res = await tryHandleProtocolCheckout(
-      req("/protocol/checkout/dpp?visit_id=dpp_abc"),
+      req("/protocol/checkout/dpp?visit_id=dpp_abc&email=ops%40brand.com"),
       {}
     );
     expect(res).not.toBeNull();
@@ -58,7 +58,9 @@ describe("tryHandleProtocolCheckout", () => {
       )
     );
     const res = await tryHandleProtocolCheckout(
-      req("/protocol/checkout/dpp?visit_id=dpp_abc&utm_source=smoke"),
+      req(
+        "/protocol/checkout/dpp?visit_id=dpp_abc&utm_source=smoke&email=ops%40brand.com"
+      ),
       { STRIPE_SECRET_KEY: "sk_test_x" }
     );
     expect(res!.status).toBe(303);
@@ -118,30 +120,28 @@ describe("tryHandleProtocolCheckout", () => {
     expect(params.get("customer_email")).toBe("buyer@brand.com");
   });
 
-  it("does not send an invalid email to Stripe", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              url: "https://checkout.stripe.com/c/pay/cs_test_noemail",
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }
-          )
-      )
+  it("303s to /dpp when GET has no recovery email", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const res = await tryHandleProtocolCheckout(
+      req("/protocol/checkout/dpp?visit_id=dpp_abc"),
+      { STRIPE_SECRET_KEY: "sk_test_x" }
     );
-    await tryHandleProtocolCheckout(
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toBe(
+      "https://authichain.com/dpp?need_email=1&visit_id=dpp_abc"
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not send an invalid email to Stripe", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const res = await tryHandleProtocolCheckout(
       req("/protocol/checkout/dpp?visit_id=dpp_abc&email=not-an-email"),
       { STRIPE_SECRET_KEY: "sk_test_x" }
     );
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    const init = fetchMock.mock.calls[0][1] as { body: URLSearchParams };
-    const params = new URLSearchParams(String(init.body));
-    expect(params.get("customer_email")).toBeNull();
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toContain("need_email=1");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {

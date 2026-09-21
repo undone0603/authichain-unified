@@ -67,8 +67,9 @@ describe("createPlanCheckoutSession", () => {
           method: "GET",
         }
       ),
-      body: { planId: "strainchain_passport" },
+      body: { planId: "strainchain_passport", email: "ops@brand.com" },
       stripeSecretKey: "sk_test_x",
+      requireEmail: true,
     });
     expect(result).toEqual({
       ok: true,
@@ -85,6 +86,25 @@ describe("createPlanCheckoutSession", () => {
     expect(arg.consent_collection).toBeUndefined();
     expect(arg.allow_promotion_codes).toBeUndefined();
     expect(arg.customer_creation).toBe("always");
+  });
+
+  it("303s to pricing when GET attributed checkout has no email", async () => {
+    const result = await createPlanCheckoutSession({
+      request: new Request(
+        "https://authichain.com/api/checkout/plan/strainchain_passport",
+        { method: "GET" }
+      ),
+      body: { planId: "strainchain_passport" },
+      stripeSecretKey: "",
+      requireEmail: true,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      status: 303,
+      error: "email_required",
+      url: "https://authichain.com/pricing?need_email=1",
+    });
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("forwards a valid email as Stripe customer_email", async () => {

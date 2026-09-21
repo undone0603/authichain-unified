@@ -75,13 +75,12 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
-      skipHref: "/api/checkout/dpp",
     },
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });
   assert.match(emailHero, /name="email"/);
   assert.match(emailHero, /action="\/api\/checkout\/dpp"/);
-  assert.match(emailHero, /Checkout without saving a recovery email/);
+  assert.doesNotMatch(emailHero, /Checkout without saving a recovery email/);
 
   const trust = estateTrust([{ value: "Polygon", label: "On-chain anchor" }]);
   assert.doesNotMatch(trust, /847\+/);
@@ -100,7 +99,6 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout",
-      skipHref: "/api/checkout/dpp",
     },
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });

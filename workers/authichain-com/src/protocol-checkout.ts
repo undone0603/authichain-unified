@@ -7,6 +7,7 @@
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
 import {
   CHECKOUT_REDIRECT_HEADERS,
+  checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
   pickCheckoutEmail,
 } from "../../../src/lib/checkout-email";
@@ -62,11 +63,6 @@ export async function tryHandleProtocolCheckout(
     return json(405, { error: "method not allowed" });
   }
 
-  const key = (env.STRIPE_SECRET_KEY || "").trim();
-  if (!key) {
-    return json(500, { error: "Stripe is not configured" });
-  }
-
   const params = url.searchParams;
   const visitId =
     pick(params, "visit_id") || pick(params, "prospect_id") || newVisitId();
@@ -79,6 +75,13 @@ export async function tryHandleProtocolCheckout(
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(params, "promo", 32));
+  if (!email && !smoke) {
+    return checkoutRedirectResponse(checkoutNeedEmailRedirect("dpp", visitId));
+  }
+  const key = (env.STRIPE_SECRET_KEY || "").trim();
+  if (!key) {
+    return json(500, { error: "Stripe is not configured" });
+  }
   const priceId = (env.STRIPE_PRICE_ID || DPP_PRICE_ID).trim();
 
   const body = new URLSearchParams();

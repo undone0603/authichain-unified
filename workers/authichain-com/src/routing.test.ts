@@ -205,6 +205,8 @@ test("DPP landing collects email before protocol checkout", async () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/protocol\/checkout\/dpp"/);
   assert.match(html, /id="dpp-cancelled-banner"/);
+  assert.match(html, /params.get\('visit_id'\)/);
+  assert.doesNotMatch(html, /href="\/protocol\/checkout\/dpp"/);
   assert.ok(!html.includes('href="/authenticate"'));
 });
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHECKOUT_NEED_EMAIL_BANNER_HTML,
+  CHECKOUT_NEED_EMAIL_DECORATE_JS,
   CHECKOUT_REDIRECT_HEADERS,
   checkoutEmailFormHtml,
+  checkoutNeedEmailRedirect,
   checkoutRedirectResponse,
   looksLikeCheckoutEmail,
   pickCheckoutEmail,
@@ -44,6 +47,25 @@ describe("checkoutEmailFormHtml", () => {
     expect(html).toContain("required");
     expect(html).toContain("Not a newsletter");
     expect(html).not.toContain("javascript:");
+  });
+});
+
+describe("checkoutNeedEmailRedirect", () => {
+  it("sends DPP and plan one-clicks to landings that capture email", () => {
+    expect(checkoutNeedEmailRedirect("dpp", "dpp_abc")).toBe(
+      "https://authichain.com/dpp?need_email=1&visit_id=dpp_abc"
+    );
+    expect(checkoutNeedEmailRedirect("plan")).toBe(
+      "https://authichain.com/pricing?need_email=1"
+    );
+  });
+
+  it("keeps visit_id when decorating bounced checkout forms", () => {
+    expect(CHECKOUT_NEED_EMAIL_BANNER_HTML).toContain(
+      'id="checkout-need-email-banner"'
+    );
+    expect(CHECKOUT_NEED_EMAIL_DECORATE_JS).toContain("need_email");
+    expect(CHECKOUT_NEED_EMAIL_DECORATE_JS).toContain("visit_id");
   });
 });
 

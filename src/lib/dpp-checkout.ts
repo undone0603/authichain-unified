@@ -7,7 +7,7 @@
  */
 
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
-import { pickCheckoutEmail } from "./checkout-email";
+import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
@@ -28,9 +28,10 @@ type SupabaseLike = {
 export type DppCheckoutOk = { ok: true; url: string; visitId: string };
 export type DppCheckoutErr = {
   ok: false;
-  status: 500;
+  status: 500 | 303;
   error: string;
   detail?: string;
+  url?: string;
 };
 export type DppCheckoutResult = DppCheckoutOk | DppCheckoutErr;
 
@@ -51,13 +52,6 @@ export async function createDppCheckoutSession(opts: {
   const { searchParams, stripeSecretKey, supabase } = opts;
   const origin = opts.origin || DPP_CHECKOUT_ORIGIN;
 
-  if (!stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
-  }
-  if (!PLAN?.stripe_price_id || PLAN.stripe_mode !== "payment") {
-    return { ok: false, status: 500, error: "DPP offer is not configured" };
-  }
-
   const visitId =
     pick(searchParams, "visit_id") ||
     pick(searchParams, "prospect_id") ||
@@ -71,6 +65,22 @@ export async function createDppCheckoutSession(opts: {
   const referrer = pick(searchParams, "referrer", 512);
   const source = utmSource || pick(searchParams, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(searchParams, "promo", 32));
+
+  if (!email && !smoke) {
+    return {
+      ok: false,
+      status: 303,
+      error: "email_required",
+      url: checkoutNeedEmailRedirect("dpp", visitId),
+    };
+  }
+
+  if (!stripeSecretKey) {
+    return { ok: false, status: 500, error: "Stripe is not configured" };
+  }
+  if (!PLAN?.stripe_price_id || PLAN.stripe_mode !== "payment") {
+    return { ok: false, status: 500, error: "DPP offer is not configured" };
+  }
 
   if (supabase) {
     await recordDppLoopEvent(supabase, {

@@ -5,15 +5,16 @@
  */
 import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
-import { pickCheckoutEmail } from "./checkout-email";
+import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
   ok: false;
-  status: 400 | 500;
+  status: 400 | 500 | 303;
   error: string;
   detail?: string;
+  url?: string;
 };
 export type PlanCheckoutResult = PlanCheckoutOk | PlanCheckoutErr;
 
@@ -35,11 +36,10 @@ export async function createPlanCheckoutSession(opts: {
     source?: string;
   };
   stripeSecretKey: string;
+  /** GET attributed checkout must collect email; POST JSON may omit it. */
+  requireEmail?: boolean;
 }): Promise<PlanCheckoutResult> {
   const { request, body, stripeSecretKey } = opts;
-  if (!stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
-  }
   const planId = typeof body.planId === "string" ? body.planId.trim() : "";
   if (!planId) {
     return { ok: false, status: 400, error: "planId is required" };
@@ -56,6 +56,20 @@ export async function createPlanCheckoutSession(opts: {
     };
   }
 
+  const email = pickCheckoutEmail(
+    typeof body.email === "string" ? body.email : ""
+  );
+  if (opts.requireEmail && !email) {
+    const visitId =
+      typeof body.prospectId === "string" ? body.prospectId.trim() : "";
+    return {
+      ok: false,
+      status: 303,
+      error: "email_required",
+      url: checkoutNeedEmailRedirect("plan", visitId),
+    };
+  }
+
   const cookieHeader = request.headers.get("cookie") || "";
   const cookieRef = readCookie(cookieHeader, "aff_ref");
   const affiliateCode = (
@@ -69,9 +83,6 @@ export async function createPlanCheckoutSession(opts: {
   const refCode = (cookieReferral ? decodeURIComponent(cookieReferral) : "")
     .trim()
     .slice(0, 64);
-  const email = pickCheckoutEmail(
-    typeof body.email === "string" ? body.email : ""
-  );
   const prospectId =
     typeof body.prospectId === "string"
       ? body.prospectId.trim().slice(0, 128)
@@ -83,6 +94,10 @@ export async function createPlanCheckoutSession(opts: {
     request.headers.get("origin") ||
     new URL(request.url).origin ||
     "https://authichain.com";
+
+  if (!stripeSecretKey) {
+    return { ok: false, status: 500, error: "Stripe is not configured" };
+  }
 
   try {
     const Stripe = (await import("stripe")).default;

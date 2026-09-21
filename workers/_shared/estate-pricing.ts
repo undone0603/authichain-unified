@@ -13,7 +13,11 @@
  */
 import { listedPlans, type Plan } from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
-import { checkoutEmailFormHtml } from "../../src/lib/checkout-email";
+import {
+  CHECKOUT_NEED_EMAIL_BANNER_HTML,
+  CHECKOUT_NEED_EMAIL_DECORATE_JS,
+  checkoutEmailFormHtml,
+} from "../../src/lib/checkout-email";
 import {
   ESTATE_BASE_CSS,
   ESTATE_FONTS_LINK,
@@ -506,6 +510,7 @@ ${ESTATE_BASE_CSS}
 ${estateSkipLink()}
 ${estateNav(brand, page.nav, navPrimary)}
 <main id="main">
+${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published catalogue",
   title: page.heroTitle,
@@ -572,6 +577,7 @@ ${estateFooter(
     ? "StrainChain prices from the published catalogue and Payment Links"
     : "Prices from the published AuthiChain plan catalogue"
 )}
+${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
 </html>`;
 }
@@ -660,6 +666,7 @@ ${estateNav(
   { href: "/onboard", label: "Request access" }
 )}
 <main id="main">
+${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
@@ -745,6 +752,7 @@ ${estateFooter(
   ],
   "GovChain has no self-serve SKU — onboard or AuthiChain DPP"
 )}
+${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
 </html>`;
 }

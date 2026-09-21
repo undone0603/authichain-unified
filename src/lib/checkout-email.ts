@@ -42,6 +42,53 @@ export function pickCheckoutEmail(
   return "";
 }
 
+/** Bounce a GET one-click (no `?email=`) to a landing that captures it. */
+export function checkoutNeedEmailRedirect(
+  kind: "dpp" | "plan",
+  visitId?: string
+): string {
+  const url = new URL(
+    kind === "dpp"
+      ? "https://authichain.com/dpp"
+      : "https://authichain.com/pricing"
+  );
+  url.searchParams.set("need_email", "1");
+  if (visitId) url.searchParams.set("visit_id", visitId.slice(0, 128));
+  return url.toString();
+}
+
+/** Banner + query-param copy for landings that collect checkout email. */
+export const CHECKOUT_NEED_EMAIL_BANNER_HTML =
+  '<div id="checkout-need-email-banner" class="checkout-need-email">Enter a work email so Stripe can recover this cart. Checkout does not start without it.</div>';
+
+export const CHECKOUT_NEED_EMAIL_DECORATE_JS = `<script>
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    document.querySelectorAll('form.checkout-email-form').forEach(function (form) {
+      ['visit_id','prospect_id','utm_source','utm_medium','utm_campaign','utm_content','utm_term','source'].forEach(function (key) {
+        var value = params.get(key);
+        if (!value) return;
+        var el = form.querySelector('input[name="'+key+'"]');
+        if (!el) {
+          el = document.createElement('input');
+          el.type = 'hidden';
+          el.name = key;
+          form.appendChild(el);
+        }
+        el.value = value.slice(0, 512);
+      });
+    });
+    if (params.get('need_email') === '1') {
+      var banner = document.getElementById('checkout-need-email-banner');
+      if (banner) banner.classList.add('is-visible');
+      var input = document.querySelector('form.checkout-email-form input[name="email"]');
+      if (input) input.focus();
+    }
+  } catch (e) {}
+})();
+</script>`;
+
 function esc(value: string): string {
   return value
     .replace(/&/g, "&amp;")

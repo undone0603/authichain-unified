@@ -38,6 +38,13 @@ export async function GET(request: NextRequest) {
       supabase: await getServiceSupabase(),
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        const redirect = NextResponse.redirect(result.url, 303);
+        for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+          redirect.headers.set(key, value);
+        }
+        return redirect;
+      }
       return NextResponse.json(
         {
           error: result.error,

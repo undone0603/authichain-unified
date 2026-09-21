@@ -227,6 +227,9 @@ app.get("/api/checkout/dpp", async c => {
       supabase,
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        return checkoutRedirectResponse(result.url);
+      }
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
@@ -273,8 +276,12 @@ app.get("/api/checkout/plan/:planId", async c => {
       },
       stripeSecretKey:
         c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
+      requireEmail: true,
     });
     if (!result.ok) {
+      if (result.status === 303 && result.url) {
+        return checkoutRedirectResponse(result.url);
+      }
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
