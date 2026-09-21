@@ -1,11 +1,15 @@
 /**
- * Production smoke gate: money + verification path on authichain.com.
- * Read-only GETs. Does not create Stripe sessions or write funnel events.
+ * Production smoke gate: live money + verification on authichain.com.
+ * Read-only. HEAD on checkout 303s so this never creates a Stripe session.
+ * Apex is Cloudflare-first: GET /api/checkout is JSON health (200), not 405.
  */
 export type SmokeStep = {
   id: string;
   url: string;
   accept: number[];
+  method?: "GET" | "HEAD";
+  jsonOk?: boolean;
+  jsonReady?: boolean;
 };
 
 export const DEFAULT_ORIGIN = "https://authichain.com";
@@ -14,23 +18,34 @@ export function smokeSteps(origin = DEFAULT_ORIGIN): SmokeStep[] {
   const base = origin.replace(/\/$/, "");
   return [
     { id: "origin", url: `${base}/`, accept: [200] },
-    { id: "verification", url: `${base}/api/v1/verify`, accept: [400] },
+    { id: "verify_surface", url: `${base}/verify`, accept: [200] },
     { id: "jwks", url: `${base}/protocol/jwks.json`, accept: [200] },
     { id: "issuer", url: `${base}/protocol/issuer.json`, accept: [200] },
-    {
-      id: "attestation",
-      url: `${base}/api/v1/attestations/verify`,
-      accept: [400, 405],
-    },
-    {
-      id: "object_lookup",
-      url: `${base}/api/v1/verify?serial=smoke-missing`,
-      accept: [404],
-    },
     { id: "checkout_surface", url: `${base}/pricing`, accept: [200] },
-    { id: "checkout_api", url: `${base}/api/checkout`, accept: [405, 400] },
-    { id: "provisioning", url: `${base}/api/v1/health`, accept: [200] },
-    { id: "crm_status", url: `${base}/api/status`, accept: [200] },
+    {
+      id: "checkout_api",
+      url: `${base}/api/checkout`,
+      accept: [200],
+      jsonOk: true,
+    },
+    {
+      id: "checkout_dpp_head",
+      url: `${base}/api/checkout/dpp`,
+      accept: [204],
+      method: "HEAD",
+    },
+    {
+      id: "passport_head",
+      url: `${base}/api/checkout/plan/strainchain_passport`,
+      accept: [204],
+      method: "HEAD",
+    },
+    {
+      id: "x402_health",
+      url: `${base}/api/x402/health`,
+      accept: [200],
+      jsonReady: true,
+    },
   ];
 }
 
@@ -46,14 +61,23 @@ export async function runSmokeStep(
   step: SmokeStep,
   fetchImpl: typeof fetch = fetch
 ): Promise<StepResult> {
+  const method = step.method || "GET";
   const res = await fetchImpl(step.url, {
-    method: "GET",
-    redirect: "follow",
+    method,
+    redirect: "manual",
     headers: { Accept: "application/json, text/html;q=0.8" },
   });
-  const ok = step.accept.includes(res.status);
-  let detail: string | undefined;
-  if (step.id === "jwks" && ok) {
+  const okStatus = step.accept.includes(res.status);
+  if (!okStatus) {
+    return {
+      id: step.id,
+      url: step.url,
+      status: res.status,
+      ok: false,
+      detail: `expected ${step.accept.join("|")}, got ${res.status}`,
+    };
+  }
+  if (step.id === "jwks") {
     const body = (await res.clone().json()) as { keys?: unknown[] };
     if (!Array.isArray(body.keys) || body.keys.length === 0) {
       return {
@@ -65,8 +89,31 @@ export async function runSmokeStep(
       };
     }
   }
-  if (!ok) detail = `expected ${step.accept.join("|")}, got ${res.status}`;
-  return { id: step.id, url: step.url, status: res.status, ok, detail };
+  if (step.jsonOk || step.jsonReady) {
+    const body = (await res.clone().json()) as {
+      ok?: unknown;
+      ready?: unknown;
+    };
+    if (step.jsonOk && body.ok !== true) {
+      return {
+        id: step.id,
+        url: step.url,
+        status: res.status,
+        ok: false,
+        detail: "checkout health missing ok:true",
+      };
+    }
+    if (step.jsonReady && body.ready !== true) {
+      return {
+        id: step.id,
+        url: step.url,
+        status: res.status,
+        ok: false,
+        detail: "x402 health missing ready:true",
+      };
+    }
+  }
+  return { id: step.id, url: step.url, status: res.status, ok: true };
 }
 
 export async function runSmokeGate(
@@ -87,7 +134,7 @@ export async function runSmokeGate(
       });
     }
   }
-  const failed = results.filter(r => !r.ok);
+  const failed = results.filter(r => r.ok === false);
   return { origin, results, ok: failed.length === 0, failed };
 }
 

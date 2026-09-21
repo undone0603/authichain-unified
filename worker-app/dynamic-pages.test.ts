@@ -454,6 +454,8 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("Pilot request received");
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
+    expect(body).toContain('name="email"');
+    expect(body).toContain('action="/api/checkout/dpp"');
   });
 });
 
@@ -479,6 +481,8 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("Sign in");
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
+      expect(body).toContain('name="email"');
+      expect(body).toContain('action="/api/checkout/dpp"');
       expect(body).not.toContain("app.authichain.com/login");
     }
   });

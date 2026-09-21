@@ -47,7 +47,10 @@ import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
 import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
-import { CHECKOUT_EMAIL_FORM_CSS } from "../src/lib/checkout-email";
+import {
+  CHECKOUT_EMAIL_FORM_CSS,
+  checkoutEmailFormHtml,
+} from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
@@ -1025,10 +1028,17 @@ function renderOnboardReceived(c: Context): Response {
     " in " +
     escapeHtml(vertical) +
     ".</p>\n" +
-    "<p>Next: verify a production JWS against live JWKS, then complete a DPP smoke checkout when ready to pay.</p>\n" +
+    "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
+    checkoutEmailFormHtml({
+      action: "/api/checkout/dpp",
+      label: "Start DPP checkout — $299",
+      formId: "onboard-dpp-checkout",
+      inputId: "onboard-dpp-email",
+    }) +
+    "\n" +
+    '<p><a href="/api/checkout/dpp">Checkout without saving a recovery email</a></p>\n' +
     "<ul>\n" +
     '<li><a href="/verify">Verify a seal</a></li>\n' +
-    '<li><a href="/api/checkout/dpp">DPP checkout</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1038,6 +1048,7 @@ function renderOnboardReceived(c: Context): Response {
       title: "Pilot request received | AuthiChain",
       description: "AuthiChain pilot intake confirmation.",
       canonicalPath: "/onboard/received",
+      extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
       bodyHtml: body,
     }),
     200
@@ -1205,6 +1216,7 @@ function authenticateHtml(): string {
     description:
       "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
+    extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
@@ -1213,8 +1225,15 @@ function authenticateHtml(): string {
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
-      '<li><a href="/api/checkout/dpp">Start DPP checkout</a></li>\n' +
       "</ul>\n" +
+      checkoutEmailFormHtml({
+        action: "/api/checkout/dpp",
+        label: "Start DPP checkout — $299",
+        formId: "auth-dpp-checkout",
+        inputId: "auth-dpp-email",
+      }) +
+      "\n" +
+      '<p><a href="/api/checkout/dpp">Checkout without saving a recovery email</a></p>\n' +
       "</main>",
   });
 }
