@@ -33,7 +33,9 @@ describe("plan catalogue integrity", () => {
     expect(planPaymentLink("dpp_readiness")).toBe(
       "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
     );
-    expect(planPaymentLink("strainchain_farm")).toBeUndefined();
+    expect(planPaymentLink("strainchain_farm")).toBe(
+      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
   });
 });
 
@@ -118,6 +120,9 @@ describe("listedPlans", () => {
     expect(byId.strainchain_farm.price).toBe(149);
     expect(byId.strainchain_farm.price_suffix).toBe("/month");
     expect(byId.strainchain_farm.stripe_mode).toBe("subscription");
+    expect(byId.strainchain_farm.stripe_payment_link).toBe(
+      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
   });
 
   it("still lists the existing QRON plans", () => {

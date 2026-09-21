@@ -182,6 +182,7 @@ export const PLANS: Plan[] = [
     description: "Unlimited cultivars, updated on every new certificate",
     generations: 0,
     stripe_price_id: "price_1UHjJWGqTruSqV8TePctYzO5",
+    stripe_payment_link: "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z",
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
