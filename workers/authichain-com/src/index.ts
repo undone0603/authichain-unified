@@ -27,6 +27,7 @@ import {
 import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
+import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
   isDppManufacturerArticlePath,
   renderDppManufacturerArticle,
@@ -3525,6 +3526,8 @@ export default {
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;
+    const index402Verify = tryHandle402IndexVerify(request);
+    if (index402Verify) return index402Verify;
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
