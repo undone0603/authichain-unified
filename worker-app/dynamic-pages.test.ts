@@ -66,7 +66,16 @@ function makeDbSelectStub(rows: any[]) {
 function sqlParamValues(query: { queryChunks?: unknown[] }): unknown[] {
   const values: unknown[] = [];
   for (const chunk of query?.queryChunks ?? []) {
-    if (chunk && typeof chunk === "object" && "value" in chunk) {
+    if (typeof chunk === "string") {
+      values.push(chunk);
+      continue;
+    }
+    if (
+      chunk &&
+      typeof chunk === "object" &&
+      "value" in chunk &&
+      !Array.isArray((chunk as { value: unknown }).value)
+    ) {
       values.push((chunk as { value: unknown }).value);
     }
   }
