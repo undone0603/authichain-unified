@@ -16,6 +16,7 @@ import { sisterOrigin } from "./estate-x402.ts";
 const BRANDS: SisterDiscoveryBrand[] = ["qron", "strainchain", "govchain"];
 const PASSPORT = planPaymentLink("strainchain_passport") ?? "";
 const DPP = planPaymentLink("dpp_readiness") ?? "";
+const FARM = planPaymentLink("strainchain_farm") ?? "";
 
 function httpsUrl(raw: string): URL {
   const url = new URL(raw);
@@ -71,8 +72,10 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
+    assert.ok(text.includes(FARM));
     assert.equal(httpsUrl(PASSPORT).hostname, "buy.stripe.com");
     assert.equal(httpsUrl(DPP).hostname, "buy.stripe.com");
+    assert.equal(httpsUrl(FARM).hostname, "buy.stripe.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
     assert.equal(text.toLowerCase().includes("facilitator.payai"), false);
   }
@@ -113,6 +116,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     assert.ok(post.post.responses["402"]);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
+    assert.equal(spec.info["x-human-checkout"].farmPaymentLink, FARM);
     assert.equal(
       spec.info["x-human-checkout"].passportUsd,
       planUsd("strainchain_passport")
@@ -120,6 +124,10 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     assert.equal(
       spec.info["x-human-checkout"].dppUsd,
       planUsd("dpp_readiness")
+    );
+    assert.equal(
+      spec.info["x-human-checkout"].farmUsd,
+      planUsd("strainchain_farm")
     );
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
