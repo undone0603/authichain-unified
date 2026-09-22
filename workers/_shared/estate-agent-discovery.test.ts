@@ -64,6 +64,9 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/api/x402"));
     assert.ok(text.includes(`$${x402PriceUsd()} USDC`));
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/mcp")
+    );
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
     assert.ok(text.includes(PASSPORT));

@@ -18,6 +18,7 @@ import {
 } from "../../_shared/estate-pricing.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
+import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2147,12 +2148,13 @@ export default {
   <url><loc>https://strainchain.io/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://strainchain.io/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
   <url><loc>https://strainchain.io/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strainchain.io/mcp</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://strainchain.io/sitemap.xml\n# https://strainchain.io/llms.txt\n# https://strainchain.io/openapi.json\n# https://strainchain.io/api/x402\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://strainchain.io/sitemap.xml\n# https://strainchain.io/llms.txt\n# https://strainchain.io/openapi.json\n# https://strainchain.io/api/x402\n# https://strainchain.io/mcp\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
@@ -2162,6 +2164,8 @@ export default {
     if (pricing) return pricing;
     const x402 = await tryHandleSisterX402(request, env);
     if (x402) return x402;
+    const mcp = await tryHandleSisterMcp(request, "strainchain", env);
+    if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "strainchain");
     if (discovery) return discovery;
     const seoRedirect = tryRedirectSeoRootCanonical(request);

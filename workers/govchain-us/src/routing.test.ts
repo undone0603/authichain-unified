@@ -113,6 +113,7 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.ok(paths.includes("/llms.txt"));
   assert.ok(paths.includes("/openapi.json"));
   assert.ok(paths.includes("/api/x402"));
+  assert.ok(paths.includes("/mcp"));
   assert.ok(!xml.includes("/rfp"));
   assert.ok(!xml.includes("/compliance"));
   assert.equal(xml.includes("/api/checkout"), false);
@@ -188,6 +189,73 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", 
   }
 });
 
+test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+  for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      protocol: string;
+      pay: { x402: string };
+      pricing: {
+        humanCheckout: {
+          passportPaymentLink?: string;
+          dppPaymentLink?: string;
+          farmPaymentLink?: string;
+          starterPaymentLink?: string;
+        };
+      };
+    };
+    assert.equal(body.protocol, "mcp", path);
+    assert.equal(body.pay.x402, "POST https://govchain.us/api/x402", path);
+    assert.equal(
+      body.pricing.humanCheckout.dppPaymentLink,
+      planPaymentLink("dpp_readiness"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.passportPaymentLink,
+      planPaymentLink("strainchain_passport"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.starterPaymentLink,
+      undefined,
+      path
+    );
+    const blob = JSON.stringify(body);
+    assert.equal(blob.includes("/api/checkout"), false, path);
+    assert.equal(blob.toLowerCase().includes("facilitator.payai"), false, path);
+  }
+
+  const unpaid = await worker.fetch(
+    new Request("https://govchain.us/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "verify" },
+      }),
+    }),
+    ENV
+  );
+  assert.equal(unpaid.status, 402);
+  const required = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string }>;
+  };
+  assert.equal(required.x402Version, 2);
+  assert.equal(required.resource?.url, "https://govchain.us/mcp");
+  assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+});
+
 test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
   const res = await get("/api/x402/catalog");
   assert.equal(res.status, 200);
@@ -242,6 +310,7 @@ test("landing-owned sitemap URLs resolve on this worker", async () => {
     "/llms.txt",
     "/openapi.json",
     "/api/x402",
+    "/mcp",
   ]) {
     const res = await get(path);
     assert.ok(
@@ -269,6 +338,7 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.ok(commentPaths.includes("/llms.txt"));
   assert.ok(commentPaths.includes("/openapi.json"));
   assert.ok(commentPaths.includes("/api/x402"));
+  assert.ok(commentPaths.includes("/mcp"));
   assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);

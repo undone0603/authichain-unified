@@ -23,6 +23,7 @@ import {
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
+import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2254,12 +2255,13 @@ export default {
   <url><loc>https://govchain.us/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://govchain.us/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
   <url><loc>https://govchain.us/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://govchain.us/mcp</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n# https://govchain.us/api/x402\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n# https://govchain.us/api/x402\n# https://govchain.us/mcp\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
@@ -2269,6 +2271,8 @@ export default {
     if (pricing) return pricing;
     const x402 = await tryHandleSisterX402(request, env);
     if (x402) return x402;
+    const mcp = await tryHandleSisterMcp(request, "govchain", env);
+    if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
     if (discovery) return discovery;
     // The homepage already fetches both of these endpoints; until now they fell
