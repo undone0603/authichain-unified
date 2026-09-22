@@ -309,6 +309,42 @@ test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async
   }
 });
 
+test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing else", async () => {
+  const res = await get("/.well-known/402index-verify.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/plain/);
+  const text = await res.text();
+  assert.equal(
+    text,
+    "423fe4bfe20daf3616465b6f496a3a06e2b03d590e77511d1782bf310b7cb2af"
+  );
+  assert.equal(text.length, 64);
+  const head = await worker.fetch(
+    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+      method: "HEAD",
+    }),
+    ENV
+  );
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+  const posted = await worker.fetch(
+    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+      method: "POST",
+    }),
+    ENV
+  );
+  assert.equal(posted.status, 404);
+  const www = await worker.fetch(
+    new Request("https://www.authichain.com/.well-known/402index-verify.txt"),
+    ENV
+  );
+  assert.equal(www.status, 301);
+  assert.equal(
+    www.headers.get("location"),
+    "https://authichain.com/.well-known/402index-verify.txt"
+  );
+});
+
 test("/llms.txt points agents at Payment Links and unpaid POST x402", async () => {
   for (const path of ["/llms.txt", "/.well-known/llms.txt"]) {
     const res = await get(path);
