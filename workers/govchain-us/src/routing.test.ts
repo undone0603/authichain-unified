@@ -310,11 +310,19 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.ok(html.includes("Nothing here is an award"));
-    assert.ok(html.includes("https://authichain.com/made-in-america"));
-    assert.ok(html.includes("/p/sbir-svip-blockchain-document-verification"));
-    assert.ok(html.includes('href="/onboard"'));
+    const hrefs = [...html.matchAll(/\bhref="([^"]+)"/g)].map(m => m[1]);
+    const actions = [...html.matchAll(/\baction="([^"]+)"/g)].map(m => m[1]);
+    assert.ok(hrefs.includes("https://authichain.com/made-in-america"), path);
     assert.ok(
-      html.includes('action="https://authichain.com/api/checkout/dpp"')
+      hrefs.includes(
+        "https://govchain.us/p/sbir-svip-blockchain-document-verification"
+      ) || hrefs.includes("/p/sbir-svip-blockchain-document-verification"),
+      path
+    );
+    assert.ok(hrefs.includes("/onboard"), path);
+    assert.ok(
+      actions.includes("https://authichain.com/api/checkout/dpp"),
+      path
     );
     assert.ok(!html.includes("SBIR awarded"));
     assert.ok(!html.includes("strainchain_farm"));
