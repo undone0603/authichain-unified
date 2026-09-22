@@ -25,7 +25,7 @@ describe("plan catalogue integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("exposes live Payment Links for Passport and DPP", () => {
+  it("exposes live Payment Links for Passport, DPP, Farm, and Theater", () => {
     expect(planById("strainchain_passport")?.price).toBe(49);
     expect(planPaymentLink("strainchain_passport")).toBe(
       "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
@@ -35,6 +35,18 @@ describe("plan catalogue integrity", () => {
     );
     expect(planPaymentLink("strainchain_farm")).toBe(
       "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
+    expect(planPaymentLink("theater_1")).toBe(
+      "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"
+    );
+    expect(planPaymentLink("theater_3")).toBe(
+      "https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"
+    );
+    expect(new URL(planPaymentLink("theater_1") ?? "").hostname).toBe(
+      "buy.stripe.com"
+    );
+    expect(new URL(planPaymentLink("theater_3") ?? "").hostname).toBe(
+      "buy.stripe.com"
     );
   });
 });
@@ -129,6 +141,8 @@ describe("listedPlans", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
+    expect(qron).toContain("theater_1");
+    expect(qron).toContain("theater_3");
   });
 
   it("exposes planUsd from the catalogue, not a second price table", () => {

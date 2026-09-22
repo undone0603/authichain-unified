@@ -194,6 +194,20 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     html,
     /href="https:\/\/authichain\.com\/api\/checkout\/dpp"/
   );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_1"/
+  );
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_3"/
+  );
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {
