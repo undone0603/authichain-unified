@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "deploy": "npx wrangler deploy",
-    "test": "npx tsx --test src/routing.test.ts ../_shared/seo-hub-routes.test.ts ../_shared/estate-agent-discovery.test.ts ../_shared/estate-x402.test.ts ../_shared/estate-mcp.test.ts"
+    "test": "npx tsx --test src/routing.test.ts src/nft-metadata.test.ts ../_shared/seo-hub-routes.test.ts ../_shared/estate-agent-discovery.test.ts ../_shared/estate-x402.test.ts ../_shared/estate-mcp.test.ts"
   }
 }
