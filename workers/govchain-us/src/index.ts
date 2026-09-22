@@ -21,6 +21,7 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
+import { tryHandleGovGift } from "./gov-gift.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
@@ -2253,6 +2254,7 @@ export default {
   <url><loc>https://govchain.us/opportunities</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://govchain.us/gift</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
   <url><loc>https://govchain.us/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://govchain.us/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
   <url><loc>https://govchain.us/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
@@ -2268,6 +2270,8 @@ export default {
     }
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
+    const gift = tryHandleGovGift(request);
+    if (gift) return gift;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
     const x402 = await tryHandleSisterX402(request, env);

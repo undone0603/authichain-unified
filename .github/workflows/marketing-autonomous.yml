@@ -88,6 +88,8 @@ jobs:
             "https://authichain.com/m/strainchain" \
             "https://authichain.com/m/bat-2026-001" \
             "https://authichain.com/blog/eu-dpp-manufacturer" \
+            "https://authichain.com/p/battery-passport-qr-code-requirements" \
+            "https://authichain.com/p/eu-digital-product-passport-batteries" \
             "https://strainchain.io/" \
             "https://strainchain.io/pricing" \
             "https://strainchain.io/onboard" \
@@ -101,6 +103,7 @@ jobs:
             "https://govchain.us/" \
             "https://govchain.us/onboard" \
             "https://govchain.us/pricing" \
+            "https://govchain.us/gift" \
             "https://govchain.us/llms.txt" \
             "https://govchain.us/openapi.json"
           do

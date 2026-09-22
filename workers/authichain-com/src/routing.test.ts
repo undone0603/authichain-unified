@@ -498,6 +498,14 @@ test("/demo/strainchain lands on the TruMark money surface", async () => {
   assert.equal(res.headers.get("location"), "https://authichain.com/trumark");
 });
 
+test("/gov-gift and /apex-packet send APEX to the GovChain packet", async () => {
+  for (const path of ["/gov-gift", "/apex-packet"]) {
+    const res = await get(path);
+    assert.equal(res.status, 302, path);
+    assert.equal(res.headers.get("location"), "https://govchain.us/gift");
+  }
+});
+
 test("/partners lands on the Made in America money surface", async () => {
   const res = await get("/partners");
   assert.equal(res.status, 302);
@@ -505,6 +513,14 @@ test("/partners lands on the Made in America money surface", async () => {
     res.headers.get("location"),
     "https://authichain.com/made-in-america"
   );
+});
+
+test("/gov-gift and /apex-packet send APEX to the GovChain packet", async () => {
+  for (const path of ["/gov-gift", "/apex-packet"]) {
+    const res = await get(path);
+    assert.equal(res.status, 302, path);
+    assert.equal(res.headers.get("location"), "https://govchain.us/gift");
+  }
 });
 
 test("/telegram and /miniapp serve the Passport Mini App", async () => {
@@ -757,6 +773,21 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
   assert.ok(
     xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>")
+  );
+  assert.ok(
+    xml.includes(
+      "<loc>https://authichain.com/p/battery-passport-qr-code-requirements</loc>"
+    )
+  );
+  assert.ok(
+    xml.includes(
+      "<loc>https://authichain.com/p/eu-digital-product-passport-batteries</loc>"
+    )
+  );
+  assert.ok(
+    xml.includes(
+      "<loc>https://authichain.com/p/cannabis-coa-verification-blockchain</loc>"
+    )
   );
   assert.ok(
     xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")

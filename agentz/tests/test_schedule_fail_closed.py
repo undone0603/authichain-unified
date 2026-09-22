@@ -78,6 +78,8 @@ INDEXNOW_MONEY_URLS = (
     "https://authichain.com/m/insulin-vial",
     "https://authichain.com/onboard",
     "https://authichain.com/blog/eu-dpp-manufacturer",
+    "https://authichain.com/p/battery-passport-qr-code-requirements",
+    "https://authichain.com/p/eu-digital-product-passport-batteries",
     "https://authichain.com/genetics",
     "https://strainchain.io/",
     "https://strainchain.io/pricing",
@@ -92,6 +94,7 @@ INDEXNOW_MONEY_URLS = (
     "https://govchain.us/",
     "https://govchain.us/onboard",
     "https://govchain.us/pricing",
+    "https://govchain.us/gift",
     "https://govchain.us/llms.txt",
     "https://govchain.us/openapi.json",
 )

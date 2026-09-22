@@ -110,6 +110,7 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   assert.ok(paths.includes("/opportunities"));
   assert.ok(paths.includes("/onboard"));
   assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/gift"));
   assert.ok(paths.includes("/llms.txt"));
   assert.ok(paths.includes("/openapi.json"));
   assert.ok(paths.includes("/api/x402"));
@@ -303,10 +304,28 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.doesNotMatch(html, /does not exist/);
 });
 
+test("free DoD packet is live, unpaid, and does not claim an award", async () => {
+  for (const path of ["/gift", "/sbir-packet", "/apex-packet"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.ok(html.includes("Nothing here is an award"));
+    assert.ok(html.includes("https://authichain.com/made-in-america"));
+    assert.ok(html.includes("/p/sbir-svip-blockchain-document-verification"));
+    assert.ok(html.includes('href="/onboard"'));
+    assert.ok(
+      html.includes('action="https://authichain.com/api/checkout/dpp"')
+    );
+    assert.ok(!html.includes("SBIR awarded"));
+    assert.ok(!html.includes("strainchain_farm"));
+  }
+});
+
 test("landing-owned sitemap URLs resolve on this worker", async () => {
   for (const path of [
     "/",
     "/pricing",
+    "/gift",
     "/llms.txt",
     "/openapi.json",
     "/api/x402",
