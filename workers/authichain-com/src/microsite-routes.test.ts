@@ -220,7 +220,10 @@ test("sitemap lists canonical microsite URLs", () => {
   assert.ok(hasSitemapPath(urls, "/m"));
   assert.ok(hasSitemapPath(urls, "/m/mendo"));
   assert.ok(hasSitemapPath(urls, "/m/bat-2026-001"));
-  assert.ok(hasSitemapPath(urls, "/telegram"));
+  assert.ok(
+    !hasSitemapPath(urls, "/telegram"),
+    "Mini App loc belongs on the worker sitemap, not the microsite list"
+  );
   assert.equal(Object.keys(MICROSITES).length, 5);
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
   assert.equal(DPP_CHECKOUT.endsWith("/api/checkout/dpp"), true);
