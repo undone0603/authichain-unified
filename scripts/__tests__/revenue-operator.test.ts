@@ -215,35 +215,31 @@ describe("classifySend", () => {
     expect(
       classifySend({
         namedInboxThisTurn: null,
-        publishedByCompany: true,
-        guessedAlias: false,
+        source: "published_contact",
       }).allowed
     ).toBe(false);
   });
 
-  it("refuses guessed aliases and unpublished inboxes", () => {
+  it("refuses guessed aliases and unknown provenance", () => {
     expect(
       classifySend({
-        namedInboxThisTurn: "info@example.com",
-        publishedByCompany: true,
-        guessedAlias: true,
+        namedInboxThisTurn: "bernard.arnault@lvmh.com",
+        source: "pattern_guess",
       }).reason
-    ).toContain("guessed");
+    ).toContain("untrusted_source:pattern_guess");
     expect(
       classifySend({
-        namedInboxThisTurn: "info@example.com",
-        publishedByCompany: false,
-        guessedAlias: false,
+        namedInboxThisTurn: "ops@example.com",
+        source: "unknown",
       }).reason
-    ).toContain("not published");
+    ).toContain("untrusted_source:unknown");
   });
 
   it("refuses founder inboxes", () => {
     expect(
       classifySend({
         namedInboxThisTurn: "authichain@gmail.com",
-        publishedByCompany: true,
-        guessedAlias: false,
+        source: "published_contact",
       }).allowed
     ).toBe(false);
   });
@@ -251,11 +247,26 @@ describe("classifySend", () => {
   it("allows one published inbox named this turn", () => {
     const verdict = classifySend({
       namedInboxThisTurn: "press@permitflow.com",
-      publishedByCompany: true,
-      guessedAlias: false,
+      source: "published_contact",
     });
     expect(verdict.allowed).toBe(true);
     expect(verdict.to).toBe("press@permitflow.com");
+  });
+
+  it("blocks a published role inbox unless allowRoleInbox is set", () => {
+    expect(
+      classifySend({
+        namedInboxThisTurn: "sales@ironfishdistillery.com",
+        source: "published_contact",
+      }).allowed
+    ).toBe(false);
+    expect(
+      classifySend({
+        namedInboxThisTurn: "sales@ironfishdistillery.com",
+        source: "published_contact",
+        allowRoleInbox: true,
+      }).allowed
+    ).toBe(true);
   });
 });
 
@@ -292,8 +303,7 @@ describe("decideOperatorAction", () => {
       }),
       send: {
         namedInboxThisTurn: "press@permitflow.com",
-        publishedByCompany: true,
-        guessedAlias: false,
+        source: "published_contact",
       },
     });
     expect(decision.action).toBe("qualifying");
@@ -313,8 +323,7 @@ describe("decideOperatorAction", () => {
       snapshot: snap({}),
       send: {
         namedInboxThisTurn: "press@permitflow.com",
-        publishedByCompany: true,
-        guessedAlias: false,
+        source: "published_contact",
       },
     });
     expect(allowed.action).toBe("send_one");
@@ -325,8 +334,7 @@ describe("decideOperatorAction", () => {
       snapshot: snap({}),
       send: {
         namedInboxThisTurn: "info@guessed.com",
-        publishedByCompany: false,
-        guessedAlias: true,
+        source: "pattern_guess",
       },
     });
     expect(refused.action).toBe("refuse_send");

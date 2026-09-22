@@ -4,6 +4,11 @@
  * This module never sends mail and never creates a Stripe session.
  */
 
+import {
+  assessRecipient,
+  canSend,
+  type VerificationSource,
+} from "../server/outreach/send-guard";
 import { planPaymentLink } from "../src/lib/plans";
 
 export const DEFAULT_FOUNDER_EMAILS = [
@@ -54,8 +59,8 @@ export type RevenueVerdict = {
 
 export type SendRequest = {
   namedInboxThisTurn: string | null | undefined;
-  publishedByCompany: boolean;
-  guessedAlias: boolean;
+  source: VerificationSource;
+  allowRoleInbox?: boolean;
 };
 
 export type SendVerdict = {
@@ -99,7 +104,6 @@ export type OperatorDecision = {
 
 const ACTIVE = new Set(["active", "trialing", "past_due"]);
 const PAID_OUT = new Set(["paid", "in_transit", "pending"]);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isFounderEmail(
   email: string | null | undefined,
@@ -179,17 +183,17 @@ export function classifySend(
   if (!to) {
     return { allowed: false, reason: "no inbox named this turn" };
   }
-  if (!EMAIL_RE.test(to)) {
-    return { allowed: false, reason: "named inbox is not an email" };
-  }
   if (isFounderEmail(to, founderEmails)) {
     return { allowed: false, reason: "founder inbox is not a prospect" };
   }
-  if (req.guessedAlias) {
-    return { allowed: false, reason: "guessed alias" };
-  }
-  if (!req.publishedByCompany) {
-    return { allowed: false, reason: "inbox not published by the company" };
+  const assessment = assessRecipient(to, req.source, {
+    allowRoleInbox: req.allowRoleInbox,
+  });
+  if (!canSend(assessment)) {
+    return {
+      allowed: false,
+      reason: assessment.reasons.join("; ") || "send guard rejected",
+    };
   }
   return { allowed: true, reason: `send to ${to}`, to };
 }
@@ -438,19 +442,26 @@ async function main(argv: string[]): Promise<number> {
   const sendRequested =
     cmd === "send" || hasFlag(argv, "--to") || Boolean(flagValue(argv, "--to"));
   const to = flagValue(argv, "--to") ?? null;
+  const source: VerificationSource = hasFlag(argv, "--guessed")
+    ? "pattern_guess"
+    : hasFlag(argv, "--apollo")
+      ? "apollo_verified"
+      : hasFlag(argv, "--published")
+        ? "published_contact"
+        : "unknown";
   const send: SendRequest | null = sendRequested
     ? {
         namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
-        publishedByCompany: hasFlag(argv, "--published"),
-        guessedAlias: hasFlag(argv, "--guessed"),
+        source,
+        allowRoleInbox: hasFlag(argv, "--role-inbox"),
       }
     : null;
 
   if (cmd === "send") {
     const verdict = classifySend({
       namedInboxThisTurn: hasFlag(argv, "--named-this-turn") ? to : null,
-      publishedByCompany: hasFlag(argv, "--published"),
-      guessedAlias: hasFlag(argv, "--guessed"),
+      source,
+      allowRoleInbox: hasFlag(argv, "--role-inbox"),
     });
     console.log(JSON.stringify(verdict, null, 2));
     return verdict.allowed ? 0 : 2;
