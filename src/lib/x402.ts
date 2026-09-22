@@ -509,12 +509,33 @@ export function toFacilitatorV1Payload(decoded: unknown): unknown {
       ? (raw.accepted as Record<string, unknown>)
       : {};
   const network = String(accepted.network ?? raw.network ?? "base");
-  return {
+  const facilitator: Record<string, unknown> = {
     x402Version: 1,
     scheme: accepted.scheme ?? raw.scheme ?? "exact",
     network: network.toLowerCase() === "eip155:8453" ? "base" : network,
     payload: raw.payload,
   };
+  const bazaar = bazaarExtensionFrom(raw);
+  if (bazaar !== undefined) {
+    facilitator.extensions = { bazaar };
+  }
+  return facilitator;
+}
+
+/** Copy only a client-supplied `extensions.bazaar`. Never invent one. */
+function bazaarExtensionFrom(
+  raw: Record<string, unknown>
+): unknown | undefined {
+  const extensions = raw.extensions;
+  if (
+    !extensions ||
+    typeof extensions !== "object" ||
+    Array.isArray(extensions)
+  ) {
+    return undefined;
+  }
+  if (!("bazaar" in extensions)) return undefined;
+  return (extensions as Record<string, unknown>).bazaar;
 }
 
 /**

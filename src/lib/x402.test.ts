@@ -395,6 +395,65 @@ describe("settlePayment (facilitator)", () => {
     );
   });
 
+  it("copies extensions.bazaar onto the settle body beside resource and omits it when absent", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, txHash: "0xdead" }),
+    } as Response);
+    const requirement = buildPaymentRequired({
+      resource: "https://authichain.com/api/x402",
+      priceUsd: 0.05,
+      payTo: "0xabc",
+    }).body.accepts[0];
+    const bazaar = {
+      info: { input: { type: "http", method: "POST" } },
+    };
+    const withBazaar = proofHeader({
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:8453" },
+      payload: {
+        signature: "0xsig",
+        authorization: { from: PAYER, to: "0xabc", value: "50000" },
+      },
+      extensions: { bazaar, other: { ignored: true } },
+    });
+    await settlePayment(withBazaar, requirement);
+    const present = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
+      paymentPayload?: {
+        resource?: string;
+        extensions?: { bazaar?: unknown; other?: unknown };
+      };
+      paymentRequirements?: {
+        outputSchema?: { input?: { type?: string; method?: string } };
+      };
+    };
+    expect(present.paymentRequirements?.outputSchema?.input?.type).toBe("http");
+    expect(present.paymentRequirements?.outputSchema?.input?.method).toBe(
+      "POST"
+    );
+    expect(present.paymentPayload?.resource).toBe(requirement.resource);
+    expect(present.paymentPayload?.extensions?.bazaar).toEqual(bazaar);
+    expect(present.paymentPayload?.extensions?.other).toBeUndefined();
+
+    fetchMock.mockClear();
+    const withoutBazaar = proofHeader({
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "base" },
+      payload: { signature: "0xsig" },
+    });
+    await settlePayment(withoutBazaar, requirement);
+    const absent = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
+      paymentPayload?: { extensions?: unknown; resource?: string };
+      paymentRequirements?: { outputSchema?: { input?: { method?: string } } };
+    };
+    expect(absent.paymentRequirements?.outputSchema?.input?.method).toBe(
+      "POST"
+    );
+    expect(absent.paymentPayload?.resource).toBe(requirement.resource);
+    expect(absent.paymentPayload?.extensions).toBeUndefined();
+  });
+
   it("attachResourceToPaymentPayload fills a missing resource and keeps a present one", () => {
     expect(attachResourceToPaymentPayload("proof", "https://x/y")).toBe(
       "proof"
