@@ -56,16 +56,18 @@ jobs:
           }
           # Sitemaps plus money URLs. Fail soft per URL so one IndexNow
           # blip does not red the job.
-          # Do not IndexNow https://authichain.com/, /dpp, or /x402 while
-          # live HTML still has one-click /api/checkout hrefs. After the
-          # authichain-com deploy that ships Payment Links on those pages,
-          # restore / and /dpp here. Fan-out + OpenAPI + llms.txt are
-          # listing surfaces (live /x402 stays off until that HTML ships).
+          # Live /, /dpp, and /x402 already ship buy.stripe.com Payment
+          # Link hrefs (email-gated form actions stay). IndexNow those
+          # HTML pages so crawlers see the links; do not ping Stripe
+          # hosts or /api/checkout|/protocol/checkout endpoints.
           for URL in \
             "https://authichain.com/sitemap.xml" \
             "https://qron.space/sitemap.xml" \
             "https://strainchain.io/sitemap.xml" \
             "https://govchain.us/sitemap.xml" \
+            "https://authichain.com/" \
+            "https://authichain.com/dpp" \
+            "https://authichain.com/x402" \
             "https://authichain.com/pricing" \
             "https://authichain.com/.well-known/x402" \
             "https://authichain.com/openapi.json" \
