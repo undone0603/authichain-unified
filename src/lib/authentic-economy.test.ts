@@ -35,6 +35,9 @@ describe("authentic-economy identity join", () => {
     expect(MONEY_RAILS.qron.theater).toBe(true);
     expect(MONEY_RAILS.qron.contract).toBe(QRON_ERC20);
     expect(MONEY_RAILS.qron.totalSupply).toBe(1_000_000_000);
+    expect(agentPricingDiscovery().qron.firstScan.qron).toBe(1);
+    expect(agentPricingDiscovery().qron.firstScan.settlesOnChain).toBe(false);
+    expect(agentPricingDiscovery().qron.isPaymentRail).toBe(false);
     expect(QRON_TOTAL_SUPPLY).toBe(1_000_000_000);
     expect(MONEY_RAILS.x402.asset.toLowerCase()).not.toBe(
       QRON_ERC20.toLowerCase()

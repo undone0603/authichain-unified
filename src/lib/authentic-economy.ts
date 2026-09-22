@@ -22,6 +22,10 @@ import {
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
 import { planPaymentLink, planUsd } from "./plans";
+import {
+  FIRST_SCAN_GIFT_URL,
+  FIRST_SCAN_REWARD_QRON,
+} from "./reward-calculator";
 import { supabaseAdmin as admin } from "./supabase-admin";
 
 export {
@@ -156,6 +160,12 @@ export function agentPricingDiscovery() {
       totalSupply: MONEY_RAILS.qron.totalSupply,
       holder: MONEY_RAILS.qron.holder,
       identity: WEB3_IDENTITY_DOC,
+      firstScan: {
+        qron: FIRST_SCAN_REWARD_QRON,
+        giftUrl: FIRST_SCAN_GIFT_URL,
+        settlesOnChain: false,
+        note: "Entitlement for the first authentic scan of a gifted seal. Repeat scans earn 0 from this path. Does not transfer Polygon $QRON and does not credit x402.",
+      },
     },
     nft: {
       network: "polygon",

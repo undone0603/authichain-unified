@@ -1125,6 +1125,25 @@ workflows:
     reputational_impact: low
     requires_human_approval: false
 
+  - id: qron_tokenomics_sim
+    title: "Simulate $QRON fiat obligations (no buyback, no burn)"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.qron_tokenomics
+    type: api
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: true
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: high
+    requires_human_approval: true
+    description: |
+      Compute a 25% fiat burn obligation and split the remaining 75%
+      40/30/15/15. Writes a checkpoint only. Refuses simulated_burn=false.
+      Does not trade, burn, or move the Polygon treasury. Live supply is 1B.
+
   - id: launch_weekly_strategy
     title: "Weekly strategy review: economic allocation"
     priority: low
