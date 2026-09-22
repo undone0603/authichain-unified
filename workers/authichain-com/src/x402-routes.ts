@@ -9,6 +9,8 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
  *      (not_configured is OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
+ * GET  /api/x402/listing → PayAPI-ready pack copied from health
+ * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 503/402 until facilitator + payTo
@@ -31,6 +33,7 @@ import {
   x402ScanFanout,
   type X402HealthEnv,
 } from "../../../src/lib/x402";
+import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 
 export type X402Env = X402HealthEnv;
 
@@ -64,6 +67,8 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/x402" ||
     p === "/api/x402/health" ||
     p === "/api/x402/catalog" ||
+    p === "/api/x402/listing" ||
+    p === "/api/x402/growth" ||
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
     p === "/.well-known/x402.json" ||
@@ -83,6 +88,14 @@ function isHealthPath(pathname: string): boolean {
 function isCatalogPath(pathname: string): boolean {
   const p = normalizePath(pathname);
   return p === "/api/x402/catalog" || p === "/.well-known/x402.json";
+}
+
+function isListingPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/api/x402/listing";
+}
+
+function isGrowthPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/api/x402/growth";
 }
 
 function isFanoutPath(pathname: string): boolean {
@@ -137,6 +150,18 @@ async function healthResponse(env?: X402Env): Promise<Response> {
 async function catalogResponse(env?: X402Env): Promise<Response> {
   hydrateX402(env);
   return json(200, await x402Catalog(healthEnv(env)));
+}
+
+async function listingResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  const health = await x402HealthReport(healthEnv(env));
+  return json(200, x402ListingPack(health));
+}
+
+async function growthResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  const health = await x402HealthReport(healthEnv(env));
+  return json(200, growthDiscovery(health));
 }
 
 function fanoutResponse(): Response {
@@ -255,6 +280,14 @@ export async function tryHandleX402(
 
   if (request.method === "GET" && isCatalogPath(url.pathname)) {
     return catalogResponse(env);
+  }
+
+  if (request.method === "GET" && isListingPath(url.pathname)) {
+    return listingResponse(env);
+  }
+
+  if (request.method === "GET" && isGrowthPath(url.pathname)) {
+    return growthResponse(env);
   }
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
