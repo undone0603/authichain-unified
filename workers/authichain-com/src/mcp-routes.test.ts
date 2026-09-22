@@ -69,7 +69,7 @@ describe("mcp discovery", () => {
       result: { tools: Array<{ name: string }> };
     };
     expect(listed.result.tools.map(t => t.name)).toEqual(
-      expect.arrayContaining(["get_pricing", "verify"])
+      expect.arrayContaining(["get_pricing", "verify", "query_provenance"])
     );
 
     const call = await tryHandleMcp(
@@ -136,6 +136,87 @@ describe("mcp discovery", () => {
     expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(JSON.stringify(body)).not.toContain("SECURED");
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
+  });
+
+  it("query_provenance is free and never stamps unknown IDs verified", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 9,
+          method: "tools/call",
+          params: {
+            name: "query_provenance",
+            arguments: { assetId: "NOPE-XYZ" },
+          },
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const body = (await res!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const text = body.result.content[0].text;
+    const data = JSON.parse(text) as {
+      status: string;
+      verified: boolean;
+      compliance: string;
+    };
+    expect(data.status).toBe("unknown");
+    expect(data.verified).toBe(false);
+    expect(text).not.toContain("EU DPP Ready");
+    expect(text).not.toContain("Polygon / Base");
+    expect(data.compliance).toContain("$299");
+  });
+
+  it("query_provenance marks the desk seed as a sample, not an attestation", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: {
+            name: "query_provenance",
+            arguments: { assetId: "ac-7c2a91e4" },
+          },
+        }),
+      })
+    );
+    const body = (await res!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const data = JSON.parse(body.result.content[0].text) as {
+      status: string;
+      verified: boolean;
+      product: { id: string };
+    };
+    expect(data.status).toBe("desk_sample");
+    expect(data.verified).toBe(false);
+    expect(data.product.id).toBe("AC-7C2A91E4");
+  });
+
+  it("unknown JSON-RPC method is 200 with -32601, not HTTP 404", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 11,
+          method: "tools/bogus",
+        }),
+      })
+    );
+    expect(res?.status).toBe(200);
+    const body = (await res!.json()) as {
+      error: { code: number };
+    };
+    expect(body.error.code).toBe(-32601);
   });
 
   it("tools/call verify is 503 when payTo is missing", async () => {
