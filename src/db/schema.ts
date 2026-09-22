@@ -1002,45 +1002,6 @@ export const consensusResults = pgTable("consensus_results", {
 });
 
 // ─── QRON Reward Ledger ──────────────────────────────────────────────────────
-// Proposed policy row. Not applied to production. Locked by default.
-// Burn rate is the fiat-revenue slice. The four percents split only the
-// remainder. Live supply is 1B; this table does not store the 100M theater figure.
-export const tokenomicsPolicy = pgTable("tokenomics_policy", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  burnRate: numeric("burn_rate", { precision: 5, scale: 4 })
-    .notNull()
-    .default("0.2500"),
-  treasuryPct: numeric("treasury_pct", { precision: 5, scale: 4 })
-    .notNull()
-    .default("0.4000"),
-  nodeOperatorsPct: numeric("node_operators_pct", { precision: 5, scale: 4 })
-    .notNull()
-    .default("0.3000"),
-  coreContributorsPct: numeric("core_contributors_pct", {
-    precision: 5,
-    scale: 4,
-  })
-    .notNull()
-    .default("0.1500"),
-  ecosystemGrantsPct: numeric("ecosystem_grants_pct", {
-    precision: 5,
-    scale: 4,
-  })
-    .notNull()
-    .default("0.1500"),
-  effectiveFrom: timestamp("effective_from", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  locked: boolean("locked").notNull().default(true),
-  settlesOnChain: boolean("settles_on_chain").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
 export const qronRewardLedger = pgTable("qron_reward_ledger", {
   id: serial("id").primaryKey(),
   agentId: integer("agent_id").notNull(),
