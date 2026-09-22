@@ -67,6 +67,13 @@ describe("authentic-economy identity join", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
     );
+    expect(d.humanCheckout.checkout.farm).toBe(
+      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
+    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
+    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
+      "buy.stripe.com"
+    );
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.qron.totalSupply).toBe(QRON_TOTAL_SUPPLY);

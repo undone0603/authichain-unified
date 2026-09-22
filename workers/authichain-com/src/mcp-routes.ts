@@ -35,7 +35,7 @@ const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Live AuthiChain prices: StrainChain Passport and EU DPP Payment Links for humans; unpaid POST /api/x402 ($0.05 USDC on Base) for agents.",
+      "Live AuthiChain prices: StrainChain Passport, Farm, and EU DPP Payment Links for humans; unpaid POST /api/x402 ($0.05 USDC on Base) for agents.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -115,8 +115,10 @@ export function mcpPricingDiscovery() {
       source: "src/lib/plans.ts",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
+      farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
+      farmPaymentLink: planPaymentLink("strainchain_farm"),
       emailCapture: {
         passport: "https://authichain.com/passport",
         dpp: "https://authichain.com/dpp",

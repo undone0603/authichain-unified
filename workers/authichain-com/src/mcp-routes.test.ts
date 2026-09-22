@@ -34,6 +34,7 @@ describe("mcp discovery", () => {
           humanCheckout: {
             passportPaymentLink?: string;
             dppPaymentLink?: string;
+            farmPaymentLink?: string;
           };
         };
       };
@@ -45,6 +46,12 @@ describe("mcp discovery", () => {
       expect(body.pricing.humanCheckout.passportPaymentLink).toBe(
         planPaymentLink("strainchain_passport")
       );
+      expect(body.pricing.humanCheckout.farmPaymentLink).toBe(
+        planPaymentLink("strainchain_farm")
+      );
+      expect(
+        new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
+      ).toBe("buy.stripe.com");
       expect(JSON.stringify(body)).not.toContain("/api/checkout");
     }
   });
@@ -86,6 +93,12 @@ describe("mcp discovery", () => {
     expect(priced.result.content[0].text).toContain(
       planPaymentLink("strainchain_passport")
     );
+    expect(priced.result.content[0].text).toContain(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
+      "buy.stripe.com"
+    );
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
   });
 
@@ -107,7 +120,11 @@ describe("mcp discovery", () => {
     const body = (await unpaid!.json()) as {
       x402Version: number;
       resource?: { url?: string };
-      accepts: Array<{ amount?: string; payTo?: string }>;
+      accepts: Array<{
+        amount?: string;
+        payTo?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
     };
     expect(body.x402Version).toBe(2);
     expect(body.resource?.url).toContain("/mcp");
@@ -115,6 +132,8 @@ describe("mcp discovery", () => {
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(JSON.stringify(body)).not.toContain("SECURED");
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });

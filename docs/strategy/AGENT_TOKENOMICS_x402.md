@@ -82,7 +82,7 @@ Health is safe to scrape: `payTo`, `asset`, `network`, `chainId`, `pricePerCall`
 
 If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the $0 / unbound path). Live production has `payTo` set — unpaid callers get 402, not 503.
 
-**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. PayAI `/settle` still receives the v1 `paymentRequirements` (with `outputSchema`) from `buildPaymentRequired().body`.
+**402 body (shape):** Coinbase CDP `POST /v2/x402/validate` reads this JSON body's `x402Version`. A v1 body is rejected (`actual 1 expected 2`). The same object is base64 in `PAYMENT-REQUIRED`. Unpaid `accepts[0]` carries `outputSchema.input` (`type` + `method`) so PayAI Bazaar can catalog from the 402 body. PayAI `/settle` still receives the v1 `paymentRequirements` (also with `outputSchema`) from `buildPaymentRequired().body`.
 
 ```json
 {
@@ -103,7 +103,10 @@ If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "payTo": "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
       "maxTimeoutSeconds": 60,
-      "extra": { "name": "USD Coin", "version": "2" }
+      "extra": { "name": "USD Coin", "version": "2" },
+      "outputSchema": {
+        "input": { "type": "http", "method": "POST", "bodyType": "json" }
+      }
     }
   ],
   "extensions": {
@@ -220,16 +223,16 @@ Owner-only live settle smoke: `scripts/x402-smoke.ts`. Do not dispatch another l
 
 ## 6. Discovery surfaces
 
-| URL                                                          | Audience                                                                                                                                                                                                                                                                              |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `https://authichain.com/x402`                                | Humans + crawlers. JSON-LD Service/Offer. In `sitemap.xml`. Do **not** IndexNow this URL while live HTML still has one-click `/api/checkout` hrefs — wait for the `authichain-com` deploy that ships email + Payment Links.                                                           |
-| `GET /.well-known/x402`                                      | x402scan fan-out (`version` + `resources`). IndexNow + sitemap after that same deploy. Live today this path is still the catalog document.                                                                                                                                            |
-| `GET /openapi.json`                                          | OpenAPI 3.1 with `x-payment-info` on unpaid `POST /api/x402`. IndexNow after deploy (live is 404).                                                                                                                                                                                    |
-| `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                                                                                |
-| `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                                                                                 |
-| `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                                                                        |
-| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
-| `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                                                                                       |
+| URL                                                          | Audience                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https://authichain.com/x402`                                | Humans + crawlers. JSON-LD Service/Offer. In `sitemap.xml`. Do **not** IndexNow this URL while live HTML still has one-click `/api/checkout` hrefs — wait for the `authichain-com` deploy that ships email + Payment Links.                                                                                                                       |
+| `GET /.well-known/x402`                                      | x402scan fan-out (`version` + `resources`). IndexNow + sitemap after that same deploy. Live today this path is still the catalog document.                                                                                                                                                                                                        |
+| `GET /openapi.json`                                          | OpenAPI 3.1 with `x-payment-info` on unpaid `POST /api/x402`. IndexNow after deploy (live is 404).                                                                                                                                                                                                                                                |
+| `GET /api/x402/health`                                       | Agents. Live bindings.                                                                                                                                                                                                                                                                                                                            |
+| `GET /api/x402/catalog`                                      | Agents / MCP / OpenAPI-style clients. Paid endpoints + price + payTo.                                                                                                                                                                                                                                                                             |
+| `GET /.well-known/x402.json`                                 | Same catalog, well-known path.                                                                                                                                                                                                                                                                                                                    |
+| Unpaid `POST /api/x402` 402 body + `PAYMENT-REQUIRED` header | `extensions.bazaar` (info + schema) **and** `accepts[0].outputSchema.input` (`type` + `method`). JSON body and header are the v2 envelope (`x402Version: 2`, `resource` object, `accepts[].amount`, CAIP-2 `eip155:8453`) so CDP Bazaar validate can pass. PayAI `/settle` still uses the v1 requirement with `outputSchema`. No facilitator URL. |
+| `server/mcp` `get_pricing` / `verify_paid`                   | MCP tools. Must point at **Base**, not Polygon.                                                                                                                                                                                                                                                                                                   |
 
 Catalog **must** call `x402HealthReport` (or the same env readers). A hardcoded $0.05 that disagrees with `X402_PRICE_USD` is a bug.
 

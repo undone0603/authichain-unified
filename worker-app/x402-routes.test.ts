@@ -129,6 +129,7 @@ describe("POST /api/x402", () => {
         amount?: string;
         maxAmountRequired?: string;
         network?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
       }>;
       extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
@@ -140,6 +141,8 @@ describe("POST /api/x402", () => {
     expect(body.accepts[0].asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
     const required = res.headers.get("PAYMENT-REQUIRED");
     expect(required).toBeTruthy();
