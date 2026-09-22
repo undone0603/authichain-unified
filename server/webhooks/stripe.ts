@@ -32,6 +32,7 @@ import {
   recordStripeWebhookDelivery,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
+import { planByStripePriceId } from "../../src/lib/plans";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -556,10 +557,30 @@ export async function handleStripeWebhook(
             ? "annual"
             : "monthly";
         const metaPlan = sub.metadata?.plan ?? null;
-        const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
+        const catalogue = priceId ? planByStripePriceId(priceId) : undefined;
         const status = mapStripeStatus(sub.status);
         const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
+        if (catalogue) {
+          await db.logAutomationAudit(
+            event.type === "customer.subscription.created"
+              ? "billing_subscription_created"
+              : "billing_subscription_updated",
+            {
+              eventId: event.id,
+              stripeSubscriptionId: sub.id,
+              stripeCustomerId: customerId ?? null,
+              plan: catalogue.id,
+              status,
+              billingCycle,
+              userId: userId ?? null,
+              catalogue: true,
+            }
+          );
+          break;
+        }
+
+        const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
         if (userId) {
           await db.upsertStripeSubscription({
             userId,
@@ -699,7 +720,10 @@ export async function handleStripeWebhook(
           firstLine?.price?.recurring?.interval === "year"
             ? "annual"
             : "monthly";
-        const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
+        const catalogue = priceId ? planByStripePriceId(priceId) : undefined;
+        const plan = catalogue
+          ? catalogue.id
+          : detectPlan(priceId, amountCents, null, invBillingCycle);
 
         await Promise.all([
           amountUsd > 0

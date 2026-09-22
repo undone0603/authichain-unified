@@ -101,7 +101,6 @@ jobs:
             "rxchain-io",
             "threadchain-io",
             "watchchain-io",
-            "passport-demo",
             "qfs-adapter",
             "authichain-bridge"
           ]')

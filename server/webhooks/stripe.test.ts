@@ -723,6 +723,43 @@ describe("plan detection (via subscription amounts)", () => {
     },
   ];
 
+  it("does not upsert a B2B starter row for a live Farm Plan subscription", async () => {
+    const { upsertStripeSubscription, logAutomationAudit } =
+      await import("../db.js");
+    const { planByStripePriceId } = await import("../../src/lib/plans.js");
+    const farm = planByStripePriceId("price_1UHjJWGqTruSqV8TePctYzO5");
+    expect(farm?.id).toBe("strainchain_farm");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("customer.subscription.created", "evt_farm_plan", {
+        id: "sub_farm",
+        status: "active",
+        customer: "cus_farm",
+        metadata: { user_id: "1" },
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_1UHjJWGqTruSqV8TePctYzO5",
+                unit_amount: 14_900,
+              },
+            },
+          ],
+        },
+        current_period_end: Math.floor(Date.now() / 1000) + 2592000,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(vi.mocked(upsertStripeSubscription)).not.toHaveBeenCalled();
+    expect(vi.mocked(logAutomationAudit)).toHaveBeenCalledWith(
+      "billing_subscription_created",
+      expect.objectContaining({
+        plan: "strainchain_farm",
+        catalogue: true,
+      })
+    );
+  });
+
   for (const { priceId, amount, expectedPlan } of cases) {
     it(`detects plan '${expectedPlan}' from priceId '${priceId}'`, async () => {
       const { upsertStripeSubscription } = await import("../db.js");
