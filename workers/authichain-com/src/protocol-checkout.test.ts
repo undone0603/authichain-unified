@@ -196,6 +196,14 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     expect(res?.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
+  it("HEAD /api/checkout/plan/strainchain_farm is 204 and does not bounce", () => {
+    const res = tryHandleApiCheckoutEmailGate(
+      req("/api/checkout/plan/strainchain_farm", { method: "HEAD" })
+    );
+    expect(res?.status).toBe(204);
+    expect(res?.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
   it("GET /api/checkout/dpp without email 303s to /dpp", () => {
     const res = tryHandleApiCheckoutEmailGate(
       req("/api/checkout/dpp?visit_id=dpp_anon")
@@ -216,6 +224,16 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     );
   });
 
+  it("GET /api/checkout/plan/strainchain_farm without email 303s to /pricing", () => {
+    const res = tryHandleApiCheckoutEmailGate(
+      req("/api/checkout/plan/strainchain_farm")
+    );
+    expect(res?.status).toBe(303);
+    expect(res?.headers.get("location")).toBe(
+      "https://authichain.com/pricing?need_email=1"
+    );
+  });
+
   it("GET with a recovery email falls through to APP_WORKER", () => {
     expect(
       tryHandleApiCheckoutEmailGate(
@@ -225,6 +243,11 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     expect(
       tryHandleApiCheckoutEmailGate(
         req("/api/checkout/plan/strainchain_passport?email=mike%40realthcv.com")
+      )
+    ).toBeNull();
+    expect(
+      tryHandleApiCheckoutEmailGate(
+        req("/api/checkout/plan/strainchain_farm?email=ops%40brand.com")
       )
     ).toBeNull();
   });
