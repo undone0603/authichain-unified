@@ -73,6 +73,63 @@ describe("tryHandleX402", () => {
     );
   });
 
+  it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {
+    const res = await tryHandleX402(req("/api/x402/listing"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      name: string;
+      category: string;
+      paidRoute: string;
+      wallet: string;
+      priceUsd: number;
+      endpoints: number;
+      tools: number;
+      payapi: { form: { wallet: string; paidRoute: string } };
+    };
+    expect(body.name).toBe("AuthiChain Agent Verify");
+    expect(body.category).toBe("Verification");
+    expect(body.paidRoute).toBe(
+      "https://authichain.com/api/v1/agent-verify"
+    );
+    expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
+    expect(body.payapi.form.wallet).toBe(body.wallet);
+    expect(body.priceUsd).toBe(0.05);
+    expect(body.endpoints).toBe(2);
+    expect(body.tools).toBe(3);
+    expect(JSON.stringify(body)).not.toContain(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
+  });
+
+  it("GET /api/x402/growth lists directories and sister aliases", async () => {
+    const res = await tryHandleX402(req("/api/x402/growth"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      listing: string;
+      directories: Array<{ id: string }>;
+      sisters: Array<{ origin: string }>;
+      pack: { wallet: string };
+    };
+    expect(body.listing).toBe("/api/x402/listing");
+    expect(body.directories.some(d => d.id === "payapi")).toBe(true);
+    expect(body.sisters.map(s => s.origin)).toEqual(
+      expect.arrayContaining([
+        "https://authichain.com",
+        "https://qron.space",
+        "https://strainchain.io",
+        "https://govchain.us",
+      ])
+    );
+    expect(body.pack.wallet).toBe(
+      "0xabc0000000000000000000000000000000000001"
+    );
+  });
+
   it("GET /.well-known/x402.json is the catalog", async () => {
     const res = await tryHandleX402(req("/.well-known/x402.json"));
     expect(res!.status).toBe(200);
