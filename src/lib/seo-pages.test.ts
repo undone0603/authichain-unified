@@ -55,6 +55,20 @@ describe("seo-pages loader", () => {
       "https://authichain.com/authentic-agentic-economy"
     );
   });
+
+  it("cannabis CoA hub offers Farm $149 as well as Passport $49", () => {
+    const page = getSeoPageBySlug("cannabis-coa-verification-blockchain");
+    expect(page).not.toBeNull();
+    expect(page?.bodyHtml).toContain(
+      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    );
+    expect(page?.bodyHtml).toContain(
+      'action="https://authichain.com/api/checkout/plan/strainchain_farm"'
+    );
+    expect(page?.bodyHtml).toContain(
+      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
+  });
 });
 
 const GENERATED_HOW_IT_WORKS =

@@ -39,6 +39,7 @@ import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
+import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -3510,6 +3511,7 @@ export default {
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/.well-known/x402', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
+        ...icpSeoSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.82' })),
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
@@ -3550,6 +3552,9 @@ export default {
     }
     if (p === '/partners' || p === '/partners/') {
       return Response.redirect('https://authichain.com/made-in-america', 302);
+    }
+    if (p === '/gov-gift' || p === '/gov-gift/' || p === '/apex-packet' || p === '/apex-packet/') {
+      return Response.redirect('https://govchain.us/gift', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
       return Response.redirect('https://authichain.com/pricing', 302);

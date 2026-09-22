@@ -31,6 +31,8 @@ const LIVE_MONEY = {
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
   strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
   strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
+  strainchainFarmCheckout: 'https://authichain.com/api/checkout/plan/strainchain_farm',
+  strainchainFarmPay: 'https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z',
 };
 
 function isDppKeyword(keyword) {
@@ -122,10 +124,18 @@ function moneyCtaHtml(brandKey, keyword, brand) {
     const extra = secondaryHref
       ? `<p><a href="${secondaryHref}">${esc(secondaryLabel)}</a>. ${esc(brand.price)}</p>`
       : `<p>${esc(brand.price)}</p>`;
+    const farm =
+      cannabis && primaryHref === LIVE_MONEY.strainchainPassportCheckout
+        ? checkoutEmailFormHtml(
+            LIVE_MONEY.strainchainFarmCheckout,
+            'Start Farm Plan $149/mo'
+          ) + `<p><a href="${LIVE_MONEY.strainchainFarmPay}">Pay $149/mo on Stripe</a></p>`
+        : '';
     return (
       `<h2>Get started</h2>` +
       checkoutEmailFormHtml(primaryHref, primaryLabel) +
       pay +
+      farm +
       extra
     );
   }
