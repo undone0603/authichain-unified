@@ -40,6 +40,7 @@ import {
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
+import { withApolloTracker } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -3462,8 +3463,7 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
   });
 }
 
-export default {
-  async fetch(request: Request, env: Env) {
+async function handleAuthichainCom(request: Request, env: Env) {
     const url = new URL(request.url);
     if (url.hostname === 'www.authichain.com') {
       url.hostname = 'authichain.com';
@@ -3648,5 +3648,10 @@ export default {
     if (seoRedirect) return seoRedirect;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
-  }
+}
+
+export default {
+  async fetch(request: Request, env: Env) {
+    return withApolloTracker(request, await handleAuthichainCom(request, env));
+  },
 };
