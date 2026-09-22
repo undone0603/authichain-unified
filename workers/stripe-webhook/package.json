@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
-    "stripe": "^22.4.0"
+    "stripe": "^22.6.2"
   }
 }
