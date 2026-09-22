@@ -326,6 +326,43 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", 
   }
 });
 
+test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+  const f = stubFetch();
+  try {
+    const res = await get("/api/x402/catalog");
+    assert.equal(res.status, 200);
+    assert.equal(f.calls.length, 0, "catalog must not be proxied");
+    const body = (await res.json()) as {
+      catalog: string;
+      humanCheckout: {
+        farmPaymentLink?: string;
+        passportPaymentLink?: string;
+        dppPaymentLink?: string;
+        starterPaymentLink?: string;
+      };
+    };
+    assert.equal(body.catalog, "/api/x402/catalog");
+    assert.equal(
+      new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
+      "buy.stripe.com"
+    );
+    assert.equal(
+      new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
+      "buy.stripe.com"
+    );
+    assert.equal(
+      new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
+      "buy.stripe.com"
+    );
+    assert.equal(body.humanCheckout.starterPaymentLink, undefined);
+    const blob = JSON.stringify(body);
+    assert.equal(blob.includes("/api/checkout"), false);
+    assert.equal(blob.toLowerCase().includes("facilitator.payai"), false);
+  } finally {
+    f.restore();
+  }
+});
+
 test("/pricing is a real catalogue page, not a 404", async () => {
   const f = stubFetch();
   try {

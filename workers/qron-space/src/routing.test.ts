@@ -181,6 +181,48 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", 
   }
 });
 
+test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", async () => {
+  const res = await get("/api/x402/catalog");
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    catalog: string;
+    humanCheckout: {
+      farmPaymentLink?: string;
+      passportPaymentLink?: string;
+      dppPaymentLink?: string;
+      starterPaymentLink?: string;
+      creatorPaymentLink?: string;
+    };
+  };
+  assert.equal(body.catalog, "/api/x402/catalog");
+  assert.equal(
+    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    body.humanCheckout.starterPaymentLink,
+    planPaymentLink("starter")
+  );
+  assert.equal(
+    body.humanCheckout.creatorPaymentLink,
+    planPaymentLink("creator")
+  );
+  const blob = JSON.stringify(body);
+  assert.equal(blob.includes("/api/checkout"), false);
+  assert.equal(blob.toLowerCase().includes("facilitator.payai"), false);
+
+  const wellKnown = await get("/.well-known/x402.json");
+  assert.equal(wellKnown.status, 200);
+});
+
 test("/pricing is a real catalogue page, not a 404", async () => {
   const res = await get("/pricing");
   assert.equal(res.status, 200);
