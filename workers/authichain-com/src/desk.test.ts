@@ -135,6 +135,9 @@ test("/desk/verify?id=AC-DPP-BATT-8841 is the battery DPP sample", async () => {
   assert.match(html, /Harbor-3/);
   assert.match(html, /18 Feb 2027/);
   assert.match(html, /Guardian/);
+  assert.match(html, /Story Mode/);
+  assert.match(html, /Cells, then a pack/);
+  assert.match(html, /this lot only/);
   assert.match(html, /Desk sample/);
 });
 
@@ -147,6 +150,10 @@ test("/desk/verify never attests an unknown ID", async () => {
   assert.doesNotMatch(html, /EU DPP Ready/);
   assert.doesNotMatch(html, /Consensus reached/);
   assert.doesNotMatch(html, /location\.href = '\/verify'/);
+  assert.match(html, /No story on this tag/);
+  assert.match(html, /does not borrow another lot/);
+  assert.doesNotMatch(html, /Cells, then a pack/);
+  assert.doesNotMatch(html, /The mother/);
 });
 
 test("/desk/verify?id=GC-MIA-DLA-0005 is not a government mint", async () => {

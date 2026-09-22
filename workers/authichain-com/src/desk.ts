@@ -320,6 +320,124 @@ function lookupDeskSeal(raw: string): DeskSeal {
   };
 }
 
+
+type StoryChapter = { phase: string; title: string; body: string };
+
+function storyChapters(seal: DeskSeal): StoryChapter[] {
+  const table: Record<string, StoryChapter[]> = {
+    [SEED]: [
+      {
+        phase: "Origin",
+        title: "A Michigan desk seed",
+        body: "AC-7C2A91E4 is the published seed on this desk. It is a Michigan sample row. It is not a live METRC filing.",
+      },
+      {
+        phase: "Classification",
+        title: "Labeled, not attested",
+        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false. The scan is Guardian through Arbiter in about 2.1 seconds.",
+      },
+      {
+        phase: "Sealing",
+        title: "Passport is the SKU",
+        body: "One cultivar passport is $49. This story belongs to the seed. It is not a dispensary record.",
+      },
+    ],
+    "AC-DPP-BATT-8841": [
+      {
+        phase: "Origin",
+        title: "Cells, then a pack",
+        body: "Cell lot sealed 2 Apr 2026 in Holland, Michigan. Assembled 11 Jun 2026 in Grand Rapids as Harbor-3, a 3.2 kWh LFP pack, held on this desk by Great Lakes Energy Works.",
+      },
+      {
+        phase: "Classification",
+        title: "The numbers on the tag",
+        body: "68.4 kg CO2e per kWh. Recycled cobalt 14%. Recycled lithium 6%. Repair is a module swap with an 8-year residual. ESPR batteries at or above 2 kWh face the 18 Feb 2027 gate. This is the sample DPP class, not a filed passport.",
+      },
+      {
+        phase: "Sealing",
+        title: "The seal on this lot",
+        body: "American Seal issued 14 Aug 2026 as a desk sample. query_provenance does not treat this row as a live registry write.",
+      },
+    ],
+    "SC-FARM-LT63-0912": [
+      {
+        phase: "Origin",
+        title: "The mother",
+        body: "Mother selected 18 Mar 2026 on farm lot A, Northern Lower Peninsula. Cultivar LT-63. This story is that jar, not the category.",
+      },
+      {
+        phase: "Classification",
+        title: "A hash, not a license",
+        body: "CoA posted 9 Jul 2026. Hash sha256:7c91…e2ab. The METRC string 1A4060300002DEMO is a desk demo. Not a METRC filing and not a dispensary license.",
+      },
+      {
+        phase: "Sealing",
+        title: "Passport on the jar",
+        body: "Sealed 12 Sep 2026. Farm is $149 a month. A single cultivar passport is $49. This page is the sample story for that jar.",
+      },
+    ],
+    "GC-MIA-DLA-0005": [
+      {
+        phase: "Origin",
+        title: "A founder-held mark",
+        body: "ACPT token 5 on Base. Held by the founder. United States origin. This is not a government mint.",
+      },
+      {
+        phase: "Classification",
+        title: "A fit, not an award",
+        body: "DLA Aviation Philadelphia is named from mint calldata. That describes a fit. It is not an award and not an SBIR win.",
+      },
+      {
+        phase: "Sealing",
+        title: "The packet you can open",
+        body: "Metadata served 22 Sep 2026. The public document is the free gift at govchain.us/gift. On-chain government seals wait until a contract has bytecode.",
+      },
+    ],
+    "AC-DPP-BATT-8841X": [
+      {
+        phase: "Origin",
+        title: "Presented as the pack",
+        body: "Shown on this desk as a copy that borrows the Harbor-3 name.",
+      },
+      {
+        phase: "Classification",
+        title: "The signature breaks",
+        body: "The signature does not verify against JWKS. There is no matching tokenURI. Sentinel fails the copy.",
+      },
+      {
+        phase: "Refusal",
+        title: "This mark does not inherit the story",
+        body: "The original Harbor-3 tag still has its own chapters. Scanning the copy does not play them.",
+      },
+    ],
+  };
+  return (
+    table[seal.id] ?? [
+      {
+        phase: "None",
+        title: "No story on this tag",
+        body: "This ID was not issued. Story Mode does not borrow another lot and does not stamp an unknown ID verified.",
+      },
+    ]
+  );
+}
+
+function renderStory(seal: DeskSeal): string {
+  const items = storyChapters(seal)
+    .map(
+      (c, i) =>
+        `<li class="card"><p class="kicker">0${i + 1} / ${esc(c.phase)}</p><h3 style="margin:.4rem 0">${esc(c.title)}</h3><p>${esc(c.body)}</p></li>`
+    )
+    .join("");
+  return `<section id="story">
+    <p class="kicker">Story Mode · this lot only</p>
+    <h2 style="margin:.4rem 0 0">${esc(seal.product)}</h2>
+    <p class="mono">${esc(seal.id)}</p>
+    <ol class="grid" style="margin-top:1rem;list-style:none;padding:0">${items}</ol>
+    <p class="muted">End of this tag's story. Another ID does not play these chapters.</p>
+  </section>`;
+}
+
 function voteLabel(vote: AgentVote): string {
   if (vote === "pass") return "Pass";
   if (vote === "fail") return "Fail";
@@ -380,7 +498,8 @@ function renderCertificate(seal: DeskSeal): string {
         `<div><p class="kicker">${esc(f.label)}</p><p style="margin:.3rem 0 0">${esc(f.value)}</p></div>`
     )
     .join("");
-  return `<section style="margin-top:2rem">
+  return `${renderStory(seal)}
+  <section style="margin-top:2rem">
     <p class="kicker">Verification · ${esc(seal.id)}</p>
     <h2 style="margin:.4rem 0 0">${esc(headline)}</h2>
     <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. Target 2.1 seconds. No agent may upgrade an unknown ID to verified.</p>
