@@ -51,6 +51,7 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource",
         maxAmountRequired?: string;
         network?: string;
         asset?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
       }>;
       extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
@@ -61,6 +62,8 @@ test("unpaid POST /api/x402 is 402 v2 with published payTo and sister resource",
     assert.equal(body.accepts[0].network, "eip155:8453", host);
     assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO, host);
     assert.equal(body.accepts[0].asset, BASE_USDC, host);
+    assert.equal(body.accepts[0].outputSchema?.input?.type, "http", host);
+    assert.equal(body.accepts[0].outputSchema?.input?.method, "POST", host);
     assert.equal(body.extensions?.bazaar?.info?.input?.method, "POST", host);
     const blob = JSON.stringify(body).toLowerCase();
     assert.equal(blob.includes("facilitator.payai"), false, host);

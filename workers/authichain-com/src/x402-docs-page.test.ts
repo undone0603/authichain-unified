@@ -56,6 +56,7 @@ describe("x402 public docs page", () => {
     );
     expect(html).toContain("HTTP 402");
     expect(html).toContain("extensions.bazaar");
+    expect(html).toContain("accepts[0].outputSchema.input");
     expect(html).toContain("PAYMENT-REQUIRED");
     expect(html).toContain("x402Version: 2");
     expect(html).toContain("application/ld+json");

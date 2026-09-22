@@ -105,6 +105,8 @@ describe("buildPaymentRequired", () => {
     expect(r.v2.resource.serviceName).toBe("AuthiChain");
     expect(r.v2.accepts[0].network).toBe("eip155:8453");
     expect(r.v2.accepts[0].amount).toBe("50000");
+    expect(r.v2.accepts[0].outputSchema.input.type).toBe("http");
+    expect(r.v2.accepts[0].outputSchema.input.method).toBe("POST");
     expect(r.v2.accepts[0]).not.toHaveProperty("resource");
     expect(r.v2.accepts[0]).not.toHaveProperty("description");
     expect(r.v2.accepts[0]).not.toHaveProperty("mimeType");
@@ -137,6 +139,8 @@ describe("buildPaymentRequired", () => {
     expect(accept.amount).toMatch(/^[1-9][0-9]*$/);
     expect(accept.payTo).toMatch(/^0x[a-fA-F0-9]{40}$/);
     expect(accept.maxTimeoutSeconds).toBeGreaterThan(0);
+    expect(accept.outputSchema.input.type).toBe("http");
+    expect(accept.outputSchema.input.method).toBe("POST");
     expect(unpaid.extensions.bazaar.info.input.type).toBe("http");
     expect(unpaid.extensions.bazaar.info.input.method).toBe("POST");
     expect(unpaid.extensions.bazaar.info.output.example).toBeTruthy();
