@@ -78,6 +78,13 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /The authentic agentic economy/);
+  assert.ok(html.includes("6ab2b3b358b37e000c06b0fa"));
+  assert.ok(html.includes("tracker.iife.js"));
+  assert.ok(
+    (res.headers.get("content-security-policy") ?? "").includes(
+      "https://assets.apollo.io"
+    )
+  );
   const faqStart = html.indexOf('"@type":"FAQPage"');
   assert.ok(faqStart > 0, "homepage JSON-LD should include FAQPage");
   const faqSlice = html.slice(faqStart, faqStart + 4000);
