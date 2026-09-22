@@ -51,6 +51,21 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "query_provenance",
+    description:
+      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. Cryptographic verify is tools/call verify ($0.05 USDC on Base).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        assetId: {
+          type: "string",
+          description: "Seal, serial, or QR token identifier",
+        },
+      },
+      required: ["assetId"],
+    },
+  },
 ];
 
 function normalizePath(pathname: string): string {
@@ -141,6 +156,52 @@ function discoveryBody() {
       wellKnown: "https://authichain.com/.well-known/x402.json",
       docs: "https://authichain.com/x402",
     },
+  };
+}
+
+function queryProvenance(assetIdRaw: unknown) {
+  const assetId = String(assetIdRaw ?? "").trim();
+  const seed = assetId.toUpperCase() === "AC-7C2A91E4";
+  return {
+    assetId: assetId || null,
+    status: seed ? "desk_sample" : "unknown",
+    verified: false,
+    authenticityScore: 0,
+    protocol: "AuthiChain attestation 0.1",
+    product: seed
+      ? {
+          id: "AC-7C2A91E4",
+          name: "Michigan METRC sample",
+          source: "Self-serve desk seed. Not a live registry row.",
+        }
+      : null,
+    ledger: {
+      polygonNft: {
+        chainId: 137,
+        contract: "0x4da4D2675e52374639C9c954f4f653887A9972BE",
+        note: "16 ACPT NFTs. $QRON is not this rail.",
+      },
+      baseNft: {
+        chainId: 8453,
+        contract: null,
+        note: "AuthiChainNFT getCode is empty. Do not claim Base mint.",
+      },
+      x402: {
+        chainId: 8453,
+        asset: BASE_USDC_ASSET,
+        pricePerCall: `$${x402PriceUsd()} USDC`,
+        payTo: X402_PUBLISHED_PAY_TO,
+      },
+    },
+    registry: {
+      certificatesApi: "https://authichain.com/api/authichain/certificates",
+      state: "404",
+      note: "Public count stays — until this endpoint answers.",
+    },
+    jwks: "https://authichain.com/.well-known/jwks.json",
+    paidVerify: "POST /mcp tools/call verify",
+    compliance:
+      "EU DPP Readiness is a $299 Stripe SKU. It is not a status on this lookup.",
   };
 }
 
@@ -297,11 +358,23 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
     if (name === "verify" || name === "authichain_verify_product") {
       return unpaidOrSettledVerify(request, env, params.arguments ?? {});
     }
+    if (name === "query_provenance" || name === "authichain_query_provenance") {
+      const args = params.arguments ?? {};
+      const assetId = args.assetId ?? args.sealId ?? args.serial ?? args.id;
+      return rpcResult(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(queryProvenance(assetId), null, 2),
+          },
+        ],
+      });
+    }
     return rpcResult(id, {
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free) or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use get_pricing (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,
