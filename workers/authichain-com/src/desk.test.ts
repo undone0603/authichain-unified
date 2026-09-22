@@ -100,3 +100,67 @@ test("apex sitemap lists /desk paths that resolve", async () => {
     assert.match(xml, new RegExp(`https://authichain.com${path}<`));
   }
 });
+
+test("/desk/verify runs five-agent consensus on the desk", async () => {
+  const res = await get("/desk/verify");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /Guardian/);
+  assert.match(html, /Sentinel/);
+  assert.match(html, /Archivist/);
+  assert.match(html, /Scout/);
+  assert.match(html, /Arbiter/);
+  assert.match(html, /AC-7C2A91E4/);
+  assert.match(html, /AC-DPP-BATT-8841/);
+  assert.match(html, /action="\/desk\/verify"/);
+  assert.doesNotMatch(html, /location\.href = '\/verify'/);
+  assert.doesNotMatch(html, /Verify on apex/);
+});
+
+test("/desk/verify?id=AC-7C2A91E4 shows labeled sample consensus", async () => {
+  const res = await get("/desk/verify?id=AC-7C2A91E4");
+  const html = await res.text();
+  assert.match(html, /Guardian/);
+  assert.match(html, /Michigan METRC/);
+  assert.match(html, /Desk sample/);
+  assert.match(html, /Consensus reached/);
+  assert.match(html, /query_provenance status desk_sample, verified false/);
+  assert.doesNotMatch(html, /location\.href = '\/verify'/);
+});
+
+test("/desk/verify?id=AC-DPP-BATT-8841 is the battery DPP sample", async () => {
+  const res = await get("/desk/verify?id=AC-DPP-BATT-8841");
+  const html = await res.text();
+  assert.match(html, /Harbor-3/);
+  assert.match(html, /18 Feb 2027/);
+  assert.match(html, /Guardian/);
+  assert.match(html, /Desk sample/);
+});
+
+test("/desk/verify never attests an unknown ID", async () => {
+  const res = await get("/desk/verify?id=NOPE-XYZ");
+  const html = await res.text();
+  assert.match(html, /Unknown\. Not attested/);
+  assert.match(html, /unknown stays unknown/i);
+  assert.match(html, /vote-unknown/);
+  assert.doesNotMatch(html, /EU DPP Ready/);
+  assert.doesNotMatch(html, /Consensus reached/);
+  assert.doesNotMatch(html, /location\.href = '\/verify'/);
+});
+
+test("/desk/verify?id=GC-MIA-DLA-0005 is not a government mint", async () => {
+  const res = await get("/desk/verify?id=GC-MIA-DLA-0005");
+  const html = await res.text();
+  assert.match(html, /not a government mint/i);
+  assert.match(html, /No SBIR/);
+  assert.match(html, /govchain\.us\/gift/);
+});
+
+test("/desk/pricing sells Farm $149/mo", async () => {
+  const res = await get("/desk/pricing");
+  const html = await res.text();
+  assert.match(html, /\$149/);
+  assert.match(html, /action="\/api\/checkout\/plan\/strainchain_farm"/);
+  assert.ok(html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'));
+  assert.doesNotMatch(html, /href="\/api\/checkout/);
+});
