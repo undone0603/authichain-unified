@@ -33,6 +33,12 @@ describe("MCP tokenomics identity", () => {
     expect(d.humanCheckout.checkout.dpp).toBe(
       "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
     );
+    expect(d.humanCheckout.checkout.farm).toBe(
+      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+    );
+    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
+      "buy.stripe.com"
+    );
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.nft.deployer.toLowerCase()).not.toBe(
       X402_PUBLISHED_PAY_TO.toLowerCase()

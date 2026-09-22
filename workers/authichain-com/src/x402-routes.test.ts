@@ -56,12 +56,20 @@ describe("tryHandleX402", () => {
         paid: boolean;
         priceUsd: number | null;
       }>;
+      humanCheckout: {
+        farmUsd: number;
+        farmPaymentLink?: string;
+      };
     };
     expect(body.protocol).toBe("x402");
     expect(body.payTo).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.pricePerCall.usd).toBe(0.05);
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
+    );
+    expect(body.humanCheckout.farmUsd).toBe(149);
+    expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
+      "buy.stripe.com"
     );
   });
 

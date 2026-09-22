@@ -21,6 +21,7 @@ import {
   X402_PUBLISHED_PAY_TO,
   type PaymentRequirement,
 } from "./x402";
+import { planPaymentLink, planUsd } from "./plans";
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 const req: PaymentRequirement = {
@@ -551,10 +552,17 @@ describe("x402Catalog", () => {
     expect(catalog.discovery.bazaarDeclared).toBe(true);
     expect(catalog.discovery.paymentRequiredHeader).toBe(true);
     expect(catalog.humanCheckout.passportPaymentLink).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      planPaymentLink("strainchain_passport")
     );
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      planPaymentLink("dpp_readiness")
+    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
+    expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
+      "buy.stripe.com"
     );
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(

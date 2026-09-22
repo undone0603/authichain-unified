@@ -319,6 +319,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
         humanCheckout: {
           passportPaymentLink?: string;
           dppPaymentLink?: string;
+          farmPaymentLink?: string;
         };
       };
     };
@@ -334,6 +335,16 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       planPaymentLink("strainchain_passport"),
       path
     );
+    assert.equal(
+      body.pricing.humanCheckout.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname,
+      "buy.stripe.com",
+      path
+    );
     assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
   }
 });
@@ -346,10 +357,21 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
       protocol: string;
       catalog: string;
       health: string;
+      humanCheckout?: { farmPaymentLink?: string; farmUsd?: number };
     };
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
+    assert.equal(
+      body.humanCheckout?.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
+      "buy.stripe.com",
+      path
+    );
   }
 });
 
