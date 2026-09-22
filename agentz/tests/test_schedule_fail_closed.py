@@ -68,6 +68,7 @@ def test_marketing_autonomous_schedule_is_inbound_only():
 INDEXNOW_MONEY_URLS = (
     "https://authichain.com/",
     "https://authichain.com/dpp",
+    "https://authichain.com/digital-product-passport",
     "https://authichain.com/x402",
     "https://authichain.com/pricing",
     "https://authichain.com/.well-known/x402",
@@ -77,6 +78,7 @@ INDEXNOW_MONEY_URLS = (
     "https://authichain.com/m/insulin-vial",
     "https://authichain.com/onboard",
     "https://authichain.com/blog/eu-dpp-manufacturer",
+    "https://authichain.com/genetics",
     "https://strainchain.io/",
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",

@@ -67,6 +67,7 @@ jobs:
             "https://govchain.us/sitemap.xml" \
             "https://authichain.com/" \
             "https://authichain.com/dpp" \
+            "https://authichain.com/digital-product-passport" \
             "https://authichain.com/x402" \
             "https://authichain.com/pricing" \
             "https://authichain.com/.well-known/x402" \
@@ -78,6 +79,7 @@ jobs:
             "https://authichain.com/trumark" \
             "https://authichain.com/made-in-america" \
             "https://authichain.com/passport" \
+            "https://authichain.com/genetics" \
             "https://authichain.com/genetics/mendo-love-farms" \
             "https://authichain.com/m" \
             "https://authichain.com/m/mendo" \
