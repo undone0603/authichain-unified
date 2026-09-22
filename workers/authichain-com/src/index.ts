@@ -24,7 +24,10 @@ import {
   renderMadeInAmericaPage,
   renderTrumarkPage,
 } from "./money-surfaces.ts";
-import { tryHandleTelegramMiniApp } from "./telegram-miniapp.ts";
+import {
+  MINIAPP_CANONICAL,
+  tryHandleTelegramMiniApp,
+} from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
@@ -3511,7 +3514,7 @@ export default {
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
-        { loc: 'https://authichain.com/telegram', freq: 'weekly', pri: '0.75' },
+        { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
