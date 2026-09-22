@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { planPaymentLink, planUsd } from "../../../src/lib/plans";
 import {
   isX402DocsPath,
   renderX402DocsPage,
   X402_PUBLIC,
 } from "./x402-docs-page";
+
+function httpsUrl(raw: string): URL {
+  const url = new URL(raw);
+  expect(url.protocol).toBe("https:");
+  return url;
+}
 
 describe("x402 public docs page", () => {
   it("matches the published live rail (payTo, Base USDC, $0.05)", () => {
@@ -87,11 +94,24 @@ describe("x402 public docs page", () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('action="/api/checkout/dpp"');
     expect(html).toContain('action="/api/checkout/plan/strainchain_passport"');
-    expect(html).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
-    );
-    expect(html).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
-    );
+    expect(html).toContain('action="/api/checkout/plan/strainchain_farm"');
+    expect(html).not.toMatch(/href=["']\/api\/checkout/);
+    expect(html).not.toMatch(/href=["']\/protocol\/checkout/);
+    expect(html).not.toContain("GET /api/checkout");
+
+    const passport = planPaymentLink("strainchain_passport");
+    const farm = planPaymentLink("strainchain_farm");
+    const dpp = planPaymentLink("dpp_readiness");
+    expect(passport).toBeTruthy();
+    expect(farm).toBeTruthy();
+    expect(dpp).toBeTruthy();
+    expect(httpsUrl(passport!).hostname).toBe("buy.stripe.com");
+    expect(httpsUrl(farm!).hostname).toBe("buy.stripe.com");
+    expect(httpsUrl(dpp!).hostname).toBe("buy.stripe.com");
+    expect(html).toContain(`href="${passport}"`);
+    expect(html).toContain(`href="${farm}"`);
+    expect(html).toContain(`href="${dpp}"`);
+    expect(html).toContain(`Pay $${planUsd("strainchain_farm")} on Stripe`);
+    expect(html).toContain("StrainChain Farm");
   });
 });
