@@ -8,7 +8,9 @@
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
  *
- * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
+ * Do not rebind X402_PAY_TO away from the owner-authorized treasury
+ * 0xaebf…e437. Do not rebind
+ * X402_FACILITATOR_URL / X402_USDC_ASSET.
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
  * `not_configured` and paid settlement stays closed ($0 path).

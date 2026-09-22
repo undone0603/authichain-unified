@@ -7,7 +7,7 @@
  * does, with this host as resource.url so the listing is the sister origin.
  *
  * payTo / asset / price come from the published AuthiChain rail
- * (X402_PUBLISHED_PAY_TO, Base USDC, $0.05). Do not rebind
+ * (X402_PUBLISHED_PAY_TO = 0xaebf…e437, Base USDC, $0.05). Do not rebind
  * X402_FACILITATOR_URL. Do not invent a second wallet. Settle needs the
  * same secret bind as authichain-com (bind-x402-secrets.yml + Deploy
  * Workers). Without X402_FACILITATOR_URL, health is not_configured and a

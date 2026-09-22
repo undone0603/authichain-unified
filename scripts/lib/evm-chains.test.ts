@@ -11,6 +11,7 @@ import {
   QRON_DECIMALS,
   QRON_ERC20,
   QRON_FACTORY_CALLER,
+  QRON_HOLDER_EOA,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
   resolveChain,
@@ -87,8 +88,14 @@ describe("canonical web3 identity", () => {
       "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
     );
     expect(POLYGON_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
-    expect(TOKENOMICS_PAY_TO).toBe(
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(
+      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
+    );
+    expect(QRON_HOLDER_EOA).toBe(
       "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
+    expect(QRON_HOLDER_EOA.toLowerCase()).not.toBe(
+      TOKENOMICS_PAY_TO.toLowerCase()
     );
     expect(QRON_FACTORY_CALLER).toBe(
       "0x8df0057ffb210444b927511b2d416ad7854fb81e"
@@ -108,6 +115,7 @@ describe("canonical web3 identity", () => {
     const named = [
       COINBASE_SMART_WALLET,
       TOKENOMICS_PAY_TO,
+      QRON_HOLDER_EOA,
       NFT_DEPLOYER_EOA,
       QRON_FACTORY_CALLER,
       QRON_ERC20,

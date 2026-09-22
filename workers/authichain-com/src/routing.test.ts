@@ -11,6 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
@@ -160,7 +161,7 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.match(html, /<title>x402 agent pay — AuthiChain<\/title>/);
     assert.match(html, /<main id="main">/);
     assert.match(html, /--ac-accent:/);
-    assert.match(html, /0x5db511706FB6317cd23A7655F67450c5AC6e6AA2/);
+    assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
     assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);

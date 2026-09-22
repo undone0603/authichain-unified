@@ -8,6 +8,7 @@ import {
   NFT_DEPLOYER_EOA,
   POLYGON_AUTHICHAIN_NFT,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { planPaymentLink, planUsd, PLANS } from "./plans";
@@ -31,11 +32,16 @@ describe("canonical web3 identity lock", () => {
   it("keeps payTo, Coinbase Smart Wallet, and NFT deployer distinct", () => {
     const named = [
       TOKENOMICS_PAY_TO,
+      QRON_HOLDER_EOA,
       COINBASE_SMART_WALLET,
       NFT_DEPLOYER_EOA,
     ].map(a => a.toLowerCase());
-    expect(new Set(named).size).toBe(3);
+    expect(new Set(named).size).toBe(4);
     expect(TOKENOMICS_PAY_TO).toBe(X402_PUBLISHED_PAY_TO);
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).not.toBe(QRON_HOLDER_EOA.toLowerCase());
+    expect(QRON_HOLDER_EOA).toBe(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
     expect(ECONOMY_NFT_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
     expect(ECONOMY_NFT).toBe(POLYGON_AUTHICHAIN_NFT);
   });

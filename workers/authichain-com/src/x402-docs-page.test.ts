@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 import {
   isX402DocsPath,
   renderX402DocsPage,
@@ -14,8 +15,9 @@ function httpsUrl(raw: string): URL {
 
 describe("x402 public docs page", () => {
   it("matches the published live rail (payTo, Base USDC, $0.05)", () => {
-    expect(X402_PUBLIC.payTo).toBe(
-      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    expect(X402_PUBLIC.payTo).toBe(X402_PUBLISHED_PAY_TO);
+    expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
+      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"
     );
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"

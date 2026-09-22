@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_USDC,
+  QRON_HOLDER_EOA,
   TOKENOMICS_PAY_TO as EVM_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
@@ -26,7 +27,8 @@ describe("authentic-economy identity join", () => {
     expect(MONEY_RAILS.x402.publishedPayTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC_ASSET);
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC);
-    expect(MONEY_RAILS.qron.holder).toBe(TOKENOMICS_PAY_TO);
+    expect(MONEY_RAILS.qron.holder).toBe(QRON_HOLDER_EOA);
+    expect(MONEY_RAILS.qron.holder).not.toBe(TOKENOMICS_PAY_TO);
   });
 
   it("keeps $QRON off the x402 settlement rail", () => {
