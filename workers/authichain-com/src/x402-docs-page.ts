@@ -315,7 +315,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement (<code>outputSchema</code> on <code>accepts[0]</code>) internally.</li>
+        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement internally.</li>
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>

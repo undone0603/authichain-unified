@@ -107,7 +107,11 @@ describe("mcp discovery", () => {
     const body = (await unpaid!.json()) as {
       x402Version: number;
       resource?: { url?: string };
-      accepts: Array<{ amount?: string; payTo?: string }>;
+      accepts: Array<{
+        amount?: string;
+        payTo?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
     };
     expect(body.x402Version).toBe(2);
     expect(body.resource?.url).toContain("/mcp");
@@ -115,6 +119,8 @@ describe("mcp discovery", () => {
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(JSON.stringify(body)).not.toContain("SECURED");
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
