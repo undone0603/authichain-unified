@@ -108,7 +108,15 @@ function hydrateX402(env?: X402Env) {
   }
 }
 
-export function mcpPricingDiscovery() {
+function livePayTo(env?: X402Env): string {
+  return (
+    env?.X402_PAY_TO?.trim() ||
+    process.env.X402_PAY_TO?.trim() ||
+    X402_PUBLISHED_PAY_TO
+  );
+}
+
+export function mcpPricingDiscovery(env?: X402Env) {
   return {
     agentRail: {
       endpoint: "POST /api/v1/agent-verify",
@@ -117,7 +125,7 @@ export function mcpPricingDiscovery() {
       network: "base",
       chainId: "8453",
       asset: BASE_USDC_ASSET,
-      publishedPayTo: X402_PUBLISHED_PAY_TO,
+      publishedPayTo: livePayTo(env),
       pricePerCall: `$${x402PriceUsd()} USDC`,
       catalog: "https://authichain.com/api/x402/catalog",
       wellKnown: "https://authichain.com/.well-known/x402.json",
@@ -190,7 +198,7 @@ function queryProvenance(assetIdRaw: unknown) {
         chainId: 8453,
         asset: BASE_USDC_ASSET,
         pricePerCall: `$${x402PriceUsd()} USDC`,
-        payTo: X402_PUBLISHED_PAY_TO,
+        payTo: livePayTo(),
       },
     },
     registry: {
@@ -346,11 +354,12 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
     };
     const name = params.name ?? "";
     if (name === "get_pricing" || name === "authichain_get_pricing") {
+      hydrateX402(env);
       return rpcResult(id, {
         content: [
           {
             type: "text",
-            text: JSON.stringify(mcpPricingDiscovery(), null, 2),
+            text: JSON.stringify(mcpPricingDiscovery(env), null, 2),
           },
         ],
       });
@@ -414,6 +423,7 @@ export async function tryHandleMcp(
   }
 
   if (request.method === "GET") {
+    hydrateX402(env);
     return json(200, discoveryBody());
   }
 
