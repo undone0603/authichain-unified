@@ -167,7 +167,7 @@
     "jsdom": "^30.0.1",
     "lint-staged": "^17.3.0",
     "postcss": "^8.5.26",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "redis": "file:./stubs/empty-redis",
     "solc": "0.8.37",
