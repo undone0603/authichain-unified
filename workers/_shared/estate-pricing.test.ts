@@ -32,6 +32,65 @@ test("DPP uses the live checkout path, never an invented URL", () => {
   );
 });
 
+test("theater subscriptions keep email-gated checkout plus Payment Links", () => {
+  const theater1 = listedPlans("qron").find(p => p.id === "theater_1");
+  const theater3 = listedPlans("qron").find(p => p.id === "theater_3");
+  assert.ok(theater1?.stripe_payment_link);
+  assert.ok(theater3?.stripe_payment_link);
+  assert.equal(theater1.price, 499);
+  assert.equal(theater3.price, 1499);
+  assert.equal(
+    new URL(theater1.stripe_payment_link).hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    new URL(theater3.stripe_payment_link).hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    planCheckoutCta(theater1, "authichain").href,
+    "/api/checkout/plan/theater_1"
+  );
+  assert.equal(
+    planCheckoutCta(theater3, "qron").href,
+    "https://authichain.com/api/checkout/plan/theater_3"
+  );
+
+  const authHtml = renderEstatePricingPage("authichain");
+  assert.match(authHtml, /action="\/api\/checkout\/plan\/theater_1"/);
+  assert.match(authHtml, /action="\/api\/checkout\/plan\/theater_3"/);
+  assert.ok(
+    authHtml.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    authHtml.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+  assert.equal(
+    authHtml.includes(`"url":"${theater1.stripe_payment_link}"`),
+    true
+  );
+  assert.equal(
+    authHtml.includes(`"url":"${theater3.stripe_payment_link}"`),
+    true
+  );
+
+  const qronHtml = renderEstatePricingPage("qron");
+  assert.match(
+    qronHtml,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_1"/
+  );
+  assert.match(
+    qronHtml,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_3"/
+  );
+  assert.ok(
+    qronHtml.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    qronHtml.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+});
+
 test("starter and creator keep their published Payment Links", () => {
   const starter = listedPlans("qron").find(p => p.id === "starter");
   const creator = listedPlans("qron").find(p => p.id === "creator");

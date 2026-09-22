@@ -124,6 +124,14 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+  assert.match(html, /action="\/api\/checkout\/plan\/theater_1"/);
+  assert.match(html, /action="\/api\/checkout\/plan\/theater_3"/);
   assert.match(html, /href="\/x402"/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
 });

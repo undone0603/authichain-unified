@@ -100,6 +100,7 @@ export const PLANS: Plan[] = [
     description: "Industrial AgTech & StrainChain Provenance",
     generations: 5000,
     stripe_price_id: "price_1TmDKJGqTruSqV8TGwxK8oc5",
+    stripe_payment_link: "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A",
     stripe_mode: "subscription",
     tier: "enterprise",
     features: [
@@ -119,6 +120,7 @@ export const PLANS: Plan[] = [
     description: "The Ultimate Industrial & Luxury Security",
     generations: 0,
     stripe_price_id: "price_1TmDKQGqTruSqV8TvSILgzXM",
+    stripe_payment_link: "https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B",
     stripe_mode: "subscription",
     tier: "enterprise",
     features: [
