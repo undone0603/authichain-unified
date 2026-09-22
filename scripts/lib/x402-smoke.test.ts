@@ -14,7 +14,9 @@ import { TOKENOMICS_PAY_TO } from "./evm-chains.ts";
 describe("describePayer", () => {
   it("aliases OPS_PAY_TO to the tokenomics / payTo EOA, not the NFT deployer", () => {
     expect(OPS_PAY_TO).toBe(TOKENOMICS_PAY_TO);
-    expect(OPS_PAY_TO).toBe("0x5db511706FB6317cd23A7655F67450c5AC6e6AA2");
+    expect(OPS_PAY_TO.toLowerCase()).not.toBe(
+      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"
+    );
     expect(OPS_PAY_TO.toLowerCase()).not.toBe(
       "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d"
     );

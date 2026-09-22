@@ -3,6 +3,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 import { DESK_SITEMAP } from "./desk.ts";
 
@@ -70,7 +71,7 @@ test("/desk/pricing collects recovery email for plan checkout", async () => {
 test("/desk/token splits payTo, deployer, and Smart Wallet", async () => {
   const res = await get("/desk/token");
   const html = await res.text();
-  assert.match(html, /0x5db511706FB6317cd23A7655F67450c5AC6e6AA2/);
+  assert.ok(html.includes(X402_PUBLISHED_PAY_TO));
   assert.match(html, /0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d/);
   assert.match(html, /0xC0D26735fd9e868eacc60400ef3171Fa4161177f/);
   assert.match(html, /Staking UI is theater/);

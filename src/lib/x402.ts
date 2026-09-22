@@ -9,10 +9,11 @@
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
  * `$QRON` and any governance token stay off this rail (see
  * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
- * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO,
- * X402_FACILITATOR_URL, or X402_USDC_ASSET. payTo is the tokenomics EOA
- * (0x5db5…), not the NFT deployer EOA (0xbad4…) and not the Coinbase
- * Smart Wallet.
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO away from
+ * the owner-authorized treasury 0xaebf…e437.
+ * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is the
+ * tokenomics EOA (0xaebf…e437), not the $QRON holder EOA (0x5db5…), not
+ * the NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
@@ -169,12 +170,13 @@ export const USDC_DECIMALS = 6;
 export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
- * Live published X402_PAY_TO — payTo / tokenomics EOA.
- * Same address holds nearly all Polygon $QRON and receives Base USDC.
- * Distinct from NFT deployer EOA 0xbad4…. Canonical map:
- * docs/strategy/WEB3_IDENTITY.md. Do not rotate. Runtime health still
- * reads the Worker/env binding; this constant documents the live value.
- * It is NOT a fallback when X402_PAY_TO is unset (that stays 503).
+ * Live published X402_PAY_TO — owner-authorized treasury / tokenomics EOA
+ * 0xaebf…e437. Distinct from the $QRON
+ * holder EOA (0x5db5…) and the NFT deployer EOA (0xbad4…). Canonical map:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from this address.
+ * Runtime health still reads the Worker/env binding; this constant
+ * documents the live value. It is NOT a fallback when X402_PAY_TO is
+ * unset (that stays 503).
  */
 export const X402_PUBLISHED_PAY_TO = TOKENOMICS_PAY_TO;
 

@@ -5,7 +5,7 @@
 # Never print POLYGON_PRIVATE_KEY / WALLET_PRIVATE_KEY.
 #
 # Required secrets for a live run (already expected on this repo):
-#   POLYGON_PRIVATE_KEY or WALLET_PRIVATE_KEY   Base ops EOA (0x5db5…)
+#   POLYGON_PRIVATE_KEY or WALLET_PRIVATE_KEY   funded smoke payer (not live payTo)
 #
 # Do not dispatch dry_run=false until the ops EOA holds at least $0.05 USDC
 # on Base (owner is funding ~$0.10). The script fails clearly below 50000 atomic.
@@ -64,7 +64,7 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           X402_ENDPOINT: ${{ inputs.endpoint }}
-          X402_PAY_TO: "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+          X402_PAY_TO: "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" # pragma: allowlist secret
           POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
           WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
         run: pnpm exec tsx scripts/x402-smoke.ts

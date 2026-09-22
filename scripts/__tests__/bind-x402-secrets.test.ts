@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { TOKENOMICS_PAY_TO } from "../lib/evm-chains.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+const PAY_TO = TOKENOMICS_PAY_TO;
 const FACILITATOR = "https://facilitator.payai.network";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const SISTERS = ["qron-space", "strainchain-io", "govchain-us"] as const;
@@ -31,6 +32,9 @@ describe("x402 facilitator bind matches authichain-com", () => {
       expect(yml).toContain(PAY_TO);
       expect(yml).toContain(`'${FACILITATOR}'`);
       expect(yml).toContain(USDC);
+      expect(yml).not.toMatch(
+        /PAY_TO[^'\n]*['"]0x5db511706FB6317cd23A7655F67450c5AC6e6AA2['"]/
+      );
       expect(yml).not.toMatch(
         /FACILITATOR[^'\n]*['"]https:\/\/x402\.org\/facilitator['"]/
       );

@@ -10,6 +10,7 @@ import {
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
 import { PAYMENT_LINKS } from "../../../server/payment-links";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 const HTML_HEADERS: Record<string, string> = {
   "Content-Type": "text/html; charset=utf-8",
@@ -25,7 +26,7 @@ const HTML_HEADERS: Record<string, string> = {
 export const DESK_AS_OF = "22 Sep 2026";
 export const DESK_COMMIT = "259290d";
 
-const PAYTO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+const PAYTO = X402_PUBLISHED_PAY_TO;
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const SMART = "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
 const POLYGON_NFT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";

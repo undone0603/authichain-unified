@@ -471,8 +471,11 @@ describe("settlePayment (facilitator)", () => {
 
 describe("published rail identity", () => {
   it("documents payTo / tokenomics EOA and Base USDC without rebinding env", () => {
-    expect(X402_PUBLISHED_PAY_TO).toBe(
-      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).toBe(
+      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
+    );
+    expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
+      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"
     );
     expect(BASE_USDC_ASSET).toBe("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
     expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(

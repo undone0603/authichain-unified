@@ -7,9 +7,10 @@
  * `src/lib/plans.ts`. Wallet map: `docs/strategy/WEB3_IDENTITY.md`.
  *
  * The 0.05 QRON figure coinciding with x402's $0.05 USDC is not the same rail.
- * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO. Runtime x402
- * still reads env X402_PAY_TO — published payTo here is identity, not a 503/402
- * fallback.
+ * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO away from the
+ * owner-authorized treasury 0xaebf…e437.
+ * Runtime x402 still reads env X402_PAY_TO — published payTo here is identity,
+ * not a 503/402 fallback.
  */
 
 import {
@@ -17,6 +18,7 @@ import {
   POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
@@ -33,6 +35,7 @@ export {
   POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
 };
@@ -82,7 +85,7 @@ export const MONEY_RAILS = {
     contract: QRON_ERC20,
     decimals: QRON_DECIMALS,
     totalSupply: QRON_TOTAL_SUPPLY,
-    holder: TOKENOMICS_PAY_TO,
+    holder: QRON_HOLDER_EOA,
     isSettlement: false,
     theater: true,
     source: "docs/strategy/WEB3_IDENTITY.md",
