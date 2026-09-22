@@ -167,6 +167,12 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
       !html.includes("PRIVATE") && !html.includes("secret"),
       `${path} must not mention secrets`
     );
+    const farmPay = planPaymentLink("strainchain_farm") ?? "";
+    assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
+    assert.equal(new URL(farmPay).hostname, "buy.stripe.com");
+    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    assert.doesNotMatch(html, /href=["']\/api\/checkout/);
+    assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
 });
 

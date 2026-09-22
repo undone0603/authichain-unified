@@ -26,6 +26,7 @@ import {
   catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
+import { planUsd } from "../../../src/lib/plans";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 export const X402_DOCS_PATHS = [
@@ -374,29 +375,40 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <h2 id="human-title">Human checkout vs agent rail</h2>
       <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
       <ul>
-        <li>StrainChain Passport — <strong>$49</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
-        <li>EU DPP Readiness — <strong>$299</strong> one-time. Same recovery path.</li>
+        <li>StrainChain Passport — <strong>$${planUsd("strainchain_passport")}</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
+        <li>StrainChain Farm — <strong>$${planUsd("strainchain_farm")}</strong>/month. Unlimited cultivars; same Payment Link as /pricing.</li>
+        <li>EU DPP Readiness — <strong>$${planUsd("dpp_readiness")}</strong> one-time. Same recovery path.</li>
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
         action: "/api/checkout/plan/strainchain_passport",
-        label: "Passport checkout — $49",
+        label: `Passport checkout — $${planUsd("strainchain_passport")}`,
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
       })}
       ${catalogPaymentLinkHtml({
         planId: "strainchain_passport",
-        label: "Pay $49 on Stripe",
+        label: `Pay $${planUsd("strainchain_passport")} on Stripe`,
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_farm",
+        label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
+      })}
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/plan/strainchain_farm",
+        label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
+        inputId: "x402-farm-email",
+        formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
         action: "/api/checkout/dpp",
-        label: "DPP checkout — $299",
+        label: `DPP checkout — $${planUsd("dpp_readiness")}`,
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",
       })}
       ${catalogPaymentLinkHtml({
         planId: "dpp_readiness",
-        label: "Pay $299 on Stripe",
+        label: `Pay $${planUsd("dpp_readiness")} on Stripe`,
       })}
     </section>
   </div>
