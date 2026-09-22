@@ -8787,5 +8787,260 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-digital-product-passport-footwear",
+    "keyword": "eu digital product passport footwear",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Footwear | AuthiChain",
+    "metaDescription": "Footwear has no adopted ESPR delegated act — it sits outside the first Working Plan’s priority list entirely, with a Commission feasibility study due by the.",
+    "h1": "EU Digital Product Passport Footwear",
+    "bodyHtml": "<p>Footwear has no adopted ESPR delegated act — it sits outside the first Working Plan’s priority list entirely, with a Commission feasibility study due by the end of 2027 before any footwear-specific Digital Product Passport requirement can even be proposed, and any resulting act would follow the textiles delegated act rather than precede it.</p><h2>Why AuthiChain</h2><ul><li>The first ESPR Working Plan (2025–2030), adopted April 2025, names textiles and apparel, furniture, tyres, mattresses, iron, steel and aluminium as priority product groups — footwear and chemicals were both excluded pending separate feasibility studies</li><li>protocol/SPEC.md’s record structure is category-agnostic: a footwear passport, if and when one is mandated, is the same W3C Verifiable Credential over a GS1 Digital Link identifier already issuing for textiles and batteries, not a new format to build later</li><li>A brand publishing footwear provenance today is ahead of a mandate, not compliant with one that does not exist yet — the honest claim on a scan is proof of origin and materials, not ESPR compliance</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is there an EU Digital Product Passport requirement for footwear yet?</h3><p>No. Footwear was excluded from the first ESPR Working Plan; a Commission feasibility study is expected by the end of 2027, and any delegated act would follow the textiles act rather than precede it.</p><h3>Should a footwear brand wait for the delegated act before publishing provenance data?</h3><p>That is a business decision, not a compliance one — nothing requires it yet. A signed record published now establishes a verifiable history the brand controls, independent of when or whether a footwear-specific mandate lands.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Footwear",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Footwear has no adopted ESPR delegated act — it sits outside the first Working Plan’s priority list entirely, with a Commission feasibility study due by the end of 2027 before any footwear-specific Digital Product Passport requirement can even be proposed, and any resulting act would follow the textiles delegated act rather than precede it.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-footwear"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Footwear",
+              "item": "https://authichain.com/p/eu-digital-product-passport-footwear"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is there an EU Digital Product Passport requirement for footwear yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Footwear was excluded from the first ESPR Working Plan; a Commission feasibility study is expected by the end of 2027, and any delegated act would follow the textiles act rather than precede it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Should a footwear brand wait for the delegated act before publishing provenance data?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That is a business decision, not a compliance one — nothing requires it yet. A signed record published now establishes a verifiable history the brand controls, independent of when or whether a footwear-specific mandate lands."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-circular-economy-act-digital-product-passport",
+    "keyword": "eu circular economy act digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Circular Economy Act Digital Product | AuthiChain",
+    "metaDescription": "The European Commission’s Circular Economy Act, now expected around November 2026 after the Regulatory Scrutiny Board rejected its impact assessment and sent.",
+    "h1": "EU Circular Economy Act Digital Product Passport",
+    "bodyHtml": "<p>The European Commission’s Circular Economy Act, now expected around November 2026 after the Regulatory Scrutiny Board rejected its impact assessment and sent it back for redrafting, is a separate proposal from the ESPR that already governs the Digital Product Passport — it targets a 24% EU circular material use rate by 2030 and a single market for secondary raw materials, not a new passport mandate of its own.</p><h2>Why AuthiChain</h2><ul><li>The Circular Economy Act and the Digital Product Passport come from different instruments: DPP obligations run through ESPR delegated acts already in motion, while the Act targets circular material use rates and secondary raw materials — reading one as replacing the other is a category error</li><li>The Commission’s own timeline has already slipped once: a negative Regulatory Scrutiny Board opinion pushed the proposal from an original third-quarter-2026 target toward November 2026, and a proposal date is not an enforcement date — Parliament and Council review still follows publication</li><li>protocol/SPEC.md’s anchoring and verification layer does not change based on which EU instrument eventually cites it — a signed record anchored today is evidence a future reporting duty could point to, not a bet on the Act’s final shape</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Circular Economy Act replace the Digital Product Passport?</h3><p>No — they are separate instruments. The DPP is being built out under ESPR’s existing delegated-act schedule; the Circular Economy Act is a new proposal focused on secondary raw materials and circular material use targets.</p><h3>When does the Circular Economy Act take effect?</h3><p>It has not been proposed yet. The Commission’s own timeline moved from an original third-quarter-2026 target to around November 2026 after the Regulatory Scrutiny Board rejected the impact assessment, and a proposal still has to clear Parliament and Council before any obligation applies.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Circular Economy Act Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s Circular Economy Act, now expected around November 2026 after the Regulatory Scrutiny Board rejected its impact assessment and sent it back for redrafting, is a separate proposal from the ESPR that already governs the Digital Product Passport — it targets a 24% EU circular material use rate by 2030 and a single market for secondary raw materials, not a new passport mandate of its own.",
+          "url": "https://authichain.com/p/eu-circular-economy-act-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Circular Economy Act Digital Product Passport",
+              "item": "https://authichain.com/p/eu-circular-economy-act-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Circular Economy Act replace the Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — they are separate instruments. The DPP is being built out under ESPR’s existing delegated-act schedule; the Circular Economy Act is a new proposal focused on secondary raw materials and circular material use targets."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When does the Circular Economy Act take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It has not been proposed yet. The Commission’s own timeline moved from an original third-quarter-2026 target to around November 2026 after the Regulatory Scrutiny Board rejected the impact assessment, and a proposal still has to clear Parliament and Council before any obligation applies."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-authorized-trading-partner-verification-requirement",
+    "keyword": "dscsa authorized trading partner verification requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Authorized Trading Partner Verification | AuthiChain",
+    "metaDescription": "DSCSA’s Authorized Trading Partner rule, enforced for wholesale distributors since FDA’s enforcement discretion expired August 27, 2025, requires proving a.",
+    "h1": "DSCSA Authorized Trading Partner Verification Requirement",
+    "bodyHtml": "<p>DSCSA’s Authorized Trading Partner rule, enforced for wholesale distributors since FDA’s enforcement discretion expired August 27, 2025, requires proving a counterparty is licensed and DSCSA-compliant before a transaction — a different check from a signed provenance record verifying that a specific drug unit is genuine, and a pharmaceutical supply chain needs both.</p><h2>Why AuthiChain</h2><ul><li>Authorized Trading Partner status is about the counterparty — is this wholesaler, repackager, or dispenser licensed and DSCSA-compliant, checked under 21 USC §360eee-1(d) before any transaction — while protocol/SPEC.md verification is about the item: does this specific record’s signature and anchor check out</li><li>Small dispensers (25 or fewer staff) have until November 27, 2026, the compliance date FDA has said it will not move again — distinct from the wholesale distributor deadline that already passed</li><li>A verified ATP relationship and a verified item record answer different fraud questions: a licensed, authorized wholesaler can still receive a counterfeit unit from further up the chain, which is exactly the gap item-level signature verification closes</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain verify DSCSA Authorized Trading Partner status?</h3><p>No — ATP verification checks licensure and DSCSA compliance of a counterparty, a due-diligence step defined under 21 USC §360eee-1(d). protocol/SPEC.md verifies a signed record about a specific item; the two checks are complementary, not substitutes.</p><h3>Is the small dispenser DSCSA deadline still November 27, 2026?</h3><p>Yes, per current FDA guidance, and the agency has said it will not extend that date again. Confirm directly against FDA guidance before relying on it, since compliance dates in this space have moved before.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Authorized Trading Partner Verification Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "DSCSA’s Authorized Trading Partner rule, enforced for wholesale distributors since FDA’s enforcement discretion expired August 27, 2025, requires proving a counterparty is licensed and DSCSA-compliant before a transaction — a different check from a signed provenance record verifying that a specific drug unit is genuine, and a pharmaceutical supply chain needs both.",
+          "url": "https://authichain.com/p/dscsa-authorized-trading-partner-verification-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Authorized Trading Partner Verification Requirement",
+              "item": "https://authichain.com/p/dscsa-authorized-trading-partner-verification-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain verify DSCSA Authorized Trading Partner status?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — ATP verification checks licensure and DSCSA compliance of a counterparty, a due-diligence step defined under 21 USC §360eee-1(d). protocol/SPEC.md verifies a signed record about a specific item; the two checks are complementary, not substitutes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the small dispenser DSCSA deadline still November 27, 2026?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, per current FDA guidance, and the agency has said it will not extend that date again. Confirm directly against FDA guidance before relying on it, since compliance dates in this space have moved before."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "shop-safe-act-marketplace-seller-verification",
+    "keyword": "shop safe act marketplace seller verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Shop Safe Act Marketplace Seller Verification | AuthiChain",
+    "metaDescription": "The SHOP SAFE Act, advanced in the U.S. AuthiChain — Plans start at $49/mo.",
+    "h1": "Shop Safe Act Marketplace Seller Verification",
+    "bodyHtml": "<p>The SHOP SAFE Act, advanced in the U.S. House in prior sessions of Congress but not enacted as of this writing, would require online marketplaces to verify high-volume sellers’ identities and require those sellers to verify the authenticity of what they list — a platform-and-seller-level check that says nothing about whether the specific unit a buyer receives is the genuine article.</p><h2>Why AuthiChain</h2><ul><li>SHOP SAFE’s proposed duties fall on marketplaces and sellers — identity verification, takedown mechanisms, contributory trademark liability for platforms that do not act on known counterfeiters — not on a buyer’s ability to check the item in hand</li><li>A signed, per-unit record answers the question SHOP SAFE does not reach: even a seller who passed marketplace verification can still ship a counterfeit unit, and item-level verification is what catches that at the point of receipt</li><li>The bill remains unenacted; nothing here describes a current legal requirement — it is a proposal AuthiChain’s model already supports if it passes, not a compliance obligation today</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the SHOP SAFE Act law yet?</h3><p>No. As of this writing it has been introduced and advanced in the House in prior sessions but has not been signed into law. Confirm current status directly before treating any of this as a live requirement.</p><h3>Would passing SHOP SAFE make item-level verification unnecessary?</h3><p>No — SHOP SAFE’s obligations run to marketplaces and sellers at the identity and listing level. It does not verify that a specific physical unit reaching a buyer is genuine, which is what a signed, anchored record does.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Shop Safe Act Marketplace Seller Verification",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "The SHOP SAFE Act, advanced in the U.S. House in prior sessions of Congress but not enacted as of this writing, would require online marketplaces to verify high-volume sellers’ identities and require those sellers to verify the authenticity of what they list — a platform-and-seller-level check that says nothing about whether the specific unit a buyer receives is the genuine article.",
+          "url": "https://authichain.com/p/shop-safe-act-marketplace-seller-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Shop Safe Act Marketplace Seller Verification",
+              "item": "https://authichain.com/p/shop-safe-act-marketplace-seller-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the SHOP SAFE Act law yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. As of this writing it has been introduced and advanced in the House in prior sessions but has not been signed into law. Confirm current status directly before treating any of this as a live requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Would passing SHOP SAFE make item-level verification unnecessary?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — SHOP SAFE’s obligations run to marketplaces and sellers at the identity and listing level. It does not verify that a specific physical unit reaching a buyer is genuine, which is what a signed, anchored record does."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
