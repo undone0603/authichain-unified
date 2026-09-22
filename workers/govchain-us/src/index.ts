@@ -28,6 +28,7 @@ import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
 } from "../../_shared/seo-hub-routes.ts";
+import { tryHandleNftMetadata } from "./nft-metadata.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect x="2" y="2" width="60" height="60" rx="8" fill="#05060b" stroke="#3b82f6" stroke-width="1.5"/>
@@ -2275,6 +2276,8 @@ export default {
     if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
     if (discovery) return discovery;
+    const nftMetadata = tryHandleNftMetadata(request);
+    if (nftMetadata) return nftMetadata;
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
