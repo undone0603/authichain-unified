@@ -744,3 +744,87 @@ describe("plan detection (via subscription amounts)", () => {
     });
   }
 });
+
+describe("handleStripeWebhook — fulfillment collision guard ($299 recurring vs one-time DPP)", () => {
+  // A $299/mo subscription Checkout Session carries no PLANS price ID and no
+  // metadata.plan. Without the guard, planByAmountCents(29900) resolves it to
+  // the one-time dpp_readiness plan and grants DPP credits for a subscription.
+  // No Stripe price may be invented to fix this — the misfulfillment is
+  // blocked instead.
+  it("recurring $299/mo checkout with no PLANS price ID does NOT provision dpp_readiness", async () => {
+    const { logAutomationAudit } = await import("../db.js");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_collision_sub", {
+        id: "cs_collision_sub",
+        mode: "subscription",
+        payment_status: "paid",
+        amount_total: 29900,
+        customer: "cus_collision",
+        subscription: "sub_collision",
+        customer_details: { email: "founder@example.com" },
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    expect(provisionPurchase).not.toHaveBeenCalled();
+    expect(vi.mocked(logAutomationAudit)).toHaveBeenCalledWith(
+      "billing_unfulfillable_subscription",
+      expect.objectContaining({ stripeSessionId: "cs_collision_sub" }),
+      undefined
+    );
+  });
+
+  it("recurring $299/mo invoice-billed subscription never reaches the DPP grant path", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_collision_sub2", {
+        id: "cs_collision_sub2",
+        mode: "subscription",
+        payment_status: "paid",
+        amount_total: 29900,
+        customer: "cus_collision2",
+        subscription: "sub_collision2",
+        customer_details: { email: "founder2@example.com" },
+        metadata: {
+          // Even a metadata claim on the DPP offer must not grant DPP
+          // credits for a subscription-mode session.
+          offer: "dpp_readiness_2026",
+          plan: "dpp_readiness",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("one-time $299 DPP checkout with the correct price ID still provisions", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_dpp_legit", {
+        id: "cs_dpp_legit",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 29900,
+        customer: "cus_legit",
+        customer_details: { email: "buyer@example.com" },
+        metadata: {
+          offer: "dpp_readiness_2026",
+          plan: "dpp_readiness",
+          visit_id: "v_legit_1",
+          stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+        },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(fulfillDppPaidSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cs_dpp_legit" }),
+      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+    );
+  });
+});

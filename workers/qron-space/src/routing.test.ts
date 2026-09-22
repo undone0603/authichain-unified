@@ -7,6 +7,8 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
 /** The homepage fetches a YouTube RSS feed; tests must not reach the network. */
@@ -26,6 +28,26 @@ function stubFetch() {
 
 async function get(path: string, env?: { APP_ORIGIN?: string }) {
   return worker.fetch(new Request(`https://qron.space${path}`), env);
+}
+
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "qron.space");
+    return url;
+  });
+}
+
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "qron.space");
+    return url.pathname;
+  });
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -71,9 +93,201 @@ test("/health still answers", async () => {
 test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(xml.includes("<loc>https://qron.space/</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://qron.space/generate</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/generate"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
+  assert.ok(paths.includes("/mcp"));
+  assert.equal(xml.includes("/api/checkout"), false);
+  for (const path of ["/llms.txt", "/openapi.json", "/api/x402", "/mcp"]) {
+    const res = await get(path);
+    assert.ok(
+      res.status >= 200 && res.status < 400,
+      `${path} answered ${res.status}`
+    );
+  }
+});
+
+test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
+  const llms = await get("/llms.txt");
+  assert.equal(llms.status, 200);
+  assert.match(llms.headers.get("content-type") ?? "", /text\/plain/);
+  const text = await llms.text();
+  assert.match(text, /POST https:\/\/qron\.space\/api\/x402/);
+  assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.equal(
+    `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
+      'href="https://buy.stripe.com'
+    ),
+    true
+  );
+  assert.doesNotMatch(text, /GET \/api\/checkout/);
+
+  const specRes = await get("/openapi.json");
+  assert.equal(specRes.status, 200);
+  const spec = (await specRes.json()) as {
+    openapi: string;
+    servers: Array<{ url: string }>;
+    paths: {
+      "/api/x402": {
+        get?: { responses: { "200": unknown } };
+        post: {
+          "x-payment-info": { protocols: string[] };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.servers, [{ url: "https://qron.space" }]);
+  assert.ok(spec.paths["/api/x402"].get?.responses["200"]);
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
+  assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
+});
+
+test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
+  const unpaid = await worker.fetch(
+    new Request("https://qron.space/api/x402", { method: "POST" })
+  );
+  assert.equal(unpaid.status, 402);
+  const body = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string; amount?: string }>;
+    extensions?: { bazaar?: unknown };
+  };
+  assert.equal(body.x402Version, 2);
+  assert.equal(body.resource?.url, "https://qron.space/api/x402");
+  assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+  assert.equal(body.accepts[0].amount, "50000");
+  assert.ok(body.extensions?.bazaar);
+  assert.ok(unpaid.headers.get("PAYMENT-REQUIRED"));
+  assert.equal(
+    JSON.stringify(body).toLowerCase().includes("facilitator.payai"),
+    false
+  );
+
+  for (const path of ["/api/x402", "/api/x402/health"]) {
+    const health = await get(path);
+    assert.equal(health.status, 200, path);
+    const report = (await health.json()) as { payTo: string };
+    assert.equal(report.payTo, X402_PUBLISHED_PAY_TO, path);
+  }
+});
+
+test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+  for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      protocol: string;
+      pay: { x402: string };
+      pricing: {
+        humanCheckout: {
+          passportPaymentLink?: string;
+          dppPaymentLink?: string;
+          farmPaymentLink?: string;
+          starterPaymentLink?: string;
+        };
+      };
+    };
+    assert.equal(body.protocol, "mcp", path);
+    assert.equal(body.pay.x402, "POST https://qron.space/api/x402", path);
+    assert.equal(
+      body.pricing.humanCheckout.dppPaymentLink,
+      planPaymentLink("dpp_readiness"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.passportPaymentLink,
+      planPaymentLink("strainchain_passport"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.starterPaymentLink,
+      planPaymentLink("starter"),
+      path
+    );
+    const blob = JSON.stringify(body);
+    assert.equal(blob.includes("/api/checkout"), false, path);
+    assert.equal(blob.toLowerCase().includes("facilitator.payai"), false, path);
+  }
+
+  const unpaid = await worker.fetch(
+    new Request("https://qron.space/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "verify" },
+      }),
+    })
+  );
+  assert.equal(unpaid.status, 402);
+  const required = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string }>;
+  };
+  assert.equal(required.x402Version, 2);
+  assert.equal(required.resource?.url, "https://qron.space/mcp");
+  assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+});
+
+test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", async () => {
+  const res = await get("/api/x402/catalog");
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    catalog: string;
+    humanCheckout: {
+      farmPaymentLink?: string;
+      passportPaymentLink?: string;
+      dppPaymentLink?: string;
+      starterPaymentLink?: string;
+      creatorPaymentLink?: string;
+    };
+  };
+  assert.equal(body.catalog, "/api/x402/catalog");
+  assert.equal(
+    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
+    "buy.stripe.com"
+  );
+  assert.equal(
+    body.humanCheckout.starterPaymentLink,
+    planPaymentLink("starter")
+  );
+  assert.equal(
+    body.humanCheckout.creatorPaymentLink,
+    planPaymentLink("creator")
+  );
+  const blob = JSON.stringify(body);
+  assert.equal(blob.includes("/api/checkout"), false);
+  assert.equal(blob.toLowerCase().includes("facilitator.payai"), false);
+
+  const wellKnown = await get("/.well-known/x402.json");
+  assert.equal(wellKnown.status, 200);
 });
 
 test("/pricing is a real catalogue page, not a 404", async () => {
@@ -89,6 +303,20 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     html,
     /href="https:\/\/authichain\.com\/api\/checkout\/dpp"/
   );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_1"/
+  );
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_3"/
+  );
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {
@@ -103,10 +331,14 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/qron.space\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/qron.space\/sitemap.xml/);
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
+  assert.ok(commentPaths.includes("/mcp"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

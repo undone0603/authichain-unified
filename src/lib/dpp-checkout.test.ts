@@ -134,4 +134,41 @@ describe("createDppCheckoutSession", () => {
     expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.payment_method_types).toBeUndefined();
   });
+
+  it("carries affiliate/ref attribution into Stripe metadata", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_aff",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_aff_1",
+        email: "ops@brand.com",
+        affiliate_code: "AFF-TEST",
+        ref_code: "USER-123",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.metadata.affiliate_code).toBe("AFF-TEST");
+    expect(arg.metadata.ref_code).toBe("USER-123");
+  });
+
+  it("accepts first-touch ?ref= as the affiliate code", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_ref",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_aff_2",
+        email: "ops@brand.com",
+        ref: "FIRST-TOUCH",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    expect(create.mock.calls[0][0].metadata.affiliate_code).toBe("FIRST-TOUCH");
+  });
 });

@@ -63,6 +63,30 @@ function makeDbSelectStub(rows: any[]) {
   return { select: () => builder };
 }
 
+function sqlParamValues(query: { queryChunks?: unknown[] }): unknown[] {
+  const values: unknown[] = [];
+  for (const chunk of query?.queryChunks ?? []) {
+    if (typeof chunk === "string") {
+      values.push(chunk);
+      continue;
+    }
+    if (
+      chunk &&
+      typeof chunk === "object" &&
+      "value" in chunk &&
+      !Array.isArray((chunk as { value: unknown }).value)
+    ) {
+      values.push((chunk as { value: unknown }).value);
+    }
+  }
+  return values;
+}
+
+function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
+  (getHyperdriveDb as any).mockReturnValue({ execute });
+  return execute;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   (getHyperdriveDb as any).mockReturnValue({});
@@ -373,6 +397,18 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('<form action="/onboard" method="post">');
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
+    expect(body).toContain(
+      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+    );
+    expect(body).toContain(
+      'href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"'
+    );
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -391,13 +427,14 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("required");
   });
 
-  it("303s a valid intake to /onboard/received", async () => {
+  it("303s a valid intake to /onboard/received after writing lead_captures", async () => {
+    const execute = mockLeadInsert();
     const res = await app.request(
       "/onboard",
       {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01",
+        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01&sku=JS-01&serial=SN1",
         redirect: "manual",
       },
       makeEnv() as any
@@ -408,9 +445,40 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(location).toContain("/onboard/received");
     expect(location).toContain("ref=");
     expect(location).toContain("vertical=strainchain");
+    expect(execute).toHaveBeenCalledTimes(1);
+    const params = sqlParamValues(execute.mock.calls[0][0]);
+    expect(params).toContain("jordan@trulieve.com");
+    expect(params).toContain("Jordan Hale");
+    expect(params).toContain("strainchain");
+    const metadata = params.find(
+      value => typeof value === "string" && value.includes("Trulieve")
+    );
+    expect(metadata).toEqual(expect.stringContaining('"company":"Trulieve"'));
+    expect(metadata).toEqual(expect.stringContaining('"sku":"JS-01"'));
+    expect(metadata).toEqual(expect.stringContaining('"serial":"SN1"'));
+  });
+
+  it("returns 500 and does not notify when the lead write fails", async () => {
+    mockLeadInsert(vi.fn().mockRejectedValue(new Error("db down")));
+    const res = await app.request(
+      "/onboard",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "company=Trulieve&contactName=Jordan+Hale&email=jordan%40trulieve.com&vertical=strainchain&productName=Jar+Seal+01",
+        redirect: "manual",
+      },
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(500);
+    expect(body).toContain("Could not record the pilot request");
+    expect(notifyPilotIntake).not.toHaveBeenCalled();
   });
 
   it("waitUntils inbound notify before the 303 when executionCtx is present", async () => {
+    mockLeadInsert();
     const pending: Promise<unknown>[] = [];
     const res = await app.request(
       "/onboard",
@@ -443,6 +511,7 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
   });
 
   it("void-notifies when executionCtx is missing and still 303s", async () => {
+    mockLeadInsert();
     const res = await app.request(
       "/onboard",
       {

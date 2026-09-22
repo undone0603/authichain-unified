@@ -7,10 +7,17 @@
     "https://authichain.com/m/strainchain",
     "https://authichain.com/m/bat-2026-001",
     "https://authichain.com/m/insulin-vial",
+    "https://authichain.com/mcp",
     "https://authichain.com/trumark",
     "https://authichain.com/made-in-america",
     "https://authichain.com/passport",
-    "https://authichain.com/genetics/mendo-love-farms"
+    "https://authichain.com/genetics/mendo-love-farms",
+    "https://qron.space/llms.txt",
+    "https://qron.space/openapi.json",
+    "https://strainchain.io/llms.txt",
+    "https://strainchain.io/openapi.json",
+    "https://govchain.us/llms.txt",
+    "https://govchain.us/openapi.json"
   ],
   "ghost": [
     "https://authichain.com/m/mendo",

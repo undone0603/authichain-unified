@@ -66,28 +66,40 @@ def test_marketing_autonomous_schedule_is_inbound_only():
 
 
 INDEXNOW_MONEY_URLS = (
+    "https://authichain.com/",
+    "https://authichain.com/dpp",
+    "https://authichain.com/x402",
     "https://authichain.com/pricing",
     "https://authichain.com/.well-known/x402",
     "https://authichain.com/openapi.json",
     "https://authichain.com/llms.txt",
+    "https://authichain.com/mcp",
+    "https://authichain.com/m/insulin-vial",
     "https://authichain.com/onboard",
     "https://authichain.com/blog/eu-dpp-manufacturer",
     "https://strainchain.io/",
     "https://strainchain.io/pricing",
     "https://strainchain.io/onboard",
+    "https://strainchain.io/llms.txt",
+    "https://strainchain.io/openapi.json",
     "https://qron.space/",
     "https://qron.space/pricing",
     "https://qron.space/generate",
+    "https://qron.space/llms.txt",
+    "https://qron.space/openapi.json",
     "https://govchain.us/",
     "https://govchain.us/onboard",
+    "https://govchain.us/pricing",
+    "https://govchain.us/llms.txt",
+    "https://govchain.us/openapi.json",
 )
 
-# Live HTML on these paths still carries one-click /api/checkout hrefs.
-# Do not IndexNow them until the authichain-com Payment Links deploy.
-INDEXNOW_LEAKY_UNTIL_DEPLOY = (
-    "https://authichain.com/",
-    "https://authichain.com/dpp",
-    "https://authichain.com/x402",
+# Email-gated form actions are not href leaks. Do not IndexNow
+# checkout endpoints or Stripe-hosted Payment Link hosts.
+INDEXNOW_FORBIDDEN_URLS = (
+    "https://buy.stripe.com",
+    "https://authichain.com/api/checkout",
+    "https://authichain.com/protocol/checkout",
 )
 
 INDEXNOW_SITEMAPS = (
@@ -147,7 +159,5 @@ def test_marketing_autonomous_indexnow_pings_sitemaps_and_money_urls():
     for url in INDEXNOW_SITEMAPS + INDEXNOW_MONEY_URLS:
         # Quoted so apex "/" is not satisfied by "/sitemap.xml".
         assert f'"{url}"' in yml, f"IndexNow should ping {url}"
-    for url in INDEXNOW_LEAKY_UNTIL_DEPLOY:
-        assert f'"{url}"' not in yml, (
-            f"IndexNow must not ping leaky {url} until Payment Links deploy"
-        )
+    for url in INDEXNOW_FORBIDDEN_URLS:
+        assert url not in yml, f"IndexNow must not ping leaky {url}"

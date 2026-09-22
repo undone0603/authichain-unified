@@ -112,9 +112,15 @@ export function planCheckoutCta(
       external: origin !== "authichain",
     };
   }
-  // StrainChain SKUs keep attributed Checkout Sessions (abandoned-cart
-  // recovery). The durable Payment Link lives on the plan for email/ops.
-  if (plan.brand === "strainchain" && plan.stripe_price_id) {
+  // StrainChain SKUs and Theater subscriptions keep attributed Checkout
+  // Sessions (abandoned-cart recovery). The durable Payment Link lives
+  // on the plan for email/ops and as a secondary CTA next to the form.
+  if (
+    (plan.brand === "strainchain" ||
+      plan.id === "theater_1" ||
+      plan.id === "theater_3") &&
+    plan.stripe_price_id
+  ) {
     const path = `/api/checkout/plan/${plan.id}`;
     if (origin === "authichain") {
       return { href: path, label: plan.cta, external: false };
@@ -423,7 +429,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "These figures come from the AuthiChain plan catalogue and the published AuthiChain Starter Payment Link. The primary money path is still EU DPP Readiness via live Stripe checkout.",
       secondary: { href: "/onboard", label: "Onboard", primary: false },
       plansNote:
-        "AuthiChain Starter is the live $299/mo Payment Link. Catalogue plans with a Stripe price or Payment Link stay listed. Theater subscriptions without a Payment Link use Contact.",
+        "AuthiChain Starter is the live $299/mo Payment Link. Catalogue plans with a Stripe price or Payment Link stay listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
       ctaTitle: "Start EU DPP Readiness",
       ctaLede:
         "EU DPP Readiness is $299 on the published Payment Link, or enter a work email so Stripe can recover the cart. AuthiChain Starter is the monthly Payment Link on this page.",
@@ -466,7 +472,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       primary: false,
     },
     plansNote:
-      "Only plans with a Stripe price or Payment Link are listed. Theater subscriptions without a Payment Link use Contact.",
+      "Only plans with a Stripe price or Payment Link are listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand.",

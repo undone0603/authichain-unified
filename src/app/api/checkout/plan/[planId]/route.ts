@@ -33,7 +33,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
         prospectId:
           search.get("prospect_id") ?? search.get("visit_id") ?? undefined,
         source: search.get("utm_source") ?? search.get("source") ?? undefined,
-        affiliateCode: search.get("affiliate_code") ?? undefined,
+        // First-touch ?ref= has no aff_ref cookie on this request yet
+        // (the proxy sets it on the response), so accept the query aliases.
+        affiliateCode:
+          search.get("affiliate_code") ??
+          search.get("ref") ??
+          search.get("aff") ??
+          undefined,
       },
       stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
       requireEmail: true,

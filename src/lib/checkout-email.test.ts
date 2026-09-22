@@ -223,6 +223,12 @@ describe("rewriteCheckoutHref", () => {
     expect(rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")).toBe(
       planPaymentLink("strainchain_farm")
     );
+    expect(rewriteCheckoutHref("/api/checkout/plan/theater_1")).toBe(
+      planPaymentLink("theater_1")
+    );
+    expect(rewriteCheckoutHref("/api/checkout/plan/theater_3")).toBe(
+      planPaymentLink("theater_3")
+    );
   });
 
   it("leaves email forms, foreign hosts, and SKUs without a Payment Link", () => {
@@ -230,7 +236,6 @@ describe("rewriteCheckoutHref", () => {
     expect(
       rewriteCheckoutHref("https://strainchain.io/api/checkout/dpp")
     ).toBeUndefined();
-    expect(rewriteCheckoutHref("/api/checkout/plan/theater_1")).toBeUndefined();
   });
 });
 

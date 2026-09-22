@@ -26,6 +26,7 @@ import {
   catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
+import { planUsd } from "../../../src/lib/plans";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 export const X402_DOCS_PATHS = [
@@ -315,7 +316,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <h2 id="flow-title">Unpaid POST → 402</h2>
       <ol>
         <li>Agent <code>POST</code>s ${esc(p.payUrl)} (or the agent-verify alias) with a JSON body and no payment header.</li>
-        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement (<code>outputSchema</code> on <code>accepts[0]</code>) internally.</li>
+        <li>The edge answers <code>402</code> with <code>x402Version: 2</code> JSON (<code>resource</code> object, <code>accepts[].amount</code>, CAIP-2 <code>eip155:8453</code>, plus EIP-712 extra for Circle USDC) and the same envelope in the <code>PAYMENT-REQUIRED</code> header. Both declare <code>extensions.bazaar</code> and <code>accepts[0].outputSchema.input</code> (<code>type</code> + <code>method</code>) so discovery clients can catalog the skill. PayAI settle still uses the v1 requirement internally.</li>
         <li>The agent settles through a compatible x402 client, then retries the same POST with <code>X-PAYMENT</code> (v1) or <code>PAYMENT-SIGNATURE</code> (v2).</li>
         <li>A valid settlement returns <code>200</code> JSON. A missing or invalid proof returns another <code>402</code>.</li>
       </ol>
@@ -374,29 +375,40 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <h2 id="human-title">Human checkout vs agent rail</h2>
       <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
       <ul>
-        <li>StrainChain Passport — <strong>$49</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
-        <li>EU DPP Readiness — <strong>$299</strong> one-time. Same recovery path.</li>
+        <li>StrainChain Passport — <strong>$${planUsd("strainchain_passport")}</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
+        <li>StrainChain Farm — <strong>$${planUsd("strainchain_farm")}</strong>/month. Unlimited cultivars; same Payment Link as /pricing.</li>
+        <li>EU DPP Readiness — <strong>$${planUsd("dpp_readiness")}</strong> one-time. Same recovery path.</li>
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
         action: "/api/checkout/plan/strainchain_passport",
-        label: "Passport checkout — $49",
+        label: `Passport checkout — $${planUsd("strainchain_passport")}`,
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
       })}
       ${catalogPaymentLinkHtml({
         planId: "strainchain_passport",
-        label: "Pay $49 on Stripe",
+        label: `Pay $${planUsd("strainchain_passport")} on Stripe`,
+      })}
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_farm",
+        label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
+      })}
+      ${checkoutEmailFormHtml({
+        action: "/api/checkout/plan/strainchain_farm",
+        label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
+        inputId: "x402-farm-email",
+        formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
         action: "/api/checkout/dpp",
-        label: "DPP checkout — $299",
+        label: `DPP checkout — $${planUsd("dpp_readiness")}`,
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",
       })}
       ${catalogPaymentLinkHtml({
         planId: "dpp_readiness",
-        label: "Pay $299 on Stripe",
+        label: `Pay $${planUsd("dpp_readiness")} on Stripe`,
       })}
     </section>
   </div>

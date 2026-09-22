@@ -34,6 +34,9 @@ jobs:
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
         run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
 
+      - name: Check sister x402 facilitator bind matches authichain-com
+        run: pnpm exec vitest run scripts/__tests__/bind-x402-secrets.test.ts
+
       - name: Check AgentZ tunnel gh secret set ($0 bring-up)
         run: pnpm exec vitest run scripts/__tests__/resolve-agent-secret.test.ts
 

@@ -56,12 +56,20 @@ describe("tryHandleX402", () => {
         paid: boolean;
         priceUsd: number | null;
       }>;
+      humanCheckout: {
+        farmUsd: number;
+        farmPaymentLink?: string;
+      };
     };
     expect(body.protocol).toBe("x402");
     expect(body.payTo).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.pricePerCall.usd).toBe(0.05);
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
+    );
+    expect(body.humanCheckout.farmUsd).toBe(149);
+    expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
+      "buy.stripe.com"
     );
   });
 
@@ -164,6 +172,7 @@ describe("tryHandleX402", () => {
         amount?: string;
         maxAmountRequired?: string;
         network?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
       }>;
       extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
@@ -175,6 +184,8 @@ describe("tryHandleX402", () => {
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
     expect(JSON.stringify(body).toLowerCase()).not.toContain(
       "facilitator.payai"
@@ -185,12 +196,19 @@ describe("tryHandleX402", () => {
       Buffer.from(required!, "base64").toString("utf8")
     ) as {
       x402Version: number;
-      accepts: Array<{ amount?: string; network?: string; resource?: string }>;
+      accepts: Array<{
+        amount?: string;
+        network?: string;
+        resource?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
       extensions?: { bazaar?: unknown };
     };
     expect(v2.x402Version).toBe(2);
     expect(v2.accepts[0].amount).toBe("50000");
     expect(v2.accepts[0].network).toBe("eip155:8453");
+    expect(v2.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(v2.accepts[0].outputSchema?.input?.method).toBe("POST");
     expect(v2.accepts[0].resource).toBeUndefined();
     expect(v2.extensions?.bazaar).toBeTruthy();
     expect(body.x402Version).toBe(v2.x402Version);

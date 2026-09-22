@@ -5,7 +5,11 @@
  * steel). Not a second homepage — existing /verify /pricing /dpp stay.
  * Checkout uses GET + ?email= (#1141). $QRON is not a payment rail (#1143).
  */
-import { checkoutEmailFormHtml } from "../../../src/lib/checkout-email";
+import {
+  catalogPaymentLinkHtml,
+  checkoutEmailFormHtml,
+} from "../../../src/lib/checkout-email";
+import { PAYMENT_LINKS } from "../../../server/payment-links";
 
 const HTML_HEADERS: Record<string, string> = {
   "Content-Type": "text/html; charset=utf-8",
@@ -39,7 +43,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "EU DPP checkout",
     state: "live",
-    detail: "GET /api/checkout/dpp needs ?email=. Else 303 to /dpp?need_email=1.",
+    detail:
+      "GET /api/checkout/dpp needs ?email=. Else 303 to /dpp?need_email=1.",
   },
   {
     surface: "Passport $49",
@@ -59,7 +64,8 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "SEO hubs /p",
     state: "live",
-    detail: "Apexes proxy /p. Five 2026 DPP/W3C hubs shipped (#1140). Specs not implemented.",
+    detail:
+      "Apexes proxy /p. Five 2026 DPP/W3C hubs shipped (#1140). Specs not implemented.",
   },
   {
     surface: "Base AuthiChainNFT",
@@ -162,7 +168,12 @@ label{display:block;margin:.75rem 0 .35rem;font-size:.85rem}
 .row{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}
 `;
 
-function shell(title: string, description: string, path: string, body: string): string {
+function shell(
+  title: string,
+  description: string,
+  path: string,
+  body: string
+): string {
   const nav = [
     ["/desk", "Desk"],
     ["/desk/verify", "Verify"],
@@ -211,7 +222,25 @@ function home(): string {
      <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:.4rem 0 1rem">Issue. Bind. Verify.</h1>
      <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base. $QRON is not a payment rail.</p>
      <div class="row">${dppForm}
+       <p style="align-self:end">${catalogPaymentLinkHtml({
+         planId: "dpp_readiness",
+         label: "Pay $299 on Stripe",
+         className: "btn ghost",
+       })}</p>
        <p style="align-self:end"><a class="btn ghost" href="/desk/verify">Verify ${SEED}</a></p>
+     </div>
+     <div class="row" style="margin-top:1rem;flex-wrap:wrap;gap:.75rem">
+       ${catalogPaymentLinkHtml({
+         planId: "strainchain_passport",
+         label: "Passport $49",
+         className: "btn ghost",
+       })}
+       ${catalogPaymentLinkHtml({
+         planId: "strainchain_farm",
+         label: "Farm $149/mo",
+         className: "btn ghost",
+       })}
+       <a class="btn ghost" href="${PAYMENT_LINKS.strainchain.basic.url}">${PAYMENT_LINKS.strainchain.basic.name} ${PAYMENT_LINKS.strainchain.basic.price}</a>
      </div>
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>

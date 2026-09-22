@@ -35,7 +35,7 @@
 // shell rather than 500ing a crawler or a user browser.
 
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
@@ -49,6 +49,7 @@ import { listedPlans } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
+  catalogPaymentLinkHtml,
   emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
@@ -140,7 +141,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
 function htmlResponse(
   c: Context,
   body: string,
-  status: 200 | 400 | 404
+  status: 200 | 400 | 404 | 500
 ): Response {
   return c.html(body, status);
 }
@@ -887,9 +888,9 @@ function renderLanding(c: Context): Response {
 
 // --- /onboard - pilot intake -------------------------------------------------
 // Real intake, not a stub. GET renders a form. POST validates company,
-// contact, work email, vertical, and first product, then 303s to
-// /onboard/received. Persistence of paying pilots is HubSpot + Command;
-// this edge form is the public CTA the freeze doc said was missing.
+// contact, work email, vertical, and first product, writes a lead_captures
+// row, then 303s to /onboard/received. The founder alert is extra; a submit
+// is recorded only when the table write succeeds.
 
 const ONBOARD_VERTICALS = [
   "authichain",
@@ -901,6 +902,40 @@ const ONBOARD_VERTICALS = [
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+function onboardPayNowHtml(): string {
+  const basic = PAYMENT_LINKS.strainchain.basic;
+  return (
+    '<section aria-label="Live checkout" class="onboard-pay">\n' +
+    "<h2>Or pay now — no call</h2>\n" +
+    "<p>Published catalogue. Pilot intake stays free.</p>\n" +
+    '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "Passport $49",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_farm",
+      label: "Farm $149/mo",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "DPP $299",
+    }) +
+    "\n" +
+    '<a class="btn btn-outline" href="' +
+    escapeHtml(basic.url) +
+    '">' +
+    escapeHtml(basic.name) +
+    " " +
+    escapeHtml(basic.price) +
+    "</a>\n" +
+    "</p>\n" +
+    "</section>\n"
+  );
+}
+
 function onboardFormHtml(error?: string): string {
   const errorBlock = error
     ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
@@ -911,8 +946,13 @@ function onboardFormHtml(error?: string): string {
   return htmlDocument({
     title: "Onboard a Pilot | AuthiChain",
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
     canonicalPath: "/onboard",
+    extraHead:
+      "<style>" +
+      CHECKOUT_EMAIL_FORM_CSS +
+      ".onboard-pay{margin-top:2rem;padding-top:1.25rem;border-top:1px solid #cbd5e1}.onboard-pay h2{font-size:1.1rem;margin:0 0 .4rem}.onboard-pay p{margin:0 0 .75rem}.onboard-pay-links{display:flex;flex-wrap:wrap;gap:.6rem}.onboard-pay-links a{display:inline-block;padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;text-decoration:none;font-weight:600}" +
+      "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Onboard a Pilot</h1>\n" +
@@ -937,9 +977,50 @@ function onboardFormHtml(error?: string): string {
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
       '<button type="submit">Request pilot seal</button>\n' +
       "</form>\n" +
+      onboardPayNowHtml() +
       '<p><a href="/verify">Verify an existing seal</a></p>\n' +
       "</main>",
   });
+}
+
+type PilotLeadRow = {
+  company: string;
+  contactName: string;
+  email: string;
+  vertical: string;
+  productName: string;
+  sku: string;
+  serial: string;
+  ref: string;
+};
+
+// Hyperdrive connects as the table owner. RLS is on but not forced, so this
+// insert is recorded even though the anon policy only allows launchcheck-grader.
+async function recordPilotLead(c: Context, row: PilotLeadRow): Promise<void> {
+  const db = getHyperdriveDb(
+    c.env as { HYPERDRIVE: { connectionString: string } }
+  );
+  const metadata = JSON.stringify({
+    company: row.company,
+    vertical: row.vertical,
+    product: row.productName,
+    sku: row.sku || undefined,
+    serial: row.serial || undefined,
+    ref: row.ref,
+  });
+  await db.execute(sql`
+    insert into lead_captures (
+      email, name, source, page_url, product_interest, metadata, status
+    ) values (
+      ${row.email},
+      ${row.contactName},
+      'onboard',
+      '/onboard',
+      ${row.vertical},
+      ${metadata},
+      'new'
+    )
+  `);
 }
 
 async function handleOnboardPost(c: Context): Promise<Response> {
@@ -948,6 +1029,8 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let email = "";
   let vertical = "authichain";
   let productName = "";
+  let sku = "";
+  let serial = "";
   try {
     const form = await c.req.parseBody();
     company = String(form.company || "")
@@ -966,6 +1049,12 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     productName = String(form.productName || "")
       .trim()
       .slice(0, 80);
+    sku = String(form.sku || "")
+      .trim()
+      .slice(0, 40);
+    serial = String(form.serial || "")
+      .trim()
+      .slice(0, 40);
   } catch {
     return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
   }
@@ -996,6 +1085,25 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     .slice(0, 8)
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+  try {
+    await recordPilotLead(c, {
+      company,
+      contactName,
+      email,
+      vertical,
+      productName,
+      sku,
+      serial,
+      ref,
+    });
+  } catch (err) {
+    console.error("[onboard] lead_captures insert failed", err);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Could not record the pilot request. Try again."),
+      500
+    );
+  }
   const dest = new URL("/onboard/received", c.req.url);
   dest.searchParams.set("ref", ref);
   dest.searchParams.set("vertical", vertical);

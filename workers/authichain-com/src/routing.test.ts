@@ -124,6 +124,14 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
+  );
+  assert.match(html, /action="\/api\/checkout\/plan\/theater_1"/);
+  assert.match(html, /action="\/api\/checkout\/plan\/theater_3"/);
   assert.match(html, /href="\/x402"/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
 });
@@ -167,6 +175,12 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
       !html.includes("PRIVATE") && !html.includes("secret"),
       `${path} must not mention secrets`
     );
+    const farmPay = planPaymentLink("strainchain_farm") ?? "";
+    assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
+    assert.equal(new URL(farmPay).hostname, "buy.stripe.com");
+    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    assert.doesNotMatch(html, /href=["']\/api\/checkout/);
+    assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
 });
 
@@ -295,6 +309,42 @@ test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async
   }
 });
 
+test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing else", async () => {
+  const res = await get("/.well-known/402index-verify.txt");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/plain/);
+  const text = await res.text();
+  assert.equal(
+    text,
+    "423fe4bfe20daf3616465b6f496a3a06e2b03d590e77511d1782bf310b7cb2af"
+  );
+  assert.equal(text.length, 64);
+  const head = await worker.fetch(
+    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+      method: "HEAD",
+    }),
+    ENV
+  );
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+  const posted = await worker.fetch(
+    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+      method: "POST",
+    }),
+    ENV
+  );
+  assert.equal(posted.status, 404);
+  const www = await worker.fetch(
+    new Request("https://www.authichain.com/.well-known/402index-verify.txt"),
+    ENV
+  );
+  assert.equal(www.status, 301);
+  assert.equal(
+    www.headers.get("location"),
+    "https://authichain.com/.well-known/402index-verify.txt"
+  );
+});
+
 test("/llms.txt points agents at Payment Links and unpaid POST x402", async () => {
   for (const path of ["/llms.txt", "/.well-known/llms.txt"]) {
     const res = await get(path);
@@ -319,6 +369,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
         humanCheckout: {
           passportPaymentLink?: string;
           dppPaymentLink?: string;
+          farmPaymentLink?: string;
         };
       };
     };
@@ -334,6 +385,16 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       planPaymentLink("strainchain_passport"),
       path
     );
+    assert.equal(
+      body.pricing.humanCheckout.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname,
+      "buy.stripe.com",
+      path
+    );
     assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
   }
 });
@@ -346,10 +407,21 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
       protocol: string;
       catalog: string;
       health: string;
+      humanCheckout?: { farmPaymentLink?: string; farmUsd?: number };
     };
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
+    assert.equal(
+      body.humanCheckout?.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
+      "buy.stripe.com",
+      path
+    );
   }
 });
 

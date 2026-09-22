@@ -65,6 +65,14 @@ export async function createDppCheckoutSession(opts: {
   const referrer = pick(searchParams, "referrer", 512);
   const source = utmSource || pick(searchParams, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(searchParams, "promo", 32));
+  // Affiliate / referral attribution survives into Stripe metadata so the
+  // webhook can accrue commission. First-touch ?ref= has no cookie yet on
+  // this request, so accept the query aliases the proxy/middleware persists.
+  const affiliateCode =
+    pick(searchParams, "affiliate_code", 64) ||
+    pick(searchParams, "ref", 64) ||
+    pick(searchParams, "aff", 64);
+  const refCode = pick(searchParams, "ref_code", 64);
 
   if (!email && !smoke) {
     return {
@@ -143,6 +151,8 @@ export async function createDppCheckoutSession(opts: {
         ...(utmContent ? { utm_content: utmContent } : {}),
         ...(utmTerm ? { utm_term: utmTerm } : {}),
         ...(referrer ? { referrer: referrer } : {}),
+        ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+        ...(refCode ? { ref_code: refCode } : {}),
       },
     });
 

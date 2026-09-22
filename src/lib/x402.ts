@@ -244,6 +244,8 @@ export type PaymentRequiredV2 = {
     payTo: string;
     maxTimeoutSeconds: number;
     extra?: { name?: string; version?: string };
+    /** PayAI / CDP Bazaar catalog the skill from the unpaid 402 accepts row. */
+    outputSchema: X402BazaarInfo;
   }>;
   extensions: X402BazaarExtension;
 };
@@ -314,6 +316,7 @@ function buildPaymentRequiredV2(opts: {
         asset: opts.asset,
         payTo: opts.payTo,
         maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
+        outputSchema: opts.extensions.bazaar.info,
         ...(opts.extra ? { extra: opts.extra } : {}),
       },
     ],
@@ -325,8 +328,10 @@ function buildPaymentRequiredV2(opts: {
  * Build the 402 payment-requirements an unpaid agent receives.
  *
  * HTTP JSON is `v2` (CDP Bazaar validate reads the JSON body's
- * `x402Version`; a v1 body is rejected as "expected 2"). `body` stays the
- * v1 requirement PayAI `/settle` needs (`outputSchema` on accepts[0]).
+ * `x402Version`; a v1 body is rejected as "expected 2"). The unpaid
+ * `accepts[0]` carries `outputSchema.input` (`type` + `method`) so Bazaar
+ * can catalog from the 402 body, not only from a later `/settle`.
+ * `body` stays the v1 requirement PayAI `/settle` still posts.
  * Do not rebind `X402_FACILITATOR_URL` to chase CDP listing.
  */
 export function buildPaymentRequired(opts: {
@@ -617,6 +622,9 @@ export type X402HealthEnv = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  // Index signature so Node's ProcessEnv (the default arg) stays assignable.
+  // Types-only: no runtime behavior change.
+  [key: string]: string | undefined;
 };
 
 export type X402FacilitatorStatus = {
@@ -771,8 +779,10 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
+    farmUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
+    farmPaymentLink?: string;
     source: string;
   };
   discovery: {
@@ -854,8 +864,10 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
+      farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
+      farmPaymentLink: planPaymentLink("strainchain_farm"),
       source: "src/lib/plans.ts",
     },
     discovery: {
