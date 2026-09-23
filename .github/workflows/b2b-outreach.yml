@@ -50,6 +50,8 @@ concurrency:
 
 permissions:
   contents: read
+  # approval queue: a tripped breaker latches outreach off until the owner approves resuming
+  issues: write
 
 env:
   NODE_VERSION: "22"
@@ -108,6 +110,28 @@ jobs:
           OUTREACH_SENDERS: ${{ vars.OUTREACH_SENDERS }}
         run: node scripts/autonomy/deliverability-breaker.mjs
 
+      - name: Breaker latch (owner approval to resume)
+        id: latch
+        if: github.event_name == 'schedule' && steps.autonomy.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TRIPPED: ${{ steps.breaker.outputs.tripped }}
+          BREAKER_REASON: ${{ steps.breaker.outputs.reason }}
+        run: |
+          set +e
+          if [ "$TRIPPED" = "true" ]; then
+            node scripts/autonomy/approvals.mjs latch --prefix cold-outreach-resume --trip \
+              --title "Resume cold outreach after the deliverability breaker tripped" \
+              --body "The breaker stopped scheduled cold outreach: ${BREAKER_REASON}. Nothing sends until you approve. Before approving, check the sender list quality and bounces in Resend."
+          else
+            node scripts/autonomy/approvals.mjs latch --prefix cold-outreach-resume
+          fi
+          code=$?
+          if [ "$code" -eq 0 ]; then echo "held=false" >> "$GITHUB_OUTPUT"; else echo "held=true" >> "$GITHUB_OUTPUT"; fi
+          echo "latch exit=$code"
+          exit 0
+
       - name: Resolve dry-run / live mode
         id: mode
         env:
@@ -119,14 +143,15 @@ jobs:
             # variable, and a clear breaker. Anything else is a dry-run.
             if [ "${{ steps.autonomy.outputs.enabled }}" = "true" ] \
               && [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ] \
-              && [ "${{ steps.breaker.outputs.tripped }}" = "false" ]; then
+              && [ "${{ steps.breaker.outputs.tripped }}" = "false" ] \
+              && [ "${{ steps.latch.outputs.held }}" = "false" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"
               echo "cap=${{ steps.autonomy.outputs.cap }}" >> "$GITHUB_OUTPUT"
               echo "Scheduled run → LIVE (manifest on, OWNER_LIVE_SEND=true, breaker clear), cap ${{ steps.autonomy.outputs.cap }}"
             else
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
               echo "cap=0" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → dry-run (manifest=${{ steps.autonomy.outputs.enabled }}, OWNER_LIVE_SEND=${{ vars.OWNER_LIVE_SEND }}, breaker tripped=${{ steps.breaker.outputs.tripped }})"
+              echo "Scheduled run → dry-run (manifest=${{ steps.autonomy.outputs.enabled }}, OWNER_LIVE_SEND=${{ vars.OWNER_LIVE_SEND }}, breaker tripped=${{ steps.breaker.outputs.tripped }}, latch held=${{ steps.latch.outputs.held }})"
               if [ "${{ steps.breaker.outputs.tripped }}" = "true" ] && [ "${{ steps.autonomy.outputs.enabled }}" = "true" ]; then
                 echo "::warning::Cold outreach paused by deliverability breaker: ${BREAKER_REASON}"
               fi

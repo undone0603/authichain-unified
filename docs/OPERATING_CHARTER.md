@@ -86,20 +86,75 @@ lifts the "leave cold outreach off" freeze recorded in
    the breaker exist so that doesn't happen again. Hand-crafted outreach using
    the manual playbook stays the main route to closing a deal.
 
+## Every procedure, end to end
+
+| Stage   | Procedure                                    | Runs on its own via                                                                           | Owner's part                                      |
+| ------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Acquire | SEO pages, owned social, listening           | `gen-seo-pages`, `content-publish`, `marketing-autonomous`, `reddit-monitor`, `ghost-traffic` | None                                              |
+| Acquire | Cold first-touch email                       | `b2b-outreach` (switch, cap, breaker, latch)                                                  | Flip the switch once; approve resume after a trip |
+| Acquire | Government opportunities                     | `gov-ingest`/`score`/`proposals`/`notify`, `email-proposals`                                  | Sign and submit bids                              |
+| Convert | Warm lead to checkout link, proposals        | `revenue-cycle`, `agentz-orchestration`                                                       | None                                              |
+| Convert | Abandoned-cart recovery                      | Stripe webhook `checkout.session.expired`                                                     | Re-enable that event on the webhook endpoint      |
+| Fulfil  | Provision after payment (DPP, plans)         | Stripe webhook `checkout.session.completed` → `fulfillDppPaidSession`                         | None                                              |
+| Fulfil  | Check that every paid checkout was fulfilled | `ops-pulse` fulfilment watchdog (hourly)                                                      | Act on the alert if one fires                     |
+| Retain  | Failed payment, dunning, win-back            | webhook `invoice.payment_failed`, `revenue-cycle` dunning, `winback`                          | Create a win-back promo if you want one           |
+| Operate | Sites, money path, loops health              | `ops-pulse`, smoke/health gates                                                               | Act on `ops-alert` issues                         |
+| Operate | Keep workflows matching the plan             | `autonomy-reconcile`                                                                          | Edit `.github/autonomy.json`                      |
+| Operate | Fix broken checks                            | `ci-repair-loop` (draft PRs)                                                                  | Merge                                             |
+| Report  | Weekly numbers + what's waiting              | `owner-digest` (email)                                                                        | Read it                                           |
+
+## The approval queue
+
+When a loop hits something on the "always waits for the owner" list, it opens
+**one** issue labelled `approval-needed`. You answer by adding the label
+`approved` or `denied`. Only a label added by the owner counts. The loop checks
+again on its next run. `scripts/autonomy/approvals.mjs` does this:
+
+- `gate`: a one-time decision.
+- `latch`: holds a loop off until you approve resuming. Cold outreach uses it
+  after the deliverability breaker trips.
+
+Keep request text public-safe: no emails, amounts or secrets.
+
+Every pending approval also appears in the owner digest email. So a normal week
+needs nothing from you except reading one email. The rare week that does need
+you comes with a list of decisions.
+
 ## Where to look
 
+- **Your inbox**: the owner digest arrives on Mondays, and on any day something is waiting on you.
 - **Command Center**: `dashboard.authichain.com` shows live money, leads, loops and sites.
-- **Alerts**: open issues labelled `ops-alert`.
+- **Alerts**: open issues labelled `ops-alert` or `approval-needed`.
 - **Loop details**: the job summary of each run in GitHub Actions.
 
-## Secrets the Command Center reads (all optional)
+## Secrets and variables (all optional; anything missing shows as "not connected")
 
-| GitHub secret                               | Purpose                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------ |
-| `STRIPE_READ_KEY`                           | Restricted Stripe key: read charges, balance, subscriptions, checkout sessions |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Lead counts from `lead_captures` (already set)                                 |
-| `DASHBOARD_GITHUB_TOKEN`                    | Fine-grained, read-only Actions + Issues token; lifts the GitHub rate limit    |
-| `FOUNDER_EMAILS`                            | Comma-separated emails whose charges count as self-tests                       |
+| Name                                        | Kind     | Purpose                                                                                |
+| ------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `STRIPE_READ_KEY`                           | secret   | Restricted Stripe key: read charges, balance, subscriptions, checkout sessions         |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | secret   | Leads and the fulfilment watchdog (already set)                                        |
+| `FOUNDER_EMAILS`                            | secret   | Your emails, and `@authichain.com` for smoke aliases; excluded from revenue and alerts |
+| `OWNER_EMAIL`                               | secret   | Where the digest goes (falls back to `SALES_NOTIFY_EMAIL`)                             |
+| `DASHBOARD_GITHUB_TOKEN`                    | secret   | Fine-grained, read-only Actions + Issues token; lifts the GitHub rate limit            |
+| `APP_DATABASE_BOUND`                        | variable | Set to `true` once the app Worker has a database; clears the digest reminder           |
+| `WINBACK_PROMO_CODE`                        | env      | Only set once that promotion code exists in Stripe                                     |
 
-`deploy-workers.yml` binds these secrets to the worker on each deploy. If a
-secret is missing, the page shows "not connected" for that source.
+`deploy-workers.yml` binds the dashboard's secrets on each deploy.
+
+## Known gap: the app Worker has no database
+
+Stripe webhooks for `authichain.com` run on the Cloudflare app Worker, which
+has no `DATABASE_URL`. Paid DPP fulfilment already works without it. Audit
+writes now fail open, so abandoned-cart recovery emails go out again. The
+following still need a database:
+
+- subscription records (`upsertStripeSubscription`)
+- status changes
+
+Until it's wired, these are the safety nets:
+
+- Stripe retries failed deliveries.
+- The fulfilment watchdog alerts on any paid checkout whose webhook didn't succeed.
+
+**Wiring the database is an owner action.** It means binding a secret, or
+creating a Hyperdrive config per `wrangler.app.jsonc`.

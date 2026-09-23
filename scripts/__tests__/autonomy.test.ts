@@ -235,3 +235,174 @@ describe("ops pulse", () => {
     expect(calls).toBe(2);
   });
 });
+
+describe("fulfilment watchdog", async () => {
+  const { findUnfulfilled } = await import("../autonomy/revenue-watch.mjs");
+  const now = Date.parse("2026-09-23T12:00:00Z");
+  const s = (
+    id: string,
+    minsAgo: number,
+    extra: Record<string, unknown> = {}
+  ) => ({
+    id,
+    status: "complete",
+    payment_status: "paid",
+    created: Math.floor((now - minsAgo * 60_000) / 1000),
+    customer_details: { email: `${id}@buyer.com` },
+    ...extra,
+  });
+
+  it("flags paid sessions with no successful webhook record, never fresh or founder ones", () => {
+    const sessions = [
+      s("cs_ok", 60),
+      s("cs_missing", 60),
+      s("cs_error", 60),
+      s("cs_fresh", 5),
+      s("cs_founder", 60, { customer_details: { email: "Me@Founder.com" } }),
+      s("cs_unpaid", 60, { payment_status: "unpaid" }),
+      s("cs_demo", 60, { metadata: { is_demo: "true" } }),
+      s("cs_smoke", 60, {
+        customer_details: { email: "smoke+dpp@authichain.com" },
+      }),
+    ];
+    const events = [
+      {
+        session_id: "cs_ok",
+        event_type: "checkout.session.completed",
+        status: "received",
+      },
+      {
+        session_id: "cs_ok",
+        event_type: "checkout.session.completed",
+        status: "success",
+      },
+      {
+        session_id: "cs_error",
+        event_type: "checkout.session.completed",
+        status: "error",
+      },
+    ];
+    const out = findUnfulfilled(sessions, events, {
+      now,
+      founderEmails: ["me@founder.com", "@authichain.com"],
+    });
+    expect(
+      out.map(
+        (p: { session: string; reason: string }) => `${p.session}:${p.reason}`
+      )
+    ).toEqual([
+      "cs_missing:no webhook record",
+      "cs_error:webhook ran but did not succeed",
+    ]);
+  });
+
+  it("puts unfulfilled payments into the alert signature", () => {
+    const report = {
+      at: "t",
+      probes: [],
+      workflows: [],
+      revenue: [{ session: "cs_x", reason: "r", paid_at: "p" }],
+    };
+    expect(signature(report)).toBe("pay:cs_x");
+    expect(decideIssueAction(null, report).body).toContain(
+      "Paid but not fulfilled"
+    );
+  });
+});
+
+describe("approval queue", async () => {
+  const { decide, latchHeld } = await import("../autonomy/approvals.mjs");
+  const issue = (labels: string[]) => ({
+    labels: labels.map(name => ({ name })),
+  });
+  const ev = (login: string, name: string) => ({
+    event: "labeled",
+    actor: { login },
+    label: { name },
+  });
+
+  it("counts only the owner's label, and only while it is still on the issue", () => {
+    expect(
+      decide(issue(["approved"]), [ev("someone", "approved")], "undone0603")
+    ).toBe("pending");
+    expect(
+      decide(issue(["approved"]), [ev("Undone0603", "approved")], "undone0603")
+    ).toBe("approved");
+    expect(
+      decide(issue([]), [ev("undone0603", "approved")], "undone0603")
+    ).toBe("pending");
+    expect(
+      decide(
+        issue(["approved", "denied"]),
+        [ev("undone0603", "approved"), ev("undone0603", "denied")],
+        "undone0603"
+      )
+    ).toBe("denied");
+    expect(decide(null, [], "undone0603")).toBe("absent");
+  });
+
+  it("a latch holds while any request is pending or denied", () => {
+    expect(latchHeld([])).toBe(false);
+    expect(latchHeld(["approved"])).toBe(false);
+    expect(latchHeld(["approved", "pending"])).toBe(true);
+    expect(latchHeld(["denied"])).toBe(true);
+  });
+});
+
+describe("owner digest", async () => {
+  const { buildDigest, summarize } =
+    await import("../autonomy/owner-digest.mjs");
+  const base = {
+    money: null,
+    leads7: 2,
+    approvals: [],
+    alerts: [],
+    prs: [],
+    setup: [],
+  };
+
+  it("stays quiet mid-week with nothing waiting, sends on Mondays", () => {
+    expect(
+      buildDigest({ ...base, date: "2026-09-23T12:30:00Z" }).shouldSend
+    ).toBe(false);
+    expect(
+      buildDigest({ ...base, date: "2026-09-28T12:30:00Z" }).shouldSend
+    ).toBe(true);
+  });
+
+  it("sends any day an approval or alert is waiting, and leads with it", () => {
+    const d = buildDigest({
+      ...base,
+      date: "2026-09-23T12:30:00Z",
+      approvals: [{ title: "Approval needed: resume outreach", url: "u" }],
+    });
+    expect(d.shouldSend).toBe(true);
+    expect(d.subject).toBe("AuthiChain: 1 thing needs you");
+    expect(d.text.split("\n")[0]).toBe("WAITING ON YOU");
+  });
+
+  it("excludes founder charges from revenue", () => {
+    const m = summarize(
+      {
+        charges: [
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 1000,
+            currency: "usd",
+            billing_details: { email: "me@x.com" },
+          },
+          {
+            status: "succeeded",
+            paid: true,
+            amount: 4900,
+            currency: "usd",
+            billing_details: { email: "buyer@farm.com" },
+          },
+        ],
+      },
+      new Set(["me@x.com"])
+    );
+    expect(m).toMatchObject({ revenue: 4900, payments: 1 });
+  });
+});

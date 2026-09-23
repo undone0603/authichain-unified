@@ -1,5 +1,5 @@
-# Loop 1 heartbeat: read-only probes of the public sites and every managed
-# loop. Opens ONE issue labelled `ops-alert` when something is red and closes
+# Loop 1 heartbeat: read-only probes of the public sites, every managed
+# loop, and paid-but-unfulfilled checkouts. Opens ONE issue labelled `ops-alert` when something is red and closes
 # it when green. No issue = healthy. See docs/OPERATING_CHARTER.md.
 name: Ops pulse
 
@@ -30,4 +30,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          # Fulfilment watchdog (read-only). Prefer a restricted read key.
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
         run: node scripts/autonomy/ops-pulse.mjs

@@ -1,0 +1,52 @@
+# The owner's email view of the company: weekly numbers every Monday, and a
+# same-day note whenever an approval or alert is waiting. Quiet days send
+# nothing. Private (email), because it carries revenue figures.
+# See docs/OPERATING_CHARTER.md.
+name: Owner digest
+
+on:
+  schedule:
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Send even on a quiet day"
+        type: boolean
+        default: true
+
+concurrency:
+  group: owner-digest
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build and send
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+          SALES_NOTIFY_EMAIL: ${{ secrets.SALES_NOTIFY_EMAIL }}
+          DIGEST_FROM: ${{ vars.DIGEST_FROM }}
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
+          DIGEST_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && 'true' || 'false' }}
+          SETUP_STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY != '' }}
+          SETUP_FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS != '' }}
+          SETUP_APP_DATABASE: ${{ vars.APP_DATABASE_BOUND == 'true' }}
+        run: node scripts/autonomy/owner-digest.mjs

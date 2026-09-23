@@ -77,7 +77,8 @@
         "gov-score.yml": "on",
         "gov-proposals.yml": "on",
         "gov-notify.yml": "on",
-        "gov-mint.yml": "on"
+        "gov-mint.yml": "on",
+        "owner-digest.yml": "on"
       }
     },
     "growth": {

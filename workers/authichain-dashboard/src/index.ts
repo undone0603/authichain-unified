@@ -160,10 +160,14 @@ export function summarizeMoney(
   const paid = charges.filter(
     c => c.status === "succeeded" && c.paid && !c.refunded
   );
-  const isExternal = (c: any) =>
-    !founders.has(
-      String(c.billing_details?.email ?? c.receipt_email ?? "").toLowerCase()
-    );
+  // Founder entries are exact emails or "@domain" (covers smoke+x@ aliases).
+  const isExternal = (c: any) => {
+    const e = String(
+      c.billing_details?.email ?? c.receipt_email ?? ""
+    ).toLowerCase();
+    const at = e.lastIndexOf("@");
+    return !(founders.has(e) || (at >= 0 && founders.has(e.slice(at))));
+  };
   const ext = paid.filter(isExternal);
   const sumUsd = (arr: any[]) =>
     arr.reduce(

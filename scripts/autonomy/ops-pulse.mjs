@@ -14,6 +14,7 @@
 
 import { appendFileSync } from "node:fs";
 import { loadManifest, flatten } from "./reconcile.mjs";
+import { checkFulfilment } from "./revenue-watch.mjs";
 
 export const PROBES = [
   { name: "authichain.com", url: "https://authichain.com/", expect: [200] },
@@ -123,6 +124,7 @@ export function signature(report) {
   const keys = [
     ...report.probes.filter(p => !p.ok).map(p => `probe:${p.name}`),
     ...report.workflows.map(w => `wf:${w.file}:${w.kind}`),
+    ...(report.revenue ?? []).map(r => `pay:${r.session}`),
   ].sort();
   return keys.join("|");
 }
@@ -143,6 +145,13 @@ export function renderReport(report) {
     for (const w of report.workflows)
       lines.push(
         `- \`${w.file}\` (${w.lane}): ${w.detail}${w.url ? ` - [run](${w.url})` : ""}`
+      );
+  }
+  if (report.revenue?.length) {
+    lines.push("", "#### Paid but not fulfilled");
+    for (const r of report.revenue)
+      lines.push(
+        `- Checkout \`${r.session}\` paid ${r.paid_at}: ${r.reason}. Check the customer received what they bought, then replay the event from the Stripe dashboard.`
       );
   }
   lines.push(
@@ -242,6 +251,29 @@ async function main() {
       remote,
       await latestRunsFor(repo, token, files)
     );
+  }
+
+  const stripeKey =
+    process.env.STRIPE_READ_KEY || process.env.STRIPE_SECRET_KEY;
+  if (
+    stripeKey &&
+    process.env.SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    try {
+      const f = await checkFulfilment({
+        stripeKey,
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        founderEmails: (process.env.FOUNDER_EMAILS ?? "").split(","),
+      });
+      report.revenue = f.problems;
+      console.log(
+        `fulfilment: ${f.checked} paid checkouts checked, ${f.problems.length} unfulfilled`
+      );
+    } catch (e) {
+      console.log(`fulfilment check skipped: ${e.message}`);
+    }
   }
 
   const sig = signature(report);
