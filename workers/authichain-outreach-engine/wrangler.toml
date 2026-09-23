@@ -5,8 +5,13 @@ account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = true
 
 # Secrets (set via `npx wrangler secret put <NAME>`, never in this file):
-#   OUTREACH_ADMIN_TOKEN — bearer token for /admin/* (mirrors agentz .env)
-#   RESEND_API_KEY       — Resend send key
+#   OUTREACH_ADMIN_TOKEN        — bearer token for /admin/* (mirrors agentz .env)
+#   OUTREACH_APPROVER_TOKEN     — bearer token for /admin/approve. Held by a person,
+#                                 never given to AgentZ. Nothing sends without it.
+#   OUTREACH_UNSUBSCRIBE_SECRET — HMAC key for unsubscribe links
+#   MAILING_ADDRESS             — CAN-SPAM postal address printed in every footer
+#   RESEND_API_KEY              — Resend send key
+# Live mode refuses to run while any of these is unset.
 
 [[d1_databases]]
 binding = "DB"
@@ -22,6 +27,10 @@ id = "291baff0863044998e9ba716dfc06085"
 OUTREACH_FROM_EMAIL = "AuthiChain <noreply@authichain.com>"
 OUTREACH_REPLY_TO = "authichain@gmail.com"
 BATCH_SIZE = "5"
+# "live" sends approved leads. Any other value makes /admin/run a read-only preview.
+OUTREACH_MODE = "dry_run"
+OUTREACH_PUBLIC_URL = "https://authichain-outreach-engine.undone-k.workers.dev"
+OUTREACH_SENDER_NAME = "Zachary Kietzman"
 
 # No cron triggers on purpose — batches run only when AgentZ POSTs /admin/run.
 # (Prior wave hit 73% bounce; keep sends explicit + suppression-gated.)
