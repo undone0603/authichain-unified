@@ -53,6 +53,7 @@
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
+        "deploy-verifier-web.yml": "on",
         "content-routine-pr.yml": "on",
         "dependabot-auto-merge.yml": "off",
         "automerge-dependabot.yml": "off",
