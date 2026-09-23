@@ -144,7 +144,7 @@ const STRAINCHAIN_PAY =
 const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   planPaymentLink("creator") ??
-  "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
+  "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"; // Creator Pack $99
 
 const hubspotToken =
   process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;
