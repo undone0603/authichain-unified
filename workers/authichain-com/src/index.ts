@@ -36,6 +36,10 @@ import {
   renderDppManufacturerArticle,
 } from "./dpp-manufacturer-article.ts";
 import {
+  isBatteryPassportPath,
+  renderBatteryPassportPage,
+} from "./battery-passport-page.ts";
+import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
@@ -3541,6 +3545,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
     if (pricing) return pricing;
+    if (isBatteryPassportPath(p)) {
+      return new Response(renderBatteryPassportPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (isDppManufacturerArticlePath(p)) {
       return new Response(renderDppManufacturerArticle(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
