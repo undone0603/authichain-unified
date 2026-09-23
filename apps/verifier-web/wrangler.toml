@@ -1,0 +1,11 @@
+# verifier-web: static Vite build served by Cloudflare Workers Static Assets.
+# Replaces the old vercel.json; Cloudflare is the only deploy target.
+# Build first (`pnpm build` in this folder), then `npx wrangler deploy`.
+# Not wired into a deploy workflow and no route bound yet: choose the
+# hostname (e.g. verify.authichain.com) before adding a [[routes]] block.
+name = "verifier-web"
+compatibility_date = "2026-08-01"
+
+[assets]
+directory = "dist"
+not_found_handling = "single-page-application"
