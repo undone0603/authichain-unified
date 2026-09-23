@@ -384,3 +384,19 @@ describe("guardedSend", () => {
     });
   });
 });
+
+describe("format checks run in linear time", () => {
+  it("rejects a pathological address quickly", () => {
+    const evil = "!@!." + "!.".repeat(50_000);
+    const start = performance.now();
+    expect(assessRecipient(evil, "apollo_verified").validFormat).toBe(false);
+    expect(assessRecipient("a@" + "b.".repeat(50_000) + "!", "apollo_verified").validFormat).toBe(false);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  it("still accepts ordinary and subdomain addresses", () => {
+    expect(assessRecipient("jane.doe@mail.acme.co.uk", "apollo_verified").validFormat).toBe(true);
+    expect(assessRecipient("a@b", "apollo_verified").validFormat).toBe(false);
+    expect(assessRecipient("a@b..com", "apollo_verified").validFormat).toBe(false);
+  });
+});

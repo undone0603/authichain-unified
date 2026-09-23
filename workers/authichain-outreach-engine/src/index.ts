@@ -105,7 +105,8 @@ async function unsubscribeToken(env: Env, email: string): Promise<string> {
 }
 
 async function unsubscribeUrl(env: Env, email: string): Promise<string> {
-  const base = env.OUTREACH_PUBLIC_URL.replace(/\/+$/, "");
+  let base = env.OUTREACH_PUBLIC_URL;
+  while (base.endsWith("/")) base = base.slice(0, -1);
   const t = await unsubscribeToken(env, email);
   return `${base}/unsubscribe?e=${encodeURIComponent(email.toLowerCase())}&t=${t}`;
 }

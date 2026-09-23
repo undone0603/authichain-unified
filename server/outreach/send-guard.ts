@@ -53,7 +53,12 @@ export async function domainAcceptsMail(email: string): Promise<boolean> {
  * records the opt-out.
  */
 export function defaultUnsubscribeUrl(replyTo: string): string {
-  const address = replyTo.replace(/^.*<([^>]+)>.*$/, "$1").trim();
+  // "Name <addr@x>" → "addr@x", without a backtracking regex.
+  const open = replyTo.lastIndexOf("<");
+  const close = replyTo.indexOf(">", open);
+  const address = (
+    open >= 0 && close > open ? replyTo.slice(open + 1, close) : replyTo
+  ).trim();
   return `mailto:${address}?subject=unsubscribe`;
 }
 

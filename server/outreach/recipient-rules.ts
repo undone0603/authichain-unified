@@ -78,7 +78,11 @@ export type AssessRecipientOptions = {
   allowRoleInbox?: boolean;
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time: the domain is dot-separated labels that cannot contain a dot,
+// so there is exactly one way to match. The previous /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// backtracked polynomially on input like "a@a.a.a.a…!" (CodeQL js/polynomial-redos).
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+const MAX_EMAIL_LENGTH = 254;
 
 export interface RecipientAssessment {
   email: string;
@@ -98,7 +102,8 @@ export function assessRecipient(
 ): RecipientAssessment {
   const reasons: string[] = [];
   const normalized = (email || "").trim().toLowerCase();
-  const validFormat = EMAIL_RE.test(normalized);
+  const validFormat =
+    normalized.length <= MAX_EMAIL_LENGTH && EMAIL_RE.test(normalized);
   if (!validFormat) reasons.push("invalid_format");
 
   const isRoleInbox = isRoleInboxEmail(normalized);
