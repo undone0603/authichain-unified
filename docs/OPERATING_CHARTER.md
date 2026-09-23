@@ -163,9 +163,14 @@ fork must not be able to run code inside the owner's network.
 
 To turn it on:
 
-1. Register a self-hosted runner for this repo on a machine that can reach
-   LM Studio (Settings → Actions → Runners → New self-hosted runner), and give
-   it the extra label `lan-gemma`.
+1. On a machine that can reach LM Studio, run
+   `bash scripts/gemma/setup-runner.sh`. It checks LM Studio, then downloads,
+   registers (label `lan-gemma`) and starts the runner as a service. It uses
+   `gh` for the registration token, or `RUNNER_TOKEN` from Settings → Actions →
+   Runners → New self-hosted runner.
+   Then set Settings → Actions → General → fork pull request workflows to
+   "Require approval for all external contributors", so a fork can't target
+   the runner from its own workflow file.
 2. Optional: set the repo variables `LOCAL_LLM_URL` and `LOCAL_LLM_MODEL` if
    they differ from the defaults.
 3. Run `Gemma loops` by hand once with `dry_run` checked, and read its output.
