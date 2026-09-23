@@ -46,7 +46,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
           DIGEST_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && 'true' || 'false' }}
-          SETUP_STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY != '' }}
-          SETUP_FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS != '' }}
-          SETUP_APP_DATABASE: ${{ vars.APP_DATABASE_BOUND == 'true' }}
         run: node scripts/autonomy/owner-digest.mjs

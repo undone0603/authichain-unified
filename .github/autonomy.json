@@ -2,13 +2,19 @@
   "$comment": "Single source of truth for what runs on its own. Edit a line, merge, and autonomy-reconcile.yml makes GitHub match within minutes. Every workflow file in .github/workflows must appear exactly once below (CI enforces this). Charter: docs/OPERATING_CHARTER.md",
   "version": 1,
   "owner": "undone0603",
+  "owner_email": "undone.k@gmail.com",
+  "founder_emails": [
+    "undone.k@gmail.com",
+    "authichain@gmail.com",
+    "@authichain.com"
+  ],
   "alerts": {
     "channel": "github-issue",
     "issue_title": "Ops alert: autonomous stack needs attention",
     "label": "ops-alert"
   },
   "cold_outreach": {
-    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true. The breaker forces dry-run when the 7-day bounce+complaint rate exceeds the limits.",
+    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval.",
     "enabled": false,
     "max_new_prospects_per_day": 10,
     "max_followups_per_prospect": 1,
@@ -20,6 +26,14 @@
       "min_sample": 10
     }
   },
+  "stripe_webhooks": [
+    {
+      "id": "we_1UGTCSGqTruSqV8ThM9bXVWp",
+      "url": "https://authichain.com/api/stripe/webhook",
+      "ensure_events": ["checkout.session.expired"],
+      "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
+    }
+  ],
   "lanes": {
     "ship": {
       "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",
@@ -44,7 +58,8 @@
         "automerge-dependabot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
-        "autonomy-reconcile.yml": "on"
+        "autonomy-reconcile.yml": "on",
+        "stripe-webhook-reconcile.yml": "on"
       }
     },
     "health": {

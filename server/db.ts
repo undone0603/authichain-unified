@@ -1,3 +1,9 @@
+import {
+  getSubscriptionRest,
+  setSubscriptionStatusRest,
+  upsertSubscriptionRest,
+  useRestFallback,
+} from "./subscriptions-rest";
 import { randomUUID } from "crypto";
 import {
   and,
@@ -2116,6 +2122,8 @@ export async function upsertStripeSubscription(data: {
   currentPeriodEnd: Date;
   trialEndsAt: Date | null;
 }) {
+  // App Worker has no DATABASE_URL: write the same row over Supabase REST.
+  if (useRestFallback()) return upsertSubscriptionRest(data);
   const db = await getDb();
   if (!db) return;
   const existing = await db
@@ -2158,6 +2166,8 @@ export async function setSubscriptionStatusByStripeId(
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
   cancelledAt?: Date
 ) {
+  if (useRestFallback())
+    return setSubscriptionStatusRest(stripeSubscriptionId, status, cancelledAt);
   const db = await getDb();
   if (!db) return;
   await db
@@ -2169,6 +2179,7 @@ export async function setSubscriptionStatusByStripeId(
 export async function getSubscriptionByStripeSubscriptionId(
   stripeSubscriptionId: string
 ) {
+  if (useRestFallback()) return getSubscriptionRest(stripeSubscriptionId);
   const db = await getDb();
   if (!db) return undefined;
   const result = await db

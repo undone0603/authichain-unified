@@ -47,6 +47,9 @@ To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 ## What always waits for the owner
 
 - Price changes, new SKUs, refunds, and any Stripe write other than creating a checkout session.
+  One narrow exception: webhook events listed under `stripe_webhooks` in the
+  manifest. Merging that line is the approval, and `stripe-webhook-reconcile`
+  only ever adds the events listed.
 - Production database migrations (see `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`).
 - DNS, Cloudflare Access, secrets rotation, and Vercel anything.
 - Merging a PR that touches security, revenue, schema, or this charter.
@@ -127,34 +130,27 @@ you comes with a list of decisions.
 - **Alerts**: open issues labelled `ops-alert` or `approval-needed`.
 - **Loop details**: the job summary of each run in GitHub Actions.
 
-## Secrets and variables (all optional; anything missing shows as "not connected")
+## Secrets and variables
 
-| Name                                        | Kind     | Purpose                                                                                |
-| ------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
-| `STRIPE_READ_KEY`                           | secret   | Restricted Stripe key: read charges, balance, subscriptions, checkout sessions         |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | secret   | Leads and the fulfilment watchdog (already set)                                        |
-| `FOUNDER_EMAILS`                            | secret   | Your emails, and `@authichain.com` for smoke aliases; excluded from revenue and alerts |
-| `OWNER_EMAIL`                               | secret   | Where the digest goes (falls back to `SALES_NOTIFY_EMAIL`)                             |
-| `DASHBOARD_GITHUB_TOKEN`                    | secret   | Fine-grained, read-only Actions + Issues token; lifts the GitHub rate limit            |
-| `APP_DATABASE_BOUND`                        | variable | Set to `true` once the app Worker has a database; clears the digest reminder           |
-| `WINBACK_PROMO_CODE`                        | env      | Only set once that promotion code exists in Stripe                                     |
+No new secrets are required. Each item below falls back to something that already exists.
 
-`deploy-workers.yml` binds the dashboard's secrets on each deploy.
+| Name                     | Kind   | Default when unset                              | Purpose                                                                 |
+| ------------------------ | ------ | ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `STRIPE_READ_KEY`        | secret | `STRIPE_SECRET_KEY` (already set)               | Recommended: a restricted, read-only key for the dashboard and monitors |
+| `FOUNDER_EMAILS`         | secret | `founder_emails` in `.github/autonomy.json`     | Charges from these don't count as revenue or trigger alerts             |
+| `OWNER_EMAIL`            | secret | `owner_email` in `.github/autonomy.json`        | Where the digest goes                                                   |
+| `DASHBOARD_GITHUB_TOKEN` | secret | Unauthenticated, cached for 5 minutes           | Fresher loop status on the dashboard                                    |
+| `WINBACK_PROMO_CODE`     | env    | Not set, so win-back emails promise no discount | Set only once that promotion code exists in Stripe                      |
 
-## Known gap: the app Worker has no database
+## Database on the app Worker
 
 Stripe webhooks for `authichain.com` run on the Cloudflare app Worker, which
-has no `DATABASE_URL`. Paid DPP fulfilment already works without it. Audit
-writes now fail open, so abandoned-cart recovery emails go out again. The
-following still need a database:
+has no `DATABASE_URL`. That no longer blocks anything:
 
-- subscription records (`upsertStripeSubscription`)
-- status changes
-
-Until it's wired, these are the safety nets:
-
-- Stripe retries failed deliveries.
-- The fulfilment watchdog alerts on any paid checkout whose webhook didn't succeed.
-
-**Wiring the database is an owner action.** It means binding a secret, or
-creating a Hyperdrive config per `wrangler.app.jsonc`.
+- **Audit rows** fail open.
+- **Subscription records** (upsert, status change, lookup) are written to the same
+  `public.subscriptions` table over Supabase REST (`server/subscriptions-rest.ts`),
+  using the Supabase credentials the Worker already has.
+- **Paid DPP fulfilment** already worked without a database.
+- **A failed state write** still returns an error, so Stripe retries it. The
+  hourly fulfilment watchdog alerts if any paid checkout is left unhandled.

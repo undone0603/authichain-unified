@@ -265,7 +265,10 @@ async function main() {
         stripeKey,
         supabaseUrl: process.env.SUPABASE_URL,
         supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        founderEmails: (process.env.FOUNDER_EMAILS ?? "").split(","),
+        founderEmails: [
+          ...(manifest.founder_emails ?? []),
+          ...(process.env.FOUNDER_EMAILS ?? "").split(","),
+        ],
       });
       report.revenue = f.problems;
       console.log(

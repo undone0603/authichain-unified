@@ -227,7 +227,6 @@ jobs:
 
       # Command Center reads live data. Each secret is optional: a missing one
       # shows "not connected" on the page instead of failing the deploy.
-      # STRIPE_READ_KEY must be a restricted, read-only Stripe key.
       - name: Bind command-center secrets
         if: |
           matrix.worker == 'authichain-dashboard' &&
@@ -240,6 +239,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           DASHBOARD_GITHUB_TOKEN: ${{ secrets.DASHBOARD_GITHUB_TOKEN }}
           FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
         run: |
@@ -252,9 +252,13 @@ jobs:
           }
           bind SUPABASE_URL "${SUPABASE_URL:-}"
           bind SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
-          bind STRIPE_READ_KEY "${STRIPE_READ_KEY:-}"
+          # Prefer a restricted read key; fall back to the existing key so the
+          # money panel works with no extra setup (the page only issues GETs).
+          bind STRIPE_READ_KEY "${STRIPE_READ_KEY:-${STRIPE_SECRET_KEY:-}}"
           bind GITHUB_TOKEN "${DASHBOARD_GITHUB_TOKEN:-}"
-          bind FOUNDER_EMAILS "${FOUNDER_EMAILS:-}"
+          # Founder list: the secret if set, else .github/autonomy.json.
+          founders="${FOUNDER_EMAILS:-$(jq -r '.founder_emails // [] | join(",")' ../../.github/autonomy.json)}"
+          bind FOUNDER_EMAILS "$founders"
 
       - name: Bind claw AGENTZ_* secrets
         if: |

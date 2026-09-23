@@ -10,10 +10,10 @@
 //      DIGEST_FROM (default "AuthiChain Ops <hello@authichain.com>"),
 //      STRIPE_READ_KEY|STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //      FOUNDER_EMAILS, GITHUB_TOKEN, GITHUB_REPOSITORY,
-//      SETUP_* = "true"/"false" flags for the setup checklist,
 //      DIGEST_FORCE=true to send regardless of day, DIGEST_DRY_RUN=true to print only.
 
 import { isFounder } from "./revenue-watch.mjs";
+import { loadManifest } from "./reconcile.mjs";
 
 const usd = c =>
   "$" +
@@ -27,20 +27,11 @@ const esc = s =>
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]
   );
 
-export const SETUP_ITEMS = [
-  [
-    "SETUP_STRIPE_READ_KEY",
-    "Add a restricted, read-only Stripe key as the GitHub secret STRIPE_READ_KEY (Command Center money panel).",
-  ],
-  [
-    "SETUP_FOUNDER_EMAILS",
-    "Add the GitHub secret FOUNDER_EMAILS (your emails, plus @authichain.com) so test purchases never count as revenue or trigger alerts.",
-  ],
-  [
-    "SETUP_APP_DATABASE",
-    "Give the authichain.com app Worker a database connection (DATABASE_URL secret or Hyperdrive). Until then subscription records from Stripe webhooks are not written.",
-  ],
-];
+// One-time setup the owner still owes, as [env flag, text]. The workflow sets
+// each flag to "true" once done. Empty now: founder/owner emails live in
+// .github/autonomy.json, money falls back to STRIPE_SECRET_KEY, and the app
+// Worker writes subscriptions over Supabase REST.
+export const SETUP_ITEMS = [];
 
 /** Pure. money inputs are raw Stripe lists; returns summary numbers. */
 export function summarize(
@@ -170,9 +161,12 @@ async function collect(env) {
     prs: [],
     setup: [],
   };
+  const manifest = loadManifest();
   const founders = new Set(
-    (env.FOUNDER_EMAILS ?? "")
-      .split(",")
+    [
+      ...(manifest.founder_emails ?? []),
+      ...(env.FOUNDER_EMAILS ?? "").split(","),
+    ]
       .map(e => e.trim().toLowerCase())
       .filter(Boolean)
   );
@@ -272,7 +266,8 @@ async function main() {
   });
   console.log(`${digest.subject}\n\n${digest.text}`);
   if (!digest.shouldSend) return console.log("\nQuiet day: not sending.");
-  const to = env.OWNER_EMAIL || env.SALES_NOTIFY_EMAIL;
+  const to =
+    env.OWNER_EMAIL || loadManifest().owner_email || env.SALES_NOTIFY_EMAIL;
   if (env.DIGEST_DRY_RUN === "true" || !env.RESEND_API_KEY || !to) {
     return console.log(
       "\nDry run or missing RESEND_API_KEY / OWNER_EMAIL: not sending."

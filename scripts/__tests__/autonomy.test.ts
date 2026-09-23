@@ -38,8 +38,12 @@ describe("autonomy manifest", () => {
     expect(validateManifest(loadManifest(), listWorkflowFiles())).toEqual([]);
   });
 
-  it("ships with cold outreach switched off", () => {
-    expect(loadManifest().cold_outreach.enabled).toBe(false);
+  it("ships with cold outreach switched off, a cap, and a strict breaker", () => {
+    const co = loadManifest().cold_outreach;
+    expect(co.enabled).toBe(false);
+    expect(co.max_new_prospects_per_day).toBeLessThanOrEqual(10);
+    expect(co.breaker.max_bounce_rate).toBeLessThanOrEqual(0.03);
+    expect(co.breaker.max_complaints).toBe(0);
   });
 
   it("flags unclassified, duplicate, stale and invalid entries", () => {
@@ -404,5 +408,54 @@ describe("owner digest", async () => {
       new Set(["me@x.com"])
     );
     expect(m).toMatchObject({ revenue: 4900, payments: 1 });
+  });
+});
+
+describe("stripe webhook reconcile", async () => {
+  const { planEndpoint } = await import("../autonomy/stripe-webhooks.mjs");
+  const declared = {
+    id: "we_1",
+    url: "https://authichain.com/api/stripe/webhook",
+    ensure_events: ["checkout.session.expired"],
+  };
+  const live = {
+    id: "we_1",
+    url: declared.url,
+    status: "enabled",
+    enabled_events: ["checkout.session.completed"],
+  };
+
+  it("adds only missing declared events", () => {
+    expect(planEndpoint(declared, live)).toEqual({
+      missing: ["checkout.session.expired"],
+    });
+    expect(
+      planEndpoint(declared, {
+        ...live,
+        enabled_events: ["checkout.session.expired"],
+      })
+    ).toEqual({ missing: [] });
+    expect(planEndpoint(declared, { ...live, enabled_events: ["*"] })).toEqual({
+      missing: [],
+    });
+  });
+
+  it("refuses a URL mismatch, a disabled endpoint, or a missing one", () => {
+    expect(
+      planEndpoint(declared, { ...live, url: "https://evil.example/hook" })
+        .error
+    ).toMatch(/points at/);
+    expect(
+      planEndpoint(declared, { ...live, status: "disabled" }).error
+    ).toMatch(/disabled/);
+    expect(planEndpoint(declared, null).error).toMatch(/not found/);
+  });
+
+  it("the manifest declares the authichain.com endpoint", () => {
+    const hooks = loadManifest().stripe_webhooks;
+    expect(hooks[0]).toMatchObject({
+      url: "https://authichain.com/api/stripe/webhook",
+      ensure_events: ["checkout.session.expired"],
+    });
   });
 });
