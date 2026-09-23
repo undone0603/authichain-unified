@@ -411,6 +411,135 @@ describe("owner digest", async () => {
   });
 });
 
+describe("owner digest scoreboard", async () => {
+  const {
+    buildDigest,
+    isRealCheckout,
+    countReplies,
+    failingWorkflows,
+    sumVisitors,
+  } = await import("../autonomy/owner-digest.mjs");
+  const founders = new Set(["me@x.com", "@authichain.com"]);
+
+  it("counts only checkouts a stranger started", () => {
+    const real = { livemode: true, customer_details: { email: "b@farm.com" } };
+    expect(isRealCheckout(real, founders)).toBe(true);
+    expect(isRealCheckout({ ...real, livemode: false }, founders)).toBe(false);
+    expect(
+      isRealCheckout({ ...real, metadata: { is_demo: "true" } }, founders)
+    ).toBe(false);
+    expect(
+      isRealCheckout(
+        { ...real, client_reference_id: "dpp_smoke_1789918869" },
+        founders
+      )
+    ).toBe(false);
+    expect(
+      isRealCheckout(
+        { ...real, metadata: { purpose: "paid_smoke_10" } },
+        founders
+      )
+    ).toBe(false);
+    expect(
+      isRealCheckout(
+        { livemode: true, customer_email: "smoke+dpp@authichain.com" },
+        founders
+      )
+    ).toBe(false);
+    expect(
+      isRealCheckout({ ...real, metadata: { utm_source: "contest" } }, founders)
+    ).toBe(true);
+  });
+
+  it("counts outside Re: emails inside the window", () => {
+    const since = Date.parse("2026-09-16T00:00:00Z");
+    const mail = [
+      {
+        subject: "Re: pilot",
+        from: "Kalee <k@trulieve.com>",
+        created_at: "2026-09-20T00:00:00Z",
+      },
+      {
+        subject: "Re: pilot",
+        from: "me@x.com",
+        created_at: "2026-09-20T00:00:00Z",
+      },
+      {
+        subject: "Invoice",
+        from: "billing@v.com",
+        created_at: "2026-09-20T00:00:00Z",
+      },
+      {
+        subject: "RE: old",
+        from: "a@b.com",
+        created_at: "2026-09-01T00:00:00Z",
+      },
+    ];
+    expect(countReplies(mail, founders, since)).toBe(1);
+  });
+
+  it("lists only enabled workflows whose latest run failed", () => {
+    const manifest = {
+      lanes: {
+        ship: { workflows: { "ci.yml": "on", "old.yml": "off" } },
+        growth: { workflows: { "agentz.yml": "on" } },
+      },
+    };
+    const runs = [
+      {
+        path: ".github/workflows/agentz.yml",
+        name: "AgentZ",
+        conclusion: "failure",
+        html_url: "u1",
+      },
+      {
+        path: ".github/workflows/agentz.yml",
+        name: "AgentZ",
+        conclusion: "success",
+      },
+      { path: ".github/workflows/ci.yml", name: "CI", conclusion: "success" },
+      { path: ".github/workflows/old.yml", name: "Old", conclusion: "failure" },
+    ];
+    expect(failingWorkflows(runs, manifest)).toEqual([
+      { title: "AgentZ", url: "u1" },
+    ]);
+  });
+
+  it("renders all five numbers, and 'not connected' instead of zero", () => {
+    expect(
+      sumVisitors([{ uniq: { uniques: 3 } }, { uniq: { uniques: 4 } }])
+    ).toBe(7);
+    const base = {
+      date: "2026-09-28T12:30:00Z",
+      money: { revenue: 4900, payments: 1, mrr: 0, subs: 0, abandoned: 0 },
+      leads7: 0,
+      approvals: [],
+      alerts: [],
+      prs: [],
+      setup: [],
+    };
+    const full = buildDigest({
+      ...base,
+      board: {
+        visitors: 120,
+        checkouts: 2,
+        replies: 1,
+        failing: [{ title: "AgentZ", url: "u" }],
+      },
+    }).text;
+    expect(full).toContain("SCOREBOARD, LAST 7 DAYS");
+    expect(full).toContain("Unique visitors: 120");
+    expect(full).toContain("Checkouts started by real visitors: 2");
+    expect(full).toContain("Paid by customers: $49.00");
+    expect(full).toContain("Replies received: 1");
+    expect(full).toContain("Systems failing: 1");
+    const empty = buildDigest({ ...base, money: null }).text;
+    expect(empty).toContain("Unique visitors: not connected");
+    expect(empty).toContain("Paid by customers: not connected");
+    expect(empty).toContain("Systems failing: not connected");
+  });
+});
+
 describe("stripe webhook reconcile", async () => {
   const { planEndpoint } = await import("../autonomy/stripe-webhooks.mjs");
   const declared = {
