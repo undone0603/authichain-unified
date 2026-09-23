@@ -109,6 +109,13 @@
         "weekly-video.yml": "off"
       }
     },
+    "improve": {
+      "purpose": "Loop 5 - Gemma (local model on the owner's LAN, self-hosted runner lan-gemma) drafts copy and outreach suggestions and triages alerts into issues. Suggestions only. Turn on after the runner is registered.",
+      "managed": true,
+      "workflows": {
+        "gemma-loops.yml": "off"
+      }
+    },
     "repair": {
       "purpose": "Loop 4 - classify failed checks, apply deterministic fixes on a branch, open a draft PR. Never merges alone.",
       "managed": true,
