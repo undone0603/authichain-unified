@@ -2001,6 +2001,8 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 type Env = {
   /** Origin of the Next app that renders passports. Set in wrangler.toml. */
   APP_ORIGIN?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -2165,9 +2167,14 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "strainchain");
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env);
+    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
     if (x402) return x402;
-    const mcp = await tryHandleSisterMcp(request, "strainchain", env);
+    const mcp = await tryHandleSisterMcp(
+      request,
+      "strainchain",
+      env,
+      env?.VERIFY_APP
+    );
     if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "strainchain");
     if (discovery) return discovery;

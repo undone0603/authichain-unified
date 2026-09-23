@@ -237,3 +237,12 @@ new_sqlite_classes = ["RateLimiter"]
 #   "*/10 * * * *",# vertical-cloner — autonomously spawns industry-expansion missions
 #   "*/30 * * * *",# newsjacking-monitor — monitors news and triggers PR/outreach missions (autonomous external)
 # ]
+
+# VERIFY_APP: service binding to the Next app worker `authichain-app`
+# (wrangler.app.jsonc), which owns the auth_seals lookup behind
+# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
+# without this binding they are refused 503 registry_not_bound before
+# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+[[services]]
+binding = "VERIFY_APP"
+service = "authichain-app"

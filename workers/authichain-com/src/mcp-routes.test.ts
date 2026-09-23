@@ -306,3 +306,70 @@ describe("mcp discovery", () => {
     expect(await tryHandleMcp(req("/dashboard"))).toBeNull();
   });
 });
+
+describe("mcp paid verify with the VERIFY_APP binding", () => {
+  const proof = Buffer.from(
+    JSON.stringify({
+      scheme: "exact",
+      network: "base",
+      payer: "0x1234567890abcdef1234567890abcdef12345678",
+      amount: "50000",
+      signature: "0xdead",
+    })
+  ).toString("base64");
+  const call = () =>
+    req("/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-payment": proof },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "verify", arguments: { serial: "AC-1" } },
+      }),
+    });
+
+  it("wraps a settled registry answer as a JSON-RPC result", async () => {
+    const seen: Request[] = [];
+    const res = await tryHandleMcp(
+      call(),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async (r: Request) => {
+          seen.push(r);
+          return new Response(
+            JSON.stringify({ verified: false, subject: "AC-1" }),
+            {
+              status: 200,
+              headers: { "PAYMENT-RESPONSE": "settled" },
+            }
+          );
+        },
+      }
+    );
+    expect(res?.status).toBe(200);
+    expect(res!.headers.get("PAYMENT-RESPONSE")).toBe("settled");
+    const body = (await res!.json()) as {
+      id: number;
+      result: { structuredContent: { subject: string } };
+    };
+    expect(body.id).toBe(4);
+    expect(body.result.structuredContent.subject).toBe("AC-1");
+    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(await seen[0].json()).toEqual({ serial: "AC-1" });
+  });
+
+  it("passes a registry refusal through as HTTP", async () => {
+    const res = await tryHandleMcp(
+      call(),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async () =>
+          new Response(JSON.stringify({ error: "seal_id_required" }), {
+            status: 400,
+          }),
+      }
+    );
+    expect(res?.status).toBe(400);
+  });
+});

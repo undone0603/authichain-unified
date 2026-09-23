@@ -15,6 +15,7 @@
  */
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
@@ -22,7 +23,9 @@ import {
   x402PriceUsd,
   x402ScanFanout,
   X402_PUBLISHED_PAY_TO,
+  type X402EnvVars,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
@@ -31,7 +34,7 @@ import {
   sisterX402Catalog,
 } from "./estate-x402-catalog.ts";
 
-export type SisterX402Env = X402HealthEnv;
+export type SisterX402Env = X402EnvVars;
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -101,7 +104,7 @@ function publishedPayTo(env?: SisterX402Env): string {
 
 function hydrateX402(env?: SisterX402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -157,7 +160,8 @@ function fanoutResponse(request: Request): Response {
 
 async function agentVerify(
   request: Request,
-  env?: SisterX402Env
+  env?: SisterX402Env,
+  verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -169,13 +173,20 @@ async function agentVerify(
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
+  if (verifyApp) {
+    return forwardPaidVerify(
+      verifyApp,
+      request,
+      proofHeader,
+      await request.text()
+    );
+  }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
   return json(503, X402_REGISTRY_NOT_BOUND);
@@ -184,7 +195,8 @@ async function agentVerify(
 /** Serve GET/HEAD health + catalog and unpaid POST 402 on a sister landing. */
 export async function tryHandleSisterX402(
   request: Request,
-  env: SisterX402Env = {}
+  env: SisterX402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
@@ -212,7 +224,7 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env);
+    return agentVerify(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

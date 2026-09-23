@@ -348,3 +348,57 @@ describe("tryHandleAppHost", () => {
     expect(tryHandleAppHost(new Request("https://authichain.com/"))).toBeNull();
   });
 });
+
+describe("POST /api/x402 with the VERIFY_APP binding", () => {
+  it("forwards the paid call to the Next registry route and returns its answer", async () => {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const seen: Request[] = [];
+    const verifyApp = {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+          headers: { "PAYMENT-RESPONSE": "settled" },
+        });
+      },
+    };
+    const res = await tryHandleX402(
+      req("/api/x402?x=1", {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      verifyApp
+    );
+    expect(res!.status).toBe(200);
+    expect(res!.headers.get("PAYMENT-RESPONSE")).toBe("settled");
+    expect(await res!.json()).toEqual({ verified: true });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(seen[0].method).toBe("POST");
+    expect(seen[0].headers.get("x-payment")).toBe(header);
+    expect(await seen[0].json()).toEqual({ sealId: "seal-1" });
+  });
+
+  it("still answers an unpaid call with the 402 challenge, without forwarding", async () => {
+    let calls = 0;
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", { method: "POST" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async () => {
+          calls++;
+          return new Response(null, { status: 500 });
+        },
+      }
+    );
+    expect(res!.status).toBe(402);
+    expect(calls).toBe(0);
+  });
+});

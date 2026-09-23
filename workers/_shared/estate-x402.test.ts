@@ -347,3 +347,35 @@ test("GET /.well-known/x402.json is the catalog; /.well-known/x402 is fan-out", 
   assert.ok(post);
   assert.equal(post.status, 405);
 });
+
+test("POST with a proof is forwarded to the Next registry route when VERIFY_APP is bound", async () => {
+  const header = proofHeader({
+    scheme: "exact",
+    network: "base",
+    payer: PAYER,
+    amount: "50000",
+  });
+  const seen: Request[] = [];
+  const res = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", {
+      method: "POST",
+      headers: { "x-payment": header, "content-type": "application/json" },
+      body: JSON.stringify({ sealId: "seal-1" }),
+    }),
+    {},
+    {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+        });
+      },
+    }
+  );
+  assert.ok(res);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { verified: true });
+  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  assert.equal(seen[0].headers.get("x-payment"), header);
+  assert.deepEqual(await seen[0].json(), { sealId: "seal-1" });
+});
