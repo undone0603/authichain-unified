@@ -99,11 +99,12 @@ export function htmlToText(html: string): string {
     .replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr)>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&rsquo;/g, "'")
+    // Last, so "&amp;lt;" becomes "&lt;" and is not decoded twice.
+    .replace(/&amp;/g, "&")
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*/g, "\n")
     .trim();

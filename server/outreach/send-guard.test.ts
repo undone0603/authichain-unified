@@ -400,3 +400,10 @@ describe("format checks run in linear time", () => {
     expect(assessRecipient("a@b..com", "apollo_verified").validFormat).toBe(false);
   });
 });
+
+describe("htmlToText", () => {
+  it("decodes each entity once", async () => {
+    const { htmlToText } = await import("./claims");
+    expect(htmlToText("<p>a &amp;lt;b&amp;gt; &lt;c&gt; &amp; d</p>")).toBe("a &lt;b&gt; <c> & d");
+  });
+});
