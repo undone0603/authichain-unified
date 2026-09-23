@@ -105,8 +105,18 @@ test("starter and creator keep their published Payment Links", () => {
 });
 
 // Payment Links that belonged to no live Stripe account (retired SKUs from the
-// 2026-08-31 cleanup). None may reappear on an apex pricing page.
-const DEAD_LINK = /buy\.stripe\.com\/[A-Za-z0-9]*(?:1Nu|1Nv|aIM0)/;
+// 2026-08-31 cleanup). None may reappear on an apex pricing page. Plain string
+// scan rather than a URL regex: slugs after "buy.stripe.com/" are checked for
+// the dead-account markers.
+function hasDeadLink(html: string): boolean {
+  return html
+    .split("buy.stripe.com/")
+    .slice(1)
+    .some(rest => {
+      const slug = rest.slice(0, 40);
+      return ["1Nu", "1Nv", "aIM0"].some(m => slug.includes(m));
+    });
+}
 
 test("PAYMENT_LINKS only points at live plans.ts Payment Links", () => {
   const live = new Set(
@@ -125,7 +135,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   const html = renderEstatePricingPage("authichain");
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.doesNotMatch(html, /AuthiChain Starter/);
-  assert.doesNotMatch(html, DEAD_LINK);
+  assert.equal(hasDeadLink(html), false);
   assert.match(html, /\$299/);
   assert.match(html, /\$29/);
   assert.match(html, /\$99/);
@@ -163,7 +173,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
 
 test("qron /pricing HTML does not advertise the AuthiChain Starter Payment Link", () => {
   const html = renderEstatePricingPage("qron");
-  assert.doesNotMatch(html, DEAD_LINK);
+  assert.equal(hasDeadLink(html), false);
   assert.doesNotMatch(html, /AuthiChain Starter/);
 });
 
@@ -181,7 +191,7 @@ test("qron /pricing lists the packs, not the retired credit bundles", () => {
   assert.match(html, /Creator Pack/);
   assert.doesNotMatch(html, /QRON generation credits/);
   assert.doesNotMatch(html, /\$9\.99/);
-  assert.doesNotMatch(html, DEAD_LINK);
+  assert.equal(hasDeadLink(html), false);
 });
 
 test("tryHandleEstatePricing answers GET /pricing and ignores other paths", async () => {
@@ -194,7 +204,7 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
   assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
   const hitHtml = await hit.text();
   assert.match(hitHtml, /Start DPP Readiness Audit/);
-  assert.doesNotMatch(hitHtml, DEAD_LINK);
+  assert.equal(hasDeadLink(hitHtml), false);
 
   assert.equal(
     tryHandleEstatePricing(
@@ -241,7 +251,7 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   );
   assert.ok(passport?.stripe_payment_link);
   assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-  assert.doesNotMatch(html, DEAD_LINK);
+  assert.equal(hasDeadLink(html), false);
   assert.doesNotMatch(html, /\$199/);
   assert.doesNotMatch(html, /StrainChain Basic/);
   assert.match(html, /\$49/);
@@ -347,5 +357,5 @@ test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () 
   );
   assert.ok(farm?.stripe_payment_link);
   assert.ok(html.includes(farm.stripe_payment_link));
-  assert.doesNotMatch(html, DEAD_LINK);
+  assert.equal(hasDeadLink(html), false);
 });

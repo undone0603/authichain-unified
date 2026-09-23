@@ -604,7 +604,12 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
-    expect(body).not.toMatch(/buy\.stripe\.com\/[A-Za-z0-9]*1Nu/);
+    expect(
+      body
+        .split("buy.stripe.com/")
+        .slice(1)
+        .some(rest => rest.slice(0, 40).includes("1Nu"))
+    ).toBe(false);
     expect(body).toContain("Need more generations");
   });
 

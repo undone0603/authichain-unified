@@ -38,7 +38,7 @@ test("/desk is a real page, not the indigo homepage", async () => {
     html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
   );
   // Retired StrainChain Basic link (no live Stripe account) must not return.
-  assert.doesNotMatch(html, /buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
+  assert.equal(html.includes("9B6cN59br5xcaCuazy1Nu1o"), false);
 });
 
 test("desk subpaths in DESK_SITEMAP all 200", async () => {
