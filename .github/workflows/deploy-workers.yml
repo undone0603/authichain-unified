@@ -225,6 +225,37 @@ jobs:
           printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-agentz
           echo "bound AGENT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY on authichain-agentz"
 
+      # Command Center reads live data. Each secret is optional: a missing one
+      # shows "not connected" on the page instead of failing the deploy.
+      # STRIPE_READ_KEY must be a restricted, read-only Stripe key.
+      - name: Bind command-center secrets
+        if: |
+          matrix.worker == 'authichain-dashboard' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-dashboard')
+        working-directory: workers/authichain-dashboard
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          DASHBOARD_GITHUB_TOKEN: ${{ secrets.DASHBOARD_GITHUB_TOKEN }}
+          FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
+        run: |
+          set -euo pipefail
+          bind() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then echo "skip $name (GitHub secret not set)"; return; fi
+            printf '%s' "$value" | npx wrangler secret put "$name" --name authichain-dashboard >/dev/null
+            echo "bound $name"
+          }
+          bind SUPABASE_URL "${SUPABASE_URL:-}"
+          bind SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          bind STRIPE_READ_KEY "${STRIPE_READ_KEY:-}"
+          bind GITHUB_TOKEN "${DASHBOARD_GITHUB_TOKEN:-}"
+          bind FOUNDER_EMAILS "${FOUNDER_EMAILS:-}"
+
       - name: Bind claw AGENTZ_* secrets
         if: |
           matrix.worker == 'authichain-openclaw' &&
