@@ -12,12 +12,15 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import {
-  STRAINCHAIN_BASIC,
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
+
+/** Recurring StrainChain path. Replaced the dead StrainChain Basic link on 2026-09-23. */
+const FARM_PLAN_LINK = planPaymentLink("strainchain_farm") ?? "/pricing";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import {
   isSeoPassportPath,
@@ -2213,7 +2216,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "Seed-to-shelf tracking on Polygon.",
-  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. StrainChain Basic is the live $199/mo Payment Link.",
+  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
   emailCheckout: {
     action: "https://authichain.com/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
@@ -2311,7 +2314,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
-    <p class="section-sub">StrainChain Basic is the live $199/month Payment Link. Passport and Farm Plan prices come from the published catalogue with live Stripe checkout.</p>
+    <p class="section-sub">Passport and Farm Plan prices come from the published catalogue with live Stripe checkout.</p>
     ${estatePricingGrid("strainchain")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2320,9 +2323,9 @@ ${estateFeatures(
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">Publish one cultivar for $49, or buy StrainChain Basic on the published Payment Link. Onboard stays the demo intake.</p>
+    <p class="section-sub">Publish one cultivar for $49, or start the $149/mo Farm Plan on the published Payment Link. Onboard stays the demo intake.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="${STRAINCHAIN_BASIC.url}" target="_blank" rel="noopener">${STRAINCHAIN_BASIC.name} ${STRAINCHAIN_BASIC.price}</a>
+      <a class="btn btn-primary" href="${FARM_PLAN_LINK}" target="_blank" rel="noopener">Farm Plan $149/mo</a>
       <a class="btn btn-outline" href="/pricing">View pricing</a>
       <a class="btn btn-outline" href="/onboard">Request demo</a>
     </div>
@@ -2331,15 +2334,15 @@ ${estateFeatures(
 
 ${estateCtaBand({
   title: "Publish one cultivar passport",
-  lede: "Enter a work email so Stripe can recover the cart. StrainChain Basic remains the $199/mo Payment Link. Onboard stays the demo intake.",
+  lede: "Enter a work email so Stripe can recover the cart. Farm Plan is the $149/mo Payment Link. Onboard stays the demo intake.",
   emailCheckout: {
     action: "https://authichain.com/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
     {
-      href: STRAINCHAIN_BASIC.url,
-      label: `${STRAINCHAIN_BASIC.name} ${STRAINCHAIN_BASIC.price}`,
+      href: FARM_PLAN_LINK,
+      label: "Farm Plan $149/mo",
       primary: false,
     },
     { href: "/onboard", label: "Request demo", primary: false },
@@ -2372,7 +2375,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Powered by AuthiChain · StrainChain Basic is the live Payment Link",
+  "Powered by AuthiChain · Farm Plan is the live recurring Payment Link",
 )}
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });

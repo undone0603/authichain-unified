@@ -38,8 +38,8 @@ describe("detectPlan", () => {
     const dpp = planByStripePriceId("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(dpp?.id).toBe("dpp_readiness");
     expect(detectPlan("price_1TwmD8GqTruSqV8TpAF8dfyA", 29_900)).toBeNull();
-    expect(detectPlan("price_1TGAiZGqTruSqV8Tb4ZdCVKr", 9_900)).toBeNull();
-    expect(detectPlan("price_1TGOM9GqTruSqV8TdV7j3DuL", 2_900)).toBeNull();
+    expect(detectPlan("price_1UIoEYGqTruSqV8TCXTNipvh", 9_900)).toBeNull();
+    expect(detectPlan("price_1UIoEVGqTruSqV8T61lp48wB", 2_900)).toBeNull();
     const farm = planByStripePriceId("price_1UHjJWGqTruSqV8TePctYzO5");
     expect(farm?.id).toBe("strainchain_farm");
     expect(detectPlan("price_1UHjJWGqTruSqV8TePctYzO5", 14_900)).toBeNull();
