@@ -37,12 +37,6 @@ import {
   type VerificationSource,
 } from "../server/outreach/send-guard";
 import {
-  mostRecentInForce,
-  nextDeadline,
-  formatMilestoneDate,
-  countdownLabel,
-} from "../src/lib/dpp-timeline";
-import {
   describeSkipReason,
   loadCrmRowsForCompanies,
   loadHubSpotContactsForCompany,
@@ -65,8 +59,14 @@ import {
   shouldLoadHighLeverageTargets,
   type HighLeverageTarget,
 } from "./lib/high-leverage";
-import { paymentLinkWithPrefilledEmail } from "../src/lib/checkout-email";
-import { planPaymentLink } from "../src/lib/plans";
+import {
+  govchainEmail,
+  partnerEmail,
+  qronEmail,
+  strainchainEmail,
+  type EmailDraft,
+} from "./lib/b2b-templates";
+import { priorContact, recordContact } from "./lib/send-history";
 
 export {
   CHANNEL_PARTNER_LEAD_SOURCE,
@@ -137,14 +137,6 @@ const SEGMENT_FROM: Record<string, string> = {
 };
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
-// Self-serve payment CTAs (live Stripe Payment Links). Soft secondary to booking.
-const STRAINCHAIN_PAY =
-  process.env.STRAINCHAIN_PAYMENT_LINK ??
-  "https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"; // StrainChain Basic
-const QRON_PAY =
-  process.env.QRON_PAYMENT_LINK ??
-  planPaymentLink("creator") ??
-  "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
 
 const hubspotToken =
   process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;
@@ -312,284 +304,29 @@ const QRON_TARGETS = [
 ];
 
 // ── Email templates ───────────────────────────────────────────────────────────
+// Copy lives in scripts/lib/b2b-templates.ts so it can be tested against the
+// claim checker; see that file for what the previous copy got wrong.
 
-function govchainEmail(t: (typeof GOVCHAIN_TARGETS)[0]): {
-  subject: string;
-  html: string;
-} {
-  const subject = `CMMC supply-chain gap — ${t.company} (${t.cmmc_status})`;
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi ${t.name.split(" ")[0]},</p>
-
-  <p>Congrats on ${t.company}'s ${t.cmmc_status} — that's a real achievement.
-  Most contractors stop there, but C3PAOs are increasingly flagging the
-  <strong>sub-contractor supply-chain layer</strong> on second-cycle assessments:
-  who touched the CUI artifact, what toolchain produced it, and is there an
-  immutable record the contracting officer can audit?</p>
-
-  <p>GovChain (<a href="https://govchain.us">govchain.us</a>) automates exactly that:
-  <ul>
-    <li>Ed25519-signed chain-of-custody on every deliverable and artifact</li>
-    <li>Blockchain-anchored past-performance proof (no sensitive data on-chain)</li>
-    <li>DFARS 252.204-7012 / NIST 800-171 audit trail, one-click export for C3PAO review</li>
-    <li>SAM.gov opportunity pipeline with AI fit-scoring (so you never miss a bid)</li>
-  </ul></p>
-
-  <p>Given your work in <strong>${t.contract_area}</strong>, this maps directly to the
-  supply-chain risk management requirements that are becoming table-stakes for
-  DoD re-competes.</p>
-
-  <p>Worth a 20-minute call?
-  <a href="${CALENDLY}?name=${encodeURIComponent(t.name)}&company=${encodeURIComponent(t.company)}">
-  Book here</a> — or reply and I'll send a demo video.</p>
-
-  <p>Best,<br>
-  Zachary<br>
-  GovChain / AuthiChain<br>
-  <a href="https://govchain.us">govchain.us</a></p>
-
-  <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  You're receiving this because ${t.company} is registered on SAM.gov.</p>
-</div>`;
-  return { subject, html };
-}
-
-/**
- * The previous version of this email led with "the DPP mandate takes effect for
- * cannabis-adjacent products in July 2026". Two things were wrong with it, and
- * both are the kind a compliance buyer checks first:
- *
- *   1. It was sent in August, about a July date — in the future tense.
- *   2. `content/dpp/regulatory-timeline.json` has no cannabis milestone at all.
- *      The dated waves are batteries, electronics, textiles and construction.
- *      The claim was not supported by our own sourced timeline.
- *
- * The rewrite only asserts what that file can back: the registry is live, the
- * next dated wave is whatever the timeline says it is, and cannabis is not yet
- * scheduled — which is stated plainly rather than implied away. Every date is
- * read from the timeline at send time, so this copy cannot go stale the way the
- * last one did.
- */
-function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
-  subject: string;
-  html: string;
-} {
-  const now = new Date();
-  const registry = mostRecentInForce(now);
-  const next = nextDeadline(now);
-
-  const registryLine = registry
-    ? `The EU's Digital Product Passport registry went live on ${formatMilestoneDate(registry)} — it is operating now, not pending.`
-    : `The EU's Digital Product Passport registry is being stood up now.`;
-  const nextLine = next
-    ? `The next mandated category is ${next.label} (${formatMilestoneDate(next)} — ${countdownLabel(next, now).toLowerCase()}), with further waves dated after it.`
-    : "";
-
-  const subject = registry
-    ? `EU DPP registry is live — what it means for ${t.company}`
-    : `EU Digital Product Passport — what it means for ${t.company}`;
-
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi,</p>
-
-  <p>${registryLine} ${nextLine}</p>
-
-  <p><strong>Cannabis is not in a dated wave yet</strong> — I'd rather tell you that than
-  invent a deadline. What the schedule does tell you is the direction of travel, and that
-  the operators who are ready when their category lands are the ones who started while it
-  was optional. For an MSO of ${t.company}'s footprint (${t.states}), the work is the same
-  either way, and it pays for itself before any EU rule applies:</p>
-
-  <ul>
-    <li>METRC sync — custody events anchored on Polygon at every handoff, so your state audit trail reconciles itself</li>
-    <li>COA hashing — lab certificates stored immutably; an altered result is detectable instead of arguable</li>
-    <li>Consumer-facing QR: full chain-of-custody plus test results on scan</li>
-    <li>Passport export in the EU DPP data model (ISO 18013-5 / EPCIS 2.0) — ready the day it is asked for</li>
-  </ul>
-
-  <p>The near-term value is the METRC reconciliation and COA integrity, today, under the
-  rules you already operate under. The DPP readiness is what you get for free by doing it.</p>
-
-  <p>Theater 1 is <strong>$499/month</strong> for 5,000 package scans, with a 7-day trial
-  and no integration needed to see it working.
-  <a href="${CALENDLY}">Book 20 minutes</a> and I'll walk through it against your own
-  ${t.states.split(",")[0].trim()} data — or
-  <a href="${paymentLinkWithPrefilledEmail(
-    `${STRAINCHAIN_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=strainchain`,
-    t.email
-  )}">
-  start StrainChain Basic self-serve</a> if you'd rather click than calendar.</p>
-
-  <p>Best,<br>
-  Zachary<br>
-  StrainChain / AuthiChain<br>
-  <a href="https://strainchain.io">strainchain.io</a></p>
-</div>`;
-  return { subject, html };
-}
-
-/**
- * Two claims were removed here because the code says they are not true.
- *
- *   "I ran ${company} through our AI QR engine and generated a custom demo"
- *   "We've pre-provisioned a white-label sandbox for ${company}"
- *
- * Neither /demo page reads `searchParams` or a `company` param at all — the only
- * place a company name is handled is the POST form where a visitor types their
- * own. So `qron.space/demo?company=X` served a generic page, and the recipient's
- * first click disproved the email's first sentence. Fabricated personalisation
- * is worse than none: it is the one thing a prospect can check in one click.
- *
- * The rewrite keeps the specificity in the product and the pricing, which are
- * real, and invites them to generate their own QR rather than claiming we
- * already did.
- */
-function qronEmail(t: (typeof QRON_TARGETS)[0]): {
-  subject: string;
-  html: string;
-} {
-  const subject = `AI-designed QR codes for ${t.company} — white-label API from $0.002/QR`;
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi,</p>
-
-  <p>You print and ship a lot of QR codes. The usual complaint about them is that
-  they are ugly, and the usual fix — sticking a logo in the middle — is what makes
-  them fail to scan. QRON generates codes that carry brand styling and stay
-  scannable, because the styling is generated with the error-correction budget
-  rather than pasted on top of it.</p>
-
-  <p style="text-align:center">
-    <a href="https://qron.space/demo"
-       style="background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
-      Generate one on your own artwork →
-    </a>
-  </p>
-
-  <p>QRON (<a href="https://qron.space">qron.space</a>) is available via
-  white-label API:</p>
-  <ul>
-    <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
-    <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
-    <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
-    <!--
-      Was "FTC EO 14392 compliant origin verification". Both halves were off.
-      An Executive Order is issued by the President and directs agencies — the
-      FTC does not issue EOs, and a company does not "comply with" one. What
-      binds a seller is the FTC's Made in USA Labeling Rule (16 CFR Part 323),
-      which is what the April 2026 sweep was brought under. EO 14392 is real
-      ("Ensuring Truthful Advertising of Products Claiming To Be Made in
-      America") and prompted that sweep, so it belongs as context, not as the
-      obligation. A QR code also cannot confer compliance — it carries the
-      evidence a claim is substantiated with.
-    -->
-    <li>Origin evidence for "Made in USA" claims under the FTC's Made in USA Labeling Rule (16 CFR Part 323) — the rule behind the April 2026 enforcement sweep</li>
-  </ul>
-
-  <p>Creator Pack is <strong>$99 for 500 generations</strong> if you just want to
-  try it on live jobs; the white-label API is usage-based from $0.002/QR, so
-  reselling it at ${t.company}'s volume costs less than the ink.</p>
-
-  <p>Worth 10 minutes?
-  <a href="${CALENDLY}?company=${encodeURIComponent(t.company)}">Book here</a>,
-  grab the
-  <a href="${paymentLinkWithPrefilledEmail(
-    `${QRON_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=qron`,
-    t.email
-  )}">Creator Pack ($99 / 500 gens)</a>
-  self-serve, or reply and I'll send the API docs — happy to set up a sandbox on
-  your account before any call.</p>
-
-  <p>Best,<br>
-  Zachary<br>
-  QRON / AuthiChain<br>
-  <a href="https://qron.space">qron.space</a></p>
-</div>`;
-  return { subject, html };
-}
-
-/**
- * Channel-partner copy — referral / implementation / already-warm, not an
- * end-buyer cold blast. Does not claim a custom demo or a pre-provisioned
- * sandbox.
- */
-function partnerEmail(t: ChannelPartnerTarget): {
-  subject: string;
-  html: string;
-} {
-  const first = t.name.split(" ")[0] || t.company;
-  const product =
-    t.segment === "govchain"
-      ? "GovChain"
-      : t.segment === "qron"
-        ? "QRON"
-        : "StrainChain";
-  const also =
-    t.also_segment === "qron"
-      ? " QRON white-label is the same conversation if you also place branded QR."
-      : "";
-  const relation = t.already_connected
-    ? `We're already connected — this is a partner upsell, not a first-touch blast.`
-    : t.inbound_warm
-      ? `CS forwarded your inbound in April 2026 — treating this as a warm follow-up, not cold outreach.`
-      : `You're on our channel-partner shortlist (consultants, accelerators, and implementation shops), not an end-buyer list.`;
-
-  const subject = t.already_connected
-    ? `Partner upsell — ${product} with ${t.company}`
-    : t.inbound_warm
-      ? `Following up — ${product} / AuthiChain and ${t.company}`
-      : `Channel partnership — ${product} / AuthiChain and ${t.company}`;
-
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi ${first},</p>
-
-  <p>${relation}</p>
-
-  <p>${product} (<a href="https://authichain.com">authichain.com</a>) is the
-  product your clients would actually run. The ask here is a channel
-  conversation — referral, implementation, or white-label — not a
-  self-serve checkout pitch.${also}</p>
-
-  <p>${t.notes}</p>
-
-  <p>If that is still the wrong desk, say so and I'll close the thread.
-  Otherwise
-  <a href="${CALENDLY}?name=${encodeURIComponent(t.name)}&company=${encodeURIComponent(t.company)}">
-  book 15 minutes</a> or reply with the person who owns partnerships.</p>
-
-  <p>Best,<br>
-  Zachary<br>
-  AuthiChain<br>
-  <a href="https://authichain.com">authichain.com</a></p>
-</div>`;
-  return { subject, html };
-}
-
-function highLeverageEmail(t: HighLeverageTarget): {
-  subject: string;
-  html: string;
-} {
-  const first = t.name.split(" ")[0] || t.company;
+/** Dry-run only (see assertHighLeverageRunAllowed). Research notes stay out of the body. */
+function highLeverageEmail(t: HighLeverageTarget): EmailDraft {
   const product =
     t.segment === "qron"
       ? "QRON"
       : t.segment === "govchain"
         ? "GovChain"
         : "StrainChain";
-  const subject = `${product} — ${t.company}`;
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi ${first},</p>
-  <p>Draft only. This address is on the high-leverage shortlist already
-  stored in Supabase (${HIGH_LEVERAGE_LEAD_SOURCE}). It is not a live send.</p>
-  <p>${t.notes}</p>
-  <p>Best,<br>Zachary<br>AuthiChain</p>
-</div>`;
-  return { subject, html };
+  return {
+    subject: `${product} and ${t.company}`,
+    html: `<p>Draft only: high-leverage shortlist (${HIGH_LEVERAGE_LEAD_SOURCE}), never sent live.</p>`,
+  };
 }
+
+/** Rebuilds a stored draft's email from its target, keyed by the segment it was written for. */
+const BUILDERS: Record<string, (t: any) => EmailDraft> = {
+  govchain: govchainEmail,
+  strainchain: strainchainEmail,
+  qron: qronEmail,
+};
 
 function escapeIlikeExact(email: string): string {
   return normalizeLeadEmail(email)
@@ -672,6 +409,10 @@ async function processTargets<
   for (const t of targets) {
     let email = t.email;
     let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
+    // How the address was found, for the skip message below. Declared here:
+    // it used to be read outside the block that defined it, which threw a
+    // ReferenceError on the first live target with no address.
+    let via: Parameters<typeof describeSkipReason>[0] | undefined;
     // Partner rows already carry a published / inbound / connected address.
     // Do not run them through usableEmail() — that strips role inboxes
     // (contact@, info@, hello@) which are the desk these partners publish.
@@ -693,6 +434,7 @@ async function processTargets<
       );
       email = resolved.email;
       source = resolved.source;
+      via = resolved.via;
       if (email && resolved.via !== "already_set") {
         (t as any).email = email;
         console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
@@ -704,6 +446,13 @@ async function processTargets<
     if (email && shouldNotLiveResend(email)) {
       console.log(`  ⏭️  Do-not-resend list — ${email}`);
       continue;
+    }
+    if (email) {
+      const prior = await priorContact(supabase, email);
+      if (prior.blocked) {
+        console.log(`  ⏭️  Not sending to ${email} — ${prior.reason}`);
+        continue;
+      }
     }
     let existingStatus: string | null = null;
     if (email && !isDryRun) {
@@ -769,7 +518,7 @@ async function processTargets<
     }
 
     if (!email) {
-      console.log(`     ℹ️  ${t.company}: ${describeSkipReason(resolved.via)}`);
+      console.log(`     ℹ️  ${t.company}: ${(via ? describeSkipReason(via) : "no address listed")}`);
       queued++;
       continue;
     }
@@ -836,6 +585,7 @@ async function processTargets<
       if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
+        await recordContact(supabase, email, GUARDRAIL_CHANNEL);
         await supabase
           .from("leads")
           .update({ status: "contacted", updatedAt: new Date().toISOString() })
@@ -912,13 +662,12 @@ export async function flushQueuedLeads(): Promise<number> {
 
   const sourceFilter =
     segment && segment !== "all" ? `b2b_outreach_${segment}` : "b2b_outreach_%";
-  // Cap leftovers are saved as `draft` then skipped; the log says "queued"
-  // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
-  // unsent-again while 4imprint/Signarama drafts can go out.
+  // Only `queued`. Every dry run writes its targets as `draft`, so draining
+  // drafts meant a live flush sent whatever the last dry run had rendered.
   let query = supabase
     .from("leads")
     .select("*")
-    .in("status", ["queued", "draft"])
+    .eq("status", "queued")
     .order("createdAt", { ascending: false });
   query = sourceFilter.endsWith("%")
     ? query.like("source", sourceFilter)
@@ -940,11 +689,15 @@ export async function flushQueuedLeads(): Promise<number> {
       continue;
     }
     const meta = lead.metadata as any;
-    if (!meta?.subject || !meta?.html_preview) continue;
     const leadEmail = String(lead.email ?? "").toLowerCase();
     if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
     if (shouldNotLiveResend(leadEmail)) {
       console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
+      continue;
+    }
+    const prior = await priorContact(supabase, leadEmail);
+    if (prior.blocked) {
+      console.log(`  ⏭️  Not sending to ${lead.email} — ${prior.reason}`);
       continue;
     }
 
@@ -966,6 +719,18 @@ export async function flushQueuedLeads(): Promise<number> {
       continue;
     }
     const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
+
+    // Re-render from the stored target with today's copy. The stored
+    // html_preview is the first 500 characters of the old copy, and flushing
+    // it sent recipients a cut-off email.
+    const build = BUILDERS[leadSegment];
+    if (!build || !meta?.target) {
+      console.log(
+        `  ⏭️  Skipping ${lead.email} — no stored target to rebuild the email from`
+      );
+      continue;
+    }
+    const draft = build({ ...meta.target, email: leadEmail });
 
     const senderCheck = await checkSender(from);
     if (!senderCheck.ok) {
@@ -990,13 +755,11 @@ export async function flushQueuedLeads(): Promise<number> {
     }
 
     try {
-      // The stored draft is a truncated preview, so a flush re-sends whatever
-      // was captured — the guard still applies the footer and headers.
       const res = await guardedSend({
         to: lead.email,
         source: (meta.source as VerificationSource) ?? RESEARCHED_SOURCE,
-        subject: meta.subject,
-        html: meta.html_preview,
+        subject: draft.subject,
+        html: draft.html,
         from,
         company: "AuthiChain",
         apiKey: process.env[senderCheck.credential!],
@@ -1008,6 +771,7 @@ export async function flushQueuedLeads(): Promise<number> {
           .eq("email", lead.email);
         flushed++;
         console.log(`  ✉️  Flushed: ${lead.email}`);
+        await recordContact(supabase, leadEmail, GUARDRAIL_CHANNEL);
         await guardrailRecord({
           channel: GUARDRAIL_CHANNEL,
           action: "record",
@@ -1086,7 +850,7 @@ if (segment === "all" || segment === "govchain") {
 
 if (segment === "all" || segment === "strainchain") {
   console.log("\n🌿 STRAINCHAIN — Cannabis MSO Compliance ($499/mo Theater 1)");
-  await processTargets(STRAINCHAIN_TARGETS, strainchaineEmail, "strainchain");
+  await processTargets(STRAINCHAIN_TARGETS, strainchainEmail, "strainchain");
 }
 
 if (segment === "all" || segment === "qron") {

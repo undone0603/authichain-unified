@@ -17,7 +17,7 @@
 // through claims.ts, and a send-time auth failure stops the batch instead of
 // touching lead state.
 
-import { checkClaims } from "./claims";
+import { checkClaims } from "../../../server/outreach/claims";
 import { checkLead, parseMetadata, type LeadMetadata } from "./guard";
 import { renderTemplate, segmentFor, TEMPLATES } from "./templates";
 

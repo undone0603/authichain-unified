@@ -152,7 +152,7 @@ describe("guardedSend", () => {
 
   it("counts a successful send and a Resend HTTP error against the live cap", () => {
     const base = {
-      email: "jane.doe@gsa.gov",
+      email: "jane.doe@acmelabs.com",
       source: "published_contact" as const,
       validFormat: true,
       trustedSource: true,
@@ -223,10 +223,18 @@ describe("guardedSend", () => {
   });
 
   it("accepts an address the counterparty published itself", async () => {
-    // A SAM.gov solicitation point-of-contact is published by its owner for
-    // this exact purpose — categorically different from a plausible guess.
-    const a = assessRecipient("john.doe@gsa.gov", "published_contact");
+    const a = assessRecipient("jane.doe@acmelabs.com", "published_contact");
     expect(canSend(a)).toBe(true);
+  });
+
+  it("refuses government and military addresses whatever the source", () => {
+    // A SAM.gov point-of-contact is published for questions about that
+    // solicitation, not for marketing. The 2026-05-16 DEA/CBP sends are why.
+    for (const to of ["john.doe@gsa.gov", "tracking@dea.gov", "a.b@army.mil", "x@agency.gov.uk"]) {
+      const a = assessRecipient(to, "published_contact");
+      expect(a.status).toBe("reject");
+      expect(a.reasons).toContain("government_or_military_address");
+    }
   });
 
   describe("outbound request shape", () => {
@@ -254,7 +262,7 @@ describe("guardedSend", () => {
       ]);
 
       const r = await guardedSend({
-        to: "jane.doe@gsa.gov",
+        to: "jane.doe@acmelabs.com",
         source: "published_contact",
         subject: "s",
         html: "<p>hi</p>",
@@ -264,13 +272,50 @@ describe("guardedSend", () => {
       return { r, body };
     }
 
-    it("sets reply-to and one-click List-Unsubscribe headers", async () => {
+    it("defaults the unsubscribe to a reply, not the dead /unsubscribe page", async () => {
+      delete process.env.UNSUBSCRIBE_URL;
+      process.env.RESEND_REPLY_TO = "Zach <zach@authichain.com>";
       const { body } = await captureSend();
-      expect(body.reply_to).toBeTruthy();
-      expect(body.headers["List-Unsubscribe"]).toMatch(/^<https?:\/\//);
+      expect(body.reply_to).toBe("Zach <zach@authichain.com>");
+      expect(body.headers["List-Unsubscribe"]).toBe(
+        "<mailto:zach@authichain.com?subject=unsubscribe>"
+      );
+      // One-Click POST is only valid with an https URI.
+      expect(body.headers["List-Unsubscribe-Post"]).toBeUndefined();
+      expect(body.html).not.toContain("authichain.com/unsubscribe");
+    });
+
+    it("sets one-click List-Unsubscribe headers for a configured https page", async () => {
+      const { body } = await captureSend({
+        unsubscribeUrl: "https://example.com/u?e=1",
+      });
+      expect(body.headers["List-Unsubscribe"]).toBe("<https://example.com/u?e=1>");
       expect(body.headers["List-Unsubscribe-Post"]).toBe(
         "List-Unsubscribe=One-Click"
       );
+    });
+
+    it("refuses copy with unbacked claims before any send", async () => {
+      process.env.RESEND_API_KEY = "re_test";
+      process.env.MAILING_ADDRESS = "123 Main St";
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const dns = await import("node:dns");
+      vi.spyOn(dns.promises, "resolveMx").mockResolvedValue([
+        { exchange: "mx", priority: 1 },
+      ]);
+      const r = await guardedSend({
+        to: "jane.doe@acmelabs.com",
+        source: "published_contact",
+        subject: "Re: our demo",
+        html: "<p>Would you like to see our <strong>SBIR Phase 1</strong> results?</p><!-- 90% -->",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toContain("claim:unverified_award");
+      expect(r.reason).toContain("claim:fake_reply_subject");
+      // Text inside an HTML comment is not shown, so it is not a claim.
+      expect(r.reason).not.toContain("unverified_statistic");
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it("puts the postal address in the HTML part, not only the text part", async () => {
@@ -299,7 +344,7 @@ describe("guardedSend", () => {
       ]);
 
       await guardedSend({
-        to: "jane.doe@gsa.gov",
+        to: "jane.doe@acmelabs.com",
         source: "published_contact",
         subject: "s",
         html: "<p>hi</p>",
@@ -328,7 +373,7 @@ describe("guardedSend", () => {
       ]);
 
       const r = await guardedSend({
-        to: "jane.doe@gsa.gov",
+        to: "jane.doe@acmelabs.com",
         source: "published_contact",
         subject: "s",
         html: "<p>hi</p>",

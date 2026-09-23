@@ -147,7 +147,9 @@ jobs:
           GUARDRAIL_API_URL: ${{ vars.GUARDRAIL_API_URL || 'https://app.authichain.com' }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
           MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          # No default: authichain.com/unsubscribe does not exist. Unset means
+          # guardedSend uses a mailto: opt-out to the reply-to inbox.
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
@@ -169,5 +171,7 @@ jobs:
           GUARDRAIL_API_URL: ${{ vars.GUARDRAIL_API_URL || 'https://app.authichain.com' }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
           MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          # No default: authichain.com/unsubscribe does not exist. Unset means
+          # guardedSend uses a mailto: opt-out to the reply-to inbox.
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}

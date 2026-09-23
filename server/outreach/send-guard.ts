@@ -7,6 +7,7 @@
 // secondary gate, and a mandatory CAN-SPAM unsubscribe footer.
 import { promises as dns } from "node:dns";
 import { recordDryRunSend } from "../email-service";
+import { checkClaims, htmlToText } from "./claims";
 
 import {
   assessRecipient,
@@ -21,6 +22,7 @@ import {
 export {
   assessRecipient,
   canSend,
+  isGovernmentOrMilitaryAddress,
   isRoleInboxEmail,
   TRUSTED_SOURCES,
   type AssessRecipientOptions,
@@ -38,6 +40,21 @@ export async function domainAcceptsMail(email: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Where the unsubscribe link points when the caller configures nothing.
+ *
+ * This used to default to https://authichain.com/unsubscribe, a route that has
+ * never existed, so every guarded send carried a dead opt-out link. A reply
+ * address is a valid CAN-SPAM opt-out mechanism and it works today: the
+ * reply-to inbox is read, and worker/outreach-loop.ts already classifies
+ * "unsubscribe" replies. Set UNSUBSCRIBE_URL only to a page that actually
+ * records the opt-out.
+ */
+export function defaultUnsubscribeUrl(replyTo: string): string {
+  const address = replyTo.replace(/^.*<([^>]+)>.*$/, "$1").trim();
+  return `mailto:${address}?subject=unsubscribe`;
 }
 
 /** CAN-SPAM compliant footer — physical address + working unsubscribe are required. */
@@ -147,10 +164,12 @@ export async function guardedSend(args: {
       assessment,
     };
   }
+  const replyTo =
+    args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com";
   const unsubscribeUrl =
-    args.unsubscribeUrl ??
-    process.env.UNSUBSCRIBE_URL ??
-    "https://authichain.com/unsubscribe";
+    args.unsubscribeUrl ||
+    process.env.UNSUBSCRIBE_URL ||
+    defaultUnsubscribeUrl(replyTo);
 
   const footerOpts = {
     company: args.company ?? "AuthiChain",
@@ -161,6 +180,21 @@ export async function guardedSend(args: {
 
   if (args.body === undefined && args.html === undefined) {
     return { sent: false, reason: "no_body", assessment };
+  }
+
+  // Refuse copy that states awards, customers, statistics, certifications or
+  // prior contact that nobody can back. See ./claims.ts for the rules and the
+  // emails that prompted each one.
+  const visibleText = [args.body ?? "", args.html ? htmlToText(args.html) : ""]
+    .join("\n")
+    .trim();
+  const violations = checkClaims(args.subject, visibleText);
+  if (violations.length > 0) {
+    return {
+      sent: false,
+      reason: violations.map(v => `claim:${v.rule}:${v.match}`).join(","),
+      assessment,
+    };
   }
 
   // Last stop before the network. Placed after every guard above so a dry run
@@ -193,18 +227,21 @@ export async function guardedSend(args: {
         args.from ??
         process.env.RESEND_FROM ??
         "AuthiChain <hello@authichain.com>",
-      reply_to:
-        args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
+      reply_to: replyTo,
       to: assessment.email,
       subject: args.subject,
       ...(args.body !== undefined ? { text: args.body + footer } : {}),
       ...(args.html !== undefined
         ? { html: args.html + unsubscribeFooterHtml(footerOpts) }
         : {}),
-      // One-click unsubscribe (RFC 8058) — improves compliance + deliverability.
+      // List-Unsubscribe (RFC 2369). The One-Click POST header (RFC 8058) is
+      // only valid alongside an https URI that accepts the POST, so a mailto
+      // opt-out goes without it.
       headers: {
         "List-Unsubscribe": `<${unsubscribeUrl}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        ...(unsubscribeUrl.startsWith("https://")
+          ? { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+          : {}),
       },
     }),
   });

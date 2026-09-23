@@ -36,8 +36,6 @@ export interface LeadCheck {
   first_name: string;
 }
 
-const GOV_DOMAIN = /\.(gov|mil)(\.[a-z]{2})?$/i;
-
 const TITLE_WORDS =
   /\b(director|manager|coordinator|lead|head|officer|chief|vp|vice|president|team|department|dept|office|desk|support|pilot|procurement|compliance|operations|ops|partnerships?|marketing|sales|admin|staff|supervisor|specialist|analyst|engineer|executive|founder|owner|contact|inquiries|info|general)\b/i;
 
@@ -79,9 +77,6 @@ export function checkLead(lead: LeadInput): LeadCheck {
   if (source === "published_contact" && !URL_RE.test(meta.verification_evidence ?? "")) {
     reasons.push("published_contact_needs_source_url");
   }
-
-  const domain = email.split("@")[1] ?? "";
-  if (GOV_DOMAIN.test(domain)) reasons.push("government_or_military_address");
 
   const first = personFirstName(lead.name);
   if (!first) reasons.push("contact_name_not_a_person");

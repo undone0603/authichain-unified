@@ -58,6 +58,17 @@ export function isRoleInboxEmail(email: string): boolean {
   return ROLE_LOCALPARTS.has(local);
 }
 
+// Government and military addresses. Solicitation points-of-contact publish
+// their address for questions about that solicitation, not for marketing, and
+// the 2026-05-16 DEA/CBP sends show what goes wrong when cold outreach reaches
+// them. Respond to a solicitation through the solicitation instead.
+const GOV_OR_MIL_DOMAIN = /\.(gov|mil)(\.[a-z]{2})?$/i;
+
+export function isGovernmentOrMilitaryAddress(email: string): boolean {
+  const domain = (email || "").trim().toLowerCase().split("@")[1] ?? "";
+  return GOV_OR_MIL_DOMAIN.test(domain);
+}
+
 export type AssessRecipientOptions = {
   /**
    * Permit a role inbox when the source is already trusted. Only the
@@ -97,8 +108,13 @@ export function assessRecipient(
   const trustedSource = TRUSTED_SOURCES.has(source);
   if (!trustedSource) reasons.push(`untrusted_source:${source}`);
 
+  const government = isGovernmentOrMilitaryAddress(normalized);
+  if (government) reasons.push("government_or_military_address");
+
   const status: "allow" | "reject" =
-    validFormat && trustedSource && !roleInboxBlocked ? "allow" : "reject";
+    validFormat && trustedSource && !roleInboxBlocked && !government
+      ? "allow"
+      : "reject";
 
   return {
     email: normalized,

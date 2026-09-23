@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkClaims } from "./claims";
+import { checkClaims } from "../../../server/outreach/claims";
 import { checkLead, personFirstName } from "./guard";
 import { renderTemplate, segmentFor, TEMPLATES, type Segment } from "./templates";
 import worker, { buildDraft, type Env } from "./index";

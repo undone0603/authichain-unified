@@ -1,5 +1,8 @@
+// server/outreach/claims.ts
 // Claim checker for outbound email. Runs on the fully rendered subject + body
-// before anything is sent, and blocks the send on any match.
+// before anything is sent, and blocks the send on any match. Pure (no Node or
+// network imports) so the Node scripts, via guardedSend, and the
+// authichain-outreach-engine Worker apply the same rules.
 //
 // Every rule below corresponds to something this project actually emailed to a
 // real organisation: "Would you like to see our SBIR Phase 1 results?" to DEA
@@ -86,4 +89,22 @@ export function checkClaims(subject: string, body: string): ClaimViolation[] {
     }
   }
   return violations;
+}
+
+/** Visible text of an HTML email, for claim checking. Comments, styles and tags are dropped. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*/g, "\n")
+    .trim();
 }
