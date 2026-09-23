@@ -903,7 +903,6 @@ const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 function onboardPayNowHtml(): string {
-  const basic = PAYMENT_LINKS.strainchain.basic;
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
     "<h2>Or pay now — no call</h2>\n" +
@@ -924,13 +923,6 @@ function onboardPayNowHtml(): string {
       label: "DPP $299",
     }) +
     "\n" +
-    '<a class="btn btn-outline" href="' +
-    escapeHtml(basic.url) +
-    '">' +
-    escapeHtml(basic.name) +
-    " " +
-    escapeHtml(basic.price) +
-    "</a>\n" +
     "</p>\n" +
     "</section>\n"
   );
@@ -1412,10 +1404,11 @@ function generatePackLinksHtml(): string {
     .join(" · ");
 }
 
+// The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
+// Stripe cleanup; the live top-ups are the catalogue Starter and Creator packs.
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
   PAYMENT_LINKS.qron.credits250,
-  PAYMENT_LINKS.qron.credits1000,
 ] as const;
 
 function generateCreditLinksHtml(): string {
@@ -1432,7 +1425,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
-    "<p>Need generation credits? Buy a credit pack on the published Stripe Payment Link. These are not Starter or Creator packs.</p>\n" +
+    "<p>Need more generations? Buy a pack on the published Stripe Payment Link.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"

@@ -123,9 +123,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
-  assert.match(html, /AuthiChain Starter/);
-  assert.match(html, /\$299\/mo/);
-  assert.match(html, /https:\/\/buy\.stripe\.com\/28E8wP0EVf7M6mefTS1Nu1p/);
+  // Retired AuthiChain Starter $299/mo link belonged to no live Stripe account.
+  assert.doesNotMatch(html, /AuthiChain Starter/);
+  assert.doesNotMatch(html, /28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);

@@ -138,9 +138,12 @@ const SEGMENT_FROM: Record<string, string> = {
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
 // Self-serve payment CTAs (live Stripe Payment Links). Soft secondary to booking.
+// The StrainChain email pitches Theater 1 ($499/mo); the old StrainChain Basic
+// link belonged to no live Stripe account.
 const STRAINCHAIN_PAY =
   process.env.STRAINCHAIN_PAYMENT_LINK ??
-  "https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"; // StrainChain Basic
+  planPaymentLink("theater_1") ??
+  "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"; // Theater 1 $499/mo
 const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   planPaymentLink("creator") ??
@@ -420,7 +423,7 @@ function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
     `${STRAINCHAIN_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=strainchain`,
     t.email
   )}">
-  start StrainChain Basic self-serve</a> if you'd rather click than calendar.</p>
+  start Theater 1 self-serve</a> if you'd rather click than calendar.</p>
 
   <p>Best,<br>
   Zachary<br>

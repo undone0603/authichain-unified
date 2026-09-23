@@ -9,7 +9,6 @@ import {
   catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
-import { PAYMENT_LINKS } from "../../../server/payment-links";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 const HTML_HEADERS: Record<string, string> = {
@@ -647,7 +646,6 @@ function home(): string {
          label: "Farm $149/mo",
          className: "btn ghost",
        })}
-       <a class="btn ghost" href="${PAYMENT_LINKS.strainchain.basic.url}">${PAYMENT_LINKS.strainchain.basic.name} ${PAYMENT_LINKS.strainchain.basic.price}</a>
      </div>
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
@@ -725,8 +723,12 @@ function pricing(): string {
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
        <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
-       <div class="card"><p class="kicker">AuthiChain Starter</p><p class="price">$299<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Not the QRON Starter Pack ($29).</p>
-         <p style="margin-top:1rem"><a class="btn ghost" href="https://buy.stripe.com/28E8wP0EVf7M6mefTS1Nu1p">Open $299/mo</a></p></div>
+       <div class="card"><p class="kicker">Theater 1: AgTech</p><p class="price">$499<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Recurring. 5,000 industrial generations a month.</p>
+         <p style="margin-top:1rem">${catalogPaymentLinkHtml({
+           planId: "theater_1",
+           label: "Pay $499/mo on Stripe",
+           className: "btn ghost",
+         })}</p></div>
      </div>
      <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Farm $149/mo is the founder-income recurring rail.</p>`
   );

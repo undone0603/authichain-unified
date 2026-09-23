@@ -406,9 +406,8 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain(
       'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
     );
-    expect(body).toContain(
-      'href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"'
-    );
+    // Retired StrainChain Basic link (no live Stripe account) must not return.
+    expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -595,22 +594,18 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("$29");
     expect(body).toContain("$99");
     expect(body).toContain("$299");
+    // Top-ups are the live Starter/Creator packs; the retired credit bundles
+    // ($9.99/$39.99/$99.99) had links on no live Stripe account.
     expect(body).toContain(
-      'href="https://buy.stripe.com/3cIaEX73jcZE5ia2321Nu1l"'
+      'href="https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/9B69AT73j9NseSKazy1Nu1m"'
+      'href="https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"'
     );
-    expect(body).toContain(
-      'href="https://buy.stripe.com/9B600j73jcZE6megXW1Nu1n"'
-    );
-    expect(body).toContain("50 Credits");
-    expect(body).toContain("$9.99");
-    expect(body).toContain("250 Credits");
-    expect(body).toContain("$39.99");
-    expect(body).toContain("1000 Credits");
-    expect(body).toContain("$99.99");
-    expect(body).toContain("Need generation credits");
+    expect(body).not.toContain("$9.99");
+    expect(body).not.toContain("$39.99");
+    expect(body).not.toMatch(/buy\.stripe\.com\/[A-Za-z0-9]*1Nu/);
+    expect(body).toContain("Need more generations");
   });
 
   it("303s a valid URL to /onboard", async () => {
