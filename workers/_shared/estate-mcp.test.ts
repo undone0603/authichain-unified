@@ -262,6 +262,49 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
   }
 });
 
+test("tools/call verify with a payment proof is 503 and never settles", async () => {
+  const orig = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify({ success: true, txHash: "0xabc" }));
+  }) as typeof fetch;
+  try {
+    const proof = Buffer.from(
+      JSON.stringify({
+        scheme: "exact",
+        network: "base",
+        payer: "0x1234567890abcdef1234567890abcdef12345678",
+        amount: "50000",
+        signature: "0xdead",
+      })
+    ).toString("base64");
+    const res = await tryHandleSisterMcp(
+      req("qron.space", "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-payment": proof },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "verify", arguments: { serial: "AC-1" } },
+        }),
+      }),
+      "qron",
+      { X402_FACILITATOR_URL: "https://facilitator.example" }
+    );
+    assert.ok(res);
+    assert.equal(res.status, 503);
+    const body = (await res.json()) as { error?: string; settled?: boolean };
+    assert.equal(body.error, "registry_not_bound");
+    assert.equal(body.settled, false);
+    assert.deepEqual(calls, []);
+  } finally {
+    globalThis.fetch = orig;
+    delete process.env.X402_FACILITATOR_URL;
+  }
+});
+
 test("HEAD /mcp is 204 and other paths are ignored", async () => {
   const head = await tryHandleSisterMcp(
     req("qron.space", "/mcp", { method: "HEAD" }),

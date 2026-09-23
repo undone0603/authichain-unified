@@ -91,9 +91,7 @@ describe("tryHandleX402", () => {
     };
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
-    expect(body.paidRoute).toBe(
-      "https://authichain.com/api/v1/agent-verify"
-    );
+    expect(body.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
     expect(body.priceUsd).toBe(0.05);
@@ -125,9 +123,7 @@ describe("tryHandleX402", () => {
         "https://govchain.us",
       ])
     );
-    expect(body.pack.wallet).toBe(
-      "0xabc0000000000000000000000000000000000001"
-    );
+    expect(body.pack.wallet).toBe("0xabc0000000000000000000000000000000000001");
   });
 
   it("GET /.well-known/x402.json is the catalog", async () => {
@@ -272,7 +268,7 @@ describe("tryHandleX402", () => {
     expect(body.accepts[0].amount).toBe(v2.accepts[0].amount);
   });
 
-  it("refuses a structural proof when no facilitator is configured", async () => {
+  it("refuses a payment proof with 503 before settlement (no registry bound)", async () => {
     const header = proofHeader({
       scheme: "exact",
       network: "base",
@@ -290,12 +286,13 @@ describe("tryHandleX402", () => {
         X402_NETWORK: "base",
       }
     );
-    expect(res!.status).toBe(402);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
   });
 
-  it("reads a v2 PAYMENT-SIGNATURE header the same as X-PAYMENT", async () => {
+  it("refuses a v2 PAYMENT-SIGNATURE proof the same as X-PAYMENT", async () => {
     const header = proofHeader({
       x402Version: 2,
       accepted: { scheme: "exact", network: "eip155:8453", amount: "50000" },
@@ -318,9 +315,10 @@ describe("tryHandleX402", () => {
         X402_NETWORK: "base",
       }
     );
-    expect(res!.status).toBe(402);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
   });
 });
 

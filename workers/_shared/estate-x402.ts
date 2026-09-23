@@ -16,10 +16,8 @@
 import {
   buildPaymentRequired,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402HealthReport,
   x402PriceUsd,
   x402ScanFanout,
@@ -178,66 +176,9 @@ async function agentVerify(
     return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(
-      402,
-      { ...required.v2, error: verification.reason },
-      required.headers
-    );
-  }
-
-  const settlement = await settlePayment(
-    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(
-      402,
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      required.headers
-    );
-  }
-
-  let input: Record<string, unknown> = {};
-  try {
-    input = (await request.json()) as Record<string, unknown>;
-  } catch {
-    /* empty body is fine */
-  }
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return json(
-    200,
-    {
-      verified: false,
-      authenticityScore: 0,
-      subject: subject ?? null,
-      details: {
-        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-      },
-      settlement: {
-        payer: proof.payer,
-        amountAtomic: verification.amount.toString(),
-        txHash: settlement.txHash ?? proof.txHash ?? null,
-        trustless: settlement.trustless,
-      },
-      timestamp: new Date().toISOString(),
-    },
-    paymentResponseHeaders({
-      success: true,
-      transaction: settlement.txHash ?? proof.txHash,
-      network: required.body.accepts[0].network,
-      payer: proof.payer,
-    })
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
 /** Serve GET/HEAD health + catalog and unpaid POST 402 on a sister landing. */
