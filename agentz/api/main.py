@@ -4,6 +4,8 @@ agentz.api.main
 FastAPI Gateway for the AgentZ Autonomous Trust Infrastructure.
 Exposes core agents for Mobile, GPT, and Third-party integrations.
 """
+import hmac
+
 from fastapi import FastAPI, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -45,8 +47,15 @@ def get_supabase():
     return create_client(url, key)
 
 async def verify_token(authorization: str = Header(None)):
-    admin_token = get("agent_secret") or "authichain-secret"
-    if not authorization or authorization != f"Bearer {admin_token}":
+    # Fail closed: with no agent_secret configured there is no token anyone
+    # should hold. This used to fall back to a string committed to the repo,
+    # which made every "protected" route public on an unconfigured box.
+    admin_token = get("agent_secret")
+    if not admin_token:
+        raise HTTPException(status_code=503, detail="agent_secret not configured")
+    if not authorization or not hmac.compare_digest(
+        authorization.encode(), f"Bearer {admin_token}".encode()
+    ):
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 
@@ -79,19 +88,28 @@ async def api_create_product(data: ProductCreate, supabase: Client = Depends(get
     res = await create_product_identity(supabase, data.dict())
     return res
 
-@app.post("/scan")
+@app.post("/scan", dependencies=[Depends(verify_token)])
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
+    """Operator-only. Writes the product's score and can issue $QRON.
+
+    `verified` comes from assess_scans, which requires a checked signature and
+    a location check that actually ran. Nothing on this path checks a
+    signature yet, so it reports `verified: false` and issues no reward.
+    """
     from agentz.core.media import generate_story_mode
-    from agentz.core.trust import monitor_scans
+    from agentz.core.trust import assess_scans
     from agentz.core.growth import reward_repeat_scans
     # The Atomic Action
-    score = await monitor_scans(supabase, data.product_id)
+    assessment = await assess_scans(supabase, data.product_id)
     narration = await generate_story_mode(supabase, data.product_id)
-    reward = await reward_repeat_scans(supabase, data.wallet, data.product_id)
-    
+    reward = None
+    if assessment["verified"]:
+        reward = await reward_repeat_scans(supabase, data.wallet, data.product_id)
+
     return {
-        "verified": score > 90,
-        "authenticity_score": score,
+        "verified": assessment["verified"],
+        "authenticity_score": assessment["score"],
+        "checks": assessment["checks"],
         "storymode_url": narration,
         "reward": reward
     }
@@ -101,7 +119,7 @@ async def api_marketplace(supabase: Client = Depends(get_supabase)):
     from agentz.core.aggregator import generate_marketplace_manifest
     return await generate_marketplace_manifest(supabase)
 
-@app.post("/redeem")
+@app.post("/redeem", dependencies=[Depends(verify_token)])
 async def api_redeem(wallet: str, amount: float, business_id: str, supabase: Client = Depends(get_supabase)):
     from agentz.core.redemption import burn_qron_for_discount
     return await burn_qron_for_discount(supabase, wallet, amount, business_id)

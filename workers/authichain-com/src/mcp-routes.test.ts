@@ -138,6 +138,49 @@ describe("mcp discovery", () => {
     expect(unpaid!.headers.get("PAYMENT-REQUIRED")).toBeTruthy();
   });
 
+  it("tools/call verify with a payment proof is 503 and never settles", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify({ success: true, txHash: "0xabc" }));
+    }) as typeof fetch;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "base",
+          payer: "0x1234567890abcdef1234567890abcdef12345678",
+          amount: "50000",
+          signature: "0xdead",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 4,
+            method: "tools/call",
+            params: { name: "verify", arguments: { serial: "AC-1" } },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          X402_FACILITATOR_URL: "https://facilitator.example",
+        }
+      );
+      expect(res?.status).toBe(503);
+      const body = (await res!.json()) as { error: string; settled: boolean };
+      expect(body.error).toBe("registry_not_bound");
+      expect(body.settled).toBe(false);
+      expect(calls).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
   it("query_provenance is free and never stamps unknown IDs verified", async () => {
     const res = await tryHandleMcp(
       req("/mcp", {
