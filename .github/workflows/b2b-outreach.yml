@@ -13,8 +13,10 @@ name: B2B Cold Outreach
 
 on:
   schedule:
-    # Every Monday at 9 AM EST (14:00 UTC) — weekly cadence
-    - cron: "0 14 * * 1"
+    # Weekdays 10:00 ET (14:00 UTC). Scheduled runs are governed by
+    # .github/autonomy.json -> cold_outreach (switch, daily cap, segments,
+    # deliverability breaker). Live send also needs vars.OWNER_LIVE_SEND=true.
+    - cron: "0 14 * * 1-5"
   workflow_dispatch:
     inputs:
       segment:
@@ -48,6 +50,8 @@ concurrency:
 
 permissions:
   contents: read
+  # approval queue: a tripped breaker latches outreach off until the owner approves resuming
+  issues: write
 
 env:
   NODE_VERSION: "22"
@@ -79,20 +83,82 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Read autonomy manifest
+        id: autonomy
+        run: |
+          set -euo pipefail
+          node -e '
+            const m = require("./.github/autonomy.json").cold_outreach;
+            const segs = m.segments.filter((s) => !["partners", "high_leverage", "all"].includes(s));
+            const day = new Date().getUTCDay();
+            const seg = segs.length ? segs[day % segs.length] : "qron";
+            const out = [
+              `enabled=${m.enabled === true}`,
+              `cap=${m.max_new_prospects_per_day}`,
+              `segment=${seg}`,
+            ].join("\n");
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, out + "\n");
+            console.log(out);
+          '
+
+      - name: Deliverability breaker
+        id: breaker
+        if: github.event_name == 'schedule'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          OUTREACH_SENDERS: ${{ vars.OUTREACH_SENDERS }}
+        run: node scripts/autonomy/deliverability-breaker.mjs
+
+      - name: Breaker latch (owner approval to resume)
+        id: latch
+        if: github.event_name == 'schedule' && steps.autonomy.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TRIPPED: ${{ steps.breaker.outputs.tripped }}
+          BREAKER_REASON: ${{ steps.breaker.outputs.reason }}
+        run: |
+          set +e
+          if [ "$TRIPPED" = "true" ]; then
+            node scripts/autonomy/approvals.mjs latch --prefix cold-outreach-resume --trip \
+              --title "Resume cold outreach after the deliverability breaker tripped" \
+              --body "The breaker stopped scheduled cold outreach: ${BREAKER_REASON}. Nothing sends until you approve. Before approving, check the sender list quality and bounces in Resend."
+          else
+            node scripts/autonomy/approvals.mjs latch --prefix cold-outreach-resume
+          fi
+          code=$?
+          if [ "$code" -eq 0 ]; then echo "held=false" >> "$GITHUB_OUTPUT"; else echo "held=true" >> "$GITHUB_OUTPUT"; fi
+          echo "latch exit=$code"
+          exit 0
+
       - name: Resolve dry-run / live mode
         id: mode
+        env:
+          BREAKER_REASON: ${{ steps.breaker.outputs.reason }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ]; then
+            # Scheduled live send needs all three: manifest switch, owner
+            # variable, and a clear breaker. Anything else is a dry-run.
+            if [ "${{ steps.autonomy.outputs.enabled }}" = "true" ] \
+              && [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ] \
+              && [ "${{ steps.breaker.outputs.tripped }}" = "false" ] \
+              && [ "${{ steps.latch.outputs.held }}" = "false" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → LIVE (OWNER_LIVE_SEND=true)"
+              echo "cap=${{ steps.autonomy.outputs.cap }}" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → LIVE (manifest on, OWNER_LIVE_SEND=true, breaker clear), cap ${{ steps.autonomy.outputs.cap }}"
             else
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → forced dry-run (OWNER_LIVE_SEND unset/false)"
+              echo "cap=0" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → dry-run (manifest=${{ steps.autonomy.outputs.enabled }}, OWNER_LIVE_SEND=${{ vars.OWNER_LIVE_SEND }}, breaker tripped=${{ steps.breaker.outputs.tripped }}, latch held=${{ steps.latch.outputs.held }})"
+              if [ "${{ steps.breaker.outputs.tripped }}" = "true" ] && [ "${{ steps.autonomy.outputs.enabled }}" = "true" ]; then
+                echo "::warning::Cold outreach paused by deliverability breaker: ${BREAKER_REASON}"
+              fi
             fi
             exit 0
           fi
+          echo "cap=2" >> "$GITHUB_OUTPUT"
           dry="${{ inputs.dry_run }}"
           if [ "$dry" = "false" ]; then
             if [ "${{ vars.OWNER_LIVE_SEND }}" != "true" ]; then
@@ -112,8 +178,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "segment=qron" >> "$GITHUB_OUTPUT"
-            echo "Scheduled run → segment=qron (never all)"
+            # Rotates through cold_outreach.segments by weekday (never all/partners/high_leverage).
+            echo "segment=${{ steps.autonomy.outputs.segment }}" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run → segment=${{ steps.autonomy.outputs.segment }}"
             exit 0
           fi
           echo "segment=${{ inputs.segment || 'all' }}" >> "$GITHUB_OUTPUT"
@@ -137,8 +204,9 @@ jobs:
           AUTHICHAIN_BOOK_URL: ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           FLUSH_QUEUED_ONLY: ${{ inputs.flush_queued || 'false' }}
-          # Tiny live batch — override only after a clean dry-run. Never a list dump.
-          MAX_LIVE_SENDS: "2"
+          # Scheduled: cold_outreach.max_new_prospects_per_day from the manifest.
+          # Manual dispatch: tiny batch of 2. Never a list dump.
+          MAX_LIVE_SENDS: ${{ steps.mode.outputs.cap != '0' && steps.mode.outputs.cap || '2' }}
           # Fail-closed: scripts/lib/channel-partners.ts refuses live partner
           # sends unless this is exactly "true". Set only for workflow_dispatch
           # segment=partners after OWNER_LIVE_SEND resolves dry_run=false.

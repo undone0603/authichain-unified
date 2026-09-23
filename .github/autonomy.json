@@ -1,0 +1,161 @@
+{
+  "$comment": "Single source of truth for what runs on its own. Edit a line, merge, and autonomy-reconcile.yml makes GitHub match within minutes. Every workflow file in .github/workflows must appear exactly once below (CI enforces this). Charter: docs/OPERATING_CHARTER.md",
+  "version": 1,
+  "owner": "undone0603",
+  "owner_email": "undone.k@gmail.com",
+  "founder_emails": [
+    "undone.k@gmail.com",
+    "authichain@gmail.com",
+    "@authichain.com"
+  ],
+  "alerts": {
+    "channel": "github-issue",
+    "issue_title": "Ops alert: autonomous stack needs attention",
+    "label": "ops-alert"
+  },
+  "cold_outreach": {
+    "$comment": "Master switch for autonomous first-touch email. Live send needs BOTH this flag AND repo variable OWNER_LIVE_SEND=true, a clear breaker, and no pending breaker-latch approval.",
+    "enabled": false,
+    "max_new_prospects_per_day": 10,
+    "max_followups_per_prospect": 1,
+    "segments": ["qron", "strainchain", "govchain"],
+    "breaker": {
+      "window_days": 7,
+      "max_bounce_rate": 0.03,
+      "max_complaints": 0,
+      "min_sample": 10
+    }
+  },
+  "stripe_webhooks": [
+    {
+      "id": "we_1UGTCSGqTruSqV8ThM9bXVWp",
+      "url": "https://authichain.com/api/stripe/webhook",
+      "ensure_events": ["checkout.session.expired"],
+      "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
+    }
+  ],
+  "lanes": {
+    "ship": {
+      "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",
+      "managed": true,
+      "workflows": {
+        "ci.yml": "on",
+        "main.yml": "on",
+        "lint.yml": "on",
+        "codeql.yml": "on",
+        "compliance-audit.yml": "on",
+        "security-scan.yml": "on",
+        "nightstamp-scan-gate.yml": "on",
+        "production-drizzle-audit.yml": "on",
+        "vercel-deploy-guard.yml": "on",
+        "verified-deployment-commit.yml": "on",
+        "deploy-authichain-com.yml": "on",
+        "deploy-cloudflare.yml": "on",
+        "deploy-edge-worker.yml": "on",
+        "deploy-workers.yml": "on",
+        "content-routine-pr.yml": "on",
+        "dependabot-auto-merge.yml": "off",
+        "automerge-dependabot.yml": "off",
+        "node-pnpm-setup.yml": "on",
+        "reusable-deploy.yml": "on",
+        "autonomy-reconcile.yml": "on",
+        "stripe-webhook-reconcile.yml": "on"
+      }
+    },
+    "health": {
+      "purpose": "Loop 1 - read-only probes of sites, money path, schema and integrations. Opens one alert issue when red, closes it when green.",
+      "managed": true,
+      "workflows": {
+        "ops-pulse.yml": "on",
+        "cloudflare-production-health.yml": "on",
+        "production-smoke-gate.yml": "on",
+        "schema-drift.yml": "on",
+        "supabase-baseline.yml": "on",
+        "verify-integrations.yml": "on",
+        "seo-regression.yml": "on",
+        "social-credentials-check.yml": "on",
+        "repo-maintenance.yml": "off",
+        "branch-hygiene.yml": "on",
+        "pipeline-tick.yml": "on",
+        "genesis-cron.yml": "on"
+      }
+    },
+    "revenue": {
+      "purpose": "Loop 2 - warm leads to checkout, dunning, revenue report, gov digest. No cold email here.",
+      "managed": true,
+      "workflows": {
+        "revenue-cycle.yml": "on",
+        "agentz-orchestration.yml": "on",
+        "email-proposals.yml": "on",
+        "gov-engine.yml": "off",
+        "gov-ingest.yml": "off",
+        "gov-score.yml": "off",
+        "gov-proposals.yml": "off",
+        "gov-notify.yml": "off",
+        "gov-mint.yml": "on",
+        "owner-digest.yml": "on"
+      }
+    },
+    "growth": {
+      "purpose": "Loop 3 - owned-channel traffic (SEO, social, community listening) plus gated cold outreach.",
+      "managed": true,
+      "workflows": {
+        "gen-seo-pages.yml": "on",
+        "content-publish.yml": "on",
+        "marketing-autonomous.yml": "on",
+        "reddit-monitor.yml": "on",
+        "ghost-traffic.yml": "on",
+        "b2b-outreach.yml": "on",
+        "weekly-video.yml": "off"
+      }
+    },
+    "repair": {
+      "purpose": "Loop 4 - classify failed checks, apply deterministic fixes on a branch, open a draft PR. Never merges alone.",
+      "managed": true,
+      "workflows": {
+        "ci-repair-loop.yml": "on"
+      }
+    },
+    "manual": {
+      "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
+      "managed": false,
+      "workflows": {
+        "agentz-manual-post.yml": "manual",
+        "agentz-tunnel-bringup.yml": "manual",
+        "authichain-ledger-reconstruction.yml": "manual",
+        "autonomous-business-cycle.yml": "manual",
+        "bind-claw-agentz-url.yml": "manual",
+        "bind-stripe-webhook-secrets.yml": "manual",
+        "bind-x402-secrets.yml": "manual",
+        "d1-license-migrate.yml": "manual",
+        "deploy-govchain-nft-base.yml": "manual",
+        "dpp-outreach-trigger.yml": "manual",
+        "guardrail-digest.yml": "manual",
+        "outreach-trigger.yml": "manual",
+        "purge-cloudflare-cache.yml": "manual",
+        "set-agentz-claw-secrets.yml": "manual",
+        "set-authichain-resend-txt.yml": "manual",
+        "set-github-secrets.yml": "manual",
+        "set-heygen-secret.yml": "manual",
+        "set-outreach-resend-secret.yml": "manual",
+        "set-outreach-secret.yml": "manual",
+        "set-qron-outreach-guardrail-secret.yml": "manual",
+        "set-social-secrets.yml": "manual",
+        "set-worker-secrets.yml": "manual",
+        "sync-agentz-linkedin-session.yml": "manual",
+        "unblock-public-access.yml": "manual",
+        "upload-microsites-kv.yml": "manual",
+        "verify-outreach-secrets.yml": "manual",
+        "verify-scheduled-jobs.yml": "manual",
+        "x402-smoke.yml": "manual"
+      }
+    },
+    "retired": {
+      "purpose": "Superseded or too costly for the value. Kept disabled so history survives; delete later if still unused.",
+      "managed": true,
+      "workflows": {
+        "browser-vision-tasks.yml": "off"
+      }
+    }
+  }
+}

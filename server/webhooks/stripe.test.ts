@@ -650,6 +650,33 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     );
   });
 
+  it("still sends the recovery email when the audit write fails (no DATABASE_URL on the apex Worker)", async () => {
+    const { sendEmail } = await import("../email-service.js");
+    const { logAutomationAudit } = await import("../db.js");
+    vi.mocked(logAutomationAudit).mockRejectedValue(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_nodb", {
+        id: "cs_expired_nodb",
+        customer_email: "lost2@example.com",
+        metadata: { plan: "starter" },
+        amount_total: 4900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    const call = vi.mocked(sendEmail).mock.calls.at(-1)?.[0] as {
+      to: string;
+      body: string;
+    };
+    expect(call.to).toBe("lost2@example.com");
+    // No discount code is promised unless it exists in Stripe.
+    expect(call.body).not.toMatch(/COMEBACK20/);
+    vi.mocked(logAutomationAudit).mockResolvedValue(undefined);
+  });
+
   it("does not send email when no customer_email", async () => {
     const { sendEmail } = await import("../email-service.js");
     mockConstructEvent.mockReturnValue(

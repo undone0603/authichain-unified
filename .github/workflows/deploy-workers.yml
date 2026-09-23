@@ -225,6 +225,41 @@ jobs:
           printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-agentz
           echo "bound AGENT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY on authichain-agentz"
 
+      # Command Center reads live data. Each secret is optional: a missing one
+      # shows "not connected" on the page instead of failing the deploy.
+      - name: Bind command-center secrets
+        if: |
+          matrix.worker == 'authichain-dashboard' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-dashboard')
+        working-directory: workers/authichain-dashboard
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          DASHBOARD_GITHUB_TOKEN: ${{ secrets.DASHBOARD_GITHUB_TOKEN }}
+          FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
+        run: |
+          set -euo pipefail
+          bind() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then echo "skip $name (GitHub secret not set)"; return; fi
+            printf '%s' "$value" | npx wrangler secret put "$name" --name authichain-dashboard >/dev/null
+            echo "bound $name"
+          }
+          bind SUPABASE_URL "${SUPABASE_URL:-}"
+          bind SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          # Prefer a restricted read key; fall back to the existing key so the
+          # money panel works with no extra setup (the page only issues GETs).
+          bind STRIPE_READ_KEY "${STRIPE_READ_KEY:-${STRIPE_SECRET_KEY:-}}"
+          bind GITHUB_TOKEN "${DASHBOARD_GITHUB_TOKEN:-}"
+          # Founder list: the secret if set, else .github/autonomy.json.
+          founders="${FOUNDER_EMAILS:-$(jq -r '.founder_emails // [] | join(",")' ../../.github/autonomy.json)}"
+          bind FOUNDER_EMAILS "$founders"
+
       - name: Bind claw AGENTZ_* secrets
         if: |
           matrix.worker == 'authichain-openclaw' &&
