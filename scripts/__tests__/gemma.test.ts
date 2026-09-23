@@ -85,6 +85,15 @@ describe("gemma client", () => {
     expect(htmlToText("x".repeat(50), 10)).toBe("xxxxxxxxxx\n[truncated]");
   });
 
+  it("drops odd script end tags and decodes entities only once", () => {
+    expect(htmlToText("<p>a</p><script>x()</script\t\n bar><b>b</b>")).toBe(
+      "a b"
+    );
+    expect(htmlToText("<SCRIPT>x</SCRIPT>ok")).toBe("ok");
+    expect(htmlToText("&amp;quot; &amp;amp;")).toBe("&quot; &amp;");
+    expect(htmlToText("unclosed <script>alert(1)")).toBe("unclosed");
+  });
+
   it("clips and strips safely on empty input", () => {
     expect(clip(undefined, 5)).toBe("");
     expect(stripThinking(null)).toBe("");

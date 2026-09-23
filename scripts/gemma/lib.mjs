@@ -46,17 +46,40 @@ export function stripThinking(text) {
     .trim();
 }
 
+const ENTITIES = { nbsp: " ", amp: "&", quot: '"', apos: "'", "#39": "'" };
+
+/** Drop tags, and the whole body of <script>/<style>, with a character scan. */
+function stripTags(html) {
+  const lower = html.toLowerCase();
+  let out = "";
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, lt) + " ";
+    const raw = ["script", "style"].find(t => lower.startsWith(t, lt + 1));
+    if (raw) {
+      const close = lower.indexOf(`</${raw}`, lt + 1);
+      if (close === -1) break;
+      const end = html.indexOf(">", close);
+      if (end === -1) break;
+      i = end + 1;
+      continue;
+    }
+    const gt = html.indexOf(">", lt + 1);
+    if (gt === -1) break;
+    i = gt + 1;
+  }
+  return out;
+}
+
 /** Visible text of a page, for a prompt. Not a sanitizer: the output is never rendered as HTML. */
 export function htmlToText(html, max = 6000) {
-  const text = String(html ?? "")
-    .replace(/<script[\s\S]*?<\/script\s*>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style\s*>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/[<>]/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&quot;/g, '"')
+  const text = stripTags(String(html ?? ""))
+    .replace(/&(nbsp|amp|quot|apos|#39);/g, (_, e) => ENTITIES[e])
     .replace(/\s+/g, " ")
     .trim();
   return clip(text, max);
