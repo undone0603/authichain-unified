@@ -9042,5 +9042,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-digital-product-passport-registration-identifier",
+    "keyword": "eu digital product passport registration identifier",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Registration | AuthiChain",
+    "metaDescription": "The EU’s Digital Product Passport Registry has been operational since 20 July 2026, and Commission Implementing Regulation (EU) 2026/1778 — in force since 6.",
+    "h1": "EU Digital Product Passport Registration Identifier",
+    "bodyHtml": "<p>The EU’s Digital Product Passport Registry has been operational since 20 July 2026, and Commission Implementing Regulation (EU) 2026/1778 — in force since 6 August — defines a scheme for issuing a unique registration identifier per passport, a public list of verified DPP service providers, and a semantic repository defining how passport data must be structured, separate from whatever record format an economic operator chooses to issue.</p><h2>Why AuthiChain</h2><ul><li>A registration identifier proves a passport exists in the registry; a signed record proves the passport’s data hasn’t been altered since it was issued — the Implementing Regulation requires the first, protocol/SPEC.md §5 delivers the second, and neither substitutes for the other</li><li>The registry stores registration identifiers alongside customs commodity codes, the detail that lets an import check match a physical shipment to a registered passport at the border, not only at the point of sale</li><li>Batteries are the registry’s first mandatory deadline — 18 February 2027 — and every category after it registers through the same interface rather than a category-specific one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain register a passport in the EU registry for us?</h3><p>Not automatically — AuthiChain issues and anchors the signed Verifiable Credential a registration submission needs. Filing that submission through the registry’s own web interface or API is a separate step an economic operator or its registry-facing tooling completes.</p><h3>Is the registry the same thing as the QR code on the product?</h3><p>No. The registry is where a registration identifier lives; the product carries a GS1 Digital Link URL that resolves to the record itself, per protocol/SPEC.md §6. A registry entry with no resolvable record, or a record with no registry entry, each fail to satisfy the requirement alone.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Registration Identifier",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s Digital Product Passport Registry has been operational since 20 July 2026, and Commission Implementing Regulation (EU) 2026/1778 — in force since 6 August — defines a scheme for issuing a unique registration identifier per passport, a public list of verified DPP service providers, and a semantic repository defining how passport data must be structured, separate from whatever record format an economic operator chooses to issue.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-registration-identifier"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Registration Identifier",
+              "item": "https://authichain.com/p/eu-digital-product-passport-registration-identifier"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain register a passport in the EU registry for us?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not automatically — AuthiChain issues and anchors the signed Verifiable Credential a registration submission needs. Filing that submission through the registry’s own web interface or API is a separate step an economic operator or its registry-facing tooling completes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the registry the same thing as the QR code on the product?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The registry is where a registration identifier lives; the product carries a GS1 Digital Link URL that resolves to the record itself, per protocol/SPEC.md §6. A registry entry with no resolvable record, or a record with no registry entry, each fail to satisfy the requirement alone."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "one-barcode-for-dscsa-and-eu-digital-product-passport",
+    "keyword": "one barcode for dscsa and eu digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "One Barcode For DSCSA And EU Digital Product | AuthiChain",
+    "metaDescription": "protocol/SPEC.md §2 names GS1 Digital Link as the item-identity format for a specific reason: a single Digital Link URI can carry the same GTIN, lot, expiry.",
+    "h1": "One Barcode For DSCSA And EU Digital Product Passport",
+    "bodyHtml": "<p>protocol/SPEC.md §2 names GS1 Digital Link as the item-identity format for a specific reason: a single Digital Link URI can carry the same GTIN, lot, expiry, and serial application identifiers a DSCSA-required GS1 DataMatrix needs, while also resolving as the URL an EU Digital Product Passport data carrier has to be.</p><h2>Why AuthiChain</h2><ul><li>DSCSA doesn’t require the carrier to be a URL — a legacy GS1 DataMatrix encoding those application identifiers as a plain element string already complies. What EU DPP adds is that the carrier now has to resolve to something, a requirement a plain element string was never built to satisfy</li><li>GS1 Digital Link is a URI syntax, not a new barcode symbology — it’s still carried in a GS1 DataMatrix or QR code; what changes is encoding it so the same symbol resolves as a URL rather than only decoding as a flat string</li><li>AuthiChain issues one signed record per identifier regardless of which regulation is asking, so a US-bound unit’s DSCSA data and an EU-bound unit’s DPP record can share one carrier format instead of maintaining two for what is functionally one item</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do we need two separate barcodes for DSCSA and EU DPP?</h3><p>Not if the carrier is built as a GS1 Digital Link URI from the start — it can encode the DSCSA application identifiers and resolve as the URL EU DPP requires. An existing DSCSA-only GS1 DataMatrix built as a plain element string, without the URL structure, is the case that does need a reprint.</p><h3>Does GS1 Digital Link replace the DataMatrix DSCSA already requires?</h3><p>No — it’s still carried in the same GS1 DataMatrix or QR symbol. GS1 Digital Link changes how the payload is encoded, not the barcode format itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — One Barcode For DSCSA And EU Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "protocol/SPEC.md §2 names GS1 Digital Link as the item-identity format for a specific reason: a single Digital Link URI can carry the same GTIN, lot, expiry, and serial application identifiers a DSCSA-required GS1 DataMatrix needs, while also resolving as the URL an EU Digital Product Passport data carrier has to be.",
+          "url": "https://authichain.com/p/one-barcode-for-dscsa-and-eu-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "One Barcode For DSCSA And EU Digital Product Passport",
+              "item": "https://authichain.com/p/one-barcode-for-dscsa-and-eu-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we need two separate barcodes for DSCSA and EU DPP?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not if the carrier is built as a GS1 Digital Link URI from the start — it can encode the DSCSA application identifiers and resolve as the URL EU DPP requires. An existing DSCSA-only GS1 DataMatrix built as a plain element string, without the URL structure, is the case that does need a reprint."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does GS1 Digital Link replace the DataMatrix DSCSA already requires?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it’s still carried in the same GS1 DataMatrix or QR symbol. GS1 Digital Link changes how the payload is encoded, not the barcode format itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jcs-vs-rdf-canonicalization-verifiable-credentials",
+    "keyword": "jcs vs rdf canonicalization verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "JCS Vs RDF Canonicalization Verifiable | AuthiChain",
+    "metaDescription": "protocol/SPEC.md §3.2 signs a record using JCS — RFC 8785 JSON Canonicalization Scheme — over the plain JSON payload, not RDF Dataset Canonicalization over.",
+    "h1": "JCS Vs RDF Canonicalization Verifiable Credentials",
+    "bodyHtml": "<p>protocol/SPEC.md §3.2 signs a record using JCS — RFC 8785 JSON Canonicalization Scheme — over the plain JSON payload, not RDF Dataset Canonicalization over the resolved JSON-LD graph, the other canonicalization path W3C’s Data Integrity cryptosuites support for the same Ed25519 signature.</p><h2>Why AuthiChain</h2><ul><li>JCS canonicalization needs no JSON-LD processor: the same JSON in memory gets object keys sorted and re-serialized the same way every time, so two independent verifiers derive byte-identical input without resolving a single @context</li><li>RDF Dataset Canonicalization signs the graph a JSON-LD processor resolves from @context, protecting meaning a JCS signature can’t see — an @context swap that silently changes what a field means — at the cost of running that processor correctly on every verify</li><li>The same design principle that makes §3.1 reject a record with a missing field outright, never downgrade to a warning, is why §3.2 picks a canonicalization simple enough to get right: JCS re-serializes existing JSON, with no separate JSON-LD resolution step for two implementations to silently disagree over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain use RDF Dataset Canonicalization like some Data Integrity cryptosuites?</h3><p>No — protocol/SPEC.md §3.2 canonicalizes with JCS (RFC 8785) over the plain JSON payload. The record’s @context values are present for JSON-LD compatibility, but the signature doesn’t depend on resolving them through a JSON-LD processor.</p><h3>Is JCS less secure than RDF canonicalization?</h3><p>They protect different things. JCS guarantees byte-identical serialization of the same JSON; it doesn’t validate that @context values resolve to the terms a verifier expects. A system that lets @context change without re-checking expected field semantics has that gap regardless of which canonicalization it signs — a schema-validation problem, not one either method solves by itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — JCS Vs RDF Canonicalization Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "protocol/SPEC.md §3.2 signs a record using JCS — RFC 8785 JSON Canonicalization Scheme — over the plain JSON payload, not RDF Dataset Canonicalization over the resolved JSON-LD graph, the other canonicalization path W3C’s Data Integrity cryptosuites support for the same Ed25519 signature.",
+          "url": "https://authichain.com/p/jcs-vs-rdf-canonicalization-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "JCS Vs RDF Canonicalization Verifiable Credentials",
+              "item": "https://authichain.com/p/jcs-vs-rdf-canonicalization-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain use RDF Dataset Canonicalization like some Data Integrity cryptosuites?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — protocol/SPEC.md §3.2 canonicalizes with JCS (RFC 8785) over the plain JSON payload. The record’s @context values are present for JSON-LD compatibility, but the signature doesn’t depend on resolving them through a JSON-LD processor."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is JCS less secure than RDF canonicalization?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They protect different things. JCS guarantees byte-identical serialization of the same JSON; it doesn’t validate that @context values resolve to the terms a verifier expects. A system that lets @context change without re-checking expected field semantics has that gap regardless of which canonicalization it signs — a schema-validation problem, not one either method solves by itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "products-excluded-from-eu-digital-product-passport-requirement",
+    "keyword": "products excluded from eu digital product passport requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Products Excluded From EU Digital Product | AuthiChain",
+    "metaDescription": "ESPR — Regulation (EU) 2024/1781, the law that creates the Digital Product Passport — explicitly excludes food, feed, medicinal products, live plants and.",
+    "h1": "Products Excluded From EU Digital Product Passport Requirement",
+    "bodyHtml": "<p>ESPR — Regulation (EU) 2024/1781, the law that creates the Digital Product Passport — explicitly excludes food, feed, medicinal products, live plants and other living organisms, and motor vehicles already covered by the EU’s type-approval framework; cosmetics sit in a narrower middle ground, in scope only for packaging, not the product formula itself.</p><h2>Why AuthiChain</h2><ul><li>The exclusions are named in the regulation’s own scope article, not inferred from silence — a company selling an excluded category isn’t waiting for a delegated act that will never come for that product</li><li>Cosmetics packaging is the one partial case: the product formula stays outside ESPR, governed instead by the EU Cosmetics Regulation, while packaging can still fall under a future ESPR delegated act the way any other packaging does</li><li>Exclusion from ESPR doesn’t mean no traceability obligation exists — food safety, cosmetics ingredient documentation, and vehicle type-approval all carry their own, older paper trails outside the DPP framework</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is my product exempt if it’s just not on the ESPR priority list yet?</h3><p>Being off the 2025–2030 Working Plan’s initial priority list is different from being excluded by the regulation itself. Food, feed, medicinal products, living organisms, and type-approved vehicles are excluded by ESPR’s own scope; most other categories are waiting their turn for a delegated act, not permanently out of scope.</p><h3>Does the cosmetics packaging-only scope cover the bottle or just the outer box?</h3><p>The regulation’s packaging scope isn’t limited to primary packaging by definition, but which packaging layers a future delegated act actually covers is a detail that act has to specify — none has been adopted for cosmetics packaging as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Products Excluded From EU Digital Product Passport Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR — Regulation (EU) 2024/1781, the law that creates the Digital Product Passport — explicitly excludes food, feed, medicinal products, live plants and other living organisms, and motor vehicles already covered by the EU’s type-approval framework; cosmetics sit in a narrower middle ground, in scope only for packaging, not the product formula itself.",
+          "url": "https://authichain.com/p/products-excluded-from-eu-digital-product-passport-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Products Excluded From EU Digital Product Passport Requirement",
+              "item": "https://authichain.com/p/products-excluded-from-eu-digital-product-passport-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is my product exempt if it’s just not on the ESPR priority list yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Being off the 2025–2030 Working Plan’s initial priority list is different from being excluded by the regulation itself. Food, feed, medicinal products, living organisms, and type-approved vehicles are excluded by ESPR’s own scope; most other categories are waiting their turn for a delegated act, not permanently out of scope."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the cosmetics packaging-only scope cover the bottle or just the outer box?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The regulation’s packaging scope isn’t limited to primary packaging by definition, but which packaging layers a future delegated act actually covers is a detail that act has to specify — none has been adopted for cosmetics packaging as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
