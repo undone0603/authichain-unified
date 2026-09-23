@@ -142,7 +142,7 @@ const SEO = {
     },
     {
       q: 'How much does AuthiChain cost?',
-      a: `The live self-serve offer is EU DPP Readiness at $299 one-time at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover the cart). StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. QRON Starter is $29 at ${planPaymentLink("starter") ?? ""} and Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
+      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -2166,10 +2166,10 @@ function seoMeta(): string {
     `<script type="application/ld+json">${JSON.stringify(obj).replace(/<\/script/gi, '<\\/script')}</script>`;
   const makesOffer = (
     [
-      'dpp_readiness',
-      'strainchain_passport',
       'starter',
+      'strainchain_passport',
       'creator',
+      'dpp_readiness',
     ] as const
   )
     .map(catalogJsonLdOffer)
@@ -2474,7 +2474,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">EU DPP Readiness is live checkout — $299 from the published catalogue. Enter a work email on <a href="/pricing">pricing</a> so Stripe can recover the cart, or <a href="#hero">start from the form below</a>.</div>
+  <div class="banner">The first checkout is the $29 signed pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy the $29 pack</a>. EU DPP Readiness stays on the form below.</div>
   ${estateNav(
     "authichain",
     [
@@ -2491,7 +2491,11 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Issue seals. Bind products. Verify anywhere.",
-    lede: "AuthiChain is the authentic agentic economy — the truth layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart.",
+    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lead: {
+      href: planPaymentLink("starter") ?? "#hero",
+      label: "Buy the $29 signed pack",
+    },
     emailCheckout: {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
