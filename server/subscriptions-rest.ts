@@ -31,7 +31,7 @@ function creds(): { url: string; key: string } | null {
 }
 
 /** True when Drizzle cannot run here but Supabase REST can. */
-export function useRestFallback(): boolean {
+export function shouldUseRestFallback(): boolean {
   return !process.env.DATABASE_URL && creds() !== null;
 }
 

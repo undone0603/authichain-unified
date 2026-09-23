@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setSubscriptionStatusRest,
   upsertSubscriptionRest,
-  useRestFallback,
+  shouldUseRestFallback,
 } from "./subscriptions-rest";
 
 const ENV = { ...process.env };
@@ -48,12 +48,12 @@ describe("subscriptions over Supabase REST", () => {
   });
 
   it("is used only when DATABASE_URL is absent and Supabase credentials exist", () => {
-    expect(useRestFallback()).toBe(true);
+    expect(shouldUseRestFallback()).toBe(true);
     process.env.DATABASE_URL = "postgres://x";
-    expect(useRestFallback()).toBe(false);
+    expect(shouldUseRestFallback()).toBe(false);
     delete process.env.DATABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    expect(useRestFallback()).toBe(false);
+    expect(shouldUseRestFallback()).toBe(false);
   });
 
   it("inserts a new row with camelCase columns when none exists", async () => {
