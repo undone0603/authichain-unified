@@ -105,6 +105,7 @@ lifts the "leave cold outreach off" freeze recorded in
 | Operate | Keep workflows matching the plan             | `autonomy-reconcile`                                                                          | Edit `.github/autonomy.json`                      |
 | Operate | Fix broken checks                            | `ci-repair-loop` (draft PRs)                                                                  | Merge                                             |
 | Report  | Weekly numbers + what's waiting              | `owner-digest` (email)                                                                        | Read it                                           |
+| Improve | Copy, outreach and alert suggestions (Gemma) | `gemma-loops` on the self-hosted `lan-gemma` runner                                           | Apply what you like in a PR                       |
 
 ## The approval queue
 
@@ -141,6 +142,34 @@ No new secrets are required. Each item below falls back to something that alread
 | `OWNER_EMAIL`            | secret | `owner_email` in `.github/autonomy.json`        | Where the digest goes                                                   |
 | `DASHBOARD_GITHUB_TOKEN` | secret | Unauthenticated, cached for 5 minutes           | Fresher loop status on the dashboard                                    |
 | `WINBACK_PROMO_CODE`     | env    | Not set, so win-back emails promise no discount | Set only once that promotion code exists in Stripe                      |
+
+## Gemma (local model)
+
+Gemma runs in LM Studio on the owner's network (default
+`http://192.168.254.10:1234`, model `google/gemma-4-e4b`). `gemma-loops.yml`
+runs three jobs on a self-hosted runner labelled `lan-gemma`:
+
+- **Copy review**, daily: reads the live pricing and landing pages and keeps
+  one `gemma` issue of rewrite suggestions for the paid offers.
+- **Outreach review**, weekdays before `b2b-outreach`: suggests clearer
+  versions of the email templates. It reads template source only, never
+  prospect data, and doesn't touch the send gates.
+- **Alert triage**, hourly: while an `ops-alert` issue is open, it comments a
+  diagnosis of each failed main-branch run, once per run.
+
+Gemma only writes suggestions. It never merges, sends, charges or edits code.
+The workflow never runs on pull requests, because this repo is public and a
+fork must not be able to run code inside the owner's network.
+
+To turn it on:
+
+1. Register a self-hosted runner for this repo on a machine that can reach
+   LM Studio (Settings → Actions → Runners → New self-hosted runner), and give
+   it the extra label `lan-gemma`.
+2. Optional: set the repo variables `LOCAL_LLM_URL` and `LOCAL_LLM_MODEL` if
+   they differ from the defaults.
+3. Run `Gemma loops` by hand once with `dry_run` checked, and read its output.
+4. Change `"gemma-loops.yml": "off"` to `"on"` in `.github/autonomy.json` and merge.
 
 ## Database on the app Worker
 
