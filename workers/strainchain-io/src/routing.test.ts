@@ -443,7 +443,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.equal(f.calls.length, 0, "/pricing must not be proxied");
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-    assert.match(html, /https:\/\/buy\.stripe\.com\/00waEXafv2l03a2bDC1ND3z/);
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+    );
     assert.match(html, /\$149/);
     assert.doesNotMatch(html, /StrainChain Basic/);
   } finally {
