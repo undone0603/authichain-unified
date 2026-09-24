@@ -358,6 +358,41 @@ class LimitProofLLM:
                 continue
         raise RuntimeError("All LLM providers failed or are out of quota (async).")
 
+class PlanTimeout(TimeoutError):
+    """The LLM plan call ran past its budget; callers use their no-LLM plan."""
+
+
+def plan_budget_seconds() -> float:
+    # Wall-clock budget for one architect/governor plan call across the whole
+    # provider waterfall. Claw aborts /architect/cycle at 95s
+    # (AGENTZ_TIMEOUT_MS); 80s leaves room for the rest of the cycle, so a
+    # slow or unreachable model yields the fallback plan and a 200, not a 502.
+    raw = os.environ.get("AGENTZ_PLAN_TIMEOUT", "80")
+    try:
+        value = float(raw)
+    except ValueError:
+        return 80.0
+    return min(max(value, 5.0), 300.0)
+
+
+def invoke_within(llm: Any, messages: Any, seconds: float) -> Any:
+    """Run llm.invoke(messages), raising PlanTimeout after `seconds`.
+
+    The call runs on a worker thread that is abandoned, not killed, on
+    timeout: it may finish in the background but its result is discarded.
+    """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="llm-plan")
+    future = pool.submit(llm.invoke, messages)
+    try:
+        return future.result(timeout=seconds)
+    except FuturesTimeout:
+        raise PlanTimeout(f"LLM plan exceeded {seconds:.0f}s budget") from None
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
 def _is_ollama_model(model: str) -> bool:
     """True for llama* / local* / ollama* tags that should stay on ChatOllama."""
     name = (model or "").strip().lower()

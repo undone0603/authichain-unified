@@ -254,10 +254,12 @@ class ArchitectAgent:
 
         try:
             from langchain_core.messages import SystemMessage, HumanMessage
-            response = self.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt),
-            ])
+            from agentz.core.llm import invoke_within, plan_budget_seconds
+            response = invoke_within(
+                self.llm,
+                [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)],
+                plan_budget_seconds(),
+            )
             return self._parse_plan(response, goal)
         except Exception as e:
             logger.error(f"LLM plan generation failed: {e}")
