@@ -19,8 +19,12 @@ Cloudflare directly, not by the PR diff.
 
 **As of 2026-09-24 only `Workers Builds: govchain-us` and
 `Workers Builds: qron-space` report.** The two that used to fail on nearly
-every PR (#922, #930, #935-#937) have not posted a check since at least
-#1180 (2026-09-22), and their in-repo causes are fixed:
+every PR (#922, #930, #935-#937) are **disconnected from git on the
+Cloudflare side** (no build triggers; last builds 2026-09-16), confirmed by
+`.github/workflows/cloudflare-builds-status.yml`, a read-only
+workflow_dispatch that prints each worker's triggers, recent builds and a
+failed-build log tail. Run it (or read its summary) instead of guessing.
+Their in-repo causes, from those logs:
 
 - **`qron-ai-api`** is the root `worker/` directory (`worker/wrangler.toml`,
   `name = "qron-ai-api"`), not `workers/qron-ai-api`. It failed because
@@ -31,9 +35,13 @@ every PR (#922, #930, #935-#937) have not posted a check since at least
   lockfile with `cd worker && pnpm install --lockfile-only` in the same PR.
   Check: `cd worker && CI=true pnpm install --frozen-lockfile && npx
   wrangler deploy --dry-run`.
-- **`passport-demo`** (`workers/passport-demo`, plain JS, no dependencies)
-  builds cleanly with `npx wrangler deploy --dry-run`. It is deliberately
-  frozen (see its `wrangler.toml`) and excluded from `deploy-workers.yml`.
+- **`passport-demo`** failed on every build, including `main`, because its
+  Cloudflare build ran from the repo root (`Scope: all 37 workspace
+  projects`) and hit the root `pnpm-lock.yaml` drift of that time. The
+  worker itself (`workers/passport-demo`, plain JS, no dependencies) builds
+  cleanly with `npx wrangler deploy --dry-run`. It is deliberately frozen
+  (see its `wrangler.toml`) and excluded from `deploy-workers.yml`. If it
+  is ever reconnected, set the root directory to `workers/passport-demo`.
 
 **Handling rule:** if either check reappears and fails, treat it as a real
 failure and root-cause it with the commands above; do not assume flakiness.
