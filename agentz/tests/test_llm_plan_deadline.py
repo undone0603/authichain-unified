@@ -5,7 +5,6 @@ import time
 import pytest
 
 import agentz.core.llm as llm_mod
-from agentz.core.llm import PlanTimeout, invoke_within, plan_budget_seconds
 from agentz.core.modes import Mode
 
 
@@ -33,18 +32,18 @@ def test_plan_budget_seconds(monkeypatch, raw, expected):
         monkeypatch.delenv("AGENTZ_PLAN_TIMEOUT", raising=False)
     else:
         monkeypatch.setenv("AGENTZ_PLAN_TIMEOUT", raw)
-    assert plan_budget_seconds() == expected
+    assert llm_mod.plan_budget_seconds() == expected
 
 
 def test_invoke_within_returns_a_fast_answer():
-    res = invoke_within(_SlowLLM(0), ["hi"], 2)
+    res = llm_mod.invoke_within(_SlowLLM(0), ["hi"], 2)
     assert "late" in res.content
 
 
 def test_invoke_within_gives_up_at_the_budget():
     started = time.monotonic()
-    with pytest.raises(PlanTimeout):
-        invoke_within(_SlowLLM(3), ["hi"], 0.2)
+    with pytest.raises(llm_mod.PlanTimeout):
+        llm_mod.invoke_within(_SlowLLM(3), ["hi"], 0.2)
     assert time.monotonic() - started < 1.5
 
 
