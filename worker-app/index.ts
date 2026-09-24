@@ -18,6 +18,7 @@ import { registerAttestationApi } from "./attestation-api";
 import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { registerLeadRoutes } from "./lead-routes";
+import { registerResendInbound } from "./resend-inbound";
 import { scheduled } from "./cron-dispatch";
 import {
   CHECKOUT_REDIRECT_HEADERS,
@@ -1747,6 +1748,7 @@ registerAttestationApi(app);
 registerX402Routes(app);
 registerGuardrailApi(app);
 registerLeadRoutes(app);
+registerResendInbound(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
