@@ -137,6 +137,7 @@
         "bind-x402-secrets.yml": "manual",
         "cloudflare-builds-status.yml": "manual",
         "d1-license-migrate.yml": "manual",
+        "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
         "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
