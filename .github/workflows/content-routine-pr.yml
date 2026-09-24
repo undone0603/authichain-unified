@@ -8,9 +8,16 @@ name: Content Routine PR
 # routine branch gets a PR opened, and auto-merge enabled so it lands the
 # moment required checks pass — no human in the loop.
 #
-# The safety property is the path filter below, not a human. A routine branch
-# that touches anything outside the content surface gets a PR that stays open
-# and is labelled for review instead of auto-merging.
+# The safety property is the path filter below plus the validation step, not
+# a human. A routine branch that touches anything outside the content surface
+# gets a PR that stays open and is labelled for review instead of
+# auto-merging — and even inside the content surface, auto-merge only fires
+# once the content itself passes the same mechanical checks a human reviewer
+# would run: the generator's own idempotency (committed pages.json matches
+# what it produces), src/lib/seo-pages.test.ts (title/meta length, no <script>
+# injection, unique slugs, money-CTA wiring), and, for social bundles,
+# scripts/validate-social-bundle.mjs. Nobody looked at PR #1206 before it
+# merged in three seconds; this step is what looks now.
 
 on:
   push:
@@ -27,7 +34,7 @@ jobs:
   open-pr:
     name: Open and auto-merge content PR
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -45,13 +52,26 @@ jobs:
           echo "Changed files:"; echo "$FILES"
 
           # Everything the content routines are allowed to touch unattended.
-          OUTSIDE=$(echo "$FILES" | grep -vE '^(content/|docs/|scripts/gen-seo-pages\.cjs$)' || true)
+          OUTSIDE=$(echo "$FILES" | grep -vE '^(content/|docs/|scripts/gen-seo-pages\.cjs$|scripts/seo-data/)' || true)
           if [ -n "$OUTSIDE" ]; then
             echo "Files outside the content surface:"; echo "$OUTSIDE"
             echo "content_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "content_only=true" >> "$GITHUB_OUTPUT"
           fi
+
+          if echo "$FILES" | grep -qE '^(scripts/gen-seo-pages\.cjs$|scripts/seo-data/|content/seo/pages\.json$)'; then
+            echo "seo_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "seo_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          SOCIAL=$(echo "$FILES" | grep -E '^content/social/.*\.json$' || true)
+          {
+            echo "social_files<<SOCIAL_EOF"
+            echo "$SOCIAL"
+            echo "SOCIAL_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Open pull request
         id: pr
@@ -77,8 +97,53 @@ jobs:
             echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Enable auto-merge for content-only changes
+      - name: Install pnpm
         if: steps.scope.outputs.content_only == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - name: Set up Node.js
+        if: steps.scope.outputs.content_only == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Regenerate SEO pages and check for drift
+        id: seo-drift
+        if: steps.scope.outputs.content_only == 'true' && steps.scope.outputs.seo_changed == 'true'
+        run: |
+          set -euo pipefail
+          node scripts/gen-seo-pages.cjs
+          if ! git diff --exit-code -- content/seo/pages.json; then
+            echo "::error::content/seo/pages.json does not match what scripts/gen-seo-pages.cjs produces from the current DATA. Run 'node scripts/gen-seo-pages.cjs' and commit the result."
+            exit 1
+          fi
+
+      - name: Install dependencies for SEO page test
+        if: steps.scope.outputs.content_only == 'true' && steps.scope.outputs.seo_changed == 'true'
+        # Scoped to the root workspace (--filter .), not the full 36-package
+        # monorepo install pnpm test would trigger via turbo — this only needs
+        # to run one root-level vitest file, and a full install pulls in every
+        # other app's build (see main.yml's retry comment on the same flake).
+        run: pnpm install --filter . --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Verify SEO page content (title/meta length, no script injection, money-CTA wiring)
+        id: seo-test
+        if: steps.scope.outputs.content_only == 'true' && steps.scope.outputs.seo_changed == 'true'
+        run: npx vitest run src/lib/seo-pages.test.ts
+
+      - name: Validate social bundles
+        id: social-validate
+        if: steps.scope.outputs.content_only == 'true' && steps.scope.outputs.social_files != ''
+        run: |
+          set -euo pipefail
+          FILES="${{ steps.scope.outputs.social_files }}"
+          echo "$FILES" | xargs -r node scripts/validate-social-bundle.mjs
+
+      - name: Enable auto-merge for content-only changes
+        if: steps.scope.outputs.content_only == 'true' && success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUMBER: ${{ steps.pr.outputs.number }}
@@ -165,6 +230,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr comment "${{ steps.pr.outputs.number }}" --body "$(printf '%s\n\n%s\n\n---\n%s\n' \
-            'This routine branch changed files outside \`content/\`, \`docs/\` and \`scripts/gen-seo-pages.cjs\`, so auto-merge was not enabled.' \
+            'This routine branch changed files outside \`content/\`, \`docs/\`, \`scripts/gen-seo-pages.cjs\` and \`scripts/seo-data/\`, so auto-merge was not enabled.' \
             'Review the diff before merging.' \
+            '_Generated by [Claude Code](https://claude.ai/code)_')"
+
+      - name: Flag for review when content validation fails
+        if: >-
+          steps.scope.outputs.content_only == 'true' &&
+          (steps.seo-drift.outcome == 'failure' ||
+           steps.seo-test.outcome == 'failure' ||
+           steps.social-validate.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ steps.pr.outputs.number }}" --body "$(printf '%s\n\n%s\n\n---\n%s\n' \
+            'This routine branch stayed inside the content surface but failed content validation (regenerated-pages drift check, src/lib/seo-pages.test.ts, or scripts/validate-social-bundle.mjs — see the failed step in this run), so auto-merge was not enabled.' \
+            'Fix the content and push again, or review and merge manually if the failure is a false positive.' \
             '_Generated by [Claude Code](https://claude.ai/code)_')"
