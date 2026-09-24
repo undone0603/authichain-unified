@@ -78,6 +78,15 @@ Local uvicorn env (not Worker secrets): `AGENT_SECRET`, `SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY` — the names `agentz.core.credentials.get()`
 reads.
 
+Local model (the architect cycle's LLM plan). Point these at the LM Studio
+server that is actually running, or claw aborts the call at 95s:
+
+```bash
+export LOCAL_MODEL_URL=http://127.0.0.1:1234   # LM Studio server address (port shown in LM Studio)
+export LOCAL_MODEL_ID=<model id from GET $LOCAL_MODEL_URL/v1/models>
+export LOCAL_MODEL_TIMEOUT=40                   # seconds per local attempt (5-120, default 40)
+```
+
 ## Named tunnel + local config.yml (cert path)
 
 Only if you already have `~/.cloudflared/*.json` from `cloudflared tunnel

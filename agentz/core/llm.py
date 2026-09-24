@@ -195,12 +195,25 @@ class LimitProofLLM:
             base += "/v1"
         return base
 
+    @staticmethod
+    def _local_timeout() -> float:
+        # Seconds to wait on the local model before moving to the next
+        # provider. Claw aborts an /architect/cycle call at 95s
+        # (AGENTZ_TIMEOUT_MS), and two local attempts at the old 120s each
+        # guaranteed a 502 whenever the local model was slow or on the wrong
+        # port. 40s each leaves room for a cloud provider after both.
+        raw = os.environ.get("LOCAL_MODEL_TIMEOUT", "40")
+        try:
+            value = float(raw)
+        except ValueError:
+            return 40.0
+        return min(max(value, 5.0), 120.0)
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID", "gemma2:2b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
@@ -208,7 +221,7 @@ class LimitProofLLM:
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
