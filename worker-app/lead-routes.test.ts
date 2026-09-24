@@ -60,8 +60,8 @@ type FetchCall = { url: string; init?: RequestInit };
 let fetchCalls: FetchCall[];
 
 function hubspotCalls() {
-  return fetchCalls.filter(call =>
-    call.url.startsWith("https://api.hubapi.com")
+  return fetchCalls.filter(
+    call => new URL(call.url).hostname === "api.hubapi.com"
   );
 }
 
