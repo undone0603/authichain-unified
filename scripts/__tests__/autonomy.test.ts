@@ -415,6 +415,7 @@ describe("owner digest scoreboard", async () => {
   const {
     buildDigest,
     isRealCheckout,
+    campaignCheckouts,
     countReplies,
     failingWorkflows,
     sumVisitors,
@@ -505,6 +506,33 @@ describe("owner digest scoreboard", async () => {
     ]);
   });
 
+  it("counts real checkouts per tracked campaign, zero when quiet", () => {
+    const s = (campaign, extra = {}) => ({
+      livemode: true,
+      customer_details: { email: "buyer@ebike.eu" },
+      metadata: { utm_campaign: campaign },
+      ...extra,
+    });
+    expect(
+      campaignCheckouts(
+        [
+          s("battery-passport"),
+          s("battery-passport", { payment_status: "paid" }),
+          s("battery-passport", { livemode: false }),
+          s("battery-passport", {
+            customer_details: { email: "me@x.com" },
+          }),
+          s("other-page", { payment_status: "paid" }),
+          { livemode: true, metadata: {} },
+        ],
+        founders
+      )
+    ).toEqual({ "battery-passport": { started: 2, paid: 1 } });
+    expect(campaignCheckouts([], founders)).toEqual({
+      "battery-passport": { started: 0, paid: 0 },
+    });
+  });
+
   it("renders all five numbers, and 'not connected' instead of zero", () => {
     expect(
       sumVisitors([{ uniq: { uniques: 3 } }, { uniq: { uniques: 4 } }])
@@ -523,6 +551,7 @@ describe("owner digest scoreboard", async () => {
       board: {
         visitors: 120,
         checkouts: 2,
+        campaigns: { "battery-passport": { started: 1, paid: 0 } },
         replies: 1,
         failing: [{ title: "AgentZ", url: "u" }],
       },
@@ -530,12 +559,16 @@ describe("owner digest scoreboard", async () => {
     expect(full).toContain("SCOREBOARD, LAST 7 DAYS");
     expect(full).toContain("Unique visitors: 120");
     expect(full).toContain("Checkouts started by real visitors: 2");
+    expect(full).toContain(
+      "battery-passport page: 1 checkouts started, 0 paid"
+    );
     expect(full).toContain("Paid by customers: $49.00");
     expect(full).toContain("Replies received: 1");
     expect(full).toContain("Systems failing: 1");
     const empty = buildDigest({ ...base, money: null }).text;
     expect(empty).toContain("Unique visitors: not connected");
     expect(empty).toContain("Paid by customers: not connected");
+    expect(empty).toContain("battery-passport page: not connected");
     expect(empty).toContain("Systems failing: not connected");
   });
 });
