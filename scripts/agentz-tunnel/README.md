@@ -85,6 +85,7 @@ server that is actually running, or claw aborts the call at 95s:
 export LOCAL_MODEL_URL=http://127.0.0.1:1234   # LM Studio server address (port shown in LM Studio)
 export LOCAL_MODEL_ID=<model id from GET $LOCAL_MODEL_URL/v1/models>
 export LOCAL_MODEL_TIMEOUT=40                   # seconds per local attempt (5-120, default 40)
+export AGENTZ_PLAN_TIMEOUT=80                   # whole plan call; past it the no-LLM plan is used (5-300, default 80, under claw's 95s)
 ```
 
 ## Named tunnel + local config.yml (cert path)
