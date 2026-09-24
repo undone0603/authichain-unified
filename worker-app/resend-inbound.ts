@@ -346,6 +346,7 @@ async function handleInbound(c: InboundContext) {
           sentimentReasoning: sentiment.reasoning,
           classifierProvider: sentiment.provider,
           classifierMissingSecret: backend.missingSecret ?? null,
+          classifierFallbackReason: sentiment.fallbackReason ?? null,
           originalHeaders: email.headers ?? {},
           inReplyTo: headerValue(email.headers, "in-reply-to") ?? null,
           replyTo: email.reply_to,
@@ -396,6 +397,7 @@ async function handleInbound(c: InboundContext) {
           provider: sentiment.provider,
           missingSecret: backend.missingSecret ?? null,
           paidLlmAvailable: backend.paidLlmAvailable,
+          fallbackReason: sentiment.fallbackReason ?? null,
         },
       },
       201
