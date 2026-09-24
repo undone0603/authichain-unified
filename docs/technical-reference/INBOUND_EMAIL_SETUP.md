@@ -1,5 +1,23 @@
 # Inbound Email Reply Capture & Auto-Nurture Setup Guide
 
+> **Status (2026-09-24): not live yet.**
+>
+> - `/api/webhooks/resend-inbound` now runs on `authichain-edge-router`
+>   (`worker-app/resend-inbound.ts`), which serves `app.authichain.com`. It
+>   takes Resend's `email.received` webhook, verifies its signature with
+>   `RESEND_WEBHOOK_SECRET` (it refuses every event until that is bound), and
+>   fetches each email's body from Resend with `RESEND_API_KEY`. The old
+>   Next.js route and its flat payload shape are no longer used.
+> - Resend (2026-09-24): receiving is set up on `reply.authichain.com`
+>   and an `email.received` webhook points at the edge router. Still needed:
+>   the subdomain's DNS records and the signing secret (Phase 1).
+> - `authichain.com` sending DNS records were re-added on 2026-09-24 and were
+>   pending verification. Check it shows **Verified** in Resend before sending
+>   proposals from `proposals@authichain.com` (Phase 7).
+> - `/api/cron/nurture-replies` is still a Next.js route that only ran on
+>   Vercel, which is retired, so replies are captured but not auto-nurtured
+>   until it is ported (Phase 5).
+
 ## Overview
 
 This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
@@ -15,9 +33,9 @@ This system automatically captures replies to proposal emails sent from `proposa
 ## Architecture Overview
 
 ```
-Prospect replies to proposals@authichain.com
+Prospect replies to proposals@reply.authichain.com (the Reply-To)
          ↓
-Resend Inbound Routes to webhook
+Resend `email.received` webhook (signed)
          ↓
 POST /api/webhooks/resend-inbound
          ↓
@@ -36,7 +54,7 @@ Dashboard shows reply + auto-nurture status
 
 ---
 
-## Phase 1: Resend Inbound Route Setup (10 minutes)
+## Phase 1: Resend Receiving + Webhook Setup (10 minutes)
 
 ### Step 1: Verify Domain in Resend Console
 
@@ -44,30 +62,37 @@ Dashboard shows reply + auto-nurture status
 2. Confirm `authichain.com` is verified (DNS records set up)
 3. If not verified, follow Resend's domain verification flow
 
-### Step 2: Create Inbound Route
+### Step 2: Receiving Subdomain and Webhook
 
-1. In Resend Dashboard, go to **Domains** → Select `authichain.com`
-2. Scroll to **Inbound Routes**
-3. Click **Create Route**
-4. Configure:
-   - **Route name**: `proposals@authichain.com`
-   - **Match email**: `proposals@authichain.com`
-   - **Forward to**: `https://your-domain.com/api/webhooks/resend-inbound`
-   - **Leave other fields default**
-5. Click **Save Route**
+Receiving runs on the subdomain `reply.authichain.com`, not the root domain.
+Resend's receiving MX has priority 0; on `authichain.com` it would take over
+all `@authichain.com` mail (e.g. `hello@`), not just replies.
 
-> **Note**: Replace `your-domain.com` with your actual production domain (e.g., `api.authichain.com` or `authichain.vercel.app`)
+1. `reply.authichain.com` exists in Resend as a receiving-only domain
+   (created 2026-09-24). Add its records to the `authichain.com` zone in
+   Cloudflare DNS (DNS only, grey cloud), using the exact values Resend shows:
+   - **MX** `reply` → `inbound-smtp.us-east-1.amazonaws.com`, priority 10
+   - **TXT** `resend._domainkey.reply` → the DKIM key Resend shows
+     (`p=MIGf…`)
+2. The `email.received` webhook exists (created 2026-09-24) and points at
+   `https://app.authichain.com/api/webhooks/resend-inbound`. Resend webhooks
+   are account-wide, so it covers the subdomain. Never point it at a
+   `*.vercel.app` host; Vercel is retired.
+3. Replies arrive at `proposals@reply.authichain.com`. Anything that emails
+   prospects must set that as **Reply-To** (the From can stay
+   `proposals@authichain.com`). Nothing in this repo emails prospects today:
+   `scripts/email-proposals.ts` sends an owner digest only.
 
-### Step 3: Copy Webhook Secret (Optional but Recommended)
+### Step 3: Bind the Signing Secret (Required)
 
-Once the route is created:
+The endpoint rejects every event until it can verify Resend's signature.
 
-1. Click the route to view details
-2. Copy the **Webhook Secret** (if displayed)
-3. Add to `.env.local`:
-   ```
-   RESEND_WEBHOOK_SECRET=your_secret_here
-   ```
+1. Open the webhook in Resend and copy its **Signing Secret** (`whsec_…`).
+2. Save it as the GitHub Actions secret `RESEND_WEBHOOK_SECRET`.
+3. Run **Actions → Bind lead-intake secrets**. It binds `RESEND_WEBHOOK_SECRET`,
+   `RESEND_API_KEY` and, if set, `OPENAI_API_KEY` on `authichain-edge-router`.
+4. Check `GET https://app.authichain.com/api/webhooks/resend-inbound` reports
+   `"webhookSecretConfigured": true`.
 
 ---
 
@@ -191,42 +216,35 @@ CREATE INDEX idx_reply_sequences_scheduled ON reply_sequences(next_scheduled_at)
 
 ---
 
-## Phase 4: Test Webhook Locally (10 minutes)
+## Phase 4: Test the Webhook (10 minutes)
 
-### Step 1: Start Dev Server
+The endpoint only accepts events signed by Resend and fetches each email's
+body from the Resend API, so an unsigned hand-written `curl` is rejected with
+`401`. Test it in two ways:
 
-```bash
-pnpm dev
-```
-
-### Step 2: Send Test Email via Postman/cURL
+### Step 1: Run the Unit Tests
 
 ```bash
-curl -X POST http://localhost:3000/api/webhooks/resend-inbound \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from": "test.prospect@company.com",
-    "subject": "RE: Proposal: Blockchain Auth for Acme Corp",
-    "text": "Hi,\n\nThanks for the proposal! We'\''re interested and would like to learn more.",
-    "html": "<p>Thanks for the proposal! We'\''re interested and would like to learn more.</p>",
-    "messageId": "test-message-123",
-    "inReplyTo": null,
-    "headers": {}
-  }'
+npx vitest run worker-app/resend-inbound.test.ts
 ```
 
-### Step 3: Verify Response
+These sign events with a test secret and cover the signature check, event
+filtering, deduplication, and the reply and lead writes.
 
-Expected response:
+### Step 2: Send a Real Reply
+
+After Phase 1, send an email to `proposals@reply.authichain.com` from an address
+that matches a row in `leads`. In Resend → **Webhooks**, the delivery should
+show `201`. The response looks like:
 
 ```json
 {
   "success": true,
   "replyId": "uuid-here",
   "sentiment": "positive",
-  "matchConfidence": 0.6,
-  "leadId": null,
-  "action": "manual_review",
+  "matchConfidence": 1,
+  "leadId": 42,
+  "action": "nurture",
   "classifier": {
     "provider": "heuristic",
     "missingSecret": "OPENAI_API_KEY",
@@ -235,7 +253,7 @@ Expected response:
 }
 ```
 
-### Step 4: Check Database
+### Step 3: Check Database
 
 ```sql
 SELECT * FROM inbound_replies ORDER BY created_at DESC LIMIT 1;
@@ -248,28 +266,13 @@ SELECT * FROM reply_sequences WHERE status = 'pending';
 
 The nurture cron runs every 2 hours via your platform's cron service.
 
-### For Vercel
+### For Cloudflare (current platform)
 
-1. Add to `vercel.json`:
-
-   ```json
-   {
-     "crons": [
-       {
-         "path": "/api/cron/nurture-replies",
-         "schedule": "0 */2 * * *"
-       }
-     ]
-   }
-   ```
-
-2. Deploy:
-
-   ```bash
-   git push
-   ```
-
-3. Verify cron is active in Vercel Dashboard → Settings → Cron Jobs
+The edge router has one hourly cron trigger, fanned out by
+`worker-app/cron-dispatch.ts`. Once `/api/cron/nurture-replies` is ported,
+add the job there with schedule `0 */2 * * *`. It sends email to prospects,
+so it belongs in GROUP B ("HELD") in `worker-app/wrangler.toml` until it is
+deliberately cleared. There is no `vercel.json` cron any more.
 
 ### For other platforms (AWS Lambda, Google Cloud, etc.)
 
@@ -303,6 +306,8 @@ Header: Authorization: Bearer ${CRON_SECRET}
 When your outbound proposal script sends emails, ensure:
 
 1. **From Address**: `proposals@authichain.com` (or configured NURTURE_EMAIL_FROM)
+   **Reply-To**: `proposals@reply.authichain.com`, the address Resend receives
+   for (Phase 1). Without it, replies go to the root domain and are not captured.
 2. **Subject Line**: Should include prospect company name for matching
 
    ```
@@ -322,6 +327,7 @@ Example outbound email setup:
 await sendEmail({
   to: "prospect@company.com",
   from: "proposals@authichain.com",
+  replyTo: "proposals@reply.authichain.com",
   subject: `Proposal: Blockchain Auth for ${prospect.company}`,
   html: proposalHTML,
   // Include proposal ID in headers for tracking
@@ -381,7 +387,7 @@ await sendEmail({
 
 1. Verify Resend route points to correct URL (including protocol https://)
 2. Check Resend dashboard → Domains → Logs for failed deliveries
-3. Test webhook manually with cURL (see Phase 4)
+3. Check the delivery status and response in Resend → Webhooks (see Phase 4)
 4. Ensure domain is verified in Resend
 
 ### Issue: Sentiment always "neutral"
@@ -401,7 +407,7 @@ await sendEmail({
 
 **Fix**:
 
-1. Verify cron is active in your platform (Vercel, AWS, etc.)
+1. Verify the cron job is registered in `worker-app/cron-dispatch.ts` and the edge-router cron trigger is enabled
 2. Check `/api/cron/nurture-replies` logs
 3. Verify `RESEND_API_KEY` is set
 4. Check reply_sequences table for "pending" entries
@@ -508,7 +514,7 @@ A: Yes! Set `nurturePaused = true` on leads table. Cron job will skip that lead.
 For issues or questions:
 
 1. Check logs: `tail -f ~/.pm2/logs/authichain-out.log`
-2. Test webhook: See Phase 4 cURL example
+2. Test webhook: see Phase 4
 3. Review database: Run SQL queries in Supabase console
 4. Check Resend dashboard for email delivery status
 

@@ -133,6 +133,7 @@
         "authichain-ledger-reconstruction.yml": "manual",
         "autonomous-business-cycle.yml": "manual",
         "bind-claw-agentz-url.yml": "manual",
+        "bind-lead-secrets.yml": "manual",
         "bind-stripe-webhook-secrets.yml": "manual",
         "bind-x402-secrets.yml": "manual",
         "cloudflare-builds-status.yml": "manual",
