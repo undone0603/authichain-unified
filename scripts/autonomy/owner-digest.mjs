@@ -78,7 +78,8 @@ export function summarize(
 // ── Scoreboard ────────────────────────────────────────────────────────────────
 // Five numbers, each null when its source is not connected (shown as such,
 // never as zero): unique visitors, real checkout starts, customer revenue,
-// replies received, and systems failing.
+// replies received, and systems failing. Plus one line per tracked offer page
+// (TRACKED_CAMPAIGNS), from the same Stripe checkout sessions.
 
 const SMOKE = /smoke|\be2e\b|\btest\b/i;
 
@@ -98,6 +99,30 @@ export function isRealCheckout(s, founders) {
   if (tags.some(t => t && SMOKE.test(String(t)))) return false;
   const email = s.customer_details?.email ?? s.customer_email;
   return !isFounder(email, founders);
+}
+
+/** Offer pages whose checkouts are counted on their own scoreboard line. */
+export const TRACKED_CAMPAIGNS = ["battery-passport"];
+
+/**
+ * Pure. Real checkouts per tracked utm_campaign: {campaign: {started, paid}}.
+ * Every tracked campaign is present, so a quiet week reads 0, not missing.
+ */
+export function campaignCheckouts(
+  sessions,
+  founders,
+  campaigns = TRACKED_CAMPAIGNS
+) {
+  const out = Object.fromEntries(
+    campaigns.map(c => [c, { started: 0, paid: 0 }])
+  );
+  for (const s of sessions) {
+    const row = out[s.metadata?.utm_campaign];
+    if (!row || !isRealCheckout(s, founders)) continue;
+    row.started += 1;
+    if (s.payment_status === "paid") row.paid += 1;
+  }
+  return out;
 }
 
 /** Pure. Received emails that look like replies from someone outside the company. */
@@ -148,7 +173,7 @@ export function sumVisitors(groups) {
 /**
  * Pure. Decide whether to send and render the email.
  * d = {date, money|null, leads7|null, approvals:[{title,url}], alerts:[{title,url}], prs:[{title,url,draft}], setup:[text],
- *      board?: {visitors|null, checkouts|null, replies|null, failing:[{title,url}]|null}}
+ *      board?: {visitors|null, checkouts|null, campaigns:{[c]:{started,paid}}|null, replies|null, failing:[{title,url}]|null}}
  */
 export function buildDigest(d, { force = false } = {}) {
   const waiting = d.approvals.length + d.alerts.length;
@@ -196,6 +221,12 @@ export function buildDigest(d, { force = false } = {}) {
       n(b.checkouts, "Checkouts started") ??
         `Checkouts started by real visitors: ${b.checkouts} (tests and founders excluded)`
     );
+    if (b.campaigns == null)
+      TRACKED_CAMPAIGNS.forEach(c => item(`${c} page: not connected`));
+    else
+      Object.entries(b.campaigns).forEach(([c, v]) =>
+        item(`${c} page: ${v.started} checkouts started, ${v.paid} paid`)
+      );
     item(
       d.money
         ? `Paid by customers: ${usd(d.money.revenue)} (Stripe-confirmed)`
@@ -260,7 +291,13 @@ async function collect(env) {
     alerts: [],
     prs: [],
     setup: [],
-    board: { visitors: null, checkouts: null, replies: null, failing: null },
+    board: {
+      visitors: null,
+      checkouts: null,
+      campaigns: null,
+      replies: null,
+      failing: null,
+    },
   };
   const manifest = loadManifest();
   const founders = new Set(
@@ -297,6 +334,7 @@ async function collect(env) {
       d.board.checkouts = cs.data.filter(s =>
         isRealCheckout(s, founders)
       ).length;
+      d.board.campaigns = campaignCheckouts(cs.data, founders);
     } catch (e) {
       console.log(`money skipped: ${e.message}`);
     }
