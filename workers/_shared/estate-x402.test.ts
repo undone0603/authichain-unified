@@ -131,7 +131,7 @@ function proofHeader(p: Record<string, unknown>): string {
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
-test("POST with a structural proof and no facilitator is 402 not_configured", async () => {
+test("POST with a structural proof is refused 503 before any settlement", async () => {
   const header = proofHeader({
     scheme: "exact",
     network: "base",
@@ -146,25 +146,21 @@ test("POST with a structural proof and no facilitator is 402 not_configured", as
     })
   );
   assert.ok(res);
-  assert.equal(res.status, 402);
-  const body = (await res.json()) as { status: string; error?: string };
-  assert.equal(body.status, "not_configured");
-  assert.equal(body.error, "dev_mode_no_facilitator");
+  assert.equal(res.status, 503);
+  const body = (await res.json()) as { error?: string; settled?: boolean };
+  assert.equal(body.error, "registry_not_bound");
+  assert.equal(body.settled, false);
 });
 
-test("POST with a facilitator mock settles trustless (no live /settle)", async () => {
+test("POST with a live facilitator never calls /settle: no registry, no charge", async () => {
   const orig = globalThis.fetch;
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = String(input);
-    calls.push(url);
-    if (url.endsWith("/settle")) {
-      return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }
-    throw new Error(`unexpected fetch ${url}`);
+    calls.push(String(input));
+    return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   }) as typeof fetch;
   try {
     const header = proofHeader({
@@ -183,14 +179,17 @@ test("POST with a facilitator mock settles trustless (no live /settle)", async (
       { X402_FACILITATOR_URL: "https://facilitator.example" }
     );
     assert.ok(res);
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 503);
     const body = (await res.json()) as {
-      settlement?: { trustless?: boolean; txHash?: string };
+      error?: string;
+      verified?: boolean;
+      settlement?: unknown;
     };
-    assert.equal(body.settlement?.trustless, true);
-    assert.equal(body.settlement?.txHash, "0xabc");
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0], "https://facilitator.example/settle");
+    assert.equal(body.error, "registry_not_bound");
+    assert.equal(body.verified, undefined);
+    assert.equal(body.settlement, undefined);
+    assert.equal(res.headers.get("PAYMENT-RESPONSE"), null);
+    assert.deepEqual(calls, []);
   } finally {
     globalThis.fetch = orig;
     delete process.env.X402_FACILITATOR_URL;

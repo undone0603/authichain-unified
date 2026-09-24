@@ -156,10 +156,10 @@ describe("listedPlans", () => {
     expect(byId.starter.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
-    expect(planByStripePriceId("price_1TGOM9GqTruSqV8TdV7j3DuL")?.id).toBe(
+    expect(planByStripePriceId("price_1UIoEVGqTruSqV8T61lp48wB")?.id).toBe(
       "starter"
     );
-    expect(planByStripePriceId("price_1TGAiZGqTruSqV8Tb4ZdCVKr")?.id).toBe(
+    expect(planByStripePriceId("price_1UIoEYGqTruSqV8TCXTNipvh")?.id).toBe(
       "creator"
     );
     expect(planByStripePriceId("price_1TwmD8GqTruSqV8TpAF8dfyA")?.id).toBe(

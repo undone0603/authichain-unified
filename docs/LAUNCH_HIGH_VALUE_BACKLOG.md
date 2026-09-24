@@ -167,7 +167,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 
 - **Shipped (this PR):** Claw appends `?mode=` + JSON body. FastAPI `resolve_execution_mode` honors query then body. Architect / `*email*` coerce to dry-run unless `live=true`.
 - **Tests:** `agentz/tests/test_mode_contract.py`, `workers/authichain-openclaw/src/agentz-mode.test.ts`.
-- **Still owner:** Cloudflare Access service token headers on claw if the tunnel policy requires them. Do not invent `OPENCLAW_GATEWAY_URL`. `AGENT_SECRET` default `"authichain-secret"` in `agentz/api/main.py` is still a foot-gun.
+- **Still owner:** Cloudflare Access service token headers on claw if the tunnel policy requires them. Do not invent `OPENCLAW_GATEWAY_URL`. `verify_token` in `agentz/api/main.py` now fails closed (503) when `AGENT_SECRET` is unset; the `"authichain-secret"` fallback is gone, so the container must have `AGENT_SECRET` bound.
 
 ### P1-2. x402 on the edge — **ready (not `not_configured`)**
 

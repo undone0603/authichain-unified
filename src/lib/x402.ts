@@ -56,7 +56,7 @@ export type X402BazaarInfo = {
       verified: boolean;
       authenticityScore: number;
       subject: string | null;
-      details: { note: string };
+      details: Record<string, unknown>;
       settlement: {
         payer: string;
         amountAtomic: string;
@@ -93,9 +93,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
         verified: false,
         authenticityScore: 0,
         subject: "demo",
-        details: {
-          note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-        },
+        details: {},
         settlement: {
           payer: "0x0000000000000000000000000000000000000000",
           amountAtomic: "50000",
@@ -629,6 +627,27 @@ export function dailyCapUsd(): number {
   const v = Number(process.env.X402_DAILY_CAP_USD);
   return Number.isFinite(v) && v > 0 ? v : 10;
 }
+
+/**
+ * Refusal for a paid verify call on a path with no seal-registry lookup behind
+ * it. Served with HTTP 503.
+ *
+ * The edge copies of POST /api/x402 (landing, sister landings, both MCP
+ * bridges, worker-app) used to settle the $0.05 and then answer
+ * `verified: false` with a note admitting the lookup was not bound: the agent
+ * paid for an answer that could never be real. Until a registry lookup is bound
+ * on those paths they return this as soon as a payment proof arrives, before
+ * settlePayment() runs, so no USDC moves. The unpaid 402 challenge stays so
+ * discovery still works. The bound implementation is
+ * src/app/api/v1/agent-verify/route.ts.
+ */
+export const X402_REGISTRY_NOT_BOUND = {
+  error: "registry_not_bound",
+  status: "unavailable",
+  settled: false,
+  detail:
+    "Seal registry lookup is not bound on this path, so a paid call cannot return a real verification. Refused before settlement; no payment was taken.",
+} as const;
 
 export const X402_DEFAULT_PRICE_USD = 0.05;
 

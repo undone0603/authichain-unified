@@ -37,9 +37,8 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.ok(
     html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
   );
-  assert.ok(
-    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
-  );
+  // Retired StrainChain Basic link (no live Stripe account) must not return.
+  assert.equal(html.includes("9B6cN59br5xcaCuazy1Nu1o"), false);
 });
 
 test("desk subpaths in DESK_SITEMAP all 200", async () => {
@@ -64,7 +63,11 @@ test("/desk/pricing collects recovery email for plan checkout", async () => {
   assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
   assert.match(html, /name="email"/);
   assert.match(html, /\$49/);
-  assert.match(html, /\$299\/mo/);
+  assert.match(html, /\$499/);
+  assert.ok(
+    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
+  );
+  assert.doesNotMatch(html, /1Nu1p/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
 });
 

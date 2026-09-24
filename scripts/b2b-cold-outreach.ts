@@ -37,12 +37,6 @@ import {
   type VerificationSource,
 } from "../server/outreach/send-guard";
 import {
-  mostRecentInForce,
-  nextDeadline,
-  formatMilestoneDate,
-  countdownLabel,
-} from "../src/lib/dpp-timeline";
-import {
   describeSkipReason,
   loadCrmRowsForCompanies,
   loadHubSpotContactsForCompany,
@@ -65,8 +59,14 @@ import {
   shouldLoadHighLeverageTargets,
   type HighLeverageTarget,
 } from "./lib/high-leverage";
-import { paymentLinkWithPrefilledEmail } from "../src/lib/checkout-email";
-import { planPaymentLink } from "../src/lib/plans";
+import {
+  govchainEmail,
+  partnerEmail,
+  qronEmail,
+  strainchainEmail,
+  type EmailDraft,
+} from "./lib/b2b-templates";
+import { priorContact, recordContact } from "./lib/send-history";
 
 export {
   CHANNEL_PARTNER_LEAD_SOURCE,
@@ -138,13 +138,16 @@ const SEGMENT_FROM: Record<string, string> = {
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
 // Self-serve payment CTAs (live Stripe Payment Links). Soft secondary to booking.
+// The StrainChain email pitches Theater 1 ($499/mo); the old StrainChain Basic
+// link belonged to no live Stripe account.
 const STRAINCHAIN_PAY =
   process.env.STRAINCHAIN_PAYMENT_LINK ??
-  "https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"; // StrainChain Basic
+  planPaymentLink("theater_1") ??
+  "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"; // Theater 1 $499/mo
 const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   planPaymentLink("creator") ??
-  "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d"; // Creator Pack $99
+  "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"; // Creator Pack $99
 
 const hubspotToken =
   process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;
@@ -312,6 +315,8 @@ const QRON_TARGETS = [
 ];
 
 // ── Email templates ───────────────────────────────────────────────────────────
+// Copy lives in scripts/lib/b2b-templates.ts so it can be tested against the
+// claim checker; see that file for what the previous copy got wrong.
 
 function govchainEmail(t: (typeof GOVCHAIN_TARGETS)[0]): {
   subject: string;
@@ -420,7 +425,7 @@ function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
     `${STRAINCHAIN_PAY}?utm_source=email&utm_medium=b2b&utm_campaign=strainchain`,
     t.email
   )}">
-  start StrainChain Basic self-serve</a> if you'd rather click than calendar.</p>
+  start Theater 1 self-serve</a> if you'd rather click than calendar.</p>
 
   <p>Best,<br>
   Zachary<br>
@@ -573,23 +578,26 @@ function highLeverageEmail(t: HighLeverageTarget): {
   html: string;
 } {
   const first = t.name.split(" ")[0] || t.company;
+/** Dry-run only (see assertHighLeverageRunAllowed). Research notes stay out of the body. */
+function highLeverageEmail(t: HighLeverageTarget): EmailDraft {
   const product =
     t.segment === "qron"
       ? "QRON"
       : t.segment === "govchain"
         ? "GovChain"
         : "StrainChain";
-  const subject = `${product} — ${t.company}`;
-  const html = `
-<div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi ${first},</p>
-  <p>Draft only. This address is on the high-leverage shortlist already
-  stored in Supabase (${HIGH_LEVERAGE_LEAD_SOURCE}). It is not a live send.</p>
-  <p>${t.notes}</p>
-  <p>Best,<br>Zachary<br>AuthiChain</p>
-</div>`;
-  return { subject, html };
+  return {
+    subject: `${product} and ${t.company}`,
+    html: `<p>Draft only: high-leverage shortlist (${HIGH_LEVERAGE_LEAD_SOURCE}), never sent live.</p>`,
+  };
 }
+
+/** Rebuilds a stored draft's email from its target, keyed by the segment it was written for. */
+const BUILDERS: Record<string, (t: any) => EmailDraft> = {
+  govchain: govchainEmail,
+  strainchain: strainchainEmail,
+  qron: qronEmail,
+};
 
 function escapeIlikeExact(email: string): string {
   return normalizeLeadEmail(email)
@@ -672,6 +680,10 @@ async function processTargets<
   for (const t of targets) {
     let email = t.email;
     let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
+    // How the address was found, for the skip message below. Declared here:
+    // it used to be read outside the block that defined it, which threw a
+    // ReferenceError on the first live target with no address.
+    let via: Parameters<typeof describeSkipReason>[0] | undefined;
     // Partner rows already carry a published / inbound / connected address.
     // Do not run them through usableEmail() — that strips role inboxes
     // (contact@, info@, hello@) which are the desk these partners publish.
@@ -693,6 +705,7 @@ async function processTargets<
       );
       email = resolved.email;
       source = resolved.source;
+      via = resolved.via;
       if (email && resolved.via !== "already_set") {
         (t as any).email = email;
         console.log(`  🔎 ${resolved.via}: ${t.company} → ${email}`);
@@ -704,6 +717,13 @@ async function processTargets<
     if (email && shouldNotLiveResend(email)) {
       console.log(`  ⏭️  Do-not-resend list — ${email}`);
       continue;
+    }
+    if (email) {
+      const prior = await priorContact(supabase, email);
+      if (prior.blocked) {
+        console.log(`  ⏭️  Not sending to ${email} — ${prior.reason}`);
+        continue;
+      }
     }
     let existingStatus: string | null = null;
     if (email && !isDryRun) {
@@ -769,7 +789,7 @@ async function processTargets<
     }
 
     if (!email) {
-      console.log(`     ℹ️  ${t.company}: ${describeSkipReason(resolved.via)}`);
+      console.log(`     ℹ️  ${t.company}: ${(via ? describeSkipReason(via) : "no address listed")}`);
       queued++;
       continue;
     }
@@ -836,6 +856,7 @@ async function processTargets<
       if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
+        await recordContact(supabase, email, GUARDRAIL_CHANNEL);
         await supabase
           .from("leads")
           .update({ status: "contacted", updatedAt: new Date().toISOString() })
@@ -912,13 +933,12 @@ export async function flushQueuedLeads(): Promise<number> {
 
   const sourceFilter =
     segment && segment !== "all" ? `b2b_outreach_${segment}` : "b2b_outreach_%";
-  // Cap leftovers are saved as `draft` then skipped; the log says "queued"
-  // but status is not updated. Drain both so Fastsigns/MOO (contacted) stay
-  // unsent-again while 4imprint/Signarama drafts can go out.
+  // Only `queued`. Every dry run writes its targets as `draft`, so draining
+  // drafts meant a live flush sent whatever the last dry run had rendered.
   let query = supabase
     .from("leads")
     .select("*")
-    .in("status", ["queued", "draft"])
+    .eq("status", "queued")
     .order("createdAt", { ascending: false });
   query = sourceFilter.endsWith("%")
     ? query.like("source", sourceFilter)
@@ -940,11 +960,15 @@ export async function flushQueuedLeads(): Promise<number> {
       continue;
     }
     const meta = lead.metadata as any;
-    if (!meta?.subject || !meta?.html_preview) continue;
     const leadEmail = String(lead.email ?? "").toLowerCase();
     if (!leadEmail || leadEmail.startsWith("[pending]@")) continue;
     if (shouldNotLiveResend(leadEmail)) {
       console.log(`  ⏭️  Skipping already-sent ${lead.email}`);
+      continue;
+    }
+    const prior = await priorContact(supabase, leadEmail);
+    if (prior.blocked) {
+      console.log(`  ⏭️  Not sending to ${lead.email} — ${prior.reason}`);
       continue;
     }
 
@@ -966,6 +990,18 @@ export async function flushQueuedLeads(): Promise<number> {
       continue;
     }
     const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
+
+    // Re-render from the stored target with today's copy. The stored
+    // html_preview is the first 500 characters of the old copy, and flushing
+    // it sent recipients a cut-off email.
+    const build = BUILDERS[leadSegment];
+    if (!build || !meta?.target) {
+      console.log(
+        `  ⏭️  Skipping ${lead.email} — no stored target to rebuild the email from`
+      );
+      continue;
+    }
+    const draft = build({ ...meta.target, email: leadEmail });
 
     const senderCheck = await checkSender(from);
     if (!senderCheck.ok) {
@@ -990,13 +1026,11 @@ export async function flushQueuedLeads(): Promise<number> {
     }
 
     try {
-      // The stored draft is a truncated preview, so a flush re-sends whatever
-      // was captured — the guard still applies the footer and headers.
       const res = await guardedSend({
         to: lead.email,
         source: (meta.source as VerificationSource) ?? RESEARCHED_SOURCE,
-        subject: meta.subject,
-        html: meta.html_preview,
+        subject: draft.subject,
+        html: draft.html,
         from,
         company: "AuthiChain",
         apiKey: process.env[senderCheck.credential!],
@@ -1008,6 +1042,7 @@ export async function flushQueuedLeads(): Promise<number> {
           .eq("email", lead.email);
         flushed++;
         console.log(`  ✉️  Flushed: ${lead.email}`);
+        await recordContact(supabase, leadEmail, GUARDRAIL_CHANNEL);
         await guardrailRecord({
           channel: GUARDRAIL_CHANNEL,
           action: "record",
@@ -1086,7 +1121,7 @@ if (segment === "all" || segment === "govchain") {
 
 if (segment === "all" || segment === "strainchain") {
   console.log("\n🌿 STRAINCHAIN — Cannabis MSO Compliance ($499/mo Theater 1)");
-  await processTargets(STRAINCHAIN_TARGETS, strainchaineEmail, "strainchain");
+  await processTargets(STRAINCHAIN_TARGETS, strainchainEmail, "strainchain");
 }
 
 if (segment === "all" || segment === "qron") {

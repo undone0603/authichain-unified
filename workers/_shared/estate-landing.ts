@@ -568,6 +568,7 @@ export function estateHero(opts: {
   eyebrow: string;
   title: string;
   lede: string;
+  lead?: EstateCta;
   actions: EstateCta[];
   emailCheckout?: {
     action: string;
@@ -582,6 +583,9 @@ export function estateHero(opts: {
         inputId: "hero-checkout-email",
       })
     : "";
+  const lead = opts.lead
+    ? `<a class="btn btn-primary" href="${esc(opts.lead.href)}">${esc(opts.lead.label)}</a>`
+    : "";
   const actions = opts.actions
     .map(
       a =>
@@ -593,7 +597,7 @@ export function estateHero(opts: {
     <p class="estate-badge hero-badge">${esc(opts.eyebrow)}</p>
     <h1>${opts.title}</h1>
     <p class="estate-lede hero-sub">${opts.lede}</p>
-    <div class="estate-actions hero-cta">${emailForm}${actions}</div>
+    <div class="estate-actions hero-cta">${lead}${emailForm}${actions}</div>
   </div>
 </header>`;
 }

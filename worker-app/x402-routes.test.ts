@@ -153,7 +153,7 @@ describe("POST /api/x402", () => {
     expect(v2.accepts[0].amount).toBe("50000");
   });
 
-  it("refuses a structural proof when no facilitator is configured", async () => {
+  it("refuses a payment proof with 503 before settlement (no registry bound)", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     process.env.X402_NETWORK = "base";
     const header = proofHeader({
@@ -167,8 +167,9 @@ describe("POST /api/x402", () => {
       headers: { "x-payment": header, "content-type": "application/json" },
       body: JSON.stringify({ sealId: "seal-1" }),
     });
-    expect(res.status).toBe(402);
-    const body = (await res.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
   });
 });

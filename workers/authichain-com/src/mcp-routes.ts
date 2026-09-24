@@ -15,10 +15,8 @@ import {
   X402_PUBLISHED_PAY_TO,
   buildPaymentRequired,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
   type X402HealthEnv,
 } from "../../../src/lib/x402.ts";
@@ -225,7 +223,7 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
   });
 }
 
-async function unpaidOrSettledVerify(
+async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
   args: Record<string, unknown>
@@ -255,69 +253,9 @@ async function unpaidOrSettledVerify(
     return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(
-      402,
-      { ...required.v2, error: verification.reason },
-      required.headers
-    );
-  }
-
-  const settlement = await settlePayment(
-    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(
-      402,
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      required.headers
-    );
-  }
-
-  const subject = (args.sealId ??
-    args.seal_id ??
-    args.productId ??
-    args.serial) as string | undefined;
-
-  return json(
-    200,
-    {
-      jsonrpc: "2.0",
-      result: {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              verified: false,
-              authenticityScore: 0,
-              subject: subject ?? null,
-              details: {
-                note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-              },
-              settlement: {
-                payer: proof.payer,
-                amountAtomic: verification.amount.toString(),
-                txHash: settlement.txHash ?? proof.txHash ?? null,
-                trustless: settlement.trustless,
-              },
-            }),
-          },
-        ],
-      },
-    },
-    paymentResponseHeaders({
-      success: true,
-      transaction: settlement.txHash ?? proof.txHash,
-      network: required.body.accepts[0].network,
-      payer: proof.payer,
-    })
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
 async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
@@ -365,7 +303,7 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
       });
     }
     if (name === "verify" || name === "authichain_verify_product") {
-      return unpaidOrSettledVerify(request, env, params.arguments ?? {});
+      return unpaidOrRefusedVerify(request, env, params.arguments ?? {});
     }
     if (name === "query_provenance" || name === "authichain_query_provenance") {
       const args = params.arguments ?? {};

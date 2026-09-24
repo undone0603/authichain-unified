@@ -76,6 +76,14 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
+  const starterFirst = planPaymentLink("starter") ?? "";
+  const auditLater = planPaymentLink("dpp_readiness") ?? "";
+  assert.ok(starterFirst.length > 0 && auditLater.length > 0);
+  assert.ok(
+    html.indexOf(starterFirst) < html.indexOf(auditLater),
+    "the $29 link has to appear before the $299 audit"
+  );
+  assert.match(html, /Buy the \$29 signed pack/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /The authentic agentic economy/);
@@ -123,9 +131,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
-  assert.match(html, /AuthiChain Starter/);
-  assert.match(html, /\$299\/mo/);
-  assert.match(html, /https:\/\/buy\.stripe\.com\/28E8wP0EVf7M6mefTS1Nu1p/);
+  // Retired AuthiChain Starter $299/mo link belonged to no live Stripe account.
+  assert.doesNotMatch(html, /AuthiChain Starter/);
+  assert.doesNotMatch(html, /28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);

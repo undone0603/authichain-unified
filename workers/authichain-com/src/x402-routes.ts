@@ -13,7 +13,9 @@
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 503/402 until facilitator + payTo
+ * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid; 503
+ *      registry_not_bound once a proof arrives, before any settlement, until
+ *      a seal-registry lookup is bound on this path (X402_REGISTRY_NOT_BOUND)
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0xaebf…e437. Do not rebind
@@ -22,10 +24,8 @@
 import {
   buildPaymentRequired,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -199,66 +199,9 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(
-      402,
-      { ...required.v2, error: verification.reason },
-      required.headers
-    );
-  }
-
-  const settlement = await settlePayment(
-    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(
-      402,
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      required.headers
-    );
-  }
-
-  let input: Record<string, unknown> = {};
-  try {
-    input = (await request.json()) as Record<string, unknown>;
-  } catch {
-    /* empty body is fine */
-  }
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return json(
-    200,
-    {
-      verified: false,
-      authenticityScore: 0,
-      subject: subject ?? null,
-      details: {
-        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-      },
-      settlement: {
-        payer: proof.payer,
-        amountAtomic: verification.amount.toString(),
-        txHash: settlement.txHash ?? proof.txHash ?? null,
-        trustless: settlement.trustless,
-      },
-      timestamp: new Date().toISOString(),
-    },
-    paymentResponseHeaders({
-      success: true,
-      transaction: settlement.txHash ?? proof.txHash,
-      network: required.body.accepts[0].network,
-      payer: proof.payer,
-    })
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
 export async function tryHandleX402(

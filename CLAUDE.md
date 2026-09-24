@@ -18,6 +18,11 @@ reaching an agent session. The import above reconnects it.
 
 ## Working notes
 
+- **Autonomy** — `docs/OPERATING_CHARTER.md` says what runs unattended and what
+  waits for the owner. `.github/autonomy.json` is the only switchboard: every
+  workflow must be classified there, and loops are turned on or off by editing
+  it, never by clicking in the Actions UI (the reconciler would revert that).
+
 - **Genetics passports** — `docs/strategy/strainchain-genetics-passport.md`
   carries the numbered design decisions and the pricing ruling. Read it before
   changing `src/lib/genetics.ts`, the `/genetics` routes, or anything about how

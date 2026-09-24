@@ -75,6 +75,24 @@ async function optionalDb<T>(
   }
 }
 
+/**
+ * Audit rows are a record of what happened, not state a customer depends on.
+ * They must never turn a webhook into a 400: on the apex Worker, where
+ * DATABASE_URL is absent, an unguarded audit write used to fail every
+ * checkout.session.expired before the recovery email went out (102 x 400 in
+ * stripe_events up to 2026-09-23). State writes below stay strict so Stripe
+ * retries them.
+ */
+function auditSafe(
+  ...args: Parameters<typeof db.logAutomationAudit>
+): Promise<void> {
+  return optionalDb(
+    `audit:${args[0]}`,
+    () => db.logAutomationAudit(...args),
+    undefined
+  );
+}
+
 function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
   return (
     session.line_items?.data?.[0]?.price?.id ||
@@ -164,7 +182,7 @@ async function fulfillCatalogCreditsIfPaid(
           `amount_total=${session.amount_total ?? "unknown"}`
       );
       try {
-        await db.logAutomationAudit(
+        await auditSafe(
           "billing_unfulfillable_subscription",
           {
             eventId: null,
@@ -244,7 +262,7 @@ async function fulfillDppCheckoutIfPaid(
         `session=${session.id} mode=${session.mode ?? "unknown"}`
     );
     try {
-      await db.logAutomationAudit(
+      await auditSafe(
         "billing_unfulfillable_subscription",
         {
           eventId: null,
@@ -562,7 +580,7 @@ export async function handleStripeWebhook(
         const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
         if (catalogue) {
-          await db.logAutomationAudit(
+          await auditSafe(
             event.type === "customer.subscription.created"
               ? "billing_subscription_created"
               : "billing_subscription_updated",
@@ -634,7 +652,7 @@ export async function handleStripeWebhook(
           }
         }
 
-        await db.logAutomationAudit(
+        await auditSafe(
           event.type === "customer.subscription.created"
             ? "billing_subscription_created"
             : "billing_subscription_updated",
@@ -670,7 +688,7 @@ export async function handleStripeWebhook(
           new Date()
         );
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "billing_subscription_cancelled",
           {
             eventId: event.id,
@@ -798,7 +816,7 @@ export async function handleStripeWebhook(
           ]);
         }
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "billing_dunning_started",
           {
             eventId: event.id,
@@ -893,7 +911,7 @@ export async function handleStripeWebhook(
         const recoveryUrl = checkoutRecoveryUrl(session);
         const name = session.metadata?.customer_name || "there";
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "checkout_abandoned",
           {
             eventId: event.id,
@@ -913,7 +931,7 @@ export async function handleStripeWebhook(
           await sendEmail({
             to: email,
             subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
-            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
             fromName: "AuthiChain",
           });
           console.log(

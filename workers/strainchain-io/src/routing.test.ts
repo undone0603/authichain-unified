@@ -124,7 +124,7 @@ test("query strings survive the hop", async () => {
   }
 });
 
-test("the apex offers Passport checkout and the live Basic Payment Link", async () => {
+test("the apex offers Passport checkout and the Farm Plan Payment Link", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
@@ -141,8 +141,9 @@ test("the apex offers Passport checkout and the live Basic Payment Link", async 
     html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
+    html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
   );
+  assert.doesNotMatch(html, /9B6cN59br5xcaCuazy1Nu1o/);
   assert.match(html, /Passport checkout — \$49/);
   assert.doesNotMatch(html, /calendly/i);
 });
@@ -442,9 +443,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.equal(f.calls.length, 0, "/pricing must not be proxied");
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-    assert.match(html, /https:\/\/buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
-    assert.match(html, /\$199/);
-    assert.match(html, /StrainChain Basic/);
+    assert.ok(
+      html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+    );
+    assert.match(html, /\$149/);
+    assert.doesNotMatch(html, /StrainChain Basic/);
   } finally {
     f.restore();
   }

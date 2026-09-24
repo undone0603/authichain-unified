@@ -19,10 +19,8 @@ import type { Hono } from "hono";
 import {
   buildPaymentRequired,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402Catalog,
   x402HealthReport,
   x402OpenApiDocument,
@@ -156,66 +154,9 @@ async function agentVerify(c: {
     return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return c.json({ ...required.v2, error: verification.reason }, 402, {
-      ...NO_STORE,
-      ...required.headers,
-    });
-  }
-
-  const settlement = await settlePayment(
-    proofHeader ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return c.json(
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      402,
-      { ...NO_STORE, ...required.headers }
-    );
-  }
-
-  const input = (await c.req.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return c.json(
-    {
-      verified: false,
-      authenticityScore: 0,
-      subject: subject ?? null,
-      details: {
-        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-      },
-      settlement: {
-        payer: proof.payer,
-        amountAtomic: verification.amount.toString(),
-        txHash: settlement.txHash ?? proof.txHash ?? null,
-        trustless: settlement.trustless,
-      },
-      timestamp: new Date().toISOString(),
-    },
-    200,
-    {
-      ...NO_STORE,
-      ...paymentResponseHeaders({
-        success: true,
-        transaction: settlement.txHash ?? proof.txHash,
-        network: required.body.accepts[0].network,
-        payer: proof.payer,
-      }),
-    }
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return c.json(X402_REGISTRY_NOT_BOUND, 503, NO_STORE);
 }
 
 export function registerX402Routes<
