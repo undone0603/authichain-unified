@@ -8,8 +8,9 @@
 >   `RESEND_WEBHOOK_SECRET` (it refuses every event until that is bound), and
 >   fetches each email's body from Resend with `RESEND_API_KEY`. The old
 >   Next.js route and its flat payload shape are no longer used.
-> - Resend is not configured for it yet: `authichain.com` has **receiving
->   disabled** and the account has **no webhooks**. Phase 1 below sets both up.
+> - Resend (2026-09-24): receiving is set up on `reply.authichain.com`
+>   and an `email.received` webhook points at the edge router. Still needed:
+>   the subdomain's DNS records and the signing secret (Phase 1).
 > - `authichain.com` sending DNS records were re-added on 2026-09-24 and were
 >   pending verification. Check it shows **Verified** in Resend before sending
 >   proposals from `proposals@authichain.com` (Phase 7).
@@ -32,7 +33,7 @@ This system automatically captures replies to proposal emails sent from `proposa
 ## Architecture Overview
 
 ```
-Prospect replies to proposals@authichain.com
+Prospect replies to proposals@reply.authichain.com (the Reply-To)
          ↓
 Resend `email.received` webhook (signed)
          ↓
@@ -61,15 +62,26 @@ Dashboard shows reply + auto-nurture status
 2. Confirm `authichain.com` is verified (DNS records set up)
 3. If not verified, follow Resend's domain verification flow
 
-### Step 2: Enable Receiving and Add the Webhook
+### Step 2: Receiving Subdomain and Webhook
 
-1. In Resend Dashboard, go to **Domains** → `authichain.com` and **enable
-   receiving**. Add the MX record Resend shows to the `authichain.com` zone in
-   Cloudflare DNS (DNS only, grey cloud).
-2. Go to **Webhooks** → **Add Webhook**:
-   - **Endpoint**: `https://app.authichain.com/api/webhooks/resend-inbound`
-   - **Events**: `email.received`
-3. Save. Never point it at a `*.vercel.app` host; Vercel is retired.
+Receiving runs on the subdomain `reply.authichain.com`, not the root domain.
+Resend's receiving MX has priority 0; on `authichain.com` it would take over
+all `@authichain.com` mail (e.g. `hello@`), not just replies.
+
+1. `reply.authichain.com` exists in Resend as a receiving-only domain
+   (created 2026-09-24). Add its records to the `authichain.com` zone in
+   Cloudflare DNS (DNS only, grey cloud), using the exact values Resend shows:
+   - **MX** `reply` → `inbound-smtp.us-east-1.amazonaws.com`, priority 10
+   - **TXT** `resend._domainkey.reply` → the DKIM key Resend shows
+     (`p=MIGf…`)
+2. The `email.received` webhook exists (created 2026-09-24) and points at
+   `https://app.authichain.com/api/webhooks/resend-inbound`. Resend webhooks
+   are account-wide, so it covers the subdomain. Never point it at a
+   `*.vercel.app` host; Vercel is retired.
+3. Replies arrive at `proposals@reply.authichain.com`. Anything that emails
+   prospects must set that as **Reply-To** (the From can stay
+   `proposals@authichain.com`). Nothing in this repo emails prospects today:
+   `scripts/email-proposals.ts` sends an owner digest only.
 
 ### Step 3: Bind the Signing Secret (Required)
 
@@ -221,7 +233,7 @@ filtering, deduplication, and the reply and lead writes.
 
 ### Step 2: Send a Real Reply
 
-After Phase 1, send an email to `proposals@authichain.com` from an address
+After Phase 1, send an email to `proposals@reply.authichain.com` from an address
 that matches a row in `leads`. In Resend → **Webhooks**, the delivery should
 show `201`. The response looks like:
 
@@ -294,6 +306,8 @@ Header: Authorization: Bearer ${CRON_SECRET}
 When your outbound proposal script sends emails, ensure:
 
 1. **From Address**: `proposals@authichain.com` (or configured NURTURE_EMAIL_FROM)
+   **Reply-To**: `proposals@reply.authichain.com`, the address Resend receives
+   for (Phase 1). Without it, replies go to the root domain and are not captured.
 2. **Subject Line**: Should include prospect company name for matching
 
    ```
@@ -313,6 +327,7 @@ Example outbound email setup:
 await sendEmail({
   to: "prospect@company.com",
   from: "proposals@authichain.com",
+  replyTo: "proposals@reply.authichain.com",
   subject: `Proposal: Blockchain Auth for ${prospect.company}`,
   html: proposalHTML,
   // Include proposal ID in headers for tracking
