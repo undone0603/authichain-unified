@@ -37,8 +37,7 @@ describe("battery passport offer page", () => {
   });
 
   it("lists exactly the plan's real deliverables and makes no invented claims", () => {
-    for (const f of plan.features)
-      expect(html).toContain(f.replace(/\$/g, "$"));
+    for (const f of plan.features) expect(html).toContain(f);
     expect(html).not.toMatch(
       /testimonial|trusted by|customers love|guarantee/i
     );
