@@ -12,37 +12,35 @@ tests, no rewriting history on someone else's branch, no empty-commit or
 close/reopen to kick CI, no pushing or resolving a larger ask on a PR you
 didn't open, no approving or merging your own PR).
 
-## Known pre-existing / flaky checks -- don't chase these
+## Cloudflare Workers Builds checks
 
 Cloudflare Workers Builds run as GitHub check runs but are triggered by
-Cloudflare directly, not by the PR diff. Two are currently noisy on
-essentially every PR, confirmed across #922, #930, #935, #936, #937:
+Cloudflare directly, not by the PR diff.
 
-- **`Workers Builds: qron-ai-api`** -- fails consistently, on PRs that don't
-  touch `workers/qron-ai-api` at all (confirmed on a pure-docs PR). Treat as
-  a standing, pre-existing infra issue. No fix is available in this repo as
-  of 2026-09-11; there is no Cloudflare dashboard access from a Cowork
-  session to diagnose it further.
-- **`Workers Builds: passport-demo`** -- intermittently fails and then
-  succeeds on an unrelated follow-up push with no code changes to that
-  worker (observed failing on #936's first commit, succeeding on #936's
-  second commit and on #937, despite neither touching `workers/passport-demo`).
-  Treat as flaky rather than a real regression unless it fails on a PR that
-  actually touches that worker's code.
+**As of 2026-09-24 only `Workers Builds: govchain-us` and
+`Workers Builds: qron-space` report.** The two that used to fail on nearly
+every PR (#922, #930, #935-#937) have not posted a check since at least
+#1180 (2026-09-22), and their in-repo causes are fixed:
 
-**Handling rule for both:** post exactly **one** standing-down comment per
-PR naming the failing check(s), citing at least one other PR/commit where
-the same check failed or flaked with no relevant diff, and stating you lack
-Cloudflare-side access to investigate further. Do not repeat the comment
-when the same check fails again on a later commit in the same PR -- a
-duplicate failure needs no second comment, per the general "already
-documented" rule. Do not widen the PR to try to fix either worker's build
-config on a hunch.
+- **`qron-ai-api`** is the root `worker/` directory (`worker/wrangler.toml`,
+  `name = "qron-ai-api"`), not `workers/qron-ai-api`. It failed because
+  its install fell through to the monorepo root (fixed by
+  `worker/pnpm-workspace.yaml`), and later because `worker/pnpm-lock.yaml`
+  drifted from `worker/package.json`, so a CI (frozen) install refused to
+  run. When a dependency bump touches `worker/package.json`, regenerate the
+  lockfile with `cd worker && pnpm install --lockfile-only` in the same PR.
+  Check: `cd worker && CI=true pnpm install --frozen-lockfile && npx
+  wrangler deploy --dry-run`.
+- **`passport-demo`** (`workers/passport-demo`, plain JS, no dependencies)
+  builds cleanly with `npx wrangler deploy --dry-run`. It is deliberately
+  frozen (see its `wrangler.toml`) and excluded from `deploy-workers.yml`.
 
-If a **different** Workers Build starts failing (not one of the two above),
-or `qron-ai-api`/`passport-demo` fails on a PR whose diff actually touches
-that worker's directory, treat it as a real, this-PR failure and root-cause
-it normally.
+**Handling rule:** if either check reappears and fails, treat it as a real
+failure and root-cause it with the commands above; do not assume flakiness.
+Any other failing Workers Build is likewise real. If a failure is on the
+Cloudflare side and not reproducible locally, post one comment naming the
+check and the local reproduction you ran, and say you lack Cloudflare-side
+access to see the build log.
 
 ## Deploy paths and access constraints
 
