@@ -1,5 +1,23 @@
 # Inbound Email Reply Capture & Auto-Nurture Setup Guide
 
+> **Status (2026-09-24): not live.** Nothing below is currently running:
+>
+> - `authichain.com` has **receiving disabled** in Resend, the account has **no
+>   webhooks**, and no inbound email has arrived. The inbound route in Phase 1
+>   was never configured.
+> - `authichain.com` was re-verified for **sending** on 2026-09-24 after its
+>   DNS records had failed. Check it shows **Verified** in Resend before
+>   sending proposals from `proposals@authichain.com` (Phase 7).
+> - `/api/webhooks/resend-inbound` and `/api/cron/nurture-replies` are Next.js
+>   routes that only ran on Vercel, which is retired. `app.authichain.com` is
+>   `authichain-edge-router` (`worker-app/`) and does not serve them yet. They
+>   need porting there first, the way `worker-app/lead-routes.ts` ported the
+>   lead forms. The route's `ResendInboundPayload` type is the older flat
+>   inbound-routes shape; check it against Resend's current `email.received`
+>   webhook payload while porting.
+>
+> Until then, the Phase 1 and Phase 5 steps point at endpoints that return 404.
+
 ## Overview
 
 This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
@@ -56,7 +74,7 @@ Dashboard shows reply + auto-nurture status
    - **Leave other fields default**
 5. Click **Save Route**
 
-> **Note**: Replace `your-domain.com` with your actual production domain (e.g., `api.authichain.com` or `authichain.vercel.app`)
+> **Note**: Use `https://app.authichain.com/api/webhooks/resend-inbound` once the route is ported to the edge router (see Status above). Never point it at a `*.vercel.app` host; Vercel is retired.
 
 ### Step 3: Copy Webhook Secret (Optional but Recommended)
 
@@ -248,28 +266,13 @@ SELECT * FROM reply_sequences WHERE status = 'pending';
 
 The nurture cron runs every 2 hours via your platform's cron service.
 
-### For Vercel
+### For Cloudflare (current platform)
 
-1. Add to `vercel.json`:
-
-   ```json
-   {
-     "crons": [
-       {
-         "path": "/api/cron/nurture-replies",
-         "schedule": "0 */2 * * *"
-       }
-     ]
-   }
-   ```
-
-2. Deploy:
-
-   ```bash
-   git push
-   ```
-
-3. Verify cron is active in Vercel Dashboard → Settings → Cron Jobs
+The edge router has one hourly cron trigger, fanned out by
+`worker-app/cron-dispatch.ts`. Once `/api/cron/nurture-replies` is ported,
+add the job there with schedule `0 */2 * * *`. It sends email to prospects,
+so it belongs in GROUP B ("HELD") in `worker-app/wrangler.toml` until it is
+deliberately cleared. There is no `vercel.json` cron any more.
 
 ### For other platforms (AWS Lambda, Google Cloud, etc.)
 
@@ -401,7 +404,7 @@ await sendEmail({
 
 **Fix**:
 
-1. Verify cron is active in your platform (Vercel, AWS, etc.)
+1. Verify the cron job is registered in `worker-app/cron-dispatch.ts` and the edge-router cron trigger is enabled
 2. Check `/api/cron/nurture-replies` logs
 3. Verify `RESEND_API_KEY` is set
 4. Check reply_sequences table for "pending" entries

@@ -1,10 +1,29 @@
 # Inbound Email Reply Capture & Auto-Nurture Setup Guide
 
+> **Status (2026-09-24): not live.** Nothing below is currently running:
+>
+> - `authichain.com` has **receiving disabled** in Resend, the account has **no
+>   webhooks**, and no inbound email has arrived. The inbound route in Phase 1
+>   was never configured.
+> - `authichain.com` was re-verified for **sending** on 2026-09-24 after its
+>   DNS records had failed. Check it shows **Verified** in Resend before
+>   sending proposals from `proposals@authichain.com` (Phase 7).
+> - `/api/webhooks/resend-inbound` and `/api/cron/nurture-replies` are Next.js
+>   routes that only ran on Vercel, which is retired. `app.authichain.com` is
+>   `authichain-edge-router` (`worker-app/`) and does not serve them yet. They
+>   need porting there first, the way `worker-app/lead-routes.ts` ported the
+>   lead forms. The route's `ResendInboundPayload` type is the older flat
+>   inbound-routes shape; check it against Resend's current `email.received`
+>   webhook payload while porting.
+>
+> Until then, the Phase 1 and Phase 5 steps point at endpoints that return 404.
+
 ## Overview
 
 This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
 
 **Expected Results:**
+
 - Capture: 258 proposals → 39-77 replies (15-30% reply rate)
 - Auto-nurture: Turn 5-10% of replies into deals with minimal manual effort
 - Dashboard: Sales team visibility + manual override controls
@@ -55,11 +74,12 @@ Dashboard shows reply + auto-nurture status
    - **Leave other fields default**
 5. Click **Save Route**
 
-> **Note**: Replace `your-domain.com` with your actual production domain (e.g., `api.authichain.com` or `authichain.vercel.app`)
+> **Note**: Use `https://app.authichain.com/api/webhooks/resend-inbound` once the route is ported to the edge router (see Status above). Never point it at a `*.vercel.app` host; Vercel is retired.
 
 ### Step 3: Copy Webhook Secret (Optional but Recommended)
 
 Once the route is created:
+
 1. Click the route to view details
 2. Copy the **Webhook Secret** (if displayed)
 3. Add to `.env.local`:
@@ -94,6 +114,7 @@ RESEND_API_KEY=re_...
 ```
 
 > **Note**: The `CRON_SECRET` is used to verify cron requests. Generate a strong random string:
+>
 > ```bash
 > node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 > ```
@@ -105,9 +126,11 @@ RESEND_API_KEY=re_...
 ### Option A: Use Supabase CLI (Recommended)
 
 1. Run migrations:
+
    ```bash
    supabase db push
    ```
+
    This will apply the schema changes from `src/db/schema.ts`
 
 2. Verify tables were created:
@@ -213,6 +236,7 @@ curl -X POST http://localhost:3000/api/webhooks/resend-inbound \
 ### Step 3: Verify Response
 
 Expected response:
+
 ```json
 {
   "success": true,
@@ -242,30 +266,18 @@ SELECT * FROM reply_sequences WHERE status = 'pending';
 
 The nurture cron runs every 2 hours via your platform's cron service.
 
-### For Vercel
+### For Cloudflare (current platform)
 
-1. Add to `vercel.json`:
-   ```json
-   {
-     "crons": [
-       {
-         "path": "/api/cron/nurture-replies",
-         "schedule": "0 */2 * * *"
-       }
-     ]
-   }
-   ```
-
-2. Deploy:
-   ```bash
-   git push
-   ```
-
-3. Verify cron is active in Vercel Dashboard → Settings → Cron Jobs
+The edge router has one hourly cron trigger, fanned out by
+`worker-app/cron-dispatch.ts`. Once `/api/cron/nurture-replies` is ported,
+add the job there with schedule `0 */2 * * *`. It sends email to prospects,
+so it belongs in GROUP B ("HELD") in `worker-app/wrangler.toml` until it is
+deliberately cleared. There is no `vercel.json` cron any more.
 
 ### For other platforms (AWS Lambda, Google Cloud, etc.)
 
 Create a scheduled task that POSTs to:
+
 ```
 POST /api/cron/nurture-replies
 Header: Authorization: Bearer ${CRON_SECRET}
@@ -295,6 +307,7 @@ When your outbound proposal script sends emails, ensure:
 
 1. **From Address**: `proposals@authichain.com` (or configured NURTURE_EMAIL_FROM)
 2. **Subject Line**: Should include prospect company name for matching
+
    ```
    Example: "Proposal: Blockchain Auth for Acme Corp"
    ```
@@ -306,18 +319,19 @@ When your outbound proposal script sends emails, ensure:
    ```
 
 Example outbound email setup:
+
 ```typescript
 // In your proposal send script
 await sendEmail({
-  to: 'prospect@company.com',
-  from: 'proposals@authichain.com',
+  to: "prospect@company.com",
+  from: "proposals@authichain.com",
   subject: `Proposal: Blockchain Auth for ${prospect.company}`,
   html: proposalHTML,
   // Include proposal ID in headers for tracking
   headers: {
-    'X-Proposal-ID': proposalId,
-    'X-Prospect-Email': prospect.email,
-  }
+    "X-Proposal-ID": proposalId,
+    "X-Prospect-Email": prospect.email,
+  },
 });
 ```
 
@@ -326,28 +340,33 @@ await sendEmail({
 ## Testing Checklist
 
 ### ✓ Email Capture
+
 - [ ] Send test proposal email from `proposals@authichain.com`
 - [ ] Reply from test email address
 - [ ] Reply appears in `inbound_replies` table within 2 minutes
 - [ ] Sentiment classification is accurate
 
 ### ✓ Matching
+
 - [ ] Reply with subject "RE: Proposal: ..." matches original proposal
 - [ ] Match confidence shown in dashboard
 - [ ] Unmatched replies flagged for review
 
 ### ✓ Sentiment Classification
+
 - [ ] Positive reply classified as "positive"
 - [ ] Objection about budget classified as "objection / budget"
 - [ ] Confidence score reasonable (0.7-1.0 for clear cases)
 
 ### ✓ Auto-Nurture
+
 - [ ] Positive reply creates nurture sequence
 - [ ] Cron job runs at scheduled times
 - [ ] Follow-up email sent to prospect
 - [ ] Reply sequences table shows "sent" status
 
 ### ✓ Dashboard
+
 - [ ] Sales team can access /dashboard/inbound-replies
 - [ ] Filters work (sentiment, status)
 - [ ] Can mark replies as "Contacted" or "Deal Won"
@@ -362,6 +381,7 @@ await sendEmail({
 **Cause**: Resend route not configured or URL incorrect
 
 **Fix**:
+
 1. Verify Resend route points to correct URL (including protocol https://)
 2. Check Resend dashboard → Domains → Logs for failed deliveries
 3. Test webhook manually with cURL (see Phase 4)
@@ -372,6 +392,7 @@ await sendEmail({
 **Cause**: The classifier fail-closes to `neutral` when the copy is ambiguous, or when every LLM backend failed and the heuristic found no strong signal. This is intentional — the nurture cron must not auto-send on a weak read.
 
 **Fix**:
+
 1. `GET /api/webhooks/resend-inbound` and read `classifier.missingSecret`. If it is `OPENAI_API_KEY`, the paid LLM is unset; the path is still live via Ollama/heuristic.
 2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `openai` / `ollama`).
 3. Optional: set `OPENAI_API_KEY`, or run local Ollama (`ollama serve` + `ollama pull llama3.2`) and set `OLLAMA_HOST`.
@@ -382,7 +403,8 @@ await sendEmail({
 **Cause**: Cron job not running or sendEmail failing
 
 **Fix**:
-1. Verify cron is active in your platform (Vercel, AWS, etc.)
+
+1. Verify the cron job is registered in `worker-app/cron-dispatch.ts` and the edge-router cron trigger is enabled
 2. Check `/api/cron/nurture-replies` logs
 3. Verify `RESEND_API_KEY` is set
 4. Check reply_sequences table for "pending" entries
@@ -397,6 +419,7 @@ await sendEmail({
 **Cause**: Missing API route or auth issue
 
 **Fix**:
+
 1. Verify `/api/dashboard/replies` route exists
 2. Check sales team user has auth session
 3. Verify role is "sales" or "admin"
@@ -433,8 +456,8 @@ Before going live with 258 proposals:
 
 ```sql
 -- Daily inbound reply count
-SELECT DATE(created_at), COUNT(*) 
-FROM inbound_replies 
+SELECT DATE(created_at), COUNT(*)
+FROM inbound_replies
 GROUP BY DATE(created_at);
 
 -- Sentiment breakdown
@@ -460,6 +483,7 @@ WHERE status = 'deal_won';
 
 **Q: How does the system match replies to proposals?**
 A: Three strategies in order:
+
 1. Exact email match (highest confidence)
 2. Subject line fuzzy match (looks for company name)
 3. No match (flagged for manual review)
@@ -472,6 +496,7 @@ A: Reply is still captured with `leadId = null` and shown in dashboard as "unmat
 
 **Q: How long are emails stored?**
 A: By default, emails are kept indefinitely in `inbound_replies`. Add a job to auto-purge after 90 days for GDPR compliance:
+
 ```sql
 DELETE FROM inbound_replies WHERE created_at < NOW() - INTERVAL '90 days';
 ```
@@ -484,6 +509,7 @@ A: Yes! Set `nurturePaused = true` on leads table. Cron job will skip that lead.
 ## Support
 
 For issues or questions:
+
 1. Check logs: `tail -f ~/.pm2/logs/authichain-out.log`
 2. Test webhook: See Phase 4 cURL example
 3. Review database: Run SQL queries in Supabase console
