@@ -5230,6 +5230,134 @@
     }
   },
   {
+    "slug": "cannabis-schedule-3-rescheduling-interstate-commerce-compliance",
+    "keyword": "cannabis schedule 3 rescheduling interstate commerce compliance",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Cannabis Schedule 3 Rescheduling Interstate | StrainChain",
+    "metaDescription": "DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June.",
+    "h1": "Cannabis Schedule 3 Rescheduling Interstate Commerce Compliance",
+    "bodyHtml": "<p>DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June 29, 2026 — but the order does not authorize interstate shipment, and every unit sold still has to prove which state’s track-and-trace program cleared it.</p><h2>Why StrainChain</h2><ul><li>Rescheduling changes which CSA schedule a product sits under; it does not legalize crossing a state line — that still requires separate congressional action, and recreational-use cannabis remains Schedule I regardless of the medical-use order</li><li>A state-by-state compliance patchwork means a batch record has to carry which program — METRC, BioTrack, or another state system — cleared it, not just that federal scheduling changed underneath it</li><li>A signed, per-batch chain-of-custody record answers a question rescheduling doesn’t: which state’s rules a specific unit was grown, tested, and sold under, checkable by a regulator without a call to the operator</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/plan/strainchain_passport\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/plan/strainchain_farm\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does the Schedule III move let cannabis cross state lines now?</h3><p>No — DOJ’s April 23, 2026 order reschedules FDA-approved drug products and state-licensed medical marijuana, and a June 29, 2026 hearing is considering broader rescheduling, but neither authorizes interstate commerce. That requires separate congressional action, and interstate shipment remains illegal today.</p><h3>Does rescheduling change what a batch record needs to show?</h3><p>No — a batch still needs the same per-state chain-of-custody and lab-result record regardless of CSA schedule. Rescheduling changes federal drug classification; it doesn’t change any state’s own track-and-trace requirements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "StrainChain — Cannabis Schedule 3 Rescheduling Interstate Commerce Compliance",
+          "provider": {
+            "@type": "Organization",
+            "name": "StrainChain",
+            "url": "https://strainchain.io"
+          },
+          "description": "DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June 29, 2026 — but the order does not authorize interstate shipment, and every unit sold still has to prove which state’s track-and-trace program cleared it.",
+          "url": "https://strainchain.io/p/cannabis-schedule-3-rescheduling-interstate-commerce-compliance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Cannabis Schedule 3 Rescheduling Interstate Commerce Compliance",
+              "item": "https://strainchain.io/p/cannabis-schedule-3-rescheduling-interstate-commerce-compliance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Schedule III move let cannabis cross state lines now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — DOJ’s April 23, 2026 order reschedules FDA-approved drug products and state-licensed medical marijuana, and a June 29, 2026 hearing is considering broader rescheduling, but neither authorizes interstate commerce. That requires separate congressional action, and interstate shipment remains illegal today."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does rescheduling change what a batch record needs to show?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — a batch still needs the same per-state chain-of-custody and lab-result record regardless of CSA schedule. Rescheduling changes federal drug classification; it doesn’t change any state’s own track-and-trace requirements."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "federal-sbom-minimum-elements-government-contractor-requirement",
+    "keyword": "federal sbom minimum elements government contractor requirement",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Federal Sbom Minimum Elements Government | GovChain",
+    "metaDescription": "CISA, the NSA, and the FBI published updated “2026 Minimum Elements for a Software Bill of Materials” in July 2026, replacing NTIA’s 2021 baseline, while OMB.",
+    "h1": "Federal Sbom Minimum Elements Government Contractor Requirement",
+    "bodyHtml": "<p>CISA, the NSA, and the FBI published updated “2026 Minimum Elements for a Software Bill of Materials” in July 2026, replacing NTIA’s 2021 baseline, while OMB Memorandum M-26-05 moved federal software vendors from fixed attestation forms toward agencies demanding raw, machine-readable SBOM data on request instead.</p><h2>Why GovChain</h2><ul><li>OMB M-26-05 lets an agency ask for the underlying SBOM data itself instead of a vendor’s signed attestation form — the same move from trusting a claim to checking a record this protocol already makes for a physical component’s provenance</li><li>The 2026 CISA guidance keeps NTIA’s 2021 core elements — supplier, component name, version, dependency relationships — while pushing for machine-readable output an agency’s own tooling can ingest, not a PDF a contracting officer reads by hand</li><li>A signed component record, the same model GovChain issues for a physical part’s chain of custody, extends to a software dependency list without a separate record type — supplier and version are checkable fields either way</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is providing an SBOM now mandatory for every federal software contractor?</h3><p>It varies by agency under OMB M-26-05’s risk-based approach — agencies now have discretion to require raw SBOM data on request rather than a fixed attestation form. Individual agency mandates, like the Army’s February 2025 policy for new software contracts, can be stricter than the OMB baseline.</p><h3>Does the 2026 CISA guidance replace the 2021 NTIA minimum elements?</h3><p>Yes — the July 2026 joint CISA/NSA/FBI guidance updates and replaces the original NTIA 2021 document, keeping its core principles while reflecting current tooling and a stronger machine-readable requirement.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Federal Sbom Minimum Elements Government Contractor Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "CISA, the NSA, and the FBI published updated “2026 Minimum Elements for a Software Bill of Materials” in July 2026, replacing NTIA’s 2021 baseline, while OMB Memorandum M-26-05 moved federal software vendors from fixed attestation forms toward agencies demanding raw, machine-readable SBOM data on request instead.",
+          "url": "https://govchain.us/p/federal-sbom-minimum-elements-government-contractor-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Federal Sbom Minimum Elements Government Contractor Requirement",
+              "item": "https://govchain.us/p/federal-sbom-minimum-elements-government-contractor-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is providing an SBOM now mandatory for every federal software contractor?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It varies by agency under OMB M-26-05’s risk-based approach — agencies now have discretion to require raw SBOM data on request rather than a fixed attestation form. Individual agency mandates, like the Army’s February 2025 policy for new software contracts, can be stricter than the OMB baseline."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the 2026 CISA guidance replace the 2021 NTIA minimum elements?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the July 2026 joint CISA/NSA/FBI guidance updates and replaces the original NTIA 2021 document, keeping its core principles while reflecting current tooling and a stronger machine-readable requirement."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "blockchain-qr-code-for-cannabis",
     "keyword": "blockchain qr code for cannabis",
     "brand": "StrainChain",
@@ -8794,6 +8922,134 @@
     }
   },
   {
+    "slug": "verifiable-credential-lifecycle-api-vs-offline-verification",
+    "keyword": "verifiable credential lifecycle api vs offline verification",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "Verifiable Credential Lifecycle API Vs Offline | QRON",
+    "metaDescription": "W3C’s Verifiable Credentials Working Group began operating under a new charter in April 2026 with VCALM — an HTTP API for issuing, presenting, and verifying.",
+    "h1": "Verifiable Credential Lifecycle API Vs Offline Verification",
+    "bodyHtml": "<p>W3C’s Verifiable Credentials Working Group began operating under a new charter in April 2026 with VCALM — an HTTP API for issuing, presenting, and verifying credentials between networked services — as a named 2026 deliverable, standardizing exactly the kind of live API call the QRON protocol is built to avoid.</p><h2>Why QRON</h2><ul><li>VCALM standardizes HTTP interfaces between issuer, holder, and verifier services so different vendors’ systems can be tested for interoperability — a live call to an endpoint, not a property a signature carries on its own</li><li>protocol/SPEC.md §5 verifies a record’s signature and anchor with zero network access once the record exists; a QRON scan needs no VCALM-style API, standardized or not, to reach a verdict</li><li>The March 2026 VCALM v0.9 Community Group report describes itself as highly experimental and still changing weekly — a real API standard worth tracking, not one this protocol’s offline-verification path depends on</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Does QRON implement VCALM?</h3><p>No — VCALM standardizes HTTP APIs between networked credential-issuance and verification services. QRON’s reference verifier checks a signed record directly, with no API call required at all, standardized or not.</p><h3>What problem does VCALM actually solve?</h3><p>It gives different vendors’ VC issuance and verification services a common HTTP interface so implementations can be tested against each other for interoperability. It doesn’t change what’s inside a credential or how its signature gets checked.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — Verifiable Credential Lifecycle API Vs Offline Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "W3C’s Verifiable Credentials Working Group began operating under a new charter in April 2026 with VCALM — an HTTP API for issuing, presenting, and verifying credentials between networked services — as a named 2026 deliverable, standardizing exactly the kind of live API call the QRON protocol is built to avoid.",
+          "url": "https://qron.space/p/verifiable-credential-lifecycle-api-vs-offline-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Lifecycle API Vs Offline Verification",
+              "item": "https://qron.space/p/verifiable-credential-lifecycle-api-vs-offline-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does QRON implement VCALM?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — VCALM standardizes HTTP APIs between networked credential-issuance and verification services. QRON’s reference verifier checks a signed record directly, with no API call required at all, standardized or not."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What problem does VCALM actually solve?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It gives different vendors’ VC issuance and verification services a common HTTP interface so implementations can be tested against each other for interoperability. It doesn’t change what’s inside a credential or how its signature gets checked."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "quantum-financial-system-real-or-myth",
+    "keyword": "quantum financial system real or myth",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Quantum Financial System Real Or Myth | AuthiChain",
+    "metaDescription": "The “Quantum Financial System” circulating on social media — a secret network said to cancel global debt and reset currencies — is not a live product at any.",
+    "h1": "Quantum Financial System Real Or Myth",
+    "bodyHtml": "<p>The “Quantum Financial System” circulating on social media — a secret network said to cancel global debt and reset currencies — is not a live product at any bank or central bank as of 2026, and protocol/SPEC.md §9 states directly that AuthiChain’s own QFS-ready profile is carriage for ISO 20022 bank messaging, not membership in that or any other externally hosted network.</p><h2>Why AuthiChain</h2><ul><li>The QFS-ready profile wraps a record in an ISO 20022 pacs.008 JSON envelope with a dual SHA-256/SHA-512 digest — a message format banks already exchange, not a login to a secret ledger</li><li>A reserved digest.pqcStatus field names NIST FIPS 204 ML-DSA-65 for a future post-quantum signature; until that field is bound, production signatures stay Ed25519, which protocol/SPEC.md §8 already discloses is not post-quantum secure</li><li>protocol/SPEC.md §9 requires a verifier to reach its verdict without contacting any purported QFS host — the same offline-verification principle §5 applies to every record, stated explicitly here so the phrase can’t be borrowed to imply something it isn’t</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain’s QFS-ready profile mean AuthiChain is connected to the Quantum Financial System?</h3><p>No. “QFS-ready” names an ISO 20022 pacs.008 message envelope a record can be wrapped in for bank carriage. protocol/SPEC.md §9 states plainly it is not membership in any external quantum financial system, and no such system exists as a live product from any bank or central bank as of this writing.</p><h3>Is the signature inside a QFS-ready record quantum-resistant?</h3><p>Not yet. Production signatures remain Ed25519 — not post-quantum secure — until the reserved digest.pqcStatus field is bound to NIST FIPS 204 ML-DSA-65, a slot the spec reserves but hasn’t activated.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Quantum Financial System Real Or Myth",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The “Quantum Financial System” circulating on social media — a secret network said to cancel global debt and reset currencies — is not a live product at any bank or central bank as of 2026, and protocol/SPEC.md §9 states directly that AuthiChain’s own QFS-ready profile is carriage for ISO 20022 bank messaging, not membership in that or any other externally hosted network.",
+          "url": "https://authichain.com/p/quantum-financial-system-real-or-myth"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Quantum Financial System Real Or Myth",
+              "item": "https://authichain.com/p/quantum-financial-system-real-or-myth"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain’s QFS-ready profile mean AuthiChain is connected to the Quantum Financial System?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. “QFS-ready” names an ISO 20022 pacs.008 message envelope a record can be wrapped in for bank carriage. protocol/SPEC.md §9 states plainly it is not membership in any external quantum financial system, and no such system exists as a live product from any bank or central bank as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the signature inside a QFS-ready record quantum-resistant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. Production signatures remain Ed25519 — not post-quantum secure — until the reserved digest.pqcStatus field is bound to NIST FIPS 204 ML-DSA-65, a slot the spec reserves but hasn’t activated."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "kimberley-process-diamond-certification-blockchain-2026",
     "keyword": "kimberley process diamond certification blockchain 2026",
     "brand": "AuthiChain",
@@ -9292,6 +9548,70 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "https://authichain.com/trumark — scan story, Passport $49, DPP $299, and a written-packet email. No call booking."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ai-agent-payment-mandate-product-authenticity-verification",
+    "keyword": "ai agent payment mandate product authenticity verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "AI Agent Payment Mandate Product Authenticity | AuthiChain",
+    "metaDescription": "Google’s Agent Payments Protocol reached more than 60 partner organizations by Q1 2026 and lets a buyer sign a cryptographically verifiable Mandate.",
+    "h1": "AI Agent Payment Mandate Product Authenticity Verification",
+    "bodyHtml": "<p>Google’s Agent Payments Protocol reached more than 60 partner organizations by Q1 2026 and lets a buyer sign a cryptographically verifiable Mandate authorizing an AI agent to spend on their behalf — proof of what the buyer agreed to pay, not proof that the item the agent is about to buy is genuine, which is a separate check.</p><h2>Why AuthiChain</h2><ul><li>AP2’s Intent and Payment Mandates are signed records a merchant can show after a chargeback dispute to prove what a buyer authorized — they say nothing about whether the unit actually shipped matches any provenance record</li><li>protocol/SPEC.md §5 verification needs no Mandate, no wallet, and no payment network — an agent can check a product’s signed record before a Mandate is ever created, independent of which payment rail eventually settles the purchase</li><li>AuthiChain’s own agent-facing rail is x402 over Base USDC, a per-request payment protocol, not a mandate-authorization one — AP2 and x402 solve adjacent but different steps of an agent purchase, and neither one verifies the product itself</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AP2 verify that a product is authentic?</h3><p>No — AP2’s Mandates are signed proof of what a buyer authorized an agent to spend and under what conditions. Whether the purchased item is genuine is a separate question a provenance record answers, not something a payment mandate checks.</p><h3>Is AP2 the same thing as x402?</h3><p>No — AP2 is Google’s consumer payment-authorization protocol built on signed Mandates; x402 is a per-request HTTP payment protocol AuthiChain uses for agent-to-server payment in USDC on Base. They cover different steps of an agent transaction, and using one doesn’t require the other.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — AI Agent Payment Mandate Product Authenticity Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Google’s Agent Payments Protocol reached more than 60 partner organizations by Q1 2026 and lets a buyer sign a cryptographically verifiable Mandate authorizing an AI agent to spend on their behalf — proof of what the buyer agreed to pay, not proof that the item the agent is about to buy is genuine, which is a separate check.",
+          "url": "https://authichain.com/p/ai-agent-payment-mandate-product-authenticity-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "AI Agent Payment Mandate Product Authenticity Verification",
+              "item": "https://authichain.com/p/ai-agent-payment-mandate-product-authenticity-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AP2 verify that a product is authentic?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — AP2’s Mandates are signed proof of what a buyer authorized an agent to spend and under what conditions. Whether the purchased item is genuine is a separate question a provenance record answers, not something a payment mandate checks."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is AP2 the same thing as x402?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — AP2 is Google’s consumer payment-authorization protocol built on signed Mandates; x402 is a per-request HTTP payment protocol AuthiChain uses for agent-to-server payment in USDC on Base. They cover different steps of an agent transaction, and using one doesn’t require the other."
               }
             }
           ]
