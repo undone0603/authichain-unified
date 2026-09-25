@@ -101,7 +101,7 @@ test("apex sitemap lists /desk paths that resolve", async () => {
   assert.equal(res.status, 200);
   const xml = await res.text();
   for (const path of DESK_SITEMAP) {
-    assert.match(xml, new RegExp(`https://authichain.govchain.us${path}<`));
+    assert.match(xml, new RegExp(`https://authichain.com${path}<`));
   }
 });
 

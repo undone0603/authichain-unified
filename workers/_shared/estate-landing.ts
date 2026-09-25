@@ -30,7 +30,7 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
     id: "authichain",
     name: "AuthiChain",
     domain: "authichain.com",
-    url: "https://authichain.govchain.us",
+    url: "https://authichain.com",
     wordmark: "AuthiChain",
     tagline: "The authentic agentic economy",
     accent: "#4F46E5",

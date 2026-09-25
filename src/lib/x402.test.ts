@@ -638,7 +638,7 @@ describe("x402ScanFanout", () => {
   it("is the x402scan version+resources document, not the catalog", () => {
     const doc = x402ScanFanout();
     expect(doc.version).toBe(1);
-    expect(doc.resources).toEqual(["https://authichain.govchain.us/api/x402"]);
+    expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
     expect(JSON.stringify(doc)).not.toContain("buy.stripe.com");
   });

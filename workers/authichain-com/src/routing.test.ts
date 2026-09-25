@@ -172,16 +172,16 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
-    assert.match(html, /https:\/\/authichain\.govchain\.us\/api\/x402\/health/);
-    assert.match(html, /https:\/\/authichain\.govchain\.us\/api\/x402\/catalog/);
-    assert.match(html, /curl -sS https:\/\/authichain\.govchain\.us\/api\/x402\/health/);
+    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/catalog/);
+    assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
     assert.match(
       html,
-      /curl -sS https:\/\/authichain\.govchain\.us\/api\/x402\/catalog/
+      /curl -sS https:\/\/authichain\.com\/api\/x402\/catalog/
     );
     assert.match(
       html,
-      /curl -sS -i -X POST https:\/\/authichain\.govchain\.us\/api\/x402/
+      /curl -sS -i -X POST https:\/\/authichain\.com\/api\/x402/
     );
     assert.ok(
       !html.toLowerCase().includes("facilitator.payai"),
@@ -357,7 +357,7 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   assert.equal(www.status, 301);
   assert.equal(
     www.headers.get("location"),
-    "https://authichain.govchain.us/.well-known/402index-verify.txt"
+    "https://authichain.com/.well-known/402index-verify.txt"
   );
 });
 
@@ -367,7 +367,7 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get("content-type") ?? "", /text\/plain/, path);
     const text = await res.text();
-    assert.match(text, /POST https:\/\/authichain\.govchain\.us\/api\/x402/);
+    assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -390,7 +390,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       };
     };
     assert.equal(body.protocol, "mcp", path);
-    assert.equal(body.pay.x402, "POST https://authichain.govchain.us/api/x402", path);
+    assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
     assert.equal(
       body.pricing.humanCheckout.dppPaymentLink,
       planPaymentLink("dpp_readiness"),
@@ -450,7 +450,7 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     protocol?: string;
   };
   assert.equal(body.version, 1);
-  assert.deepEqual(body.resources, ["https://authichain.govchain.us/api/x402"]);
+  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
   assert.equal(body.protocol, undefined);
 });
 
@@ -757,61 +757,61 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     "/authichain/pilots",
   ]) {
     assert.ok(
-      !xml.includes(`<loc>https://authichain.govchain.us${gone}</loc>`),
+      !xml.includes(`<loc>https://authichain.com${gone}</loc>`),
       `${gone} should be gone`
     );
   }
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
   assert.equal(
-    xml.split("<loc>https://authichain.govchain.us/telegram</loc>").length - 1,
+    xml.split("<loc>https://authichain.com/telegram</loc>").length - 1,
     1,
     "canonical Mini App loc once — not also via micrositeSitemapUrls"
   );
   assert.ok(
-    !xml.includes("<loc>https://authichain.govchain.us/miniapp</loc>"),
+    !xml.includes("<loc>https://authichain.com/miniapp</loc>"),
     "/miniapp is an alias; sitemap lists /telegram only"
   );
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/onboard</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/dpp</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/genetics</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/passport</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/trumark</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/made-in-america</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/mendo</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/trumark</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/musa</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/strainchain</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/bat-2026-001</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/partners/brief</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/verify</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/x402</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/.well-known/x402</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/m/mendo</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/m/trumark</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/m/musa</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/m/strainchain</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/m/bat-2026-001</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.govchain.us/blog/eu-dpp-manufacturer</loc>")
+    xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>")
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.govchain.us/p/battery-passport-qr-code-requirements</loc>"
+      "<loc>https://authichain.com/p/battery-passport-qr-code-requirements</loc>"
     )
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.govchain.us/p/eu-digital-product-passport-batteries</loc>"
+      "<loc>https://authichain.com/p/eu-digital-product-passport-batteries</loc>"
     )
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.govchain.us/p/cannabis-coa-verification-blockchain</loc>"
+      "<loc>https://authichain.com/p/cannabis-coa-verification-blockchain</loc>"
     )
   );
   assert.ok(
-    xml.includes("<loc>https://authichain.govchain.us/authentic-agentic-economy</loc>")
+    xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
   );
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/llms.txt</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/mcp</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/openapi.json</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.govchain.us/vs/everledger</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/openapi.json</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
 });
 
 test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {
@@ -847,10 +847,10 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
   const robotsText = await robots.text();
-  assert.match(robotsText, /Sitemap: https:\/\/authichain\.govchain\.us\/sitemap.xml/);
-  assert.ok(robotsText.includes("https://authichain.govchain.us/llms.txt"));
-  assert.ok(robotsText.includes("https://authichain.govchain.us/openapi.json"));
-  assert.ok(robotsText.includes("https://authichain.govchain.us/.well-known/x402"));
+  assert.match(robotsText, /Sitemap: https:\/\/authichain\.com\/sitemap.xml/);
+  assert.ok(robotsText.includes("https://authichain.com/llms.txt"));
+  assert.ok(robotsText.includes("https://authichain.com/openapi.json"));
+  assert.ok(robotsText.includes("https://authichain.com/.well-known/x402"));
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

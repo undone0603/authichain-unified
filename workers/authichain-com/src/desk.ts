@@ -596,7 +596,7 @@ function shell(
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="https://authichain.govchain.us${esc(path)}">
+<link rel="canonical" href="https://authichain.com${esc(path)}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${CSS}</style>
 </head><body>

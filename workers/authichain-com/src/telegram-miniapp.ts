@@ -10,7 +10,7 @@ import { catalogPaymentLinkHtml } from "../../../src/lib/checkout-email";
 
 export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
 export const PASSPORT_CHECKOUT_URL = `https://authichain.govchain.us${PASSPORT_CHECKOUT_PATH}`;
-export const MINIAPP_CANONICAL = "https://authichain.govchain.us/telegram";
+export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
 
 const MINIAPP_PATHS = new Set([
   "/telegram",

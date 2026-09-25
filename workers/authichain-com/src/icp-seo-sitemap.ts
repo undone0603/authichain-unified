@@ -17,5 +17,5 @@ export const ICP_SEO_SITEMAP_PATHS = [
 ] as const;
 
 export function icpSeoSitemapUrls(): string[] {
-  return ICP_SEO_SITEMAP_PATHS.map(path => `https://authichain.govchain.us${path}`);
+  return ICP_SEO_SITEMAP_PATHS.map(path => `https://authichain.com${path}`);
 }

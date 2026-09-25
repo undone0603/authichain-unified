@@ -42,7 +42,7 @@ describe("authentic agentic economy page", () => {
     expect(html).not.toContain("GET /api/checkout");
     expect(html).toContain('<main id="main">');
     expect(html).toContain(
-      'rel="canonical" href="https://authichain.govchain.us/authentic-agentic-economy"'
+      'rel="canonical" href="https://authichain.com/authentic-agentic-economy"'
     );
   });
 
@@ -64,7 +64,7 @@ describe("authentic agentic economy page", () => {
     expect(html).toContain('"@type":"Article"');
     expect(html).toContain('"@type":"FAQPage"');
     expect(AUTHENTIC_AGENTIC_ECONOMY.canonicalUrl).toBe(
-      "https://authichain.govchain.us/authentic-agentic-economy"
+      "https://authichain.com/authentic-agentic-economy"
     );
   });
 });

@@ -29,7 +29,7 @@ function hasSitemapPath(urls: URL[], pathname: string): boolean {
   return urls.some(
     u =>
       u.protocol === "https:" &&
-      u.hostname === "authichain.govchain.us" &&
+      u.hostname === "authichain.com" &&
       u.pathname === pathname
   );
 }

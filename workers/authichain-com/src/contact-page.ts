@@ -56,12 +56,12 @@ export function renderContactPage(): string {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Contact AuthiChain</title>
 <meta name="description" content="Reach the AuthiChain team — partnerships and pilots, technical support for existing customers, and federal or government pursuits.">
-<link rel="canonical" href="https://authichain.govchain.us/contact">
+<link rel="canonical" href="https://authichain.com/contact">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Contact AuthiChain">
 <meta property="og:description" content="Reach the AuthiChain team — partnerships, technical support, and federal pursuits.">
-<meta property="og:url" content="https://authichain.govchain.us/contact">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+<meta property="og:url" content="https://authichain.com/contact">
+<meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

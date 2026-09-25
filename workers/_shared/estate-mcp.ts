@@ -132,8 +132,8 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     dppPaymentLink: DPP_LINK,
     farmPaymentLink: FARM_LINK,
     emailCapture: {
-      passport: "https://authichain.govchain.us/passport",
-      dpp: "https://authichain.govchain.us/dpp",
+      passport: "https://authichain.com/passport",
+      dpp: "https://authichain.com/dpp",
       pricing: `${origin}/pricing`,
     },
   };
@@ -152,10 +152,10 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
       asset: BASE_USDC_ASSET,
       publishedPayTo: X402_PUBLISHED_PAY_TO,
       pricePerCall: `$${x402PriceUsd()} USDC`,
-      catalog: "https://authichain.govchain.us/api/x402/catalog",
-      wellKnown: "https://authichain.govchain.us/.well-known/x402.json",
+      catalog: "https://authichain.com/api/x402/catalog",
+      wellKnown: "https://authichain.com/.well-known/x402.json",
       mcp: `${origin}/mcp`,
-      docs: "https://authichain.govchain.us/x402",
+      docs: "https://authichain.com/x402",
       note: "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT.",
     },
     humanCheckout,
@@ -173,9 +173,9 @@ function discoveryBody(brand: SisterDiscoveryBrand) {
     pay: {
       x402: `POST ${origin}/api/x402`,
       mcpVerify: `POST ${origin}/mcp tools/call verify`,
-      catalog: "https://authichain.govchain.us/api/x402/catalog",
-      wellKnown: "https://authichain.govchain.us/.well-known/x402.json",
-      docs: "https://authichain.govchain.us/x402",
+      catalog: "https://authichain.com/api/x402/catalog",
+      wellKnown: "https://authichain.com/.well-known/x402.json",
+      docs: "https://authichain.com/x402",
     },
   };
 }
