@@ -4,8 +4,8 @@
  * Health is the only source of payTo / price / asset / network.
  * Listing packs, directory rows, skills, and sister aliases copy those
  * fields. Do not hardcode a second wallet. Do not put $QRON on this rail.
- * Do not rebind X402_PAY_TO away from the owner-authorized treasury
- * 0xaebf…e437.
+ * X402_PAY_TO is the owner's keyed EOA 0x5db5…6AA2. Never list the $QRON
+ * ERC-20 contract 0xAebf…E437 as a wallet.
  */
 
 export const GROWTH_ORIGIN = "https://authichain.com";
@@ -256,7 +256,7 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
         toolCount: 3,
       },
       rules: [
-        "Copy wallet from this pack or live /api/x402/health payTo. Never type 0x5db5….",
+        "Copy wallet from this pack or live /api/x402/health payTo. Never type the $QRON contract 0xAebf….",
         "Paid route must already 402 unpaid with Base USDC to that wallet.",
         "Price must match health.pricePerCall.usd (live $0.05).",
         "Do not list a sister origin as a second provider wallet.",
