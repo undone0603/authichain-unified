@@ -483,7 +483,7 @@ function qronEmail(t: (typeof QRON_TARGETS)[0]): {
   white-label API:</p>
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
-    <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
+    <li>Ed25519-signed authenticity certificate on every scan, anchored on Polygon (roadmap)</li>
     <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
     <!--
       Was "FTC EO 14392 compliant origin verification". Both halves were off.

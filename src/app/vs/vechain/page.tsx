@@ -39,7 +39,7 @@ const reasons = [
   },
   {
     title: 'AI + Multi-Chain Assurance',
-    desc: '5-agent AI consensus screens every scan before it is anchored to both Polygon and Bitcoin L1 — combining machine verification with the strongest settlement layer available.',
+    desc: 'Our goal: 5-agent AI consensus that screens every scan before it is anchored to both Polygon and Bitcoin L1, combining machine verification with the strongest settlement layer available.',
   },
 ];
 

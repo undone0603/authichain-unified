@@ -2234,7 +2234,7 @@ h2{font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;margin-bottom:1rem}
 .feature-card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.75rem}
 .feature-card h3{font-size:1rem;font-weight:600;margin-bottom:.75rem;color:var(--teal)}
 .feature-card p{color:var(--muted);font-size:.875rem;line-height:1.65}
-.compliance-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem}
+.compliance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
 .compliance-card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.5rem}
 .compliance-card h3{font-size:1rem;font-weight:600;margin-bottom:.5rem;color:var(--teal-light)}
 .compliance-card p{color:var(--muted);font-size:.85rem}
@@ -2311,7 +2311,6 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <div class="compliance-card"><h3>EU Battery Regulation (DPP)</h3><p>On our roadmap: Digital Product Passport export for EV and industrial batteries, with a raw-material traceability chain from mine to pack.</p></div>
     <div class="compliance-card"><h3>IPC-1752A / CMRT Conflict Minerals</h3><p>On our roadmap: automated Conflict Minerals Reporting Template generation for SEC Dodd-Frank Section 1502, with on-chain supplier declarations in place of manual data collection.</p></div>
     <div class="compliance-card"><h3>US NDAA Section 889 (Banned Components)</h3><p>Goal: cross-reference component registrations against NDAA prohibited supplier lists and flag matches at sourcing and incoming inspection.</p></div>
-    <div class="compliance-card"><h3>ISO 9001 Audit Trail</h3><p>Immutable on-chain records built to support ISO 9001 traceability evidence. One-click evidence package export for certification audits and customer requests. Certification remains yours to hold.</p></div>
   </div>
 </section>
 

@@ -46,7 +46,7 @@ export default function StrainChainCompliance() {
                 <FileText className="w-8 h-8 text-gold mb-6" />
                 <h3 className="text-xl font-black uppercase tracking-tight mb-4">Immutable Data Carrier</h3>
                 <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                    QRON technology serves as the primary data carrier, linking physical products to their decentralized digital twin. Every scan accesses a cryptographically signed payload containing carbon footprint, repairability, and material composition data.
+                    QRON technology serves as the primary data carrier, linking physical products to their decentralized digital twin. Our goal: every scan opens a cryptographically signed payload containing carbon footprint, repairability, and material composition data.
                 </p>
             </div>
             <div className="protocol-card p-8 border-zinc-800 bg-zinc-950/50">
