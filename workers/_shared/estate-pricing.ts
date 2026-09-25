@@ -122,7 +122,7 @@ export function planCheckoutCta(
   }
   return {
     href:
-      origin === "authichain" ? "/contact" : "https://authichain.govchain.us/contact",
+      origin === "authichain" ? "/contact" : "https://authichain.com/contact",
     label: "Contact",
     external: origin !== "authichain",
   };
@@ -156,7 +156,7 @@ function cataloguePricingGrid(
       return `<article class="price-card${featured ? " featured" : ""}">
   <h3>${esc(title)}</h3>
   <div class="price-amount">${esc(amount)}</div>
-  <div class="price-period">${esc(suffix || "trial")}</div>
+  <div class="price-period">${esc(suffix || "no card")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
   ${attributedCheckoutCta(plan, cardCta, featured)}
@@ -286,7 +286,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       ],
       footerMore: [
         { href: "/genetics/mendo-love-farms", label: "Genetics library" },
-        { href: "https://authichain.govchain.us/contact", label: "Contact" },
+        { href: "https://authichain.com/contact", label: "Contact" },
       ],
       offers: catalogueOffers,
     };
@@ -304,7 +304,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       url: planJsonLdOfferUrl(
         p,
         isAuthichain
-          ? "https://authichain.govchain.us/pricing"
+          ? "https://authichain.com/pricing"
           : "https://qron.space/pricing"
       ),
     }));
@@ -363,7 +363,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.govchain.us/pricing",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
@@ -371,7 +371,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroLede:
       "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
     secondary: {
-      href: "https://authichain.govchain.us/pricing",
+      href: "https://authichain.com/pricing",
       label: "Start DPP checkout",
       primary: false,
     },
@@ -384,12 +384,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
       {
-        href: "https://authichain.govchain.us/pricing",
+        href: "https://authichain.com/pricing",
         label: "DPP checkout",
       },
     ],
     footerMore: [
-      { href: "https://authichain.govchain.us/x402", label: "x402 agent pay" },
+      { href: "https://authichain.com/x402", label: "x402 agent pay" },
     ],
     offers,
   };
@@ -478,7 +478,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.govchain.us", label: "AuthiChain" },
+        { href: "https://authichain.com", label: "AuthiChain" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
         {
@@ -641,7 +641,7 @@ ${estateCtaBand({
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
-      href: "https://authichain.govchain.us/pricing",
+      href: "https://authichain.com/pricing",
       label: "AuthiChain pricing",
       primary: false,
     },
@@ -655,14 +655,14 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: "https://authichain.govchain.us/pricing", label: "DPP checkout" },
+        { href: "https://authichain.com/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
       ],
     },
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.govchain.us/pricing", label: "AuthiChain pricing" },
+        { href: "https://authichain.com/pricing", label: "AuthiChain pricing" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         {
           href: "https://strainchain.io/onboard",
