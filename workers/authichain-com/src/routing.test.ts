@@ -144,14 +144,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/theater_1"')
-  );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/theater_3"')
-  );
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/theater_1"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/theater_3"/);
+  // Theater is unlisted since the #1234 catalog freeze.
+  assert.equal(html.includes("checkout/theater_1"), false);
+  assert.equal(html.includes("checkout/theater_3"), false);
   assert.match(html, /href="\/x402"/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
 });

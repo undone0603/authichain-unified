@@ -731,7 +731,7 @@ function pricing(): string {
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
        <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
      </div>
-     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater $499 and $1,499 are not listed. Farm $149/mo is the founder-income recurring rail.</p>`
+     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
   );
 }
 
