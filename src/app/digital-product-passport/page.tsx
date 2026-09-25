@@ -372,9 +372,7 @@ export default function DPPPage() {
               Every Requirement. <span className="gold-text">Checked.</span>
             </h2>
             <p className="text-zinc-500 text-sm mt-4 max-w-lg mx-auto">
-              EU ESPR mandates that DPP data be accessible, verifiable, and
-              tamper-evident. AuthiChain exceeds the spec — adding what no
-              competitor can match.
+              EU ESPR mandates that DPP data be accessible, verifiable, and tamper-evident.
             </p>
           </div>
 

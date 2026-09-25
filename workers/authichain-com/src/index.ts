@@ -2720,28 +2720,6 @@ textarea{resize:vertical;min-height:80px}
       Share the QR code with buyers, customs agents, or insurers. Anyone who scans it can instantly verify your product.
     </div>
   </div>
-
-  <div style="margin-top:3rem;border-top:1px solid rgba(255,255,255,.06);padding-top:2rem">
-    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">AuthiChain vs. alternatives</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;font-size:.85rem">
-      <div style="background:#0a0a0f;border:1px solid rgba(201,162,39,.2);border-radius:.5rem;padding:1rem">
-        <div style="color:#c9a227;font-weight:700;margin-bottom:.35rem">AuthiChain</div>
-        <div style="color:#94a3b8;line-height:1.6">Free tier. 30-second setup. Public certificate URL. No enterprise contract.</div>
-      </div>
-      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
-        <div style="font-weight:700;margin-bottom:.35rem;color:#555">AURA (LVMH)</div>
-        <div style="color:#555;line-height:1.6">Consortium-only. LVMH/Prada/Richemont brands. No public access.</div>
-      </div>
-      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
-        <div style="font-weight:700;margin-bottom:.35rem;color:#555">MediLedger</div>
-        <div style="color:#555;line-height:1.6">Pharma only. EDI integration required. Six-figure setup.</div>
-      </div>
-      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
-        <div style="font-weight:700;margin-bottom:.35rem;color:#555">IBM Food Trust</div>
-        <div style="color:#555;line-height:1.6">Enterprise SaaS. Supply chain integration required.</div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>

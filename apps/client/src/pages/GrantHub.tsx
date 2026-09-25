@@ -316,9 +316,6 @@ export default function GrantHub() {
                 <p className="font-semibold">The Solution:</p>
                 <p>AuthiChain is the world's first unified AI + blockchain authentication platform. We combine real-time AI image analysis (99.7% accuracy), immutable blockchain verification, NFT-based certificates of authenticity, and automated supply chain tracking in a single SaaS platform.</p>
                 
-                <p className="font-semibold">Why One-of-a-Kind:</p>
-                <p>No competitor offers AI-powered visual authentication AND blockchain verification AND an NFT marketplace AND automated business intelligence in one platform. AuthiChain eliminates the need for 4-5 separate vendor relationships.</p>
-                
                 <p className="font-semibold">Market Opportunity:</p>
                 <p>The authentication and brand protection market is $4.1B (2026), growing at 12% CAGR. Blockchain authentication holds 53.5% market share. AuthiChain targets the intersection of AI ($200B) and blockchain authentication ($2.2B) markets.</p>
                 
@@ -332,7 +329,7 @@ export default function GrantHub() {
                 variant="outline"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    "AuthiChain is the world's first unified AI + blockchain authentication platform combining real-time AI image analysis, immutable blockchain verification, NFT-based certificates, and automated supply chain tracking. The $4.1B authentication market is growing at 12% CAGR, and no competitor offers our full-stack approach. We serve luxury, pharma, agriculture, art, and electronics with SaaS subscriptions from $49-$799/mo plus usage-based fees."
+                    "AuthiChain is a unified AI + blockchain authentication platform combining real-time AI image analysis (in development), immutable blockchain verification, NFT-based certificates (in development), and automated supply chain tracking. The $4.1B authentication market is growing at 12% CAGR. We serve luxury, pharma, agriculture, art, and electronics with SaaS subscriptions from $49-$799/mo plus usage-based fees."
                   );
                   toast.success("Pitch copied to clipboard!");
                 }}
