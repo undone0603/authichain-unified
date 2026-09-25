@@ -1160,10 +1160,10 @@ app.post("/api/gpt/qr/generate", async c => {
     const body = await c.req.json().catch(() => ({}) as any);
     const { productId, style, size } = body ?? {};
     if (!productId) return c.json({ error: "productId required" }, 400);
-    const verifyUrl = `https://authichain.com/verify/${productId}`;
+    const verifyUrl = `https://authichain.govchain.us/verify/${productId}`;
     return c.json({
       qrUrl: verifyUrl,
-      embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
+      embedUrl: `https://authichain.govchain.us/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
       message: `QR code generated for product ${productId}`,
     });
   } catch (err) {

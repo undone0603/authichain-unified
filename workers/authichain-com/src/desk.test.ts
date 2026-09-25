@@ -13,7 +13,7 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string) {
-  return worker.fetch(new Request(`https://authichain.com${path}`), ENV);
+  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), ENV);
 }
 
 test("/desk is a real page, not the indigo homepage", async () => {
@@ -101,7 +101,7 @@ test("apex sitemap lists /desk paths that resolve", async () => {
   assert.equal(res.status, 200);
   const xml = await res.text();
   for (const path of DESK_SITEMAP) {
-    assert.match(xml, new RegExp(`https://authichain.com${path}<`));
+    assert.match(xml, new RegExp(`https://authichain.govchain.us${path}<`));
   }
 });
 

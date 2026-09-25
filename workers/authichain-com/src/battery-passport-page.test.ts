@@ -11,7 +11,7 @@ import { ICP_SEO_SITEMAP_PATHS } from "./icp-seo-sitemap.ts";
 import { GAP_MAP_DISCLAIMER } from "./battery-gap-map.ts";
 
 const req = (path: string, method = "GET") =>
-  new Request(`https://authichain.com${path}`, { method });
+  new Request(`https://authichain.govchain.us${path}`, { method });
 
 describe("battery passport offer page", () => {
   const html = renderBatteryPassportPage(new Date("2026-09-23T12:00:00Z"));

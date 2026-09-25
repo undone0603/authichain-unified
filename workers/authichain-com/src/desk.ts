@@ -87,17 +87,17 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
 const HUBS = [
   {
     brand: "AuthiChain",
-    href: "https://authichain.com/p/what-is-a-digital-product-passport",
+    href: "https://authichain.govchain.us/p/what-is-a-digital-product-passport",
     label: "What is a DPP",
   },
   {
     brand: "AuthiChain",
-    href: "https://authichain.com/p/eu-digital-product-passport-registry-test-environment",
+    href: "https://authichain.govchain.us/p/eu-digital-product-passport-registry-test-environment",
     label: "EU DPP registry test env",
   },
   {
     brand: "AuthiChain",
-    href: "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1-changes",
+    href: "https://authichain.govchain.us/p/w3c-verifiable-credentials-data-model-2-1-changes",
     label: "W3C VC Data Model 2.1",
   },
   {
@@ -514,7 +514,7 @@ function renderCertificate(seal: DeskSeal): string {
       </div>
       <p class="muted" style="margin-top:1rem">${esc(seal.disclaimer)}</p>
       <div class="row">${sealCta(seal)}
-        <a class="btn ghost" href="https://authichain.com/onboard">Start a pilot</a>
+        <a class="btn ghost" href="https://authichain.govchain.us/onboard">Start a pilot</a>
       </div>
     </article>
   </section>`;
@@ -596,7 +596,7 @@ function shell(
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="https://authichain.com${esc(path)}">
+<link rel="canonical" href="https://authichain.govchain.us${esc(path)}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${CSS}</style>
 </head><body>

@@ -39,13 +39,13 @@ const BRANDS = {
 // Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
 // estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
-  authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
+  authichainDppCheckout: 'https://authichain.govchain.us/api/checkout/dpp',
   authichainDppPay: 'https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c',
-  authichainPricing: 'https://authichain.com/pricing',
+  authichainPricing: 'https://authichain.govchain.us/pricing',
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
-  strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
+  strainchainPassportCheckout: 'https://authichain.govchain.us/api/checkout/plan/strainchain_passport',
   strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
-  strainchainFarmCheckout: 'https://authichain.com/api/checkout/plan/strainchain_farm',
+  strainchainFarmCheckout: 'https://authichain.govchain.us/api/checkout/plan/strainchain_farm',
   strainchainFarmPay: 'https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z',
 };
 
@@ -101,13 +101,13 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   if (trumark) {
     primaryHref = LIVE_MONEY.strainchainPassportCheckout;
     primaryLabel = 'Start StrainChain passport checkout';
-    secondaryHref = 'https://authichain.com/trumark';
+    secondaryHref = 'https://authichain.govchain.us/trumark';
     secondaryLabel = 'Read the TruMark brief';
   } else if (musa || ((dpp || brandKey === 'authichain') && !cannabis)) {
     primaryHref = LIVE_MONEY.authichainDppCheckout;
     primaryLabel = 'Start DPP readiness checkout';
     secondaryHref = musa
-      ? 'https://authichain.com/made-in-america'
+      ? 'https://authichain.govchain.us/made-in-america'
       : LIVE_MONEY.authichainPricing;
     secondaryLabel = musa ? 'Read the Made in America brief' : 'View AuthiChain pricing';
   } else if (cannabis || brandKey === 'strainchain') {

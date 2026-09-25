@@ -15,7 +15,7 @@ import {
   recordDppLoopEvent,
 } from "./dpp-loop";
 
-export const DPP_CHECKOUT_ORIGIN = "https://authichain.com";
+export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
 export { DPP_SMOKE_PROMO, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");

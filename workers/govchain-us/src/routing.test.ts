@@ -295,8 +295,8 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
-  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.match(html, /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/);
+  assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
@@ -312,7 +312,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     assert.ok(html.includes("Nothing here is an award"));
     const hrefs = [...html.matchAll(/\bhref="([^"]+)"/g)].map(m => m[1]);
     const actions = [...html.matchAll(/\baction="([^"]+)"/g)].map(m => m[1]);
-    assert.ok(hrefs.includes("https://authichain.com/made-in-america"), path);
+    assert.ok(hrefs.includes("https://authichain.govchain.us/made-in-america"), path);
     assert.ok(
       hrefs.includes(
         "https://govchain.us/p/sbir-svip-blockchain-document-verification"
@@ -321,7 +321,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     );
     assert.ok(hrefs.includes("/onboard"), path);
     assert.ok(
-      actions.includes("https://authichain.com/api/checkout/dpp"),
+      actions.includes("https://authichain.govchain.us/api/checkout/dpp"),
       path
     );
     assert.ok(!html.includes("SBIR awarded"));

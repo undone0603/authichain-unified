@@ -13,8 +13,8 @@ import {
 import { MICROSITE_HTML } from "./microsite-packs.ts";
 
 export const PASSPORT_CHECKOUT =
-  "https://authichain.com/api/checkout/plan/strainchain_passport";
-export const DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+  "https://authichain.govchain.us/api/checkout/plan/strainchain_passport";
+export const DPP_CHECKOUT = "https://authichain.govchain.us/api/checkout/dpp";
 
 export type MicrositePackId =
   "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
@@ -70,9 +70,9 @@ for (const def of Object.values(MICROSITES)) {
 
 export function micrositeSitemapUrls(): string[] {
   return [
-    "https://authichain.com/m",
+    "https://authichain.govchain.us/m",
     ...Object.values(MICROSITES).map(
-      def => `https://authichain.com${def.canonicalPath}`
+      def => `https://authichain.govchain.us${def.canonicalPath}`
     ),
   ];
 }
@@ -145,7 +145,7 @@ function renderHub(): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Money-path microsites | AuthiChain</title>
 <meta name="description" content="Targeted AuthiChain microsites. Passport $49 and EU DPP Readiness $299. Self-serve — no call.">
-<link rel="canonical" href="https://authichain.com/m">
+<link rel="canonical" href="https://authichain.govchain.us/m">
 <style>
 body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;margin:0;color:#0f172a;background:#fff}
 .wrap{width:min(880px,calc(100% - 32px));margin:0 auto;padding:48px 0}

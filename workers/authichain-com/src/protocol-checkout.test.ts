@@ -5,7 +5,7 @@ import {
 } from "./protocol-checkout";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 describe("tryHandleProtocolCheckout", () => {
@@ -131,7 +131,7 @@ describe("tryHandleProtocolCheckout", () => {
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toBe(
-      "https://authichain.com/dpp?need_email=1&visit_id=dpp_abc"
+      "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_abc"
     );
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -210,7 +210,7 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     );
     expect(res?.status).toBe(303);
     expect(res?.headers.get("location")).toBe(
-      "https://authichain.com/dpp?need_email=1&visit_id=dpp_anon"
+      "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_anon"
     );
   });
 
@@ -220,7 +220,7 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     );
     expect(res?.status).toBe(303);
     expect(res?.headers.get("location")).toBe(
-      "https://authichain.com/pricing?need_email=1"
+      "https://authichain.govchain.us/pricing?need_email=1"
     );
   });
 
@@ -230,7 +230,7 @@ describe("tryHandleApiCheckoutEmailGate", () => {
     );
     expect(res?.status).toBe(303);
     expect(res?.headers.get("location")).toBe(
-      "https://authichain.com/pricing?need_email=1"
+      "https://authichain.govchain.us/pricing?need_email=1"
     );
   });
 

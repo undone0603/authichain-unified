@@ -16,7 +16,7 @@ afterEach(() => {
 describe("createPlanCheckoutSession", () => {
   it("requires planId", async () => {
     const result = await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", {
+      request: new Request("https://authichain.govchain.us/api/checkout", {
         method: "POST",
       }),
       body: {},
@@ -31,7 +31,7 @@ describe("createPlanCheckoutSession", () => {
 
   it("rejects an unknown plan without calling Stripe", async () => {
     const result = await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", {
+      request: new Request("https://authichain.govchain.us/api/checkout", {
         method: "POST",
       }),
       body: { planId: "not-a-plan" },
@@ -46,7 +46,7 @@ describe("createPlanCheckoutSession", () => {
 
   it("rejects the free plan", async () => {
     const result = await createPlanCheckoutSession({
-      request: new Request("https://authichain.com/api/checkout", {
+      request: new Request("https://authichain.govchain.us/api/checkout", {
         method: "POST",
       }),
       body: { planId: "free" },
@@ -62,7 +62,7 @@ describe("createPlanCheckoutSession", () => {
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_passport",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
         {
           method: "GET",
         }
@@ -91,7 +91,7 @@ describe("createPlanCheckoutSession", () => {
   it("303s to pricing when GET attributed checkout has no email", async () => {
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_passport",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
         { method: "GET" }
       ),
       body: { planId: "strainchain_passport" },
@@ -102,7 +102,7 @@ describe("createPlanCheckoutSession", () => {
       ok: false,
       status: 303,
       error: "email_required",
-      url: "https://authichain.com/pricing?need_email=1",
+      url: "https://authichain.govchain.us/pricing?need_email=1",
     });
     expect(create).not.toHaveBeenCalled();
   });
@@ -113,7 +113,7 @@ describe("createPlanCheckoutSession", () => {
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_passport",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
         { method: "GET" }
       ),
       body: {
@@ -131,7 +131,7 @@ describe("createPlanCheckoutSession", () => {
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
         { method: "GET" }
       ),
       body: { planId: "strainchain_farm" },
@@ -151,7 +151,7 @@ describe("createPlanCheckoutSession", () => {
     });
     const result = await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
         {
           method: "GET",
           headers: { cookie: "aff_ref=AFF-COOKIE; ref_code=USER-456" },
@@ -174,7 +174,7 @@ describe("createPlanCheckoutSession", () => {
     });
     await createPlanCheckoutSession({
       request: new Request(
-        "https://authichain.com/api/checkout/plan/strainchain_farm",
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_farm",
         { method: "GET", headers: { cookie: "aff_ref=AFF-COOKIE" } }
       ),
       body: { planId: "strainchain_farm", affiliateCode: "AFF-EXPLICIT" },

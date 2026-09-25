@@ -298,10 +298,10 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /\$299/);
   assert.match(html, /href="\/generate"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/);
   assert.doesNotMatch(
     html,
-    /href="https:\/\/authichain\.com\/api\/checkout\/dpp"/
+    /href="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/
   );
   assert.ok(
     html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
@@ -311,11 +311,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   );
   assert.match(
     html,
-    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_1"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_1"/
   );
   assert.match(
     html,
-    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_3"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_3"/
   );
 });
 

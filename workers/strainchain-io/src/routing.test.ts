@@ -131,11 +131,11 @@ test("the apex offers Passport checkout and the Farm Plan Payment Link", async (
   assert.match(html, /name="email"/);
   assert.match(
     html,
-    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
   );
   assert.doesNotMatch(
     html,
-    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /href="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
   );
   assert.ok(
     html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')

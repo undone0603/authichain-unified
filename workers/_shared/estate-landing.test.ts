@@ -132,7 +132,7 @@ test("IndexNow key file is exact-path plain text with a short cache", async () =
   assert.equal(ESTATE_INDEXNOW_KEY, "authichain2026indexnow");
 
   const hit = tryHandleEstateIndexNow(
-    new Request("https://authichain.com/authichain2026indexnow.txt")
+    new Request("https://authichain.govchain.us/authichain2026indexnow.txt")
   );
   assert.ok(hit);
   assert.equal(await hit.text(), ESTATE_INDEXNOW_KEY);

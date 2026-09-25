@@ -8,7 +8,7 @@
  * ERC-20 contract 0xAebf…E437 as a wallet.
  */
 
-export const GROWTH_ORIGIN = "https://authichain.com";
+export const GROWTH_ORIGIN = "https://authichain.govchain.us";
 
 export type GrowthDirectoryStatus = "live" | "ready" | "declared" | "planned";
 
@@ -58,7 +58,7 @@ export const GROWTH_DIRECTORIES: GrowthDirectory[] = [
     url: "https://www.x402scan.com",
     probe: `GET ${GROWTH_ORIGIN}/.well-known/x402`,
     status: "live",
-    notes: "Fan-out lists POST https://authichain.com/api/x402.",
+    notes: "Fan-out lists POST https://authichain.govchain.us/api/x402.",
   },
   {
     id: "payapi",

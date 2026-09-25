@@ -85,7 +85,7 @@ export function planCheckoutCta(
       href:
         origin === "authichain"
           ? "/api/checkout/dpp"
-          : "https://authichain.com/api/checkout/dpp",
+          : "https://authichain.govchain.us/api/checkout/dpp",
       label: plan.cta,
       external: origin !== "authichain",
     };
@@ -104,7 +104,7 @@ export function planCheckoutCta(
       return { href: path, label: plan.cta, external: false };
     }
     return {
-      href: `https://authichain.com${path}`,
+      href: `https://authichain.govchain.us${path}`,
       label: plan.cta,
       external: true,
     };
@@ -118,7 +118,7 @@ export function planCheckoutCta(
       return { href: path, label: plan.cta, external: false };
     }
     return {
-      href: `https://authichain.com${path}`,
+      href: `https://authichain.govchain.us${path}`,
       label: plan.cta,
       external: true,
     };
@@ -132,7 +132,7 @@ export function planCheckoutCta(
   }
   return {
     href:
-      origin === "authichain" ? "/contact" : "https://authichain.com/contact",
+      origin === "authichain" ? "/contact" : "https://authichain.govchain.us/contact",
     label: "Contact",
     external: origin !== "authichain",
   };
@@ -279,7 +279,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       ],
       footerMore: [
         { href: "/genetics/mendo-love-farms", label: "Genetics library" },
-        { href: "https://authichain.com/contact", label: "Contact" },
+        { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
       offers: catalogueOffers,
     };
@@ -297,7 +297,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       url: planJsonLdOfferUrl(
         p,
         isAuthichain
-          ? "https://authichain.com/pricing"
+          ? "https://authichain.govchain.us/pricing"
           : "https://qron.space/pricing"
       ),
     }));
@@ -309,7 +309,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       title: "Pricing — AuthiChain",
       description:
         "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
-      canonical: "https://authichain.com/pricing",
+      canonical: "https://authichain.govchain.us/pricing",
       themeColor: "#4F46E5",
       primary: { href: "/api/checkout/dpp", label: "Start DPP checkout" },
       nav: [
@@ -352,7 +352,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.com/pricing",
+        href: "https://authichain.govchain.us/pricing",
         label: "DPP checkout",
       },
     ],
@@ -360,7 +360,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroLede:
       "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
     secondary: {
-      href: "https://authichain.com/pricing",
+      href: "https://authichain.govchain.us/pricing",
       label: "Start DPP checkout",
       primary: false,
     },
@@ -373,12 +373,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
       {
-        href: "https://authichain.com/pricing",
+        href: "https://authichain.govchain.us/pricing",
         label: "DPP checkout",
       },
     ],
     footerMore: [
-      { href: "https://authichain.com/x402", label: "x402 agent pay" },
+      { href: "https://authichain.govchain.us/x402", label: "x402 agent pay" },
     ],
     offers,
   };
@@ -467,7 +467,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com", label: "AuthiChain" },
+        { href: "https://authichain.govchain.us", label: "AuthiChain" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
         {
@@ -513,7 +513,7 @@ export function tryHandleEstatePricing(
 }
 
 /** Live AuthiChain DPP checkout — absolute so it works off govchain.us. */
-export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.govchain.us/api/checkout/dpp";
 
 /**
  * GovChain has no self-serve SKU. /pricing must not invent one and must not
@@ -628,7 +628,7 @@ ${estateCtaBand({
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
-      href: "https://authichain.com/pricing",
+      href: "https://authichain.govchain.us/pricing",
       label: "AuthiChain pricing",
       primary: false,
     },
@@ -642,14 +642,14 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: "https://authichain.com/pricing", label: "DPP checkout" },
+        { href: "https://authichain.govchain.us/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
       ],
     },
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com/pricing", label: "AuthiChain pricing" },
+        { href: "https://authichain.govchain.us/pricing", label: "AuthiChain pricing" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         {
           href: "https://strainchain.io/onboard",

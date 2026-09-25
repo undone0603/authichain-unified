@@ -74,7 +74,7 @@ describe("GET /api/checkout/dpp", () => {
     const res = await app.request("/api/checkout/dpp?visit_id=dpp_worker_anon");
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
-      "https://authichain.com/dpp?need_email=1&visit_id=dpp_worker_anon"
+      "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_worker_anon"
     );
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(dppCreate).not.toHaveBeenCalled();
@@ -123,7 +123,7 @@ describe("GET /api/checkout/plan/:planId", () => {
     const res = await app.request("/api/checkout/plan/strainchain_passport");
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
-      "https://authichain.com/pricing?need_email=1"
+      "https://authichain.govchain.us/pricing?need_email=1"
     );
     expect(dppCreate).not.toHaveBeenCalled();
   });

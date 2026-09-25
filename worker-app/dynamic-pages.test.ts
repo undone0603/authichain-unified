@@ -248,9 +248,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/api/checkout/dpp"');
+    expect(body).toContain('action="https://authichain.govchain.us/api/checkout/dpp"');
     expect(body).not.toContain(
-      'href="https://authichain.com/api/checkout/dpp"'
+      'href="https://authichain.govchain.us/api/checkout/dpp"'
     );
     expect(body).toContain(
       'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
@@ -271,10 +271,10 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("What you get");
     expect(body).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
     );
     expect(body).not.toContain(
-      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'href="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
     );
     expect(body).toContain(
       'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'

@@ -2064,7 +2064,7 @@ function pageShell(title: string, robots: string, body: string): string {
 <style>${PAGE_CSS}</style></head><body>
 <div class="nav"><a href="/" class="logo">GovChain</a><a href="/opportunities">Opportunities</a></div>
 ${body}
-<footer>&copy; 2026 GovChain &middot; Powered by AuthiChain Protocol &middot; <a href="https://authichain.com">authichain.com</a></footer>
+<footer>&copy; 2026 GovChain &middot; Powered by AuthiChain Protocol &middot; <a href="https://authichain.govchain.us">authichain.com</a></footer>
 </body></html>`;
 }
 
@@ -2344,7 +2344,7 @@ export default {
 <meta name="theme-color" content="#1d4ed8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and an immutable on-chain public datalog for Made-in-USA and federal compliance.","sameAs":["https://authichain.com"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and an immutable on-chain public datalog for Made-in-USA and federal compliance.","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GovChain","url":"https://govchain.us","description":"Federal Contract Intelligence and Public Provenance powered by AuthiChain Protocol."}</script>
 <style>
 ${estateCssVars("govchain")}
@@ -2445,7 +2445,7 @@ ${estateFeatures(
     <p class="section-sub">GovChain does not publish a self-serve price in the AuthiChain catalogue. Request access on /onboard — the same intake production already proxies. This page does not promise a live government mint.</p>
     <div class="estate-actions">
       <a class="btn btn-primary" href="/onboard">Request access</a>
-      <a class="btn btn-outline" href="https://authichain.com/pricing">AuthiChain pricing</a>
+      <a class="btn btn-outline" href="https://authichain.govchain.us/pricing">AuthiChain pricing</a>
     </div>
   </div>
 </section>
@@ -2472,7 +2472,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
+        { href: "https://authichain.govchain.us/dashboard", label: "AuthiChain dashboard" },
         { href: "https://qron.space/generate", label: "Generate Living QR" },
         { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
       ],
@@ -2480,7 +2480,7 @@ ${estateFooter(
     {
       heading: "Company",
       links: [
-        { href: "https://authichain.com/contact", label: "Contact" },
+        { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
     },
   ],

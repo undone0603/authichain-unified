@@ -87,7 +87,7 @@ describe("planIdFromCheckoutAction", () => {
   it("maps DPP, protocol DPP, and plan checkout paths", () => {
     expect(planIdFromCheckoutAction("/api/checkout/dpp")).toBe("dpp_readiness");
     expect(
-      planIdFromCheckoutAction("https://authichain.com/api/checkout/dpp")
+      planIdFromCheckoutAction("https://authichain.govchain.us/api/checkout/dpp")
     ).toBe("dpp_readiness");
     expect(planIdFromCheckoutAction("/protocol/checkout/dpp")).toBe(
       "dpp_readiness"
@@ -175,10 +175,10 @@ describe("emailPaymentLinkHtml", () => {
 describe("checkoutNeedEmailRedirect", () => {
   it("sends DPP and plan one-clicks to landings that capture email", () => {
     expect(checkoutNeedEmailRedirect("dpp", "dpp_abc")).toBe(
-      "https://authichain.com/dpp?need_email=1&visit_id=dpp_abc"
+      "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_abc"
     );
     expect(checkoutNeedEmailRedirect("plan")).toBe(
-      "https://authichain.com/pricing?need_email=1"
+      "https://authichain.govchain.us/pricing?need_email=1"
     );
   });
 
@@ -217,7 +217,7 @@ describe("rewriteCheckoutHref", () => {
     ).toBe(dpp);
     expect(
       rewriteCheckoutHref(
-        "https://authichain.com/api/checkout/plan/strainchain_passport"
+        "https://authichain.govchain.us/api/checkout/plan/strainchain_passport"
       )
     ).toBe(passport);
     expect(rewriteCheckoutHref("/api/checkout/plan/strainchain_farm")).toBe(

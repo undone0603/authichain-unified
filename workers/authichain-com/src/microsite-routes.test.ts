@@ -29,7 +29,7 @@ function hasSitemapPath(urls: URL[], pathname: string): boolean {
   return urls.some(
     u =>
       u.protocol === "https:" &&
-      u.hostname === "authichain.com" &&
+      u.hostname === "authichain.govchain.us" &&
       u.pathname === pathname
   );
 }
@@ -104,7 +104,7 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.doesNotMatch(bat, /Annex II Certification Required/);
   assert.doesNotMatch(bat, /WHO GMP Certification \(Global/);
   assert.match(bat, /name="email"/);
-  assert.match(bat, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
+  assert.match(bat, /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/);
   assert.ok(
     bat.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
   );
@@ -176,7 +176,7 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.match(batHtml, /MVCL-MQWQ2MR7-I7L0/);
   assert.match(
     batHtml,
-    /action="https:\/\/authichain.com\/api\/checkout\/dpp"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/
   );
   assert.doesNotMatch(
     batHtml,

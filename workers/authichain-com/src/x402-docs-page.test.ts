@@ -28,18 +28,18 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.chainId).toBe("8453");
     expect(X402_PUBLIC.priceUsd).toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(
-      "https://authichain.com/api/x402/health"
+      "https://authichain.govchain.us/api/x402/health"
     );
     expect(X402_PUBLIC.catalogUrl).toBe(
-      "https://authichain.com/api/x402/catalog"
+      "https://authichain.govchain.us/api/x402/catalog"
     );
     expect(X402_PUBLIC.wellKnownUrl).toBe(
-      "https://authichain.com/.well-known/x402.json"
+      "https://authichain.govchain.us/.well-known/x402.json"
     );
     expect(X402_PUBLIC.fanoutUrl).toBe(
-      "https://authichain.com/.well-known/x402"
+      "https://authichain.govchain.us/.well-known/x402"
     );
-    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.com/openapi.json");
+    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.govchain.us/openapi.json");
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
     expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
     expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");
@@ -58,10 +58,10 @@ describe("x402 public docs page", () => {
     expect(html).toContain("<title>x402 agent pay — AuthiChain</title>");
     expect(html).toContain(X402_PUBLIC.payTo);
     expect(html).toContain(X402_PUBLIC.asset);
-    expect(html).toContain("curl -sS https://authichain.com/api/x402/health");
-    expect(html).toContain("curl -sS https://authichain.com/api/x402/catalog");
+    expect(html).toContain("curl -sS https://authichain.govchain.us/api/x402/health");
+    expect(html).toContain("curl -sS https://authichain.govchain.us/api/x402/catalog");
     expect(html).toContain(
-      "curl -sS -i -X POST https://authichain.com/api/x402"
+      "curl -sS -i -X POST https://authichain.govchain.us/api/x402"
     );
     expect(html).toContain("HTTP 402");
     expect(html).toContain("extensions.bazaar");

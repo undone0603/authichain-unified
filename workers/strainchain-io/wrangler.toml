@@ -17,7 +17,7 @@ zone_name = "strainchain.io"
 [vars]
 # Origin that renders /genetics, /passport, /onboard, and /p (SEO hubs).
 # Never use *.vercel.app for customer traffic.
-APP_ORIGIN = "https://authichain.com"
+APP_ORIGIN = "https://authichain.govchain.us"
 
 [observability]
 enabled = true

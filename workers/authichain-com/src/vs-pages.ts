@@ -387,7 +387,7 @@ function shell(
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
-<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${VS_CSS}</style></head><body>
@@ -404,7 +404,7 @@ function cell(value: boolean | string): string {
 
 /** Renders one head-to-head comparison page. */
 export function renderVsPage(def: VsDefinition): string {
-  const canonical = `https://authichain.com/vs/${def.slug}`;
+  const canonical = `https://authichain.govchain.us/vs/${def.slug}`;
   const rows = def.rows
     .map(
       r =>
@@ -428,13 +428,13 @@ export function renderVsPage(def: VsDefinition): string {
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: "https://authichain.com",
+        item: "https://authichain.govchain.us",
       },
       {
         "@type": "ListItem",
         position: 2,
         name: "Compare",
-        item: "https://authichain.com/vs",
+        item: "https://authichain.govchain.us/vs",
       },
       {
         "@type": "ListItem",
@@ -477,7 +477,7 @@ export function renderVsIndex(): string {
   return shell(
     "Compare AuthiChain — Product Authentication Platforms Side by Side",
     "Honest, feature-by-feature comparisons of AuthiChain against Scantrust, Circularise, VeChain and Everledger.",
-    "https://authichain.com/vs",
+    "https://authichain.govchain.us/vs",
     `<div class="wrap">
 <section class="hero">
   <span class="badge">Comparisons</span>
@@ -497,7 +497,7 @@ export function findVsPage(slug: string): VsDefinition | null {
 /** Every URL this module serves — used to build the sitemap. */
 export function vsUrls(): string[] {
   return [
-    "https://authichain.com/vs",
-    ...VS_PAGES.map(d => `https://authichain.com/vs/${d.slug}`),
+    "https://authichain.govchain.us/vs",
+    ...VS_PAGES.map(d => `https://authichain.govchain.us/vs/${d.slug}`),
   ];
 }
