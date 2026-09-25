@@ -67,7 +67,7 @@ describe("GET /api/x402/health", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual(["https://authichain.govchain.us/api/x402"]);
     expect(body.protocol).toBeUndefined();
   });
 

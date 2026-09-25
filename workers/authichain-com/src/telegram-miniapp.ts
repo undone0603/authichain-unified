@@ -9,8 +9,8 @@
 import { catalogPaymentLinkHtml } from "../../../src/lib/checkout-email";
 
 export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
-export const PASSPORT_CHECKOUT_URL = `https://authichain.com${PASSPORT_CHECKOUT_PATH}`;
-export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
+export const PASSPORT_CHECKOUT_URL = `https://authichain.govchain.us${PASSPORT_CHECKOUT_PATH}`;
+export const MINIAPP_CANONICAL = "https://authichain.govchain.us/telegram";
 
 const MINIAPP_PATHS = new Set([
   "/telegram",
@@ -35,7 +35,7 @@ export const MINIAPP_HEADERS: Record<string, string> = {
     "script-src 'self' 'unsafe-inline' https://telegram.org",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://authichain.com https://telegram.org",
+    "connect-src 'self' https://authichain.govchain.us https://telegram.org",
     "font-src 'self' data: https:",
     "frame-ancestors https://web.telegram.org https://webk.telegram.org https://webz.telegram.org https://telegram.org",
   ].join("; "),
@@ -143,13 +143,13 @@ export function renderTelegramMiniApp(): string {
         label: "Pay $49 on Stripe",
         className: "btn btn-ghost",
       })}
-      <a class="btn btn-ghost" id="pricing" href="https://authichain.com/pricing">View pricing</a>
+      <a class="btn btn-ghost" id="pricing" href="https://authichain.govchain.us/pricing">View pricing</a>
     </div>
 
     <section class="card">
       <h2>Optional TruMark verify</h2>
       <p class="lede" style="margin-bottom:.65rem">Already have a seal or certificate id? Open the live verify page. No account and no phone call.</p>
-      <form id="verify-form" action="https://authichain.com/verify" method="get">
+      <form id="verify-form" action="https://authichain.govchain.us/verify" method="get">
         <label for="verify-id">TruMark or product ID</label>
         <div class="row">
           <input id="verify-id" name="id" type="text" inputmode="text" autocomplete="off" placeholder="TM-… or certificate id">
@@ -159,9 +159,9 @@ export function renderTelegramMiniApp(): string {
     </section>
 
     <nav class="links" aria-label="Related pages">
-      <a href="https://authichain.com/passport">Passport page</a>
-      <a href="https://authichain.com/genetics">Genetics library</a>
-      <a href="https://authichain.com/trumark">TruMark</a>
+      <a href="https://authichain.govchain.us/passport">Passport page</a>
+      <a href="https://authichain.govchain.us/genetics">Genetics library</a>
+      <a href="https://authichain.govchain.us/trumark">TruMark</a>
     </nav>
 
     <footer>
@@ -172,7 +172,7 @@ export function renderTelegramMiniApp(): string {
   <script>
     (function () {
       var CHECKOUT = ${JSON.stringify(PASSPORT_CHECKOUT_URL)};
-      var VERIFY = "https://authichain.com/verify";
+      var VERIFY = "https://authichain.govchain.us/verify";
       var tg = window.Telegram && window.Telegram.WebApp;
       if (tg) {
         try { tg.ready(); tg.expand(); } catch (e) {}

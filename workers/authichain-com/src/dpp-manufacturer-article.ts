@@ -18,7 +18,7 @@ import {
 
 export const DPP_CHECKOUT = "/api/checkout/dpp";
 export const DPP_MANUFACTURER_ARTICLE_PATH = "/blog/eu-dpp-manufacturer";
-export const DPP_MANUFACTURER_ARTICLE_CANONICAL = `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
+export const DPP_MANUFACTURER_ARTICLE_CANONICAL = `https://authichain.govchain.us${DPP_MANUFACTURER_ARTICLE_PATH}`;
 
 const ARTICLE_PATHS = new Set([
   DPP_MANUFACTURER_ARTICLE_PATH,
@@ -66,7 +66,7 @@ function pageShell(opts: {
   <meta property="og:title" content="${opts.title}">
   <meta property="og:description" content="${opts.description}">
   <meta property="og:url" content="${opts.canonical}">
-  <meta property="og:image" content="https://authichain.com/og-image.png">
+  <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
@@ -77,7 +77,7 @@ function pageShell(opts: {
     publisher: {
       "@type": "Organization",
       name: "AuthiChain",
-      url: "https://authichain.com",
+      url: "https://authichain.govchain.us",
     },
   }).replace(/<\/script/gi, "<\\/script")}</script>
   ${ESTATE_FONTS_LINK}

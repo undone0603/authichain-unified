@@ -26,7 +26,7 @@ test("DPP uses the live checkout path, never an invented URL", () => {
   assert.equal(planCheckoutCta(dpp, "authichain").href, "/api/checkout/dpp");
   assert.equal(
     planCheckoutCta(dpp, "qron").href,
-    "https://authichain.com/api/checkout/dpp"
+    "https://authichain.govchain.us/api/checkout/dpp"
   );
 });
 
@@ -51,7 +51,7 @@ test("theater subscriptions keep email-gated checkout plus Payment Links", () =>
   );
   assert.equal(
     planCheckoutCta(theater3, "qron").href,
-    "https://authichain.com/api/checkout/plan/theater_3"
+    "https://authichain.govchain.us/api/checkout/plan/theater_3"
   );
 
   const authHtml = renderEstatePricingPage("authichain");
@@ -75,11 +75,11 @@ test("theater subscriptions keep email-gated checkout plus Payment Links", () =>
   const qronHtml = renderEstatePricingPage("qron");
   assert.match(
     qronHtml,
-    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_1"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_1"/
   );
   assert.match(
     qronHtml,
-    /action="https:\/\/authichain\.com\/api\/checkout\/plan\/theater_3"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_3"/
   );
   assert.ok(
     qronHtml.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
@@ -181,7 +181,7 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   const html = renderEstatePricingPage("qron");
   assert.match(html, /<title>Pricing — QRON<\/title>/);
   assert.match(html, /href="\/generate"/);
-  assert.match(html, /https:\/\/authichain\.com\/api\/checkout\/dpp/);
+  assert.match(html, /https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp/);
   assert.doesNotMatch(html, /\$2,990/);
 });
 
@@ -196,7 +196,7 @@ test("qron /pricing lists the packs, not the retired credit bundles", () => {
 
 test("tryHandleEstatePricing answers GET /pricing and ignores other paths", async () => {
   const hit = tryHandleEstatePricing(
-    new Request("https://authichain.com/pricing"),
+    new Request("https://authichain.govchain.us/pricing"),
     "authichain"
   );
   assert.ok(hit);
@@ -208,7 +208,7 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
 
   assert.equal(
     tryHandleEstatePricing(
-      new Request("https://authichain.com/pricing/pro"),
+      new Request("https://authichain.govchain.us/pricing/pro"),
       "authichain"
     ),
     null
@@ -236,7 +236,7 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
   assert.ok(passport);
   assert.equal(
     planCheckoutCta(passport, "strainchain").href,
-    "https://authichain.com/api/checkout/plan/strainchain_passport"
+    "https://authichain.govchain.us/api/checkout/plan/strainchain_passport"
   );
   assert.equal(
     passport.stripe_payment_link,
@@ -260,11 +260,11 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   assert.match(html, /Start a Farm Plan/);
   assert.match(
     html,
-    /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_passport/
+    /https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport/
   );
   assert.match(
     html,
-    /https:\/\/authichain\.com\/api\/checkout\/plan\/strainchain_farm/
+    /https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_farm/
   );
   assert.ok(
     html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
@@ -300,10 +300,10 @@ test("govchain /pricing uses absolute AuthiChain DPP checkout and no invented SK
   assert.match(html, /id="checkout-need-email-banner"/);
   assert.equal(
     GOVCHAIN_DPP_CHECKOUT,
-    "https://authichain.com/api/checkout/dpp"
+    "https://authichain.govchain.us/api/checkout/dpp"
   );
   assert.match(html, new RegExp(`\\$${dpp.price}`));
-  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')

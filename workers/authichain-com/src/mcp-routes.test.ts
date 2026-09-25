@@ -3,7 +3,7 @@ import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { isMcpPath, tryHandleMcp } from "./mcp-routes";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 afterEach(() => {
@@ -39,7 +39,7 @@ describe("mcp discovery", () => {
         };
       };
       expect(body.protocol).toBe("mcp");
-      expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
+      expect(body.pay.x402).toBe("POST https://authichain.govchain.us/api/x402");
       expect(body.pricing.humanCheckout.dppPaymentLink).toBe(
         planPaymentLink("dpp_readiness")
       );

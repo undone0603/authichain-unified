@@ -29,7 +29,7 @@ import {
 } from "./battery-gap-map";
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
-export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
+export const BATTERY_PASSPORT_CANONICAL = `https://authichain.govchain.us${BATTERY_PASSPORT_PATH}`;
 export const BATTERY_CHECKOUT_ACTION = "/api/checkout/dpp";
 export const BATTERY_UTM = {
   utm_source: "site",
@@ -278,7 +278,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
-          url: "https://authichain.com",
+          url: "https://authichain.govchain.us",
         },
         areaServed: "European Union",
         url: BATTERY_PASSPORT_CANONICAL,
@@ -315,7 +315,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:url" content="${BATTERY_PASSPORT_CANONICAL}">
-  <meta property="og:image" content="https://authichain.com/og-image.png">
+  <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/<\/script/gi, "<\\/script")}</script>
   ${ESTATE_FONTS_LINK}

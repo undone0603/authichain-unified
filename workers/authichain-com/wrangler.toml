@@ -24,6 +24,12 @@ zone_name = "authichain.com"
 pattern = "app.authichain.com/"
 zone_name = "authichain.com"
 
+# Primary site host (moved from the apex). Workers Custom Domain on the
+# govchain.us zone; attached live 2026-09-25. Declared here so a redeploy keeps it.
+[[routes]]
+pattern = "authichain.govchain.us"
+custom_domain = true
+
 [observability]
 enabled = true
 

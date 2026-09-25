@@ -29,7 +29,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY_PATHS = [
 
 export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalPath: "/authentic-agentic-economy",
-  canonicalUrl: "https://authichain.com/authentic-agentic-economy",
+  canonicalUrl: "https://authichain.govchain.us/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
     "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
@@ -66,9 +66,9 @@ const JSON_LD = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://authichain.com/#organization",
+      "@id": "https://authichain.govchain.us/#organization",
       name: "AuthiChain",
-      url: "https://authichain.com",
+      url: "https://authichain.govchain.us",
       slogan: "The authentic agentic economy",
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
     },
@@ -78,7 +78,7 @@ const JSON_LD = {
       url: AUTHENTIC_AGENTIC_ECONOMY.canonicalUrl,
       name: AUTHENTIC_AGENTIC_ECONOMY.title,
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
-      isPartOf: { "@id": "https://authichain.com/#organization" },
+      isPartOf: { "@id": "https://authichain.govchain.us/#organization" },
     },
     {
       "@type": "Article",
@@ -143,7 +143,7 @@ function sources(): string {
       cite: "Galaxy (2026). Agents as economic actors still need a fact layer before they spend. AuthiChain is that layer for physical goods.",
     },
     {
-      href: "https://authichain.com/x402",
+      href: "https://authichain.govchain.us/x402",
       title: "AuthiChain x402 agent pay (live)",
       cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. Unpaid POST returns HTTP 402.",
     },
@@ -182,7 +182,7 @@ export function renderAuthenticAgenticEconomyPage(): string {
 <meta property="og:title" content="${esc(p.title)}">
 <meta property="og:description" content="${esc(p.description)}">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
-<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(p.title)}">
 <meta name="twitter:description" content="${esc(p.description)}">

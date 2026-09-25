@@ -67,7 +67,7 @@ function pageShell(opts: {
   <meta property="og:title" content="${opts.title}">
   <meta property="og:description" content="${opts.description}">
   <meta property="og:url" content="${opts.canonical}">
-  <meta property="og:image" content="https://authichain.com/og-image.png">
+  <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   ${ESTATE_FONTS_LINK}
   <style>
@@ -134,7 +134,7 @@ export function renderTrumarkPage(): string {
     title: "TruMark seals | AuthiChain",
     description:
       "TruMark is the physical scan seal. Publish a StrainChain genetics passport at $49, or start EU DPP Readiness at $299. Self-serve checkout — no call booking.",
-    canonical: "https://authichain.com/trumark",
+    canonical: "https://authichain.govchain.us/trumark",
     keywords:
       "TruMark, product authentication seal, StrainChain passport, blockchain QR seal",
     body: `${surfaceNav({ href: "/pricing", label: "View pricing" })}
@@ -212,7 +212,7 @@ export function renderMadeInAmericaPage(): string {
     title: "Made in America origin claims | AuthiChain",
     description:
       "Substantiate Made in USA / Made in America origin claims with a signed per-unit record. FTC 16 CFR Part 323 and EO 14392 context. Start EU DPP Readiness at $299.",
-    canonical: "https://authichain.com/made-in-america",
+    canonical: "https://authichain.govchain.us/made-in-america",
     keywords:
       "Made in America, Made in USA, FTC 16 CFR Part 323, EO 14392, origin claims, Buy American",
     body: `${surfaceNav({ href: "/pricing", label: "View pricing" })}

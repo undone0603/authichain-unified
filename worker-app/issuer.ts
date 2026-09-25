@@ -20,7 +20,7 @@ const ISSUER_HEADERS = {
   "Access-Control-Allow-Methods": "GET, POST",
 };
 
-const JWKS_URL = "https://authichain.com/protocol/jwks.json";
+const JWKS_URL = "https://authichain.govchain.us/protocol/jwks.json";
 const ISSUER_ID = "https://authichain.com";
 const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
 const OIDC_AUDIENCE = "https://authichain.com";

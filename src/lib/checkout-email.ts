@@ -51,8 +51,8 @@ export function checkoutNeedEmailRedirect(
 ): string {
   const url = new URL(
     kind === "dpp"
-      ? "https://authichain.com/dpp"
-      : "https://authichain.com/pricing"
+      ? "https://authichain.govchain.us/dpp"
+      : "https://authichain.govchain.us/pricing"
   );
   url.searchParams.set("need_email", "1");
   if (visitId) url.searchParams.set("visit_id", visitId.slice(0, 128));
@@ -240,7 +240,11 @@ export function rewriteCheckoutHref(href: string): string | undefined {
     if (/^https?:\/\//i.test(raw)) {
       const url = new URL(raw);
       const host = url.hostname.toLowerCase();
-      if (host !== "authichain.com" && host !== "www.authichain.com") {
+      if (
+        host !== "authichain.com" &&
+        host !== "www.authichain.com" &&
+        host !== "authichain.govchain.us"
+      ) {
         return undefined;
       }
       pathname = url.pathname;
