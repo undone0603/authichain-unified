@@ -28,7 +28,9 @@ describe("authentic-economy identity join", () => {
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC_ASSET);
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC);
     expect(MONEY_RAILS.qron.holder).toBe(QRON_HOLDER_EOA);
-    expect(MONEY_RAILS.qron.holder).not.toBe(TOKENOMICS_PAY_TO);
+    // Owner's keyed EOA both holds $QRON and receives x402 USDC.
+    expect(MONEY_RAILS.qron.holder).toBe(TOKENOMICS_PAY_TO);
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).not.toBe(QRON_ERC20.toLowerCase());
   });
 
   it("keeps $QRON off the x402 settlement rail", () => {

@@ -7,11 +7,12 @@ import {
   x402ListingPack,
 } from "./x402-growth";
 
-const LIVE_PAY_TO = "0xaebfa6b08fb25b59748c93273ab8880e20ffe437";
-const STALE_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+const LIVE_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+// $QRON ERC-20 contract on Polygon — must never appear as a wallet.
+const STALE_PAY_TO = "0xaebfa6b08fb25b59748c93273ab8880e20ffe437"; // pragma: allowlist secret
 
 describe("x402ListingPack", () => {
-  it("copies wallet and price from health and never invents 0x5db5…", () => {
+  it("copies wallet and price from health and never invents the $QRON contract", () => {
     const pack = x402ListingPack({
       payTo: LIVE_PAY_TO,
       pricePerCall: { usd: 0.05, atomic: "50000" },
@@ -22,7 +23,7 @@ describe("x402ListingPack", () => {
     expect(pack.wallet).toBe(LIVE_PAY_TO);
     expect(pack.payapi.form.wallet).toBe(LIVE_PAY_TO);
     expect(pack.priceUsd).toBe(0.05);
-    expect(pack.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(pack.paidRoute).toBe("https://authichain.govchain.us/api/v1/agent-verify");
     expect(pack.category).toBe("Verification");
     expect(pack.endpoints).toBe(2);
     expect(pack.tools).toBe(3);

@@ -30,7 +30,7 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
     id: "authichain",
     name: "AuthiChain",
     domain: "authichain.com",
-    url: "https://authichain.com",
+    url: "https://authichain.govchain.us",
     wordmark: "AuthiChain",
     tagline: "The authentic agentic economy",
     accent: "#4F46E5",
@@ -726,7 +726,7 @@ export function estateSkipLink(): string {
 }
 
 export const ESTATE_SISTER_LINKS: EstateLink[] = [
-  { href: "https://authichain.com", label: "AuthiChain" },
+  { href: "https://authichain.govchain.us", label: "AuthiChain" },
   { href: "https://qron.space", label: "QRON" },
   { href: "https://govchain.us", label: "GovChain" },
   { href: "https://strainchain.io", label: "StrainChain" },

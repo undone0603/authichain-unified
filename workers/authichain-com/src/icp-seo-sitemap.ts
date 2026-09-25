@@ -5,6 +5,7 @@
 export const ICP_SEO_SITEMAP_PATHS = [
   "/p/what-is-a-digital-product-passport",
   "/p/eu-digital-product-passport-batteries",
+  "/battery-passport",
   "/p/battery-passport-qr-code-requirements",
   "/p/battery-passport-due-diligence-requirement",
   "/p/eu-battery-regulation-due-diligence-report-deadline",
@@ -16,5 +17,5 @@ export const ICP_SEO_SITEMAP_PATHS = [
 ] as const;
 
 export function icpSeoSitemapUrls(): string[] {
-  return ICP_SEO_SITEMAP_PATHS.map(path => `https://authichain.com${path}`);
+  return ICP_SEO_SITEMAP_PATHS.map(path => `https://authichain.govchain.us${path}`);
 }

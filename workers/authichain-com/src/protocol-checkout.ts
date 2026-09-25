@@ -16,7 +16,7 @@ import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
 
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
-export const APP_ORIGIN = "https://authichain.com";
+export const APP_ORIGIN = "https://authichain.govchain.us";
 
 export type CheckoutEnv = {
   STRIPE_SECRET_KEY?: string;

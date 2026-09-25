@@ -87,7 +87,7 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         `${host} ${path}`
       );
       const catalog = httpsUrl(body.pay.catalog);
-      assert.equal(catalog.hostname, "authichain.com", `${host} ${path}`);
+      assert.equal(catalog.hostname, "authichain.govchain.us", `${host} ${path}`);
       assert.equal(catalog.pathname, "/api/x402/catalog", `${host} ${path}`);
       const mcp = httpsUrl(body.pricing.agentRail.mcp);
       assert.equal(mcp.hostname, host, `${host} ${path}`);

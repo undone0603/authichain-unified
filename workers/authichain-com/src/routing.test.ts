@@ -22,7 +22,7 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string, env: Env = ENV) {
-  return worker.fetch(new Request(`https://authichain.com${path}`), env);
+  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), env);
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -172,16 +172,16 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
-    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);
-    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/catalog/);
-    assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
+    assert.match(html, /https:\/\/authichain\.govchain\.us\/api\/x402\/health/);
+    assert.match(html, /https:\/\/authichain\.govchain\.us\/api\/x402\/catalog/);
+    assert.match(html, /curl -sS https:\/\/authichain\.govchain\.us\/api\/x402\/health/);
     assert.match(
       html,
-      /curl -sS https:\/\/authichain\.com\/api\/x402\/catalog/
+      /curl -sS https:\/\/authichain\.govchain\.us\/api\/x402\/catalog/
     );
     assert.match(
       html,
-      /curl -sS -i -X POST https:\/\/authichain\.com\/api\/x402/
+      /curl -sS -i -X POST https:\/\/authichain\.govchain\.us\/api\/x402/
     );
     assert.ok(
       !html.toLowerCase().includes("facilitator.payai"),
@@ -308,7 +308,7 @@ test("DPP landing collects email before protocol checkout", async () => {
 test("/dapp redirects to /dashboard (estate CTA)", async () => {
   const res = await get("/dapp");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.com/dashboard");
+  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/dashboard");
 });
 
 test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
@@ -336,7 +336,7 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   );
   assert.equal(text.length, 64);
   const head = await worker.fetch(
-    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
       method: "HEAD",
     }),
     ENV
@@ -344,7 +344,7 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
   const posted = await worker.fetch(
-    new Request("https://authichain.com/.well-known/402index-verify.txt", {
+    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
       method: "POST",
     }),
     ENV
@@ -357,7 +357,7 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   assert.equal(www.status, 301);
   assert.equal(
     www.headers.get("location"),
-    "https://authichain.com/.well-known/402index-verify.txt"
+    "https://authichain.govchain.us/.well-known/402index-verify.txt"
   );
 });
 
@@ -367,7 +367,7 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get("content-type") ?? "", /text\/plain/, path);
     const text = await res.text();
-    assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+    assert.match(text, /POST https:\/\/authichain\.govchain\.us\/api\/x402/);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -390,7 +390,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       };
     };
     assert.equal(body.protocol, "mcp", path);
-    assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
+    assert.equal(body.pay.x402, "POST https://authichain.govchain.us/api/x402", path);
     assert.equal(
       body.pricing.humanCheckout.dppPaymentLink,
       planPaymentLink("dpp_readiness"),
@@ -450,7 +450,7 @@ test("GET /.well-known/x402 is the x402scan fan-out, not the catalog", async () 
     protocol?: string;
   };
   assert.equal(body.version, 1);
-  assert.deepEqual(body.resources, ["https://authichain.com/api/x402"]);
+  assert.deepEqual(body.resources, ["https://authichain.govchain.us/api/x402"]);
   assert.equal(body.protocol, undefined);
 });
 
@@ -487,16 +487,16 @@ test("GET /api/checkout without email bounces here, not to APP_WORKER", async ()
   assert.equal(dpp.status, 303);
   assert.equal(
     dpp.headers.get("location"),
-    "https://authichain.com/dpp?need_email=1&visit_id=dpp_live_anon"
+    "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_live_anon"
   );
   const passport = await get("/api/checkout/plan/strainchain_passport");
   assert.equal(passport.status, 303);
   assert.equal(
     passport.headers.get("location"),
-    "https://authichain.com/pricing?need_email=1"
+    "https://authichain.govchain.us/pricing?need_email=1"
   );
   const head = await worker.fetch(
-    new Request("https://authichain.com/api/checkout/dpp", { method: "HEAD" }),
+    new Request("https://authichain.govchain.us/api/checkout/dpp", { method: "HEAD" }),
     ENV
   );
   assert.equal(head.status, 204);
@@ -505,13 +505,13 @@ test("GET /api/checkout without email bounces here, not to APP_WORKER", async ()
 test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogue", async () => {
   const res = await get("/demo");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.com/pricing");
+  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/pricing");
 });
 
 test("/demo/strainchain lands on the TruMark money surface", async () => {
   const res = await get("/demo/strainchain");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.com/trumark");
+  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/trumark");
 });
 
 test("/gov-gift and /apex-packet send APEX to the GovChain packet", async () => {
@@ -527,7 +527,7 @@ test("/partners lands on the Made in America money surface", async () => {
   assert.equal(res.status, 302);
   assert.equal(
     res.headers.get("location"),
-    "https://authichain.com/made-in-america"
+    "https://authichain.govchain.us/made-in-america"
   );
 });
 
@@ -547,11 +547,11 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
     assert.match(html, /<title>StrainChain Passport \| AuthiChain<\/title>/);
     assert.match(
       html,
-      /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+      /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
     );
     assert.doesNotMatch(
       html,
-      /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+      /href="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
     );
     assert.match(html, /Publish Passport — \$49/);
     assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
@@ -578,11 +578,11 @@ test("money-path microsites are live with checkout CTAs", async () => {
   const mendoHtml = await mendo.text();
   assert.match(
     mendoHtml,
-    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
   );
   assert.doesNotMatch(
     mendoHtml,
-    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /href="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/strainchain_passport"/
   );
   assert.match(mendoHtml, /Passport checkout — \$49/);
   assert.match(mendoHtml, /LT-63/);
@@ -694,7 +694,7 @@ test("stale APP_WORKER checkout anchors become catalogue Payment Links", async (
       fetch: async () =>
         new Response(
           '<a href="/api/checkout/dpp">DPP</a>' +
-            '<a href="https://authichain.com/api/checkout/plan/strainchain_passport">Passport</a>' +
+            '<a href="https://authichain.govchain.us/api/checkout/plan/strainchain_passport">Passport</a>' +
             '<form action="/api/checkout/dpp"><input name="email"></form>',
           {
             status: 200,
@@ -720,7 +720,7 @@ test("seed SEO canonicals 301 to /p/<slug>, except authentic-agentic-economy", a
   assert.equal(res.status, 301);
   assert.equal(
     res.headers.get("location"),
-    "https://authichain.com/p/what-is-a-digital-product-passport"
+    "https://authichain.govchain.us/p/what-is-a-digital-product-passport"
   );
   const live = await get("/authentic-agentic-economy");
   assert.equal(live.status, 200);
@@ -757,61 +757,61 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     "/authichain/pilots",
   ]) {
     assert.ok(
-      !xml.includes(`<loc>https://authichain.com${gone}</loc>`),
+      !xml.includes(`<loc>https://authichain.govchain.us${gone}</loc>`),
       `${gone} should be gone`
     );
   }
-  assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/contact</loc>"));
   assert.equal(
-    xml.split("<loc>https://authichain.com/telegram</loc>").length - 1,
+    xml.split("<loc>https://authichain.govchain.us/telegram</loc>").length - 1,
     1,
     "canonical Mini App loc once — not also via micrositeSitemapUrls"
   );
   assert.ok(
-    !xml.includes("<loc>https://authichain.com/miniapp</loc>"),
+    !xml.includes("<loc>https://authichain.govchain.us/miniapp</loc>"),
     "/miniapp is an alias; sitemap lists /telegram only"
   );
-  assert.ok(xml.includes("<loc>https://authichain.com/pricing</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/onboard</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/dpp</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/genetics</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/mendo</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/trumark</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/musa</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/strainchain</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/bat-2026-001</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/partners/brief</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/verify</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/x402</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/.well-known/x402</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/pricing</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/onboard</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/dpp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/genetics</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/passport</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/trumark</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/made-in-america</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/mendo</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/trumark</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/musa</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/strainchain</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/m/bat-2026-001</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/partners/brief</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/verify</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/x402</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/.well-known/x402</loc>"));
   assert.ok(
-    xml.includes("<loc>https://authichain.com/blog/eu-dpp-manufacturer</loc>")
+    xml.includes("<loc>https://authichain.govchain.us/blog/eu-dpp-manufacturer</loc>")
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.com/p/battery-passport-qr-code-requirements</loc>"
+      "<loc>https://authichain.govchain.us/p/battery-passport-qr-code-requirements</loc>"
     )
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.com/p/eu-digital-product-passport-batteries</loc>"
+      "<loc>https://authichain.govchain.us/p/eu-digital-product-passport-batteries</loc>"
     )
   );
   assert.ok(
     xml.includes(
-      "<loc>https://authichain.com/p/cannabis-coa-verification-blockchain</loc>"
+      "<loc>https://authichain.govchain.us/p/cannabis-coa-verification-blockchain</loc>"
     )
   );
   assert.ok(
-    xml.includes("<loc>https://authichain.com/authentic-agentic-economy</loc>")
+    xml.includes("<loc>https://authichain.govchain.us/authentic-agentic-economy</loc>")
   );
-  assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/openapi.json</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/llms.txt</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/mcp</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/openapi.json</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.govchain.us/vs/everledger</loc>"));
 });
 
 test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {
@@ -847,10 +847,10 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
   const robotsText = await robots.text();
-  assert.match(robotsText, /Sitemap: https:\/\/authichain.com\/sitemap.xml/);
-  assert.ok(robotsText.includes("https://authichain.com/llms.txt"));
-  assert.ok(robotsText.includes("https://authichain.com/openapi.json"));
-  assert.ok(robotsText.includes("https://authichain.com/.well-known/x402"));
+  assert.match(robotsText, /Sitemap: https:\/\/authichain\.govchain\.us\/sitemap.xml/);
+  assert.ok(robotsText.includes("https://authichain.govchain.us/llms.txt"));
+  assert.ok(robotsText.includes("https://authichain.govchain.us/openapi.json"));
+  assert.ok(robotsText.includes("https://authichain.govchain.us/.well-known/x402"));
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

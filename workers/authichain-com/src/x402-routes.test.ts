@@ -4,7 +4,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 function proofHeader(p: Record<string, unknown>) {
@@ -91,7 +91,7 @@ describe("tryHandleX402", () => {
     };
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
-    expect(body.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(body.paidRoute).toBe("https://authichain.govchain.us/api/v1/agent-verify");
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
     expect(body.priceUsd).toBe(0.05);
@@ -117,7 +117,7 @@ describe("tryHandleX402", () => {
     expect(body.directories.some(d => d.id === "payapi")).toBe(true);
     expect(body.sisters.map(s => s.origin)).toEqual(
       expect.arrayContaining([
-        "https://authichain.com",
+        "https://authichain.govchain.us",
         "https://qron.space",
         "https://strainchain.io",
         "https://govchain.us",
@@ -142,7 +142,7 @@ describe("tryHandleX402", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.resources).toEqual(["https://authichain.govchain.us/api/x402"]);
     expect(body.protocol).toBeUndefined();
   });
 
@@ -345,7 +345,7 @@ describe("tryHandleAppHost", () => {
   });
 
   it("ignores the apex root", () => {
-    expect(tryHandleAppHost(new Request("https://authichain.com/"))).toBeNull();
+    expect(tryHandleAppHost(new Request("https://authichain.govchain.us/"))).toBeNull();
   });
 });
 

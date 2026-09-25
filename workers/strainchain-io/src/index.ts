@@ -2201,7 +2201,7 @@ export default {
 <meta name="theme-color" content="#15803d">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.","sameAs":["https://authichain.com"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StrainChain","url":"https://strainchain.io","description":"Cannabis supply chain tracking on blockchain: seed-to-shelf NFTs, METRC sync, and 4-layer audit trail."}</script>
 <style>
 ${estateCssVars("strainchain")}
@@ -2225,7 +2225,7 @@ ${estateHero({
   title: "Seed-to-shelf tracking on Polygon.",
   lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
   emailCheckout: {
-    action: "https://authichain.com/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
@@ -2343,7 +2343,7 @@ ${estateCtaBand({
   title: "Publish one cultivar passport",
   lede: "Enter a work email so Stripe can recover the cart. Farm Plan is the $149/mo Payment Link. Onboard stays the demo intake.",
   emailCheckout: {
-    action: "https://authichain.com/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
@@ -2370,7 +2370,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
+        { href: "https://authichain.govchain.us/dashboard", label: "AuthiChain dashboard" },
         { href: "https://qron.space/generate", label: "Generate Living QR" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
       ],
@@ -2378,7 +2378,7 @@ ${estateFooter(
     {
       heading: "Company",
       links: [
-        { href: "https://authichain.com/contact", label: "Contact" },
+        { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
     },
   ],

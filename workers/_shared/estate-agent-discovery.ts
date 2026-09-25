@@ -74,7 +74,7 @@ function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
   }
   lines.push(
     `- Pricing: https://${brand === "qron" ? "qron.space" : brand === "strainchain" ? "strainchain.io" : "govchain.us"}/pricing`,
-    "- Canonical catalogue: https://authichain.com/pricing"
+    "- Canonical catalogue: https://authichain.govchain.us/pricing"
   );
   return lines;
 }
@@ -87,19 +87,19 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     "",
     "## Agent pay (x402)",
     `- Unpaid POST ${ESTATE_BRANDS[brand].url}/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
-    "- Canonical rail: https://authichain.com/api/x402",
-    "- Catalog: https://authichain.com/api/x402/catalog",
-    "- Well-known catalog: https://authichain.com/.well-known/x402.json",
-    "- x402scan fan-out: https://authichain.com/.well-known/x402",
-    "- OpenAPI: https://authichain.com/openapi.json",
+    "- Canonical rail: https://authichain.govchain.us/api/x402",
+    "- Catalog: https://authichain.govchain.us/api/x402/catalog",
+    "- Well-known catalog: https://authichain.govchain.us/.well-known/x402.json",
+    "- x402scan fan-out: https://authichain.govchain.us/.well-known/x402",
+    "- OpenAPI: https://authichain.govchain.us/openapi.json",
     `- MCP: GET ${ESTATE_BRANDS[brand].url}/mcp (get_pricing free; tools/call verify is unpaid HTTP 402)`,
-    "- Canonical MCP: GET https://authichain.com/mcp",
-    "- Docs: https://authichain.com/x402",
+    "- Canonical MCP: GET https://authichain.govchain.us/mcp",
+    "- Docs: https://authichain.govchain.us/x402",
     "",
     ...humanCheckoutLines(brand),
     "",
     "## Positioning",
-    "- https://authichain.com/authentic-agentic-economy",
+    "- https://authichain.govchain.us/authentic-agentic-economy",
   ].join("\n");
 }
 
@@ -133,7 +133,7 @@ export function renderEstateOpenApi(
     info: {
       title: `${meta.title} agent pay (AuthiChain rails)`,
       version: "1.0.0",
-      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical spec: https://authichain.com/openapi.json.`,
+      description: `Unpaid POST ${origin}/api/x402 returns HTTP 402. Human SKUs are Stripe Payment Links from src/lib/plans.ts. Canonical spec: https://authichain.govchain.us/openapi.json.`,
       "x-human-checkout": {
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),

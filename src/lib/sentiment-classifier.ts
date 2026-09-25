@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 export const SENTIMENTS = [
   "positive",
@@ -33,6 +33,25 @@ export interface SentimentResult {
   confidence: number;
   reasoning: string;
   provider: ClassifierProvider;
+  /**
+   * Why a configured LLM was skipped, when the result came from a fallback
+   * (e.g. OpenAI 401/429). Redacted of key material. Absent when the first
+   * backend succeeded or none was configured.
+   */
+  fallbackReason?: string;
+}
+
+/** Current, inexpensive model with reliable JSON output. */
+export const OPENAI_REPLY_MODEL = "gpt-4o-mini";
+
+/** Error text safe to store and return: key fragments removed, length capped. */
+export function describeClassifierError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replace(/sk-[A-Za-z0-9_*-]+/g, "sk-[redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
 }
 
 export interface ClassifierBackendStatus {
@@ -60,6 +79,14 @@ export interface ClassifyReplyDeps {
 const DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434";
 const DEFAULT_OLLAMA_MODEL = "llama3.2";
 const OLLAMA_TIMEOUT_MS = 2500;
+/**
+ * Resend times out an inbound webhook after a few seconds and retries. With
+ * the SDK's defaults (2 retries with back-off, no deadline) one slow or failing
+ * OpenAI call outlasted it, so the first live reply after #1232 timed out.
+ * One attempt with a hard deadline keeps the route under that limit; on
+ * timeout the waterfall falls back and records why.
+ */
+export const OPENAI_TIMEOUT_MS = 8000;
 
 const CLASSIFY_PROMPT_PREAMBLE = `You are an expert sales analyst. Classify this customer reply to a business proposal.`;
 
@@ -310,16 +337,21 @@ export function classifyReplyEmailHeuristic(
 
 async function classifyWithOpenAI(
   prompt: string,
+  apiKey: string | undefined,
   generateOpenAI?: (prompt: string) => Promise<string>
 ): Promise<SentimentResult> {
+  // Key passed explicitly rather than read from process.env inside the SDK:
+  // on Workers the env is per-request bindings, not a process environment.
   const text = generateOpenAI
     ? await generateOpenAI(prompt)
     : (
         await generateText({
-          model: openai("gpt-4-turbo"),
+          model: createOpenAI({ apiKey })(OPENAI_REPLY_MODEL),
           prompt,
           temperature: 0.3,
           maxOutputTokens: 500,
+          maxRetries: 0,
+          abortSignal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
         })
       ).text;
   return parseSentimentJson(text, "openai");
@@ -380,25 +412,36 @@ export async function classifyReplyEmail(
   const prompt = buildClassifyPrompt(emailBody, emailSubject);
   const fetchImpl = deps.fetchImpl ?? fetch;
 
+  let fallbackReason: string | undefined;
+  const withReason = (result: SentimentResult): SentimentResult =>
+    fallbackReason ? { ...result, fallbackReason } : result;
+
   try {
     if (backend.paidLlmAvailable) {
       try {
-        return await classifyWithOpenAI(prompt, deps.generateOpenAI);
+        return await classifyWithOpenAI(
+          prompt,
+          env.OPENAI_API_KEY?.trim(),
+          deps.generateOpenAI
+        );
       } catch (error) {
+        fallbackReason = `openai: ${describeClassifierError(error)}`;
         console.warn(
           "OpenAI reply classification failed; trying local fallback",
-          error
+          fallbackReason
         );
       }
     }
 
     if (ollamaIsConfigured(env)) {
       try {
-        return await classifyWithOllama(
-          prompt,
-          backend.ollamaHost,
-          backend.ollamaModel,
-          fetchImpl
+        return withReason(
+          await classifyWithOllama(
+            prompt,
+            backend.ollamaHost,
+            backend.ollamaModel,
+            fetchImpl
+          )
         );
       } catch (error) {
         console.warn(
@@ -409,10 +452,10 @@ export async function classifyReplyEmail(
     }
 
     const heuristic = deps.heuristic ?? classifyReplyEmailHeuristic;
-    return heuristic(emailBody, emailSubject);
+    return withReason(heuristic(emailBody, emailSubject));
   } catch (error) {
     console.error("Sentiment classification error:", error);
-    return failClosedNeutral(error);
+    return withReason(failClosedNeutral(error));
   }
 }
 

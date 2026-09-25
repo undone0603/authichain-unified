@@ -4,7 +4,7 @@ import { tryHandleGeneticsRoutes } from "./genetics-routes.ts";
 
 function get(path: string): Response {
   const res = tryHandleGeneticsRoutes(
-    new Request(`https://authichain.com${path}`)
+    new Request(`https://authichain.govchain.us${path}`)
   );
   assert.ok(res, `expected handler for ${path}`);
   return res!;
@@ -102,7 +102,7 @@ describe("genetics routes", () => {
 
   it("ignores unrelated paths", () => {
     assert.equal(
-      tryHandleGeneticsRoutes(new Request("https://authichain.com/pricing")),
+      tryHandleGeneticsRoutes(new Request("https://authichain.govchain.us/pricing")),
       null
     );
   });

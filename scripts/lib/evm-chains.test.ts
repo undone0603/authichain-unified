@@ -89,13 +89,16 @@ describe("canonical web3 identity", () => {
     );
     expect(POLYGON_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
     expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(
-      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
+      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2" // pragma: allowlist secret
     );
     expect(QRON_HOLDER_EOA).toBe(
       "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
     );
-    expect(QRON_HOLDER_EOA.toLowerCase()).not.toBe(
+    expect(QRON_HOLDER_EOA.toLowerCase()).toBe(
       TOKENOMICS_PAY_TO.toLowerCase()
+    );
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).not.toBe(
+      QRON_ERC20.toLowerCase()
     );
     expect(QRON_FACTORY_CALLER).toBe(
       "0x8df0057ffb210444b927511b2d416ad7854fb81e"
@@ -114,8 +117,7 @@ describe("canonical web3 identity", () => {
   it("keeps Smart Wallet, payTo, and NFT deployer as three distinct addresses", () => {
     const named = [
       COINBASE_SMART_WALLET,
-      TOKENOMICS_PAY_TO,
-      QRON_HOLDER_EOA,
+      TOKENOMICS_PAY_TO, // same EOA as QRON_HOLDER_EOA
       NFT_DEPLOYER_EOA,
       QRON_FACTORY_CALLER,
       QRON_ERC20,

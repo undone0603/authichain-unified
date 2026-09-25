@@ -17,7 +17,7 @@ describe("x402 public docs page", () => {
   it("matches the published live rail (payTo, Base USDC, $0.05)", () => {
     expect(X402_PUBLIC.payTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
-      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"
+      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
     );
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -28,18 +28,18 @@ describe("x402 public docs page", () => {
     expect(X402_PUBLIC.chainId).toBe("8453");
     expect(X402_PUBLIC.priceUsd).toBe("$0.05");
     expect(X402_PUBLIC.healthUrl).toBe(
-      "https://authichain.com/api/x402/health"
+      "https://authichain.govchain.us/api/x402/health"
     );
     expect(X402_PUBLIC.catalogUrl).toBe(
-      "https://authichain.com/api/x402/catalog"
+      "https://authichain.govchain.us/api/x402/catalog"
     );
     expect(X402_PUBLIC.wellKnownUrl).toBe(
-      "https://authichain.com/.well-known/x402.json"
+      "https://authichain.govchain.us/.well-known/x402.json"
     );
     expect(X402_PUBLIC.fanoutUrl).toBe(
-      "https://authichain.com/.well-known/x402"
+      "https://authichain.govchain.us/.well-known/x402"
     );
-    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.com/openapi.json");
+    expect(X402_PUBLIC.openApiUrl).toBe("https://authichain.govchain.us/openapi.json");
     expect(X402_PUBLIC.legalEntity).toBe("ZACHARY KIETZMAN");
     expect(X402_PUBLIC.identityUrl).toContain("WEB3_IDENTITY.md");
     expect(X402_PUBLIC.tokenomicsUrl).toContain("AGENT_TOKENOMICS_x402.md");
@@ -58,10 +58,10 @@ describe("x402 public docs page", () => {
     expect(html).toContain("<title>x402 agent pay — AuthiChain</title>");
     expect(html).toContain(X402_PUBLIC.payTo);
     expect(html).toContain(X402_PUBLIC.asset);
-    expect(html).toContain("curl -sS https://authichain.com/api/x402/health");
-    expect(html).toContain("curl -sS https://authichain.com/api/x402/catalog");
+    expect(html).toContain("curl -sS https://authichain.govchain.us/api/x402/health");
+    expect(html).toContain("curl -sS https://authichain.govchain.us/api/x402/catalog");
     expect(html).toContain(
-      "curl -sS -i -X POST https://authichain.com/api/x402"
+      "curl -sS -i -X POST https://authichain.govchain.us/api/x402"
     );
     expect(html).toContain("HTTP 402");
     expect(html).toContain("extensions.bazaar");

@@ -8,6 +8,7 @@ import hmac
 
 from fastapi import FastAPI, Header, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
@@ -276,7 +277,12 @@ async def api_architect_cycle(
         or (body.get("goal") if isinstance(body.get("goal"), str) else "")
         or "Assess fleet health, fix failing workflows, and run priority jobs."
     )
-    report = architect.run_cycle(goal=effective_goal, mode=m, verbose=False)
+    # run_cycle is synchronous and can block for the whole plan budget
+    # (AGENTZ_PLAN_TIMEOUT); keep it off the event loop so /health and other
+    # requests are still served meanwhile.
+    report = await run_in_threadpool(
+        architect.run_cycle, goal=effective_goal, mode=m, verbose=False
+    )
     return {
         "report": report.to_dict(),
         "mode": resolved,

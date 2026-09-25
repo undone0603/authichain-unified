@@ -17,6 +17,8 @@ import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
 import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
+import { registerLeadRoutes } from "./lead-routes";
+import { registerResendInbound } from "./resend-inbound";
 import { scheduled } from "./cron-dispatch";
 import {
   CHECKOUT_REDIRECT_HEADERS,
@@ -179,6 +181,16 @@ app.use("/api/contact/*", rateLimitMiddleware("contact", 5, 60 * 60_000));
 app.use("/api/gpt/*", rateLimitMiddleware("gpt", 60, 60_000));
 // Admin ops: 30 requests per 15 min per IP
 app.use("/api/admin/*", rateLimitMiddleware("admin", 30, 15 * 60_000));
+// Public lead forms (/book, /contact, lead-capture popups): 10 per hour per IP
+app.use("/api/book", rateLimitMiddleware("book", 10, 60 * 60_000));
+app.use(
+  "/api/lead-capture",
+  rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
+);
+app.use(
+  "/api/leads/capture",
+  rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
+);
 // Catch-all API guard: 300 requests per minute per IP (also covers
 // /api/trpc/* — see tRPC note above)
 app.use("/api/*", rateLimitMiddleware("global", 300, 60_000));
@@ -1150,10 +1162,10 @@ app.post("/api/gpt/qr/generate", async c => {
     const body = await c.req.json().catch(() => ({}) as any);
     const { productId, style, size } = body ?? {};
     if (!productId) return c.json({ error: "productId required" }, 400);
-    const verifyUrl = `https://authichain.com/verify/${productId}`;
+    const verifyUrl = `https://authichain.govchain.us/verify/${productId}`;
     return c.json({
       qrUrl: verifyUrl,
-      embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
+      embedUrl: `https://authichain.govchain.us/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
       message: `QR code generated for product ${productId}`,
     });
   } catch (err) {
@@ -1737,6 +1749,8 @@ registerIssuerRoutes(app);
 registerAttestationApi(app);
 registerX402Routes(app);
 registerGuardrailApi(app);
+registerLeadRoutes(app);
+registerResendInbound(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
