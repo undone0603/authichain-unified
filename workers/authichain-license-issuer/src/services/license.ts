@@ -85,16 +85,31 @@ export async function hashKey(key: string): Promise<string> {
 }
 
 /**
- * Determine tier from a Stripe price ID.
+ * Map a Stripe price ID to a license tier, or null when the price is not a
+ * license SKU. The same Stripe account sells other products, so a checkout for
+ * an unmapped price is expected and must not be treated as a failure.
+ */
+export function licenseTierForPriceId(
+  env: Env,
+  priceId: string
+): LicenseTier | null {
+  if (!priceId?.trim()) return null;
+  if (priceId === env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID)
+    return "enterprise";
+  if (priceId === env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID) return "pro";
+  return null;
+}
+
+/**
+ * Determine tier from a Stripe price ID. Throws on a missing or unknown price.
  */
 export function tierFromPriceId(env: Env, priceId: string): LicenseTier {
   if (!priceId?.trim()) {
     throw new Error("checkout.session.completed missing price id");
   }
-  if (priceId === env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID)
-    return "enterprise";
-  if (priceId === env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID) return "pro";
-  throw new Error(`unknown license price id: ${priceId}`);
+  const tier = licenseTierForPriceId(env, priceId);
+  if (!tier) throw new Error(`unknown license price id: ${priceId}`);
+  return tier;
 }
 
 /**
