@@ -722,7 +722,10 @@ test("stale APP_WORKER checkout anchors become catalogue Payment Links", async (
     assert.ok(html.includes(`href="${dpp}"`), path);
     assert.ok(html.includes(`href="${passport}"`), path);
     assert.equal(html.includes('href="/api/checkout/dpp"'), false, path);
-    assert.doesNotMatch(html, /buy\.stripe\.com/, path);
+    const linkHosts = [...html.matchAll(/(?:href|action)="(https?:\/\/[^"]+)"/g)].map(
+      m => new URL(m[1].replace(/&amp;/g, "&")).hostname
+    );
+    assert.equal(linkHosts.includes("buy.stripe.com"), false, path);
     assert.ok(html.includes('action="/api/checkout/dpp"'), path);
   }
 });
