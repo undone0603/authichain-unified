@@ -124,7 +124,7 @@ export function checkoutEmailFormHtml(opts: {
   const formId = opts.formId ? ` id="${esc(opts.formId)}"` : "";
   const inputId = opts.inputId || "checkout-email";
   const hint =
-    opts.hint ?? "Receipt and abandoned-checkout recovery. Not a newsletter.";
+    opts.hint ?? "We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.";
   const cls = ["checkout-email-form", opts.extraClass]
     .filter(Boolean)
     .join(" ");

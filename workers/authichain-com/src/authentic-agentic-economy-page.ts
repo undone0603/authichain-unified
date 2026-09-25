@@ -222,7 +222,6 @@ ${estateTrust([
   { value: "Ed25519", label: "Signed seals" },
   { value: "Polygon", label: "On-chain anchor" },
   { value: "$0.05", label: "x402 per verify" },
-  { value: "2.1s", label: "Agent consensus" },
 ])}
 ${estateFeatures(
   "What is live on this estate",

@@ -2339,12 +2339,12 @@ function originMoneySurfaces() {
     <div class="estate-grid">
       <article class="estate-card card">
         <h3>TruMark</h3>
-        <p>Physical scan seal already used in the StrainChain demo and enterprise tag-mint copy. Cannabis brands publish one genetics passport.</p>
+        <p>TruMark is our physical scan seal, shown in the StrainChain demo. Cannabis brands can start with one StrainChain genetics passport.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/trumark">TruMark brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/strainchain_passport",
-            label: "Passport checkout — $49",
+            label: "Buy a StrainChain Passport — $49",
             inputId: "origin-trumark-email",
             formId: "origin-trumark-checkout",
           })}
@@ -2356,12 +2356,12 @@ function originMoneySurfaces() {
       </article>
       <article class="estate-card card">
         <h3>Made in America</h3>
-        <p>Signed per-unit origin evidence for Made in USA labels. Partner brief at /partners/brief. EU DPP Readiness is the live checkout.</p>
+        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or start today with the $299 EU DPP Readiness Audit.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/dpp_readiness",
-            label: "DPP checkout — $299",
+            label: "Start EU DPP Readiness Audit — $299",
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
           })}
@@ -2492,11 +2492,11 @@ const HTML = `<!DOCTYPE html>
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
-    title: "Issue seals. Bind products. Verify anywhere.",
+    title: "Signed QR seals for real products.",
     lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
-      label: "Buy the $29 signed pack",
+      label: "Buy a QRON Starter Pack — $29",
     },
     emailCheckout: {
       action: "https://authichain.com/checkout/dpp_readiness",
@@ -2516,16 +2516,10 @@ const HTML = `<!DOCTYPE html>
 
   <section class="estate-verify" id="registry" aria-labelledby="registry-heading">
     <div class="wrap">
-      <h2 id="registry-heading">Certificate registry</h2>
-      <p class="section-sub">AuthiChain's certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building a public certificate lookup where you enter a cert ID to confirm authenticity.</p>
-      <div class="estate-verify-grid">
-        <div class="estate-card"><strong>On our roadmap</strong><span class="stat-label">Goal: multi-agent verification in under 2.1 seconds</span></div>
-      </div>
+      <h2 id="registry-heading">Public certificate registry</h2>
+      <p class="section-sub">Public certificate registry: in development. Our goal: anyone can check an AuthiChain certificate with its ID.</p>
       <div class="estate-verify-actions">
-        <label class="sr-only" for="ac-cert-input">Certificate ID</label>
-        <input id="ac-cert-input" class="estate-field" type="text" placeholder="Enter cert ID to verify…">
-        <button type="button" class="btn btn-primary" onclick="acVerify()">Verify</button>
-        <a class="btn btn-outline" href="/api/authichain/certificates" target="_blank" rel="noopener">Browse registry (in development)</a>
+        <a class="btn btn-primary" href="https://authichain.com/contact">Talk to us</a>
       </div>
       <div id="ac-verify-result" style="margin-top:1rem;display:none"></div>
     </div>
@@ -3422,7 +3416,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 <p><code>${escapeHtml(pathname)}</code> is not a page on authichain.com.</p>
 ${emailCheckoutWithPaymentLinkHtml({
   action: "https://authichain.com/checkout/strainchain_passport",
-  label: "Publish a passport — $49",
+  label: "Buy a StrainChain Passport — $49",
   formId: "404-passport",
   inputId: "404-passport-email",
 })}

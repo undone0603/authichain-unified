@@ -350,3 +350,32 @@ test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () 
   assert.ok(html.includes(planPaymentLink(farm!.id)!));
   assert.equal(hasDeadLink(html), false);
 });
+
+test("authichain pricing uses buyer copy and QRON titles; held strings unchanged", () => {
+  const html = renderEstatePricingPage("authichain");
+  assert.match(html, />Plans and prices</);
+  assert.doesNotMatch(html, /primary money path/);
+  assert.doesNotMatch(html, /Prices that already charge/);
+  assert.match(html, /QRON Starter Pack/);
+  assert.match(html, /QRON Creator Pack/);
+  assert.match(html, /QRON Theater 1: AgTech/);
+  assert.match(html, /QRON Theater 3: Elite/);
+  assert.match(html, /Subscribe — \$499\/mo/);
+  assert.match(html, />Start audit</);
+  assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
+  assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
+  // Held pending decision: trial card, Theater 3 button, DPP card, Basic line.
+  assert.match(html, /Free Trial/);
+  assert.match(html, /Try Free for 7 Days/);
+  assert.match(html, /Contact for Theater 3/);
+  assert.match(html, /\$299 credited toward AuthiChain Basic/);
+  // No new plan prices.
+  assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
+});
+
+test("qron pricing keeps plain names and relabels only the Theater 1 button", () => {
+  const html = renderEstatePricingPage("qron");
+  assert.match(html, /Subscribe — \$499\/mo/);
+  assert.doesNotMatch(html, /Initialize Theater 1/);
+  assert.match(html, /Contact for Theater 3/);
+});

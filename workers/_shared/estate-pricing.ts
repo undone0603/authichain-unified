@@ -128,6 +128,11 @@ export function planCheckoutCta(
   };
 }
 
+/** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */
+const QRON_TITLED_PLANS = new Set(["starter", "creator", "theater_1", "theater_3"]);
+/** Plain-language Theater 1 button; the price matches the card. */
+const THEATER_1_BUTTON = "Subscribe — $499/mo";
+
 function cataloguePricingGrid(
   origin: Exclude<PricingOrigin, "strainchain">
 ): string {
@@ -141,13 +146,20 @@ function cataloguePricingGrid(
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
       const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
+      // On the AuthiChain page, QRON products carry the QRON name Stripe shows.
+      const title =
+        origin === "authichain" && QRON_TITLED_PLANS.has(plan.id)
+          ? `QRON ${plan.name}`
+          : plan.name;
+      const cardCta =
+        plan.id === "theater_1" ? { ...cta, label: THEATER_1_BUTTON } : cta;
       return `<article class="price-card${featured ? " featured" : ""}">
-  <h3>${esc(plan.name)}</h3>
+  <h3>${esc(title)}</h3>
   <div class="price-amount">${esc(amount)}</div>
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(plan, cta, featured)}
+  ${attributedCheckoutCta(plan, cardCta, featured)}
 </article>`;
     })
     .join("");
@@ -193,8 +205,13 @@ type PricingPage = {
   themeColor: string;
   primary: EstateCta;
   nav: EstateLink[];
+  eyebrow?: string;
   heroTitle: string;
   heroLede: string;
+  /** Short label for the sticky header CTA (defaults to primary.label). */
+  navLabel?: string;
+  footerTagline?: string;
+  footerNote?: string;
   secondary: EstateCta;
   plansNote: string;
   ctaTitle: string;
@@ -308,15 +325,19 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         { href: "/digital-product-passport", label: "EU DPP" },
         { href: "/contact", label: "Contact" },
       ],
-      heroTitle: "Prices that already charge.",
+      eyebrow: "Pricing",
+      heroTitle: "Plans and prices",
       heroLede:
-        "These figures come from the AuthiChain plan catalogue. The primary money path is EU DPP Readiness via live Stripe checkout.",
+        "Start with the $299 EU DPP Readiness Audit, or request a free pilot seal. Every paid plan below checks out on Stripe.",
+      navLabel: "Start audit",
       secondary: { href: "/onboard", label: "Onboard", primary: false },
       plansNote:
-        "Catalogue plans with a Stripe price or Payment Link stay listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
-      ctaTitle: "Start EU DPP Readiness",
+        "QRON generation packs and plans, the EU DPP Readiness Audit, and a free pilot.",
+      ctaTitle: "Start your EU DPP Readiness Audit",
       ctaLede:
-        "EU DPP Readiness is $299 on the published Payment Link, or enter a work email so Stripe can recover the cart.",
+        "$299, one time. Pay on Stripe, or add your work email first so we can send your receipt.",
+      footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
+      footerNote: "",
       footerStart: [
         { href: "/pricing", label: "DPP checkout" },
         { href: "/onboard", label: "Onboard" },
@@ -379,7 +400,7 @@ export function renderEstatePricingPage(origin: PricingOrigin): string {
   const brand: EstateBrandId = page.brand;
   const checkoutPrimary = /\/api\/checkout\/|\/checkout\//.test(page.primary.href);
   const navPrimary = checkoutPrimary
-    ? { href: "#pricing", label: page.primary.label }
+    ? { href: "#pricing", label: page.navLabel ?? page.primary.label }
     : page.primary;
 
   return `<!DOCTYPE html>
@@ -410,7 +431,7 @@ ${estateNav(brand, page.nav, navPrimary)}
 <main id="main">
 ${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
-  eyebrow: "Published catalogue",
+  eyebrow: page.eyebrow ?? "Published catalogue",
   title: page.heroTitle,
   lede: page.heroLede,
   emailCheckout: checkoutPrimary
@@ -471,9 +492,11 @@ ${estateFooter(
       links: page.footerMore,
     },
   ],
-  origin === "strainchain"
-    ? "StrainChain prices from the published catalogue and Payment Links"
-    : "Prices from the published AuthiChain plan catalogue"
+  page.footerNote ??
+    (origin === "strainchain"
+      ? "StrainChain prices from the published catalogue and Payment Links"
+      : "Prices from the published AuthiChain plan catalogue"),
+  page.footerTagline
 )}
 ${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
@@ -568,7 +591,7 @@ ${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
-  lede: "GovChain does not publish a catalogue SKU. Request access on the live /onboard intake, or start EU DPP Readiness on AuthiChain — the same $299 checkout already used on authichain.com.",
+  lede: "Request access and we'll talk through what you need. If you also sell into the EU, you can start AuthiChain's $299 EU DPP Readiness Audit today.",
   emailCheckout: {
     action: GOVCHAIN_DPP_CHECKOUT,
     label: dppCta,

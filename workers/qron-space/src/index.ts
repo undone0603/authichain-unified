@@ -2099,11 +2099,14 @@ h1{font-size:1.25rem;font-weight:700;margin:.75rem 0 .5rem}
 p{color:var(--muted);margin-bottom:1.75rem}
 code{background:rgba(148,163,184,.12);border:1px solid var(--border);border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:var(--text);word-break:break-all}
 a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:600;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;text-decoration:none}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+a.ghost{background:transparent;border:1px solid #27272a}
 </style></head><body><main>
 <div class="code">404</div>
 <h1>This page does not exist</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a page on qron.space.</p>
-<a href="/">Back to the $QRON hub</a>
+<a href="/">Back to qron.space</a>
+<p class="links"><a class="ghost" href="https://authichain.com/onboard">Request a free pilot</a> <a class="ghost" href="https://authichain.com/pricing">Pricing</a></p>
 </main></body></html>`;
   return new Response(html, {
     status: 404,
