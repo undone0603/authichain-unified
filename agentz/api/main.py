@@ -70,6 +70,10 @@ class ProductCreate(BaseModel):
 class ScanInput(BaseModel):
     product_id: str
     wallet: str
+    # Signed provenance record (protocol/SPEC.md) and optional anchor. Without
+    # a record the signature is not checked and the scan is not verified.
+    record: Optional[Dict[str, Any]] = None
+    anchor: Optional[Dict[str, Any]] = None
 
 # --- Endpoints ---
 
@@ -94,14 +98,28 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
     """Operator-only. Writes the product's score and can issue $QRON.
 
     `verified` comes from assess_scans, which requires a checked signature and
-    a location check that actually ran. Nothing on this path checks a
-    signature yet, so it reports `verified: false` and issues no reward.
+    a location check that actually ran. The signature is checked by the
+    reference verifier (agentz.core.signature); without a record, a trusted
+    issuer list or a product subject_id it stays "not_checked".
     """
     from agentz.core.media import generate_story_mode
+    from agentz.core.signature import check_scan_signature
     from agentz.core.trust import assess_scans
     from agentz.core.growth import reward_repeat_scans
+
+    product = (
+        supabase.table("products").select("metadata").eq("id", data.product_id)
+        .single().execute().data
+    ) or {}
+    signature = await check_scan_signature(
+        data.record,
+        data.anchor,
+        (product.get("metadata") or {}).get("subject_id"),
+    )
     # The Atomic Action
-    assessment = await assess_scans(supabase, data.product_id)
+    assessment = await assess_scans(
+        supabase, data.product_id, signature_valid=signature["signature_valid"]
+    )
     narration = await generate_story_mode(supabase, data.product_id)
     reward = None
     if assessment["verified"]:
@@ -110,7 +128,7 @@ async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
     return {
         "verified": assessment["verified"],
         "authenticity_score": assessment["score"],
-        "checks": assessment["checks"],
+        "checks": {**assessment["checks"], "signature_reason": signature["reason"]},
         "storymode_url": narration,
         "reward": reward
     }

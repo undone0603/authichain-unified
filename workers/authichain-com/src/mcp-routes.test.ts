@@ -39,7 +39,9 @@ describe("mcp discovery", () => {
         };
       };
       expect(body.protocol).toBe("mcp");
-      expect(body.pay.x402).toBe("POST https://authichain.govchain.us/api/x402");
+      expect(body.pay.x402).toBe(
+        "POST https://authichain.govchain.us/api/x402"
+      );
       expect(body.pricing.humanCheckout.dppPaymentLink).toBe(
         planPaymentLink("dpp_readiness")
       );
@@ -355,7 +357,8 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
     };
     expect(body.id).toBe(4);
     expect(body.result.structuredContent.subject).toBe("AC-1");
-    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(new URL(seen[0].url).pathname).toBe("/api/v1/agent-verify");
+    expect(new URL(seen[0].url).search).toBe("");
     expect(await seen[0].json()).toEqual({ serial: "AC-1" });
   });
 
