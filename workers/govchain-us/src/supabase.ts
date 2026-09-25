@@ -186,11 +186,18 @@ async function countRows(
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** The three counters the homepage stats bar reads. */
+/**
+ * The three counters the homepage stats bar reads.
+ *
+ * The opportunity counters skip expired notices using the same deadline
+ * cutoff as `fetchOpportunities` (today's UTC date; no deadline = still open).
+ */
 export async function fetchStats(env: SupabaseEnv): Promise<GovStats> {
+  const today = new Date().toISOString().slice(0, 10);
+  const open = `or=(deadline.gte.${today},deadline.is.null)`;
   const [scored, highFit, proposals] = await Promise.all([
-    countRows(env, OPPORTUNITIES_VIEW, "fit_score=not.is.null"),
-    countRows(env, OPPORTUNITIES_VIEW, "fit_score=gte.70"),
+    countRows(env, OPPORTUNITIES_VIEW, `fit_score=not.is.null&${open}`),
+    countRows(env, OPPORTUNITIES_VIEW, `fit_score=gte.70&${open}`),
     countRows(env, PROPOSALS_VIEW),
   ]);
   return {
