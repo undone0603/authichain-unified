@@ -415,6 +415,7 @@ describe("owner digest scoreboard", async () => {
   const {
     buildDigest,
     isRealCheckout,
+    hasBuyerEmail,
     campaignCheckouts,
     countReplies,
     failingWorkflows,
@@ -450,6 +451,68 @@ describe("owner digest scoreboard", async () => {
     expect(
       isRealCheckout({ ...real, metadata: { utm_source: "contest" } }, founders)
     ).toBe(true);
+  });
+
+  it("counts a checkout as started only with a real buyer email", () => {
+    const live = { livemode: true };
+    // no email at all: link previews, scanners, prefetch
+    expect(hasBuyerEmail(live)).toBe(false);
+    expect(isRealCheckout(live, founders)).toBe(false);
+    expect(
+      isRealCheckout({ ...live, customer_details: { email: null } }, founders)
+    ).toBe(false);
+    expect(
+      isRealCheckout({ ...live, customer_email: "   " }, founders)
+    ).toBe(false);
+    // walkthrough / fixture emails
+    expect(
+      isRealCheckout(
+        { ...live, customer_details: { email: "walkthrough+1@example.com" } },
+        founders
+      )
+    ).toBe(false);
+    expect(
+      isRealCheckout({ ...live, customer_email: "QA@Example.COM" }, founders)
+    ).toBe(false);
+    // our own domain, even when not in the founders list
+    expect(
+      isRealCheckout(
+        { ...live, customer_email: "ops@authichain.com" },
+        new Set()
+      )
+    ).toBe(false);
+    expect(hasBuyerEmail({ customer_email: "x@mail.authichain.com" })).toBe(
+      false
+    );
+    // real buyers, from either field
+    expect(
+      isRealCheckout(
+        { ...live, customer_details: { email: "buyer@farm.com" } },
+        founders
+      )
+    ).toBe(true);
+    expect(
+      isRealCheckout(
+        {
+          ...live,
+          customer_details: { email: null },
+          customer_email: "buyer@ebike.eu",
+        },
+        founders
+      )
+    ).toBe(true);
+    // lookalike domains are still buyers
+    expect(hasBuyerEmail({ customer_email: "a@notexample.com" })).toBe(true);
+    expect(hasBuyerEmail({ customer_email: "a@authichain.com.au" })).toBe(true);
+    // count over a batch like the Sep 20-25 sample
+    const batch = [
+      live,
+      live,
+      { ...live, customer_email: "t@example.com" },
+      { ...live, customer_email: "z@authichain.com" },
+      { ...live, customer_details: { email: "real@brand.co" } },
+    ];
+    expect(batch.filter(s => isRealCheckout(s, new Set())).length).toBe(1);
   });
 
   it("counts outside Re: emails inside the window", () => {

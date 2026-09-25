@@ -83,7 +83,26 @@ export function summarize(
 
 const SMOKE = /smoke|\be2e\b|\btest\b/i;
 
-/** Pure. A checkout session a stranger started: live, not a demo, smoke test or founder. */
+/** Emails that never belong to a real buyer: walkthrough/test fixtures and our own domain. */
+const NON_BUYER_EMAIL = /@(?:[a-z0-9-]+\.)*(?:example\.com|authichain\.com)$/i;
+
+/**
+ * Pure. The session carries a real buyer email: customer_details.email or
+ * customer_email is present, and not @example.com or @authichain.com.
+ * Sessions with no email (link previews, scanners, prefetch) are not "started".
+ */
+export function hasBuyerEmail(s) {
+  const email = String(
+    s?.customer_details?.email || s?.customer_email || ""
+  ).trim();
+  if (!email.includes("@")) return false;
+  return !NON_BUYER_EMAIL.test(email);
+}
+
+/**
+ * Pure. A checkout session a stranger started: live, has a real buyer email,
+ * not a demo, smoke test or founder.
+ */
 export function isRealCheckout(s, founders) {
   if (s.livemode === false) return false;
   const m = s.metadata ?? {};
@@ -97,6 +116,7 @@ export function isRealCheckout(s, founders) {
     m.utm_source,
   ];
   if (tags.some(t => t && SMOKE.test(String(t)))) return false;
+  if (!hasBuyerEmail(s)) return false;
   const email = s.customer_details?.email ?? s.customer_email;
   return !isFounder(email, founders);
 }
@@ -219,7 +239,7 @@ export function buildDigest(d, { force = false } = {}) {
     );
     item(
       n(b.checkouts, "Checkouts started") ??
-        `Checkouts started by real visitors: ${b.checkouts} (tests and founders excluded)`
+        `Checkouts started by real visitors: ${b.checkouts} (no-email, @example.com, @authichain.com, tests and founders excluded)`
     );
     if (b.campaigns == null)
       TRACKED_CAMPAIGNS.forEach(c => item(`${c} page: not connected`));
