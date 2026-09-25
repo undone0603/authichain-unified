@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   seo-check:
@@ -40,7 +41,14 @@ jobs:
             home_code=$(curl -sS -L --max-time 15 \
               -o "$home_out" -D "$home_headers" \
               -w '%{http_code}' \
-              "https://${domain}/")
+              "https://${domain}/" 2>/dev/null)
+            home_code="${home_code:-000}"
+
+            if [ "$home_code" = "000" ]; then
+              rm -f "$home_out" "$home_headers"
+              echo "${domain}: UNCHECKED -- could not connect (network failure on this runner, not a content regression)"
+              return 2
+            fi
 
             if [ "$home_code" != "200" ]; then
               failed="${failed:+$failed, }/ HTTP $home_code (not 200)"
@@ -64,7 +72,7 @@ jobs:
                 failed="${failed:+$failed, }/ missing <meta property=og:image content=...>"
               fi
               local ldjson_count
-              ldjson_count=$(echo "$home_body" | grep -c 'application/ld+json' || echo 0)
+              ldjson_count=$(echo "$home_body" | grep -o 'application/ld+json' | wc -l)
               if [ "$ldjson_count" -lt 2 ]; then
                 failed="${failed:+$failed, }/ only ${ldjson_count} ld+json block(s) (need >=2)"
               fi
@@ -186,16 +194,49 @@ jobs:
             fi
           }
 
+          TOTAL=0
+          UNCHECKED=0
           for domain in $DOMAINS; do
+            TOTAL=$((TOTAL + 1))
             run_check "$domain"
+            rc=$?
+            if [ "$rc" -eq 2 ]; then
+              UNCHECKED=$((UNCHECKED + 1))
+            fi
           done
 
           echo ""
           echo "--- rollup ---"
-          if [ "$OVERALL" -eq 0 ]; then
-            echo "All 4 brand domains passed all 6 SEO checks (homepage meta, og-image.png size, og-image.svg, favicon.svg, sitemap.xml, robots.txt). No regressions detected."
+          if [ "$UNCHECKED" -eq "$TOTAL" ]; then
+            echo "All $TOTAL brand domains were UNCHECKED -- this runner could not connect to any of them. Treat as a network problem with the runner, not a content regression."
+            echo "result=unchecked" >> "$GITHUB_OUTPUT"
+          elif [ "$OVERALL" -eq 0 ]; then
+            if [ "$UNCHECKED" -gt 0 ]; then
+              echo "$((TOTAL - UNCHECKED))/$TOTAL reachable brand domains passed all 6 SEO checks. $UNCHECKED domain(s) were UNCHECKED (network failure) and are not counted as regressions."
+            else
+              echo "All $TOTAL brand domains passed all 6 SEO checks (homepage meta, og-image.png size, og-image.svg, favicon.svg, sitemap.xml, robots.txt). No regressions detected."
+            fi
+            echo "result=pass" >> "$GITHUB_OUTPUT"
           else
             echo "One or more brand domains failed SEO checks. Investigate the FAIL lines above and look at the corresponding workers/<brand>/src/index.ts fetch handler for the failing route. Common causes: a route handler was removed or returned the wrong content-type; the PNG asset grew beyond 300 KB or shrank below 80 KB; an ld+json block was dropped from the homepage template."
+            echo "result=fail" >> "$GITHUB_OUTPUT"
           fi
 
-          exit $OVERALL
+      - name: Fail job on confirmed regression
+        if: always() && steps.check.outputs.result == 'fail'
+        run: |
+          echo "SEO regression confirmed on a reachable domain. Failing job."
+          exit 1
+
+      - name: Open issue on regression
+        if: always() && steps.check.outputs.result == 'fail'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `SEO regression detected -- ${new Date().toISOString().slice(0, 10)}`,
+              labels: ['seo-regression'],
+              body: `The weekly SEO Regression Check found a regression on a reachable brand domain. See the run log: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            })
