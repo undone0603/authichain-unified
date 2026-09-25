@@ -16,30 +16,27 @@ export const metadata: Metadata = {
 };
 
 const rows: ComparisonRow[] = [
-  { feature: 'Turnkey product (no dev team required)', authichain: true, competitor: false },
-  { feature: 'On-chain anchoring', authichain: true, competitor: true },
-  { feature: 'Bitcoin L1 finality', authichain: true, competitor: false },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: true, competitor: false },
-  { feature: 'EU Digital Product Passport export', authichain: true, competitor: 'Via partners' },
-  { feature: 'Self-serve onboarding < 1 day', authichain: true, competitor: false },
-  { feature: 'No native token / crypto to buy', authichain: true, competitor: false },
-  { feature: 'Fiat pricing (USD, card)', authichain: true, competitor: false },
-  { feature: 'W3C Verifiable Credentials', authichain: true, competitor: 'Partial' },
-  { feature: 'Starts at', authichain: '$49/mo', competitor: 'Custom integration' },
+  { feature: 'Turnkey product (no dev team required)', authichain: true, competitor: 'Via ToolChain or partners' },
+  { feature: 'On-chain anchoring', authichain: 'Certificate contract live on Polygon', competitor: true },
+  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
+  { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: 'Via partners' },
+  { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: '—' },
+  { feature: 'No native token / crypto to buy', authichain: true, competitor: 'Gas can be sponsored (VIP-191)' },
+  { feature: 'Starts at', authichain: 'Contact for pricing', competitor: '—' },
 ];
 
 const reasons = [
   {
     title: 'A Product, Not a Protocol',
-    desc: 'VeChain is an L1 blockchain — you (or an integrator) build the authentication app on top. AuthiChain ships the finished product: scan, verify, certificate, done.',
+    desc: 'AuthiChain is building the brand-facing layer: seals, certificates, and public verification.',
   },
   {
     title: 'No Token Volatility or Gas UX',
-    desc: 'Pay in USD with a card. No VET/VTHO to acquire, no wallet setup for your team or customers, no exposure to token price swings for your compliance budget.',
+    desc: 'Pay in USD by card through Stripe.',
   },
   {
     title: 'AI + Multi-Chain Assurance',
-    desc: 'Our goal: 5-agent AI consensus that screens every scan before it is anchored to both Polygon and Bitcoin L1, combining machine verification with the strongest settlement layer available.',
+    desc: 'Our goal: multi-agent AI verification before each certificate is anchored on Polygon.',
   },
 ];
 

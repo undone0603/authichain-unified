@@ -16,30 +16,27 @@ export const metadata: Metadata = {
 };
 
 const rows: ComparisonRow[] = [
-  { feature: 'On-chain cryptographic anchoring', authichain: true, competitor: false },
-  { feature: 'Bitcoin L1 + Polygon finality', authichain: true, competitor: false },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: true, competitor: 'Limited' },
-  { feature: 'EU Digital Product Passport export', authichain: true, competitor: true },
-  { feature: 'Self-serve onboarding < 1 day', authichain: true, competitor: false },
-  { feature: 'Transparent public pricing', authichain: true, competitor: false },
-  { feature: 'W3C Verifiable Credentials (you hold keys)', authichain: true, competitor: false },
-  { feature: 'NFT certificates of authenticity', authichain: true, competitor: false },
-  { feature: 'No minimum enterprise contract', authichain: true, competitor: false },
-  { feature: 'Starts at', authichain: '$49/mo', competitor: 'Enterprise quote' },
+  { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: 'Has shipped blockchain integrations (Cardano, Hyperledger)' },
+  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
+  { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
+  { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: 'Yes (self-serve signup)' },
+  { feature: 'NFT certificates of authenticity', authichain: 'Contract live; issuance in development', competitor: '—' },
+  { feature: 'No minimum enterprise contract', authichain: true, competitor: 'Self-serve plans available' },
+  { feature: 'Starts at', authichain: 'Contact for pricing', competitor: 'From €230/yr (e-label)' },
 ];
 
 const reasons = [
   {
     title: 'Tamper-Proof by Design',
-    desc: 'Every verification is anchored to Bitcoin L1 and Polygon — not a private database you have to trust. Scantrust relies on centralized cloud records that can be altered or lost.',
+    desc: 'AuthiChain\'s certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.',
   },
   {
     title: 'Live in a Day, Not a Quarter',
-    desc: 'Import your catalog and issue authenticated codes the same day. No sales gate, no 3–6 month integration project, no compliance consultant on retainer.',
+    desc: 'Import your catalog and issue authenticated codes the same day. No sales call required to start.',
   },
   {
     title: 'Pricing You Can Actually See',
-    desc: 'Public plans from $49/mo with no minimum commitment. Scantrust hides pricing behind enterprise sales calls — you find out the cost after weeks of demos.',
+    desc: 'Pricing: contact us at authichain.com/contact.',
   },
 ];
 

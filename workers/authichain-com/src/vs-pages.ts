@@ -47,67 +47,52 @@ export const VS_PAGES: VsDefinition[] = [
     rows: [
       {
         feature: "On-chain cryptographic anchoring",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Bitcoin L1 + Polygon finality",
-        authichain: true,
-        competitor: false,
+        authichain: "Certificate contract live on Polygon",
+        competitor: "Has shipped blockchain integrations (Cardano, Hyperledger)",
       },
       {
         feature: "AI image analysis (5-agent consensus)",
-        authichain: true,
-        competitor: "Limited",
+        authichain: "In development",
+        competitor: "—",
       },
       {
         feature: "EU Digital Product Passport export",
-        authichain: true,
+        authichain: "In development",
         competitor: true,
       },
       {
         feature: "Self-serve onboarding < 1 day",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Transparent public pricing",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "W3C Verifiable Credentials (you hold keys)",
-        authichain: true,
-        competitor: false,
+        authichain: "In development",
+        competitor: "Yes (self-serve signup)",
       },
       {
         feature: "NFT certificates of authenticity",
-        authichain: true,
-        competitor: false,
+        authichain: "Contract live; issuance in development",
+        competitor: "—",
       },
       {
         feature: "No minimum enterprise contract",
         authichain: true,
-        competitor: false,
+        competitor: "Self-serve plans available",
       },
       {
         feature: "Starts at",
-        authichain: "$49/mo",
-        competitor: "Enterprise quote",
+        authichain: "Contact for pricing",
+        competitor: "From €230/yr (e-label)",
       },
     ],
     reasons: [
       {
         title: "Tamper-Proof by Design",
-        desc: "Every verification is anchored to Bitcoin L1 and Polygon — not a private database you have to trust. Scantrust relies on centralized cloud records that can be altered or lost.",
+        desc: "AuthiChain's certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.",
       },
       {
         title: "Live in a Day, Not a Quarter",
-        desc: "Import your catalog and issue authenticated codes the same day. No sales gate, no 3–6 month integration project, no compliance consultant on retainer.",
+        desc: "Import your catalog and issue authenticated codes the same day. No sales call required to start.",
       },
       {
         title: "Pricing You Can Actually See",
-        desc: "Public plans from $49/mo with no minimum commitment. Scantrust hides pricing behind enterprise sales calls — you find out the cost after weeks of demos.",
+        desc: "Pricing: contact us at authichain.com/contact.",
       },
     ],
   },
@@ -124,47 +109,41 @@ export const VS_PAGES: VsDefinition[] = [
       {
         feature: "Product authentication (anti-counterfeit)",
         authichain: true,
-        competitor: "Limited",
+        competitor: "—",
       },
       {
         feature: "EU Digital Product Passport export",
-        authichain: true,
+        authichain: "In development",
         competitor: true,
       },
       {
         feature: "On-chain cryptographic anchoring",
-        authichain: true,
+        authichain: "Certificate contract live on Polygon",
         competitor: true,
       },
-      { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
       {
         feature: "AI image analysis (5-agent consensus)",
-        authichain: true,
-        competitor: false,
+        authichain: "In development",
+        competitor: "—",
       },
       {
         feature: "Self-serve onboarding < 1 day",
-        authichain: true,
+        authichain: "In development",
         competitor: false,
       },
       {
         feature: "Serves SMB + enterprise",
         authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Transparent public pricing",
-        authichain: true,
-        competitor: false,
+        competitor: "—",
       },
       {
         feature: "NFT certificates of authenticity",
-        authichain: true,
-        competitor: false,
+        authichain: "Contract live; issuance in development",
+        competitor: "—",
       },
       {
         feature: "Starts at",
-        authichain: "$49/mo",
+        authichain: "Contact for pricing",
         competitor: "Enterprise quote",
       },
     ],
@@ -179,7 +158,7 @@ export const VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Strongest Proof Layer",
-        desc: "AI consensus plus dual anchoring on Polygon and Bitcoin L1 gives customs, auditors, and customers verifiable, tamper-proof provenance in a single scan.",
+        desc: "Our goal: AI consensus plus on-chain anchoring, so customs, auditors, and customers can verify provenance in a single scan.",
       },
     ],
   },
@@ -196,130 +175,51 @@ export const VS_PAGES: VsDefinition[] = [
       {
         feature: "Turnkey product (no dev team required)",
         authichain: true,
-        competitor: false,
+        competitor: "Via ToolChain or partners",
       },
-      { feature: "On-chain anchoring", authichain: true, competitor: true },
-      { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
+      {
+        feature: "On-chain anchoring",
+        authichain: "Certificate contract live on Polygon",
+        competitor: true,
+      },
       {
         feature: "AI image analysis (5-agent consensus)",
-        authichain: true,
-        competitor: false,
+        authichain: "In development",
+        competitor: "—",
       },
       {
         feature: "EU Digital Product Passport export",
-        authichain: true,
+        authichain: "In development",
         competitor: "Via partners",
       },
       {
         feature: "Self-serve onboarding < 1 day",
-        authichain: true,
-        competitor: false,
+        authichain: "In development",
+        competitor: "—",
       },
       {
         feature: "No native token / crypto to buy",
         authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Fiat pricing (USD, card)",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "W3C Verifiable Credentials",
-        authichain: true,
-        competitor: "Partial",
+        competitor: "Gas can be sponsored (VIP-191)",
       },
       {
         feature: "Starts at",
-        authichain: "$49/mo",
-        competitor: "Custom integration",
+        authichain: "Contact for pricing",
+        competitor: "—",
       },
     ],
     reasons: [
       {
         title: "A Product, Not a Protocol",
-        desc: "VeChain is an L1 blockchain — you (or an integrator) build the authentication app on top. AuthiChain ships the finished product: scan, verify, certificate, done.",
+        desc: "AuthiChain is building the brand-facing layer: seals, certificates, and public verification.",
       },
       {
         title: "No Token Volatility or Gas UX",
-        desc: "Pay in USD with a card. No VET/VTHO to acquire, no wallet setup for your team or customers, no exposure to token price swings for your compliance budget.",
+        desc: "Pay in USD by card through Stripe.",
       },
       {
         title: "AI + Multi-Chain Assurance",
-        desc: "Our goal: 5-agent AI consensus that screens every scan before it is anchored to both Polygon and Bitcoin L1, combining machine verification with the strongest settlement layer available.",
-      },
-    ],
-  },
-  {
-    slug: "everledger",
-    competitor: "Everledger",
-    title:
-      "AuthiChain vs Everledger: Which Is Better for Product Authentication? (2026)",
-    description:
-      "AuthiChain vs Everledger compared — self-serve, multi-industry product authentication and EU DPP export vs asset-registry provenance for diamonds, wine and luxury goods.",
-    competitorSummary:
-      "Everledger built blockchain provenance registries for high-value assets — diamonds, wine, fine art and luxury goods — with a registry-first model aimed at industry consortia.",
-    rows: [
-      {
-        feature: "Self-serve signup (no consortium or sales gate)",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Covers any product category",
-        authichain: true,
-        competitor: "High-value assets",
-      },
-      {
-        feature: "On-chain cryptographic anchoring",
-        authichain: true,
-        competitor: true,
-      },
-      { feature: "Bitcoin L1 finality", authichain: true, competitor: false },
-      {
-        feature: "AI image analysis (5-agent consensus)",
-        authichain: true,
-        competitor: "Asset-specific",
-      },
-      {
-        feature: "EU Digital Product Passport export",
-        authichain: true,
-        competitor: "Partial",
-      },
-      {
-        feature: "W3C Verifiable Credentials (you hold keys)",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Customer-facing scan-to-verify page",
-        authichain: true,
-        competitor: "Via partners",
-      },
-      {
-        feature: "Transparent public pricing",
-        authichain: true,
-        competitor: false,
-      },
-      {
-        feature: "Starts at",
-        authichain: "$49/mo",
-        competitor: "Enterprise quote",
-      },
-    ],
-    reasons: [
-      {
-        title: "Your Data Outlives Your Vendor",
-        desc: "A provenance record is only as durable as the registry holding it. AuthiChain anchors the hash on public chains and issues W3C Verifiable Credentials you keep — so proof survives independently of any single company's registry.",
-      },
-      {
-        title: "Every Category, Not Just Luxury",
-        desc: "Registry-first provenance was built around diamonds, wine and fine art. AuthiChain authenticates any SKU — cannabis, pharma, parts, apparel — on the same rails, with the same one-day onboarding.",
-      },
-      {
-        title: "No Consortium Required",
-        desc: "Industry-registry models need the industry to join before the record is worth much. AuthiChain works for a single brand on day one, then composes upward as your suppliers join.",
+        desc: "Our goal: multi-agent AI verification before each certificate is anchored on Polygon.",
       },
     ],
   },
@@ -393,7 +293,7 @@ function shell(
 <style>${VS_CSS}</style></head><body>
 <div class="nav"><a href="/" class="logo">AuthiChain</a><a href="/vs">All comparisons</a></div>
 ${body}
-<footer>AuthiChain &middot; Blockchain Product Authentication &middot; EU DPP Compliant &middot; Polygon &amp; Bitcoin Anchored</footer>
+<footer>AuthiChain &middot; Product Authentication &middot; EU DPP Readiness &middot; Certificate contract on Polygon</footer>
 </body></html>`;
 }
 
@@ -455,7 +355,7 @@ export function renderVsPage(def: VsDefinition): string {
   <span class="badge">Head-to-Head Comparison</span>
   <h1>AuthiChain vs ${esc(def.competitor)}:<br><span class="accent">Which Is Better for Product Authentication?</span></h1>
   <p class="lede">${esc(def.competitorSummary)} Below is a feature-by-feature comparison so you can decide which platform fits your supply chain, budget, and compliance timeline.</p>
-  <div class="ctas"><a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Pay $299 on Stripe</a><a class="cta ghost" href="/anchor">See Live Demo</a></div>
+  <div class="ctas"><a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Get started</a><a class="cta ghost" href="/anchor">See Live Demo</a></div>
 </section>
 <table>
   <thead><tr><th>Feature</th><th class="ac">AuthiChain</th><th class="co">${esc(def.competitor)}</th></tr></thead>
@@ -476,7 +376,7 @@ export function renderVsIndex(): string {
 
   return shell(
     "Compare AuthiChain — Product Authentication Platforms Side by Side",
-    "Honest, feature-by-feature comparisons of AuthiChain against Scantrust, Circularise, VeChain and Everledger.",
+    "Honest, feature-by-feature comparisons of AuthiChain against Scantrust, Circularise and VeChain.",
     "https://authichain.govchain.us/vs",
     `<div class="wrap">
 <section class="hero">

@@ -108,7 +108,6 @@ export function renderDppManufacturerArticle(): string {
       [
         { href: "/dpp", label: "EU DPP" },
         { href: "/pricing", label: "Pricing" },
-        { href: "/vs/everledger", label: "vs Everledger" },
         { href: "/contact", label: "Contact" },
       ],
       { href: "/pricing", label: "View pricing" }
@@ -237,7 +236,6 @@ ${estateFooter(
       links: [
         { href: DPP_MANUFACTURER_ARTICLE_PATH, label: "Manufacturer article" },
         { href: "/dpp", label: "EU DPP" },
-        { href: "/vs/everledger", label: "vs Everledger" },
       ],
     },
     {

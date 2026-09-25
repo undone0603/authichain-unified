@@ -77,7 +77,7 @@ const COMPARISON = [
   { feature: 'On-chain cryptographic anchoring', govchain: true, scantrust: false, vechain: true, circularise: false },
   { feature: 'EPCIS 2.0 + JSON-LD export', govchain: true, scantrust: true, vechain: true, circularise: true },
   { feature: 'Self-serve onboarding < 1 day', govchain: true, scantrust: false, vechain: false, circularise: false },
-  { feature: 'Transparent public pricing', govchain: true, scantrust: false, vechain: false, circularise: false },
+  { feature: 'Transparent public pricing', govchain: true, scantrust: true, vechain: false, circularise: false },
   { feature: 'US federal procurement (FAR/SAM.gov)', govchain: true, scantrust: false, vechain: false, circularise: false },
 ];
 
