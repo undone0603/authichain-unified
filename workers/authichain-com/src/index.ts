@@ -2375,7 +2375,7 @@ function originMoneySurfaces() {
       </article>
       <article class="estate-card card">
         <h3>Mendo / LT-63</h3>
-        <p>Hot licensing lead. Genetics library is live. The campaign microsite sends Mike to Passport $49 checkout — no call.</p>
+        <p>Genetics library is live. The Mendo campaign microsite goes straight to Passport $49 checkout.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
           ${checkoutEmailFormHtml({

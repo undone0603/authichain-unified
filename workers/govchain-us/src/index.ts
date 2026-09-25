@@ -2012,12 +2012,17 @@ function escapeHtml(value: unknown): string {
   );
 }
 
-/** Formats an ISO timestamp as a plain date, or "Deadline TBD" when absent. */
+/**
+ * Formats an ISO timestamp as a plain date, or "Deadline TBD" when absent.
+ * A deadline in the past reads "Closed <date>" so a direct link to an expired
+ * notice never presents it as open.
+ */
 function formatDeadline(value: string | null): string {
   if (!value) return "Deadline TBD";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "Deadline TBD";
-  return `Due ${d.toISOString().slice(0, 10)}`;
+  const date = d.toISOString().slice(0, 10);
+  return d.getTime() < Date.now() ? `Closed ${date}` : `Due ${date}`;
 }
 
 /** Only https SAM links are rendered as links; anything else becomes plain text. */
