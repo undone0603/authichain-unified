@@ -2580,7 +2580,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — signed seals, 5-agent consensus, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every genuine product gets a signed seal anchored on Polygon. The certificate is public. An agent can look it up the same way a person scans a QR." },
-      { title: "Verification", body: "Five agents reach weighted consensus in 2.1 seconds. MCP tools expose that check to any model that can call AuthiChain." },
+      { title: "Verification", body: "Multi-agent verification is in development. MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -3093,7 +3093,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         EU DIGITAL<br><span class="accent">PRODUCT PASSPORT</span>
       </h1>
       <p class="hero-sub" style="max-width:600px">
-        The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
+        ESPR (Regulation (EU) 2024/1781) requires a digital product passport for product groups the EU designates, starting with the first ones in its working plan. Batteries have their own passport under Regulation (EU) 2023/1542 from 18 February 2027. The law is technology-neutral, and AuthiChain is building passport tooling that meets its requirements for data integrity and verifiability (in development).
       </p>
       <div id="dpp-cancelled-banner" class="dpp-cancelled">Checkout was not finished. Leave a work email so Stripe can send a recovery link if this session expires.</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
@@ -3113,7 +3113,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward. Promo <code>DPP-SMOKE-E2E</code> for end-to-end smoke.
+        The $299 is credited in full toward AuthiChain Basic if you move forward.
       </p>
     </div>
   </section>
@@ -3254,8 +3254,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
-          <div class="feature-title">AI Provenance Verification</div>
-          <div class="feature-desc">5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) verifies authenticity in 2.1 seconds. Counterfeit detection built in.</div>
+          <div class="feature-title">AI provenance verification (in development)</div>
+          <div class="feature-desc">Multi-agent verification of product records is in development.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>
@@ -3269,7 +3269,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section" id="industries">
     <div class="container">
       <div class="section-label">INDUSTRIES SERVED</div>
-      <h2 class="section-title">Already Working With</h2>
+      <h2 class="section-title">Industries we're building for</h2>
       <div class="industries">
         <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
@@ -3283,9 +3283,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
-      <div class="badge-live" style="background:rgba(201,162,39,.12); border-color:var(--primary); color:var(--primary)">16 DAYS TO REGISTRY LAUNCH</div>
       <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
+      <p class="section-sub">Start with a written readiness assessment for your product line. Checkout is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",

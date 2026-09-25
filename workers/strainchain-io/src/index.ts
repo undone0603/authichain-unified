@@ -2187,11 +2187,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StrainChain — Cannabis Supply Chain on Blockchain</title>
-<meta name="description" content="End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.">
+<meta name="description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="StrainChain">
 <meta property="og:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
-<meta property="og:description" content="Seed-to-shelf strain NFTs, automated compliance reporting, and a 4-layer audit trail that satisfies regulators in all 38 legal markets.">
+<meta property="og:description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
 <meta property="og:url" content="https://strainchain.io/">
 <meta property="og:image" content="https://strainchain.io/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2201,8 +2201,8 @@ export default {
 <meta name="theme-color" content="#15803d">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.","sameAs":["https://authichain.govchain.us"]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StrainChain","url":"https://strainchain.io","description":"Cannabis supply chain tracking on blockchain: seed-to-shelf NFTs, METRC sync, and 4-layer audit trail."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.","sameAs":["https://authichain.govchain.us"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StrainChain","url":"https://strainchain.io","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development."}</script>
 <style>
 ${estateCssVars("strainchain")}
 ${ESTATE_BASE_CSS}
@@ -2265,7 +2265,7 @@ ${estateFeatures(
   "Why StrainChain",
   "Particular advantages over spreadsheets, generic seed-to-sale, and paper COAs.",
   [
-    { title: "Unfakeable strain identity", body: "Each batch is an on-chain NFT carrying its genetic fingerprint and COA hash — relabeling or back-dating is mathematically visible." },
+    { title: "COA-backed strain identity", body: "Each passport is built from the lab panel itself, and discrepancies are shown. On-chain batch records are in development." },
     { title: "METRC and BioTrack sync", body: "Bidirectional tag and manifest flow so operators are not double-keying state systems." },
     { title: "Regulator-ready export", body: "The four-layer audit trail exports an inspection-ready evidence package on demand." },
     { title: "Consumer proof at the shelf", body: "A QR on the package resolves to on-chain provenance — proof in the buyer's hand, not only a claim on a label." },
