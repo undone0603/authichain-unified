@@ -81,7 +81,7 @@ function checkoutEmailFormHtml(action, label) {
     `<label class="checkout-email-label" for="checkout-email">Work email` +
     `<input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">` +
     `</label>` +
-    `<p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>` +
+    `<p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p>` +
     `<button class="btn btn-primary" type="submit">${esc(label)}</button>` +
     `</form>`
   );

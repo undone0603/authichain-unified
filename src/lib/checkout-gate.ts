@@ -206,7 +206,7 @@ ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 ${hidden}<button type="submit">Continue to secure Stripe checkout</button>
-<p class="hint">Receipt and abandoned-checkout recovery only. Not a newsletter. You will review the total on Stripe before paying.</p>
+<p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
 </form>
 <div class="links"><a href="/checkout">All plans</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a></div>`
   );

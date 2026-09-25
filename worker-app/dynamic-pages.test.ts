@@ -355,7 +355,7 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
+    expect(body).toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
     expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(body).toContain(
@@ -571,6 +571,50 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
+  });
+});
+
+describe("/onboard and /generate: walkthrough friction fixes", () => {
+  it("titles /onboard per site from X-Forwarded-Host", async () => {
+    const title = async (host?: string) => {
+      const res = await app.request(
+        "/onboard",
+        host ? { headers: { "x-forwarded-host": host } } : {},
+        makeEnv() as any
+      );
+      return /<title>([^<]*)<\/title>/.exec(await res.text())?.[1];
+    };
+    expect(await title()).toBe("Request a pilot | AuthiChain");
+    expect(await title("govchain.us")).toBe("Request access | GovChain");
+    expect(await title("strainchain.io")).toBe("Request a pilot | StrainChain");
+    expect(await title("authichain.govchain.us")).toBe(
+      "Request a pilot | AuthiChain"
+    );
+  });
+
+  it("uses plain copy, product names, no /verify link and 44px targets", async () => {
+    const res = await app.request("/onboard", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("Request a free pilot seal</button>");
+    expect(body).not.toContain("not a placeholder");
+    expect(body).toContain("Or buy now, no call needed");
+    expect(body).toContain("StrainChain Passport — $49");
+    expect(body).toContain("StrainChain Farm Plan — $149/mo");
+    expect(body).toContain("EU DPP Readiness Audit — $299");
+    expect(body).not.toContain('href="/verify"');
+    expect(body).toContain('href="https://authichain.com/contact"');
+    expect(body).toContain("min-height:44px");
+  });
+
+  it("styles /generate and drops API wording", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("min-height:44px");
+    expect(body).toContain('<label for="targetUrl">Product URL</label>');
+    expect(body).toContain("Need more generations? Buy a pack:");
+    expect(body).not.toContain("<code>POST /api/generate</code>");
+    expect(body).not.toContain("/dashboard");
+    expect(body).not.toContain('href="/login"');
   });
 });
 

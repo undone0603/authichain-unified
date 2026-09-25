@@ -55,7 +55,7 @@ describe("checkoutEmailFormHtml", () => {
     expect(html).not.toContain('method="get"');
     expect(html).toContain('name="email"');
     expect(html).toContain("required");
-    expect(html).toContain("Not a newsletter");
+    expect(html).toContain("No newsletter");
     expect(html).not.toContain("javascript:");
   });
 });
