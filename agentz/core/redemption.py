@@ -7,7 +7,7 @@ Implements the "Layer 2 Siphon" revenue model.
 from __future__ import annotations
 import uuid
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 logger = logging.getLogger("agentz.redemption")
 
