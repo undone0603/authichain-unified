@@ -38,6 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
           OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
           SALES_NOTIFY_EMAIL: ${{ secrets.SALES_NOTIFY_EMAIL }}
           DIGEST_FROM: ${{ vars.DIGEST_FROM }}

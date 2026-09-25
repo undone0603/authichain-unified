@@ -6,7 +6,9 @@
 //   - any day something is waiting on the owner: the list of decisions
 // Quiet days send nothing. Email, not an issue, because it carries money.
 //
-// Env: RESEND_API_KEY, OWNER_EMAIL (falls back to SALES_NOTIFY_EMAIL),
+// Env: RESEND_API_KEY and/or RESEND_API_KEY2 (two Resend accounts hold
+//      different verified domains; each key is tried in turn, see resendKeys),
+//      OWNER_EMAIL (falls back to SALES_NOTIFY_EMAIL),
 //      DIGEST_FROM (default "AuthiChain Ops <hello@authichain.com>"),
 //      STRIPE_READ_KEY|STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //      FOUNDER_EMAILS, GITHUB_TOKEN, GITHUB_REPOSITORY,
@@ -418,18 +420,22 @@ async function collect(env) {
       console.log(`visitors skipped: ${e.message}`);
     }
   }
-  if (env.RESEND_API_KEY) {
-    try {
-      const rec = await getJson(
-        "https://api.resend.com/emails/receiving?limit=100",
-        {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-        }
-      );
-      d.board.replies = countReplies(rec.data ?? [], founders, since * 1000);
-    } catch (e) {
-      console.log(`replies skipped: ${e.message}`);
+  if (resendKeys(env).length) {
+    // Inbound mail lands on whichever account owns the receiving domain, so
+    // read every configured account and de-duplicate by id.
+    const seen = new Map();
+    for (const key of resendKeys(env)) {
+      try {
+        const rec = await getJson(
+          "https://api.resend.com/emails/receiving?limit=100",
+          { Authorization: `Bearer ${key}` }
+        );
+        for (const e of rec.data ?? []) seen.set(e.id ?? seen.size, e);
+      } catch (e) {
+        console.log(`replies skipped for one Resend account: ${e.message}`);
+      }
     }
+    d.board.replies = countReplies([...seen.values()], founders, since * 1000);
   }
   if (env.GITHUB_TOKEN && env.GITHUB_REPOSITORY) {
     try {
@@ -506,30 +512,62 @@ async function main() {
   if (!digest.shouldSend) return console.log("\nQuiet day: not sending.");
   const to =
     env.OWNER_EMAIL || loadManifest().owner_email || env.SALES_NOTIFY_EMAIL;
-  if (env.DIGEST_DRY_RUN === "true" || !env.RESEND_API_KEY || !to) {
+  const keys = resendKeys(env);
+  if (env.DIGEST_DRY_RUN === "true" || !keys.length || !to) {
     return console.log(
-      "\nDry run or missing RESEND_API_KEY / OWNER_EMAIL: not sending."
+      "\nDry run or missing RESEND_API_KEY(2) / OWNER_EMAIL: not sending."
     );
   }
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: env.DIGEST_FROM || "AuthiChain Ops <hello@authichain.com>",
-      to: [to],
-      subject: digest.subject,
-      text: digest.text,
-      html: digest.html,
-    }),
+  const via = await sendViaResend(keys, {
+    from: env.DIGEST_FROM || "AuthiChain Ops <hello@authichain.com>",
+    to: [to],
+    subject: digest.subject,
+    text: digest.text,
+    html: digest.html,
   });
-  if (!r.ok)
-    throw new Error(
-      `Resend send -> ${r.status} ${(await r.text()).slice(0, 200)}`
-    );
-  console.log("\nDigest sent.");
+  console.log(`\nDigest sent (Resend credential #${via + 1}).`);
+}
+
+/**
+ * Pure. Resend credentials in the same order as
+ * scripts/lib/resend-preflight.ts CREDENTIAL_ENV_VARS. The estate has two
+ * Resend accounts with different verified domains (RESEND_API_KEY ->
+ * strainchain.io, RESEND_API_KEY2 -> authichain.com, measured 2026-08-16), so
+ * the sender address alone does not say which key works.
+ */
+export function resendKeys(env) {
+  return [
+    ...new Set(
+      [env.RESEND_API_KEY, env.RESEND_API_KEY2]
+        .map(k => (k ?? "").trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+/**
+ * Send one email, trying each credential until Resend accepts it. Only
+ * 401 (bad key) and 403 (domain not on that account) fall through to the next
+ * key: both mean nothing was sent, so a retry can never double-send. Any other
+ * status stops immediately. Returns the index of the key that worked.
+ */
+export async function sendViaResend(keys, payload, fetchImpl = fetch) {
+  let last = "Resend send -> no credentials";
+  for (const [i, key] of keys.entries()) {
+    const r = await fetchImpl("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) return i;
+    last = `Resend send -> ${r.status} ${(await r.text()).slice(0, 200)}`;
+    if (r.status !== 401 && r.status !== 403) break;
+    console.log(`credential #${i + 1} rejected (${r.status}); trying next`);
+  }
+  throw new Error(last);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
