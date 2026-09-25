@@ -16,12 +16,17 @@ import {
 export const metadata: Metadata = {
   title: 'EU Digital Product Passport Compliance | GovChain',
   description:
-    'Get your blockchain-anchored Digital Product Passport with GovChain.',
+    'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
   openGraph: {
     title: 'EU Digital Product Passport Compliance | GovChain',
     description:
-      'Issue cryptographically-signed Digital Product Passports via GovChain — no enterprise contract.',
+      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
     url: 'https://govchain.us/eu-dpp',
+  },
+  twitter: {
+    title: 'EU Digital Product Passport Compliance | GovChain',
+    description:
+      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
   },
 };
 
@@ -31,8 +36,8 @@ const ACCENT_LIGHT = '#3B82F6';
 const FEATURES = [
   {
     icon: ShieldCheck,
-    title: 'Regulation (EU) 2024/1781 Ready',
-    desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores out of the box.',
+    title: 'Built on Regulation (EU) 2024/1781',
+    desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores in our data model.',
   },
   {
     icon: Lock,
@@ -60,7 +65,6 @@ const TIMELINE = [
   { date: 'Jul 2026', label: 'EU DPP registry rules adopted (Implementing Regulation (EU) 2026/1778)', active: true, urgent: false },
   { date: 'Feb 2027', label: 'Battery Passport Mandatory (EV, Industrial)', active: true },
   { date: '2028', label: 'Textiles & Electronics — Delegated Regulations', active: false },
-  { date: '2030', label: 'All EU Physical Goods — Full Scope', active: false },
 ];
 
 const FAQ: FaqItem[] = [
@@ -72,12 +76,12 @@ const FAQ: FaqItem[] = [
   {
     question: 'When does the EU DPP regulation take effect?',
     answer:
-      'Battery passports become mandatory for EV and industrial batteries in February 2027, textiles and electronics follow under delegated regulations from 2028, and by 2030 nearly all physical goods sold in the EU will require a Digital Product Passport.',
+      'Battery passports become mandatory for EV and industrial batteries in February 2027, textiles and electronics follow under delegated regulations from 2028. The regulation lets the EU require passports for most physical products, one product group at a time.',
   },
   {
     question: 'Which products need a Digital Product Passport?',
     answer:
-      'Priority categories are batteries, textiles and apparel, electronics and ICT equipment, furniture, iron and steel, aluminium, tyres, and construction products. Scope expands through delegated acts until virtually every non-food physical product placed on the EU market is covered by 2030.',
+      'Priority categories are batteries, textiles and apparel, electronics and ICT equipment, furniture, iron and steel, aluminium, tyres, and construction products. Scope expands through delegated acts. The regulation lets the EU require passports for most physical products, one product group at a time.',
   },
   {
     question: 'How does AuthiChain implement EU DPP?',
@@ -92,7 +96,7 @@ const FAQ: FaqItem[] = [
   {
     question: 'How long does AuthiChain DPP setup take?',
     answer:
-      'Setup takes less than one business day. You import your product catalog, map fields to the DPP schema, and issue registry-ready passports the same day.',
+      'Guided onboarding is in development. Contact us at authichain.com/contact to scope a pilot.',
   },
 ];
 
@@ -151,7 +155,7 @@ export default function EuDppPage() {
             { value: 'EU 2024/1781', label: 'Regulation' },
             { value: 'Polygon', label: 'Anchored On-Chain' },
             { value: 'EPCIS 2.0', label: 'Export Format' },
-            { value: '< 1 Day', label: 'Onboarding' },
+            { value: 'In Development', label: 'Guided Onboarding' },
           ].map((s) => (
             <div key={s.label} className="px-6 py-8 text-center">
               <div className="text-2xl font-black" style={{ color: ACCENT_LIGHT }}>
@@ -176,8 +180,8 @@ export default function EuDppPage() {
           <p className="text-zinc-300 text-base leading-relaxed mb-6">
             The EU Digital Product Passport (DPP) is a machine-readable data record — accessible via QR code — that
             carries a product's environmental footprint, material composition, repair instructions, and supply chain
-            provenance. Required under Regulation (EU) 2024/1781 (Ecodesign for Sustainable Products), it applies to
-            every physical good sold in the EU market starting with batteries in February 2027, with full scope by 2030.
+            provenance. Required under Regulation (EU) 2024/1781 (Ecodesign for Sustainable Products), it starts with
+            batteries in February 2027. The regulation lets the EU require passports for most physical products, one product group at a time.
           </p>
           <p className="text-zinc-400 text-sm leading-relaxed">
             GovChain handles the entire technical stack so your team focuses on business,
@@ -262,7 +266,7 @@ export default function EuDppPage() {
               {
                 step: '02',
                 title: 'Issue Passports',
-                desc: 'Each product gets a unique DPP — hashed, signed with Ed25519, and anchored on Polygon in seconds. Your QR code is ready to print.',
+                desc: 'Each product gets a unique DPP — hashed and anchored on Polygon in seconds (Ed25519-signed records are in development). Your QR code is ready to print.',
               },
               {
                 step: '03',
@@ -320,7 +324,7 @@ export default function EuDppPage() {
       {/* CLOSING CTA */}
       <section className="border-t border-zinc-900 px-6 py-24 text-center">
         <p className="mx-auto mb-10 max-w-xl text-sm text-zinc-500 leading-relaxed">
-          Setup takes less than one business day.
+          Guided onboarding is in development.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
@@ -339,7 +343,7 @@ export default function EuDppPage() {
           </Link>
         </div>
         <ul className="mx-auto mt-12 flex max-w-2xl flex-wrap justify-center gap-x-8 gap-y-3">
-          {['No enterprise contract', 'Self-serve < 1 day', 'Polygon-anchored', 'EPCIS 2.0 export'].map((t) => (
+          {['No enterprise contract', 'Guided onboarding in development', 'Polygon-anchored', 'EPCIS 2.0 export'].map((t) => (
             <li
               key={t}
               className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-zinc-500"
