@@ -73,7 +73,9 @@ export default function DPPPage() {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4">
             <Globe className="w-4 h-4" />
-            {liveMilestone ? (
+            {liveMilestone?.badge ? (
+              <>EU ESPR · {liveMilestone.badge}</>
+            ) : liveMilestone ? (
               <>
                 EU ESPR · {liveMilestone.label} —{" "}
                 <DppCountdown milestone={liveMilestone} />
@@ -110,7 +112,7 @@ export default function DPPPage() {
               checkable, which is the stronger sentence anyway. The registry
               date is no longer written in the future tense by hand. */}
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-4 leading-relaxed">
-            {registryMilestone && (
+            {registryMilestone && !registryMilestone.hideStatus && (
               <>
                 The EU Digital Product Passport registry {registryVerb}{" "}
                 {formatMilestoneDate(registryMilestone)}.{" "}
@@ -336,7 +338,7 @@ export default function DPPPage() {
                           : "text-zinc-600"
                     }
                   >
-                    <DppCountdown milestone={item} />
+                    {!item.hideStatus && <DppCountdown milestone={item} />}
                   </span>
                   <a
                     href={item.source}

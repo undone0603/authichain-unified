@@ -2223,7 +2223,7 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QRON — Living QR codes that scan</title>
-<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. AuthiChain certificate anchoring on Polygon is in development.">
+<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">

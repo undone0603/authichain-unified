@@ -57,7 +57,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="2" fill="#e2e8f0">StrainChain</text>
   <line x1="240" y1="416" x2="600" y2="416" stroke="#10b981" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="32" font-weight="300" fill="#64748b">Cannabis Supply Chain on Blockchain</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#3d5a48">Seed-to-Shelf NFTs · METRC Sync · 4-Layer Audit Trail</text>
+  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#3d5a48">Seed-to-Shelf NFTs · METRC Integration on Our Roadmap · 4-Layer Audit Trail</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#10b981">STRAINCHAIN.IO</text>
 </svg>`;
 
@@ -2187,11 +2187,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StrainChain: Cannabis COA and Genetics Passports</title>
-<meta name="description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
+<meta name="description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records and a four-layer audit trail are in development. METRC integration is on our roadmap, as are BioTrack and California CCRS integrations. Goal: compliance support across all 38 legal cannabis markets.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="StrainChain">
 <meta property="og:title" content="StrainChain: Cannabis COA and Genetics Passports">
-<meta property="og:description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
+<meta property="og:description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records and a four-layer audit trail are in development. METRC integration is on our roadmap, as are BioTrack and California CCRS integrations. Goal: compliance support across all 38 legal cannabis markets.">
 <meta property="og:url" content="https://strainchain.io/">
 <meta property="og:image" content="https://strainchain.io/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2201,8 +2201,8 @@ export default {
 <meta name="theme-color" content="#15803d">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.","sameAs":["https://authichain.govchain.us"]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StrainChain","url":"https://strainchain.io","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StrainChain","url":"https://strainchain.io","logo":"https://strainchain.io/favicon.svg","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records and a four-layer audit trail are in development. METRC integration is on our roadmap, as are BioTrack and California CCRS integrations. Goal: compliance support across all 38 legal cannabis markets.","sameAs":["https://authichain.govchain.us"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StrainChain","url":"https://strainchain.io","description":"Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records and a four-layer audit trail are in development. METRC integration is on our roadmap, as are BioTrack and California CCRS integrations. Goal: compliance support across all 38 legal cannabis markets."}</script>
 <style>
 ${estateCssVars("strainchain")}
 ${ESTATE_BASE_CSS}
@@ -2223,7 +2223,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "COA-backed genetics passports. On-chain tracking on Polygon is in development.",
-  lede: "Genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain identity is in development. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
+  lede: "Genetics passports built from your COAs, with totals recomputed from the source panel. On our roadmap: on-chain strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
   emailCheckout: {
     action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
@@ -2237,7 +2237,7 @@ ${estateTrust([
   { value: "—", label: "Lab tests logged", id: "sc-lab" },
   { value: "—", label: "Chain events", id: "sc-chain" },
   { value: "—", label: "Dispensary receipts", id: "sc-dispensary" },
-  { value: "METRC", label: "State system sync" },
+  { value: "On our roadmap", label: "METRC integration" },
 ])}
 <script>
 fetch('https://strainchain.io/api/strainchain/stats')
@@ -2254,9 +2254,9 @@ fetch('https://strainchain.io/api/strainchain/stats')
     <p class="section-sub">Every touch-point recorded. No gaps, no tampering, regulator-ready access.</p>
     <div class="steps">
       <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport. Minting to AuthiChain's ERC-721 contract on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p></div>
-      <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Custody events linked to the batch record. On-chain anchoring is in development.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Custody events linked to the batch record. On our roadmap: anchoring sensor and custody events to the batch on-chain.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Lab testing</h3><p>The COA panel is linked to the passport, and discrepancies are surfaced, not smoothed over. Hashing COAs on-chain is in development.</p></div>
-      <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>A QR code on packaging opens the passport. Verification against the on-chain record is in development.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>A QR code on packaging opens the passport. Our goal: consumers and regulators can verify it against the on-chain record in under a second.</p></div>
     </div>
   </div>
 </section>
@@ -2265,8 +2265,8 @@ ${estateFeatures(
   "Why StrainChain",
   "Particular advantages over spreadsheets, generic seed-to-sale, and paper COAs.",
   [
-    { title: "COA-backed strain identity", body: "Each passport is built from the lab panel itself, and discrepancies are shown. On-chain batch records are in development." },
-    { title: "METRC and BioTrack sync", body: "Bidirectional tag and manifest flow so operators are not double-keying state systems." },
+    { title: "COA-backed strain identity", body: "Each passport is built from the lab panel itself, and discrepancies are shown. We're building on-chain batch records so relabeling or back-dating shows up against the original entry." },
+    { title: "Building toward METRC integration", body: "METRC integration is on our roadmap." },
     { title: "Regulator-ready export", body: "The four-layer audit trail exports an inspection-ready evidence package on demand." },
     { title: "Proof at the shelf", body: "A QR code on the package opens the passport and its lab panel. On-chain provenance is in development." },
     { title: "Genetics passports", body: "Public cultivar records live at /genetics. Totals are derived from the lab panel at render time." },
@@ -2280,9 +2280,9 @@ ${estateFeatures(
     <h2>Compliance layer</h2>
     <p class="section-sub">Pre-built integrations with major state tracking systems.</p>
     <div class="compliance-grid">
-      <div class="compliance-card"><h3>METRC</h3><p>Real-time tag sync and automatic manifest generation for METRC states.</p></div>
+      <div class="compliance-card"><h3>METRC</h3><p>METRC integration is on our roadmap.</p></div>
       <div class="compliance-card"><h3>BioTrack</h3><p>Bidirectional sync for WA, NH, NM, and HI seed-to-sale systems.</p></div>
-      <div class="compliance-card"><h3>CCRS (California)</h3><p>DCC reporting automated via API with an on-chain backup.</p></div>
+      <div class="compliance-card"><h3>CCRS (California)</h3><p>On our roadmap: automated DCC reporting via API, with an on-chain backup.</p></div>
       <div class="compliance-card"><h3>Audit evidence export</h3><p>Inspection-ready reports from the four-layer trail in one click.</p></div>
     </div>
   </div>
@@ -2306,7 +2306,7 @@ ${estateFeatures(
     <h2>Integrations</h2>
     <p class="section-sub">Plug into the existing stack. No rip-and-replace required.</p>
     <div class="integrations">
-      <div class="estate-card">METRC</div>
+      <div class="estate-card">METRC integration is on our roadmap</div>
       <div class="estate-card">BioTrack</div>
       <div class="estate-card">CCRS</div>
       <div class="estate-card">LeafLogix</div>

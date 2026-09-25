@@ -2410,7 +2410,7 @@ ${estateFeatures(
   [
     { title: "Opportunity radar + fit-scoring", body: "AI ranks notices by fit so business-development time goes only where it can pay off." },
     { title: "Auto-drafted capability statements", body: "Turn a high-fit notice into a tailored capability statement so the team edits instead of starting blank." },
-    { title: "Made-in-USA provenance", body: "Seals for domestic-origin claims (in development), built around FTC Made in USA documentation." },
+    { title: "Made-in-USA provenance", body: "Our goal: cryptographic seals for domestic-origin claims, built around FTC Made in USA documentation." },
     { title: "Public datalog", body: "On-chain verification of claims for contracting officers and auditors is in development." },
     { title: "Compliance-ready exports", body: "Evidence packages mapped to FAR/DFARS, NIST 800-171, and Section 889." },
     { title: "Deadline watchdog", body: "Alerts when a high-fit proposal is within 48 hours of its deadline." },

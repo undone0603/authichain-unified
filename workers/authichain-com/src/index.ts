@@ -128,7 +128,7 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. Signed, publicly verifiable certificates are in development.',
+    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. In development: signed, publicly verifiable certificates and 5-agent consensus verification.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
@@ -2274,7 +2274,7 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
       { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
-      { title: "Bitcoin Ordinals", body: "Optional permanent provenance for high-value certificates via Bitcoin Ordinals." },
+      { title: "Bitcoin Ordinals", body: "On our roadmap: Bitcoin Ordinals inscriptions for certificates." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],
     "community",
@@ -2297,9 +2297,9 @@ function howItWorks() {
     "How it works",
     "Three steps that already exist on this estate. No new product surface.",
     [
-      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; signed certificate issuance is in development." },
+      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. In development: Ed25519-signed certificates anchored to that contract." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
-      { title: "Verify", body: "Every scan is logged against the serial. Public verification against the on-chain record is in development." },
+      { title: "Verify", body: "Every scan is logged against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
     "how",
   );
@@ -2323,7 +2323,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. A signed certificate anyone can verify is in development." },
+      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract, live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Our goal: tamper-evident seals with a signed certificate anyone can verify." },
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
@@ -2519,7 +2519,10 @@ const HTML = `<!DOCTYPE html>
   <section class="estate-verify" id="registry" aria-labelledby="registry-heading">
     <div class="wrap">
       <h2 id="registry-heading">Certificate registry</h2>
-      <p class="section-sub">AuthiChain's certificate contract is deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Public certificate lookup is in development.</p>
+      <p class="section-sub">AuthiChain's certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building a public certificate lookup where you enter a cert ID to confirm authenticity.</p>
+      <div class="estate-verify-grid">
+        <div class="estate-card"><strong>On our roadmap</strong><span class="stat-label">Goal: multi-agent verification in under 2.1 seconds</span></div>
+      </div>
       <div class="estate-verify-actions">
         <label class="sr-only" for="ac-cert-input">Certificate ID</label>
         <input id="ac-cert-input" class="estate-field" type="text" placeholder="Enter cert ID to verify…">
@@ -2561,10 +2564,10 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. Multi-agent verification is in development.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. In development: 5-agent consensus verification.",
     [
       { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "Multi-agent verification is in development. MCP tools will expose that check to any model that can call AuthiChain." },
+      { title: "Verification", body: "Our goal: five agents reach weighted consensus in under 2.1 seconds. MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -3007,7 +3010,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EU Digital Product Passport Compliance | AuthiChain</title>
-  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) tooling via blockchain. One integration covers ESPR, EUDR and CSRD. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
+  <meta name="description" content="AuthiChain EU Digital Product Passport readiness tooling. Our goal: one integration for ESPR, EUDR, and CSRD.">
   <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://authichain.govchain.us/digital-product-passport">
@@ -3015,13 +3018,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
-  <meta property="og:description" content="Blockchain-native DPP platform. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''} Offline verification, no account required.">
+  <meta property="og:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
   <meta property="og:url" content="https://authichain.govchain.us/digital-product-passport">
   <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="ESPR DPP tooling via blockchain. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.govchain.us/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.govchain.us"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.govchain.us/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.govchain.us"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3072,7 +3075,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 
   <section class="hero" id="hero" style="min-height:70vh">
     <div class="hero-content">
-      <div class="badge-live">● ${escHtml((mostRecentInForce(now) ?? listMilestones()[0]).label.toUpperCase())} — ${escHtml(countdownLabel(mostRecentInForce(now) ?? listMilestones()[0], now).toUpperCase())}</div>
+      <div class="badge-live">● ${(() => { const m = mostRecentInForce(now) ?? listMilestones()[0]; return m.badge ? escHtml(m.badge.toUpperCase()) : `${escHtml(m.label.toUpperCase())} — ${escHtml(countdownLabel(m, now).toUpperCase())}`; })()}</div>
       <h1 class="hero-title" style="font-size: clamp(2.4rem, 6vw, 4.5rem)">
         EU DIGITAL<br><span class="accent">PRODUCT PASSPORT</span>
       </h1>
@@ -3201,7 +3204,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           <div class="dpp-content">
             <span class="dpp-dot"></span>
             <span class="dpp-phase-title">${escHtml(m.label)}</span>
-            <div class="dpp-phase-sub">${escHtml(m.detail)} <a href="${escHtml(m.source)}" rel="noopener noreferrer" target="_blank" style="color:inherit;text-decoration:underline">${escHtml(countdownLabel(m, now))}</a></div>
+            <div class="dpp-phase-sub">${escHtml(m.detail)}${m.hideStatus ? '' : ` <a href="${escHtml(m.source)}" rel="noopener noreferrer" target="_blank" style="color:inherit;text-decoration:underline">${escHtml(countdownLabel(m, now))}</a>`}</div>
           </div>
         </div>`;
         }).join('')}
@@ -3213,18 +3216,18 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
       <h2 class="section-title">One Integration. Every Standard.</h2>
-      <p class="section-sub">AuthiChain is building passport tooling on its Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. NFT-linked passports are in development.</p>
+      <p class="section-sub">AuthiChain is building passport tooling on its certificate contract, live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
         <div class="feature-item">
           <div class="feature-icon">🔗</div>
           <div class="feature-title">ERC-721 certificates (in development)</div>
-          <div class="feature-desc">The certificate contract is deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Per-product certificates carrying passport data are in development.</div>
+          <div class="feature-desc">The certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
           <div class="feature-title">QR Scan → Instant Passport</div>
-          <div class="feature-desc">A QR code on the label links to the product's passport record, and every scan is logged against the serial. An on-chain record behind it is in development.</div>
+          <div class="feature-desc">A QR code on the label links to the product's passport record, and every scan is logged against the serial. Our goal: consumers, regulators, and resellers all see the same on-chain record.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
@@ -3234,17 +3237,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
           <div class="feature-title">Supply chain events</div>
-          <div class="feature-desc">Provenance events from manufacturing to retail receipt. Anchoring events on Polygon is in development.</div>
+          <div class="feature-desc">Provenance events from manufacturing to retail receipt. On our roadmap: anchoring all 22 supply-chain events on Polygon.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
           <div class="feature-title">AI provenance verification (in development)</div>
-          <div class="feature-desc">Multi-agent verification of product records is in development.</div>
+          <div class="feature-desc">Our goal: 5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) that will verify authenticity in under 2.1 seconds. Goal: counterfeit detection built into every verification.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>
           <div class="feature-title">Multi-Standard Coverage</div>
-          <div class="feature-desc">EU DPP + CSRD + EUDR + FDA DSCSA + USMCA + ISO 22005. A single AuthiChain integration satisfies every major sustainability compliance framework.</div>
+          <div class="feature-desc">Our goal: a single AuthiChain integration that supports ESPR, EUDR, and CSRD.</div>
         </div>
       </div>
     </div>
@@ -3259,7 +3262,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
         <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div><div class="industry-deadline">Goal: counterfeit detection for luxury goods</div></div>
         <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
       </div>
     </div>
