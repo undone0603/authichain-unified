@@ -25,7 +25,12 @@ describe("plan catalogue integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("exposes live Payment Links for Passport, DPP, Farm, and Theater", () => {
+  it("caps free at 5 generations", () => {
+    expect(planById("free")?.generations).toBe(5);
+    expect(PLAN_CREDITS.free).toBe(5);
+  });
+
+  it("exposes live Payment Links for Passport, DPP, Farm, and hidden Theater", () => {
     expect(planById("strainchain_passport")?.price).toBe(49);
     expect(planPaymentLink("strainchain_passport")).toBe(
       "https://authichain.com/checkout/strainchain_passport"
@@ -48,6 +53,8 @@ describe("plan catalogue integrity", () => {
     expect(new URL(planPaymentLink("theater_3") ?? "").hostname).toBe(
       "authichain.com"
     );
+    expect(planById("theater_1")?.listed).toBe(false);
+    expect(planById("theater_3")?.listed).toBe(false);
   });
 });
 
@@ -137,12 +144,15 @@ describe("listedPlans", () => {
     );
   });
 
-  it("still lists the existing QRON plans", () => {
+  it("lists public QRON plans and hides Theater", () => {
     const qron = listedPlans("qron").map(p => p.id);
+    expect(qron).toContain("free");
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
-    expect(qron).toContain("theater_1");
-    expect(qron).toContain("theater_3");
+    expect(qron).toContain("dpp_readiness");
+    expect(qron).not.toContain("theater_1");
+    expect(qron).not.toContain("theater_3");
+    expect(qron).not.toContain("strainchain_passport");
   });
 
   it("exposes planUsd from the catalogue, not a second price table", () => {
