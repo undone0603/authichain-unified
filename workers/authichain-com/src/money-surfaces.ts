@@ -19,8 +19,8 @@ import {
 } from "../../_shared/estate-landing.ts";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
 
-export const DPP_CHECKOUT = "/api/checkout/dpp";
-export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
+export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
 const PASSPORT_PAYMENT_LINK = planPaymentLink("strainchain_passport") ?? "";
 
 const TRUMARK_PATHS = new Set(["/trumark", "/trumark/"]);

@@ -248,12 +248,10 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.govchain.us/api/checkout/dpp"');
-    expect(body).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/dpp"'
-    );
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
@@ -271,13 +269,11 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("What you get");
     expect(body).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(body).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
-    );
+    expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(body).toContain('href="https://strainchain.io/pricing"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
@@ -361,9 +357,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="/api/checkout/dpp"');
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
   });
 });
@@ -398,13 +394,13 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'
+      'href="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -539,9 +535,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="/api/checkout/dpp"');
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
   });
 });
@@ -569,9 +565,9 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
       expect(body).toContain('name="email"');
-      expect(body).toContain('action="/api/checkout/dpp"');
+      expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
       expect(body).toContain(
-        'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+        'href="https://authichain.com/checkout/dpp_readiness"'
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
@@ -597,10 +593,10 @@ describe("renderDynamicPage: /generate Living QR", () => {
     // Top-ups are the live Starter/Creator packs; the retired credit bundles
     // ($9.99/$39.99/$99.99) had links on no live Stripe account.
     expect(body).toContain(
-      'href="https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E"'
+      'href="https://authichain.com/checkout/starter"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"'
+      'href="https://authichain.com/checkout/creator"'
     );
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");

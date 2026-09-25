@@ -10,12 +10,12 @@
     "passport": {
       "sku": "strainchain_passport",
       "priceUsd": 49,
-      "href": "https://authichain.com/api/checkout/plan/strainchain_passport"
+      "href": "https://authichain.com/checkout/strainchain_passport"
     },
     "dpp": {
       "sku": "dpp_readiness",
       "priceUsd": 299,
-      "href": "https://authichain.com/api/checkout/dpp"
+      "href": "https://authichain.com/checkout/dpp_readiness"
     }
   },
   "packs": [

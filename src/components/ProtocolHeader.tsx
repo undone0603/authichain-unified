@@ -3,7 +3,7 @@ import { BRAND_IDS, BRANDS, type BrandId } from '@shared/brands';
 import { LIGHT_ACCENT } from '@/lib/estate-accents';
 
 const HEADER_CTA: Record<BrandId, { href: string; label: string }> = {
-  authichain: { href: '/api/checkout/dpp', label: 'Start DPP checkout' },
+  authichain: { href: 'https://authichain.com/checkout/dpp_readiness', label: 'Start DPP checkout' },
   qron: { href: '/generate', label: 'Generate' },
   strainchain: { href: '/onboard', label: 'Onboard' },
   govchain: { href: '/onboard', label: 'Onboard' },

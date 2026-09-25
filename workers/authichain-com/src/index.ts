@@ -7,6 +7,7 @@ import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
 } from "./protocol-checkout";
+import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
@@ -2342,7 +2343,7 @@ function originMoneySurfaces() {
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/trumark">TruMark brief</a>
           ${checkoutEmailFormHtml({
-            action: "/api/checkout/plan/strainchain_passport",
+            action: "https://authichain.com/checkout/strainchain_passport",
             label: "Passport checkout — $49",
             inputId: "origin-trumark-email",
             formId: "origin-trumark-checkout",
@@ -2359,7 +2360,7 @@ function originMoneySurfaces() {
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           ${checkoutEmailFormHtml({
-            action: "/api/checkout/dpp",
+            action: "https://authichain.com/checkout/dpp_readiness",
             label: "DPP checkout — $299",
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
@@ -2376,7 +2377,7 @@ function originMoneySurfaces() {
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
           ${checkoutEmailFormHtml({
-            action: "/api/checkout/plan/strainchain_passport",
+            action: "https://authichain.com/checkout/strainchain_passport",
             label: "Passport checkout — $49",
             inputId: "origin-mendo-email",
             formId: "origin-mendo-checkout",
@@ -2401,7 +2402,7 @@ function marketReality() {
     <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. AuthiChain issues the certificate and the DPP audit path without claiming another company's logo as a customer.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: "Start DPP checkout",
         inputId: "compliance-dpp-email",
         formId: "compliance-dpp-checkout",
@@ -2498,7 +2499,7 @@ const HTML = `<!DOCTYPE html>
       label: "Buy the $29 signed pack",
     },
     emailCheckout: {
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout — $299",
     },
     actions: [
@@ -2579,7 +2580,7 @@ const HTML = `<!DOCTYPE html>
     title: "Start EU DPP Readiness",
     lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
     emailCheckout: {
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout",
     },
     actions: [
@@ -3333,7 +3334,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 <h1>No passport at this URL</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a published product passport.</p>
 ${emailCheckoutWithPaymentLinkHtml({
-  action: "/api/checkout/plan/strainchain_passport",
+  action: "https://authichain.com/checkout/strainchain_passport",
   label: "Publish a passport — $49",
   formId: "p-timeout-passport",
   inputId: "p-timeout-passport-email",
@@ -3420,7 +3421,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
 <h1>This page does not exist</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a page on authichain.com.</p>
 ${emailCheckoutWithPaymentLinkHtml({
-  action: "/api/checkout/plan/strainchain_passport",
+  action: "https://authichain.com/checkout/strainchain_passport",
   label: "Publish a passport — $49",
   formId: "404-passport",
   inputId: "404-passport-email",
@@ -3565,14 +3566,17 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (isAuthenticAgenticEconomyPath(p)) {
       return new Response(renderAuthenticAgenticEconomyPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
+    // Stable gated checkout: GET /checkout (chooser) and /checkout/<plan>
+    // (confirm page) never call Stripe; only the confirm form's POST does.
+    const gated = await tryHandleGatedCheckout(request, env);
+    if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
-    // Intercept before APP_PREFIXES — live sister sites still one-click
-    // https://authichain.com/api/checkout/*, which APP_WORKER opens as
-    // anonymous Stripe sessions. Bounce GET without ?email= here so an
-    // authichain-com deploy stops those carts even if APP_WORKER is stale.
+    // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
+    // click-to-confirm page, so a stale APP_WORKER never sees a GET that
+    // could open a Stripe session.
     const checkoutGate = tryHandleApiCheckoutEmailGate(request);
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER

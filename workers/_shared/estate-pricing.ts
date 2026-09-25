@@ -14,7 +14,7 @@
  * belonged to no live Stripe account, and the 2026-08-31 Stripe cleanup had
  * archived those products. Every card here is now a `plans.ts` SKU.
  */
-import { listedPlans, type Plan } from "../../src/lib/plans.ts";
+import { gatedCheckoutUrl, listedPlans, planPaymentLink, type Plan } from "../../src/lib/plans.ts";
 import {
   CHECKOUT_NEED_EMAIL_BANNER_HTML,
   CHECKOUT_NEED_EMAIL_DECORATE_JS,
@@ -46,12 +46,12 @@ function esc(value: string): string {
 }
 
 /**
- * JSON-LD Offer.url is followed by crawlers. Never put a GET checkout path
- * there — live GET /api/checkout opens an anonymous Stripe cart. Prefer the
- * published Payment Link; otherwise the public pricing page.
+ * JSON-LD Offer.url is followed by crawlers. Use the gated confirm page
+ * (authichain.com/checkout/<plan>): its GET renders HTML and never opens a
+ * Stripe session, unlike a raw buy.stripe.com Payment Link.
  */
 function planJsonLdOfferUrl(plan: Plan, listingUrl: string): string {
-  return plan.stripe_payment_link ?? listingUrl;
+  return planPaymentLink(plan.id) ?? listingUrl;
 }
 
 function attributedCheckoutCta(
@@ -59,7 +59,7 @@ function attributedCheckoutCta(
   cta: { href: string; label: string; external: boolean },
   featured: boolean
 ): string {
-  if (!/\/api\/checkout\//.test(cta.href)) {
+  if (!/\/api\/checkout\/|\/checkout\//.test(cta.href)) {
     const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
     return `<a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>`;
   }
@@ -82,10 +82,7 @@ export function planCheckoutCta(
 ): { href: string; label: string; external: boolean } {
   if (plan.id === "dpp_readiness") {
     return {
-      href:
-        origin === "authichain"
-          ? "/api/checkout/dpp"
-          : "https://authichain.govchain.us/api/checkout/dpp",
+      href: gatedCheckoutUrl("dpp_readiness"),
       label: plan.cta,
       external: origin !== "authichain",
     };
@@ -99,28 +96,21 @@ export function planCheckoutCta(
       plan.id === "theater_3") &&
     plan.stripe_price_id
   ) {
-    const path = `/api/checkout/plan/${plan.id}`;
-    if (origin === "authichain") {
-      return { href: path, label: plan.cta, external: false };
-    }
     return {
-      href: `https://authichain.govchain.us${path}`,
+      href: gatedCheckoutUrl(plan.id),
       label: plan.cta,
-      external: true,
+      external: origin !== "authichain",
     };
   }
   if (plan.stripe_payment_link) {
-    return { href: plan.stripe_payment_link, label: plan.cta, external: true };
+    // Gated confirm page — a bare buy.stripe.com GET opens a Stripe session.
+    return { href: gatedCheckoutUrl(plan.id), label: plan.cta, external: origin !== "authichain" };
   }
   if (plan.stripe_price_id) {
-    const path = `/api/checkout/plan/${plan.id}`;
-    if (origin === "authichain") {
-      return { href: path, label: plan.cta, external: false };
-    }
     return {
-      href: `https://authichain.govchain.us${path}`,
+      href: gatedCheckoutUrl(plan.id),
       label: plan.cta,
-      external: true,
+      external: origin !== "authichain",
     };
   }
   if (plan.price === 0) {
@@ -272,7 +262,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
             ]
           : []),
         ...(farm?.stripe_payment_link
-          ? [{ href: farm.stripe_payment_link, label: farm.name }]
+          ? [{ href: gatedCheckoutUrl(farm.id), label: farm.name }]
           : []),
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
@@ -311,7 +301,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
-      primary: { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+      primary: { href: "https://authichain.com/checkout/dpp_readiness", label: "Start DPP checkout" },
       nav: [
         { href: "/", label: "Home" },
         { href: "/x402", label: "x402" },
@@ -387,7 +377,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
 export function renderEstatePricingPage(origin: PricingOrigin): string {
   const page = pricingPage(origin);
   const brand: EstateBrandId = page.brand;
-  const checkoutPrimary = /\/api\/checkout\//.test(page.primary.href);
+  const checkoutPrimary = /\/api\/checkout\/|\/checkout\//.test(page.primary.href);
   const navPrimary = checkoutPrimary
     ? { href: "#pricing", label: page.primary.label }
     : page.primary;
@@ -513,7 +503,7 @@ export function tryHandleEstatePricing(
 }
 
 /** Live AuthiChain DPP checkout — absolute so it works off govchain.us. */
-export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.govchain.us/api/checkout/dpp";
+export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
 /**
  * GovChain has no self-serve SKU. /pricing must not invent one and must not

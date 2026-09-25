@@ -129,7 +129,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
   assert.equal(
     `href="${planPaymentLink("dpp_readiness")}"`.startsWith(
-      'href="https://buy.stripe.com'
+      'href="https://authichain.com/checkout/'
     ),
     true
   );
@@ -272,15 +272,15 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
   assert.equal(body.catalog, "/api/x402/catalog");
   assert.equal(
     new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(body.humanCheckout.starterPaymentLink, undefined);
   const blob = JSON.stringify(body);
@@ -295,11 +295,11 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.doesNotMatch(html, /does not exist/);
 });
@@ -333,7 +333,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     );
     assert.ok(hrefs.includes("/onboard"), path);
     assert.ok(
-      actions.some(a => isAppUrl(a, "/api/checkout/dpp")),
+      actions.includes("https://authichain.com/checkout/dpp_readiness"),
       path
     );
     assert.ok(!html.includes("SBIR awarded"));

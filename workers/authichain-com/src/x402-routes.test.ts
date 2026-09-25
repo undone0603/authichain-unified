@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("/api/checkout/dpp"))).toBeNull();
+    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -69,7 +69,7 @@ describe("tryHandleX402", () => {
     );
     expect(body.humanCheckout.farmUsd).toBe(149);
     expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
   });
 

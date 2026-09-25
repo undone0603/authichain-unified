@@ -28,25 +28,25 @@ describe("plan catalogue integrity", () => {
   it("exposes live Payment Links for Passport, DPP, Farm, and Theater", () => {
     expect(planById("strainchain_passport")?.price).toBe(49);
     expect(planPaymentLink("strainchain_passport")).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      "https://authichain.com/checkout/strainchain_passport"
     );
     expect(planPaymentLink("dpp_readiness")).toBe(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      "https://authichain.com/checkout/dpp_readiness"
     );
     expect(planPaymentLink("strainchain_farm")).toBe(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
     expect(planPaymentLink("theater_1")).toBe(
-      "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"
+      "https://authichain.com/checkout/theater_1"
     );
     expect(planPaymentLink("theater_3")).toBe(
-      "https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"
+      "https://authichain.com/checkout/theater_3"
     );
     expect(new URL(planPaymentLink("theater_1") ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(new URL(planPaymentLink("theater_3") ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
   });
 });

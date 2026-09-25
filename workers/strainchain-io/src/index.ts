@@ -1915,6 +1915,11 @@ a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:60
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    // /verify 404ed on this apex (linked from /onboard). The public verify
+    // page lives on authichain.com.
+    if (url.pathname === "/verify" || url.pathname === "/verify/") {
+      return Response.redirect(`https://authichain.com/verify${url.search}`, 302);
+    }
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "strainchain.io", ts: Date.now() });
     }
@@ -2027,7 +2032,7 @@ ${estateHero({
   title: "COA-backed genetics passports. On-chain tracking on Polygon is in development.",
   lede: "Genetics passports built from your COAs, with totals recomputed from the source panel. On our roadmap: on-chain strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
   emailCheckout: {
-    action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
@@ -2146,7 +2151,7 @@ ${estateCtaBand({
   title: "Publish one cultivar passport",
   lede: "Enter a work email so Stripe can recover the cart. Farm Plan is the $149/mo Payment Link. Onboard stays the demo intake.",
   emailCheckout: {
-    action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [

@@ -30,13 +30,13 @@ test("Mini App copy is Passport $49 AuthiChain, not the 2025 Inc deck", () => {
   assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_URL}"`), true);
   assert.equal(
     PASSPORT_CHECKOUT_PATH,
-    "/api/checkout/plan/strainchain_passport"
+    "https://authichain.com/checkout/strainchain_passport"
   );
   assert.match(html, /name="email"/);
   assert.match(html, /Publish Passport — \$49/);
   assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.match(html, /action="https:\/\/authichain\.govchain\.us\/verify"/);
   assert.match(html, /ZACHARY KIETZMAN/);

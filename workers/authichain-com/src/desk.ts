@@ -44,7 +44,7 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "EU DPP checkout",
     state: "live",
     detail:
-      "GET /api/checkout/dpp needs ?email=. Else 303 to /dpp?need_email=1.",
+      "GET https://authichain.com/checkout/dpp_readiness needs ?email=. Else 303 to /dpp?need_email=1.",
   },
   {
     surface: "Passport $49",
@@ -614,7 +614,7 @@ function shell(
 
 function home(): string {
   const dppForm = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-dpp",
     inputId: "desk-dpp-email",
@@ -686,21 +686,21 @@ function status(): string {
 
 function pricing(): string {
   const dpp = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-price-dpp",
     inputId: "desk-price-dpp-email",
     buttonClass: "btn",
   });
   const passport = checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Publish one passport",
     formId: "desk-price-pass",
     inputId: "desk-price-pass-email",
     buttonClass: "btn",
   });
   const farm = checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_farm",
+    action: "https://authichain.com/checkout/strainchain_farm",
     label: "Start a Farm Plan",
     formId: "desk-price-farm",
     inputId: "desk-price-farm-email",
