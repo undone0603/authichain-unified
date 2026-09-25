@@ -100,7 +100,7 @@ export default function FtcShieldPage() {
             { 
               icon: Lock, 
               title: 'Ed25519 Security', 
-              desc: 'Every scan verifies the cryptographic signature of the original factory node, completely eliminating counterfeiting risks.' 
+              desc: 'Our goal: every scan verifies the cryptographic signature of the original factory node, so counterfeits show up at the scan.' 
             },
           ].map((item, i) => (
             <div key={i} className="protocol-card p-8 group hover:border-red-500/30 transition-all border-zinc-900 bg-zinc-950/50">

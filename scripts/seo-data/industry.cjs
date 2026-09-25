@@ -13,7 +13,7 @@ module.exports = [
     faqs: [{ q: 'Does it replace METRC?', a: 'No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.' }, { q: 'What does the consumer see?', a: 'A scan opens verified lab results, strain provenance, and an immutable chain of custody.' }] },
   { keyword: 'blockchain qr code for luxury', brand: 'authichain', schemaType: 'Product',
     lead: 'Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at customs.',
-    bullets: ['5-agent AI consensus screens every scan for anomalies', 'NFT certificate of authenticity travels with the item on resale', 'Bitcoin L1 anchoring makes the provenance record unforgeable'],
+    bullets: ['Our goal: 5-agent AI consensus that screens every scan for anomalies', 'NFT certificate of authenticity travels with the item on resale', 'Bitcoin L1 anchoring makes the provenance record unforgeable'],
     faqs: [{ q: 'Does the QR work after resale?', a: 'Yes — ownership and provenance transfer with the item, protecting secondary-market value.' }, { q: 'Can counterfeiters copy the QR?', a: 'Copying the image is useless: verification is cryptographic and checked against the blockchain record.' }] },
   { keyword: 'blockchain qr code for pharma', brand: 'authichain', schemaType: 'Product',
     lead: 'Meet DSCSA serialization and give patients, pharmacists, and inspectors an instant, blockchain-verified check that a medicine is genuine and unexpired.',

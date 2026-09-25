@@ -412,7 +412,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Scan a QR code or enter a product ID to check authenticity.</p>\n" +
+      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -970,7 +970,7 @@ function onboardFormHtml(error?: string): string {
       '<button type="submit">Request pilot seal</button>\n' +
       "</form>\n" +
       onboardPayNowHtml() +
-      '<p><a href="/verify">Verify an existing seal</a></p>\n' +
+      '<p><a href="/verify">Verify an existing seal (in development)</a></p>\n' +
       "</main>",
   });
 }
@@ -1177,7 +1177,7 @@ function renderOnboardReceived(c: Context): Response {
       inputId: "onboard-dpp-email",
     }) +
     "<ul>\n" +
-    '<li><a href="/verify">Verify a seal</a></li>\n' +
+    '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1238,7 +1238,7 @@ function launchProofStoryHtml(): string {
       "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
-      '<p><a href="/verify">Verify a seal</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      '<p><a href="/verify">Verify a seal (in development)</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
       "</main>",
   });
 }
@@ -1336,7 +1336,7 @@ function dashboardHtml(): string {
       "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
-      '<li><a href="/verify">Verify a seal</a></li>\n' +
+      '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
       '<li><a href="/generate">Generate a Living QR</a></li>\n' +
       '<li><a href="/protocol">Protocol</a></li>\n' +
       '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
