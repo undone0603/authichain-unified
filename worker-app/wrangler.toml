@@ -269,6 +269,11 @@ zone_name = "govchain.us"
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
 
+# Workers AI classifies inbound replies (/api/webhooks/resend-inbound) inside
+# the free 10,000 Neurons/day allocation, ahead of OpenAI.
+[ai]
+binding = "AI"
+
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "97d767ff69584161a0672cd942e9364a"

@@ -19,6 +19,7 @@ import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { registerLeadRoutes } from "./lead-routes";
 import { registerResendInbound } from "./resend-inbound";
+import type { WorkersAIBinding } from "../src/lib/sentiment-classifier";
 import { scheduled } from "./cron-dispatch";
 import {
   CHECKOUT_REDIRECT_HEADERS,
@@ -30,6 +31,8 @@ type Env = {
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  /** Workers AI: free inbound-reply classifier (worker-app/resend-inbound.ts). */
+  AI?: WorkersAIBinding;
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
