@@ -130,7 +130,7 @@ export const PLANS: Plan[] = [
     features: [
       "Unlimited Industrial Artifacts",
       "Custom AI Model Training",
-      "On-Chain Product Narratives",
+      "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)",
       "Real-time Security Webhooks",
       "24/7 AuthiChain Core Support",
     ],

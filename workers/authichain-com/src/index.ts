@@ -128,7 +128,7 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain is the authentic agentic economy — signed seals, 5-agent consensus, and x402 pay-per-call so agents and humans can prove a physical product is real. EU DPP Readiness is live Stripe checkout.',
+    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. Signed, publicly verifiable certificates are in development.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
@@ -2271,7 +2271,7 @@ const BASE_CSS = ESTATE_BASE_CSS + `
 function communityHub(_brand: keyof typeof BRANDS) {
   return estateFeatures(
     "Ecosystem utilities",
-    "QRON and Bitcoin Ordinals sit beside AuthiChain certificates. Use them when you need a living QR or a high-value on-chain anchor.",
+    "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
       { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "Optional permanent provenance for high-value certificates via Bitcoin Ordinals." },
@@ -2287,7 +2287,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">AuthiChain issues signed seals, binds them to products, and verifies them in public. The money path is EU DPP Readiness — the same Stripe checkout production already uses.</p>
+    <p class="section-sub">AuthiChain issues seals and binds them to products, and every scan is logged against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2297,9 +2297,9 @@ function howItWorks() {
     "How it works",
     "Three steps that already exist on this estate. No new product surface.",
     [
-      { title: "Issue", body: "Issue a cryptographically signed seal for the product. Certificates are Ed25519-signed and anchored on Polygon." },
+      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; signed certificate issuance is in development." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
-      { title: "Verify", body: "Anyone with a camera confirms authenticity against the public record. Agents can pay per call on the x402 rail." },
+      { title: "Verify", body: "Every scan is logged against the serial. Public verification against the on-chain record is in development." },
     ],
     "how",
   );
@@ -2323,7 +2323,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "Signed seals", body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable." },
+      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. A signed certificate anyone can verify is in development." },
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
@@ -2456,7 +2456,7 @@ function ecosystemFooter() {
         ],
       },
     ],
-    "Polygon · ERC-721 · EU DPP",
+    'Polygon · ERC-721 contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · EU DPP',
   );
 }
 
@@ -2511,26 +2511,20 @@ const HTML = `<!DOCTYPE html>
   })}
   ${estateTrust([
     { value: "Ed25519", label: "Signed seals" },
-    { value: "Polygon", label: "On-chain anchor" },
+    { value: "Polygon", label: "Contract deployed" },
     { value: "$299", label: "EU DPP Readiness" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
   <section class="estate-verify" id="registry" aria-labelledby="registry-heading">
     <div class="wrap">
-      <h2 id="registry-heading">Public certificate registry</h2>
-      <p class="section-sub">Every AuthiChain certificate is publicly verifiable. Enter a cert ID to confirm authenticity. Counts load from the live registry when available.</p>
-      <div class="estate-verify-grid">
-        <div class="estate-card"><strong id="ac-cert-total">—</strong><span class="stat-label">Certificates issued</span></div>
-        <div class="estate-card"><strong id="ac-cert-valid">—</strong><span class="stat-label">Currently valid</span></div>
-        <div class="estate-card"><strong>Polygon</strong><span class="stat-label">On-chain products</span></div>
-        <div class="estate-card"><strong>2.1s</strong><span class="stat-label">Agent consensus</span></div>
-      </div>
+      <h2 id="registry-heading">Certificate registry</h2>
+      <p class="section-sub">AuthiChain's certificate contract is deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Public certificate lookup is in development.</p>
       <div class="estate-verify-actions">
         <label class="sr-only" for="ac-cert-input">Certificate ID</label>
         <input id="ac-cert-input" class="estate-field" type="text" placeholder="Enter cert ID to verify…">
         <button type="button" class="btn btn-primary" onclick="acVerify()">Verify</button>
-        <a class="btn btn-outline" href="/api/authichain/certificates" target="_blank" rel="noopener">Browse registry</a>
+        <a class="btn btn-outline" href="/api/authichain/certificates" target="_blank" rel="noopener">Browse registry (in development)</a>
       </div>
       <div id="ac-verify-result" style="margin-top:1rem;display:none"></div>
     </div>
@@ -2538,16 +2532,6 @@ const HTML = `<!DOCTYPE html>
   <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style>
 
   <script>
-  (function(){
-    fetch('/api/authichain/certificates?limit=1&valid=true')
-      .then(r=>r.json()).then(d=>{
-        if(d.total){document.getElementById('ac-cert-valid').textContent=d.total.toLocaleString();}
-      }).catch(()=>{});
-    fetch('/api/authichain/certificates?limit=1')
-      .then(r=>r.json()).then(d=>{
-        if(d.total){document.getElementById('ac-cert-total').textContent=d.total.toLocaleString();}
-      }).catch(()=>{});
-  })();
   function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
   function acVerify(){
     var id=(document.getElementById('ac-cert-input').value||'').trim();
@@ -2577,9 +2561,9 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — signed seals, 5-agent consensus, MCP tools, and x402 at $0.05 USDC on Base.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. Multi-agent verification is in development.",
     [
-      { title: "Identity", body: "Every genuine product gets a signed seal anchored on Polygon. The certificate is public. An agent can look it up the same way a person scans a QR." },
+      { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
       { title: "Verification", body: "Multi-agent verification is in development. MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
@@ -3037,7 +3021,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="ESPR DPP tooling via blockchain. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.govchain.us/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport compliance for brands via blockchain certificates.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.govchain.us"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.govchain.us/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.govchain.us"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3229,18 +3213,18 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
       <h2 class="section-title">One Integration. Every Standard.</h2>
-      <p class="section-sub">AuthiChain's blockchain certificates are the DPP. No retrofitting, no middleware — the NFT <em>is</em> the passport.</p>
+      <p class="section-sub">AuthiChain is building passport tooling on its Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. NFT-linked passports are in development.</p>
 
       <div class="feature-row">
         <div class="feature-item">
           <div class="feature-icon">🔗</div>
-          <div class="feature-title">ERC-721 = DPP</div>
-          <div class="feature-desc">Each product gets an on-chain NFT containing all ESPR-required data fields: materials, carbon footprint, recycled content, supplier chain, repair information.</div>
+          <div class="feature-title">ERC-721 certificates (in development)</div>
+          <div class="feature-desc">The certificate contract is deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Per-product certificates carrying passport data are in development.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
           <div class="feature-title">QR Scan → Instant Passport</div>
-          <div class="feature-desc">A single QR code on the product label opens the full DPP. Consumers, regulators, and resellers all see the same immutable, real-time record.</div>
+          <div class="feature-desc">A QR code on the label links to the product's passport record, and every scan is logged against the serial. An on-chain record behind it is in development.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
@@ -3249,8 +3233,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         </div>
         <div class="feature-item">
           <div class="feature-icon">⛓️</div>
-          <div class="feature-title">22 Supply Chain Events</div>
-          <div class="feature-desc">Full provenance trail: manufacturing, customs clearance, quality inspection, distribution, retail receipt — every event logged immutably on Polygon.</div>
+          <div class="feature-title">Supply chain events</div>
+          <div class="feature-desc">Provenance events from manufacturing to retail receipt. Anchoring events on Polygon is in development.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
@@ -3275,7 +3259,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
         <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
-        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Anti-counterfeit + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Product authenticity + DPP</div></div>
         <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
       </div>
     </div>

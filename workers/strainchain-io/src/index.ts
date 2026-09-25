@@ -2186,11 +2186,11 @@ export default {
 
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StrainChain — Cannabis Supply Chain on Blockchain</title>
+<title>StrainChain: Cannabis COA and Genetics Passports</title>
 <meta name="description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="StrainChain">
-<meta property="og:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
+<meta property="og:title" content="StrainChain: Cannabis COA and Genetics Passports">
 <meta property="og:description" content="Cannabis genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain records are in development.">
 <meta property="og:url" content="https://strainchain.io/">
 <meta property="og:image" content="https://strainchain.io/og-image.png">
@@ -2222,8 +2222,8 @@ ${estateNav(
 <main id="main">
 ${estateHero({
   eyebrow: "Cannabis supply chain",
-  title: "Seed-to-shelf tracking on Polygon.",
-  lede: "Immutable strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
+  title: "COA-backed genetics passports. On-chain tracking on Polygon is in development.",
+  lede: "Genetics passports built from your COAs, with totals recomputed from the source panel. On-chain strain identity is in development. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
   emailCheckout: {
     action: "https://authichain.govchain.us/api/checkout/plan/strainchain_passport",
     label: "Passport checkout — $49",
@@ -2253,10 +2253,10 @@ fetch('https://strainchain.io/api/strainchain/stats')
     <h2>From seed to shelf</h2>
     <p class="section-sub">Every touch-point recorded. No gaps, no tampering, regulator-ready access.</p>
     <div class="steps">
-      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Genetic fingerprint and cultivar data minted as an ERC-721 NFT on Polygon with IPFS-pinned metadata.</p></div>
-      <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Sensor and custody events anchored to the batch identity through the grow.</p></div>
-      <div class="step"><div class="step-num">03</div><h3>Lab testing</h3><p>COA hashed and linked to the NFT so THC, CBD, and terpene profiles stay tamper-evident.</p></div>
-      <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>QR on packaging resolves to the on-chain record. Consumers and regulators verify in under a second.</p></div>
+      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport. Minting to AuthiChain's ERC-721 contract on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Custody events linked to the batch record. On-chain anchoring is in development.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Lab testing</h3><p>The COA panel is linked to the passport, and discrepancies are surfaced, not smoothed over. Hashing COAs on-chain is in development.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>A QR code on packaging opens the passport. Verification against the on-chain record is in development.</p></div>
     </div>
   </div>
 </section>
@@ -2268,7 +2268,7 @@ ${estateFeatures(
     { title: "COA-backed strain identity", body: "Each passport is built from the lab panel itself, and discrepancies are shown. On-chain batch records are in development." },
     { title: "METRC and BioTrack sync", body: "Bidirectional tag and manifest flow so operators are not double-keying state systems." },
     { title: "Regulator-ready export", body: "The four-layer audit trail exports an inspection-ready evidence package on demand." },
-    { title: "Consumer proof at the shelf", body: "A QR on the package resolves to on-chain provenance — proof in the buyer's hand, not only a claim on a label." },
+    { title: "Proof at the shelf", body: "A QR code on the package opens the passport and its lab panel. On-chain provenance is in development." },
     { title: "Genetics passports", body: "Public cultivar records live at /genetics. Totals are derived from the lab panel at render time." },
     { title: "Jar-pack onboarding", body: "Start on /onboard. The worker proxies that path to the AuthiChain app intake." },
   ],
@@ -2291,12 +2291,12 @@ ${estateFeatures(
 <section class="estate-section" id="audit">
   <div class="wrap">
     <h2>Four-layer audit trail</h2>
-    <p class="section-sub">Every event captured from operational record to chain anchor.</p>
+    <p class="section-sub">Every event captured from operational record to chain anchor (in development).</p>
     <div class="audit-pipeline">
       <div class="audit-layer"><div class="audit-name">Airtable</div><div class="audit-desc">Operational records and staff-facing data entry</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Structured store and real-time subscriptions</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS / Pinata</div><div class="audit-desc">Content-addressed file storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">On-chain hash anchor</div></div>
+      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>
