@@ -2284,7 +2284,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">AuthiChain issues seals and binds them to products, and every scan is logged against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2296,7 +2296,7 @@ function howItWorks() {
     [
       { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. In development: Ed25519-signed certificates anchored to that contract." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
-      { title: "Verify", body: "Every scan is logged against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
+      { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
     "how",
   );
@@ -3224,7 +3224,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
           <div class="feature-title">QR Scan → Instant Passport</div>
-          <div class="feature-desc">A QR code on the label links to the product's passport record, and every scan is logged against the serial. Our goal: consumers, regulators, and resellers all see the same on-chain record.</div>
+          <div class="feature-desc">A QR code on the label links to the product's passport record, and our goal is to log every scan against the serial. Also our goal: consumers, regulators, and resellers all see the same on-chain record.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📊</div>
