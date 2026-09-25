@@ -127,10 +127,10 @@ export function mcpPricingDiscovery(env?: X402Env) {
       asset: BASE_USDC_ASSET,
       publishedPayTo: livePayTo(env),
       pricePerCall: `$${x402PriceUsd()} USDC`,
-      catalog: "https://authichain.govchain.us/api/x402/catalog",
-      wellKnown: "https://authichain.govchain.us/.well-known/x402.json",
-      mcp: "https://authichain.govchain.us/mcp",
-      docs: "https://authichain.govchain.us/x402",
+      catalog: "https://authichain.com/api/x402/catalog",
+      wellKnown: "https://authichain.com/.well-known/x402.json",
+      mcp: "https://authichain.com/mcp",
+      docs: "https://authichain.com/x402",
       note: "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT.",
     },
     humanCheckout: {
@@ -143,8 +143,8 @@ export function mcpPricingDiscovery(env?: X402Env) {
       dppPaymentLink: planPaymentLink("dpp_readiness"),
       farmPaymentLink: planPaymentLink("strainchain_farm"),
       emailCapture: {
-        passport: "https://authichain.govchain.us/passport",
-        dpp: "https://authichain.govchain.us/dpp",
+        passport: "https://authichain.com/passport",
+        dpp: "https://authichain.com/dpp",
       },
     },
   };
@@ -158,11 +158,11 @@ function discoveryBody() {
     tools: TOOLS,
     pricing: mcpPricingDiscovery(),
     pay: {
-      x402: "POST https://authichain.govchain.us/api/x402",
-      mcpVerify: "POST https://authichain.govchain.us/mcp tools/call verify",
-      catalog: "https://authichain.govchain.us/api/x402/catalog",
-      wellKnown: "https://authichain.govchain.us/.well-known/x402.json",
-      docs: "https://authichain.govchain.us/x402",
+      x402: "POST https://authichain.com/api/x402",
+      mcpVerify: "POST https://authichain.com/mcp tools/call verify",
+      catalog: "https://authichain.com/api/x402/catalog",
+      wellKnown: "https://authichain.com/.well-known/x402.json",
+      docs: "https://authichain.com/x402",
     },
   };
 }
@@ -202,11 +202,11 @@ function queryProvenance(assetIdRaw: unknown) {
       },
     },
     registry: {
-      certificatesApi: "https://authichain.govchain.us/api/authichain/certificates",
+      certificatesApi: "https://authichain.com/api/authichain/certificates",
       state: "404",
       note: "Public count stays — until this endpoint answers.",
     },
-    jwks: "https://authichain.govchain.us/.well-known/jwks.json",
+    jwks: "https://authichain.com/.well-known/jwks.json",
     paidVerify: "POST /mcp tools/call verify",
     compliance:
       "EU DPP Readiness is a $299 Stripe SKU. It is not a status on this lookup.",

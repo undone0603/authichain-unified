@@ -309,7 +309,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       title: "Pricing — AuthiChain",
       description:
         "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
-      canonical: "https://authichain.govchain.us/pricing",
+      canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
       primary: { href: "/api/checkout/dpp", label: "Start DPP checkout" },
       nav: [

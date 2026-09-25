@@ -29,7 +29,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY_PATHS = [
 
 export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalPath: "/authentic-agentic-economy",
-  canonicalUrl: "https://authichain.govchain.us/authentic-agentic-economy",
+  canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
     "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
@@ -66,9 +66,9 @@ const JSON_LD = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://authichain.govchain.us/#organization",
+      "@id": "https://authichain.com/#organization",
       name: "AuthiChain",
-      url: "https://authichain.govchain.us",
+      url: "https://authichain.com",
       slogan: "The authentic agentic economy",
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
     },
@@ -78,7 +78,7 @@ const JSON_LD = {
       url: AUTHENTIC_AGENTIC_ECONOMY.canonicalUrl,
       name: AUTHENTIC_AGENTIC_ECONOMY.title,
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
-      isPartOf: { "@id": "https://authichain.govchain.us/#organization" },
+      isPartOf: { "@id": "https://authichain.com/#organization" },
     },
     {
       "@type": "Article",
@@ -182,7 +182,7 @@ export function renderAuthenticAgenticEconomyPage(): string {
 <meta property="og:title" content="${esc(p.title)}">
 <meta property="og:description" content="${esc(p.description)}">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+<meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(p.title)}">
 <meta name="twitter:description" content="${esc(p.description)}">

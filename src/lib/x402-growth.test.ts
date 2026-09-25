@@ -23,7 +23,7 @@ describe("x402ListingPack", () => {
     expect(pack.wallet).toBe(LIVE_PAY_TO);
     expect(pack.payapi.form.wallet).toBe(LIVE_PAY_TO);
     expect(pack.priceUsd).toBe(0.05);
-    expect(pack.paidRoute).toBe("https://authichain.govchain.us/api/v1/agent-verify");
+    expect(pack.paidRoute).toBe("https://authichain.com/api/v1/agent-verify");
     expect(pack.category).toBe("Verification");
     expect(pack.endpoints).toBe(2);
     expect(pack.tools).toBe(3);

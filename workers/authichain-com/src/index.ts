@@ -116,7 +116,7 @@ const BRANDS = {
     glowRgba: 'transparent',
     logoMark: 'AC',
         accent: '#4F46E5',
-    url: 'https://authichain.govchain.us',
+    url: 'https://authichain.com',
   }
 };
 
@@ -137,7 +137,7 @@ const SEO = {
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
     'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
-  ogImage: 'https://authichain.govchain.us/og-image.png',
+  ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
     {
@@ -2603,8 +2603,8 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="Anchor a Product — AuthiChain">
 <meta property="og:description" content="Blockchain certificate in 30 seconds. Free. No account.">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
-<meta property="og:url" content="https://authichain.govchain.us/anchor">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:url" content="https://authichain.com/anchor">
 <meta name="twitter:card" content="summary_large_image">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2801,7 +2801,7 @@ function certPage(certId: string): string {
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="AuthiChain Certificate \${certId}">
 <meta property="og:description" content="Blockchain-anchored product certificate. Verify authenticity instantly.">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+<meta property="og:image" content="https://authichain.com/og-image.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
@@ -2897,10 +2897,10 @@ const PROTOCOL_HTML = `<!DOCTYPE html>
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="Open Verification Protocol — AuthiChain">
 <meta property="og:description" content="Verify product provenance yourself. Offline, one command, no account. Apache-2.0.">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
-<meta property="og:url" content="https://authichain.govchain.us/protocol">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:url" content="https://authichain.com/protocol">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"AuthiChain Verification Specification","description":"An open specification and reference verifier for product provenance, licensed Apache-2.0.","license":"https://www.apache.org/licenses/LICENSE-2.0","url":"https://authichain.govchain.us/protocol"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"AuthiChain Verification Specification","description":"An open specification and reference verifier for product provenance, licensed Apache-2.0.","license":"https://www.apache.org/licenses/LICENSE-2.0","url":"https://authichain.com/protocol"}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.65}
@@ -2988,18 +2988,18 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="description" content="AuthiChain EU Digital Product Passport readiness tooling. Our goal: one integration for ESPR, EUDR, and CSRD.">
   <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
-  <link rel="canonical" href="https://authichain.govchain.us/digital-product-passport">
+  <link rel="canonical" href="https://authichain.com/digital-product-passport">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
   <meta property="og:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <meta property="og:url" content="https://authichain.govchain.us/digital-product-passport">
-  <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+  <meta property="og:url" content="https://authichain.com/digital-product-passport">
+  <meta property="og:image" content="https://authichain.com/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.govchain.us/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.govchain.us"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3436,11 +3436,11 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 
 async function handleAuthichainCom(request: Request, env: Env) {
     const url = new URL(request.url);
-    // Primary site host is authichain.govchain.us. www.authichain.com still
-    // 301s to the primary host; the apex and the primary host both serve the
-    // site directly (never bounce the primary host).
+    // Canonical hub is authichain.com. www.authichain.com 301s to the apex;
+    // authichain.govchain.us stays a working fallback host and serves the
+    // site directly (never bounce the fallback host).
     if (url.hostname === 'www.authichain.com') {
-      url.hostname = 'authichain.govchain.us';
+      url.hostname = 'authichain.com';
       return Response.redirect(url.toString(), 301);
     }
     const hostMicrosite = tryHandleMicrosite(request);
@@ -3467,32 +3467,32 @@ async function handleAuthichainCom(request: Request, env: Env) {
       // worker-app/route-manifest.ts, so each one resolved to the homepage at
       // 200 — a sitemap promising five pages that did not exist.
       const staticUrls = [
-        { loc: 'https://authichain.govchain.us/', freq: 'weekly', pri: '1.0' },
-        { loc: 'https://authichain.govchain.us/pricing', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.govchain.us/onboard', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.govchain.us/anchor', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.govchain.us/verify', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.govchain.us/protocol', freq: 'weekly', pri: '0.95' },
-        { loc: 'https://authichain.govchain.us/digital-product-passport', freq: 'weekly', pri: '0.9' },
-        { loc: 'https://authichain.govchain.us/genetics', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.govchain.us/genetics/mendo-love-farms', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.govchain.us/passport', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.govchain.us/dpp', freq: 'weekly', pri: '0.9' },
-        { loc: 'https://authichain.govchain.us/trumark', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.govchain.us/made-in-america', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
+        { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/onboard', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/genetics/mendo-love-farms', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
-        { loc: 'https://authichain.govchain.us/partners/brief', freq: 'weekly', pri: '0.8' },
-        { loc: 'https://authichain.govchain.us/x402', freq: 'weekly', pri: '0.8' },
-        { loc: 'https://authichain.govchain.us/.well-known/x402', freq: 'weekly', pri: '0.7' },
-        { loc: 'https://authichain.govchain.us/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/.well-known/x402', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
         ...icpSeoSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.82' })),
-        { loc: 'https://authichain.govchain.us/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.govchain.us/llms.txt', freq: 'weekly', pri: '0.7' },
-        { loc: 'https://authichain.govchain.us/mcp', freq: 'weekly', pri: '0.7' },
-        { loc: 'https://authichain.govchain.us/openapi.json', freq: 'weekly', pri: '0.65' },
+        { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
-        ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.govchain.us${path}`, freq: 'weekly' as const, pri: '0.8' })),
-        { loc: 'https://authichain.govchain.us/contact', freq: 'monthly', pri: '0.7' },
+        ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
+        { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
@@ -3501,7 +3501,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.govchain.us/sitemap.xml\n# https://authichain.govchain.us/llms.txt\n# https://authichain.govchain.us/openapi.json\n# https://authichain.govchain.us/.well-known/x402\n', { headers: { 'Content-Type': 'text/plain' } });
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n# https://authichain.com/llms.txt\n# https://authichain.com/openapi.json\n# https://authichain.com/.well-known/x402\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     const llms = tryHandleLlmsTxt(request);
     if (llms) return llms;

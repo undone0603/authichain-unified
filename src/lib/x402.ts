@@ -1033,9 +1033,9 @@ export type X402ScanFanout = {
 };
 
 export function x402ScanFanout(
-  origin = "https://authichain.govchain.us"
+  origin = "https://authichain.com"
 ): X402ScanFanout {
-  const base = origin.replace(/\/+$/, "") || "https://authichain.govchain.us";
+  const base = origin.replace(/\/+$/, "") || "https://authichain.com";
   return {
     version: 1,
     resources: [`${base}/api/x402`],
@@ -1055,7 +1055,7 @@ type X402OpenApiDocument = {
  */
 export async function x402OpenApiDocument(
   env: X402HealthEnv = process.env,
-  origin = "https://authichain.govchain.us"
+  origin = "https://authichain.com"
 ): Promise<X402OpenApiDocument> {
   const health = await x402HealthReport(env);
   const amount = String(health.pricePerCall.usd);
@@ -1092,7 +1092,7 @@ export async function x402OpenApiDocument(
       description:
         "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing.",
     },
-    servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.govchain.us" }],
+    servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {
       "/api/x402": {
         get: {

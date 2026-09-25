@@ -30,7 +30,7 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.match(html, /<title>TruMark seals \| AuthiChain<\/title>/);
   assert.match(
     html,
-    /rel="canonical" href="https:\/\/authichain\.govchain\.us\/trumark"/
+    /rel="canonical" href="https:\/\/authichain\.com\/trumark"/
   );
   assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_PATH}"`), true);
   assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
@@ -66,7 +66,7 @@ test("Made in America page uses live DPP checkout and partner-brief alias story"
   );
   assert.match(
     html,
-    /rel="canonical" href="https:\/\/authichain\.govchain\.us\/made-in-america"/
+    /rel="canonical" href="https:\/\/authichain\.com\/made-in-america"/
   );
   assert.match(html, /16 CFR Part 323/);
   assert.match(html, /EO 14392|Executive Order 14392/);
