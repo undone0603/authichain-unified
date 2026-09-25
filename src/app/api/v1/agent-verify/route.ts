@@ -24,6 +24,7 @@ import {
   settlePayment,
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
+import { attestSeal } from "@/lib/seal-attestation";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -122,10 +123,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Look the seal up against the same registry the free consumer-facing
-  // /api/verify endpoint checks (auth_seals), so a paid agent call can never
-  // return "verified" for a seal that doesn't exist. A lookup error is an
-  // outage, not a "not found", and is refused unpaid.
+  // A row in auth_seals is not an attestation. verified is true only when
+  // protocol/verifier.mjs returns verdict "verified" (Ed25519 + mainnet anchor).
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) {
@@ -170,15 +169,20 @@ export async function POST(request: Request) {
     payload: proof.payer,
   });
 
-  const verified = !!seal;
+  const attestation = attestSeal(
+    seal ? (seal as Record<string, unknown>) : null
+  );
+  const verified = attestation.verified;
   const details: Record<string, unknown> = seal
     ? {
         productId: seal.product_id,
         batchId: seal.batch_id,
         brand: seal.brand,
         createdAt: seal.created_at,
+        verdict: attestation.verdict,
+        reasons: attestation.reasons,
       }
-    : {};
+    : { verdict: attestation.verdict, reasons: attestation.reasons };
   await onVerificationEvent({
     seal_id: sealId,
     brand: (seal?.brand as string | undefined) ?? "authichain.com",
