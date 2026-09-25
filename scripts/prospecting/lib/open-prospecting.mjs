@@ -73,6 +73,14 @@ export const CONTACT_PATHS = [
   "/mentions-legales",
   "/aviso-legal",
   "/colofon",
+  // Press pages usually name a real person next to the press inbox
+  // (r-m.de/de/presse: Benjamin Wenz, Corporate Communications & PR).
+  "/presse",
+  "/press",
+  "/de/presse/",
+  "/en/press/",
+  "/newsroom",
+  "/media",
 ];
 
 export function buildSparqlQuery(qids, limit = 200) {

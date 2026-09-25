@@ -31,6 +31,24 @@ For another segment, pass its Wikidata item: `--qid Q924724` (electric bicycle).
 Look items up with
 `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=<term>&language=en&format=json`.
 
+## Contact sources that cost $0, best first
+
+1. **Press pages.** They usually name the person behind the press inbox
+   (r-m.de/de/presse names Benjamin Wenz, Corporate Communications & PR, at
+   `presse@r-m.de`). The crawler checks these paths.
+2. **The imprint.** Legally required in DE/AT/CH. It names the managing
+   directors, though usually only next to `info@`.
+3. **Sustainability reports and press releases.** They name the executive who
+   owns the topic and give figures a pitch can quote.
+4. **Registers.** stiftung ear's battery-producer list (Germany) and UK
+   Companies House give names and qualification, not addresses.
+5. **Reacher** (self-hosted, AGPL). Checks that a mailbox exists without
+   sending anything. It needs outbound port 25, so it runs on a VPS, not
+   in CI.
+
+Apollo's current plan has neither Organization Search nor People Enrichment,
+so it is not an option.
+
 ## Reading the output
 
 - The score is a ranking aid; each point has a written reason. EU/EEA companies
