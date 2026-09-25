@@ -79,6 +79,14 @@ export interface ClassifyReplyDeps {
 const DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434";
 const DEFAULT_OLLAMA_MODEL = "llama3.2";
 const OLLAMA_TIMEOUT_MS = 2500;
+/**
+ * Resend times out an inbound webhook after a few seconds and retries. With
+ * the SDK's defaults (2 retries with back-off, no deadline) one slow or failing
+ * OpenAI call outlasted it, so the first live reply after #1232 timed out.
+ * One attempt with a hard deadline keeps the route under that limit; on
+ * timeout the waterfall falls back and records why.
+ */
+export const OPENAI_TIMEOUT_MS = 8000;
 
 const CLASSIFY_PROMPT_PREAMBLE = `You are an expert sales analyst. Classify this customer reply to a business proposal.`;
 
@@ -342,6 +350,8 @@ async function classifyWithOpenAI(
           prompt,
           temperature: 0.3,
           maxOutputTokens: 500,
+          maxRetries: 0,
+          abortSignal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
         })
       ).text;
   return parseSentimentJson(text, "openai");
