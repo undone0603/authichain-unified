@@ -30,6 +30,13 @@ zone_name = "authichain.com"
 pattern = "authichain.govchain.us"
 custom_domain = true
 
+# authichain.com apex Workers Custom Domain (attached out-of-band before #1245;
+# the post-#1245 deploy removed it because it was not declared here, and it had
+# to be reattached via API on 2026-09-25). Declared so deploys keep it.
+[[routes]]
+pattern = "authichain.com"
+custom_domain = true
+
 [observability]
 enabled = true
 
