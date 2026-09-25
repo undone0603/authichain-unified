@@ -75,7 +75,9 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/m\/mendo"/);
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
-  assert.match(html, /Issue seals\. Bind products\. Verify anywhere\./);
+  assert.match(html, /Signed QR seals for real products\./);
+  assert.doesNotMatch(html, /Agent consensus/);
+  assert.match(html, /Public certificate registry: in development\./);
   const starterFirst = planPaymentLink("starter") ?? "";
   const auditLater = planPaymentLink("dpp_readiness") ?? "";
   assert.ok(starterFirst.length > 0 && auditLater.length > 0);
@@ -83,7 +85,9 @@ test("the apex still renders the homepage", async () => {
     html.indexOf(starterFirst) < html.indexOf(auditLater),
     "the $29 link has to appear before the $299 audit"
   );
-  assert.match(html, /Buy the \$29 signed pack/);
+  assert.match(html, /Buy a QRON Starter Pack — \$29/);
+  // Held pending decision: the $29 banner stays as it is.
+  assert.match(html, /The first checkout is the \$29 signed pack\./);
   assert.match(html, /name="email"/);
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /The authentic agentic economy/);

@@ -2029,11 +2029,11 @@ ${estateNav(
 <main id="main">
 ${estateHero({
   eyebrow: "Cannabis supply chain",
-  title: "COA-backed genetics passports. On-chain tracking on Polygon is in development.",
-  lede: "Genetics passports built from your COAs, with totals recomputed from the source panel. On our roadmap: on-chain strain identity, automated compliance reporting, and a four-layer audit trail for legal cannabis markets. One cultivar passport is $49. Farm Plan is $149/mo, the recurring plan.",
+  title: "Genetics passports for every cultivar.",
+  lede: "Publish a genetics passport for one cultivar from your existing CoAs for $49, or cover every cultivar with the Farm Plan at $149/mo. On our roadmap: seed-to-shelf tracking and METRC compliance reporting.",
   emailCheckout: {
     action: "https://authichain.com/checkout/strainchain_passport",
-    label: "Passport checkout — $49",
+    label: "Buy a StrainChain Passport — $49",
   },
   actions: [
     { href: "/pricing", label: "View pricing", primary: false },
