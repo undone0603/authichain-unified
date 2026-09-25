@@ -312,7 +312,19 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     assert.ok(html.includes("Nothing here is an award"));
     const hrefs = [...html.matchAll(/\bhref="([^"]+)"/g)].map(m => m[1]);
     const actions = [...html.matchAll(/\baction="([^"]+)"/g)].map(m => m[1]);
-    assert.ok(hrefs.includes("https://authichain.govchain.us/made-in-america"), path);
+    const isAppUrl = (raw: string, pathname: string) => {
+      try {
+        const u = new URL(raw);
+        return (
+          u.protocol === "https:" &&
+          u.hostname === "authichain.govchain.us" &&
+          u.pathname === pathname
+        );
+      } catch {
+        return false;
+      }
+    };
+    assert.ok(hrefs.some(h => isAppUrl(h, "/made-in-america")), path);
     assert.ok(
       hrefs.includes(
         "https://govchain.us/p/sbir-svip-blockchain-document-verification"
@@ -321,7 +333,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     );
     assert.ok(hrefs.includes("/onboard"), path);
     assert.ok(
-      actions.includes("https://authichain.govchain.us/api/checkout/dpp"),
+      actions.some(a => isAppUrl(a, "/api/checkout/dpp")),
       path
     );
     assert.ok(!html.includes("SBIR awarded"));
