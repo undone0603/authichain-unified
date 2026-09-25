@@ -149,6 +149,21 @@ zone_name = "authichain.com"
 pattern = "authichain.com/generate*"
 zone_name = "authichain.com"
 
+# Public lead forms (LeadCapturePopup.tsx, SocialShareCTA.tsx, /book). More
+# specific than authichain-com's authichain.com/* glob so POSTs reach
+# worker-app/lead-routes.ts directly. Attached live 2026-09-25 via the API.
+[[routes]]
+pattern = "authichain.com/api/leads/capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/lead-capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/book"
+zone_name = "authichain.com"
+
 # Preferred app host. 522s when DNS still points at a dead origin (old Vercel).
 # Attaching the edge router here is the in-repo fix; owner must CNAME app
 # onto this zone and orange-cloud it (see docs/ROUTING.md).
