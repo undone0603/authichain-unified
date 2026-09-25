@@ -20,7 +20,14 @@ compatibility_flags = ["nodejs_compat"]
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
-# directory and alias differ). Keep the # Mirrors of the apex path routes on the primary host authichain.govchain.us
+# directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
+# [[durable_objects.bindings]] and [[migrations]] blocks below in sync with
+# that file — a divergence here previously caused the RateLimiter Durable
+# Object migration to use new_classes in one file and new_sqlite_classes in
+# the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
+# catch a `new_classes` regression in either file.
+
+# Mirrors of the apex path routes on the primary host authichain.govchain.us
 # (govchain.us zone; attached live 2026-09-25 via the API).
 [[routes]]
 pattern = "authichain.govchain.us/.well-known/jwks.json"
@@ -113,13 +120,6 @@ zone_name = "govchain.us"
 [[routes]]
 pattern = "authichain.govchain.us/generate*"
 zone_name = "govchain.us"
-
-[[kv_namespaces]], [[hyperdrive]],
-# [[durable_objects.bindings]] and [[migrations]] blocks below in sync with
-# that file — a divergence here previously caused the RateLimiter Durable
-# Object migration to use new_classes in one file and new_sqlite_classes in
-# the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
-# catch a `new_classes` regression in either file.
 
 [alias]
 playwright-core = "./playwright-unavailable.ts"
@@ -253,6 +253,11 @@ zone_name = "authichain.com"
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
+
+# Workers AI classifies inbound replies (/api/webhooks/resend-inbound) inside
+# the free 10,000 Neurons/day allocation, ahead of OpenAI.
+[ai]
+binding = "AI"
 
 [[hyperdrive]]
 binding = "HYPERDRIVE"
