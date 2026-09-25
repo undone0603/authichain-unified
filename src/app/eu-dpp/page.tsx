@@ -125,8 +125,8 @@ export default function EuDppPage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-zinc-400 text-base md:text-lg font-medium leading-relaxed mb-10">
-            GovChain issues blockchain-anchored DPPs that meet Regulation (EU) 2024/1781
-            — self-serve, no enterprise contract.
+            GovChain issues blockchain-anchored DPPs that meet Regulation (EU) 2024/1781.
+            No enterprise contract. Start with a scoped pilot.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -231,7 +231,7 @@ export default function EuDppPage() {
           <span style={{ color: ACCENT_LIGHT }}>EU DPP Compliance</span>
         </h2>
         <p className="text-center text-zinc-500 text-sm font-medium mb-16 max-w-xl mx-auto">
-          One platform. Every data field mandated by Regulation (EU) 2024/1781. Ready for registry submission on day one.
+          One platform. Every data field mandated by Regulation (EU) 2024/1781. Our goal is passport records ready for submission to the EU registry.
         </p>
         <div className="grid gap-8 md:grid-cols-3">
           {FEATURES.map((f) => (
