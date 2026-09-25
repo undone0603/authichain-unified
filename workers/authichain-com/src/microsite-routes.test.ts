@@ -58,10 +58,8 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
     assert.doesNotMatch(html, /schedule a (call|demo)/i, slug);
     assert.doesNotMatch(html, /AuthiChain Inc/i, slug);
     assert.match(html, /ZACHARY KIETZMAN/, slug);
-    const hasPassport = html.includes(
-      "https://authichain.com/checkout/strainchain_passport"
-    );
-    const hasDpp = html.includes("https://authichain.com/checkout/dpp_readiness");
+    const hasPassport = /https:\/\/authichain\.com\/checkout\/strainchain_passport/.test(html);
+    const hasDpp = /https:\/\/authichain\.com\/checkout\/dpp_readiness/.test(html);
     assert.ok(hasPassport || hasDpp, `${slug} needs a live checkout CTA`);
     assert.match(html, /name="email"/, slug);
     assert.doesNotMatch(html, /GET \/api\/checkout/, slug);

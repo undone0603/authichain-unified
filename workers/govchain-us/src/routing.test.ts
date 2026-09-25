@@ -13,6 +13,8 @@ import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
+const GATED_DPP_ACTION = new URL("/checkout/dpp_readiness", "https://authichain.com").href;
+
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-test-key",
@@ -333,7 +335,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     );
     assert.ok(hrefs.includes("/onboard"), path);
     assert.ok(
-      actions.includes("https://authichain.com/checkout/dpp_readiness"),
+      actions.some(a => a === GATED_DPP_ACTION),
       path
     );
     assert.ok(!html.includes("SBIR awarded"));

@@ -37,7 +37,7 @@ describe("genetics routes", () => {
     assert.match(html, /never transcribed/i);
     assert.match(html, /\/genetics\/mendo-love-farms\/vt-26/);
     assert.match(html, /\/genetics\/mendo-love-farms\/lt-63/);
-    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
+    assert.match(html, /https:\/\/authichain\.com\/checkout\/strainchain_passport/);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
@@ -59,7 +59,7 @@ describe("genetics routes", () => {
     assert.doesNotMatch(html, /Totals only/);
     assert.match(html, /Confirmed in writing|Claimed/);
     assert.match(html, /never transcribed/i);
-    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
+    assert.match(html, /https:\/\/authichain\.com\/checkout\/strainchain_passport/);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
@@ -74,7 +74,7 @@ describe("genetics routes", () => {
     assert.match(html, /No CoA in library/);
     assert.match(html, /Sibling chemistry is not a substitute/);
     assert.doesNotMatch(html, /Peak total THCV 11\./);
-    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
+    assert.match(html, /https:\/\/authichain\.com\/checkout\/strainchain_passport/);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
