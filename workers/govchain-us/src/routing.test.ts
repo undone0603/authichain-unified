@@ -298,7 +298,7 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
-  assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
+  assert.match(html, /href="https:\/\/authichain\.com\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
