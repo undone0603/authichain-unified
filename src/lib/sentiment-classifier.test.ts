@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   classifyReplyEmail,
   classifyReplyEmailHeuristic,
+  describeClassifierError,
   failClosedNeutral,
   inboundReplyAction,
   isProbablyLegitimateReply,
@@ -181,6 +182,38 @@ describe("classifyReplyEmail waterfall", () => {
     expect(result.confidence).toBeCloseTo(0.91);
   });
 
+  it("reports why OpenAI was skipped when it falls back, with the key redacted", async () => {
+    const result = await classifyReplyEmail(
+      "thanks, we are interested",
+      "RE: Proposal",
+      {
+        env: { OPENAI_API_KEY: "sk-test" },
+        generateOpenAI: async () => {
+          throw new Error(
+            "Incorrect API key provided: sk-proj-abc123XYZ. Check your key."
+          );
+        },
+      }
+    );
+    expect(result.provider).toBe("heuristic");
+    expect(result.fallbackReason).toBe(
+      "openai: Incorrect API key provided: sk-[redacted]. Check your key."
+    );
+  });
+
+  it("leaves fallbackReason unset when OpenAI succeeds", async () => {
+    const result = await classifyReplyEmail("body", "subject", {
+      env: { OPENAI_API_KEY: "sk-test" },
+      generateOpenAI: async () =>
+        JSON.stringify({
+          sentiment: "neutral",
+          objectionType: null,
+          confidence: 0.5,
+        }),
+    });
+    expect(result.fallbackReason).toBeUndefined();
+  });
+
   it("falls through to Ollama when OpenAI is unset", async () => {
     const fetchImpl: typeof fetch = async () =>
       new Response(
@@ -265,5 +298,15 @@ describe("inboundReplyAction", () => {
     expect(inboundReplyAction("positive", null)).toBe("manual_review");
     expect(inboundReplyAction("neutral", 12)).toBe("manual_review");
     expect(inboundReplyAction("negative", 12)).toBe("manual_review");
+  });
+});
+
+describe("describeClassifierError", () => {
+  it("redacts key fragments and caps the length", () => {
+    const text = describeClassifierError(
+      new Error(`bad key sk-live_1234 ${"x".repeat(500)}`)
+    );
+    expect(text).not.toContain("sk-live_1234");
+    expect(text.length).toBeLessThanOrEqual(300);
   });
 });
