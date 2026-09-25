@@ -31,7 +31,7 @@ test("recognizes sister x402 paths and ignores marketing paths", () => {
   assert.equal(isSisterX402Path("/.well-known/x402.json"), true);
   assert.equal(isSisterX402Path("/.well-known/x402"), true);
   assert.equal(isSisterX402Path("/openapi.json"), false);
-  assert.equal(isSisterX402Path("/api/checkout/dpp"), false);
+  assert.equal(isSisterX402Path("https://authichain.com/checkout/dpp_readiness"), false);
   assert.equal(isSisterX402Path("/pricing"), false);
 });
 
@@ -214,7 +214,7 @@ test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterX402(req("qron.space", "/api/checkout/dpp")),
+    await tryHandleSisterX402(req("qron.space", "https://authichain.com/checkout/dpp_readiness")),
     null
   );
 });
@@ -223,9 +223,9 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
   const passport = planPaymentLink("strainchain_passport") ?? "";
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const farm = planPaymentLink("strainchain_farm") ?? "";
-  assert.equal(new URL(passport).hostname, "buy.stripe.com");
-  assert.equal(new URL(dpp).hostname, "buy.stripe.com");
-  assert.equal(new URL(farm).hostname, "buy.stripe.com");
+  assert.equal(new URL(passport).hostname, "authichain.com");
+  assert.equal(new URL(dpp).hostname, "authichain.com");
+  assert.equal(new URL(farm).hostname, "authichain.com");
 
   for (const { brand, host } of BRANDS) {
     const res = await tryHandleSisterX402(req(host, "/api/x402/catalog"));
@@ -284,17 +284,17 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     assert.equal(body.humanCheckout.farmPaymentLink, farm, host);
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
     assert.equal(
       new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
     assert.equal(
       new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
 
@@ -309,8 +309,8 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       assert.equal(body.humanCheckout.creatorUsd, planUsd("creator"), host);
       assert.equal(body.humanCheckout.starterPaymentLink, starter, host);
       assert.equal(body.humanCheckout.creatorPaymentLink, creator, host);
-      assert.equal(new URL(starter).hostname, "buy.stripe.com");
-      assert.equal(new URL(creator).hostname, "buy.stripe.com");
+      assert.equal(new URL(starter).hostname, "authichain.com");
+      assert.equal(new URL(creator).hostname, "authichain.com");
     } else {
       assert.equal(body.humanCheckout.starterPaymentLink, undefined, host);
       assert.equal(body.humanCheckout.creatorPaymentLink, undefined, host);

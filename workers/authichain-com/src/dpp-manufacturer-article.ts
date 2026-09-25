@@ -16,7 +16,7 @@ import {
   estateSkipLink,
 } from "../../_shared/estate-landing.ts";
 
-export const DPP_CHECKOUT = "/api/checkout/dpp";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 export const DPP_MANUFACTURER_ARTICLE_PATH = "/blog/eu-dpp-manufacturer";
 export const DPP_MANUFACTURER_ARTICLE_CANONICAL = `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
 

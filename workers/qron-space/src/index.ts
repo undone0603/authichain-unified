@@ -2159,7 +2159,9 @@ export default {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
     if (
-      /^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname) ||
+      // /onboard is linked from /generate ("Request a free pilot"); it used
+      // to 404 here. Same app intake govchain.us and strainchain.io proxy.
+      /^\/(?:generate|api\/generate|onboard)(?:\/|$)/.test(url.pathname) ||
       isSeoPassportPath(url.pathname)
     ) {
       if (!env?.APP_ORIGIN) {

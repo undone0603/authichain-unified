@@ -45,7 +45,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
-import { listedPlans } from "../src/lib/plans";
+import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
@@ -608,7 +608,7 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "/api/checkout/dpp" },
+    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -808,7 +808,7 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
-  const primaryIsCheckout = /\/api\/checkout\//.test(content.primaryCta.href);
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
   const primaryHtml = primaryIsCheckout
     ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
@@ -1171,7 +1171,7 @@ function renderOnboardReceived(c: Context): Response {
     ".</p>\n" +
     "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
     emailCheckoutWithPaymentLinkHtml({
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout — $299",
       formId: "onboard-dpp-checkout",
       inputId: "onboard-dpp-email",
@@ -1366,7 +1366,7 @@ function authenticateHtml(): string {
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
       "</ul>\n" +
       emailCheckoutWithPaymentLinkHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: "Start DPP checkout — $299",
         formId: "auth-dpp-checkout",
         inputId: "auth-dpp-email",
@@ -1390,7 +1390,7 @@ function generatePackLinksHtml(): string {
       const href =
         p.id === "dpp_readiness"
           ? "/pricing"
-          : p.stripe_payment_link || "/pricing";
+          : planPaymentLink(p.id) || "/pricing";
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1458,7 +1458,9 @@ function generateFormHtml(error?: string): string {
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
-      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +
+      // Absolute: qron.space proxies this page, and qron.space/dashboard and
+      // /login do not exist (404). Account links stay hidden until they do.
+      '<p><a href="https://authichain.com/onboard">Request a free pilot</a></p>\n' +
       "<script>\n" +
       "(function(){\n" +
       "var form=document.getElementById('generate-form');\n" +

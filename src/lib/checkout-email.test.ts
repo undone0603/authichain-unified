@@ -43,15 +43,16 @@ describe("pickCheckoutEmail", () => {
 });
 
 describe("checkoutEmailFormHtml", () => {
-  it("GETs the live checkout path with a required email field", () => {
+  it("POSTs to the gated confirm path with a required email field", () => {
     const html = checkoutEmailFormHtml({
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
       formId: "dpp-checkout-form",
       inputId: "dpp-email",
     });
-    expect(html).toContain('action="/api/checkout/dpp"');
-    expect(html).toContain('method="get"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(html).toContain('method="post"');
+    expect(html).not.toContain('method="get"');
     expect(html).toContain('name="email"');
     expect(html).toContain("required");
     expect(html).toContain("Not a newsletter");
@@ -60,25 +61,26 @@ describe("checkoutEmailFormHtml", () => {
 });
 
 describe("catalogPaymentLinkHtml", () => {
-  it("uses the live Passport Payment Link from plans.ts", () => {
+  it("links the gated Passport confirm page, never buy.stripe.com", () => {
     const html = catalogPaymentLinkHtml({
       planId: "strainchain_passport",
       label: "Pay $49 on Stripe",
     });
     expect(html).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
+    expect(html).not.toContain("buy.stripe.com");
     expect(html).toContain("Pay $49 on Stripe");
     expect(html).not.toContain("/api/checkout");
   });
 
-  it("uses the live DPP Payment Link from plans.ts", () => {
+  it("links the gated DPP confirm page", () => {
     const html = catalogPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "Pay $299 on Stripe",
     });
     expect(html).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
   });
 });
@@ -109,14 +111,37 @@ describe("emailCheckoutWithPaymentLinkHtml", () => {
       action: "/api/checkout/dpp",
       label: "Start DPP checkout — $299",
     });
-    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('name="email"');
     expect(html).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(html).toContain("Pay $299 on Stripe");
     expect(html).not.toContain('href="/api/checkout/dpp"');
     expect(html).not.toContain("prefilled_email=");
+  });
+});
+
+describe("paymentLinkWithPrefilledEmail (gated)", () => {
+  it("uses ?email= for the gated confirm page", () => {
+    const gated = "https://authichain.com/checkout/creator?utm_source=email";
+    expect(paymentLinkWithPrefilledEmail(gated, "a@b.co")).toBe(
+      `${gated}&email=a%40b.co`
+    );
+  });
+});
+
+describe("rewriteCheckoutHref (buy.stripe.com)", () => {
+  it("maps a raw Payment Link to the gated page, keeping email + utm", () => {
+    expect(
+      rewriteCheckoutHref(
+        "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y?prefilled_email=a%40b.co&utm_source=x"
+      )
+    ).toBe(
+      "https://authichain.com/checkout/strainchain_passport?email=a%40b.co&utm_source=x"
+    );
+    expect(rewriteCheckoutHref("https://buy.stripe.com/unknown")).toBeUndefined();
+    expect(rewriteCheckoutHref("https://authichain.com/checkout/creator")).toBeUndefined();
   });
 });
 
@@ -148,15 +173,15 @@ describe("paymentLinkWithPrefilledEmail", () => {
 });
 
 describe("emailPaymentLinkHtml", () => {
-  it("puts prefilled_email on the quoted Payment Link when email is present", () => {
+  it("prefills ?email= on the gated confirm page when email is present", () => {
     const html = emailPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "Pay $299 on Stripe",
       email: "buyer@brand.com",
     });
-    expect(html).toContain('href="https://buy.stripe.com');
-    expect(html).toContain("prefilled_email=");
-    expect(html).toContain("buyer%40brand.com");
+    expect(html).toContain('href="https://authichain.com/checkout/dpp_readiness?email=buyer%40brand.com"');
+    expect(html).not.toContain("buy.stripe.com");
+    expect(html).not.toContain("prefilled_email=");
     expect(html).toContain("Pay $299 on Stripe");
   });
 
@@ -166,20 +191,23 @@ describe("emailPaymentLinkHtml", () => {
       label: "Pay $299 on Stripe",
     });
     expect(html).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
-    expect(html).not.toContain("prefilled_email=");
+    expect(html).not.toContain("email=");
   });
 });
 
 describe("checkoutNeedEmailRedirect", () => {
-  it("sends DPP and plan one-clicks to landings that capture email", () => {
+  it("sends DPP and plan one-clicks to the gated confirm page / chooser", () => {
     expect(checkoutNeedEmailRedirect("dpp", "dpp_abc")).toBe(
-      "https://authichain.govchain.us/dpp?need_email=1&visit_id=dpp_abc"
+      "https://authichain.com/checkout/dpp_readiness?need_email=1&visit_id=dpp_abc"
     );
     expect(checkoutNeedEmailRedirect("plan")).toBe(
-      "https://authichain.govchain.us/pricing?need_email=1"
+      "https://authichain.com/checkout?need_email=1"
     );
+    expect(
+      checkoutNeedEmailRedirect("plan", undefined, "strainchain_farm")
+    ).toBe("https://authichain.com/checkout/strainchain_farm?need_email=1");
   });
 
   it("keeps visit_id when decorating bounced checkout forms", () => {
@@ -214,7 +242,7 @@ describe("rewriteCheckoutHref", () => {
     expect(rewriteCheckoutHref("/api/checkout/dpp")).toBe(dpp);
     expect(
       rewriteCheckoutHref("/protocol/checkout/dpp?visit_id=dpp_anon")
-    ).toBe(dpp);
+    ).toBe(`${dpp}?visit_id=dpp_anon`);
     expect(
       rewriteCheckoutHref(
         "https://authichain.govchain.us/api/checkout/plan/strainchain_passport"

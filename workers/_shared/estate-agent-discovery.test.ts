@@ -73,9 +73,9 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
     assert.ok(text.includes(FARM));
-    assert.equal(httpsUrl(PASSPORT).hostname, "buy.stripe.com");
-    assert.equal(httpsUrl(DPP).hostname, "buy.stripe.com");
-    assert.equal(httpsUrl(FARM).hostname, "buy.stripe.com");
+    assert.equal(httpsUrl(PASSPORT).hostname, "authichain.com");
+    assert.equal(httpsUrl(DPP).hostname, "authichain.com");
+    assert.equal(httpsUrl(FARM).hostname, "authichain.com");
     assert.doesNotMatch(text, /GET \/api\/checkout/);
     assert.equal(text.toLowerCase().includes("facilitator.payai"), false);
   }
@@ -131,7 +131,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     );
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
-    assert.ok(hasHttpsHost(body, "buy.stripe.com"));
+    assert.ok(hasHttpsHost(body, "authichain.com"));
   }
 });
 

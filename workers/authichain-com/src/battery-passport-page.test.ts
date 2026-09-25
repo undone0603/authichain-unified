@@ -31,9 +31,9 @@ describe("battery passport offer page", () => {
 
   it("sells the existing $299 plan through the email-gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
-    expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain('type="email" required');
   });
 
@@ -94,7 +94,7 @@ describe("battery passport offer page", () => {
     expect(plan.id).toBe("dpp_readiness");
     expect(html).toContain(`$${plan.price}`);
     expect(html).toMatch(
-      /<form class="checkout-email-form" action="\/api\/checkout\/dpp" method="get"/
+      /<form class="checkout-email-form" action="https:\/\/authichain\.com\/checkout\/dpp_readiness" method="post"/
     );
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
   });

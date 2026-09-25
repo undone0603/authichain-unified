@@ -149,11 +149,11 @@ const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
 const STRAINCHAIN_PAY =
   process.env.STRAINCHAIN_PAYMENT_LINK ??
   planPaymentLink("theater_1") ??
-  "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"; // Theater 1 $499/mo
+  "https://authichain.com/checkout/theater_1"; // Theater 1 $499/mo
 const QRON_PAY =
   process.env.QRON_PAYMENT_LINK ??
   planPaymentLink("creator") ??
-  "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"; // Creator Pack $99
+  "https://authichain.com/checkout/creator"; // Creator Pack $99
 
 const hubspotToken =
   process.env.HUBSPOT_TOKEN || process.env.HUBSPOT_ACCESS_TOKEN;

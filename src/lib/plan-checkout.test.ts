@@ -102,7 +102,7 @@ describe("createPlanCheckoutSession", () => {
       ok: false,
       status: 303,
       error: "email_required",
-      url: "https://authichain.govchain.us/pricing?need_email=1",
+      url: "https://authichain.com/checkout/strainchain_passport?need_email=1",
     });
     expect(create).not.toHaveBeenCalled();
   });

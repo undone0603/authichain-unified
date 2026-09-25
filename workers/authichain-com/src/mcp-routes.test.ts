@@ -19,7 +19,7 @@ describe("mcp discovery", () => {
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
     expect(isMcpPath("/api/x402")).toBe(false);
-    expect(isMcpPath("/api/checkout/dpp")).toBe(false);
+    expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(false);
   });
 
   it("GET discovery points at Payment Links and unpaid POST x402, not GET checkout", async () => {
@@ -53,7 +53,7 @@ describe("mcp discovery", () => {
       );
       expect(
         new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
-      ).toBe("buy.stripe.com");
+      ).toBe("authichain.com");
       expect(JSON.stringify(body)).not.toContain("/api/checkout");
     }
   });
@@ -99,7 +99,7 @@ describe("mcp discovery", () => {
       planPaymentLink("strainchain_farm")
     );
     expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
   });
@@ -304,7 +304,7 @@ describe("mcp discovery", () => {
   });
 
   it("returns null for other paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleMcp(req("/api/checkout/dpp"))).toBeNull();
+    expect(await tryHandleMcp(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
     expect(await tryHandleMcp(req("/dashboard"))).toBeNull();
   });
 });

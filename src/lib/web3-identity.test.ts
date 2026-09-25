@@ -93,7 +93,7 @@ describe("canonical web3 identity lock", () => {
     );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
   });
 
@@ -129,7 +129,7 @@ describe("canonical web3 identity lock", () => {
       planPaymentLink("strainchain_farm")
     );
     expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);

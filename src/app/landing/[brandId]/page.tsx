@@ -110,7 +110,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         { value: "x402", label: "Agent micropayments" },
       ],
       closingLine: "Start EU DPP Readiness on the live checkout path.",
-      primaryCta: { label: "Start DPP checkout", href: "/api/checkout/dpp" },
+      primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
       secondaryCta: { label: "View pricing", href: "/pricing" },
     },
     qron: {
