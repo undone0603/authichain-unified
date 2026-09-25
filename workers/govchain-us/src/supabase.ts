@@ -121,6 +121,12 @@ async function restGet(
  * Ordering is `deadline.asc.nullslast` so an opportunity with no deadline sinks
  * rather than heading the list — a null sorts first in Postgres ascending order
  * by default, which would put the least actionable rows on top.
+ *
+ * Rows whose deadline has already passed are filtered out, so the "live"
+ * homepage feed and /opportunities never advertise closed notices. The cutoff
+ * is today's UTC date (YYYY-MM-DD), which compares correctly whether `deadline`
+ * is stored as timestamptz or as an ISO-8601 string. Rows with no deadline are
+ * kept (they render as "Deadline TBD" and sort last).
  */
 export async function fetchOpportunities(
   env: SupabaseEnv,
@@ -128,9 +134,11 @@ export async function fetchOpportunities(
 ): Promise<GovOpportunity[]> {
   const minFit = Number.isFinite(opts.minFit) ? Number(opts.minFit) : 70;
   const limit = Math.min(Math.max(Number(opts.limit) || 12, 1), 100);
+  const today = new Date().toISOString().slice(0, 10);
   const query = [
     `select=${LIST_COLUMNS}`,
     `fit_score=gte.${minFit}`,
+    `or=(deadline.gte.${today},deadline.is.null)`,
     "order=deadline.asc.nullslast",
     `limit=${limit}`,
   ].join("&");
