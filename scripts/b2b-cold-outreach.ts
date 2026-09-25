@@ -44,6 +44,12 @@ import {
 } from "./lib/lead-email-resolver";
 import { ensureLiveB2bChannel } from "../shared/guardrail-store";
 import {
+  countdownLabel,
+  formatMilestoneDate,
+  listMilestones,
+  nextDeadline,
+} from "../src/lib/dpp-timeline";
+import {
   CHANNEL_PARTNER_LEAD_SOURCE,
   CHANNEL_PARTNER_TARGETS,
   allowPartnerLiveSends,
@@ -370,7 +376,7 @@ function govchainEmail(t: (typeof GOVCHAIN_TARGETS)[0]): {
  *      The dated waves are batteries, electronics, textiles and construction.
  *      The claim was not supported by our own sourced timeline.
  *
- * The rewrite only asserts what that file can back: the registry is live, the
+ * The rewrite only asserts what that file can back: the registry rules are adopted, the
  * next dated wave is whatever the timeline says it is, and cannabis is not yet
  * scheduled — which is stated plainly rather than implied away. Every date is
  * read from the timeline at send time, so this copy cannot go stale the way the
@@ -381,18 +387,18 @@ function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
   html: string;
 } {
   const now = new Date();
-  const registry = mostRecentInForce(now);
+  const registry = listMilestones().find((m) => m.id === 'central-registry') ?? null;
   const next = nextDeadline(now);
 
   const registryLine = registry
-    ? `The EU's Digital Product Passport registry went live on ${formatMilestoneDate(registry)} — it is operating now, not pending.`
-    : `The EU's Digital Product Passport registry is being stood up now.`;
+    ? `The EU adopted the rules for its Digital Product Passport registry (Implementing Regulation (EU) 2026/1778) on 16 July 2026.`
+    : `The EU is setting up its Digital Product Passport registry.`;
   const nextLine = next
     ? `The next mandated category is ${next.label} (${formatMilestoneDate(next)} — ${countdownLabel(next, now).toLowerCase()}), with further waves dated after it.`
     : "";
 
   const subject = registry
-    ? `EU DPP registry is live — what it means for ${t.company}`
+    ? `EU DPP registry rules adopted: what it means for ${t.company}`
     : `EU Digital Product Passport — what it means for ${t.company}`;
 
   const html = `
@@ -408,14 +414,14 @@ function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
   either way, and it pays for itself before any EU rule applies:</p>
 
   <ul>
-    <li>METRC sync — custody events anchored on Polygon at every handoff, so your state audit trail reconciles itself</li>
-    <li>COA hashing — lab certificates stored immutably; an altered result is detectable instead of arguable</li>
-    <li>Consumer-facing QR: full chain-of-custody plus test results on scan</li>
-    <li>Passport export in the EU DPP data model (ISO 18013-5 / EPCIS 2.0) — ready the day it is asked for</li>
+    <li>On our roadmap: METRC integration, with custody events anchored on Polygon at every handoff.</li>
+    <li>In development: hashing COAs on-chain, so an altered result would show up against the original.</li>
+    <li>Consumer-facing QR that opens the passport and its lab panel. On our roadmap: full chain of custody on scan.</li>
+    <li>On our roadmap: passport export in the EU DPP data model (EPCIS 2.0).</li>
   </ul>
 
-  <p>The near-term value is the METRC reconciliation and COA integrity, today, under the
-  rules you already operate under. The DPP readiness is what you get for free by doing it.</p>
+  <p>The near-term value is COA integrity under the rules you already operate under.
+  METRC integration is on our roadmap. The DPP readiness is what you get for free by doing it.</p>
 
   <p>Theater 1 is <strong>$499/month</strong> for 5,000 package scans, with a 7-day trial
   and no integration needed to see it working.
@@ -477,7 +483,7 @@ function qronEmail(t: (typeof QRON_TARGETS)[0]): {
   white-label API:</p>
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
-    <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
+    <li>Ed25519-signed authenticity certificate on every scan, anchored on Polygon (roadmap)</li>
     <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
     <!--
       Was "FTC EO 14392 compliant origin verification". Both halves were off.

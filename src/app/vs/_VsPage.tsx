@@ -150,8 +150,7 @@ export function VsPage({
           Switch to AuthiChain Today
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-sm text-zinc-500 leading-relaxed">
-          Start authenticating products in under a day. No enterprise contract,
-          transparent pricing, and blockchain-anchored proof your customers can verify.
+          No enterprise contract. Public verification is in development.
         </p>
         <Link
           href="/pricing"
@@ -165,7 +164,7 @@ export function VsPage({
 
       <footer className="px-6 py-12">
         <p className="text-center text-[10px] font-bold uppercase tracking-widest text-zinc-700">
-          AuthiChain · Blockchain Product Authentication · EU DPP Compliant · Polygon &amp; Bitcoin Anchored
+          AuthiChain · Product Authentication · EU DPP Readiness · Certificate contract on Polygon
         </p>
       </footer>
     </div>
