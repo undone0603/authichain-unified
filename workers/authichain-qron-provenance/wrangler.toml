@@ -15,6 +15,12 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 pattern = "authichain.com/api/qron-register*"
 zone_name = "authichain.com"
 
+# Primary host (govchain.us zone). Attached live 2026-09-25; declared here so
+# deploys stop removing it.
+[[routes]]
+pattern = "authichain.govchain.us/api/qron-register*"
+zone_name = "govchain.us"
+
 [env.production]
 name = "authichain-qron-provenance"
 

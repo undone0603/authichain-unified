@@ -27,100 +27,6 @@ compatibility_flags = ["nodejs_compat"]
 # the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
 # catch a `new_classes` regression in either file.
 
-# Mirrors of the apex path routes on the primary host authichain.govchain.us
-# (govchain.us zone; attached live 2026-09-25 via the API).
-[[routes]]
-pattern = "authichain.govchain.us/.well-known/jwks.json"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/protocol/jwks.json"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/protocol/issuer.json"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/protocol/launch-proof"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/automation/cron"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/v1/attestation"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/v1/attestation/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/guardrail/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/v1/agent-verify*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/x402*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/checkout"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/checkout/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/generate"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/generate/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/stripe/webhook"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/webhooks/stripe"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/attest"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/attest/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/attestations"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/api/attestations/*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/dashboard*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/dapp*"
-zone_name = "govchain.us"
-
-[[routes]]
-pattern = "authichain.govchain.us/generate*"
-zone_name = "govchain.us"
-
 [alias]
 playwright-core = "./playwright-unavailable.ts"
 
@@ -243,12 +149,121 @@ zone_name = "authichain.com"
 pattern = "authichain.com/generate*"
 zone_name = "authichain.com"
 
+# Public lead forms (LeadCapturePopup.tsx, SocialShareCTA.tsx, /book). More
+# specific than authichain-com's authichain.com/* glob so POSTs reach
+# worker-app/lead-routes.ts directly. Attached live 2026-09-25 via the API.
+[[routes]]
+pattern = "authichain.com/api/leads/capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/lead-capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/book"
+zone_name = "authichain.com"
+
 # Preferred app host. 522s when DNS still points at a dead origin (old Vercel).
 # Attaching the edge router here is the in-repo fix; owner must CNAME app
 # onto this zone and orange-cloud it (see docs/ROUTING.md).
 [[routes]]
 pattern = "app.authichain.com/*"
 zone_name = "authichain.com"
+
+# Mirrors of the apex path routes on the primary host authichain.govchain.us
+# (govchain.us zone; attached live 2026-09-25 via the API).
+[[routes]]
+pattern = "authichain.govchain.us/.well-known/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/issuer.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/launch-proof"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/automation/cron"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/attestation"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/attestation/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/guardrail/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/agent-verify*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/checkout"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/checkout/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/generate"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/generate/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/stripe/webhook"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/webhooks/stripe"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attest"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attest/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attestations"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attestations/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/dashboard*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/dapp*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/generate*"
+zone_name = "govchain.us"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
