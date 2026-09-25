@@ -63,10 +63,9 @@ test("/desk/pricing collects recovery email for plan checkout", async () => {
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
   assert.match(html, /name="email"/);
   assert.match(html, /\$49/);
-  assert.match(html, /\$499/);
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/theater_1"')
-  );
+  assert.match(html, /\$299/);
+  assert.doesNotMatch(html, /\$499/);
+  assert.equal(html.includes("theater_1"), false);
   assert.doesNotMatch(html, /1Nu1p/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
 });
@@ -87,6 +86,9 @@ test("/desk/status records telegram sitemap live and Base pending", async () => 
   assert.match(html, /telegram is in sitemap/);
   assert.match(html, /getCode on 8453 is still 0x/);
   assert.match(html, /#1138 on main/);
+  assert.match(html, /25 Sep 2026/);
+  assert.match(html, /does not call Stripe/);
+  assert.match(html, /Theater \$499 and \$1,499 are not listed/);
 });
 
 test("/desk/hubs does not claim W3C VC specs are implemented", async () => {
