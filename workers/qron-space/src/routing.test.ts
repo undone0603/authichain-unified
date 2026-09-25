@@ -303,20 +303,9 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     html,
     /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
   );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/theater_1"')
-  );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/theater_3"')
-  );
-  assert.match(
-    html,
-    /action="https:\/\/authichain\.com\/checkout\/theater_1"/
-  );
-  assert.match(
-    html,
-    /action="https:\/\/authichain\.com\/checkout\/theater_3"/
-  );
+  // Theater is unlisted since the #1234 catalog freeze.
+  assert.equal(html.includes("checkout/theater_1"), false);
+  assert.equal(html.includes("checkout/theater_3"), false);
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {

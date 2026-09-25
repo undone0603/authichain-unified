@@ -327,9 +327,10 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.match(html, />Start audit</);
   assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
   assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
-  // Held: trial card, DPP card, Basic line. Theater is not listed.
-  assert.match(html, /Free Trial/);
-  assert.match(html, /Try Free for 7 Days/);
+  // Held: free card (5 generations since the #1234 freeze), DPP card, Basic
+  // line. Theater is not listed.
+  assert.match(html, /Start with 5 free/);
+  assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
   assert.match(html, /\$299 credited toward AuthiChain Basic/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
@@ -337,6 +338,7 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
 
 test("qron pricing does not list Theater", () => {
   const html = renderEstatePricingPage("qron");
+  assert.doesNotMatch(html, /Theater|\$499|\$1,?499/);
   assert.doesNotMatch(html, /Subscribe — \$499\/mo/);
   assert.doesNotMatch(html, /Initialize Theater 1/);
   assert.doesNotMatch(html, /Contact for Theater 3/);
