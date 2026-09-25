@@ -20,7 +20,7 @@ const rows: ComparisonRow[] = [
   { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: 'Yes (self-serve signup)' },
-  { feature: 'NFT certificates of authenticity', authichain: 'Contract live; issuance in development', competitor: '—' },
+  { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
   { feature: 'No minimum enterprise contract', authichain: true, competitor: 'Self-serve plans available' },
   { feature: 'Starts at', authichain: 'Contact for pricing', competitor: 'From €230/yr (e-label)' },
 ];
@@ -32,7 +32,7 @@ const reasons = [
   },
   {
     title: 'Live in a Day, Not a Quarter',
-    desc: 'Import your catalog and issue authenticated codes the same day. No sales call required to start.',
+    desc: 'Import your catalog and issue authenticated codes the same day.',
   },
   {
     title: 'Pricing You Can Actually See',

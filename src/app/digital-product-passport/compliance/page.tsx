@@ -9,7 +9,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'EU DPP Compliance | StrainChain Protocol',
-  description: 'Details on EU 2024/1789 Digital Product Passport requirements and regulatory timelines.',
+  description: 'Details on (EU) 2024/1781 Digital Product Passport requirements and regulatory timelines.',
 };
 
 export default function StrainChainCompliance() {
@@ -28,7 +28,7 @@ export default function StrainChainCompliance() {
         </header>
 
         <h1 className="text-5xl md:text-7xl font-black mb-12 tracking-tighter uppercase leading-[0.9]">
-          EU 2024/1789 <br /> <span className="gold-text">MANDATE.</span>
+          (EU) 2024/1781 <br /> <span className="gold-text">MANDATE.</span>
         </h1>
 
         <div className="protocol-card p-10 bg-red-500/5 border-red-500/20 mb-16">

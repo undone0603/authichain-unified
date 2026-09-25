@@ -21,7 +21,6 @@ const rows: ComparisonRow[] = [
   { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: 'Via partners' },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: '—' },
-  { feature: 'No native token / crypto to buy', authichain: true, competitor: 'Gas can be sponsored (VIP-191)' },
   { feature: 'Starts at', authichain: 'Contact for pricing', competitor: '—' },
 ];
 

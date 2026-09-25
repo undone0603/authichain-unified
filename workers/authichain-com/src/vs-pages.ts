@@ -67,7 +67,7 @@ export const VS_PAGES: VsDefinition[] = [
       },
       {
         feature: "NFT certificates of authenticity",
-        authichain: "Contract live; issuance in development",
+        authichain: "In development",
         competitor: "—",
       },
       {
@@ -88,7 +88,7 @@ export const VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Live in a Day, Not a Quarter",
-        desc: "Import your catalog and issue authenticated codes the same day. No sales call required to start.",
+        desc: "Import your catalog and issue authenticated codes the same day.",
       },
       {
         title: "Pricing You Can Actually See",
@@ -138,7 +138,7 @@ export const VS_PAGES: VsDefinition[] = [
       },
       {
         feature: "NFT certificates of authenticity",
-        authichain: "Contract live; issuance in development",
+        authichain: "In development",
         competitor: "—",
       },
       {
@@ -196,11 +196,6 @@ export const VS_PAGES: VsDefinition[] = [
         feature: "Self-serve onboarding < 1 day",
         authichain: "In development",
         competitor: "—",
-      },
-      {
-        feature: "No native token / crypto to buy",
-        authichain: true,
-        competitor: "Gas can be sponsored (VIP-191)",
       },
       {
         feature: "Starts at",

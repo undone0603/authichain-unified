@@ -22,7 +22,7 @@ const rows: ComparisonRow[] = [
   { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: false },
   { feature: 'Serves SMB + enterprise', authichain: true, competitor: '—' },
-  { feature: 'NFT certificates of authenticity', authichain: 'Contract live; issuance in development', competitor: '—' },
+  { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
   { feature: 'Starts at', authichain: 'Contact for pricing', competitor: 'Enterprise quote' },
 ];
 

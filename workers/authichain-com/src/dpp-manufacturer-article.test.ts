@@ -42,7 +42,15 @@ test("article HTML uses the live DPP checkout and no AuthiChain Inc", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="\/api\/checkout\/dpp"/);
   assert.match(html, /href="\/pricing"/);
-  assert.match(html, /Everledger/);
+  assert.match(html, /Everledger \(2016–2023\)/);
+  assert.match(html, /entered liquidation in 2023/);
+  // The article copy no longer quotes $299. The shared catalog checkout
+  // button ("Pay $<price> on Stripe") is rendered by estateCtaBand and is out
+  // of scope for this copy change, so strip it before checking.
+  const copy = html.replace(/<div class="checkout-payment-link"[\s\S]*?<\/div>/g, "");
+  assert.doesNotMatch(copy, /\$299/);
+  assert.doesNotMatch(html, /Everledger-style/);
+  assert.doesNotMatch(html, /vs Everledger/);
   assert.match(html, /18 Feb 2027/);
   assert.match(html, /ZACHARY KIETZMAN/);
   assert.doesNotMatch(html, /AuthiChain Inc/i);
