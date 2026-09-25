@@ -5358,6 +5358,262 @@
     }
   },
   {
+    "slug": "eu-green-transition-directive-environmental-claims",
+    "keyword": "eu green transition directive environmental claims",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "EU Green Transition Directive Environmental Claims | QRON",
+    "metaDescription": "The Empowering Consumers for the Green Transition Directive applies from 27 September 2026 and prohibits a generic environmental claim — “eco-friendly,”.",
+    "h1": "EU Green Transition Directive Environmental Claims",
+    "bodyHtml": "<p>The Empowering Consumers for the Green Transition Directive applies from 27 September 2026 and prohibits a generic environmental claim — “eco-friendly,” “climate neutral” — unless it is backed by evidence, independent of whatever happens to the separate Green Claims Directive proposal the Commission has moved to withdraw.</p><h2>Why QRON</h2><ul><li>A record signed with Ed25519 and anchored on-chain is evidence a regulator or a buyer can check independently, not a claim QRON is asking them to take on trust</li><li>The substantiation duty falls on whoever makes the claim, which is the same reason verification here runs offline with no account and no call back to QRON</li><li>Apache-2.0 licensing means a compliance team’s own auditor can run the reference verifier against the record directly, instead of relying on a vendor’s dashboard</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Does the Green Transition Directive replace the Green Claims Directive?</h3><p>No — they are separate instruments. The Commission has moved to withdraw the standalone Green Claims Directive proposal, but the Green Transition Directive (an amendment to the Unfair Commercial Practices Directive) applies from 27 September 2026 regardless of that outcome.</p><h3>What counts as evidence under the directive?</h3><p>The directive does not mandate a specific format. It requires a claim to be substantiated with evidence a consumer or regulator can access — a signed, independently checkable record meets that bar more directly than an unlinked internal report, though businesses should confirm specifics with counsel.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — EU Green Transition Directive Environmental Claims",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "The Empowering Consumers for the Green Transition Directive applies from 27 September 2026 and prohibits a generic environmental claim — “eco-friendly,” “climate neutral” — unless it is backed by evidence, independent of whatever happens to the separate Green Claims Directive proposal the Commission has moved to withdraw.",
+          "url": "https://qron.space/p/eu-green-transition-directive-environmental-claims"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Green Transition Directive Environmental Claims",
+              "item": "https://qron.space/p/eu-green-transition-directive-environmental-claims"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Green Transition Directive replace the Green Claims Directive?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — they are separate instruments. The Commission has moved to withdraw the standalone Green Claims Directive proposal, but the Green Transition Directive (an amendment to the Unfair Commercial Practices Directive) applies from 27 September 2026 regardless of that outcome."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What counts as evidence under the directive?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The directive does not mandate a specific format. It requires a claim to be substantiated with evidence a consumer or regulator can access — a signed, independently checkable record meets that bar more directly than an unlinked internal report, though businesses should confirm specifics with counsel."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-epcis-interoperable-data-exchange-requirement",
+    "keyword": "dscsa epcis interoperable data exchange requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA EPCIS Interoperable Data Exchange | AuthiChain",
+    "metaDescription": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not.",
+    "h1": "DSCSA EPCIS Interoperable Data Exchange Requirement",
+    "bodyHtml": "<p>DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.</p><h2>Why AuthiChain</h2><ul><li>AuthiChain hashes and anchors the EPCIS event record itself, so a partner can confirm the file it received matches what was issued, not just that a file arrived</li><li>Ed25519 signing runs on the event data your existing EPCIS repository already emits — protocol/SPEC.md aligns with EPCIS 2.0 as the record source, not a replacement schema</li><li>A verifier checks the record offline; a dispenser deciding whether to quarantine a shipment does not need an AuthiChain account to confirm what they received is genuine</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does DSCSA require blockchain?</h3><p>No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one.</p><h3>What happens if a dispenser can’t verify a shipment’s data?</h3><p>DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA EPCIS Interoperable Data Exchange Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.",
+          "url": "https://authichain.com/p/dscsa-epcis-interoperable-data-exchange-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA EPCIS Interoperable Data Exchange Requirement",
+              "item": "https://authichain.com/p/dscsa-epcis-interoperable-data-exchange-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does DSCSA require blockchain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What happens if a dispenser can’t verify a shipment’s data?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-chemicals-scope-study",
+    "keyword": "eu digital product passport chemicals scope study",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Chemicals Scope | AuthiChain",
+    "metaDescription": "The Commission’s first ESPR Working Plan (2025–2030) excludes chemicals from its priority product list — postponed over demarcation issues with REACH and.",
+    "h1": "EU Digital Product Passport Chemicals Scope Study",
+    "bodyHtml": "<p>The Commission’s first ESPR Working Plan (2025–2030) excludes chemicals from its priority product list — postponed over demarcation issues with REACH and other existing chemical rules — with a scoping study feeding the decision on whether a future delegated act brings them in before the plan’s 2028 mid-term review.</p><h2>Why AuthiChain</h2><ul><li>No chemicals delegated act exists yet, so there is no required passport schema to build against today — a category AuthiChain tracks rather than guesses at</li><li>The same record structure already used for textiles, batteries, and electronics — a signed Verifiable Credential anchored per protocol/SPEC.md — extends to a chemicals passport once a delegated act defines the required fields</li><li>REACH safety data sheets and an eventual DPP are not the same obligation; a signed record can carry REACH-required data today without waiting on a chemicals delegated act to exist</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/dpp\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do chemical products need a Digital Product Passport now?</h3><p>No. Chemicals are excluded from the first ESPR Working Plan’s priority list. A scoping study is examining future inclusion, and any requirement would arrive through a category-specific delegated act that has not been proposed yet.</p><h3>Why were chemicals left out of the first working plan?</h3><p>The Commission cited overlapping and sometimes conflicting requirements with REACH and other existing chemical regulation as the reason for postponing chemicals, rather than including them in the same first wave as textiles, batteries, and electronics.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Chemicals Scope Study",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Commission’s first ESPR Working Plan (2025–2030) excludes chemicals from its priority product list — postponed over demarcation issues with REACH and other existing chemical rules — with a scoping study feeding the decision on whether a future delegated act brings them in before the plan’s 2028 mid-term review.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-chemicals-scope-study"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Chemicals Scope Study",
+              "item": "https://authichain.com/p/eu-digital-product-passport-chemicals-scope-study"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do chemical products need a Digital Product Passport now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Chemicals are excluded from the first ESPR Working Plan’s priority list. A scoping study is examining future inclusion, and any requirement would arrive through a category-specific delegated act that has not been proposed yet."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why were chemicals left out of the first working plan?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The Commission cited overlapping and sometimes conflicting requirements with REACH and other existing chemical regulation as the reason for postponing chemicals, rather than including them in the same first wave as textiles, batteries, and electronics."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cmmc-2-0-supply-chain-subcontractor-flow-down-requirement",
+    "keyword": "cmmc 2.0 supply chain subcontractor flow down requirement",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "CMMC 2.0 Supply Chain Subcontractor Flow Down | GovChain",
+    "metaDescription": "DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day.",
+    "h1": "CMMC 2.0 Supply Chain Subcontractor Flow Down Requirement",
+    "bodyHtml": "<p>DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day program review, but Phase 1 self-assessment and the prime contractor’s duty to flow certification requirements down to subcontractors remain in effect.</p><h2>Why GovChain</h2><ul><li>A prime confirming a subcontractor’s CMMC self-assessment level needs a record it can check without taking the subcontractor’s word for it — the same offline-verification problem GovChain’s protocol solves for any signed claim</li><li>Flow-down obligations do not pause when a phase is suspended: a prime still has to know which CMMC level applies to which subcontractor and what data they are cleared to receive</li><li>A signed, anchored record of a subcontractor’s attested level is checkable by an auditor months later, without depending on whichever internal spreadsheet tracked it at the time</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is CMMC 2.0 paused for all contractors?</h3><p>No. DoD suspended Phase 2 — the move to mandatory third-party (C3PAO) certification for Level 2 contracts — pending a program review announced in July 2026. Phase 1 self-assessment requirements, in effect since November 2025, were not suspended.</p><h3>Do subcontractors still need to meet CMMC requirements during the pause?</h3><p>Flow-down still applies: a prime contractor remains responsible for ensuring subcontractors meet the CMMC level appropriate to the federal contract information or controlled unclassified information they handle, under whichever phase requirement is currently in effect.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — CMMC 2.0 Supply Chain Subcontractor Flow Down Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day program review, but Phase 1 self-assessment and the prime contractor’s duty to flow certification requirements down to subcontractors remain in effect.",
+          "url": "https://govchain.us/p/cmmc-2-0-supply-chain-subcontractor-flow-down-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CMMC 2.0 Supply Chain Subcontractor Flow Down Requirement",
+              "item": "https://govchain.us/p/cmmc-2-0-supply-chain-subcontractor-flow-down-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is CMMC 2.0 paused for all contractors?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. DoD suspended Phase 2 — the move to mandatory third-party (C3PAO) certification for Level 2 contracts — pending a program review announced in July 2026. Phase 1 self-assessment requirements, in effect since November 2025, were not suspended."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do subcontractors still need to meet CMMC requirements during the pause?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Flow-down still applies: a prime contractor remains responsible for ensuring subcontractors meet the CMMC level appropriate to the federal contract information or controlled unclassified information they handle, under whichever phase requirement is currently in effect."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "blockchain-qr-code-for-cannabis",
     "keyword": "blockchain qr code for cannabis",
     "brand": "StrainChain",
@@ -9042,6 +9298,134 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Not yet. Production signatures remain Ed25519 — not post-quantum secure — until the reserved digest.pqcStatus field is bound to NIST FIPS 204 ML-DSA-65, a slot the spec reserves but hasn’t activated."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "metrc-consumer-qr-code-vs-verifiable-credential",
+    "keyword": "metrc consumer qr code vs verifiable credential",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Metrc Consumer QR Code Vs Verifiable | StrainChain",
+    "metaDescription": "Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports.",
+    "h1": "Metrc Consumer QR Code Vs Verifiable Credential",
+    "bodyHtml": "<p>Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports — a signed StrainChain record is a Verifiable Credential a customer’s own device can check without trusting that server to stay honest or stay up.</p><h2>Why StrainChain</h2><ul><li>A Metrc consumer QR code resolves through Metrc’s own systems; a StrainChain record verifies offline with Ed25519, the same distinction protocol/SPEC.md draws between attestation and verification</li><li>State track-and-trace answers a regulatory question — was this batch logged correctly; a signed COA record answers a different one — has this specific result been altered since the lab issued it</li><li>StrainChain runs alongside Metrc rather than replacing it: the batch and package IDs Metrc already assigns are what a StrainChain record signs over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/plan/strainchain_passport\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/api/checkout/plan/strainchain_farm\" method=\"get\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">Receipt and abandoned-checkout recovery. Not a newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does this replace Metrc’s consumer QR code?</h3><p>No — it runs alongside it. Metrc’s code shows the state-mandated track-and-trace data; a StrainChain record adds a signature over the lab result that a customer’s device checks independently, without calling any server.</p><h3>If I have to ask a vendor to confirm a result, is that verification?</h3><p>No — that is attestation. Verification you don’t have to request is the distinction that matters: a StrainChain record verifies against a public key with an offline verifier, not by phoning in to ask if it’s real.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "StrainChain — Metrc Consumer QR Code Vs Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "StrainChain",
+            "url": "https://strainchain.io"
+          },
+          "description": "Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports — a signed StrainChain record is a Verifiable Credential a customer’s own device can check without trusting that server to stay honest or stay up.",
+          "url": "https://strainchain.io/p/metrc-consumer-qr-code-vs-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Metrc Consumer QR Code Vs Verifiable Credential",
+              "item": "https://strainchain.io/p/metrc-consumer-qr-code-vs-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this replace Metrc’s consumer QR code?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it runs alongside it. Metrc’s code shows the state-mandated track-and-trace data; a StrainChain record adds a signature over the lab result that a customer’s device checks independently, without calling any server."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "If I have to ask a vendor to confirm a result, is that verification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — that is attestation. Verification you don’t have to request is the distinction that matters: a StrainChain record verifies against a public key with an offline verifier, not by phoning in to ask if it’s real."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "model-context-protocol-product-verification-tool",
+    "keyword": "model context protocol product verification tool",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "Model Context Protocol Product Verification Tool | QRON",
+    "metaDescription": "An AI shopping agent calling a product-verification tool over MCP gets back whatever the tool returns — a genuine offline Ed25519 verdict, or a.",
+    "h1": "Model Context Protocol Product Verification Tool",
+    "bodyHtml": "<p>An AI shopping agent calling a product-verification tool over MCP gets back whatever the tool returns — a genuine offline Ed25519 verdict, or a plausible-sounding string from a server with no signature behind it — and the protocol itself has no opinion on which, which is why the verdict has to be checkable independent of the agent that requested it.</p><h2>Why QRON</h2><ul><li>A QRON MCP tool call returns the same three verdicts protocol/SPEC.md §5.1 defines — verified, valid-unanchored, invalid — not a paraphrase an agent could hallucinate around</li><li>The tool’s response includes the record and signature an agent’s own downstream systems can re-verify, instead of asking the agent to trust the tool call at face value</li><li>MCP standardizes how an agent discovers and calls the tool; it does not standardize what the tool is honest about, which is a protocol-verification-layer distinction, not an MCP one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Does MCP guarantee an AI agent gets an honest verification result?</h3><p>No. MCP standardizes how a tool is discovered and called, not what the tool returns. An agent — or the person relying on its output — still has to be able to check the underlying record and signature independently rather than trust the tool’s response.</p><h3>Can an agent verify a product without calling QRON’s server?</h3><p>Yes for the cryptographic check — Ed25519 signature verification runs offline once the agent has the record and public key. An MCP tool call is a convenience for fetching that record, not a requirement for verifying it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — Model Context Protocol Product Verification Tool",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "An AI shopping agent calling a product-verification tool over MCP gets back whatever the tool returns — a genuine offline Ed25519 verdict, or a plausible-sounding string from a server with no signature behind it — and the protocol itself has no opinion on which, which is why the verdict has to be checkable independent of the agent that requested it.",
+          "url": "https://qron.space/p/model-context-protocol-product-verification-tool"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Model Context Protocol Product Verification Tool",
+              "item": "https://qron.space/p/model-context-protocol-product-verification-tool"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does MCP guarantee an AI agent gets an honest verification result?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. MCP standardizes how a tool is discovered and called, not what the tool returns. An agent — or the person relying on its output — still has to be able to check the underlying record and signature independently rather than trust the tool’s response."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can an agent verify a product without calling QRON’s server?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes for the cryptographic check — Ed25519 signature verification runs offline once the agent has the record and public key. An MCP tool call is a convenience for fetching that record, not a requirement for verifying it."
               }
             }
           ]
