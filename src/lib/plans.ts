@@ -1,6 +1,12 @@
 // --- QRON Plans — mapped to real Stripe products/prices ---
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
+//
+// 2026-09-24 freeze: public listed SKUs are free(5), starter $29, creator $99,
+// dpp_readiness $299, strainchain_passport $49. Theater stays in this file so
+// webhooks still resolve price IDs; listed:false keeps them off /pricing.
+// Stripe products are NOT archived this pass.
+// generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
 export type PlanId =
   | "free"
@@ -20,7 +26,7 @@ export interface Plan {
   price: number;
   price_suffix?: string;
   description: string;
-  generations: number; // 0 = unlimited
+  generations: number; // 0 = no grant; 999999 = unlimited sentinel
   stripe_price_id: string | null;
   stripe_payment_link?: string;
   stripe_mode: "payment" | "subscription" | null;
@@ -34,25 +40,26 @@ export interface Plan {
    * appear on the QRON pricing page just because it gained a Stripe price.
    */
   brand?: "qron" | "strainchain";
+  /** When false, listedPlans() hides the card. Webhook lookup still works. */
+  listed?: boolean;
 }
 
 export const PLANS: Plan[] = [
   {
     id: "free",
-    name: "Free Trial",
+    name: "Free",
     price: 0,
-    description: "Try every Pro feature free for 7 days",
-    generations: 0,
+    description: "5 signed generations. Lookup verify only. No card.",
+    generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
     features: [
-      "7-day free trial — full access",
-      "All Pro generation modes",
-      "Cancel anytime before it ends",
-      "Card required · no charge during trial",
+      "5 generations",
+      "Lookup verify only (no GPT-4V)",
+      "Then Starter $29 or DPP $299",
     ],
-    cta: "Try Free for 7 Days",
+    cta: "Start with 5 free",
   },
   {
     id: "starter",
@@ -60,8 +67,6 @@ export const PLANS: Plan[] = [
     price: 29,
     description: "100 AI QR generations, never expire",
     generations: 100,
-    // prod_VJR6xofjGFoP1j. The previous price (price_1TGOM9…) charged $49
-    // for "QRON Single Design", and its link was not active on this account.
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
@@ -80,8 +85,6 @@ export const PLANS: Plan[] = [
     price: 99,
     description: "500 AI QR generations — best value",
     generations: 500,
-    // prod_VJR6imfy3FRa7z. The previous price (price_1TGAiZ…) charged $99.99
-    // for "1000 Credits", and its link was not active on this account.
     stripe_price_id: "price_1UIoEYGqTruSqV8TCXTNipvh",
     stripe_payment_link: "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F",
     stripe_mode: "payment",
@@ -107,6 +110,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A",
     stripe_mode: "subscription",
     tier: "enterprise",
+    listed: false,
     features: [
       "5,000 Industrial generations / mo",
       "Full DPP Data Integration",
@@ -122,11 +126,12 @@ export const PLANS: Plan[] = [
     price: 1499,
     price_suffix: "/month",
     description: "The Ultimate Industrial & Luxury Security",
-    generations: 0,
+    generations: 999999,
     stripe_price_id: "price_1TmDKQGqTruSqV8TvSILgzXM",
     stripe_payment_link: "https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B",
     stripe_mode: "subscription",
     tier: "enterprise",
+    listed: false,
     features: [
       "Unlimited Industrial Artifacts",
       "Custom AI Model Training",
@@ -155,11 +160,6 @@ export const PLANS: Plan[] = [
     ],
     cta: "Start DPP Readiness Audit",
   },
-  // --- StrainChain passport SKUs -------------------------------------------
-  //
-  // Live Stripe prices (prod_VIJqbTJOoGT1I3 / prod_VIJxYUXwNWQzh4). Passport
-  // has a published Payment Link; Farm Plan uses email-gated checkout on
-  // authichain.com. See docs/strategy/strainchain-genetics-passport.md §3.
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
@@ -203,6 +203,14 @@ export const PLANS: Plan[] = [
   },
 ];
 
+export const PUBLIC_PLAN_IDS = [
+  "free",
+  "starter",
+  "creator",
+  "dpp_readiness",
+  "strainchain_passport",
+] as const;
+
 /**
  * A plan can be shown and sold only when a real Stripe price backs it.
  *
@@ -219,7 +227,12 @@ export function isPurchasable(plan: Plan): boolean {
 
 /** Plans safe to display on a given brand's pricing page. */
 export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
-  return PLANS.filter(p => (p.brand ?? "qron") === brand && isPurchasable(p));
+  return PLANS.filter(
+    p =>
+      (p.brand ?? "qron") === brand &&
+      isPurchasable(p) &&
+      p.listed !== false
+  );
 }
 
 /** Stripe metadata.offer value for the autonomous DPP revenue loop. */
@@ -291,7 +304,7 @@ export function planByAmountCents(
 
 // Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {
-  free: 0,
+  free: 5,
   starter: 100,
   creator: 500,
   studio: 2000,
