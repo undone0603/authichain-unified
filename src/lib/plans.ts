@@ -230,8 +230,37 @@ export function planById(id: PlanId): Plan | undefined {
   return PLANS.find(p => p.id === id);
 }
 
-/** Durable Stripe Payment Link for a catalogue plan, if one exists. */
+/**
+ * Stable, bot-safe checkout URL Marketing, sites and outreach link to.
+ *
+ * GET renders a confirm page (never calls Stripe); only a human POST of the
+ * confirm form creates a Checkout Session. Served by workers/authichain-com.
+ */
+export const GATED_CHECKOUT_ORIGIN = "https://authichain.com";
+
+export function gatedCheckoutUrl(id: PlanId): string {
+  return `${GATED_CHECKOUT_ORIGIN}/checkout/${id}`;
+}
+
+/**
+ * Public checkout link for a catalogue plan.
+ *
+ * Used to return the raw buy.stripe.com Payment Link, but opening a Payment
+ * Link on GET creates a Checkout Session — so link scanners, email security
+ * gateways and chat previews created ~28 unpaid sessions/day. Every public
+ * surface now gets the gated authichain.com/checkout/<plan> URL instead.
+ * Use `planStripePaymentLink()` only server-side after a human confirmed.
+ */
 export function planPaymentLink(id: PlanId): string | undefined {
+  const plan = planById(id);
+  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link)) {
+    return undefined;
+  }
+  return gatedCheckoutUrl(id);
+}
+
+/** Raw Stripe Payment Link. Never render this in HTML/email (GET opens a session). */
+export function planStripePaymentLink(id: PlanId): string | undefined {
   return planById(id)?.stripe_payment_link;
 }
 

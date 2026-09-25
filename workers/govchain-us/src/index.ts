@@ -2231,6 +2231,11 @@ async function proxyToApp(request: Request, url: URL, origin: string): Promise<R
 export default {
   async fetch(request: Request, env: SupabaseEnv): Promise<Response> {
     const url = new URL(request.url);
+    // /verify 404ed on this apex (linked from /onboard). The public verify
+    // page lives on authichain.com.
+    if (url.pathname === "/verify" || url.pathname === "/verify/") {
+      return Response.redirect(`https://authichain.com/verify${url.search}`, 302);
+    }
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
     }

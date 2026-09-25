@@ -20,10 +20,10 @@ describe("genetics routes", () => {
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+      html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
     assert.ok(
-      html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
     );
   });
 
@@ -37,11 +37,11 @@ describe("genetics routes", () => {
     assert.match(html, /never transcribed/i);
     assert.match(html, /\/genetics\/mendo-love-farms\/vt-26/);
     assert.match(html, /\/genetics\/mendo-love-farms\/lt-63/);
-    assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
+    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+      html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
     assert.ok(html.includes("/m/mendo"));
     assert.match(html, /11\.618%/);
@@ -59,11 +59,11 @@ describe("genetics routes", () => {
     assert.doesNotMatch(html, /Totals only/);
     assert.match(html, /Confirmed in writing|Claimed/);
     assert.match(html, /never transcribed/i);
-    assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
+    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+      html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
   });
 
@@ -74,11 +74,11 @@ describe("genetics routes", () => {
     assert.match(html, /No CoA in library/);
     assert.match(html, /Sibling chemistry is not a substitute/);
     assert.doesNotMatch(html, /Peak total THCV 11\./);
-    assert.ok(html.includes("/api/checkout/plan/strainchain_passport"));
+    assert.ok(html.includes("https://authichain.com/checkout/strainchain_passport"));
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+      html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
   });
 
@@ -96,7 +96,7 @@ describe("genetics routes", () => {
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+      html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
   });
 

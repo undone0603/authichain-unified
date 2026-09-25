@@ -35,7 +35,7 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 };
 
 const CHECKOUT =
-  "https://authichain.govchain.us/api/checkout/plan/strainchain_passport";
+  "https://authichain.com/checkout/strainchain_passport";
 const MENDO_MICRO = "https://authichain.govchain.us/m/mendo";
 
 const PROVENANCE_LABEL: Record<Provenance, string> = {

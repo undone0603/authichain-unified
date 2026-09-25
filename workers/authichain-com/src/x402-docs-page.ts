@@ -383,7 +383,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_passport",
+        action: "https://authichain.com/checkout/strainchain_passport",
         label: `Passport checkout — $${planUsd("strainchain_passport")}`,
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
@@ -397,13 +397,13 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_farm",
+        action: "https://authichain.com/checkout/strainchain_farm",
         label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
         inputId: "x402-farm-email",
         formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: `DPP checkout — $${planUsd("dpp_readiness")}`,
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",

@@ -46,7 +46,7 @@ describe("seo-pages loader", () => {
     expect(page?.jsonLd["@type"]).toBe("Article");
     expect(page?.bodyHtml).toContain("authentic agentic economy");
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(page?.bodyHtml).toContain('name="email"');
     expect(page?.bodyHtml).toContain('href="https://authichain.govchain.us/x402"');
@@ -60,13 +60,13 @@ describe("seo-pages loader", () => {
     const page = getSeoPageBySlug("cannabis-coa-verification-blockchain");
     expect(page).not.toBeNull();
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_farm"'
+      'action="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(page?.bodyHtml).toContain(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
   });
 });
@@ -134,16 +134,14 @@ describe("generated SEO money-path CTAs", () => {
     const textiles = getSeoPageBySlug("eu-digital-product-passport-textiles");
     expect(batteries?.bodyHtml).toContain('name="email"');
     expect(batteries?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
-    expect(batteries?.bodyHtml).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/dpp"'
-    );
+    expect(batteries?.bodyHtml).not.toContain('href="/api/checkout');
     expect(batteries?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(textiles?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(batteries?.bodyHtml).toContain(
       'href="https://authichain.govchain.us/pricing"'
@@ -156,16 +154,16 @@ describe("generated SEO money-path CTAs", () => {
       "made-in-america-origin-claim-substantiation"
     );
     expect(musa?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(musa?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(musa?.bodyHtml).toContain(
       'href="https://authichain.govchain.us/made-in-america"'
     );
     expect(origin?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(origin?.bodyHtml).toContain(
       'href="https://authichain.govchain.us/made-in-america"'
@@ -176,13 +174,11 @@ describe("generated SEO money-path CTAs", () => {
     const trumark = getSeoPageBySlug("trumark-product-authentication-seal");
     expect(trumark?.bodyHtml).toContain('name="email"');
     expect(trumark?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(trumark?.bodyHtml).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
-    );
+    expect(trumark?.bodyHtml).not.toContain('href="/api/checkout');
     expect(trumark?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(trumark?.bodyHtml).toContain(
       'href="https://authichain.govchain.us/trumark"'
@@ -193,13 +189,11 @@ describe("generated SEO money-path CTAs", () => {
     const cannabis = getSeoPageBySlug("blockchain-qr-code-for-cannabis");
     expect(cannabis?.bodyHtml).toContain('name="email"');
     expect(cannabis?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(cannabis?.bodyHtml).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
-    );
+    expect(cannabis?.bodyHtml).not.toContain('href="/api/checkout');
     expect(cannabis?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'
@@ -240,23 +234,21 @@ describe("generated SEO money-path CTAs", () => {
   it("routes seed CTAs to the same live money URLs as generated hubs", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(dpp?.bodyHtml).toContain('name="email"');
     expect(dpp?.bodyHtml).toContain('href="https://authichain.govchain.us/pricing"');
-    expect(dpp?.bodyHtml).not.toContain(
-      'href="https://authichain.govchain.us/api/checkout/dpp"'
-    );
+    expect(dpp?.bodyHtml).not.toContain('href="/api/checkout');
     expect(dpp?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
 
     const cannabis = getSeoPageBySlug("cannabis-blockchain-provenance");
     expect(cannabis?.bodyHtml).toContain(
-      'action="https://authichain.govchain.us/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'

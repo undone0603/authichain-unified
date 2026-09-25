@@ -28,10 +28,10 @@ describe("authentic agentic economy page", () => {
       "Agents can pay. They still need to know if it is real."
     );
     expect(html).toContain('name="email"');
-    expect(html).toContain('action="/api/checkout/dpp"');
-    expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(html).toContain('href="/x402"');
     expect(html).toContain('href="/onboard"');

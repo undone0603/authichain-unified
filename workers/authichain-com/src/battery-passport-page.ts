@@ -30,7 +30,7 @@ import {
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
 export const BATTERY_PASSPORT_CANONICAL = `https://authichain.govchain.us${BATTERY_PASSPORT_PATH}`;
-export const BATTERY_CHECKOUT_ACTION = "/api/checkout/dpp";
+export const BATTERY_CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
 export const BATTERY_UTM = {
   utm_source: "site",
   utm_medium: "offer-page",
@@ -64,7 +64,7 @@ function checkoutForm(id: string, label: string): string {
   const hidden = Object.entries(BATTERY_UTM)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`)
     .join("");
-  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="get" id="${id}">
+  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="post" id="${id}">
   <label class="checkout-email-label" for="${id}-email">Work email
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>

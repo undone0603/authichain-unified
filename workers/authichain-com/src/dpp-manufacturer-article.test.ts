@@ -33,14 +33,14 @@ test("article HTML uses the live DPP checkout and no AuthiChain Inc", () => {
     html,
     /rel="canonical" href="https:\/\/authichain\.govchain\.us\/blog\/eu-dpp-manufacturer"/
   );
-  assert.match(html, /action="\/api\/checkout\/dpp"/);
-  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /Everledger/);
   assert.match(html, /18 Feb 2027/);

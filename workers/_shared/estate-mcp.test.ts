@@ -35,7 +35,7 @@ function httpsUrl(raw: string): URL {
 
 function stripeLink(raw: string): URL {
   const url = httpsUrl(raw);
-  assert.equal(url.hostname, "buy.stripe.com");
+  assert.equal(url.hostname, "authichain.com");
   return url;
 }
 
@@ -45,7 +45,7 @@ test("recognizes sister MCP paths and ignores checkout", () => {
   assert.equal(isSisterMcpPath("/api/mcp"), true);
   assert.equal(isSisterMcpPath("/.well-known/mcp.json"), true);
   assert.equal(isSisterMcpPath("/api/x402"), false);
-  assert.equal(isSisterMcpPath("/api/checkout/dpp"), false);
+  assert.equal(isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"), false);
   assert.equal(isSisterMcpPath("/pricing"), false);
 });
 
@@ -318,7 +318,7 @@ test("HEAD /mcp is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterMcp(req("qron.space", "/api/checkout/dpp"), "qron"),
+    await tryHandleSisterMcp(req("qron.space", "https://authichain.com/checkout/dpp_readiness"), "qron"),
     null
   );
   assert.equal(
