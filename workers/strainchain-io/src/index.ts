@@ -57,7 +57,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="2" fill="#e2e8f0">StrainChain</text>
   <line x1="240" y1="416" x2="600" y2="416" stroke="#10b981" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="32" font-weight="300" fill="#64748b">Cannabis Supply Chain on Blockchain</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#3d5a48">Seed-to-Shelf NFTs · METRC Sync · 4-Layer Audit Trail</text>
+  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#3d5a48">Seed-to-Shelf NFTs · 4-Layer Audit Trail</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#10b981">STRAINCHAIN.IO</text>
 </svg>`;
 
@@ -2237,7 +2237,6 @@ ${estateTrust([
   { value: "—", label: "Lab tests logged", id: "sc-lab" },
   { value: "—", label: "Chain events", id: "sc-chain" },
   { value: "—", label: "Dispensary receipts", id: "sc-dispensary" },
-  { value: "METRC", label: "State system sync" },
 ])}
 <script>
 fetch('https://strainchain.io/api/strainchain/stats')
@@ -2266,7 +2265,6 @@ ${estateFeatures(
   "Particular advantages over spreadsheets, generic seed-to-sale, and paper COAs.",
   [
     { title: "COA-backed strain identity", body: "Each passport is built from the lab panel itself, and discrepancies are shown. On-chain batch records are in development." },
-    { title: "METRC and BioTrack sync", body: "Bidirectional tag and manifest flow so operators are not double-keying state systems." },
     { title: "Regulator-ready export", body: "The four-layer audit trail exports an inspection-ready evidence package on demand." },
     { title: "Proof at the shelf", body: "A QR code on the package opens the passport and its lab panel. On-chain provenance is in development." },
     { title: "Genetics passports", body: "Public cultivar records live at /genetics. Totals are derived from the lab panel at render time." },
@@ -2280,7 +2278,6 @@ ${estateFeatures(
     <h2>Compliance layer</h2>
     <p class="section-sub">Pre-built integrations with major state tracking systems.</p>
     <div class="compliance-grid">
-      <div class="compliance-card"><h3>METRC</h3><p>Real-time tag sync and automatic manifest generation for METRC states.</p></div>
       <div class="compliance-card"><h3>BioTrack</h3><p>Bidirectional sync for WA, NH, NM, and HI seed-to-sale systems.</p></div>
       <div class="compliance-card"><h3>CCRS (California)</h3><p>DCC reporting automated via API with an on-chain backup.</p></div>
       <div class="compliance-card"><h3>Audit evidence export</h3><p>Inspection-ready reports from the four-layer trail in one click.</p></div>
@@ -2306,7 +2303,6 @@ ${estateFeatures(
     <h2>Integrations</h2>
     <p class="section-sub">Plug into the existing stack. No rip-and-replace required.</p>
     <div class="integrations">
-      <div class="estate-card">METRC</div>
       <div class="estate-card">BioTrack</div>
       <div class="estate-card">CCRS</div>
       <div class="estate-card">LeafLogix</div>
