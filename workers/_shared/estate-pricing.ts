@@ -376,7 +376,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       primary: false,
     },
     plansNote:
-      "Only plans with a Stripe price or Payment Link are listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
+      "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand.",
