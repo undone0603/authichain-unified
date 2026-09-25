@@ -32,13 +32,14 @@ describe("canonical web3 identity lock", () => {
   it("keeps payTo, Coinbase Smart Wallet, and NFT deployer distinct", () => {
     const named = [
       TOKENOMICS_PAY_TO,
-      QRON_HOLDER_EOA,
       COINBASE_SMART_WALLET,
       NFT_DEPLOYER_EOA,
+      QRON_ERC20,
     ].map(a => a.toLowerCase());
     expect(new Set(named).size).toBe(4);
     expect(TOKENOMICS_PAY_TO).toBe(X402_PUBLISHED_PAY_TO);
-    expect(TOKENOMICS_PAY_TO.toLowerCase()).not.toBe(QRON_HOLDER_EOA.toLowerCase());
+    // payTo is the owner's keyed EOA, which is also the $QRON holder.
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(QRON_HOLDER_EOA.toLowerCase());
     expect(QRON_HOLDER_EOA).toBe(
       "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
     );
