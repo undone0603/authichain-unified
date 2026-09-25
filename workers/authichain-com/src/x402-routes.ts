@@ -13,9 +13,10 @@
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid; 503
- *      registry_not_bound once a proof arrives, before any settlement, until
- *      a seal-registry lookup is bound on this path (X402_REGISTRY_NOT_BOUND)
+ * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid; paid
+ *      calls are forwarded over the VERIFY_APP service binding to the Next
+ *      route, which holds the seal-registry lookup. With no binding, 503
+ *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND)
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0xaebf…e437. Do not rebind
@@ -23,6 +24,7 @@
  */
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
@@ -31,11 +33,13 @@ import {
   x402OpenApiDocument,
   x402PriceUsd,
   x402ScanFanout,
+  type X402EnvVars,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 
-export type X402Env = X402HealthEnv;
+export type X402Env = X402EnvVars;
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -113,7 +117,7 @@ function isPaidPath(pathname: string): boolean {
 
 function hydrateX402(env?: X402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -173,7 +177,11 @@ async function openApiResponse(env?: X402Env): Promise<Response> {
   return json(200, await x402OpenApiDocument(healthEnv(env)));
 }
 
-async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
+async function agentVerify(
+  request: Request,
+  env?: X402Env,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
@@ -192,13 +200,20 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
+  if (verifyApp) {
+    return forwardPaidVerify(
+      verifyApp,
+      request,
+      proofHeader,
+      await request.text()
+    );
+  }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
   return json(503, X402_REGISTRY_NOT_BOUND);
@@ -206,7 +221,8 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
 
 export async function tryHandleX402(
   request: Request,
-  env: X402Env = {}
+  env: X402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
@@ -246,7 +262,7 @@ export async function tryHandleX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env);
+    return agentVerify(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

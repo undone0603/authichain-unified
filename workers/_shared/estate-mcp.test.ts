@@ -348,3 +348,51 @@ test("unknown tool calls are errors, not fake verify", async () => {
   assert.ok(body.result.content[0].text.includes("verify"));
   assert.equal(body.result.content[0].text.includes("SECURED"), false);
 });
+
+test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bound", async () => {
+  const proof = Buffer.from(
+    JSON.stringify({
+      scheme: "exact",
+      network: "base",
+      payer: "0x1234567890abcdef1234567890abcdef12345678",
+      amount: "50000",
+      signature: "0xdead",
+    })
+  ).toString("base64");
+  const seen: Request[] = [];
+  const res = await tryHandleSisterMcp(
+    req("qron.space", "/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-payment": proof },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "verify", arguments: { serial: "AC-1" } },
+      }),
+    }),
+    "qron",
+    {},
+    {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(
+          JSON.stringify({ verified: false, subject: "AC-1" }),
+          {
+            status: 200,
+          }
+        );
+      },
+    }
+  );
+  assert.ok(res);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    id: number;
+    result: { structuredContent: { subject: string } };
+  };
+  assert.equal(body.id, 4);
+  assert.equal(body.result.structuredContent.subject, "AC-1");
+  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  assert.deepEqual(await seen[0].json(), { serial: "AC-1" });
+});

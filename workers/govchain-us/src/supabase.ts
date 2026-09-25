@@ -26,6 +26,8 @@ export interface SupabaseEnv {
   SUPABASE_ANON_KEY?: string;
   /** Origin that renders /onboard. Set in wrangler.toml. */
   APP_ORIGIN?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;

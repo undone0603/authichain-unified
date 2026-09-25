@@ -3328,6 +3328,8 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
  */
 interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   /** Test-only override. Live default is 4000ms. */
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
@@ -3614,9 +3616,9 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
-    const x402 = await tryHandleX402(request, env);
+    const x402 = await tryHandleX402(request, env, env.VERIFY_APP);
     if (x402) return x402;
-    const mcp = await tryHandleMcp(request, env);
+    const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

@@ -2279,9 +2279,14 @@ export default {
     if (gift) return gift;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env);
+    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
     if (x402) return x402;
-    const mcp = await tryHandleSisterMcp(request, "govchain", env);
+    const mcp = await tryHandleSisterMcp(
+      request,
+      "govchain",
+      env,
+      env?.VERIFY_APP
+    );
     if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
     if (discovery) return discovery;

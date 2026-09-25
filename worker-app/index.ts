@@ -48,6 +48,8 @@ type Env = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: Fetcher;
   QRON_WORKER_URL?: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   SUPABASE_ANON_KEY?: string;

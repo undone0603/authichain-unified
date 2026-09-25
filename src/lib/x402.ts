@@ -639,7 +639,8 @@ export function dailyCapUsd(): number {
  * on those paths they return this as soon as a payment proof arrives, before
  * settlePayment() runs, so no USDC moves. The unpaid 402 challenge stays so
  * discovery still works. The bound implementation is
- * src/app/api/v1/agent-verify/route.ts.
+ * src/app/api/v1/agent-verify/route.ts; an edge worker with a VERIFY_APP
+ * binding forwards to it (forwardPaidVerify) instead of refusing.
  */
 export const X402_REGISTRY_NOT_BOUND = {
   error: "registry_not_bound",
@@ -648,6 +649,90 @@ export const X402_REGISTRY_NOT_BOUND = {
   detail:
     "Seal registry lookup is not bound on this path, so a paid call cannot return a real verification. Refused before settlement; no payment was taken.",
 } as const;
+
+/**
+ * Cloudflare service binding to the Next app worker (`authichain-app`, see
+ * wrangler.app.jsonc). Edge workers bind it as `VERIFY_APP`.
+ */
+export interface X402VerifyBinding {
+  fetch(request: Request): Promise<Response>;
+}
+
+/** The registry-backed paid verify route (src/app/api/v1/agent-verify). */
+export const X402_BOUND_VERIFY_PATH = "/api/v1/agent-verify";
+
+/**
+ * Hand a paid verify call to the Next route, which does the auth_seals lookup
+ * and settles only when it can return a real answer (every refusal there is
+ * before settlement). The edge copies of POST /api/x402 have no registry of
+ * their own; without a binding they keep answering X402_REGISTRY_NOT_BOUND.
+ *
+ * The public host is kept so the Next route builds the same resource URL the
+ * agent was challenged with. No timeout: aborting after the facilitator has
+ * settled would take the agent's money and drop the answer.
+ */
+export function forwardPaidVerify(
+  binding: X402VerifyBinding,
+  request: Request,
+  proofHeader: string,
+  body: string
+): Promise<Response> {
+  const url = new URL(request.url);
+  url.pathname = X402_BOUND_VERIFY_PATH;
+  url.search = "";
+  return binding.fetch(
+    new Request(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-PAYMENT": proofHeader,
+      },
+      body,
+    })
+  );
+}
+
+/**
+ * MCP `tools/call verify` over forwardPaidVerify. A settled answer comes back
+ * as a JSON-RPC result carrying the PAYMENT-RESPONSE header; any refusal
+ * (402, 400, 429, 503) passes through as HTTP, the same way the unpaid 402
+ * already does on /mcp.
+ */
+export async function forwardPaidVerifyMcp(
+  binding: X402VerifyBinding,
+  request: Request,
+  proofHeader: string,
+  args: Record<string, unknown>,
+  id: unknown
+): Promise<Response> {
+  const upstream = await forwardPaidVerify(
+    binding,
+    request,
+    proofHeader,
+    JSON.stringify(args)
+  );
+  if (!upstream.ok) return upstream;
+  const result = (await upstream.json()) as unknown;
+  const headers: Record<string, string> = {
+    "Cache-Control": "private, no-store",
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+  };
+  const paymentResponse = upstream.headers.get("PAYMENT-RESPONSE");
+  if (paymentResponse) headers["PAYMENT-RESPONSE"] = paymentResponse;
+  return new Response(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: id ?? null,
+      result: {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+      },
+    }),
+    { status: 200, headers }
+  );
+}
 
 export const X402_DEFAULT_PRICE_USD = 0.05;
 
@@ -668,6 +753,21 @@ export type X402HealthEnv = {
   // Types-only: no runtime behavior change.
   [key: string]: string | undefined;
 };
+
+/**
+ * The named x402 vars without the index signature, for a worker's own Env:
+ * that Env also holds bindings (VERIFY_APP), which a string index rejects.
+ */
+export type X402EnvVars = Pick<
+  X402HealthEnv,
+  | "X402_PAY_TO"
+  | "X402_FACILITATOR_URL"
+  | "X402_NETWORK"
+  | "X402_CHAIN_ID"
+  | "X402_USDC_ASSET"
+  | "X402_PRICE_USD"
+  | "X402_DAILY_CAP_USD"
+>;
 
 export type X402FacilitatorStatus = {
   configured: boolean;

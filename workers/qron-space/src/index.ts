@@ -2113,6 +2113,8 @@ a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:60
 
 type Env = {
   APP_ORIGIN?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -2200,9 +2202,14 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
-    const x402 = await tryHandleSisterX402(request, env);
+    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
     if (x402) return x402;
-    const mcp = await tryHandleSisterMcp(request, "qron", env);
+    const mcp = await tryHandleSisterMcp(
+      request,
+      "qron",
+      env,
+      env?.VERIFY_APP
+    );
     if (mcp) return mcp;
     const discovery = tryHandleEstateAgentDiscovery(request, "qron");
     if (discovery) return discovery;

@@ -14,11 +14,13 @@ import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
   buildPaymentRequired,
+  forwardPaidVerifyMcp,
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
-  type X402HealthEnv,
+  type X402EnvVars,
+  type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
 
@@ -91,7 +93,7 @@ function json(
 
 function hydrateX402(env?: X402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -226,7 +228,9 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
 async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  id: unknown,
+  verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
@@ -246,19 +250,25 @@ async function unpaidOrRefusedVerify(
     payTo,
     description: "AuthiChain MCP verify",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
+  if (verifyApp) {
+    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
+  }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
   return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
-async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
+async function handleRpc(
+  request: Request,
+  env?: X402Env,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
   let body: {
     jsonrpc?: string;
     id?: unknown;
@@ -303,7 +313,13 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
       });
     }
     if (name === "verify" || name === "authichain_verify_product") {
-      return unpaidOrRefusedVerify(request, env, params.arguments ?? {});
+      return unpaidOrRefusedVerify(
+        request,
+        env,
+        params.arguments ?? {},
+        id,
+        verifyApp
+      );
     }
     if (name === "query_provenance" || name === "authichain_query_provenance") {
       const args = params.arguments ?? {};
@@ -333,7 +349,8 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
 
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {}
+  env: X402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;
 
@@ -366,7 +383,7 @@ export async function tryHandleMcp(
   }
 
   if (request.method === "POST") {
-    return handleRpc(request, env);
+    return handleRpc(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });
