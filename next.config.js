@@ -72,19 +72,6 @@ const nextConfig = {
       ".mjs": [".mts", ".mjs"],
     };
 
-    if (IS_WORKERS_BUILD) {
-      // next/font/google downloads CSS from Google at build time. That fetch
-      // returns a body the loader cannot parse on Workers Builds
-      // (TypeError reading '1' on Public_Sans). Alias every compilation.
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        "next/font/google": path.resolve(
-          process.cwd(),
-          "server/stubs/next-font-google.mjs"
-        ),
-      };
-    }
-
     if (IS_WORKERS_BUILD && isServer) {
       // Next externalizes playwright-core by default (its built-in server
       // externals list), and externals are decided before aliases apply.
