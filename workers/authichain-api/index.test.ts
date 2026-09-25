@@ -118,22 +118,24 @@ function supabase(opts: {
   createStatus?: number;
 }): Handler {
   return (call) => {
-    if (call.url.includes("/rest/v1/rpc/authichain_api_resolve_key")) {
+    const u = new URL(call.url);
+    if (u.host === "polygon.test")
+      return json({ jsonrpc: "2.0", id: 1, result: opts.receipt ?? null });
+    if (u.host !== "nhdnkzhtadfkkluiulhs.supabase.co") return undefined;
+    if (u.pathname === "/rest/v1/rpc/authichain_api_resolve_key") {
       if (opts.resolve === "missing") return json({ code: "PGRST202" }, 404);
       return json(opts.resolve ?? [{ id: "c1", billing_plan: "pro", company_name: "Acme", api_call_limit: 1000, user_id: null }]);
     }
-    if (call.url.includes("/rest/v1/rpc/authichain_api_create_key"))
+    if (u.pathname === "/rest/v1/rpc/authichain_api_create_key")
       return json(
         opts.createStatus && opts.createStatus >= 300
           ? { message: "boom" }
           : "c2",
         opts.createStatus || 200
       );
-    if (call.url.includes("/rest/v1/products")) return json(opts.products ?? []);
-    if (call.url.includes("/rest/v1/verifications"))
+    if (u.pathname === "/rest/v1/products") return json(opts.products ?? []);
+    if (u.pathname === "/rest/v1/verifications")
       return new Response(null, { status: 201 });
-    if (call.url.startsWith("https://polygon.test"))
-      return json({ jsonrpc: "2.0", id: 1, result: opts.receipt ?? null });
     return undefined;
   };
 }
