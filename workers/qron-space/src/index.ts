@@ -2227,7 +2227,7 @@ export default {
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">
-<meta property="og:description" content="Generate a signed Living QR for packaging and labels. Ed25519-signed and still scannable.">
+<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2267,7 +2267,7 @@ ${estateHero({
   ],
 })}
 ${estateTrust([
-  { value: "Ed25519", label: "Signed payload" },
+  { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
   { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
