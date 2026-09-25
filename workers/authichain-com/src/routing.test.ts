@@ -172,8 +172,8 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
-    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/health/);
-    assert.match(html, /https:\/\/authichain\.com\/api\/x402\/catalog/);
+    assert.ok(html.includes("https://authichain.com/api/x402/health"), path);
+    assert.ok(html.includes("https://authichain.com/api/x402/catalog"), path);
     assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
     assert.match(
       html,
