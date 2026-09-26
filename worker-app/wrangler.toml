@@ -72,6 +72,10 @@ pattern = "authichain.com/api/automation/cron"
 zone_name = "authichain.com"
 
 [[routes]]
+pattern = "authichain.com/api/cron/nurture-replies"
+zone_name = "authichain.com"
+
+[[routes]]
 pattern = "authichain.com/api/v1/attestation"
 zone_name = "authichain.com"
 
@@ -343,6 +347,7 @@ new_sqlite_classes = ["RateLimiter"]
 # firing autonomously).
 # crons_HELD = [
 #   "0 9 * * *",   # lead-nurturing — writes/syncs unsynced leads to HubSpot (external CRM writes)
+#   "0 */2 * * *", # nurture-replies — emails prospects from inbound reply sequences (OUTREACH). Port lives at GET/POST /api/cron/nurture-replies. Default is dry-run. Do not move to GROUP A. To send for real: bind NURTURE_SEND_ENABLED=true and call with ?send=1. Still a per-job founder yes.
 #   "0 */4 * * *", # hubspot-crm-sync — syncs leads/payment events to HubSpot (external CRM writes)
 #   "0 4 * * *",   # staking-rewards — inserts pending $QRON reward-ledger entries (creates financial obligations)
 #   "0 9 1 * *",   # founder-payout — monthly Stripe pay-yourself-first split (MOVES REAL MONEY; 1st of month)

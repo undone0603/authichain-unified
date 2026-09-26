@@ -51,11 +51,18 @@ export interface WorkersAIBinding {
 }
 
 /**
- * Free-tier model with JSON Mode support. Workers AI includes 10,000 Neurons
- * a day at no charge; one reply classification is a few dozen Neurons, so
- * this is the $0 primary.
+ * Free-tier models, tried in order. Workers AI includes 10,000 Neurons a day
+ * at no charge; one reply classification is a few dozen Neurons, so this is
+ * the $0 primary. The plain `@cf/meta/llama-3.1-8b-instruct` was retired on
+ * 2026-05-30 (error 5028); its `-fast` variant stays active. GLM-4.7-Flash is
+ * Cloudflare's recommended replacement, kept second so one more retirement
+ * does not drop the free path.
  */
-export const WORKERS_AI_REPLY_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+export const WORKERS_AI_REPLY_MODELS = [
+  "@cf/meta/llama-3.1-8b-instruct-fast",
+  "@cf/zai-org/glm-4.7-flash",
+] as const;
+/** Deadline for the whole Workers AI step, across every model tried. */
 export const WORKERS_AI_TIMEOUT_MS = 8000;
 
 /** Current, inexpensive model with reliable JSON output. */
@@ -385,11 +392,24 @@ const SENTIMENT_JSON_SCHEMA = {
   required: ["sentiment", "confidence", "reasoning"],
 };
 
-async function classifyWithWorkersAI(
+/** Pull the completion out of either Workers AI output shape. */
+function workersAIText(output: unknown): unknown {
+  const o = output as {
+    response?: unknown;
+    choices?: Array<{ message?: { content?: unknown } }>;
+  };
+  // Workers AI native shape: { response }. JSON Mode makes it an object.
+  if (o?.response !== undefined && o.response !== null) return o.response;
+  // OpenAI-compatible shape used by newer models: { choices: [{ message }] }.
+  return o?.choices?.[0]?.message?.content;
+}
+
+async function runWorkersAIModel(
+  model: string,
   prompt: string,
   ai: WorkersAIBinding
 ): Promise<SentimentResult> {
-  const run = ai.run(WORKERS_AI_REPLY_MODEL, {
+  const output = await ai.run(model, {
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 300,
@@ -398,6 +418,31 @@ async function classifyWithWorkersAI(
       json_schema: SENTIMENT_JSON_SCHEMA,
     },
   });
+  const response = workersAIText(output);
+  if (response && typeof response === "object") {
+    return parseSentimentPayload(response, "workers_ai");
+  }
+  if (typeof response === "string" && response.trim()) {
+    return parseSentimentJson(response, "workers_ai");
+  }
+  throw new Error("Workers AI returned an empty completion");
+}
+
+async function classifyWithWorkersAI(
+  prompt: string,
+  ai: WorkersAIBinding
+): Promise<SentimentResult> {
+  const attempts = (async () => {
+    const errors: string[] = [];
+    for (const model of WORKERS_AI_REPLY_MODELS) {
+      try {
+        return await runWorkersAIModel(model, prompt, ai);
+      } catch (error) {
+        errors.push(`${model}: ${describeClassifierError(error)}`);
+      }
+    }
+    throw new Error(errors.join(" | "));
+  })();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(
@@ -406,18 +451,7 @@ async function classifyWithWorkersAI(
     );
   });
   try {
-    const output = (await Promise.race([run, timeout])) as {
-      response?: unknown;
-    };
-    // JSON Mode returns an object; without it the model returns text.
-    const response = output?.response;
-    if (response && typeof response === "object") {
-      return parseSentimentPayload(response, "workers_ai");
-    }
-    if (typeof response === "string" && response.trim()) {
-      return parseSentimentJson(response, "workers_ai");
-    }
-    throw new Error("Workers AI returned an empty completion");
+    return await Promise.race([attempts, timeout]);
   } finally {
     clearTimeout(timer);
   }

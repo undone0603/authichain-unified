@@ -82,7 +82,7 @@ describe("Workers AI (free primary)", () => {
     expect(result.fallbackReason).toBeUndefined();
     expect(generateOpenAI).not.toHaveBeenCalled();
     expect(ai.run).toHaveBeenCalledWith(
-      "@cf/meta/llama-3.1-8b-instruct",
+      "@cf/meta/llama-3.1-8b-instruct-fast",
       expect.objectContaining({
         response_format: expect.objectContaining({ type: "json_schema" }),
       })
@@ -102,6 +102,30 @@ describe("Workers AI (free primary)", () => {
     expect(result.provider).toBe("workers_ai");
   });
 
+  it("tries the next free model when the first is retired", async () => {
+    const ai = {
+      run: vi.fn(async (model: string) => {
+        if (model === "@cf/meta/llama-3.1-8b-instruct-fast") {
+          throw new Error("5028: model was deprecated");
+        }
+        // OpenAI-compatible output shape.
+        return {
+          choices: [{ message: { content: JSON.stringify(positive) } }],
+        };
+      }),
+    };
+    const result = await classifyReplyEmail("Can we talk?", "Re: proposal", {
+      env: {},
+      workersAI: ai,
+    });
+    expect(result.provider).toBe("workers_ai");
+    expect(result.fallbackReason).toBeUndefined();
+    expect(ai.run).toHaveBeenLastCalledWith(
+      "@cf/zai-org/glm-4.7-flash",
+      expect.anything()
+    );
+  });
+
   it("falls back to the heuristic and records why when Workers AI fails", async () => {
     const ai = {
       run: vi.fn(async () => {
@@ -115,7 +139,7 @@ describe("Workers AI (free primary)", () => {
     );
     expect(result.provider).toBe("heuristic");
     expect(result.fallbackReason).toBe(
-      "workers_ai: 4006: daily free allocation exceeded"
+      "workers_ai: @cf/meta/llama-3.1-8b-instruct-fast: 4006: daily free allocation exceeded | @cf/zai-org/glm-4.7-flash: 4006: daily free allocation exceeded"
     );
   });
 
@@ -129,7 +153,7 @@ describe("Workers AI (free primary)", () => {
     });
     expect(result.provider).toBe("heuristic");
     expect(result.fallbackReason).toBe(
-      "workers_ai: Workers AI returned an empty completion; openai: no credits"
+      "workers_ai: @cf/meta/llama-3.1-8b-instruct-fast: Workers AI returned an empty completion | @cf/zai-org/glm-4.7-flash: Workers AI returned an empty completion; openai: no credits"
     );
   });
 });

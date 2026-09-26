@@ -19,6 +19,7 @@ import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { registerLeadRoutes } from "./lead-routes";
 import { registerResendInbound } from "./resend-inbound";
+import { registerNurtureReplies } from "./nurture-replies";
 import type { WorkersAIBinding } from "../src/lib/sentiment-classifier";
 import { scheduled } from "./cron-dispatch";
 import {
@@ -1735,6 +1736,7 @@ registerX402Routes(app);
 registerGuardrailApi(app);
 registerLeadRoutes(app);
 registerResendInbound(app);
+registerNurtureReplies(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
