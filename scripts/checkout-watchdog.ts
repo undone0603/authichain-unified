@@ -440,6 +440,14 @@ export function applyFixes(
   return { src: out, applied };
 }
 
+/** Escape a value for a Markdown table cell (backslashes first, then pipes). */
+export function mdCell(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ");
+}
+
 export function renderReport(
   findings: Finding[],
   meta: { stripe: string }
@@ -456,7 +464,7 @@ export function renderReport(
     lines.push("| | finding | plan | detail |", "|---|---|---|---|");
     for (const f of findings)
       lines.push(
-        `| ${f.fixable ? "auto-fix" : "needs a person"} | ${f.kind} | ${f.planId ?? ""} | ${f.detail.replace(/\|/g, "\\|")} |`
+        `| ${f.fixable ? "auto-fix" : "needs a person"} | ${f.kind} | ${f.planId ?? ""} | ${mdCell(f.detail)} |`
       );
   }
   return lines.join("\n");

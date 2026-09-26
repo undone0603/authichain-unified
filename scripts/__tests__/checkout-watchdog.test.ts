@@ -12,6 +12,7 @@ import {
   expectedPlanIds,
   extractCheckoutLinks,
   isLiveStripeKey,
+  mdCell,
   safeToAutoFix,
   type Finding,
 } from "../checkout-watchdog";
@@ -256,5 +257,11 @@ describe("checkout watchdog: --fix", () => {
     );
     expect(safeToAutoFix([f("price_inactive", paid[0].id)])).toBe(true);
     expect(safeToAutoFix(paid.map(p => f("price_inactive", p.id)))).toBe(false);
+  });
+});
+
+describe("checkout watchdog: report", () => {
+  it("escapes backslashes, pipes and newlines in table cells", () => {
+    expect(mdCell("a|b\\c\nd")).toBe("a\\|b\\\\c d");
   });
 });
