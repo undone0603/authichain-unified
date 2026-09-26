@@ -124,25 +124,26 @@ test("query strings survive the hop", async () => {
   }
 });
 
-test("the apex offers Passport checkout and the live Basic Payment Link", async () => {
+test("the apex offers Passport checkout and the Farm Plan Payment Link", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.match(html, /name="email"/);
   assert.match(
     html,
-    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
   assert.doesNotMatch(
     html,
-    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/9B6cN59br5xcaCuazy1Nu1o"')
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
   );
+  assert.doesNotMatch(html, /9B6cN59br5xcaCuazy1Nu1o/);
   assert.match(html, /Passport checkout — \$49/);
   assert.doesNotMatch(html, /calendly/i);
 });
@@ -265,7 +266,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
   assert.equal(
     `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
-      'href="https://buy.stripe.com'
+      'href="https://authichain.com/checkout/'
     ),
     true
   );
@@ -414,15 +415,15 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     assert.equal(body.catalog, "/api/x402/catalog");
     assert.equal(
       new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(
       new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(body.humanCheckout.starterPaymentLink, undefined);
     const blob = JSON.stringify(body);
@@ -442,9 +443,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.equal(f.calls.length, 0, "/pricing must not be proxied");
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-    assert.match(html, /https:\/\/buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
-    assert.match(html, /\$199/);
-    assert.match(html, /StrainChain Basic/);
+    assert.ok(
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+    );
+    assert.match(html, /\$149/);
+    assert.doesNotMatch(html, /StrainChain Basic/);
   } finally {
     f.restore();
   }

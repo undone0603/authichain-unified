@@ -14,13 +14,13 @@ import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
   buildPaymentRequired,
+  forwardPaidVerifyMcp,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
-  type X402HealthEnv,
+  type X402EnvVars,
+  type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
 
@@ -93,7 +93,7 @@ function json(
 
 function hydrateX402(env?: X402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -108,7 +108,15 @@ function hydrateX402(env?: X402Env) {
   }
 }
 
-export function mcpPricingDiscovery() {
+function livePayTo(env?: X402Env): string {
+  return (
+    env?.X402_PAY_TO?.trim() ||
+    process.env.X402_PAY_TO?.trim() ||
+    X402_PUBLISHED_PAY_TO
+  );
+}
+
+export function mcpPricingDiscovery(env?: X402Env) {
   return {
     agentRail: {
       endpoint: "POST /api/v1/agent-verify",
@@ -117,7 +125,7 @@ export function mcpPricingDiscovery() {
       network: "base",
       chainId: "8453",
       asset: BASE_USDC_ASSET,
-      publishedPayTo: X402_PUBLISHED_PAY_TO,
+      publishedPayTo: livePayTo(env),
       pricePerCall: `$${x402PriceUsd()} USDC`,
       catalog: "https://authichain.com/api/x402/catalog",
       wellKnown: "https://authichain.com/.well-known/x402.json",
@@ -190,7 +198,7 @@ function queryProvenance(assetIdRaw: unknown) {
         chainId: 8453,
         asset: BASE_USDC_ASSET,
         pricePerCall: `$${x402PriceUsd()} USDC`,
-        payTo: X402_PUBLISHED_PAY_TO,
+        payTo: livePayTo(),
       },
     },
     registry: {
@@ -217,10 +225,12 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
   });
 }
 
-async function unpaidOrSettledVerify(
+async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  id: unknown,
+  verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
@@ -240,79 +250,25 @@ async function unpaidOrSettledVerify(
     payTo,
     description: "AuthiChain MCP verify",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(
-      402,
-      { ...required.v2, error: verification.reason },
-      required.headers
-    );
+  if (verifyApp) {
+    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
   }
-
-  const settlement = await settlePayment(
-    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(
-      402,
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      required.headers
-    );
-  }
-
-  const subject = (args.sealId ??
-    args.seal_id ??
-    args.productId ??
-    args.serial) as string | undefined;
-
-  return json(
-    200,
-    {
-      jsonrpc: "2.0",
-      result: {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              verified: false,
-              authenticityScore: 0,
-              subject: subject ?? null,
-              details: {
-                note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-              },
-              settlement: {
-                payer: proof.payer,
-                amountAtomic: verification.amount.toString(),
-                txHash: settlement.txHash ?? proof.txHash ?? null,
-                trustless: settlement.trustless,
-              },
-            }),
-          },
-        ],
-      },
-    },
-    paymentResponseHeaders({
-      success: true,
-      transaction: settlement.txHash ?? proof.txHash,
-      network: required.body.accepts[0].network,
-      payer: proof.payer,
-    })
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
-async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
+async function handleRpc(
+  request: Request,
+  env?: X402Env,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
   let body: {
     jsonrpc?: string;
     id?: unknown;
@@ -346,17 +302,24 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
     };
     const name = params.name ?? "";
     if (name === "get_pricing" || name === "authichain_get_pricing") {
+      hydrateX402(env);
       return rpcResult(id, {
         content: [
           {
             type: "text",
-            text: JSON.stringify(mcpPricingDiscovery(), null, 2),
+            text: JSON.stringify(mcpPricingDiscovery(env), null, 2),
           },
         ],
       });
     }
     if (name === "verify" || name === "authichain_verify_product") {
-      return unpaidOrSettledVerify(request, env, params.arguments ?? {});
+      return unpaidOrRefusedVerify(
+        request,
+        env,
+        params.arguments ?? {},
+        id,
+        verifyApp
+      );
     }
     if (name === "query_provenance" || name === "authichain_query_provenance") {
       const args = params.arguments ?? {};
@@ -386,7 +349,8 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
 
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {}
+  env: X402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;
 
@@ -414,11 +378,12 @@ export async function tryHandleMcp(
   }
 
   if (request.method === "GET") {
+    hydrateX402(env);
     return json(200, discoveryBody());
   }
 
   if (request.method === "POST") {
-    return handleRpc(request, env);
+    return handleRpc(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

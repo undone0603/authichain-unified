@@ -9,7 +9,7 @@ import { validateAttestation } from "../packages/verifier/src/index";
 const SAMPLE = {
   version: "0.1",
   attestation_id: "urn:authichain:attestation:v01:test-1",
-  issuer: { id: "https://authichain.com", name: "AuthiChain" },
+  issuer: { id: "https://authichain.govchain.us", name: "AuthiChain" },
   subject: { object_id: "authi:test:SN-1" },
   decision: "verified",
   status: "active",

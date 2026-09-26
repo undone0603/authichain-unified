@@ -75,10 +75,15 @@ export async function handleLeadAutomation(lead: {
     // 3. Sync to HubSpot (if enterprise potential detected)
     if (enriched.is_enterprise || enriched.lead_score > 60) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+        // /api/crm/sync lives on the edge router (worker-app/lead-routes.ts), not
+        // on qron.space or Vercel, and requires INTERNAL_API_SECRET.
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.authichain.com';
         await fetch(`${baseUrl}/api/crm/sync`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '',
+          },
           body: JSON.stringify(finalLead)
         });
       } catch (crmErr) {

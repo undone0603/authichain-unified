@@ -75,7 +75,7 @@ describe("dpp-loop", () => {
 
   it("builds activate URL with session and visit", () => {
     expect(dppActivateUrl("cs_test_1", "dpp_abc")).toBe(
-      "https://authichain.com/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+      "https://authichain.govchain.us/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
   });
 

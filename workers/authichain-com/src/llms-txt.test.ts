@@ -29,14 +29,14 @@ describe("llms.txt", () => {
 
   it("answers GET and ignores other paths", async () => {
     const hit = tryHandleLlmsTxt(
-      new Request("https://authichain.com/llms.txt")
+      new Request("https://authichain.govchain.us/llms.txt")
     );
     expect(hit).not.toBeNull();
     expect(hit?.status).toBe(200);
     expect(hit?.headers.get("content-type")).toMatch(/text\/plain/);
     expect(await hit!.text()).toContain("POST https://authichain.com/api/x402");
     expect(
-      tryHandleLlmsTxt(new Request("https://authichain.com/pricing"))
+      tryHandleLlmsTxt(new Request("https://authichain.govchain.us/pricing"))
     ).toBeNull();
   });
 });

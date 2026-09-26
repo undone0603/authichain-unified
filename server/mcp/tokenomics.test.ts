@@ -28,16 +28,16 @@ describe("MCP tokenomics identity", () => {
     expect(d.qron.isPaymentRail).toBe(false);
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.checkout.passport).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      "https://authichain.com/checkout/strainchain_passport"
     );
     expect(d.humanCheckout.checkout.dpp).toBe(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      "https://authichain.com/checkout/dpp_readiness"
     );
     expect(d.humanCheckout.checkout.farm).toBe(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
     expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.nft.deployer.toLowerCase()).not.toBe(

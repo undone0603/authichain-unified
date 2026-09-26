@@ -35,8 +35,8 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 };
 
 const CHECKOUT =
-  "https://authichain.com/api/checkout/plan/strainchain_passport";
-const MENDO_MICRO = "https://authichain.com/m/mendo";
+  "https://authichain.com/checkout/strainchain_passport";
+const MENDO_MICRO = "https://authichain.govchain.us/m/mendo";
 
 const PROVENANCE_LABEL: Record<Provenance, string> = {
   confirmed_in_writing: "Confirmed in writing",
@@ -130,9 +130,9 @@ code{font-size:.85em;background:rgba(148,163,184,.1);padding:.1rem .35rem;border
 <div class="wrap">
 <nav>
   <a class="brand" href="https://strainchain.io">StrainChain</a>
-  <a href="https://authichain.com/pricing">Pricing</a>
+  <a href="https://authichain.govchain.us/pricing">Pricing</a>
   <a href="https://strainchain.io/onboard">Onboard</a>
-  <a href="https://authichain.com">AuthiChain</a>
+  <a href="https://authichain.govchain.us">AuthiChain</a>
 </nav>
 ${body}
 <footer>
