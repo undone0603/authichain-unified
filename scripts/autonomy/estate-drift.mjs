@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 // scripts/autonomy/estate-drift.mjs
-// Weekly read-only comparer of live Cloudflare Workers vs wrangler names vs config/estate.json.
-// Ghosts open ONE issue labelled estate-drift. Silence means clean.
-// Env: CLOUDFLARE_API_TOKEN (Scripts:Read), CLOUDFLARE_ACCOUNT_ID, GITHUB_TOKEN, DRIFT_DRY_RUN.
-// Without CF creds print skipped and exit 0. Do not deploy anything.
+// Weekly, read-only. Live Cloudflare Workers vs wrangler configs vs config/estate.json.
+// Ghosts open one issue labelled estate-drift. Silence means clean.
 
 import { appendFileSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -38,8 +36,8 @@ export function repoWorkerNames(root = ROOT) {
     encoding: "utf8",
   })
     .split("\n")
-    .filter((f) => /(^|\/)wrangler[^/]*\.(toml|json|jsonc)$/.test(f))
-    .filter((f) => !f.startsWith("docs/"));
+    .filter(f => /(^|\/)wrangler[^/]*\.(toml|json|jsonc)$/.test(f))
+    .filter(f => !f.startsWith("docs/"));
   const names = new Map();
   for (const f of files) {
     const n = wranglerName(readFileSync(resolve(root, f), "utf8"), f);
@@ -49,7 +47,7 @@ export function repoWorkerNames(root = ROOT) {
 }
 
 export function evaluateDrift(live, repo, estate) {
-  const has = (n) => repo.has(n);
+  const has = n => repo.has(n);
   const inv = estate.off_repo_workers ?? {};
   const liveSet = new Set(live);
   const ghosts = [];
@@ -62,7 +60,9 @@ export function evaluateDrift(live, repo, estate) {
     else if (entry.disposition === "retire") retire.push(name);
     else tracked.push({ name, disposition: entry.disposition });
   }
-  const gone = Object.keys(inv).filter((n) => !liveSet.has(n)).sort();
+  const gone = Object.keys(inv)
+    .filter(n => !liveSet.has(n))
+    .sort();
   return { ghosts, retire, tracked, gone, live: live.length };
 }
 
@@ -102,11 +102,10 @@ export function render(result, at = new Date().toISOString()) {
 
 export function decideIssueAction(existing, result, at) {
   const sig = signature(result);
-  if (!sig) {
+  if (!sig)
     return existing
       ? { action: "close", body: `No ghost Workers at ${at}. Closing.` }
       : { action: "none" };
-  }
   const body = `${render(result, at)}\n\n${MARKER}${sig} -->`;
   if (!existing) return { action: "create", body };
   const prev = (existing.body ?? "").split(MARKER)[1]?.split(" -->")[0] ?? "";
@@ -127,7 +126,7 @@ export async function liveWorkers({ accountId, token, fetchImpl = fetch }) {
       `Cloudflare ${res.status}: ${JSON.stringify(data.errors ?? []).slice(0, 200)}`
     );
   }
-  return (data.result ?? []).map((s) => s.id).filter(Boolean);
+  return (data.result ?? []).map(s => s.id).filter(Boolean);
 }
 
 async function gh(path, { method = "GET", token, body } = {}) {
@@ -150,7 +149,7 @@ async function gh(path, { method = "GET", token, body } = {}) {
 
 function out(md) {
   console.log(md);
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${md}\n`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
 }
 
 async function main() {
@@ -180,7 +179,7 @@ async function main() {
     body: { name: LABEL, color: "fbca04" },
   }).catch(() => {});
   const open = await gh(`/repos/${repo}/issues?state=open&labels=${LABEL}&per_page=5`, { token });
-  const existing = open.find((i) => i.title === TITLE) ?? null;
+  const existing = open.find(i => i.title === TITLE) ?? null;
   const d = decideIssueAction(existing, result, at);
   if (d.action === "create") {
     await gh(`/repos/${repo}/issues`, {
@@ -212,7 +211,7 @@ async function main() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((e) => {
+  main().catch(e => {
     console.error(e);
     process.exit(1);
   });
