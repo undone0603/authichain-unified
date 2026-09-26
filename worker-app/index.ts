@@ -16,6 +16,8 @@ import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
 import { registerX402Routes } from "./x402-routes";
+import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
+import { registerInboundRoutes } from "./inbound-routes";
 import { registerGuardrailApi } from "./guardrail-api";
 import { registerLeadRoutes } from "./lead-routes";
 import { registerResendInbound } from "./resend-inbound";
@@ -45,6 +47,13 @@ type Env = {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   CRON_SECRET?: string;
   INTERNAL_API_SECRET?: string;
+  /** Signs and verifies cold-email opt-out links (worker-app/unsubscribe-routes.ts). */
+  OUTREACH_UNSUBSCRIBE_SECRET?: string;
+  /** Resend inbound webhook signing secret (whsec_…) for /api/outreach/inbound. */
+  RESEND_INBOUND_WEBHOOK_SECRET?: string;
+  /** Key of the Resend account that owns the receiving domain; falls back to RESEND_API_KEY. */
+  RESEND_INBOUND_API_KEY?: string;
+  RESEND_API_KEY?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -1733,6 +1742,8 @@ registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
 registerX402Routes(app);
+registerUnsubscribeRoutes(app);
+registerInboundRoutes(app);
 registerGuardrailApi(app);
 registerLeadRoutes(app);
 registerResendInbound(app);

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "tsconfig.json": 342,
+    "tsconfig.worker.json": 754,
+    "tsconfig.workers.json": 72
+  }
+}

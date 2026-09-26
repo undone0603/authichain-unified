@@ -235,11 +235,18 @@ export async function signAttestation(
     .sign(privateKey);
 }
 
-export async function verifyAttestationJws(
+/**
+ * Check what a signature can prove, and nothing else: the protected header,
+ * the key id, the Ed25519 signature, the v0.1 schema and (when given) that the
+ * subject is the object in hand. Status, decision and expiry are NOT judged
+ * here, so a revoked or blocked attestation can still be inspected; use
+ * evaluateAttestation() for the trust decision.
+ */
+export async function inspectAttestationJws(
   jws: string,
   publicJwk: Record<string, unknown>,
   options: AttestationVerificationOptions = {}
-) {
+): Promise<AuthiChainAttestationV01> {
   const header = decodeProtectedHeader(jws);
   if (header.typ !== AUTHICHAIN_ATTESTATION_TYP || header.alg !== "EdDSA") {
     throw new Error("unsupported attestation JWS header");
@@ -266,8 +273,64 @@ export async function verifyAttestationJws(
     options.expectedObjectId !== undefined &&
     parsed.subject.object_id !== options.expectedObjectId
   ) {
-    throw new Error("attestation subject object_id does not match expected object");
+    throw new Error(
+      "attestation subject object_id does not match expected object"
+    );
   }
+  return parsed;
+}
+
+export interface AttestationEvaluation {
+  /** True only when the decision is verified, the status active and it is unexpired. */
+  valid: boolean;
+  decision: AttestationDecision;
+  /** The signed status, or "expired" once expires_at has passed. Status is as of issuance. */
+  status: AttestationStatus | "expired";
+  expired: boolean;
+  /** Why `valid` is false; empty when valid. */
+  reasons: string[];
+}
+
+/**
+ * The trust decision for a signature-checked attestation
+ * (docs/attestation/v0.1.md): valid=true only when it is unexpired, `active`
+ * and `verified`. `warning` and `blocked` are the issuer's decisions, not
+ * signature failures, so they come back valid=false with the decision kept.
+ */
+export function evaluateAttestation(
+  attestation: AuthiChainAttestationV01,
+  now: number = Date.now()
+): AttestationEvaluation {
+  const expired =
+    attestation.expires_at !== undefined &&
+    Date.parse(attestation.expires_at) <= now;
+  const reasons: string[] = [];
+  if (expired) reasons.push("expired");
+  if (attestation.status !== "active")
+    reasons.push(`status_${attestation.status}`);
+  if (attestation.decision !== "verified")
+    reasons.push(`decision_${attestation.decision}`);
+  return {
+    valid: reasons.length === 0,
+    decision: attestation.decision,
+    status: expired ? "expired" : attestation.status,
+    expired,
+    reasons,
+  };
+}
+
+/**
+ * Signature check plus the status and expiry gates, throwing on any failure.
+ * Kept for existing callers. It does not judge `decision`: a `blocked` or
+ * `warning` attestation passes. Anything answering "is this valid?" must use
+ * evaluateAttestation() as well.
+ */
+export async function verifyAttestationJws(
+  jws: string,
+  publicJwk: Record<string, unknown>,
+  options: AttestationVerificationOptions = {}
+) {
+  const parsed = await inspectAttestationJws(jws, publicJwk, options);
 
   if (parsed.status !== "active") {
     throw new Error(`attestation status is ${parsed.status}`);

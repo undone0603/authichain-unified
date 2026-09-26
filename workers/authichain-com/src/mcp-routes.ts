@@ -19,6 +19,7 @@ import {
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
+  x402PaidVerifyStatus,
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
@@ -41,7 +42,9 @@ const TOOLS = [
   {
     name: "verify",
     description:
-      "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT.",
+      x402PaidVerifyStatus().bound
+        ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
+        : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
     inputSchema: {
       type: "object",
       properties: {
@@ -54,7 +57,10 @@ const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. Cryptographic verify is tools/call verify ($0.05 USDC on Base).",
+      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. " +
+      (x402PaidVerifyStatus().bound
+        ? "Paid verify is tools/call verify ($0.05 USDC on Base)."
+        : "Paid tools/call verify ($0.05 USDC on Base) is not answering yet: it refuses before settlement."),
     inputSchema: {
       type: "object",
       properties: {
@@ -131,7 +137,10 @@ export function mcpPricingDiscovery(env?: X402Env) {
       wellKnown: "https://authichain.com/.well-known/x402.json",
       mcp: "https://authichain.com/mcp",
       docs: "https://authichain.com/x402",
-      note: "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT.",
+      note: x402PaidVerifyStatus().bound
+        ? "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT."
+        : "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
+      paidVerify: x402PaidVerifyStatus(),
     },
     humanCheckout: {
       rail: "stripe",

@@ -25,6 +25,8 @@ import {
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
 import { attestSeal } from "@/lib/seal-attestation";
+// Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
+import { parseSealRequest, registryAnswer } from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -102,16 +104,11 @@ export async function POST(request: Request) {
     string,
     unknown
   >;
-  const rawSealId =
-    input.sealId ?? input.seal_id ?? input.productId ?? input.serial;
-  const sealId =
-    typeof rawSealId === "string" && rawSealId.trim() ? rawSealId.trim() : null;
-  if (!sealId) {
-    return NextResponse.json(
-      { error: "seal_id_required", settled: false },
-      { status: 400 }
-    );
+  const parsed = parseSealRequest(input);
+  if (!parsed.ok) {
+    return NextResponse.json(parsed.body, { status: parsed.status });
   }
+  const { sealId } = parsed;
 
   const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
   const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
@@ -172,30 +169,27 @@ export async function POST(request: Request) {
   const attestation = attestSeal(
     seal ? (seal as Record<string, unknown>) : null
   );
-  const verified = attestation.verified;
-  const details: Record<string, unknown> = seal
-    ? {
-        productId: seal.product_id,
-        batchId: seal.batch_id,
-        brand: seal.brand,
-        createdAt: seal.created_at,
-        verdict: attestation.verdict,
-        reasons: attestation.reasons,
-      }
-    : { verdict: attestation.verdict, reasons: attestation.reasons };
+  const answer = registryAnswer(seal as Record<string, unknown> | null);
+  if (attestation.verdict) {
+    answer.details.verdict = attestation.verdict;
+    answer.details.reasons = attestation.reasons;
+    if (attestation.verified) answer.checks.signature = "checked";
+  }
   await onVerificationEvent({
     seal_id: sealId,
     brand: (seal?.brand as string | undefined) ?? "authichain.com",
     scan_context: { source: "agent-verify", payer: proof.payer },
-    status: verified ? "valid" : "invalid",
+    status: attestation.verified ? "valid" : "invalid",
   });
 
   return NextResponse.json(
     {
-      verified,
-      authenticityScore: verified ? 100 : 0,
+      verified: attestation.verified,
+      registered: answer.registered,
+      status: answer.status,
+      checks: answer.checks,
       subject: sealId,
-      details,
+      details: answer.details,
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),

@@ -42,6 +42,7 @@
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
+        "typecheck-ratchet.yml": "on",
         "codeql.yml": "on",
         "compliance-audit.yml": "on",
         "security-scan.yml": "on",
