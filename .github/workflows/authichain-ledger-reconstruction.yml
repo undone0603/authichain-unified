@@ -51,7 +51,7 @@ jobs:
         env:
           POLYGON_RPC_URL: ${{ inputs.rpc_url || 'https://polygon-rpc.com' }}
           AUTHICHAIN_LEDGER_CHUNK: ${{ inputs.chunk_size || '50000' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: authichain-nft-ledger
           path: artifacts/onchain/

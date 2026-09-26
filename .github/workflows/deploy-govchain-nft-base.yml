@@ -93,7 +93,7 @@ jobs:
           console.log("artifact_ok bytecode_bytes=" + ((a.bytecode.length - 2) / 2) + " abi=" + a.abi.length);
           '
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: authichain-nft-artifact
           path: artifacts/contracts/AuthiChainNFT.sol/AuthiChainNFT.json
@@ -200,7 +200,7 @@ jobs:
             echo "- Basescan: https://basescan.org/address/${CONTRACT}" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: authichain-nft-deploy-${{ inputs.chain || 'base' }}
