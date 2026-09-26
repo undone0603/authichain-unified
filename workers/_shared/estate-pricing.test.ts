@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { listedPlans, planPaymentLink, PLANS } from "../../src/lib/plans.ts";
+import {
+  listedPlans,
+  planById,
+  planPaymentLink,
+  PLANS,
+  type Plan,
+  type PlanId,
+} from "../../src/lib/plans.ts";
 import { PAYMENT_LINKS } from "../../server/payment-links.ts";
 import {
   GOVCHAIN_DPP_CHECKOUT,
@@ -11,6 +18,52 @@ import {
   tryHandleEstatePricing,
   tryHandleGovchainPricing,
 } from "./estate-pricing.ts";
+
+// Card wording comes from src/lib/plans.ts. Tests read it from there so a copy
+// change in the catalogue does not break them; literal strings below pin page
+// copy owned by estate-pricing.ts, or retired copy that must stay gone.
+function plan(id: PlanId): Plan {
+  const found = planById(id);
+  assert.ok(found, `plan ${id} is in the catalogue`);
+  return found;
+}
+
+function escHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, '&quot;');
+}
+
+function assertCardWording(html: string, p: Plan, title = p.name): void {
+  const amount = p.price === 0 ? "Free" : `$${p.price}`;
+  for (const text of [title, amount, p.description, p.cta, ...p.features]) {
+    assert.ok(
+      html.includes(escHtml(text)),
+      `${p.id} card shows its catalogue wording: ${text}`
+    );
+  }
+}
+
+/** The QRON-branded name AuthiChain /pricing shows for QRON packs. */
+function authichainTitle(p: Plan): string {
+  return p.id === "starter" || p.id === "creator" ? `QRON ${p.name}` : p.name;
+}
+
+test("every listed card renders its wording from the plan catalogue", () => {
+  const authHtml = renderEstatePricingPage("authichain");
+  const qronHtml = renderEstatePricingPage("qron");
+  const strainHtml = renderEstatePricingPage("strainchain");
+  for (const p of listedPlans("qron")) {
+    assertCardWording(authHtml, p, authichainTitle(p));
+    assertCardWording(qronHtml, p);
+  }
+  for (const p of listedPlans("strainchain")) {
+    assertCardWording(strainHtml, p);
+    assert.equal(authHtml.includes(escHtml(p.cta)), false, `${p.id} stays off AuthiChain`);
+  }
+});
 
 test("pricing paths are exact /pricing only", () => {
   assert.equal(isPricingPath("/pricing"), true);
@@ -99,11 +152,11 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.equal(hasDeadLink(html), false);
-  assert.match(html, /\$299/);
-  assert.match(html, /\$29/);
-  assert.match(html, /\$99/);
+  for (const id of ["dpp_readiness", "starter", "creator"] as const) {
+    assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
+  }
   assert.match(html, /href="\/x402"/);
-  assert.match(html, /Start DPP Readiness Audit/);
+  assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
@@ -127,8 +180,8 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /need_email/);
   assert.doesNotMatch(html, /\$2,990/);
   assert.doesNotMatch(html, /\$0\.004/);
-  assert.doesNotMatch(html, /Publish one passport/);
-  assert.doesNotMatch(html, /Start a Farm Plan/);
+  assert.equal(html.includes(escHtml(plan("strainchain_passport").cta)), false);
+  assert.equal(html.includes(escHtml(plan("strainchain_farm").cta)), false);
 });
 
 test("qron /pricing HTML does not advertise the AuthiChain Starter Payment Link", () => {
@@ -147,8 +200,8 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
 
 test("qron /pricing lists the packs, not the retired credit bundles", () => {
   const html = renderEstatePricingPage("qron");
-  assert.match(html, /Starter Pack/);
-  assert.match(html, /Creator Pack/);
+  assert.ok(html.includes(escHtml(plan("starter").name)));
+  assert.ok(html.includes(escHtml(plan("creator").name)));
   assert.doesNotMatch(html, /QRON generation credits/);
   assert.doesNotMatch(html, /\$9\.99/);
   assert.equal(hasDeadLink(html), false);
@@ -163,7 +216,7 @@ test("tryHandleEstatePricing answers GET /pricing and ignores other paths", asyn
   assert.equal(hit.status, 200);
   assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
   const hitHtml = await hit.text();
-  assert.match(hitHtml, /Start DPP Readiness Audit/);
+  assert.ok(hitHtml.includes(escHtml(plan("dpp_readiness").cta)));
   assert.equal(hasDeadLink(hitHtml), false);
 
   assert.equal(
@@ -214,10 +267,10 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   assert.equal(hasDeadLink(html), false);
   assert.doesNotMatch(html, /\$199/);
   assert.doesNotMatch(html, /StrainChain Basic/);
-  assert.match(html, /\$49/);
-  assert.match(html, /\$149/);
-  assert.match(html, /Publish one passport/);
-  assert.match(html, /Start a Farm Plan/);
+  for (const id of ["strainchain_passport", "strainchain_farm"] as const) {
+    assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
+    assert.ok(html.includes(escHtml(plan(id).cta)), `${id} cta`);
+  }
   assert.match(
     html,
     /https:\/\/authichain\.com\/checkout\/strainchain_passport/
@@ -319,19 +372,20 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.match(html, />Plans and prices</);
   assert.doesNotMatch(html, /primary money path/);
   assert.doesNotMatch(html, /Prices that already charge/);
-  assert.match(html, /QRON Starter Pack/);
-  assert.match(html, /QRON Creator Pack/);
+  assert.ok(html.includes(escHtml(`QRON ${plan("starter").name}`)));
+  assert.ok(html.includes(escHtml(`QRON ${plan("creator").name}`)));
   assert.doesNotMatch(html, /Theater 1/);
   assert.doesNotMatch(html, /Theater 3/);
   assert.doesNotMatch(html, /\$499/);
   assert.match(html, />Start audit</);
   assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
   assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
-  // Held: free card (5 generations since the #1234 freeze), DPP card, Basic
-  // line. Theater is not listed.
-  assert.match(html, /Start with 5 free/);
+  // Free and DPP card wording comes from plans.ts (see the catalogue test
+  // above); the retired 7-day trial copy must not come back. Theater is not
+  // listed.
+  assertCardWording(html, plan("free"));
+  assertCardWording(html, plan("dpp_readiness"));
   assert.doesNotMatch(html, /Free Trial|Try Free for 7 Days/);
-  assert.match(html, /\$299 credited toward AuthiChain Basic/);
   // No new plan prices.
   assert.doesNotMatch(html, /\$1,499|\$199\/mo/);
 });
