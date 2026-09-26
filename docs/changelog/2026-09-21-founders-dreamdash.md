@@ -10,3 +10,20 @@ Restore `/founders` as an auth-gated deal command center (Today / Board / Ops).
 - Cycle stale follow-ups set `draftPending`. Queue + Open opens the lead sheet.
 - `metadata` accepts jsonb objects or text JSON.
 - Do not merge until reviewed. Do not set `live=true` on AgentZ workflows.
+
+## 2026-09-21 — draft/notify + sitemap
+
+- Cycle logs each heartbeat workflow separately, then the summary row.
+- `draftPending` flips notify founder-only (ntfy `zk_live_alerts_99`, optional Resend to authichain@ + undone.k@). Never emails the lead.
+- POST `/api/founders/digest` compiles + alerts the founder. Ops "Compile digest" calls it.
+- Edge `POST /api/dpp/publish` and `GET/POST /api/dpp/verify` already mounted; added POST verify tests.
+- Sitemap keeps `/dpp` `/onboard` `/verify` and adds `/telegram`.
+
+## 2026-09-21 — AgentZ may manage /founders
+
+- HTML `/founders` stays cookie-gated.
+- APIs accept founder session **or** AgentZ bearer:
+  `x-agentz-secret` / `Authorization: Bearer` matching `AGENTZ_WEBHOOK_SECRET`, `AGENTZ_API_KEY`, `AGENT_SECRET`, or `INTERNAL_API_SECRET`.
+- AgentZ uses the service-role client. Actor is logged as `agentz`.
+- Command surface: `GET/POST /api/founders/agentz` ops `dashboard|cycle|digest|capture|import-sam|mutate|ask`.
+- `mutate action=send` still only marks the draft sent. It does not email the lead.

@@ -2,15 +2,15 @@
 
 Targeted first-dollar pages for AuthiChain. Self-serve checkout only. No call booking. Brand AuthiChain; SAM legal entity **ZACHARY KIETZMAN** (no AuthiChain Inc).
 
-## Inventory (2026-09-20)
+## Inventory (2026-09-21)
 
-| Surface | What actually happens |
-| --- | --- |
-| `workers/authichain-com` | Serves **authichain.com** and **www.authichain.com** (`authichain.com/*`). This is the live apex. Last deploy path: `.github/workflows/deploy-authichain-com.yml`. |
+| Surface                                                       | What actually happens                                                                                                                                                                  |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workers/authichain-com`                                      | Serves **authichain.com** and **www.authichain.com** (`authichain.com/*`). This is the live apex. Last deploy path: `.github/workflows/deploy-authichain-com.yml`.                     |
 | Root worker `authichain` (`worker/index.ts`, `wrangler.toml`) | Binds **MICROSITES_KV** id `a992900da1db4b998af1cdf4eccf550a`. Routes `*.authichain.com` (except apex/www) to KV key `{subdomain}{path}` with `/` → `/index.html`. **R2 is not used.** |
-| `*.authichain.com` today | Wildcard DNS exists (Cloudflare 522/523). No worker is attached. Do **not** enable Workers Paid to fix this. |
-| `agentz/core/microsites.py` | Stale R2 + Vercel alias path. Do not use. |
-| `/p` and `/p/<serial>` | Product passport GET on `APP_WORKER`. **Do not** put campaign pages here. |
+| `*.authichain.com` today                                      | Wildcard DNS exists (Cloudflare 522/523). No worker is attached. Do **not** enable Workers Paid to fix this.                                                                           |
+| `agentz/core/microsites.py`                                   | Stale R2 + Vercel alias path. Do not use.                                                                                                                                              |
+| `/p` and `/p/<serial>`                                        | Product passport GET on `APP_WORKER`. **Do not** put campaign pages here.                                                                                                              |
 
 Live money rails (probed 2026-09-20):
 
@@ -21,13 +21,14 @@ Live money rails (probed 2026-09-20):
 
 After `authichain-com` deploys from main:
 
-| Pack | Canonical | Aliases |
-| --- | --- | --- |
-| Mendo / RealTHCV / LT-63 | https://authichain.com/m/mendo | `/m/realthcv`, `/m/lt-63` |
-| TruMark | https://authichain.com/m/trumark | — |
-| Made in America | https://authichain.com/m/musa | `/m/made-in-america` |
-| StrainChain hub | https://authichain.com/m/strainchain | — |
-| Index | https://authichain.com/m | — |
+| Pack                              | Canonical                             | Aliases                   |
+| --------------------------------- | ------------------------------------- | ------------------------- |
+| Mendo / RealTHCV / LT-63          | https://authichain.com/m/mendo        | `/m/realthcv`, `/m/lt-63` |
+| TruMark                           | https://authichain.com/m/trumark      | —                         |
+| Made in America                   | https://authichain.com/m/musa         | `/m/made-in-america`      |
+| StrainChain hub                   | https://authichain.com/m/strainchain  | —                         |
+| BAT-2026-001 / Insulin Vial 100IU | https://authichain.com/m/bat-2026-001 | `/m/insulin-vial`         |
+| Index                             | https://authichain.com/m              | —                         |
 
 Existing product briefs stay at `/trumark`, `/made-in-america`, `/genetics/mendo-love-farms`, `/passport`.
 
@@ -42,14 +43,16 @@ Namespace **MICROSITES_KV** `a992900da1db4b998af1cdf4eccf550a` (title confirmed 
 ./scripts/upload-microsites-kv.sh
 ```
 
-| Key | File |
-| --- | --- |
-| `mendo/index.html` | `content/microsites/mendo/index.html` |
-| `realthcv/index.html` | same as mendo |
-| `trumark/index.html` | `content/microsites/trumark/index.html` |
-| `musa/index.html` | `content/microsites/musa/index.html` |
-| `made-in-america/index.html` | same as musa |
-| `strainchain/index.html` | `content/microsites/strainchain/index.html` |
+| Key                          | File                                         |
+| ---------------------------- | -------------------------------------------- |
+| `mendo/index.html`           | `content/microsites/mendo/index.html`        |
+| `realthcv/index.html`        | same as mendo                                |
+| `trumark/index.html`         | `content/microsites/trumark/index.html`      |
+| `musa/index.html`            | `content/microsites/musa/index.html`         |
+| `made-in-america/index.html` | same as musa                                 |
+| `strainchain/index.html`     | `content/microsites/strainchain/index.html`  |
+| `bat-2026-001/index.html`    | `content/microsites/bat-2026-001/index.html` |
+| `insulin-vial/index.html`    | same as bat-2026-001                         |
 
 KV does nothing useful until a worker route is attached to those hostnames. Prefer `/m/`.
 

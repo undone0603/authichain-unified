@@ -1,0 +1,15 @@
+{
+  "id": "C-legitimate-travel",
+  "input": {
+    "objectFound": true,
+    "depth": "history",
+    "crypto": { "signatureValid": true, "issuerTrusted": true, "identityValid": true, "evidenceIntact": true, "statusActive": true },
+    "attestation": { "objectId": "ac:demo:874921", "decision": "verified", "status": "active", "issuer": "Authichain-Core", "evidence": [] },
+    "scans": [
+      { "at": "2026-09-26T09:00:00Z", "lat": 42.3314, "lon": -83.0458, "region": "US-MI" },
+      { "at": "2026-09-26T13:00:00Z", "lat": 41.8781, "lon": -87.6298, "region": "US-IL" },
+      { "at": "2026-09-26T17:00:00Z", "lat": 39.7684, "lon": -86.1581, "region": "US-IN" }
+    ]
+  },
+  "expect": { "decision": "verified" }
+}

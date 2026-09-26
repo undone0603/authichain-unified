@@ -13,6 +13,8 @@
 #   musa/index.html
 #   made-in-america/index.html   (same bytes as musa)
 #   strainchain/index.html
+#   bat-2026-001/index.html
+#   insulin-vial/index.html      (same bytes as bat-2026-001)
 #
 # Live serving today is authichain-com /m/<slug>. KV + *.authichain.com
 # only works after the root `authichain` worker is actually routed to
@@ -47,6 +49,8 @@ put_key "trumark/index.html" "$ROOT/content/microsites/trumark/index.html"
 put_key "musa/index.html" "$ROOT/content/microsites/musa/index.html"
 put_key "made-in-america/index.html" "$ROOT/content/microsites/musa/index.html"
 put_key "strainchain/index.html" "$ROOT/content/microsites/strainchain/index.html"
+put_key "bat-2026-001/index.html" "$ROOT/content/microsites/bat-2026-001/index.html"
+put_key "insulin-vial/index.html" "$ROOT/content/microsites/bat-2026-001/index.html"
 
 echo "KV upload complete. Subdomain DNS is still 522/523 until a worker route is attached."
 echo "Apex URLs (no DNS change): https://authichain.com/m/mendo"

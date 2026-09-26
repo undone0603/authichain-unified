@@ -32,6 +32,7 @@ EXPECTED_MONEY_PATHS = (
     "https://authichain.com/m/trumark",
     "https://authichain.com/m/musa",
     "https://authichain.com/m/strainchain",
+    "https://authichain.com/m/bat-2026-001",
     "https://authichain.com/api/checkout/dpp",
     "https://authichain.com/api/checkout/plan/strainchain_passport",
     "https://strainchain.io/pricing",

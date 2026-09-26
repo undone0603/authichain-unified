@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tryHandleProtocolCheckout } from "./protocol-checkout";
+import {
+  tryHandleProtocolCheckout,
+  tryHandleApiCheckoutEmailGate,
+} from "./protocol-checkout";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 describe("tryHandleProtocolCheckout", () => {
@@ -28,66 +31,34 @@ describe("tryHandleProtocolCheckout", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("returns 500 JSON when Stripe is not bound", async () => {
+  it("GET with a valid email 303s to the confirm page and never calls Stripe", async () => {
+    vi.stubGlobal("fetch", vi.fn());
     const res = await tryHandleProtocolCheckout(
-      req("/protocol/checkout/dpp?visit_id=dpp_abc"),
-      {}
+      req("/protocol/checkout/dpp?visit_id=dpp_abc&email=buyer%40brand.com&utm_source=x"),
+      { STRIPE_SECRET_KEY: "sk_live_x" }
     );
-    expect(res).not.toBeNull();
-    expect(res!.status).toBe(500);
-    expect(res!.headers.get("cache-control")).toMatch(/no-store/);
-    await expect(res!.json()).resolves.toEqual({
-      error: "Stripe is not configured",
-    });
+    expect(res!.status).toBe(303);
+    const loc = new URL(res!.headers.get("location")!);
+    expect(loc.origin + loc.pathname).toBe(
+      "https://authichain.com/checkout/dpp_readiness"
+    );
+    expect(loc.searchParams.get("email")).toBe("buyer@brand.com");
+    expect(loc.searchParams.get("visit_id")).toBe("dpp_abc");
+    expect(loc.searchParams.get("utm_source")).toBe("x");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("303s to the Stripe Checkout URL", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              url: "https://checkout.stripe.com/c/pay/cs_test_1",
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }
-          )
-      )
-    );
+  it("GET without email 303s to the confirm page (no Stripe)", async () => {
+    vi.stubGlobal("fetch", vi.fn());
     const res = await tryHandleProtocolCheckout(
-      req("/protocol/checkout/dpp?visit_id=dpp_abc&utm_source=smoke"),
+      req("/protocol/checkout/dpp?visit_id=dpp_abc&email=not-an-email"),
       { STRIPE_SECRET_KEY: "sk_test_x" }
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_1"
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_abc"
     );
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const init = fetchMock.mock.calls[0][1] as {
-      headers: Record<string, string>;
-      body: URLSearchParams;
-    };
-    expect(init.headers.Authorization).toBe("Bearer sk_test_x");
-    const body = String(init.body);
-    const params = new URLSearchParams(body);
-    expect(body).toContain("price_1TwmD8GqTruSqV8TpAF8dfyA");
-    expect(body).toContain("dpp_abc");
-    expect(body).toContain("utm_source");
-    expect(body).toContain("dpp_readiness_2026");
-    expect(body).toContain("stripe_price_id");
-    expect(body).not.toContain("payment_method_types");
-    expect(body).toContain("after_expiration");
-    expect(body).toContain("recovery");
-    expect(body).not.toContain("consent_collection");
-    expect(params.get("allow_promotion_codes")).toBeNull();
-    expect(
-      params.get("after_expiration[recovery][allow_promotion_codes]")
-    ).toBe("false");
-    expect(body).toContain("customer_creation");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
@@ -122,5 +93,51 @@ describe("tryHandleProtocolCheckout", () => {
     expect(body).toContain(
       "metadata[stripe_price_id]=price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
+  });
+});
+
+describe("tryHandleApiCheckoutEmailGate", () => {
+  it("returns null for other API paths", () => {
+    expect(tryHandleApiCheckoutEmailGate(req("/api/x402"))).toBeNull();
+    expect(tryHandleApiCheckoutEmailGate(req("/dashboard"))).toBeNull();
+  });
+
+  it("HEAD /api/checkout/dpp is 204 and does not bounce", () => {
+    const res = tryHandleApiCheckoutEmailGate(
+      req("/api/checkout/dpp", { method: "HEAD" })
+    );
+    expect(res?.status).toBe(204);
+    expect(res?.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("HEAD /api/checkout/plan/strainchain_farm is 204 and does not bounce", () => {
+    const res = tryHandleApiCheckoutEmailGate(
+      req("/api/checkout/plan/strainchain_farm", { method: "HEAD" })
+    );
+    expect(res?.status).toBe(204);
+    expect(res?.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("every GET (with or without email) 303s to the gated confirm page", () => {
+    const cases: Array<[string, string]> = [
+      ["/api/checkout/dpp?visit_id=dpp_anon", "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_anon"],
+      ["/api/checkout/dpp?email=ops%40brand.com", "https://authichain.com/checkout/dpp_readiness?email=ops%40brand.com"],
+      ["/api/checkout/plan/strainchain_passport", "https://authichain.com/checkout/strainchain_passport"],
+      ["/api/checkout/plan/strainchain_farm?email=ops%40brand.com&utm_source=mail", "https://authichain.com/checkout/strainchain_farm?email=ops%40brand.com&utm_source=mail"],
+      ["/api/checkout/plan/theater_3", "https://authichain.com/checkout/theater_3"],
+      ["/api/checkout/plan/nope", "https://authichain.com/checkout?need_email=1"],
+    ];
+    for (const [path, loc] of cases) {
+      const res = tryHandleApiCheckoutEmailGate(req(path));
+      expect(res?.status, path).toBe(303);
+      expect(res?.headers.get("location"), path).toBe(loc);
+      expect(res?.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    }
+  });
+
+  it("only DPP-SMOKE-E2E falls through to APP_WORKER", () => {
+    expect(
+      tryHandleApiCheckoutEmailGate(req("/api/checkout/dpp?promo=DPP-SMOKE-E2E"))
+    ).toBeNull();
   });
 });
