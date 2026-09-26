@@ -30,7 +30,10 @@ const OUT = path.join(__dirname, '..', 'content', 'seo', 'pages.json');
 // with the snippet above before deciding it's still skewed — it changes every
 // run.
 const BRANDS = {
-  authichain: { name: 'AuthiChain', domain: 'authichain.com', price: 'Plans start at $49/mo.' },
+  // domain is the brand key pages.json is filtered by; origin is the live host
+  // for canonical URLs. AuthiChain moved to authichain.govchain.us in #1245
+  // while its checkout forms stay on authichain.com/checkout (LIVE_MONEY).
+  authichain: { name: 'AuthiChain', domain: 'authichain.com', origin: 'authichain.govchain.us', price: 'Plans start at $49/mo.' },
   strainchain: { name: 'StrainChain', domain: 'strainchain.io', price: 'Plans start at $199/mo.' },
   govchain: { name: 'GovChain', domain: 'govchain.us', price: 'No enterprise contract — public-sector pricing.' },
   qron: { name: 'QRON', domain: 'qron.space', price: 'Plans start at $29/mo.' },
@@ -256,13 +259,14 @@ const DATA = [
   ...require('./seo-data/industry.cjs'),
   ...require('./seo-data/standards.cjs'),
   ...require('./seo-data/commercial.cjs'),
+  ...require('./seo-data/comparison.cjs'),
 ];
 
 function buildEntry(d) {
   const b = BRANDS[d.brand];
   const kwTitle = titleCase(d.keyword);
   const slug = slugify(d.keyword);
-  const url = `https://${b.domain}/p/${slug}`;
+  const url = `https://${b.origin || b.domain}/p/${slug}`;
   const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
   const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
@@ -285,14 +289,14 @@ function buildEntry(d) {
         name: `${b.name} — ${kwTitle}`,
         ...(d.schemaType === 'Product'
           ? { brand: { '@type': 'Brand', name: b.name } }
-          : { provider: { '@type': 'Organization', name: b.name, url: `https://${b.domain}` } }),
+          : { provider: { '@type': 'Organization', name: b.name, url: `https://${b.origin || b.domain}` } }),
         description: d.lead,
         url,
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: b.name, item: `https://${b.domain}` },
+          { '@type': 'ListItem', position: 1, name: b.name, item: `https://${b.origin || b.domain}` },
           { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
         ],
       },
