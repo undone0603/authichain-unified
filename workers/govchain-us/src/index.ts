@@ -21,10 +21,15 @@ import {
   tryHandleEstateIndexNow,
 } from "../../_shared/estate-landing.ts";
 import { tryHandleGovchainPricing } from "../../_shared/estate-pricing.ts";
+import { tryHandleGovGift } from "./gov-gift.ts";
+import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
+import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
+import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
 } from "../../_shared/seo-hub-routes.ts";
+import { tryHandleNftMetadata } from "./nft-metadata.ts";
 
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect x="2" y="2" width="60" height="60" rx="8" fill="#05060b" stroke="#3b82f6" stroke-width="1.5"/>
@@ -2007,12 +2012,17 @@ function escapeHtml(value: unknown): string {
   );
 }
 
-/** Formats an ISO timestamp as a plain date, or "Deadline TBD" when absent. */
+/**
+ * Formats an ISO timestamp as a plain date, or "Deadline TBD" when absent.
+ * A deadline in the past reads "Closed <date>" so a direct link to an expired
+ * notice never presents it as open.
+ */
 function formatDeadline(value: string | null): string {
   if (!value) return "Deadline TBD";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "Deadline TBD";
-  return `Due ${d.toISOString().slice(0, 10)}`;
+  const date = d.toISOString().slice(0, 10);
+  return d.getTime() < Date.now() ? `Closed ${date}` : `Due ${date}`;
 }
 
 /** Only https SAM links are rendered as links; anything else becomes plain text. */
@@ -2054,7 +2064,7 @@ function pageShell(title: string, robots: string, body: string): string {
 <style>${PAGE_CSS}</style></head><body>
 <div class="nav"><a href="/" class="logo">GovChain</a><a href="/opportunities">Opportunities</a></div>
 ${body}
-<footer>&copy; 2026 GovChain &middot; Powered by AuthiChain Protocol &middot; <a href="https://authichain.com">authichain.com</a></footer>
+<footer>&copy; 2026 GovChain &middot; Powered by AuthiChain Protocol &middot; <a href="https://authichain.govchain.us">authichain.com</a></footer>
 </body></html>`;
 }
 
@@ -2221,6 +2231,11 @@ async function proxyToApp(request: Request, url: URL, origin: string): Promise<R
 export default {
   async fetch(request: Request, env: SupabaseEnv): Promise<Response> {
     const url = new URL(request.url);
+    // /verify 404ed on this apex (linked from /onboard). The public verify
+    // page lives on authichain.com.
+    if (url.pathname === "/verify" || url.pathname === "/verify/") {
+      return Response.redirect(`https://authichain.com/verify${url.search}`, 302);
+    }
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
     }
@@ -2249,19 +2264,39 @@ export default {
   <url><loc>https://govchain.us/opportunities</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://govchain.us/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://govchain.us/gift</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://govchain.us/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://govchain.us/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://govchain.us/api/x402</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://govchain.us/mcp</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     if (p === '/robots.txt') {
-      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n', {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n# https://govchain.us/llms.txt\n# https://govchain.us/openapi.json\n# https://govchain.us/api/x402\n# https://govchain.us/mcp\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
     const indexNow = tryHandleEstateIndexNow(request);
     if (indexNow) return indexNow;
+    const gift = tryHandleGovGift(request);
+    if (gift) return gift;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
+    const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
+    if (x402) return x402;
+    const mcp = await tryHandleSisterMcp(
+      request,
+      "govchain",
+      env,
+      env?.VERIFY_APP
+    );
+    if (mcp) return mcp;
+    const discovery = tryHandleEstateAgentDiscovery(request, "govchain");
+    if (discovery) return discovery;
+    const nftMetadata = tryHandleNftMetadata(request);
+    if (nftMetadata) return nftMetadata;
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
@@ -2305,11 +2340,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GovChain — Federal Contract Intelligence & Public Provenance</title>
-<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and an immutable on-chain public datalog for Made-in-USA and federal compliance.">
+<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GovChain">
 <meta property="og:title" content="GovChain — Federal Contract Intelligence &amp; Public Provenance">
-<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements, and an immutable on-chain public datalog for Made-in-USA and federal compliance.">
+<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
 <meta property="og:url" content="https://govchain.us/">
 <meta property="og:image" content="https://govchain.us/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2319,7 +2354,7 @@ export default {
 <meta name="theme-color" content="#1d4ed8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and an immutable on-chain public datalog for Made-in-USA and federal compliance.","sameAs":["https://authichain.com"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GovChain","url":"https://govchain.us","description":"Federal Contract Intelligence and Public Provenance powered by AuthiChain Protocol."}</script>
 <style>
 ${estateCssVars("govchain")}
@@ -2340,7 +2375,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Federal contract intelligence",
   title: "Win more federal work. Prove every claim.",
-  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements, and an immutable public datalog for Made-in-USA and federal compliance.",
+  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).",
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     { href: "/opportunities", label: "Browse opportunities", primary: false },
@@ -2364,12 +2399,12 @@ ${estateTrust([
 <section class="estate-section" id="how">
   <div class="wrap">
     <h2>From notice to awarded</h2>
-    <p class="section-sub">An autonomous pipeline that ingests, scores, drafts, and anchors — so the team pursues only what fits.</p>
+    <p class="section-sub">A pipeline that ingests, scores, and drafts, so the team pursues only what fits. On-chain anchoring is in development.</p>
     <div class="steps">
       <div class="step"><div class="step-num">01</div><h3>SAM.gov ingestion</h3><p>Live ingestion of federal and state notices by NAICS, agency, and keyword.</p></div>
       <div class="step"><div class="step-num">02</div><h3>AI fit-scoring</h3><p>Each opportunity scored 0–100 against your capabilities with a pursue / monitor / skip call.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Capability drafting</h3><p>High-fit opportunities get an AI-drafted capability statement ready for review.</p></div>
-      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring</h3><p>Claims and Made-in-USA provenance are hash-anchored to Polygon for public proof.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring (in development)</h3><p>Contract deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>; hash-anchoring of claims is in development.</p></div>
     </div>
   </div>
 </section>
@@ -2380,8 +2415,8 @@ ${estateFeatures(
   [
     { title: "Opportunity radar + fit-scoring", body: "AI ranks notices by fit so business-development time goes only where it can pay off." },
     { title: "Auto-drafted capability statements", body: "Turn a high-fit notice into a tailored capability statement so the team edits instead of starting blank." },
-    { title: "Made-in-USA provenance", body: "Cryptographic seals for domestic-origin claims, ready for FTC MUSA and EO 14392 scrutiny." },
-    { title: "Public datalog", body: "Certifications and contract claims are verifiable on-chain by contracting officers and auditors." },
+    { title: "Made-in-USA provenance", body: "Our goal: cryptographic seals for domestic-origin claims, built around FTC Made in USA documentation." },
+    { title: "Public datalog", body: "On-chain verification of claims for contracting officers and auditors is in development." },
     { title: "Compliance-ready exports", body: "Evidence packages mapped to FAR/DFARS, NIST 800-171, and Section 889." },
     { title: "Deadline watchdog", body: "Alerts when a high-fit proposal is within 48 hours of its deadline." },
   ],
@@ -2391,12 +2426,12 @@ ${estateFeatures(
 <section class="estate-section" id="audit">
   <div class="wrap">
     <h2>Four-layer public trust trail</h2>
-    <p class="section-sub">From operational record to immutable chain anchor.</p>
+    <p class="section-sub">From operational record to chain anchor (in development).</p>
     <div class="audit-pipeline">
       <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Scored opportunities, proposals, and certifications</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS</div><div class="audit-desc">Content-addressed evidence storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">On-chain hash anchor · public, tamper-evident</div></div>
+      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>
@@ -2420,7 +2455,7 @@ ${estateFeatures(
     <p class="section-sub">GovChain does not publish a self-serve price in the AuthiChain catalogue. Request access on /onboard — the same intake production already proxies. This page does not promise a live government mint.</p>
     <div class="estate-actions">
       <a class="btn btn-primary" href="/onboard">Request access</a>
-      <a class="btn btn-outline" href="https://authichain.com/pricing">AuthiChain pricing</a>
+      <a class="btn btn-outline" href="https://authichain.govchain.us/pricing">AuthiChain pricing</a>
     </div>
   </div>
 </section>
@@ -2447,7 +2482,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
+        { href: "https://authichain.govchain.us/dashboard", label: "AuthiChain dashboard" },
         { href: "https://qron.space/generate", label: "Generate Living QR" },
         { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
       ],
@@ -2455,7 +2490,7 @@ ${estateFooter(
     {
       heading: "Company",
       links: [
-        { href: "https://authichain.com/contact", label: "Contact" },
+        { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
     },
   ],

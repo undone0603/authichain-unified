@@ -8,9 +8,10 @@ import {
   NFT_DEPLOYER_EOA,
   POLYGON_AUTHICHAIN_NFT,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
-import { planUsd, PLANS } from "./plans";
+import { planPaymentLink, planUsd, PLANS } from "./plans";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -33,9 +34,15 @@ describe("canonical web3 identity lock", () => {
       TOKENOMICS_PAY_TO,
       COINBASE_SMART_WALLET,
       NFT_DEPLOYER_EOA,
+      QRON_ERC20,
     ].map(a => a.toLowerCase());
-    expect(new Set(named).size).toBe(3);
+    expect(new Set(named).size).toBe(4);
     expect(TOKENOMICS_PAY_TO).toBe(X402_PUBLISHED_PAY_TO);
+    // payTo is the owner's keyed EOA, which is also the $QRON holder.
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).toBe(QRON_HOLDER_EOA.toLowerCase());
+    expect(QRON_HOLDER_EOA).toBe(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
     expect(ECONOMY_NFT_DEPLOYER).toBe(NFT_DEPLOYER_EOA);
     expect(ECONOMY_NFT).toBe(POLYGON_AUTHICHAIN_NFT);
   });
@@ -75,6 +82,19 @@ describe("canonical web3 identity lock", () => {
       planUsd("strainchain_passport")
     );
     expect(catalog.humanCheckout.dppUsd).toBe(planUsd("dpp_readiness"));
+    expect(catalog.humanCheckout.passportPaymentLink).toBe(
+      planPaymentLink("strainchain_passport")
+    );
+    expect(catalog.humanCheckout.dppPaymentLink).toBe(
+      planPaymentLink("dpp_readiness")
+    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
+    expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
+      "authichain.com"
+    );
   });
 
   it("keeps $QRON out of x402 accepts[]", () => {
@@ -97,20 +117,26 @@ describe("canonical web3 identity lock", () => {
       planUsd("strainchain_passport")
     );
     expect(MONEY_RAILS.stripe.skus.dppUsd).toBe(planUsd("dpp_readiness"));
+    expect(MONEY_RAILS.stripe.skus.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(PLANS.find(p => p.id === "strainchain_passport")?.price).toBe(49);
     expect(PLANS.find(p => p.id === "dpp_readiness")?.price).toBe(299);
+    expect(PLANS.find(p => p.id === "strainchain_farm")?.price).toBe(149);
     const d = agentPricingDiscovery();
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.strainchain_passport).toBe("$49 one-time");
+    expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
+    expect(d.humanCheckout.checkout.farm).toBe(
+      planPaymentLink("strainchain_farm")
+    );
+    expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
+      "authichain.com"
+    );
     expect(d.nft.deployer).toBe(NFT_DEPLOYER_EOA);
     expect(d.nft.contract).toBe(POLYGON_AUTHICHAIN_NFT);
   });
 
   it("joins Next MCP get_pricing and chain-data literals to the named exports", () => {
-    const mcp = readFileSync(
-      join(root, "src/app/api/mcp/route.ts"),
-      "utf8"
-    );
+    const mcp = readFileSync(join(root, "src/app/api/mcp/route.ts"), "utf8");
     expect(mcp).toContain("agentPricingDiscovery");
     expect(mcp).not.toMatch(/register_product:\s*"\$0\.50"/);
     expect(mcp).not.toMatch(/check_eu_dpp:\s*"\$5\.00"/);

@@ -32,6 +32,7 @@ import {
   recordStripeWebhookDelivery,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
+import { planByStripePriceId } from "../../src/lib/plans";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -74,6 +75,24 @@ async function optionalDb<T>(
   }
 }
 
+/**
+ * Audit rows are a record of what happened, not state a customer depends on.
+ * They must never turn a webhook into a 400: on the apex Worker, where
+ * DATABASE_URL is absent, an unguarded audit write used to fail every
+ * checkout.session.expired before the recovery email went out (102 x 400 in
+ * stripe_events up to 2026-09-23). State writes below stay strict so Stripe
+ * retries them.
+ */
+function auditSafe(
+  ...args: Parameters<typeof db.logAutomationAudit>
+): Promise<void> {
+  return optionalDb(
+    `audit:${args[0]}`,
+    () => db.logAutomationAudit(...args),
+    undefined
+  );
+}
+
 function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
   return (
     session.line_items?.data?.[0]?.price?.id ||
@@ -81,6 +100,29 @@ function checkoutLinePriceId(session: Stripe.Checkout.Session): string | null {
       ? session.metadata.stripe_price_id
       : null)
   );
+}
+
+/**
+ * Fulfillment-collision guard: a $299/mo subscription Checkout Session (e.g.
+ * via buy.stripe.com/28E8wP0) carries no PLANS price ID and no metadata.plan,
+ * so planByAmountCents(29900) would resolve it to the one-time dpp_readiness
+ * plan and grant DPP credits for a recurring subscription. Any Checkout
+ * Session that is subscription-mode or otherwise recurring must never fall
+ * back to a one-time plan by amount.
+ */
+function isRecurringCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  if (session.mode === "subscription") return true;
+  const sub = session.subscription;
+  if (typeof sub === "string" ? sub : sub?.id) return true;
+  const price = (
+    session.line_items?.data?.[0] as unknown as
+      | {
+          price?: { recurring?: { interval?: string } | null } | null;
+        }
+      | undefined
+  )?.price;
+  if (price?.recurring?.interval) return true;
+  return false;
 }
 
 function isReplayableCheckoutEvent(type: string): boolean {
@@ -110,9 +152,14 @@ async function fulfillCatalogCreditsIfPaid(
     await import("../../src/lib/plans");
   const metaPlan =
     typeof session.metadata?.plan === "string" ? session.metadata.plan : "";
-  let catalog =
-    planByStripePriceId(linePriceId)?.id ||
-    planByAmountCents(session.amount_total ?? undefined)?.id;
+  // Collision guard: a recurring Session must never resolve a one-time plan
+  // by amount. Only an explicit PLANS price ID (or explicit metadata below)
+  // may provision a subscription-mode checkout.
+  const recurring = isRecurringCheckoutSession(session);
+  let catalog = planByStripePriceId(linePriceId)?.id;
+  if (!catalog && !recurring) {
+    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
+  }
   if (
     !catalog &&
     metaPlan &&
@@ -124,7 +171,42 @@ async function fulfillCatalogCreditsIfPaid(
   if (!catalog && metaPlan === "starter" && session.mode === "payment") {
     catalog = "starter";
   }
-  if (!catalog) return;
+  if (!catalog) {
+    if (recurring) {
+      // Explicit unfulfillable-subscription path: record the exception for
+      // ops and return WITHOUT granting credits (no throw — an unknown
+      // recurring price can never succeed on Stripe retry).
+      console.error(
+        "[stripe-webhook] unfulfillable recurring checkout: no PLANS price ID " +
+          `for session=${session.id} mode=${session.mode ?? "unknown"} ` +
+          `amount_total=${session.amount_total ?? "unknown"}`
+      );
+      try {
+        await auditSafe(
+          "billing_unfulfillable_subscription",
+          {
+            eventId: null,
+            stripeSessionId: session.id,
+            stripeCustomerId:
+              typeof session.customer === "string" ? session.customer : null,
+            stripeSubscriptionId:
+              typeof session.subscription === "string"
+                ? session.subscription
+                : null,
+            amountTotal: session.amount_total ?? null,
+            linePriceId,
+          },
+          undefined
+        );
+      } catch (auditErr) {
+        console.warn(
+          "[stripe-webhook] unfulfillable-subscription audit skipped:",
+          auditErr instanceof Error ? auditErr.message : String(auditErr)
+        );
+      }
+    }
+    return;
+  }
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
@@ -169,6 +251,35 @@ async function fulfillDppCheckoutIfPaid(
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   const linePriceId = checkoutLinePriceId(session);
   if (!isDppOffer(session.metadata || {}, linePriceId)) return;
+
+  // Collision guard: DPP readiness is a one-time $299 audit. A recurring
+  // (subscription-mode) Session must never enter the DPP grant path, even
+  // when its metadata claims the DPP offer — the subscription lifecycle
+  // handler owns recurring entitlements.
+  if (isRecurringCheckoutSession(session)) {
+    console.error(
+      "[stripe-webhook] refusing DPP fulfill for recurring checkout: " +
+        `session=${session.id} mode=${session.mode ?? "unknown"}`
+    );
+    try {
+      await auditSafe(
+        "billing_unfulfillable_subscription",
+        {
+          eventId: null,
+          stripeSessionId: session.id,
+          reason: "recurring_session_claimed_dpp_offer",
+          linePriceId,
+        },
+        undefined
+      );
+    } catch (auditErr) {
+      console.warn(
+        "[stripe-webhook] unfulfillable-subscription audit skipped:",
+        auditErr instanceof Error ? auditErr.message : String(auditErr)
+      );
+    }
+    return;
+  }
 
   const supabase = await getWebhookSupabase();
   if (!supabase) {
@@ -464,10 +575,30 @@ export async function handleStripeWebhook(
             ? "annual"
             : "monthly";
         const metaPlan = sub.metadata?.plan ?? null;
-        const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
+        const catalogue = priceId ? planByStripePriceId(priceId) : undefined;
         const status = mapStripeStatus(sub.status);
         const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
+        if (catalogue) {
+          await auditSafe(
+            event.type === "customer.subscription.created"
+              ? "billing_subscription_created"
+              : "billing_subscription_updated",
+            {
+              eventId: event.id,
+              stripeSubscriptionId: sub.id,
+              stripeCustomerId: customerId ?? null,
+              plan: catalogue.id,
+              status,
+              billingCycle,
+              userId: userId ?? null,
+              catalogue: true,
+            }
+          );
+          break;
+        }
+
+        const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
         if (userId) {
           await db.upsertStripeSubscription({
             userId,
@@ -521,7 +652,7 @@ export async function handleStripeWebhook(
           }
         }
 
-        await db.logAutomationAudit(
+        await auditSafe(
           event.type === "customer.subscription.created"
             ? "billing_subscription_created"
             : "billing_subscription_updated",
@@ -557,7 +688,7 @@ export async function handleStripeWebhook(
           new Date()
         );
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "billing_subscription_cancelled",
           {
             eventId: event.id,
@@ -607,7 +738,10 @@ export async function handleStripeWebhook(
           firstLine?.price?.recurring?.interval === "year"
             ? "annual"
             : "monthly";
-        const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
+        const catalogue = priceId ? planByStripePriceId(priceId) : undefined;
+        const plan = catalogue
+          ? catalogue.id
+          : detectPlan(priceId, amountCents, null, invBillingCycle);
 
         await Promise.all([
           amountUsd > 0
@@ -682,7 +816,7 @@ export async function handleStripeWebhook(
           ]);
         }
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "billing_dunning_started",
           {
             eventId: event.id,
@@ -777,7 +911,7 @@ export async function handleStripeWebhook(
         const recoveryUrl = checkoutRecoveryUrl(session);
         const name = session.metadata?.customer_name || "there";
 
-        await db.logAutomationAudit(
+        await auditSafe(
           "checkout_abandoned",
           {
             eventId: event.id,
@@ -797,7 +931,7 @@ export async function handleStripeWebhook(
           await sendEmail({
             to: email,
             subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
-            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
             fromName: "AuthiChain",
           });
           console.log(

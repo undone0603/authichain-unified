@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { listedPlans } from "@/lib/plans";
+import { listedPlans, planPaymentLink } from "@/lib/plans";
 import { CheckoutModal, TrialButton } from "./pricing-client";
-import { Check, Coins } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import {
@@ -107,100 +107,9 @@ export default function PricingPage() {
                   planId={plan.id}
                   label={plan.name}
                   price={`$${plan.price}`}
-                  paymentLink={plan.stripe_payment_link}
+                  paymentLink={planPaymentLink(plan.id)}
                 />
               )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Bitcoin Ordinals Section */}
-      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-zinc-900">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F7931A]/10 border border-[#F7931A]/20 text-[#F7931A] text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-            <Coins className="w-4 h-4" />
-            New: Bitcoin L1 Inscriptions
-          </div>
-          <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter">
-            Immutable <span className="text-[#F7931A]">Ordinals</span>
-          </h2>
-          <p className="max-w-xl mx-auto text-zinc-500 text-sm font-medium uppercase tracking-widest leading-relaxed">
-            Store your AI QR art permanently on the world&apos;s most trusted
-            blockchain. Dual-chain proof for maximum verification.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              id: "ordinal_single",
-              name: "Ordinal Single",
-              price: "49",
-              features: [
-                "1 AI QR Art Inscription",
-                "Bitcoin L1 Permanence",
-                "Magic Eden Ready",
-                "Transferable Digital Artifact",
-              ],
-              link: "https://buy.stripe.com/14A00jbjz9Ns5ia5fe1Nu1d",
-            },
-            {
-              id: "ordinal_auth",
-              name: "BTC Dual-Auth",
-              price: "299",
-              features: [
-                "Product Cert on BTC",
-                "Dual-Chain Proof",
-                "Authichain Verification",
-                "Brand Inscription",
-              ],
-              link: "https://buy.stripe.com/dRm3cv0EV6BgeSKdLK1Nu1e",
-              highlight: true,
-            },
-            {
-              id: "ordinal_collection",
-              name: "Batch Collection",
-              price: "799",
-              features: [
-                "25 L1 Inscriptions",
-                "Collection Listing",
-                "Enterprise Scale",
-                "Co-Marketing Rights",
-              ],
-              link: "https://buy.stripe.com/eVq9AT5Zff7MbGy8rq1Nu1f",
-            },
-          ].map(o => (
-            <div
-              key={o.id}
-              className={`protocol-card p-8 border-[#F7931A]/20 bg-[#F7931A]/5 ${o.highlight ? "ring-2 ring-[#F7931A]/40" : ""}`}
-            >
-              <h3 className="text-[10px] font-black uppercase text-[#F7931A] mb-2">
-                {o.name}
-              </h3>
-              <div className="flex items-baseline gap-1 mb-8">
-                <span className="text-3xl font-black text-white">
-                  ${o.price}
-                </span>
-              </div>
-              <ul className="space-y-4 mb-10">
-                {o.features.map(f => (
-                  <li key={f} className="flex gap-3">
-                    <span className="text-[#F7931A] text-xs">â‚¿</span>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">
-                      {f}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href={o.link}
-                target="_blank"
-                rel="noopener"
-                className="block w-full py-4 rounded-xl bg-[#F7931A] text-black font-black uppercase tracking-widest text-xs text-center"
-              >
-                Inscribe Now
-              </a>
             </div>
           ))}
         </div>

@@ -12,29 +12,51 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Dependabot and fork PRs run without repository secrets, so
+      # DATABASE_URL is empty there and the audit cannot connect. Skip the
+      # audit (the job still passes) instead of failing every dependency
+      # bump; runs that do have the secret audit as before.
+      - name: Check database secret
+        id: secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Schema audit skipped::DATABASE_URL is not available to this run (Dependabot or fork PR), so the production schema audit was skipped."
+          fi
+
       - name: Checkout
+        if: steps.secret.outputs.available == 'true'
         uses: actions/checkout@v7
 
       - name: Install pnpm
+        if: steps.secret.outputs.available == 'true'
         uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           version: "10.28.2"
 
       - name: Use Node.js
+        if: steps.secret.outputs.available == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "pnpm"
 
       - name: Install dependencies
+        if: steps.secret.outputs.available == 'true'
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Audit production database
+        if: steps.secret.outputs.available == 'true'
         run: node scripts/audit-production-drizzle.mjs
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Upload audit artifact
+        if: steps.secret.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: production-drizzle-audit

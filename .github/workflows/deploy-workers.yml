@@ -101,7 +101,6 @@ jobs:
             "rxchain-io",
             "threadchain-io",
             "watchchain-io",
-            "passport-demo",
             "qfs-adapter",
             "authichain-bridge"
           ]')
@@ -173,6 +172,11 @@ jobs:
           docker buildx version
           docker buildx ls
 
+      # Promote path. Cloudflare Workers Builds on PRs for qron-space and
+      # govchain-us runs `npx wrangler versions upload`, which stores a new
+      # version but leaves custom-domain traffic on the last `wrangler deploy`.
+      # Email-capture pricing HTML reaches qron.space / govchain.us / strainchain.io
+      # / authichain.com only after this step on main.
       - name: Deploy Worker
         if: |
           env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != '' &&
@@ -221,6 +225,41 @@ jobs:
           printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-agentz
           echo "bound AGENT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY on authichain-agentz"
 
+      # Command Center reads live data. Each secret is optional: a missing one
+      # shows "not connected" on the page instead of failing the deploy.
+      - name: Bind command-center secrets
+        if: |
+          matrix.worker == 'authichain-dashboard' &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == 'authichain-dashboard')
+        working-directory: workers/authichain-dashboard
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          DASHBOARD_GITHUB_TOKEN: ${{ secrets.DASHBOARD_GITHUB_TOKEN }}
+          FOUNDER_EMAILS: ${{ secrets.FOUNDER_EMAILS }}
+        run: |
+          set -euo pipefail
+          bind() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then echo "skip $name (GitHub secret not set)"; return; fi
+            printf '%s' "$value" | npx wrangler secret put "$name" --name authichain-dashboard >/dev/null
+            echo "bound $name"
+          }
+          bind SUPABASE_URL "${SUPABASE_URL:-}"
+          bind SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          # Prefer a restricted read key; fall back to the existing key so the
+          # money panel works with no extra setup (the page only issues GETs).
+          bind STRIPE_READ_KEY "${STRIPE_READ_KEY:-${STRIPE_SECRET_KEY:-}}"
+          bind GITHUB_TOKEN "${DASHBOARD_GITHUB_TOKEN:-}"
+          # Founder list: the secret if set, else .github/autonomy.json.
+          founders="${FOUNDER_EMAILS:-$(jq -r '.founder_emails // [] | join(",")' ../../.github/autonomy.json)}"
+          bind FOUNDER_EMAILS "$founders"
+
       - name: Bind claw AGENTZ_* secrets
         if: |
           matrix.worker == 'authichain-openclaw' &&
@@ -260,3 +299,28 @@ jobs:
             printf '%s' "$STRIPE_PRICE_ID" | npx wrangler secret put STRIPE_PRICE_ID --name authichain-com
           fi
           echo "bound STRIPE_SECRET_KEY on authichain-com from GitHub secrets"
+
+      # Same values as bind-x402-secrets.yml / deploy-authichain-com.yml.
+      # Sisters 402 without this secret; /settle stays closed (dead listing).
+      # Do not invent a facilitator URL. Do not print values.
+      - name: Bind X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET
+        if: |
+          (matrix.worker == 'qron-space' ||
+           matrix.worker == 'strainchain-io' ||
+           matrix.worker == 'govchain-us') &&
+          env.CLOUDFLARE_ACCOUNT_ID != '' &&
+          (github.event.inputs.worker == '' || github.event.inputs.worker == matrix.worker)
+        working-directory: workers/${{ matrix.worker }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
+          FACILITATOR='https://facilitator.payai.network'
+          USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          NAME='${{ matrix.worker }}'
+          printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name "$NAME"
+          printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name "$NAME"
+          printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name "$NAME"
+          echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on ${NAME} (values not logged)"
