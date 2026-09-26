@@ -3,7 +3,8 @@
  * Captures replies to proposals@authichain.com: classify sentiment, match the
  * sender to a lead/proposal, store the reply in inbound_replies, and mark the
  * lead as replied. Like the original, it does not write HubSpot and does not
- * send anything; /api/cron/nurture-replies (not yet ported) follows up later.
+ * send anything; /api/cron/nurture-replies is ported on the edge router but
+ * stays GROUP B / HELD (dry-run until NURTURE_SEND_ENABLED=true and ?send=1).
  *
  * Differences from the Next.js route, all deliberate:
  * - Signed events only. The original accepted any unauthenticated POST, so
