@@ -147,6 +147,7 @@ export type ListingHealth = {
   ready?: boolean;
   status?: string;
   mode?: string;
+  paidVerify?: { bound: boolean; status: string; detail?: string };
 };
 
 export type X402ListingPack = {
@@ -228,8 +229,9 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
     health: `${GROWTH_ORIGIN}/api/x402/health`,
     docs: `${GROWTH_ORIGIN}/x402`,
     listing: `${GROWTH_ORIGIN}/api/x402/listing`,
-    ready: Boolean(health.ready && wallet),
+    ready: Boolean(health.ready && wallet && health.paidVerify?.bound === true),
     railStatus: health.status || "unknown",
+    paidVerify: health.paidVerify?.status ?? "unknown",
     directories: GROWTH_DIRECTORIES.map(d => ({
       id: d.id,
       status: d.status,

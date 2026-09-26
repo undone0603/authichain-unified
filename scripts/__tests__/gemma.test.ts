@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   chat,
   clip,
   config,
   htmlToText,
+  redact,
   stripThinking,
 } from "../gemma/lib.mjs";
 import {
@@ -16,7 +18,7 @@ import {
   TEMPLATES,
   extractTemplates,
 } from "../gemma/outreach-review.mjs";
-import { logTail, marker, pickRuns } from "../gemma/alert-triage.mjs";
+import { logTail, marker, pickRuns, triageComment } from "../gemma/alert-triage.mjs";
 
 function fakeFetch(status: number, payload: unknown) {
   const calls: Array<{ url: string; body: any }> = [];
@@ -115,12 +117,20 @@ describe("copy review", () => {
 });
 
 describe("outreach review", () => {
+  it("reads the copy the outreach script actually sends", () => {
+    // The templates moved to scripts/lib/b2b-templates.ts in #1207 so they
+    // can be tested against the claim checker. Reviewing anything else would
+    // be reviewing copy that is never sent.
+    expect(SOURCE.endsWith(join("scripts", "lib", "b2b-templates.ts"))).toBe(true);
+  });
+
   it("extracts every template from the real outreach script", () => {
     const templates = extractTemplates(readFileSync(SOURCE, "utf8"));
     expect(Object.keys(templates).sort()).toEqual([...TEMPLATES].sort());
     for (const [name, src] of Object.entries(templates)) {
-      expect(src.startsWith(`function ${name}(`)).toBe(true);
+      expect(src).toMatch(new RegExp(`^(export )?function ${name}\\(`));
       expect(src).not.toContain("\nfunction ");
+      expect(src).not.toContain("\nexport function ");
     }
   });
 });
@@ -169,5 +179,53 @@ describe("alert triage", () => {
       "line 299",
     ]);
     expect(marker(42)).toBe("<!-- gemma-triage:42 -->");
+  });
+});
+
+describe("redact", () => {
+  const JWT =
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";
+
+  it.each([
+    ["an email address", "sent to dana@acmelabs.com ok", "dana@acmelabs.com"],
+    ["a bearer token", "Authorization: Bearer abcdefghijklmnop", "abcdefghijklmnop"],
+    ["a Stripe key", "using sk_live_51Habcdefghijklmnop", "sk_live_51H"],
+    ["a Resend key", "key re_AbCdEfGhIjKlMnOpQr_123", "re_AbCdEf"],
+    ["a GitHub token", "ghp_abcdefghijklmnopqrstuvwxyz0123", "ghp_abc"],
+    ["a JWT", `token=${JWT}`, "eyJhbGci"],
+    ["a 64-hex secret", `0x${"a".repeat(64)}`, "a".repeat(64)],
+    ["an env assignment", "INTERNAL_API_SECRET=hunter2hunter2", "hunter2"],
+    ["URL credentials", "postgres://user:pa55word@db.example.com/x", "pa55word"],
+    ["a query token", "https://x.test/u?e=a&t=0123456789abcdef", "0123456789abcdef"],
+    ["a PEM block", "-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----", "MIIB"],
+  ])("removes %s", (_label, input, secret) => {
+    const out = redact(input);
+    expect(out).not.toContain(secret);
+    expect(out).toContain("[redacted");
+  });
+
+  it("keeps what triage needs: git SHAs, wallet addresses, GitHub's *** masks", () => {
+    const sha = "b".repeat(40);
+    const wallet = `0x${"c".repeat(40)}`;
+    const text = `commit ${sha} payTo ${wallet} SUPABASE_SERVICE_ROLE_KEY: ***`;
+    expect(redact(text)).toBe(text);
+  });
+});
+
+describe("alert triage scrubbing", () => {
+  it("scrubs the log tail before it reaches the model", () => {
+    const tail = logTail("line\nEmailing prospect jo@example.org\nSTRIPE_SECRET_KEY=sk_test_abcdefgh1234");
+    expect(tail).not.toContain("jo@example.org");
+    expect(tail).not.toContain("sk_test_abcdefgh1234");
+  });
+
+  it("scrubs the model's answer before it is posted publicly", () => {
+    const body = triageComment(
+      { id: 42, name: "B2B Cold Outreach", html_url: "https://github.com/x/y/actions/runs/42" },
+      "The send to jo@example.org failed: Resend rejected key re_AbCdEfGhIjKlMnOpQr."
+    );
+    expect(body).toContain(marker(42));
+    expect(body).not.toContain("jo@example.org");
+    expect(body).not.toContain("re_AbCdEfGhIjKlMnOpQr");
   });
 });

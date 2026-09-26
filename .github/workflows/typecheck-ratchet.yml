@@ -1,0 +1,44 @@
+# Typecheck ratchet for the programs CI Main never typechecked: the root
+# (scripts/, server/, src/), the standalone Workers and the edge router.
+# Fails on any syntax error and on any increase over
+# .github/typecheck-baseline.json. See scripts/typecheck-ratchet.mjs.
+name: Typecheck ratchet
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: typecheck-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ratchet:
+    name: Typecheck ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tsconfig.worker.json can need ~5 GB of heap and, on a busy runner, minutes.
+      - name: Ratchet
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: node scripts/typecheck-ratchet.mjs
