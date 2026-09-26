@@ -20,7 +20,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { PAYMENT_LINKS } from "../server/payment-links";
-import { PLANS } from "../src/lib/plans";
+import { PLANS, planPaymentLink } from "../src/lib/plans";
 
 type Phase =
   | "all"
@@ -224,7 +224,7 @@ function segmentPaymentCta(segment?: string | null): {
       return {
         name: p.name,
         price: `$${p.price}`,
-        url: p.stripe_payment_link,
+        url: planPaymentLink(p.id) ?? p.stripe_payment_link,
       };
     }
     return {
@@ -248,7 +248,7 @@ function segmentPaymentCta(segment?: string | null): {
       return {
         name: dpp.name,
         price: `$${dpp.price}`,
-        url: dpp.stripe_payment_link,
+        url: planPaymentLink(dpp.id) ?? dpp.stripe_payment_link,
       };
     }
   }
@@ -980,7 +980,7 @@ async function phaseReport(db: SupabaseClient | null): Promise<void> {
 
   lines.push(`Catalog CTAs ready:`);
   lines.push(
-    `  QRON Creator: ${PLANS.find(p => p.id === "creator")?.stripe_payment_link ?? PAYMENT_LINKS.qron.brandPack.url}`
+    `  QRON Creator: ${planPaymentLink("creator") ?? PAYMENT_LINKS.qron.brandPack.url}`
   );
   lines.push(`  AuthiChain Starter: ${PAYMENT_LINKS.authichain.starter.url}`);
   lines.push(`  StrainChain Basic: ${PAYMENT_LINKS.strainchain.basic.url}`);

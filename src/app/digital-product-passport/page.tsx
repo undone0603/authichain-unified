@@ -73,7 +73,9 @@ export default function DPPPage() {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4">
             <Globe className="w-4 h-4" />
-            {liveMilestone ? (
+            {liveMilestone?.badge ? (
+              <>EU ESPR · {liveMilestone.badge}</>
+            ) : liveMilestone ? (
               <>
                 EU ESPR · {liveMilestone.label} —{" "}
                 <DppCountdown milestone={liveMilestone} />
@@ -110,22 +112,23 @@ export default function DPPPage() {
               checkable, which is the stronger sentence anyway. The registry
               date is no longer written in the future tense by hand. */}
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-4 leading-relaxed">
-            {registryMilestone && (
+            {registryMilestone && !registryMilestone.hideStatus && (
               <>
                 The EU Digital Product Passport registry {registryVerb}{" "}
                 {formatMilestoneDate(registryMilestone)}.{" "}
               </>
             )}
-            AuthiChain issues ESPR-aligned passports that verify{" "}
+            Our goal: ESPR-aligned passports that verify{" "}
             <span className="text-white font-bold">
               with no internet connection
-            </span>{" "}
-            — the signature checks against the issuer&apos;s published key, not
-            against our servers.
+            </span>
+            . The open-source verifier already runs offline: it checks a signed
+            record against the issuer&apos;s published key, not against our
+            servers.
           </p>
           <p className="max-w-xl mx-auto text-zinc-600 text-sm font-bold uppercase tracking-widest mb-12">
-            Works at factory floors, border crossings, and disconnected
-            industrial sites.
+            Goal: verification that works at factory floors, border crossings,
+            and disconnected industrial sites.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -136,7 +139,7 @@ export default function DPPPage() {
             >
               {isSimulating
                 ? "Processing Compliance..."
-                : "Simulate BMW Battery Passport"}
+                : "Simulate a Battery Passport"}
             </button>
             <Link
               href="/book"
@@ -154,9 +157,9 @@ export default function DPPPage() {
                  check. "Aligned with" rather than "compliant": conformance is
                  assessed per product, not asserted by a vendor. */}
             <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
-              <span>Polygon Anchored</span>
+              <span>Polygon contract live</span>
               <div className="w-1 h-1 rounded-full bg-zinc-800" />
-              <span>Ed25519 Secured</span>
+              <span>Ed25519 signing in development</span>
               <div className="w-1 h-1 rounded-full bg-zinc-800" />
               <a
                 href="https://eur-lex.europa.eu/eli/reg/2024/1781/oj"
@@ -172,12 +175,12 @@ export default function DPPPage() {
             <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex flex-wrap items-center justify-center gap-10">
               <div className="text-left sm:border-r border-zinc-900 sm:pr-10">
                 <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">
-                  Verification
+                  Open verifier
                 </p>
                 <p className="text-2xl font-black text-white tracking-tighter">
-                  Offline{" "}
+                  Runs offline{" "}
                   <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">
-                    No Account Required
+                    No account required
                   </span>
                 </p>
               </div>
@@ -336,7 +339,7 @@ export default function DPPPage() {
                           : "text-zinc-600"
                     }
                   >
-                    <DppCountdown milestone={item} />
+                    {!item.hideStatus && <DppCountdown milestone={item} />}
                   </span>
                   <a
                     href={item.source}
@@ -369,9 +372,7 @@ export default function DPPPage() {
               Every Requirement. <span className="gold-text">Checked.</span>
             </h2>
             <p className="text-zinc-500 text-sm mt-4 max-w-lg mx-auto">
-              EU ESPR mandates that DPP data be accessible, verifiable, and
-              tamper-evident. AuthiChain exceeds the spec — adding what no
-              competitor can match.
+              EU ESPR mandates that DPP data be accessible, verifiable, and tamper-evident.
             </p>
           </div>
 
@@ -388,14 +389,14 @@ export default function DPPPage() {
                 exclusive: false,
               },
               {
-                label: "Tamper-Evident",
-                desc: "Every passport hashed and anchored on Polygon — any alteration is permanently detectable on-chain.",
+                label: "Tamper-evident (goal)",
+                desc: "Our goal: every passport hashed and anchored on Polygon, so any alteration shows up on-chain.",
                 exclusive: false,
               },
               {
-                label: "Offline-Capable",
-                desc: "AuthiChain-exclusive: full cryptographic verification with zero internet. Works at mines, factories, and border crossings where competitors fail.",
-                exclusive: true,
+                label: "Offline verification (goal)",
+                desc: "Goal: full cryptographic verification of AuthiChain passports with no internet, for mines, factories, and border crossings. The open-source verifier already runs offline.",
+                exclusive: false,
               },
             ].map(req => (
               <div
@@ -430,14 +431,11 @@ export default function DPPPage() {
           <div className="flex flex-col md:flex-row items-center gap-10 p-10 rounded-3xl border border-gold/20 bg-gold/5">
             <div className="flex-shrink-0 text-center">
               <WifiOff className="w-16 h-16 text-gold mx-auto mb-3" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-gold">
-                Only AuthiChain
-              </p>
             </div>
             <div>
               <h3 className="text-2xl font-black uppercase tracking-tighter mb-4">
-                Verification Breaks Without Signal.{" "}
-                <span className="gold-text">Not Anymore.</span>
+                Verification <span className="gold-text">Shouldn&apos;t Break</span>{" "}
+                Without Signal.
               </h3>
               <p className="text-zinc-400 text-sm leading-relaxed mb-4">
                 Battery factories, mining operations and logistics hubs often
@@ -446,125 +444,14 @@ export default function DPPPage() {
                 behind it silently fails.
               </p>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                AuthiChain&apos;s Ed25519 verification runs entirely on-device,
-                checking the signature against the issuer&apos;s published key.
-                No server, no connectivity, no account. The reference verifier
-                is Apache-2.0 — run it yourself and confirm it never opens a
-                socket.
+                The open-source reference verifier (Apache-2.0) runs entirely
+                on-device, checking a signed record against the issuer&apos;s
+                published key. No server, no connectivity, no account: run it
+                yourself and confirm it never opens a socket. Signed AuthiChain
+                passports for it to check are in development.
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── Competitor Comparison ──────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-6 py-24">
-        <div className="text-center mb-16">
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gold mb-4">
-            Competitive Landscape
-          </p>
-          <h2 className="text-4xl font-black uppercase tracking-tighter">
-            Why AuthiChain <span className="gold-text">Wins</span>
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-800">
-                <th className="text-left py-4 pr-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                  Provider
-                </th>
-                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">
-                  Offline Verify
-                </th>
-                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">
-                  Industrial
-                </th>
-                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">
-                  AI Layer
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  name: "Scantrust",
-                  focus: "Consumer QR / Brand Protection",
-                  offline: false,
-                  industrial: false,
-                  ai: false,
-                  highlight: false,
-                },
-                {
-                  name: "VeChain",
-                  focus: "Enterprise Blockchain",
-                  offline: false,
-                  industrial: true,
-                  ai: false,
-                  highlight: false,
-                },
-                {
-                  name: "Circularise",
-                  focus: "Circular Economy / Plastics",
-                  offline: false,
-                  industrial: false,
-                  ai: false,
-                  highlight: false,
-                },
-                {
-                  name: "AuthiChain",
-                  focus: "Industrial Supply Chain AI + Blockchain",
-                  offline: true,
-                  industrial: true,
-                  ai: true,
-                  highlight: true,
-                },
-              ].map(c => (
-                <tr
-                  key={c.name}
-                  className={`border-b ${c.highlight ? "border-gold/20 bg-gold/5" : "border-zinc-900"}`}
-                >
-                  <td className="py-5 pr-8">
-                    <p
-                      className={`font-black uppercase tracking-tight ${c.highlight ? "text-gold text-base" : "text-zinc-400 text-sm"}`}
-                    >
-                      {c.name}
-                    </p>
-                    <p className="text-[10px] text-zinc-600 uppercase tracking-tighter mt-0.5">
-                      {c.focus}
-                    </p>
-                  </td>
-                  <td className="py-5 px-4 text-center">
-                    {c.offline ? (
-                      <CheckCircle className="w-5 h-5 text-green-400 mx-auto" />
-                    ) : (
-                      <span className="text-zinc-700 font-black text-lg">
-                        —
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-5 px-4 text-center">
-                    {c.industrial ? (
-                      <CheckCircle className="w-5 h-5 text-green-400 mx-auto" />
-                    ) : (
-                      <span className="text-zinc-700 font-black text-lg">
-                        —
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-5 px-4 text-center">
-                    {c.ai ? (
-                      <CheckCircle className="w-5 h-5 text-green-400 mx-auto" />
-                    ) : (
-                      <span className="text-zinc-700 font-black text-lg">
-                        —
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
 
@@ -650,11 +537,11 @@ export default function DPPPage() {
           </h2>
           <p className="text-zinc-400 mb-4 max-w-xl mx-auto leading-relaxed">
             We&apos;re onboarding battery manufacturers and tier-1 suppliers for
-            our EU DPP pilot. Full ESPR compliance, offline verification, and
-            GS1 registry integration — operational in 90 days.
+            our EU DPP pilot. Pilot goals: ESPR readiness, offline verification
+            of signed passports, and GS1 registry integration.
           </p>
           <p className="text-zinc-600 mb-12 uppercase tracking-widest text-xs font-bold">
-            Programmatic generation for 1M+ units per day.
+            Goal: programmatic generation for 1M+ units per day.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

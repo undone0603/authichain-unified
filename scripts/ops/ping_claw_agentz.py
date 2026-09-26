@@ -178,7 +178,9 @@ def architect_dry_run(*, goal: str) -> dict[str, Any]:
             "goal": goal,
         },
         auth=True,
-        timeout_s=60.0,
+        # Longer than claw's AGENTZ_TIMEOUT_MS (95s) so claw, not this
+        # client, reports a slow AgentZ.
+        timeout_s=120.0,
     )
     return {"http": status, "body": body}
 

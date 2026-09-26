@@ -1,6 +1,6 @@
 ---
 title: "Why AuthiChain Is Built for Digital Product Passports, Product Authentication, and Brand Protection"
-description: "A manufacturer-focused perspective on EU digital product passport readiness, item-level identity, and how AuthiChain compares to Everledger-style traceability platforms."
+description: "A manufacturer-focused perspective on EU digital product passport readiness and item-level identity."
 slug: eu-dpp-manufacturer
 canonical: https://authichain.com/blog/eu-dpp-manufacturer
 status: published
@@ -27,7 +27,6 @@ Digital product passports are moving from concept to requirement. Brands now nee
 ### What this article covers
 
 - Why item-level identity matters for anti-counterfeit and traceability.
-- Where Everledger set an early benchmark in provenance and digital identity.
 - How AuthiChain can position itself as a more agile, product-first platform.
 
 | Focus | Meaning |
@@ -50,25 +49,9 @@ The technical challenge is not just storing data; it is establishing a trustwort
 
 **Regulatory peg (first-party plan notes, not legal advice):** EU batteries DPP obligations ramp toward **18 Feb 2027** (Battery Regulation Art. 77); DPP Registry context mid-2026. Confirm against current Commission / ESPR materials before any compliance claim in outbound mail.
 
-## Why Everledger matters — Early provenance benchmark
+## Early provenance registries (2016–2023)
 
-Everledger describes itself as a digital transparency company focused on increasing transparency in global supply chains. Platform messaging emphasizes supplier compliance, chain of custody reporting, fraud detection, and media-rich provenance records.
-
-Across product and industry pages, Everledger positions around digital identities, smartphone-accessible product experiences, and the ability to authenticate, transfer, and track products. It also highlights blockchain, IoT, AI, RFID, NFC, and QR as part of a broader trust stack for global supply chain visibility.
-
-Themes: transparency · provenance · private blockchain · chain of custody · luxury and fashion.
-
-## Competitive positioning — Where AuthiChain can differentiate
-
-Everledger established a strong narrative around provenance and enterprise transparency, especially in asset-sensitive categories. AuthiChain can differentiate with a more direct, implementation-ready story around product authentication, QR-native verification, digital passports, and consumer trust activation.
-
-| Dimension | Everledger-style positioning | AuthiChain positioning opportunity |
-| --- | --- | --- |
-| Core narrative | Supply chain transparency, provenance, compliance, digital identities | Fast, verifiable product trust: authentication, anti-counterfeit, product passport deployment, and brand engagement in one flow |
-| User entry point | Platform-centered, enterprise workflow oriented | Scan-centered, product-centered, easier to understand at the point of interaction |
-| Physical-to-digital bridge | RFID, NFC, QR, AI, IoT-linked records | Lead with QR-native verification; extend to additional identifiers as needs grow |
-| Trust moment | Back-office provenance + consumer-facing authenticated experiences | Immediate public verification page that proves legitimacy while opening a brand channel |
-| Go-to-market | Transparency platform for regulated / asset-intensive supply chains | Composable authentication for brands that need trust, traceability, and DPP readiness without heavyweight complexity |
+Everledger (2016–2023) was an early blockchain provenance company, best known for diamonds. Its operating companies entered liquidation in 2023.
 
 ## Strategic angle — Sell outcomes, not “we also use blockchain”
 
@@ -78,10 +61,6 @@ The strongest positioning is not “we also use blockchain.” The stronger mess
 2. **Traceability** — Capture manufacturing, logistics, ownership, and product lifecycle events.
 3. **Compliance readiness** — Structure product data so it can support evolving digital passport and regulatory demands.
 4. **Consumer trust** — Turn each verification scan into a proof point, not a dead-end serial number check.
-
-### Suggested positioning paragraph
-
-Everledger showed the market that provenance and supply chain transparency can be organized around digital identities and immutable records. AuthiChain takes that core trust model and makes it more actionable for modern brands that need QR-linked authentication, product passport deployment, and customer-visible proof at the item level.
 
 Instead of treating trust as a back-office reporting layer, AuthiChain frames it as a live product interface. A scanned code should not just reference a database entry; it should prove the item, expose its story, and create a trusted connection between brand, buyer, and product lifecycle data.
 

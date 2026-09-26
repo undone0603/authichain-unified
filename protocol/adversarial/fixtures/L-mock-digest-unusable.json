@@ -1,0 +1,16 @@
+{
+  "id": "L-mock-digest-unusable",
+  "input": {
+    "objectFound": true,
+    "depth": "lookup",
+    "crypto": { "signatureValid": true, "issuerTrusted": true, "identityValid": true, "evidenceIntact": true, "statusActive": true },
+    "attestation": {
+      "objectId": "ac:demo:mock-01",
+      "decision": "verified",
+      "status": "active",
+      "issuer": "Authichain-Core",
+      "evidence": [{ "type": "manufacturing", "issuer": "Manufacturer", "timestamp": "2026-01-01T00:00:00Z", "digest": "sha256:mock-digest-mfg" }]
+    }
+  },
+  "expect": { "decision": "verified", "reasonsInclude": ["mock_digest_unusable"] }
+}

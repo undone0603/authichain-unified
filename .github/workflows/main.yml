@@ -46,8 +46,27 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter agent-browser exec playwright install --with-deps chromium
 
+      # `pnpm test` runs `turbo test`, and turbo.json's test task
+      # `dependsOn: ["build"]` builds every workspace app first — including
+      # every Next.js app using next/font/google, not just the root app the
+      # "Production build" step below covers. That step already retries once
+      # for the same flake (see its comment); this implicit build had no such
+      # retry, so a font-fetch hiccup here failed the whole required gate with
+      # no test output at all. Second `pnpm test` keeps the step's exit code —
+      # do not `set +e`.
+      #
+      # `--continue=dependencies-successful` keeps turbo running every other
+      # package's tests after one fails, so a single red package no longer
+      # hides failures elsewhere; turbo still exits non-zero if any task
+      # failed. A package whose own build failed is skipped, not tested.
       - name: Run tests
-        run: pnpm test
+        run: |
+          if pnpm test --continue=dependencies-successful; then
+            exit 0
+          fi
+          echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
+          sleep 15
+          pnpm test --continue=dependencies-successful
 
       # next/font/google sometimes 404s mid-build (null CSS parse at
       # google/loader.js:122 on Public_Sans). Same layout just passed on

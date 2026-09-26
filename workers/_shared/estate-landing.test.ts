@@ -62,27 +62,27 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     lede: "Lede",
     actions: [
       { href: "/generate", label: "Generate Living QR", primary: true },
-      { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+      { href: "https://authichain.com/checkout/dpp_readiness", label: "Start DPP checkout" },
     ],
   });
   assert.match(hero, /href="\/generate"/);
-  assert.match(hero, /href="\/api\/checkout\/dpp"/);
+  assert.match(hero, /href="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
 
   const emailHero = estateHero({
     eyebrow: "Test",
     title: "Headline",
     lede: "Lede",
     emailCheckout: {
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout — $299",
     },
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });
   assert.match(emailHero, /name="email"/);
-  assert.match(emailHero, /action="\/api\/checkout\/dpp"/);
+  assert.match(emailHero, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.doesNotMatch(emailHero, /Checkout without saving a recovery email/);
   assert.ok(
-    emailHero.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    emailHero.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.match(emailHero, /id="hero-checkout-email"/);
 
@@ -101,16 +101,16 @@ test("shared chrome keeps conversion hrefs verbatim", () => {
     title: "Go",
     lede: "Now",
     emailCheckout: {
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout",
     },
     actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   });
   assert.match(emailCta, /name="email"/);
-  assert.match(emailCta, /action="\/api\/checkout\/dpp"/);
+  assert.match(emailCta, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(emailCta, /href="\/pricing"/);
   assert.ok(
-    emailCta.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    emailCta.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.match(emailCta, /id="cta-checkout-email"/);
 
@@ -132,7 +132,7 @@ test("IndexNow key file is exact-path plain text with a short cache", async () =
   assert.equal(ESTATE_INDEXNOW_KEY, "authichain2026indexnow");
 
   const hit = tryHandleEstateIndexNow(
-    new Request("https://authichain.com/authichain2026indexnow.txt")
+    new Request("https://authichain.govchain.us/authichain2026indexnow.txt")
   );
   assert.ok(hit);
   assert.equal(await hit.text(), ESTATE_INDEXNOW_KEY);

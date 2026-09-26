@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_USDC,
+  QRON_HOLDER_EOA,
   TOKENOMICS_PAY_TO as EVM_PAY_TO,
 } from "../../scripts/lib/evm-chains";
 import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
@@ -26,7 +27,10 @@ describe("authentic-economy identity join", () => {
     expect(MONEY_RAILS.x402.publishedPayTo).toBe(X402_PUBLISHED_PAY_TO);
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC_ASSET);
     expect(MONEY_RAILS.x402.asset).toBe(BASE_USDC);
+    expect(MONEY_RAILS.qron.holder).toBe(QRON_HOLDER_EOA);
+    // Owner's keyed EOA both holds $QRON and receives x402 USDC.
     expect(MONEY_RAILS.qron.holder).toBe(TOKENOMICS_PAY_TO);
+    expect(TOKENOMICS_PAY_TO.toLowerCase()).not.toBe(QRON_ERC20.toLowerCase());
   });
 
   it("keeps $QRON off the x402 settlement rail", () => {
@@ -35,6 +39,9 @@ describe("authentic-economy identity join", () => {
     expect(MONEY_RAILS.qron.theater).toBe(true);
     expect(MONEY_RAILS.qron.contract).toBe(QRON_ERC20);
     expect(MONEY_RAILS.qron.totalSupply).toBe(1_000_000_000);
+    expect(agentPricingDiscovery().qron.firstScan.qron).toBe(1);
+    expect(agentPricingDiscovery().qron.firstScan.settlesOnChain).toBe(false);
+    expect(agentPricingDiscovery().qron.isPaymentRail).toBe(false);
     expect(QRON_TOTAL_SUPPLY).toBe(1_000_000_000);
     expect(MONEY_RAILS.x402.asset.toLowerCase()).not.toBe(
       QRON_ERC20.toLowerCase()
@@ -62,17 +69,17 @@ describe("authentic-economy identity join", () => {
     expect(d.agentRail.note).toMatch(/\$QRON/);
     expect(d.humanCheckout.source).toBe("src/lib/plans.ts");
     expect(d.humanCheckout.checkout.passport).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      "https://authichain.com/checkout/strainchain_passport"
     );
     expect(d.humanCheckout.checkout.dpp).toBe(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      "https://authichain.com/checkout/dpp_readiness"
     );
     expect(d.humanCheckout.checkout.farm).toBe(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
     expect(d.humanCheckout.strainchain_farm).toBe("$149/month");
     expect(new URL(d.humanCheckout.checkout.farm ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(JSON.stringify(d)).not.toContain("/api/checkout");
     expect(d.qron.isPaymentRail).toBe(false);

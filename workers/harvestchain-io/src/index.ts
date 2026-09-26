@@ -2333,10 +2333,6 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <h2>Integrations</h2>
   <p class="section-sub">Connect to the platforms your team already uses. No rip-and-replace required.</p>
   <div class="integrations">
-    <div class="integration">🌾 FoodLogiQ</div>
-    <div class="integration">📦 IBM Food Trust</div>
-    <div class="integration">🔬 TE-FOOD</div>
-    <div class="integration">🚚 ChainPoint</div>
     <div class="integration">🏭 SAP Agri</div>
     <div class="integration">⛓️ Polygon</div>
     <div class="integration">🌐 GS1</div>

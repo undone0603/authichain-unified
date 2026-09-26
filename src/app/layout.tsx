@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { systemFont } from '@/lib/system-font';
 import './globals.css';
 import { ReferralTracker } from '@/components/ReferralTracker';
 import { FunnelTracker } from '@/components/FunnelTracker';
@@ -10,15 +10,8 @@ import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 import { SiteNav } from '@/components/SiteNav';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+const geistSans = systemFont({ variable: '--font-geist-sans' });
+const geistMono = systemFont({ variable: '--font-geist-mono' });
 
 export const metadata: Metadata = {
   title: {
