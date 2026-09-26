@@ -7,9 +7,10 @@
  * `src/lib/plans.ts`. Wallet map: `docs/strategy/WEB3_IDENTITY.md`.
  *
  * The 0.05 QRON figure coinciding with x402's $0.05 USDC is not the same rail.
- * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO. Runtime x402
- * still reads env X402_PAY_TO — published payTo here is identity, not a 503/402
- * fallback.
+ * Do not add $QRON to x402 accepts[]. Do not rebind X402_PAY_TO away from the
+ * owner-authorized treasury 0xaebf…e437.
+ * Runtime x402 still reads env X402_PAY_TO — published payTo here is identity,
+ * not a 503/402 fallback.
  */
 
 import {
@@ -17,14 +18,16 @@ import {
   POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
 } from "../../scripts/lib/evm-chains";
+import { BASE_USDC_ASSET, X402_PUBLISHED_PAY_TO } from "./x402";
+import { planPaymentLink, planUsd } from "./plans";
 import {
-  BASE_USDC_ASSET,
-  X402_PUBLISHED_PAY_TO,
-} from "./x402";
-import { planUsd } from "./plans";
+  FIRST_SCAN_GIFT_URL,
+  FIRST_SCAN_REWARD_QRON,
+} from "./reward-calculator";
 import { supabaseAdmin as admin } from "./supabase-admin";
 
 export {
@@ -32,6 +35,7 @@ export {
   POLYGON_AUTHICHAIN_NFT,
   QRON_DECIMALS,
   QRON_ERC20,
+  QRON_HOLDER_EOA,
   QRON_TOTAL_SUPPLY,
   TOKENOMICS_PAY_TO,
 };
@@ -56,6 +60,7 @@ export const MONEY_RAILS = {
     skus: {
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
+      farmUsd: planUsd("strainchain_farm"),
     },
     isSettlement: true,
   },
@@ -80,7 +85,7 @@ export const MONEY_RAILS = {
     contract: QRON_ERC20,
     decimals: QRON_DECIMALS,
     totalSupply: QRON_TOTAL_SUPPLY,
-    holder: TOKENOMICS_PAY_TO,
+    holder: QRON_HOLDER_EOA,
     isSettlement: false,
     theater: true,
     source: "docs/strategy/WEB3_IDENTITY.md",
@@ -137,10 +142,15 @@ export function agentPricingDiscovery() {
       source: MONEY_RAILS.stripe.source,
       strainchain_passport: `$${MONEY_RAILS.stripe.skus.passportUsd} one-time`,
       dpp_readiness: `$${MONEY_RAILS.stripe.skus.dppUsd} one-time`,
+      strainchain_farm: `$${MONEY_RAILS.stripe.skus.farmUsd}/month`,
       checkout: {
-        passport:
-          "https://authichain.com/api/checkout/plan/strainchain_passport",
-        dpp: "https://authichain.com/api/checkout/dpp",
+        passport: planPaymentLink("strainchain_passport"),
+        dpp: planPaymentLink("dpp_readiness"),
+        farm: planPaymentLink("strainchain_farm"),
+        emailCapture: {
+          passport: "https://authichain.com/passport",
+          dpp: "https://authichain.com/dpp",
+        },
       },
     },
     qron: {
@@ -153,6 +163,12 @@ export function agentPricingDiscovery() {
       totalSupply: MONEY_RAILS.qron.totalSupply,
       holder: MONEY_RAILS.qron.holder,
       identity: WEB3_IDENTITY_DOC,
+      firstScan: {
+        qron: FIRST_SCAN_REWARD_QRON,
+        giftUrl: FIRST_SCAN_GIFT_URL,
+        settlesOnChain: false,
+        note: "Entitlement for the first authentic scan of a gifted seal. Repeat scans earn 0 from this path. Does not transfer Polygon $QRON and does not credit x402.",
+      },
     },
     nft: {
       network: "polygon",
@@ -255,7 +271,10 @@ export async function processFeeFlow(params: {
     return { ok: true, flowId: flow.id, distribution: dist };
   } catch (err: unknown) {
     console.error("[authentic-economy] processFeeFlow failed:", err);
-    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
   }
 }
 
@@ -270,7 +289,10 @@ export async function processFeeFlow(params: {
  * on HTTP error responses), so a failed or never-attempted burn/treasury
  * swap still read as 'confirmed' on the admin revenue dashboard.
  */
-async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution) {
+async function triggerAutonomousExecution(
+  flowId: string,
+  dist: FeeDistribution
+) {
   const authichainApi = process.env.AUTHICHAIN_API_URL;
   const apiKey = process.env.AUTHICHAIN_API_SECRET;
 
@@ -310,8 +332,12 @@ async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution)
         .update({ status: "failed" })
         .eq("id", flowId);
       console.warn(
-        "[autonomous] fiatswap call failed for flow:", flowId,
-        "burn:", burnRes.status, "treasury:", treasuryRes.status,
+        "[autonomous] fiatswap call failed for flow:",
+        flowId,
+        "burn:",
+        burnRes.status,
+        "treasury:",
+        treasuryRes.status
       );
       return;
     }
@@ -321,10 +347,7 @@ async function triggerAutonomousExecution(flowId: string, dist: FeeDistribution)
       .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
       .eq("id", flowId);
   } catch (err) {
-    await admin
-      .from("fee_flows")
-      .update({ status: "failed" })
-      .eq("id", flowId);
+    await admin.from("fee_flows").update({ status: "failed" }).eq("id", flowId);
     console.warn("[autonomous] Execution failed for flow:", flowId, err);
   }
 }

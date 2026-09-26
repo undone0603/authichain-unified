@@ -6,10 +6,10 @@
  * or paying for Workers. Checkout is the live Passport rail — do not invent
  * TruMark prices or ship the May 2025 Inc / Series A claims.
  */
-export const PASSPORT_CHECKOUT_PATH =
-  "/api/checkout/plan/strainchain_passport";
-export const PASSPORT_CHECKOUT_URL =
-  `https://authichain.com${PASSPORT_CHECKOUT_PATH}`;
+import { catalogPaymentLinkHtml } from "../../../src/lib/checkout-email";
+
+export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
+export const PASSPORT_CHECKOUT_URL = PASSPORT_CHECKOUT_PATH;
 export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
 
 const MINIAPP_PATHS = new Set([
@@ -35,7 +35,7 @@ export const MINIAPP_HEADERS: Record<string, string> = {
     "script-src 'self' 'unsafe-inline' https://telegram.org",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://authichain.com https://telegram.org",
+    "connect-src 'self' https://authichain.govchain.us https://telegram.org",
     "font-src 'self' data: https:",
     "frame-ancestors https://web.telegram.org https://webk.telegram.org https://webz.telegram.org https://telegram.org",
   ].join("; "),
@@ -99,10 +99,12 @@ export function renderTelegramMiniApp(): string {
     .btn-primary { background: var(--accent); color: var(--accent-text); }
     .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
     label { display: block; font-size: .78rem; font-weight: 650; margin-bottom: .4rem; }
-    input[type="text"] {
+    input[type="text"], input[type="email"] {
       width: 100%; border-radius: 10px; border: 1px solid var(--line);
       background: var(--bg); color: var(--text); padding: .7rem .75rem; font-size: 1rem;
     }
+    .checkout-email-form { display: flex; flex-direction: column; gap: .45rem; }
+    .checkout-email-hint { font-size: .78rem; color: var(--muted); margin: 0; }
     .row { display: flex; gap: .5rem; margin-top: .55rem; }
     .row input { flex: 1; }
     .row .btn { width: auto; padding: .7rem .9rem; }
@@ -129,14 +131,25 @@ export function renderTelegramMiniApp(): string {
     </section>
 
     <div class="actions">
-      <a class="btn btn-primary" id="checkout" href="${PASSPORT_CHECKOUT_URL}">Publish Passport — $49</a>
-      <a class="btn btn-ghost" id="pricing" href="https://authichain.com/pricing">View pricing</a>
+      <form class="checkout-email-form" id="checkout-form" action="${PASSPORT_CHECKOUT_URL}" method="post">
+        <label for="checkout-email">Work email
+          <input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
+        </label>
+        <p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p>
+        <button class="btn btn-primary" id="checkout" type="submit">Publish Passport — $49</button>
+      </form>
+      ${catalogPaymentLinkHtml({
+        planId: "strainchain_passport",
+        label: "Pay $49 on Stripe",
+        className: "btn btn-ghost",
+      })}
+      <a class="btn btn-ghost" id="pricing" href="https://authichain.govchain.us/pricing">View pricing</a>
     </div>
 
     <section class="card">
       <h2>Optional TruMark verify</h2>
       <p class="lede" style="margin-bottom:.65rem">Already have a seal or certificate id? Open the live verify page. No account and no phone call.</p>
-      <form id="verify-form" action="https://authichain.com/verify" method="get">
+      <form id="verify-form" action="https://authichain.govchain.us/verify" method="get">
         <label for="verify-id">TruMark or product ID</label>
         <div class="row">
           <input id="verify-id" name="id" type="text" inputmode="text" autocomplete="off" placeholder="TM-… or certificate id">
@@ -146,9 +159,9 @@ export function renderTelegramMiniApp(): string {
     </section>
 
     <nav class="links" aria-label="Related pages">
-      <a href="https://authichain.com/passport">Passport page</a>
-      <a href="https://authichain.com/genetics">Genetics library</a>
-      <a href="https://authichain.com/trumark">TruMark</a>
+      <a href="https://authichain.govchain.us/passport">Passport page</a>
+      <a href="https://authichain.govchain.us/genetics">Genetics library</a>
+      <a href="https://authichain.govchain.us/trumark">TruMark</a>
     </nav>
 
     <footer>
@@ -159,7 +172,7 @@ export function renderTelegramMiniApp(): string {
   <script>
     (function () {
       var CHECKOUT = ${JSON.stringify(PASSPORT_CHECKOUT_URL)};
-      var VERIFY = "https://authichain.com/verify";
+      var VERIFY = "https://authichain.govchain.us/verify";
       var tg = window.Telegram && window.Telegram.WebApp;
       if (tg) {
         try { tg.ready(); tg.expand(); } catch (e) {}
@@ -176,10 +189,28 @@ export function renderTelegramMiniApp(): string {
         }
         window.location.href = url;
       }
-      function openCheckout() { openExternal(CHECKOUT); }
-      var checkout = document.getElementById("checkout");
-      if (checkout) {
-        checkout.addEventListener("click", function (ev) {
+      function looksLikeEmail(value) {
+        var email = String(value || "").trim();
+        return email.length >= 3 && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+      function checkoutUrlWithEmail() {
+        var input = document.getElementById("checkout-email");
+        var email = input ? String(input.value || "").trim() : "";
+        if (!looksLikeEmail(email)) return "";
+        return CHECKOUT + (CHECKOUT.indexOf("?") >= 0 ? "&" : "?") + "email=" + encodeURIComponent(email);
+      }
+      function openCheckout() {
+        var url = checkoutUrlWithEmail();
+        if (!url) {
+          var input = document.getElementById("checkout-email");
+          if (input && typeof input.focus === "function") input.focus();
+          return;
+        }
+        openExternal(url);
+      }
+      var form = document.getElementById("checkout-form");
+      if (form) {
+        form.addEventListener("submit", function (ev) {
           ev.preventDefault();
           openCheckout();
         });

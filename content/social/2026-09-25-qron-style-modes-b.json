@@ -1,0 +1,18 @@
+{
+  "linkedin": "Your QR code doesn't have to look like a QR code. With QRON, pick Holographic mode, Memory mode, or plain, and design freely — the artwork can look like almost anything.\n\nUnderneath every one of those styles sits the same thing: an Ed25519 signature, anchored under the AuthiChain protocol. The art changes; what's verifiable underneath does not.\n\nMost 'designer QR code' generators make you choose: stylize hard and risk breaking the scan, or keep it plain and trade away the look. We wanted the design decision and the verification to live on separate layers, so a heavier style doesn't cost anything on the checking side.\n\nIf you've been picking between a QR code that looks good and one that can actually be checked, that shouldn't be the tradeoff.\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qron-style-modes&utm_content=b\n\n#QRCode #GenerativeArt #ProductAuthentication",
+  "reddit": {
+    "subreddit": "graphic_design",
+    "title": "Our QR code generator lets you design freely first, verify underneath second — feedback from designers?",
+    "body": "QRON generates QR codes as actual artwork — Holographic mode, Memory mode, a few others — so you can design the code first and not think about the standard black-and-white grid at all.\n\nUnderneath, every generated design carries the same Ed25519 signature, anchored under the AuthiChain protocol, regardless of which style rendered it. So picking a bolder style doesn't cost anything on the verification side.\n\nMost 'designer QR code' generators force the tradeoff the other way: either they stylize hard and the code stops scanning, or they stay safe and look bland. We built this so design comes first and the signing is just there, unaffected.\n\nCurious what this crowd thinks: does \"design freely, it's still verifiable\" land better as a pitch than leading with the verification piece?\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=qron-style-modes&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "Your QR code doesn't have to look like a QR code. With QRON, design freely — Holographic mode, Memory mode, plain — pick whatever fits.",
+    "Underneath every style: the same Ed25519 signature, anchored under the AuthiChain protocol. Design first, the verification is still there.",
+    "Most \"designer QR code\" tools make you choose between looking good and being checkable. We didn't want that tradeoff: https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qron-style-modes&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "qron-style-modes",
+    "variant": "b",
+    "hypothesis": "leading with a style/creative-freedom hook (design freely, verification is unaffected) outperforms the signature-stays-constant-across-styles framing used in variant a on click-through to qron.space"
+  }
+}

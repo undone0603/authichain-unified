@@ -2327,8 +2327,6 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="integrations-wrap">
     <div class="chip">🏭 SAP EWM</div>
     <div class="chip">📦 Oracle WMS</div>
-    <div class="chip">🔬 TraceLink</div>
-    <div class="chip">💊 rfxcel</div>
     <div class="chip">🏥 McKesson</div>
     <div class="chip">⛓️ Polygon</div>
     <div class="chip">🌐 GS1</div>

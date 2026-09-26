@@ -6,13 +6,18 @@
  * prefix (APP_WORKER). These pages are /m/<slug> on authichain-com —
  * the worker that actually serves authichain.com.
  */
+import {
+  catalogPaymentLinkHtml,
+  checkoutEmailFormHtml,
+} from "../../../src/lib/checkout-email";
 import { MICROSITE_HTML } from "./microsite-packs.ts";
 
 export const PASSPORT_CHECKOUT =
-  "https://authichain.com/api/checkout/plan/strainchain_passport";
-export const DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+  "https://authichain.com/checkout/strainchain_passport";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
-export type MicrositePackId = "mendo" | "trumark" | "musa" | "strainchain";
+export type MicrositePackId =
+  "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
 
 export interface MicrositeDef {
   pack: MicrositePackId;
@@ -46,6 +51,12 @@ export const MICROSITES: Record<string, MicrositeDef> = {
     aliases: [],
     hosts: ["strainchain.authichain.com"],
   },
+  "bat-2026-001": {
+    pack: "bat-2026-001",
+    canonicalPath: "/m/bat-2026-001",
+    aliases: ["/m/insulin-vial"],
+    hosts: ["bat-2026-001.authichain.com"],
+  },
 };
 
 const PATH_TO_PACK = new Map<string, MicrositePackId>();
@@ -61,14 +72,14 @@ export function micrositeSitemapUrls(): string[] {
   return [
     "https://authichain.com/m",
     ...Object.values(MICROSITES).map(
-      (def) => `https://authichain.com${def.canonicalPath}`,
+      def => `https://authichain.com${def.canonicalPath}`
     ),
   ];
 }
 
 export function resolveMicrositePack(
   pathname: string,
-  hostname?: string,
+  hostname?: string
 ): MicrositePackId | null {
   if (hostname) {
     const hostPack = HOST_TO_PACK.get(hostname.toLowerCase());
@@ -87,24 +98,44 @@ const HTML_HEADERS: Record<string, string> = {
     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
 };
 
+function hubCardCopy(pack: MicrositePackId): {
+  title: string;
+  dpp: boolean;
+} {
+  switch (pack) {
+    case "mendo":
+      return { title: "Mendo / RealTHCV / LT-63", dpp: false };
+    case "trumark":
+      return { title: "TruMark seal", dpp: false };
+    case "musa":
+      return { title: "Made in America", dpp: true };
+    case "strainchain":
+      return { title: "StrainChain genetics hub", dpp: false };
+    case "bat-2026-001":
+      return { title: "BAT-2026-001 / Insulin Vial 100IU", dpp: true };
+  }
+}
+
 function renderHub(): string {
   const cards = Object.values(MICROSITES)
-    .map((def) => {
-      const title =
-        def.pack === "mendo"
-          ? "Mendo / RealTHCV / LT-63"
-          : def.pack === "trumark"
-            ? "TruMark seal"
-            : def.pack === "musa"
-              ? "Made in America"
-              : "StrainChain genetics hub";
-      const cta =
-        def.pack === "musa"
-          ? "DPP checkout — $299"
-          : "Passport checkout — $49";
-      const href =
-        def.pack === "musa" ? "/api/checkout/dpp" : "/api/checkout/plan/strainchain_passport";
-      return `<article class="card"><h2><a href="${def.canonicalPath}">${title}</a></h2><p><a class="btn" href="${href}">${cta}</a></p></article>`;
+    .map(def => {
+      const { title, dpp } = hubCardCopy(def.pack);
+      const cta = dpp ? "DPP checkout — $299" : "Passport checkout — $49";
+      const action = dpp
+        ? "https://authichain.com/checkout/dpp_readiness"
+        : "https://authichain.com/checkout/strainchain_passport";
+      return `<article class="card"><h2><a href="${def.canonicalPath}">${title}</a></h2>${checkoutEmailFormHtml(
+        {
+          action,
+          label: cta,
+          inputId: `hub-${def.pack}-email`,
+          formId: `hub-${def.pack}-checkout`,
+          extraClass: "hub-checkout",
+        }
+      )}${catalogPaymentLinkHtml({
+        planId: dpp ? "dpp_readiness" : "strainchain_passport",
+        label: dpp ? "Pay $299 on Stripe" : "Pay $49 on Stripe",
+      })}</article>`;
     })
     .join("");
   return `<!DOCTYPE html>
@@ -120,7 +151,11 @@ body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;margin:0;color:#0f172a
 .wrap{width:min(880px,calc(100% - 32px));margin:0 auto;padding:48px 0}
 a{color:#4F46E5}
 .card{border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:12px 0}
-.btn{display:inline-block;margin-top:8px;font-weight:700;text-decoration:none}
+.btn{display:inline-block;margin-top:8px;font-weight:700;text-decoration:none;border:0;cursor:pointer;font:inherit;padding:12px 20px;border-radius:8px;background:#4F46E5;color:#fff}
+.checkout-email-form{display:flex;flex-direction:column;gap:8px;max-width:22rem;margin:1rem 0 0;text-align:left}
+.checkout-email-label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600}
+.checkout-email-form input[type=email]{padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.checkout-email-hint{font-size:.82rem;opacity:.8;margin:0}
 footer{color:#64748b;font-size:.85rem;margin-top:32px}
 </style>
 </head>
@@ -130,7 +165,26 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
   <h1>Checkout is the next click.</h1>
   <p>Passport $49 and EU DPP Readiness $299. No call booking. AuthiChain is a brand; the SAM legal entity is ZACHARY KIETZMAN.</p>
   ${cards}
-  <p><a href="/api/checkout/plan/strainchain_passport">Passport checkout — $49</a> · <a href="/api/checkout/dpp">DPP checkout — $299</a></p>
+  ${checkoutEmailFormHtml({
+    action: "https://authichain.com/checkout/strainchain_passport",
+    label: "Passport checkout — $49",
+    inputId: "hub-footer-passport-email",
+    formId: "hub-footer-passport-checkout",
+  })}
+  ${catalogPaymentLinkHtml({
+    planId: "strainchain_passport",
+    label: "Pay $49 on Stripe",
+  })}
+  ${checkoutEmailFormHtml({
+    action: "https://authichain.com/checkout/dpp_readiness",
+    label: "DPP checkout — $299",
+    inputId: "hub-footer-dpp-email",
+    formId: "hub-footer-dpp-checkout",
+  })}
+  ${catalogPaymentLinkHtml({
+    planId: "dpp_readiness",
+    label: "Pay $299 on Stripe",
+  })}
   <footer>ZACHARY KIETZMAN · brand AuthiChain · not a corporation.</footer>
 </main>
 </body>

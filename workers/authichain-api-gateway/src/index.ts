@@ -241,12 +241,15 @@ export default {
           notice: 'Demo mode — returns simulated responses',
           plans: [
             { name: 'Free', price: '$0', requests: 10, features: ['Classification API', 'Verification API', 'Community support'] },
-            { name: 'StrainChain Basic', price: '$199/mo', requests: 'Standard', features: ['StrainChain cannabis compliance tracking', 'Basic analytics', 'Email support'], stripeLink: 'https://buy.stripe.com/14A4gz9brgbQdOG4ba1Nu0w' },
-            { name: 'StrainChain Pro', price: '$499/mo', requests: 'Enhanced', features: ['All Basic features', 'Advanced analytics', 'Priority support', 'API access'], stripeLink: 'https://buy.stripe.com/8x28wP5Zf1gWcKC4ba1Nu0x' },
-            { name: 'StrainChain Enterprise', price: '$999/mo', requests: 'Unlimited', features: ['All Pro features', 'White-label', 'SLA guarantee', 'Dedicated support', 'Custom integrations'], stripeLink: 'https://buy.stripe.com/aFaaEX9br4t8dOG8rq1Nu0y' },
-            { name: 'QRON Single', price: '$49', requests: 'One-time', features: ['Single QR code generation', 'Basic customization'], stripeLink: 'https://buy.stripe.com/6oU3cvafv1gW25YcHG1Nu0z' },
-            { name: 'QRON Brand Pack', price: '$199', requests: 'One-time', features: ['Multiple QR codes', 'Brand customization', 'Analytics dashboard'], stripeLink: 'https://buy.stripe.com/aFabJ1cnD9Ns25Y7nm1Nu0A' },
-            { name: 'QRON Enterprise', price: '$999/mo', requests: 'Unlimited', features: ['Unlimited QR codes', 'Full brand suite', 'API access', 'Priority support', 'Custom integrations'], stripeLink: 'https://buy.stripe.com/bJe9AT3R7gbQ9yq9vu1Nu0B' }
+            // Live plans.ts SKUs. The previous StrainChain Basic/Pro/Enterprise and
+            // QRON Single/Brand Pack/Enterprise links belonged to no live Stripe
+            // account (products archived in the 2026-08-31 cleanup).
+            { name: 'StrainChain Passport', price: '$49', requests: 'One-time', features: ['One published genetics passport', 'Totals recomputed from the source CoA panel', 'QR code and shareable link'], stripeLink: 'https://authichain.com/checkout/strainchain_passport' },
+            { name: 'StrainChain Farm Plan', price: '$149/mo', requests: 'Unlimited cultivars', features: ['Unlimited cultivars and passports', 'Auto-updates on every new CoA', 'Lineage and batch history'], stripeLink: 'https://authichain.com/checkout/strainchain_farm' },
+            { name: 'QRON Starter Pack', price: '$29', requests: '100 generations', features: ['100 AI QR generations, never expire', 'Holographic & Memory modes', 'Designed for AuthiChain signed verification (in development)'], stripeLink: 'https://authichain.com/checkout/starter' },
+            { name: 'QRON Creator Pack', price: '$99', requests: '500 generations', features: ['500 AI QR generations, never expire', 'All Pro modes and premium styles', 'Priority generation queue'], stripeLink: 'https://authichain.com/checkout/creator' },
+            { name: 'EU DPP Readiness Audit', price: '$299', requests: 'One-time', features: ['Written EU DPP readiness assessment', '50 workspace generations', 'Credited toward AuthiChain Basic'], stripeLink: 'https://authichain.com/checkout/dpp_readiness' },
+            { name: 'Theater 3: Elite', price: '$1,499/mo', requests: 'Unlimited', features: ['Unlimited industrial artifacts', 'Custom AI model training', 'Real-time security webhooks'], stripeLink: 'https://authichain.com/checkout/theater_3' },
           ]
         }, cors);
       }

@@ -1,7 +1,7 @@
 name: Production smoke gate
 
-# Money + verification path. Read-only GETs. Not a substitute for pnpm check —
-# this is the live commercial loop after required CI on main.
+# Money + verification path. Read-only. HEAD on checkout 303s so CI
+# never creates a Stripe session. GET /api/checkout is JSON health (200).
 on:
   push:
     branches: [main]
