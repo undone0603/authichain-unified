@@ -17,6 +17,10 @@ import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
 import { registerX402Routes } from "./x402-routes";
 import { registerGuardrailApi } from "./guardrail-api";
+import { registerLeadRoutes } from "./lead-routes";
+import { registerResendInbound } from "./resend-inbound";
+import { registerNurtureReplies } from "./nurture-replies";
+import type { WorkersAIBinding } from "../src/lib/sentiment-classifier";
 import { scheduled } from "./cron-dispatch";
 import {
   CHECKOUT_REDIRECT_HEADERS,
@@ -28,6 +32,8 @@ type Env = {
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  /** Workers AI: free inbound-reply classifier (worker-app/resend-inbound.ts). */
+  AI?: WorkersAIBinding;
   AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64?: string;
   AUTHICHAIN_ATTESTATION_KEY_ID?: string;
   AUTHICHAIN_ATTESTATION_PUBLIC_JWK?: string;
@@ -46,6 +52,8 @@ type Env = {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: Fetcher;
   QRON_WORKER_URL?: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   SUPABASE_ANON_KEY?: string;
@@ -177,6 +185,16 @@ app.use("/api/contact/*", rateLimitMiddleware("contact", 5, 60 * 60_000));
 app.use("/api/gpt/*", rateLimitMiddleware("gpt", 60, 60_000));
 // Admin ops: 30 requests per 15 min per IP
 app.use("/api/admin/*", rateLimitMiddleware("admin", 30, 15 * 60_000));
+// Public lead forms (/book, /contact, lead-capture popups): 10 per hour per IP
+app.use("/api/book", rateLimitMiddleware("book", 10, 60 * 60_000));
+app.use(
+  "/api/lead-capture",
+  rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
+);
+app.use(
+  "/api/leads/capture",
+  rateLimitMiddleware("lead-capture", 10, 60 * 60_000)
+);
 // Catch-all API guard: 300 requests per minute per IP (also covers
 // /api/trpc/* — see tRPC note above)
 app.use("/api/*", rateLimitMiddleware("global", 300, 60_000));
@@ -196,15 +214,24 @@ function isAppHostname(host: string): boolean {
   return h.startsWith("app.");
 }
 
-// ─── DPP $299 Checkout ──────────────────────────────────────────────────────
-// Same session create as Next src/app/api/checkout/dpp. Registered here so
-// authichain-com's APP_WORKER proxy does not fall through to static ASSETS.
+// ─── DPP $299 + catalogue plan checkout (GET = click-to-confirm) ────────────
+// A GET never opens a Stripe session: link scanners, email security gateways
+// and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
+// https://authichain.com/checkout/<plan> (authichain-com), whose confirm form
+// POSTs to create the session. Only DPP-SMOKE-E2E (a $0 demo session used by
+// production-smoke-gate) still creates a session on GET.
 app.get("/api/checkout/dpp", async c => {
   if (c.req.method === "HEAD") {
     for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
       c.header(key, value);
     }
     return c.body(null, 204);
+  }
+  const search = new URL(c.req.url).searchParams;
+  const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
+  const { isDppSmokePromo } = await import("../src/lib/dpp-loop");
+  if (!isDppSmokePromo(search.get("promo"))) {
+    return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", search));
   }
   try {
     hydrateProcessEnv(c.env);
@@ -222,7 +249,7 @@ app.get("/api/checkout/dpp", async c => {
       supabase = createClient(supabaseUrl, serviceKey);
     }
     const result = await createDppCheckoutSession({
-      searchParams: new URL(c.req.url).searchParams,
+      searchParams: search,
       stripeSecretKey,
       supabase,
     });
@@ -249,8 +276,7 @@ app.get("/api/checkout/dpp", async c => {
   }
 });
 
-// Catalogue plan checkout (GET). Same session create as Next
-// src/app/api/checkout/plan/[planId].
+// Catalogue plan checkout (GET) → click-to-confirm page. Never Stripe.
 app.get("/api/checkout/plan/:planId", async c => {
   if (c.req.method === "HEAD") {
     for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
@@ -258,47 +284,14 @@ app.get("/api/checkout/plan/:planId", async c => {
     }
     return c.body(null, 204);
   }
-  try {
-    hydrateProcessEnv(c.env);
-    const planId = c.req.param("planId");
-    const search = new URL(c.req.url).searchParams;
-    const { createPlanCheckoutSession } =
-      await import("../src/lib/plan-checkout");
-    const result = await createPlanCheckoutSession({
-      request: c.req.raw,
-      body: {
-        planId,
-        email: search.get("email") ?? undefined,
-        prospectId:
-          search.get("prospect_id") ?? search.get("visit_id") ?? undefined,
-        source: search.get("utm_source") ?? search.get("source") ?? undefined,
-        affiliateCode: search.get("affiliate_code") ?? undefined,
-      },
-      stripeSecretKey:
-        c.env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "",
-      requireEmail: true,
-    });
-    if (!result.ok) {
-      if (result.status === 303 && result.url) {
-        return checkoutRedirectResponse(result.url);
-      }
-      c.header("Cache-Control", "private, no-store");
-      return c.json(
-        {
-          error: result.error,
-          ...(result.detail ? { detail: result.detail } : {}),
-        },
-        result.status
-      );
-    }
-    return checkoutRedirectResponse(result.url);
-  } catch (err: any) {
-    console.error("[checkout/plan] Error:", err?.message || err);
-    return c.json(
-      { error: "Failed to start checkout", detail: err?.message },
-      500
-    );
+  const search = new URL(c.req.url).searchParams;
+  const { gatedConfirmUrl, planFromGatedPath, GATED_CHECKOUT_ORIGIN } =
+    await import("../src/lib/checkout-gate");
+  const plan = planFromGatedPath(`/checkout/${c.req.param("planId")}`);
+  if (!plan) {
+    return checkoutRedirectResponse(`${GATED_CHECKOUT_ORIGIN}/checkout`);
   }
+  return checkoutRedirectResponse(gatedConfirmUrl(plan.id, search));
 });
 
 // Generic plan checkout (POST). GET is route-health only — never creates a
@@ -308,7 +301,8 @@ app.get("/api/checkout", c => {
   return c.json({
     ok: true,
     methods: ["POST"],
-    smoke: "GET /api/checkout/dpp",
+    smoke: "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E",
+    confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
     activate: "/dpp/activate",
@@ -316,6 +310,11 @@ app.get("/api/checkout", c => {
 });
 
 app.post("/api/checkout", async c => {
+  const { isAutomatedCheckoutRequest } = await import("../src/lib/checkout-gate");
+  if (isAutomatedCheckoutRequest(c.req.raw)) {
+    c.header("Cache-Control", "private, no-store");
+    return c.json({ error: "automated_request_blocked" }, 403);
+  }
   try {
     hydrateProcessEnv(c.env);
     let body: Record<string, string> = {};
@@ -1148,10 +1147,10 @@ app.post("/api/gpt/qr/generate", async c => {
     const body = await c.req.json().catch(() => ({}) as any);
     const { productId, style, size } = body ?? {};
     if (!productId) return c.json({ error: "productId required" }, 400);
-    const verifyUrl = `https://authichain.com/verify/${productId}`;
+    const verifyUrl = `https://authichain.govchain.us/verify/${productId}`;
     return c.json({
       qrUrl: verifyUrl,
-      embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
+      embedUrl: `https://authichain.govchain.us/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
       message: `QR code generated for product ${productId}`,
     });
   } catch (err) {
@@ -1735,6 +1734,9 @@ registerIssuerRoutes(app);
 registerAttestationApi(app);
 registerX402Routes(app);
 registerGuardrailApi(app);
+registerLeadRoutes(app);
+registerResendInbound(app);
+registerNurtureReplies(app);
 
 app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];

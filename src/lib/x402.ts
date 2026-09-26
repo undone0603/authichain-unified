@@ -9,10 +9,11 @@
  * funded by a KYC'd entity and every payer is spend-capped + rate-limited.
  * `$QRON` and any governance token stay off this rail (see
  * docs/strategy/AGENT_TOKENOMICS_x402.md). Wallets vs rails:
- * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO,
- * X402_FACILITATOR_URL, or X402_USDC_ASSET. payTo is the tokenomics EOA
- * (0x5db5…), not the NFT deployer EOA (0xbad4…) and not the Coinbase
- * Smart Wallet.
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind X402_PAY_TO away from
+ * the owner-authorized treasury 0xaebf…e437.
+ * Do not rebind X402_FACILITATOR_URL or X402_USDC_ASSET. payTo is the
+ * tokenomics EOA (0xaebf…e437), not the $QRON holder EOA (0x5db5…), not
+ * the NFT deployer EOA (0xbad4…), and not the Coinbase Smart Wallet.
  *
  * Pure helpers here are fully unit-tested; settlement verification has a single
  * documented integration point (`verifyPaymentProof`) to wire to an x402
@@ -55,7 +56,7 @@ export type X402BazaarInfo = {
       verified: boolean;
       authenticityScore: number;
       subject: string | null;
-      details: { note: string };
+      details: Record<string, unknown>;
       settlement: {
         payer: string;
         amountAtomic: string;
@@ -92,9 +93,7 @@ export function x402BazaarDiscovery(): X402BazaarExtension {
         verified: false,
         authenticityScore: 0,
         subject: "demo",
-        details: {
-          note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-        },
+        details: {},
         settlement: {
           payer: "0x0000000000000000000000000000000000000000",
           amountAtomic: "50000",
@@ -169,12 +168,13 @@ export const USDC_DECIMALS = 6;
 export const BASE_USDC_ASSET = BASE_USDC;
 
 /**
- * Live published X402_PAY_TO — payTo / tokenomics EOA.
- * Same address holds nearly all Polygon $QRON and receives Base USDC.
- * Distinct from NFT deployer EOA 0xbad4…. Canonical map:
- * docs/strategy/WEB3_IDENTITY.md. Do not rotate. Runtime health still
- * reads the Worker/env binding; this constant documents the live value.
- * It is NOT a fallback when X402_PAY_TO is unset (that stays 503).
+ * Live published X402_PAY_TO — owner-authorized treasury / tokenomics EOA
+ * 0xaebf…e437. Distinct from the $QRON
+ * holder EOA (0x5db5…) and the NFT deployer EOA (0xbad4…). Canonical map:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from this address.
+ * Runtime health still reads the Worker/env binding; this constant
+ * documents the live value. It is NOT a fallback when X402_PAY_TO is
+ * unset (that stays 503).
  */
 export const X402_PUBLISHED_PAY_TO = TOKENOMICS_PAY_TO;
 
@@ -507,12 +507,33 @@ export function toFacilitatorV1Payload(decoded: unknown): unknown {
       ? (raw.accepted as Record<string, unknown>)
       : {};
   const network = String(accepted.network ?? raw.network ?? "base");
-  return {
+  const facilitator: Record<string, unknown> = {
     x402Version: 1,
     scheme: accepted.scheme ?? raw.scheme ?? "exact",
     network: network.toLowerCase() === "eip155:8453" ? "base" : network,
     payload: raw.payload,
   };
+  const bazaar = bazaarExtensionFrom(raw);
+  if (bazaar !== undefined) {
+    facilitator.extensions = { bazaar };
+  }
+  return facilitator;
+}
+
+/** Copy only a client-supplied `extensions.bazaar`. Never invent one. */
+function bazaarExtensionFrom(
+  raw: Record<string, unknown>
+): unknown | undefined {
+  const extensions = raw.extensions;
+  if (
+    !extensions ||
+    typeof extensions !== "object" ||
+    Array.isArray(extensions)
+  ) {
+    return undefined;
+  }
+  if (!("bazaar" in extensions)) return undefined;
+  return (extensions as Record<string, unknown>).bazaar;
 }
 
 /**
@@ -607,6 +628,112 @@ export function dailyCapUsd(): number {
   return Number.isFinite(v) && v > 0 ? v : 10;
 }
 
+/**
+ * Refusal for a paid verify call on a path with no seal-registry lookup behind
+ * it. Served with HTTP 503.
+ *
+ * The edge copies of POST /api/x402 (landing, sister landings, both MCP
+ * bridges, worker-app) used to settle the $0.05 and then answer
+ * `verified: false` with a note admitting the lookup was not bound: the agent
+ * paid for an answer that could never be real. Until a registry lookup is bound
+ * on those paths they return this as soon as a payment proof arrives, before
+ * settlePayment() runs, so no USDC moves. The unpaid 402 challenge stays so
+ * discovery still works. The bound implementation is
+ * src/app/api/v1/agent-verify/route.ts; an edge worker with a VERIFY_APP
+ * binding forwards to it (forwardPaidVerify) instead of refusing.
+ */
+export const X402_REGISTRY_NOT_BOUND = {
+  error: "registry_not_bound",
+  status: "unavailable",
+  settled: false,
+  detail:
+    "Seal registry lookup is not bound on this path, so a paid call cannot return a real verification. Refused before settlement; no payment was taken.",
+} as const;
+
+/**
+ * Cloudflare service binding to the Next app worker (`authichain-app`, see
+ * wrangler.app.jsonc). Edge workers bind it as `VERIFY_APP`.
+ */
+export interface X402VerifyBinding {
+  fetch(request: Request): Promise<Response>;
+}
+
+/** The registry-backed paid verify route (src/app/api/v1/agent-verify). */
+export const X402_BOUND_VERIFY_PATH = "/api/v1/agent-verify";
+
+/**
+ * Hand a paid verify call to the Next route, which does the auth_seals lookup
+ * and settles only when it can return a real answer (every refusal there is
+ * before settlement). The edge copies of POST /api/x402 have no registry of
+ * their own; without a binding they keep answering X402_REGISTRY_NOT_BOUND.
+ *
+ * The public host is kept so the Next route builds the same resource URL the
+ * agent was challenged with. No timeout: aborting after the facilitator has
+ * settled would take the agent's money and drop the answer.
+ */
+export function forwardPaidVerify(
+  binding: X402VerifyBinding,
+  request: Request,
+  proofHeader: string,
+  body: string
+): Promise<Response> {
+  const url = new URL(request.url);
+  url.pathname = X402_BOUND_VERIFY_PATH;
+  url.search = "";
+  return binding.fetch(
+    new Request(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-PAYMENT": proofHeader,
+      },
+      body,
+    })
+  );
+}
+
+/**
+ * MCP `tools/call verify` over forwardPaidVerify. A settled answer comes back
+ * as a JSON-RPC result carrying the PAYMENT-RESPONSE header; any refusal
+ * (402, 400, 429, 503) passes through as HTTP, the same way the unpaid 402
+ * already does on /mcp.
+ */
+export async function forwardPaidVerifyMcp(
+  binding: X402VerifyBinding,
+  request: Request,
+  proofHeader: string,
+  args: Record<string, unknown>,
+  id: unknown
+): Promise<Response> {
+  const upstream = await forwardPaidVerify(
+    binding,
+    request,
+    proofHeader,
+    JSON.stringify(args)
+  );
+  if (!upstream.ok) return upstream;
+  const result = (await upstream.json()) as unknown;
+  const headers: Record<string, string> = {
+    "Cache-Control": "private, no-store",
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+  };
+  const paymentResponse = upstream.headers.get("PAYMENT-RESPONSE");
+  if (paymentResponse) headers["PAYMENT-RESPONSE"] = paymentResponse;
+  return new Response(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: id ?? null,
+      result: {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+      },
+    }),
+    { status: 200, headers }
+  );
+}
+
 export const X402_DEFAULT_PRICE_USD = 0.05;
 
 export function x402PriceUsd(raw?: string): number {
@@ -626,6 +753,21 @@ export type X402HealthEnv = {
   // Types-only: no runtime behavior change.
   [key: string]: string | undefined;
 };
+
+/**
+ * The named x402 vars without the index signature, for a worker's own Env:
+ * that Env also holds bindings (VERIFY_APP), which a string index rejects.
+ */
+export type X402EnvVars = Pick<
+  X402HealthEnv,
+  | "X402_PAY_TO"
+  | "X402_FACILITATOR_URL"
+  | "X402_NETWORK"
+  | "X402_CHAIN_ID"
+  | "X402_USDC_ASSET"
+  | "X402_PRICE_USD"
+  | "X402_DAILY_CAP_USD"
+>;
 
 export type X402FacilitatorStatus = {
   configured: boolean;

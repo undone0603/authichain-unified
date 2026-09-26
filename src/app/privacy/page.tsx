@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           Effective Date: April 12, 2026
         </p>
         <p className="text-zinc-600 text-xs font-medium uppercase tracking-tighter">
-          QRON is operated by AuthiChain, Michigan, USA
+          QRON is operated by Zachary Kietzman, doing business as AuthiChain, Michigan, USA
         </p>
       </section>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
               1. Introduction
             </h2>
             <p className="text-zinc-400 leading-relaxed">
-              AuthiChain (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates QRON at qron.space (the &quot;Service&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our Service.
+              Zachary Kietzman, doing business as AuthiChain (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates QRON at qron.space (the &quot;Service&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our Service.
             </p>
           </section>
 
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
               </Link>
             </div>
             <p className="text-[10px] font-bold text-zinc-600 uppercase">
-              &copy; 2026 AuthiChain Inc.
+              &copy; 2026 AuthiChain
             </p>
           </div>
         </div>

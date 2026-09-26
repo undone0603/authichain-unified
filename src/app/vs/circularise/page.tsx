@@ -16,16 +16,14 @@ export const metadata: Metadata = {
 };
 
 const rows: ComparisonRow[] = [
-  { feature: 'Product authentication (anti-counterfeit)', authichain: true, competitor: 'Limited' },
-  { feature: 'EU Digital Product Passport export', authichain: true, competitor: true },
-  { feature: 'On-chain cryptographic anchoring', authichain: true, competitor: true },
-  { feature: 'Bitcoin L1 finality', authichain: true, competitor: false },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: true, competitor: false },
-  { feature: 'Self-serve onboarding < 1 day', authichain: true, competitor: false },
-  { feature: 'Serves SMB + enterprise', authichain: true, competitor: false },
-  { feature: 'Transparent public pricing', authichain: true, competitor: false },
-  { feature: 'NFT certificates of authenticity', authichain: true, competitor: false },
-  { feature: 'Starts at', authichain: '$49/mo', competitor: 'Enterprise quote' },
+  { feature: 'Product authentication (anti-counterfeit)', authichain: true, competitor: '—' },
+  { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
+  { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: true },
+  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
+  { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: false },
+  { feature: 'Serves SMB + enterprise', authichain: true, competitor: '—' },
+  { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
+  { feature: 'Starts at', authichain: 'Contact for pricing', competitor: 'Enterprise quote' },
 ];
 
 const reasons = [
@@ -39,7 +37,7 @@ const reasons = [
   },
   {
     title: 'Strongest Proof Layer',
-    desc: 'AI consensus plus dual anchoring on Polygon and Bitcoin L1 gives customs, auditors, and customers verifiable, tamper-proof provenance in a single scan.',
+    desc: 'Our goal: AI consensus plus on-chain anchoring, so customs, auditors, and customers can verify provenance in a single scan.',
   },
 ];
 

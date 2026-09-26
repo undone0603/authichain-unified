@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 import {
   isX402DocsPath,
   renderX402DocsPage,
@@ -14,8 +15,9 @@ function httpsUrl(raw: string): URL {
 
 describe("x402 public docs page", () => {
   it("matches the published live rail (payTo, Base USDC, $0.05)", () => {
-    expect(X402_PUBLIC.payTo).toBe(
-      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    expect(X402_PUBLIC.payTo).toBe(X402_PUBLISHED_PAY_TO);
+    expect(X402_PUBLIC.payTo.toLowerCase()).not.toBe(
+      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
     );
     expect(X402_PUBLIC.asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -92,9 +94,9 @@ describe("x402 public docs page", () => {
     expect(html).toContain("Plus Jakarta Sans");
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('name="email"');
-    expect(html).toContain('action="/api/checkout/dpp"');
-    expect(html).toContain('action="/api/checkout/plan/strainchain_passport"');
-    expect(html).toContain('action="/api/checkout/plan/strainchain_farm"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(html).toContain('action="https://authichain.com/checkout/strainchain_passport"');
+    expect(html).toContain('action="https://authichain.com/checkout/strainchain_farm"');
     expect(html).not.toMatch(/href=["']\/api\/checkout/);
     expect(html).not.toMatch(/href=["']\/protocol\/checkout/);
     expect(html).not.toContain("GET /api/checkout");
@@ -105,9 +107,9 @@ describe("x402 public docs page", () => {
     expect(passport).toBeTruthy();
     expect(farm).toBeTruthy();
     expect(dpp).toBeTruthy();
-    expect(httpsUrl(passport!).hostname).toBe("buy.stripe.com");
-    expect(httpsUrl(farm!).hostname).toBe("buy.stripe.com");
-    expect(httpsUrl(dpp!).hostname).toBe("buy.stripe.com");
+    expect(httpsUrl(passport!).hostname).toBe("authichain.com");
+    expect(httpsUrl(farm!).hostname).toBe("authichain.com");
+    expect(httpsUrl(dpp!).hostname).toBe("authichain.com");
     expect(html).toContain(`href="${passport}"`);
     expect(html).toContain(`href="${farm}"`);
     expect(html).toContain(`href="${dpp}"`);

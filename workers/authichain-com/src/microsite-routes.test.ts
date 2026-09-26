@@ -58,10 +58,8 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
     assert.doesNotMatch(html, /schedule a (call|demo)/i, slug);
     assert.doesNotMatch(html, /AuthiChain Inc/i, slug);
     assert.match(html, /ZACHARY KIETZMAN/, slug);
-    const hasPassport = html.includes(
-      "/api/checkout/plan/strainchain_passport"
-    );
-    const hasDpp = html.includes("/api/checkout/dpp");
+    const hasPassport = /https:\/\/authichain\.com\/checkout\/strainchain_passport/.test(html);
+    const hasDpp = /https:\/\/authichain\.com\/checkout\/dpp_readiness/.test(html);
     assert.ok(hasPassport || hasDpp, `${slug} needs a live checkout CTA`);
     assert.match(html, /name="email"/, slug);
     assert.doesNotMatch(html, /GET \/api\/checkout/, slug);
@@ -74,22 +72,22 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.match(MICROSITE_HTML.mendo, /name="email"/);
   assert.ok(
     MICROSITE_HTML.mendo.includes(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     )
   );
   assert.ok(
     MICROSITE_HTML.trumark.includes(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     )
   );
   assert.ok(
     MICROSITE_HTML.strainchain.includes(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     )
   );
   assert.ok(
     MICROSITE_HTML.musa.includes(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     )
   );
   const bat = MICROSITE_HTML["bat-2026-001"];
@@ -104,12 +102,12 @@ test("every pack has live Passport or DPP checkout and no call booking", () => {
   assert.doesNotMatch(bat, /Annex II Certification Required/);
   assert.doesNotMatch(bat, /WHO GMP Certification \(Global/);
   assert.match(bat, /name="email"/);
-  assert.match(bat, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
+  assert.match(bat, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.ok(
-    bat.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    bat.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.ok(
-    bat.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    bat.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.match(
     MICROSITE_HTML.mendo,
@@ -143,12 +141,12 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.match(hubHtml, /Mendo \/ RealTHCV/);
   assert.match(hubHtml, /Passport checkout — \$49/);
   assert.match(hubHtml, /name="email"/);
-  assert.match(hubHtml, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(hubHtml, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
   assert.ok(
-    hubHtml.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    hubHtml.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.ok(
-    hubHtml.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    hubHtml.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.match(hubHtml, /ZACHARY KIETZMAN/);
   assert.doesNotMatch(
@@ -176,7 +174,7 @@ test("tryHandleMicrosite serves /m hub and packs", async () => {
   assert.match(batHtml, /MVCL-MQWQ2MR7-I7L0/);
   assert.match(
     batHtml,
-    /action="https:\/\/authichain.com\/api\/checkout\/dpp"/
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
   );
   assert.doesNotMatch(
     batHtml,
@@ -206,7 +204,7 @@ test("apex worker serves /m pages and does not steal /p", async () => {
     const res = await worker.fetch(req(path), ENV);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /api\/checkout/, path);
+    assert.match(html, /api\/checkout|authichain\.com\/checkout\//, path);
     assert.doesNotMatch(html, /calendly/i);
   }
 
@@ -226,5 +224,5 @@ test("sitemap lists canonical microsite URLs", () => {
   );
   assert.equal(Object.keys(MICROSITES).length, 5);
   assert.equal(PASSPORT_CHECKOUT.includes("strainchain_passport"), true);
-  assert.equal(DPP_CHECKOUT.endsWith("/api/checkout/dpp"), true);
+  assert.equal(DPP_CHECKOUT.endsWith("https://authichain.com/checkout/dpp_readiness"), true);
 });

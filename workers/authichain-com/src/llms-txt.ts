@@ -30,6 +30,8 @@ export function renderLlmsTxt(): string {
     "## Agent pay (x402)",
     `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
     "- Catalog: https://authichain.com/api/x402/catalog",
+    "- Listing pack: https://authichain.com/api/x402/listing",
+    "- Growth registry: https://authichain.com/api/x402/growth",
     "- Well-known catalog: https://authichain.com/.well-known/x402.json",
     "- x402scan fan-out: https://authichain.com/.well-known/x402",
     "- OpenAPI: https://authichain.com/openapi.json",

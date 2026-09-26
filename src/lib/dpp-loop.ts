@@ -741,7 +741,7 @@ export function dppActivateUrl(
   sessionId: string,
   visitId?: string | null
 ): string {
-  const base = "https://authichain.com/dpp/activate";
+  const base = "https://authichain.govchain.us/dpp/activate";
   const params = new URLSearchParams({ session_id: sessionId });
   if (visitId) params.set("visit_id", visitId);
   return `${base}?${params.toString()}`;

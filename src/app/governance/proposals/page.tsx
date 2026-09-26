@@ -39,7 +39,7 @@ export default function GovChainProposals() {
       id: 'PIP-040',
       status: 'Executed',
       ends: 'Completed',
-      desc: 'Adopt the EU 2024/1789 standard for all digital product passports generated via the StrainChain gateway.'
+      desc: 'Adopt the (EU) 2024/1781 standard for all digital product passports generated via the StrainChain gateway.'
     }
   ];
 

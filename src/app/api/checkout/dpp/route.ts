@@ -1,7 +1,9 @@
 /**
  * Attributed Checkout Session for the EU DPP Readiness Audit ($299).
  *
- * GET /api/checkout/dpp?... → 303 to Stripe Checkout
+ * GET /api/checkout/dpp?... → 303 to the click-to-confirm page
+ * https://authichain.com/checkout/dpp_readiness (its POST creates the
+ * session). Only the DPP-SMOKE-E2E $0 demo still opens a session on GET.
  *
  * Canonical session create lives in `src/lib/dpp-checkout.ts` (also used by
  * worker-app). Do not fork price/metadata here.
@@ -9,7 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { CHECKOUT_REDIRECT_HEADERS } from "@/lib/checkout-email";
-import { createDppCheckoutSession } from "@/lib/dpp-checkout";
+import { createDppCheckoutSession, isDppSmokePromo } from "@/lib/dpp-checkout";
+import { gatedConfirmUrl } from "@/lib/checkout-gate";
 import { logAutomation } from "@/lib/automation";
 
 export const runtime = "nodejs";
@@ -31,6 +34,16 @@ export async function HEAD() {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isDppSmokePromo(request.nextUrl.searchParams.get("promo"))) {
+    const redirect = NextResponse.redirect(
+      gatedConfirmUrl("dpp_readiness", request.nextUrl.searchParams),
+      303
+    );
+    for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+      redirect.headers.set(key, value);
+    }
+    return redirect;
+  }
   try {
     const result = await createDppCheckoutSession({
       searchParams: request.nextUrl.searchParams,
