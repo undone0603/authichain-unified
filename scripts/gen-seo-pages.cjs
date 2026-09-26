@@ -20,33 +20,17 @@ const path = require('path');
 
 const OUT = path.join(__dirname, '..', 'content', 'seo', 'pages.json');
 
-// Brand balance as of 2026-09-24: authichain 119/135 generated entries (88%),
-// strainchain 5, govchain 6, qron 5. That skew is a byproduct of chasing
-// whichever EU DPP/regulatory news is freshest each run, not a deliberate
-// choice — most regulatory research naturally lands on authichain. If a new
-// entry's topic doesn't force a specific brand (e.g. it's not an EU DPP
-// delegated act, which is authichain by definition), prefer strainchain,
-// govchain, or qron over authichain to work this back toward balance. Recount
-// with the snippet above before deciding it's still skewed — it changes every
-// run.
 const BRANDS = {
-  // domain is the brand key pages.json is filtered by; origin is the live host
-  // for canonical URLs. AuthiChain moved to authichain.govchain.us in #1245
-  // while its checkout forms stay on authichain.com/checkout (LIVE_MONEY).
-  // Price strings must match https://authichain.com/pricing — never $49/mo Pro.
-  authichain: { name: 'AuthiChain', domain: 'authichain.com', origin: 'authichain.govchain.us', price: 'EU DPP Readiness is $299 one-time.' },
+  authichain: { name: 'AuthiChain', domain: 'authichain.com', origin: 'authichain.com', price: 'EU DPP Readiness is $299 one-time.' },
   strainchain: { name: 'StrainChain', domain: 'strainchain.io', price: 'Genetics passport is $49 one-time.' },
   govchain: { name: 'GovChain', domain: 'govchain.us', price: 'No enterprise contract — public-sector pricing.' },
   qron: { name: 'QRON', domain: 'qron.space', price: 'QRON packs from $29 one-time.' },
 };
 
-// Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
-// estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
   authichainDppCheckout: 'https://authichain.com/checkout/dpp_readiness',
   authichainDppPay: 'https://authichain.com/checkout/dpp_readiness',
   authichainPricing: 'https://authichain.com/pricing',
-  // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
   strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
   strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
   strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
@@ -69,19 +53,13 @@ function isTrumarkKeyword(keyword) {
   return /trumark/i.test(keyword);
 }
 
-/**
- * Brand-aware CTA after How it works. Keyword bias can override brand:
- * DPP / battery / textiles → AuthiChain DPP checkout; cannabis / METRC /
- * strain / COA → StrainChain passport checkout + strainchain.io/pricing.
- * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
- */
 function isCheckoutUrl(href) {
   return /\/api\/checkout\/|\/checkout\//.test(href);
 }
 
 function checkoutEmailFormHtml(action, label) {
   return (
-    `<form class="checkout-email-form" action="${esc(action).replace(/"/g, """)}" method="${isCheckoutUrl(action) && /^https:\/\/authichain\.com\/checkout\//.test(action) ? "post" : "get"}">` +
+    `<form class="checkout-email-form" action="${esc(action).replace(/"/g, "&quot;")}" method="${isCheckoutUrl(action) && /^https:\/\/authichain\.com\/checkout\//.test(action) ? "post" : "get"}">` +
     `<label class="checkout-email-label" for="checkout-email">Work email` +
     `<input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">` +
     `</label>` +
@@ -96,12 +74,10 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   let primaryLabel;
   let secondaryHref = null;
   let secondaryLabel = null;
-
   const cannabis = isCannabisKeyword(keyword);
   const dpp = isDppKeyword(keyword);
   const musa = isMusaKeyword(keyword);
   const trumark = isTrumarkKeyword(keyword);
-
   if (trumark) {
     primaryHref = LIVE_MONEY.strainchainPassportCheckout;
     primaryLabel = 'Start StrainChain passport checkout';
@@ -131,7 +107,6 @@ function moneyCtaHtml(brandKey, keyword, brand) {
     primaryHref = `https://${brand.domain}/pricing`;
     primaryLabel = `View ${brand.name} pricing`;
   }
-
   if (isCheckoutUrl(primaryHref)) {
     const pay =
       primaryHref === LIVE_MONEY.strainchainPassportCheckout
@@ -157,7 +132,6 @@ function moneyCtaHtml(brandKey, keyword, brand) {
       extra
     );
   }
-
   const links =
     `<a href="${primaryHref}">${esc(primaryLabel)}</a>` +
     (secondaryHref ? ` · <a href="${secondaryHref}">${esc(secondaryLabel)}</a>` : '');
@@ -170,12 +144,6 @@ function brandKeyForPage(page) {
   return Object.keys(BRANDS).find((k) => BRANDS[k].domain === page.domain) || null;
 }
 
-/**
- * Keep the Get started money CTA in lockstep with generated hubs.
- * Bespoke seed copy above/below that heading is left alone. A seed
- * that already has <h2>Get started</h2> has only that block replaced
- * so Bing landings pick up the email form without a manual rewrite.
- */
 function ensureMoneyCta(page) {
   if (typeof page.bodyHtml !== 'string') return page;
   const brandKey = brandKeyForPage(page);
@@ -209,52 +177,23 @@ const titleCase = (s) =>
     if (ACRONYMS[lw]) return ACRONYMS[lw];
     return w.replace(/^[a-z]/, (c) => c.toUpperCase());
   }).join('');
-const esc = (s) => s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-// Trim to <= max chars on a word boundary (no mid-word cut), keeping a period.
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function clampMeta(s, max) {
   if (s.length <= max) return s;
   const cut = s.slice(0, max);
   const lastSpace = cut.lastIndexOf(' ');
   return cut.slice(0, lastSpace > 0 ? lastSpace : max).replace(/[\s,;:.]+$/, '') + '.';
 }
-
-// Search results truncate around 60 characters, and src/lib/seo-pages.test.ts
-// asserts the limit. Titles were assembled unclamped, so a long keyword pushed
-// "Product Authentication For Government Supply Chain | GovChain" to 61 and the
-// regeneration workflow committed it straight to main under [skip ci] — the
-// test only ran on the next unrelated push.
-//
-// The brand suffix is kept and the keyword is trimmed at a word boundary: the
-// brand is the part that earns the click, so it is the wrong end to lose.
 function clampTitle(kwTitle, brand, max = 60) {
   const suffix = ` | ${brand}`;
   const full = `${kwTitle}${suffix}`;
   if (full.length <= max) return full;
-
   const room = max - suffix.length;
   const cut = kwTitle.slice(0, room);
   const lastSpace = cut.lastIndexOf(' ');
   const kw = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s|,;:-]+$/, '');
   return `${kw}${suffix}`;
 }
-
-// DATA lives in scripts/seo-data/*.cjs, split by theme so a diff touches
-// one ~100-300 line file instead of this ~950-line one. Each entry:
-// keyword, brand, schemaType, lead, bullets[3], faqs[{q,a}] — match that
-// shape exactly in whichever file you add to:
-//   seo-data/regulatory.cjs  — dated EU/US compliance deadlines (ESPR, EUDR,
-//                              DSCSA, battery passport, PPWR, FTC/USDA...)
-//   seo-data/industry.cjs    — "blockchain qr code for X", "product
-//                              authentication for X", anti-counterfeit,
-//                              supply chain traceability by vertical
-//   seo-data/standards.cjs   — W3C Verifiable Credentials, GS1 Digital Link,
-//                              DID methods, EPCIS and similar protocol/
-//                              standards-mechanics explainers
-//   seo-data/commercial.cjs  — brand/money surfaces that aren't a deadline,
-//                              a vertical, or a standards explainer
-// If unsure which file fits, regulatory.cjs is the largest/most general
-// bucket. Order across files doesn't matter — content/seo/pages.json is
-// read by slug (src/lib/seo-pages.ts), never by position.
 const DATA = [
   ...require('./seo-data/regulatory.cjs'),
   ...require('./seo-data/industry.cjs'),
@@ -262,7 +201,6 @@ const DATA = [
   ...require('./seo-data/commercial.cjs'),
   ...require('./seo-data/comparison.cjs'),
 ];
-
 function buildEntry(d) {
   const b = BRANDS[d.brand];
   const kwTitle = titleCase(d.keyword);
@@ -281,7 +219,6 @@ function buildEntry(d) {
     moneyCtaHtml(d.brand, d.keyword, b) +
     `<h2>FAQ</h2>` +
     d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
-
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -311,27 +248,8 @@ function buildEntry(d) {
       },
     ],
   };
-
-  return {
-    slug,
-    keyword: d.keyword,
-    brand: b.name,
-    domain: b.domain,
-    title,
-    metaDescription,
-    h1,
-    bodyHtml,
-    jsonLd,
-  };
+  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd };
 }
-
-// Hand-authored seed pages: bespoke copy that doesn't fit this generator's
-// fixed template (custom section headings, several with no FAQ, two typed
-// Article rather than Product/Service). They live in content/seo/pages.json
-// but not in DATA, and are preserved below by slug on every run. Listed
-// explicitly here (rather than left as "whatever doesn't match DATA") so a
-// future DATA keyword that happens to slugify to the same value fails loudly
-// instead of silently overwriting real copy with the generic template.
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
   'anti-counterfeit-qr-verification',
@@ -359,12 +277,9 @@ const PROTECTED_SEED_SLUGS = new Set([
   'w3c-verifiable-credentials-product-authentication',
   'what-is-a-digital-product-passport',
 ]);
-
-// Preserve hand-authored seed pages, replace/append generated ones by slug.
 const existing = JSON.parse(fs.readFileSync(OUT, 'utf8'));
 const generated = DATA.map(buildEntry);
 const genSlugs = new Set(generated.map((g) => g.slug));
-
 const clobberedSeeds = generated.filter((g) => PROTECTED_SEED_SLUGS.has(g.slug));
 if (clobberedSeeds.length > 0) {
   throw new Error(
@@ -375,10 +290,7 @@ if (clobberedSeeds.length > 0) {
       `slug from PROTECTED_SEED_SLUGS in this file first.`
   );
 }
-
-const seeds = existing
-  .filter((e) => !genSlugs.has(e.slug))
-  .map(ensureMoneyCta);
+const seeds = existing.filter((e) => !genSlugs.has(e.slug)).map(ensureMoneyCta);
 const unprotectedSeeds = seeds.filter((e) => !PROTECTED_SEED_SLUGS.has(e.slug));
 if (unprotectedSeeds.length > 0) {
   console.warn(
@@ -388,13 +300,7 @@ if (unprotectedSeeds.length > 0) {
       unprotectedSeeds.map((e) => `  - ${e.slug}`).join('\n')
   );
 }
-
 const merged = [...seeds, ...generated];
-
-// Guard against duplicate slugs landing in pages.json: standard JSON.parse
-// silently keeps only the last object for a repeated key when this array is
-// ever consumed by slug (e.g. built into a Map), so a collision here fails
-// loudly at build time rather than silently unpublishing one of the two pages.
 const slugCounts = new Map();
 for (const p of merged) slugCounts.set(p.slug, (slugCounts.get(p.slug) || 0) + 1);
 const duplicateSlugs = [...slugCounts.entries()].filter(([, n]) => n > 1).map(([s]) => s);
@@ -404,7 +310,6 @@ if (duplicateSlugs.length > 0) {
       `${duplicateSlugs.join(', ')}. Give each page a distinct slug before writing.`
   );
 }
-
 fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
 seeds.forEach((s) => console.log(`  - ${s.slug}`));
