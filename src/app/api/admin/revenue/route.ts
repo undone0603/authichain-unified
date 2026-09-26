@@ -1,22 +1,16 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
 import { createClient } from '@/utils/supabase/server';
 import { requireAdmin } from '@/lib/require-admin';
+import { checkAdminKey } from '@/lib/admin-key';
 
 export const dynamic = 'force-dynamic';
 
-function dashboardKeyMatches(provided: string | null): boolean {
-  const expected = process.env.ADMIN_DASHBOARD_KEY;
-  if (!expected || !provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export async function GET(request: Request) {
-  if (!dashboardKeyMatches(new URL(request.url).searchParams.get('key'))) {
+  // Shared-key path: ADMIN_DASHBOARD_KEY only, min 16 chars, fail-closed.
+  // Session path: requireAdmin so the founder dashboard still works without
+  // a query-string key. Do not drop this fallback.
+  if (!checkAdminKey(request)) {
     const supabase = await createClient();
     const authResult = await requireAdmin(supabase);
     if (authResult instanceof NextResponse) return authResult;
