@@ -23,7 +23,9 @@ def test_unauthorized_access():
 
 def test_authorized_scout():
     """Verify authorized API access to agents."""
-    admin_token = get("agent_secret") or "authichain-secret"
+    admin_token = get("agent_secret")
+    if not admin_token:
+        pytest.skip("AGENT_SECRET not configured")
     headers = {"Authorization": f"Bearer {admin_token}"}
     
     # We use a mocked/small call to avoid long browser-use runs during testing

@@ -453,7 +453,7 @@ export default function Pricing() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: <Shield className="h-6 w-6" />, title: "AI + Blockchain", desc: "Dual-layer verification no competitor offers" },
+              { icon: <Shield className="h-6 w-6" />, title: "AI + Blockchain", desc: "AI analysis (in development) plus on-chain certificate record" },
               { icon: <TrendingUp className="h-6 w-6" />, title: "Autopilot AI", desc: "Automated lead gen, outreach, and qualification" },
               { icon: <DollarSign className="h-6 w-6" />, title: "NFT Marketplace", desc: "Monetize authentication with tradeable certificates" },
               { icon: <Globe className="h-6 w-6" />, title: "White-Label", desc: "Resell as your own brand to enterprise clients" },

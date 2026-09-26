@@ -19,7 +19,8 @@
 //   WALLET_PRIVATE_KEY | MINTER_PRIVATE_KEY | POLYGON_PRIVATE_KEY  (NFT deployer EOA)
 //   ALCHEMY_API_KEY       optional; falls back to the chain public RPC
 //
-// Do not use the payTo / tokenomics EOA (0x5db5…) as this signer.
+// Do not use the payTo / tokenomics EOA (0xaebf…e437) or the $QRON
+// holder EOA (0x5db5…) as this signer.
 // Identity: docs/strategy/WEB3_IDENTITY.md.
 //
 // Usage:

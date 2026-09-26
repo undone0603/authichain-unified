@@ -1,0 +1,10 @@
+{
+  "id": "F-modified-payload",
+  "input": {
+    "objectFound": true,
+    "depth": "lookup",
+    "crypto": { "signatureValid": false, "issuerTrusted": true, "identityValid": true, "evidenceIntact": false, "statusActive": true },
+    "attestation": { "objectId": "ac:demo:874921", "decision": "verified", "status": "active", "issuer": "Authichain-Core", "evidence": [] }
+  },
+  "expect": { "decision": "invalid", "reasonsInclude": ["signature_invalid"] }
+}

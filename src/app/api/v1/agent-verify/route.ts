@@ -3,8 +3,9 @@
  *
  * Pay-per-call verification endpoint for autonomous agents (x402).
  * No payment -> HTTP 402 + requirements. Paid (X-PAYMENT proof) -> verify the
- * payment, enforce a per-payer daily spend cap + rate limit, then return a
- * verification result. Price is fixed, so daily spend = call-count x price,
+ * payment, enforce a per-payer daily spend cap + rate limit and look the seal
+ * up, and only then settle and return the verification result. Every refusal
+ * happens before settlement. Price is fixed, so daily spend = call-count x price,
  * tracked in automation_logs (same ledger the rate-limiter uses).
  */
 import { NextResponse } from "next/server";
@@ -21,7 +22,9 @@ import {
   usdToAtomic,
   dailyCapUsd,
   settlePayment,
+  X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
+import { attestSeal } from "@/lib/seal-attestation";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -92,7 +95,55 @@ export async function POST(request: Request) {
     );
   }
 
-  // 3b. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
+  // 4. Everything that can refuse runs before settlement, so a refused call
+  // never costs the agent the $0.05: missing subject, spend cap, registry
+  // outage. Only a call that will get a real registry answer is settled.
+  const input = (await request.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
+  const rawSealId =
+    input.sealId ?? input.seal_id ?? input.productId ?? input.serial;
+  const sealId =
+    typeof rawSealId === "string" && rawSealId.trim() ? rawSealId.trim() : null;
+  if (!sealId) {
+    return NextResponse.json(
+      { error: "seal_id_required", settled: false },
+      { status: 400 }
+    );
+  }
+
+  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
+  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
+  const spent = await dailySpentAtomic(proof.payer, priceAtomic);
+  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
+    return NextResponse.json(
+      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
+      { status: 402 }
+    );
+  }
+
+  // A row in auth_seals is not an attestation. verified is true only when
+  // protocol/verifier.mjs returns verdict "verified" (Ed25519 + mainnet anchor).
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return NextResponse.json({ ...X402_REGISTRY_NOT_BOUND }, { status: 503 });
+  }
+  const admin = createAdminClient(supabaseUrl, serviceKey);
+  const { data: seal, error: sealError } = await admin
+    .from("auth_seals")
+    .select("*")
+    .eq("id", sealId)
+    .maybeSingle();
+  if (sealError) {
+    return NextResponse.json(
+      { error: "registry_unavailable", settled: false },
+      { status: 503 }
+    );
+  }
+
+  // 5. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
   // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
   // configured) is refused in production so a fake proof can never pass.
   const settlement = await settlePayment(
@@ -109,18 +160,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // 4. Enforce the per-payer daily spend cap.
-  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
-  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(proof.payer, priceAtomic);
-  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
-    return NextResponse.json(
-      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
-      { status: 402 }
-    );
-  }
-
-  // 5. Record the spend (one row == one priced call).
+  // 6. Record the spend (one row == one priced call).
   const supabase = await createClient();
   await supabase.from("automation_logs").insert({
     workflow_name: "x402_spend",
@@ -129,52 +169,32 @@ export async function POST(request: Request) {
     payload: proof.payer,
   });
 
-  // 6. Do the work: look the seal up against the same registry the free
-  // consumer-facing /api/verify endpoint checks (auth_seals), so a paid
-  // agent call can never return "verified" for a seal that doesn't exist.
-  const input = (await request.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  const sealId = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  let verified = false;
-  let details: Record<string, unknown> = {};
-  if (sealId) {
-    const admin = createAdminClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    const { data: seal } = await admin
-      .from("auth_seals")
-      .select("*")
-      .eq("id", sealId)
-      .single();
-    verified = !!seal;
-    if (seal) {
-      details = {
+  const attestation = attestSeal(
+    seal ? (seal as Record<string, unknown>) : null
+  );
+  const verified = attestation.verified;
+  const details: Record<string, unknown> = seal
+    ? {
         productId: seal.product_id,
         batchId: seal.batch_id,
         brand: seal.brand,
         createdAt: seal.created_at,
-      };
-    }
-    await onVerificationEvent({
-      seal_id: sealId,
-      brand: (seal?.brand as string | undefined) ?? "authichain.com",
-      scan_context: { source: "agent-verify", payer: proof.payer },
-      status: verified ? "valid" : "invalid",
-    });
-  }
+        verdict: attestation.verdict,
+        reasons: attestation.reasons,
+      }
+    : { verdict: attestation.verdict, reasons: attestation.reasons };
+  await onVerificationEvent({
+    seal_id: sealId,
+    brand: (seal?.brand as string | undefined) ?? "authichain.com",
+    scan_context: { source: "agent-verify", payer: proof.payer },
+    status: verified ? "valid" : "invalid",
+  });
 
   return NextResponse.json(
     {
       verified,
       authenticityScore: verified ? 100 : 0,
-      subject: sealId ?? null,
+      subject: sealId,
       details,
       settlement: {
         payer: proof.payer,

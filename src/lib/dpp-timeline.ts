@@ -28,6 +28,10 @@ export type Milestone = {
   /** A URL a reader can check. Every milestone must carry one. */
   source: string;
   urgent?: boolean;
+  /** Fixed banner text used instead of "label — countdown" (e.g. an adopted act with no confirmed go-live date). */
+  badge?: string;
+  /** Hide the live countdown/status line for this milestone. */
+  hideStatus?: boolean;
 };
 
 /** `in-force` once the date has passed; `imminent` within a year; else `upcoming`. */

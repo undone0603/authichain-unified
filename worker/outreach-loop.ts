@@ -4,12 +4,29 @@
  * Uses Gmail OAuth secrets already on the Worker:
  *   GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, GMAIL_FROM_EMAIL
  *
+ * Required to send:
+ *   OUTREACH_AUTONOMOUS — must be "true"
+ *   MAILING_ADDRESS — CAN-SPAM postal address; sends fail closed without it
+ *
  * Optional:
  *   RESEND_API_KEY — founder alerts
  *   OUTREACH_REPLY_TO — defaults to GMAIL_FROM_EMAIL
  *   OUTREACH_DAILY_CAP — default 10 (hard max 25)
- *   OUTREACH_AUTONOMOUS — must be "true" to send
  *   OUTREACH_FOLLOWUP_DAYS — default 3
+ *   OUTREACH_AUTO_NURTURE — "true" to auto-answer positive replies. Off by
+ *     default: the founder is notified of every reply and answers in person.
+ *
+ * Not imported by worker/index.ts or deployed as of 2026-09-23 (the live
+ * `authichain` bundle has no outreach code). It is kept to the same rules as
+ * every other sender so wiring it up later cannot bring back what the
+ * 2026-05-16 and September sends did:
+ *   - recipients need trusted provenance (server/outreach/recipient-rules.ts);
+ *     .gov/.mil and role inboxes are refused
+ *   - every message passes the claim checker (server/outreach/claims.ts)
+ *   - no "there" / "your company" fallbacks, no fake "Re:" on a first touch
+ *   - a postal address and a working opt-out (reply "unsubscribe", which
+ *     NEGATIVE_RE below handles) in every message, plus List-Unsubscribe
+ *   - a failed send is not retried every run; an auth error stops the batch
  *
  * State lives in KV (SESSIONS binding) so we don't depend on D1 CLI access.
  *
@@ -18,6 +35,12 @@
  *   2) poll Gmail for real replies → founder notify + positive nurture / negative suppress
  *   3) follow up once on non-responders after N days
  */
+
+import { checkClaims } from "../server/outreach/claims";
+import {
+  assessRecipient,
+  type VerificationSource,
+} from "../server/outreach/recipient-rules";
 
 export interface OutreachEnv {
   SESSIONS: KVNamespace;
@@ -32,6 +55,8 @@ export interface OutreachEnv {
   RESEND_API_KEY?: string;
   FOUNDER_NOTIFY_EMAIL?: string;
   CRON_SECRET?: string;
+  MAILING_ADDRESS?: string;
+  OUTREACH_AUTO_NURTURE?: string;
 }
 
 export type OutreachLead = {
@@ -40,6 +65,8 @@ export type OutreachLead = {
   company?: string;
   industry?: string;
   source?: string;
+  /** Where the address came from. Must be a trusted VerificationSource to send. */
+  verificationSource?: string;
   status?:
     | "queued"
     | "sent"
@@ -70,6 +97,24 @@ const POSITIVE_RE =
 const NEGATIVE_RE =
   /unsubscribe|not interested|no thanks|stop emailing|remove me|don't contact|do not contact|wrong person|leave me alone/i;
 const BOUNCE_FROM_RE = /mailer-daemon@|postmaster@/i;
+/** "not available", "don't call", "no demo" etc. are not a yes. */
+const NEGATED_RE =
+  /\b(not|no|don'?t|do not|never|isn'?t|won'?t|can'?t|cannot)\b[^.!?\n]{0,25}\b(interested|call|demo|book|available|schedule|send)\b/i;
+
+/**
+ * Auto-answer a reply only when explicitly enabled and the reply reads as a
+ * yes. A keyword match on "call" or "available" is not consent: "please
+ * don't call" matched POSITIVE_RE before this.
+ */
+export function shouldAutoNurture(env: OutreachEnv, text: string): boolean {
+  return (
+    env.OUTREACH_AUTONOMOUS === "true" &&
+    env.OUTREACH_AUTO_NURTURE === "true" &&
+    POSITIVE_RE.test(text) &&
+    !NEGATIVE_RE.test(text) &&
+    !NEGATED_RE.test(text)
+  );
+}
 
 /** Role / catch-all localparts — never treat as decision-makers. */
 const ROLE_LOCALPARTS = new Set([
@@ -196,49 +241,62 @@ function encodeSubject(subject: string): string {
   return `=?UTF-8?B?${btoa(bin)}?=`;
 }
 
+/**
+ * First-touch copy. Every statement matches the "EU DPP Readiness Audit" entry
+ * in src/lib/plans.ts. There is deliberately no fallback for a missing name or
+ * company: gmailSend refuses a message with an unfilled placeholder.
+ */
 function renderTemplate(lead: OutreachLead): { subject: string; body: string } {
-  const name = lead.name || "there";
-  const company = lead.company || "your company";
-  const subject = `EU DPP readiness for ${company} - $299 audit`;
+  const name = lead.name?.trim() || "{{name}}";
+  const company = lead.company?.trim() || "{{company}}";
+  const subject = `EU Digital Product Passport readiness for ${company}`;
   const body = [
-    `Hi ${name},`,
+    `Hi ${name.split(/\s+/)[0]},`,
     ``,
-    `If ${company} sells into the EU (or sells to brands that do), Digital Product Passport requirements are moving from "roadmap" to buyer/compliance pressure.`,
+    `I'm Zac, founder of AuthiChain, a small company that builds product-authentication and Digital Product Passport tools.`,
     ``,
-    `We offer a one-time EU DPP Readiness Audit ($299) that maps labeling/passport gaps, activates a self-serve AuthiChain workspace, and credits the $299 toward AuthiChain Basic if you continue.`,
+    `If ${company} sells into the EU, or sells to brands that do, we offer a one-time EU DPP Readiness Audit for $299: a written readiness assessment and a self-serve AuthiChain workspace to publish a first passport. The $299 is credited toward AuthiChain Basic if you continue.`,
     ``,
-    `Start here:`,
-    `https://authichain.com/dpp?utm_source=email&utm_medium=autonomous&utm_campaign=dpp_outreach&email=${encodeURIComponent(lead.email)}`,
+    `Details: https://authichain.com/dpp?utm_source=email&utm_medium=autonomous&utm_campaign=dpp_outreach`,
     ``,
-    `Reply to this email with a good 15-minute window if you'd rather walk through it live.`,
+    `If a 15-minute call would be easier, reply with a time that suits you. If this isn't relevant, a one-line reply is enough.`,
     ``,
-    `— Zac`,
+    `Zac`,
     `AuthiChain`,
-    ``,
-    `—`,
-    `AuthiChain / QRON`,
-    `Unsubscribe: https://authichain.com/contact?unsub=${encodeURIComponent(lead.email)}`,
   ].join("\n");
   return { subject, body };
 }
 
+/** One follow-up in the same thread. Same subject as the original, not a manufactured "Re:". */
 function renderFollowUp(lead: OutreachLead): { subject: string; body: string } {
-  const name = lead.name || "there";
-  const company = lead.company || "your company";
-  const subject = `Re: EU DPP readiness for ${company} - $299 audit`;
+  const { subject } = renderTemplate(lead);
+  const name = lead.name?.trim() || "{{name}}";
   const body = [
-    `Hi ${name},`,
+    `Hi ${name.split(/\s+/)[0]},`,
     ``,
-    `Quick bump on the EU DPP readiness note — happy to keep this short.`,
+    `Following up once on my note about EU Digital Product Passport readiness. If it's not relevant, no reply is needed and I won't write again.`,
     ``,
-    `If helpful, the $299 audit is here:`,
-    `https://authichain.com/dpp?utm_source=email&utm_medium=autonomous_followup&utm_campaign=dpp_outreach&email=${encodeURIComponent(lead.email)}`,
+    `https://authichain.com/dpp?utm_source=email&utm_medium=autonomous_followup&utm_campaign=dpp_outreach`,
     ``,
-    `If timing is off, reply "later" and I'll pause. If I'm the wrong person, reply with the right contact and I'll redirect.`,
-    ``,
-    `— Zac`,
+    `Zac`,
   ].join("\n");
   return { subject, body };
+}
+
+/** "Hi Dana," for a named person, "Hello," otherwise — never "Hi there,". */
+function greet(name?: string): string {
+  return isNamedHuman(name) ? `Hi ${name!.trim().split(/\s+/)[0]},` : "Hello,";
+}
+
+/** Why a lead may not be emailed, or [] when it may. */
+export function leadSendBlockers(lead: OutreachLead): string[] {
+  const reasons = assessRecipient(
+    lead.email,
+    (lead.verificationSource ?? "unknown") as VerificationSource
+  ).reasons;
+  if (!isNamedHuman(lead.name)) reasons.push("name_not_human");
+  if (!lead.company?.trim()) reasons.push("missing_company");
+  return reasons;
 }
 
 async function gmailSend(
@@ -252,19 +310,40 @@ async function gmailSend(
     inReplyTo?: string;
     references?: string;
   }
-): Promise<{ ok: boolean; id?: string; threadId?: string; error?: string }> {
+): Promise<{ ok: boolean; id?: string; threadId?: string; error?: string; auth?: boolean }> {
   const fromEmail = env.GMAIL_FROM_EMAIL;
-  if (!fromEmail) return { ok: false, error: "GMAIL_FROM_EMAIL unset" };
+  // Configuration problems fail every lead the same way, so they stop the
+  // batch (`auth`) instead of marking each lead failed.
+  if (!fromEmail) return { ok: false, error: "GMAIL_FROM_EMAIL unset", auth: true };
+  const address = env.MAILING_ADDRESS?.trim();
+  if (!address) return { ok: false, error: "mailing_address_not_configured", auth: true };
   const replyTo = env.OUTREACH_REPLY_TO || fromEmail;
   const rendered = renderTemplate(lead);
   const subject = opts?.subject || rendered.subject;
-  const body = opts?.body || rendered.body;
+  // A reply inside the recipient's own thread legitimately carries "Re:", so
+  // only the body is checked then; everything else is checked in full.
+  const violations = checkClaims(opts?.inReplyTo ? "" : subject, opts?.body || rendered.body);
+  if (violations.length) {
+    return {
+      ok: false,
+      error: `claims:${violations.map(v => `${v.rule}:${v.match}`).join(",")}`,
+    };
+  }
+  const body = [
+    opts?.body || rendered.body,
+    ``,
+    `--`,
+    `AuthiChain`,
+    address,
+    `To stop these emails, reply "unsubscribe".`,
+  ].join("\n");
 
   const mimeLines = [
     `From: Zac at AuthiChain <${fromEmail}>`,
     `To: ${lead.email}`,
     `Reply-To: ${replyTo}`,
     `Subject: ${encodeSubject(subject)}`,
+    `List-Unsubscribe: <mailto:${replyTo}?subject=unsubscribe>`,
   ];
   if (opts?.inReplyTo) mimeLines.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts?.references) mimeLines.push(`References: ${opts.references}`);
@@ -287,7 +366,11 @@ async function gmailSend(
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    return { ok: false, error: `gmail_send_${res.status}:${(await res.text()).slice(0, 200)}` };
+    return {
+      ok: false,
+      error: `gmail_send_${res.status}:${(await res.text()).slice(0, 200)}`,
+      auth: res.status === 401 || res.status === 403,
+    };
   }
   const data = (await res.json()) as { id?: string; threadId?: string };
   return { ok: true, id: data.id, threadId: data.threadId };
@@ -389,10 +472,8 @@ export async function enqueueLeads(
   const rejected: Array<{ email: string; reasons: string[] }> = [];
   for (const lead of leads) {
     const email = lead.email.trim().toLowerCase();
-    const reasons: string[] = [];
-    if (!email.includes("@")) reasons.push("invalid_email");
-    if (isRoleInbox(email)) reasons.push("role_inbox");
-    if (!isNamedHuman(lead.name)) reasons.push("name_not_human");
+    const reasons = leadSendBlockers({ ...lead, email });
+    if (isRoleInbox(email) && !reasons.includes("role_inbox")) reasons.push("role_inbox");
     if (reasons.length) {
       rejected.push({ email, reasons });
       // Keep bad addresses out of the send queue permanently
@@ -479,6 +560,7 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
   let sentToday = budget.sentToday;
 
   const doneEmails = new Set<string>();
+  let aborted: string | null = null;
   for (const email of batch) {
     const lead = (await getLead(env, email)) || { email, status: "queued" as const };
     if (
@@ -491,19 +573,29 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
       doneEmails.add(email);
       continue;
     }
-    // Hard gate at send time — drop role inboxes / placeholders that slipped in
-    if (isRoleInbox(email) || !isNamedHuman(lead.name)) {
+    // Hard gate at send time — the same rules as enqueueLeads, re-run in case
+    // a lead was written to KV some other way.
+    const blockers = leadSendBlockers(lead);
+    if (isRoleInbox(email) && !blockers.includes("role_inbox")) blockers.push("role_inbox");
+    if (blockers.length) {
       failed++;
       doneEmails.add(email);
       await putLead(env, {
         ...lead,
         status: "suppressed",
-        suppressReason: isRoleInbox(email) ? "role_inbox" : "name_not_human",
+        suppressReason: blockers.join("|"),
       });
-      outcomes.push({ email, status: "suppressed", reason: "quality_gate" });
+      outcomes.push({ email, status: "suppressed", reason: blockers });
       continue;
     }
     const res = await gmailSend(env, token, lead);
+    if (!res.ok && res.auth) {
+      // Bad or revoked credentials fail identically for every lead. Stop and
+      // leave the queue as it is instead of marking leads failed.
+      outcomes.push({ email, status: "not_attempted", error: res.error });
+      aborted = res.error ?? "gmail_auth";
+      break;
+    }
     if (res.ok) {
       sent++;
       sentToday++;
@@ -518,20 +610,16 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
       outcomes.push({ email, status: "sent", threadId: res.threadId });
     } else {
       failed++;
+      doneEmails.add(email);
       await putLead(env, { ...lead, status: "failed" });
       outcomes.push({ email, status: "failed", error: res.error });
     }
   }
 
-  // Drop completed / suppressed from queue; only retry hard failures
-  const remainingQueue = queue.filter(e => !doneEmails.has(e) && !batch.includes(e));
-  const retry: string[] = [];
-  for (const email of batch) {
-    if (doneEmails.has(email)) continue;
-    const lead = await getLead(env, email);
-    if (lead?.status === "failed") retry.push(email);
-  }
-  await putQueue(env, [...remainingQueue, ...retry]);
+  // Failed leads leave the queue for a person to look at. Re-queuing them
+  // every run is how 2026-05-16 produced eleven attempts at the same batch.
+  // Leads not reached (auth abort or batch end) stay queued.
+  await putQueue(env, queue.filter(e => !doneEmails.has(e)));
   await bumpSentToday(env, budget.sentDate, sentToday);
 
   if (sent > 0) {
@@ -542,7 +630,7 @@ export async function runOutreachSend(env: OutreachEnv): Promise<Record<string, 
     );
   }
 
-  return { sent, failed, sentToday, cap: budget.cap, outcomes };
+  return { sent, failed, sentToday, cap: budget.cap, aborted, outcomes };
 }
 
 /** One follow-up to non-responders after OUTREACH_FOLLOWUP_DAYS (default 3). */
@@ -585,6 +673,7 @@ export async function runFollowUps(env: OutreachEnv): Promise<Record<string, unk
   let sentToday = budget.sentToday;
 
   for (const lead of batch) {
+    if (leadSendBlockers(lead).length) continue;
     const tpl = renderFollowUp(lead);
     const res = await gmailSend(env, token, lead, {
       subject: tpl.subject,
@@ -605,7 +694,10 @@ export async function runFollowUps(env: OutreachEnv): Promise<Record<string, unk
       outcomes.push({ email: lead.email, status: "followup_sent" });
     } else {
       failed++;
+      // Mark it so the follow-up is not attempted again on every run.
+      await putLead(env, { ...lead, followUpAt: new Date().toISOString() });
       outcomes.push({ email: lead.email, status: "failed", error: res.error });
+      if (res.auth) break;
     }
   }
 
@@ -807,13 +899,13 @@ export async function runReplyPoll(env: OutreachEnv): Promise<Record<string, unk
     await notifyFounder(
       env,
       `Outreach REPLY from ${targetEmail}`,
-      `Subject: ${subject}\n\n${snippet}\n\nLead: ${JSON.stringify(matched || { email: targetEmail }, null, 2)}\n\nOpen Gmail thread and respond — positive replies auto-nurture with calendar + DPP checkout.\n`
+      `Subject: ${subject}\n\n${snippet}\n\nLead: ${JSON.stringify(matched || { email: targetEmail }, null, 2)}\n\nOpen the Gmail thread and reply in person.\n`
     );
 
     // Auto nurture: positive-ish reply → calendar + DPP link once
-    if (POSITIVE_RE.test(blob) && env.OUTREACH_AUTONOMOUS === "true") {
+    if (shouldAutoNurture(env, blob)) {
       const nurtureBody = [
-        `Hi ${matched?.name || "there"},`,
+        greet(matched?.name),
         ``,
         `Thanks for the reply — happy to walk through EU DPP readiness.`,
         ``,
@@ -928,8 +1020,7 @@ export async function processInboundReply(
 
   const shouldNurture =
     input.sendNurture !== false &&
-    POSITIVE_RE.test(blob) &&
-    env.OUTREACH_AUTONOMOUS === "true";
+    shouldAutoNurture(env, blob);
 
   if (!shouldNurture) {
     return { ok: true, action: "replied" };
@@ -939,7 +1030,7 @@ export async function processInboundReply(
   if (!token) return { ok: true, action: "replied", nurture: "gmail_token_unavailable" };
 
   const nurtureBody = [
-    `Hi ${lead.name || "there"},`,
+    greet(lead.name),
     ``,
     `Thanks for the reply — happy to walk through EU DPP readiness.`,
     ``,

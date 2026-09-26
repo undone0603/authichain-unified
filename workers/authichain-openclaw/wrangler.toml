@@ -24,7 +24,8 @@ zone_name = "authichain.com"
 
 [vars]
 OPENCLAW_API_VERSION = "1"
-AGENTZ_TIMEOUT_MS = "30000"
+# Cloudflare returns 524 after ~100s on a proxied tunnel origin, so stay under it.
+AGENTZ_TIMEOUT_MS = "95000"
 
 [observability]
 enabled = true

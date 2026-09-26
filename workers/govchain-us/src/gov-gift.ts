@@ -79,7 +79,7 @@ ${estateHero({
   actions: [
     { href: "/onboard", label: "Request GovChain access", primary: true },
     {
-      href: "https://authichain.com/made-in-america",
+      href: "https://authichain.govchain.us/made-in-america",
       label: "Made in America brief",
       primary: false,
     },
@@ -89,7 +89,7 @@ ${estateHero({
   <div class="wrap">
     <h2>What you get without paying</h2>
     <ul class="gift-list">
-      <li><a href="https://authichain.com/made-in-america">Made in America origin brief</a> — FTC 16 CFR Part 323 and EO 14392 context. A signed record documents a claim; it does not replace meeting the standard.</li>
+      <li><a href="https://authichain.govchain.us/made-in-america">Made in America origin brief</a> — FTC 16 CFR Part 323 and EO 14392 context. A signed record documents a claim; it does not replace meeting the standard.</li>
       <li><a href="https://govchain.us/p/sbir-svip-blockchain-document-verification">SBIR / SVIP document-verification explainer</a> — how a hashed record attaches to a proposal. Not a submitted pitch.</li>
       <li><a href="https://govchain.us/opportunities">Live opportunity feed</a> — public notices scored on this estate. Refresh, do not screenshot a stale PDF.</li>
       <li><a href="https://govchain.us/onboard">GovChain onboard</a> — the intake form production already proxies. No invented GovChain subscription SKU.</li>
@@ -125,7 +125,7 @@ ${estateCtaBand({
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
-      href: "https://authichain.com/partners/brief",
+      href: "https://authichain.govchain.us/partners/brief",
       label: "Partner brief",
       primary: false,
     },
@@ -151,14 +151,14 @@ ${estateFooter(
       heading: "Origin",
       links: [
         {
-          href: "https://authichain.com/made-in-america",
+          href: "https://authichain.govchain.us/made-in-america",
           label: "Made in America",
         },
         {
-          href: "https://authichain.com/partners/brief",
+          href: "https://authichain.govchain.us/partners/brief",
           label: "Partner brief",
         },
-        { href: "https://authichain.com/pricing", label: "AuthiChain pricing" },
+        { href: "https://authichain.govchain.us/pricing", label: "AuthiChain pricing" },
       ],
     },
   ],

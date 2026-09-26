@@ -1,0 +1,39 @@
+# Adds the Stripe webhook events declared in .github/autonomy.json once the
+# handler that serves them is live (after "Deploy to Cloudflare" succeeds on
+# main). Add-only; never removes events or touches undeclared endpoints.
+name: Stripe webhook reconcile
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Cloudflare"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      plan:
+        description: "Show what would change without writing"
+        type: boolean
+        default: true
+
+concurrency:
+  group: stripe-webhook-reconcile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Reconcile
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          PLAN: ${{ github.event_name == 'workflow_dispatch' && inputs.plan && '--plan' || '' }}
+        run: node scripts/autonomy/stripe-webhooks.mjs $PLAN

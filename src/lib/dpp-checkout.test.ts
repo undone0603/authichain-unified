@@ -92,7 +92,7 @@ describe("createDppCheckoutSession", () => {
       ok: false,
       status: 303,
       error: "email_required",
-      url: "https://authichain.com/dpp?need_email=1&visit_id=dpp_paid_3",
+      url: "https://authichain.com/checkout/dpp_readiness?need_email=1&visit_id=dpp_paid_3",
     });
     expect(create).not.toHaveBeenCalled();
   });

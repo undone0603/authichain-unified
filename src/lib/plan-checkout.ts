@@ -66,7 +66,7 @@ export async function createPlanCheckoutSession(opts: {
       ok: false,
       status: 303,
       error: "email_required",
-      url: checkoutNeedEmailRedirect("plan", visitId),
+      url: checkoutNeedEmailRedirect("plan", visitId, plan.id),
     };
   }
 
@@ -93,7 +93,7 @@ export async function createPlanCheckoutSession(opts: {
   const origin =
     request.headers.get("origin") ||
     new URL(request.url).origin ||
-    "https://authichain.com";
+    "https://authichain.govchain.us";
 
   if (!stripeSecretKey) {
     return { ok: false, status: 500, error: "Stripe is not configured" };
