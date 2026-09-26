@@ -80,7 +80,8 @@
         "branch-hygiene.yml": "on",
         "pipeline-tick.yml": "on",
         "genesis-cron.yml": "on",
-        "trust-lab.yml": "on"
+        "trust-lab.yml": "on",
+        "estate-drift.yml": "on"
       }
     },
     "revenue": {
@@ -127,7 +128,7 @@
       }
     },
     "manual": {
-      "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
+      "purpose": "One-shot operator tools (secret binding, backfills, one-off sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
         "agentz-manual-post.yml": "manual",
