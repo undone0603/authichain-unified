@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/require-admin";
 import { buildRevenueProof } from "@/lib/revenue-proof";
 import type { LoopEventRow } from "@/lib/dpp-loop";
 
@@ -8,12 +9,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
 
     const { data: events, error: eventError } = await supabase
       .from("funnel_events")

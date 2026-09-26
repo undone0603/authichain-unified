@@ -1,14 +1,25 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const key = searchParams.get('key');
+function dashboardKeyMatches(provided: string | null): boolean {
+  const expected = process.env.ADMIN_DASHBOARD_KEY;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
-  if (key !== process.env.ADMIN_DASHBOARD_KEY && key !== 'authichain2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET(request: Request) {
+  if (!dashboardKeyMatches(new URL(request.url).searchParams.get('key'))) {
+    const supabase = await createClient();
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
   }
 
   try {
@@ -37,7 +48,7 @@ export async function GET(request: Request) {
     const { data: brands } = await admin
       .from('brands')
       .select('staking_tier, id');
-    
+
     const tierCounts = (brands || []).reduce((acc: Record<string, number>, b) => {
       acc[b.staking_tier] = (acc[b.staking_tier] || 0) + 1;
       return acc;
