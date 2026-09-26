@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useTryForFree } from '@/hooks/useTryForFree';
+import {
+  PRICING_TEST,
+  PRICING_TEST_COOKIE,
+  assignVariant,
+  plainHeadline,
+  tagCheckoutHref,
+  variantFromCookie,
+  type PricingVariant,
+} from '@/lib/pricing-test';
 
 export function CheckoutModal({ 
   planId, 
@@ -48,7 +57,7 @@ export function CheckoutModal({
   // navigates). The fallback API-checkout path keeps the onClick button.
   if (paymentLink) {
     return (
-      <a href={paymentLink} className={className} rel="noopener">
+      <a href={paymentLink} className={className} rel="noopener" data-checkout-link>
         {`Get ${label}`}
       </a>
     );
@@ -104,4 +113,44 @@ export function TrialButton() {
       <TrialButtonInner />
     </Suspense>
   );
+}
+
+/**
+ * Headline for the monthly /pricing test (src/lib/pricing-test.ts). Renders
+ * the control headline until the flag is on; then assigns a sticky 50/50
+ * variant and tags every checkout link with it, control included, so Stripe
+ * can count checkouts per variant.
+ */
+export function PricingTestHeadline({
+  fromUsd,
+  children,
+}: {
+  fromUsd: number;
+  children: ReactNode;
+}) {
+  const [variant, setVariant] = useState<PricingVariant | null>(null);
+
+  useEffect(() => {
+    if (!PRICING_TEST.active) return;
+    let v = variantFromCookie(document.cookie);
+    if (!v) {
+      v = assignVariant(Math.random());
+      document.cookie = `${PRICING_TEST_COOKIE}=${v};max-age=${60 * 60 * 24 * 60};path=/;SameSite=Lax`;
+    }
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('a[data-checkout-link]')) {
+      a.href = tagCheckoutHref(a.href, v);
+    }
+    // The page is prerendered, so the cookie is only readable after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVariant(v);
+  }, []);
+
+  if (variant === 'b') {
+    return (
+      <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter leading-tight">
+        {plainHeadline(fromUsd)}
+      </h1>
+    );
+  }
+  return <>{children}</>;
 }
