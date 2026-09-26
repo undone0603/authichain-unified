@@ -1,0 +1,122 @@
+name: Checkout watchdog
+
+# Hourly: does every pricing card on authichain.com, qron.space and
+# strainchain.io still lead to a plan we sell, and is that plan's Stripe
+# price, product and Payment Link still active? Read-only against the sites
+# and Stripe (see scripts/checkout-watchdog.ts).
+#
+# The smoke gate (production-smoke-gate.yml) probes three fixed endpoints on
+# authichain.com; HEAD there always answers 204, so it cannot see a stale or
+# archived plan. This covers the cards themselves.
+#
+# When the only problem is an archived Stripe price/product or a deactivated
+# Payment Link, this opens a draft PR that takes the card off (listed: false)
+# or drops the dead link in src/lib/plans.ts. It never merges. Anything else
+# (a wrong amount, a missing card, a page down) turns the run red, and
+# ops-pulse.yml raises it on the ops-alert issue.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: checkout-watchdog
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  watch:
+    name: pricing cards lead to live plans
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
+      - name: Check pricing cards
+        id: watch
+        env:
+          # Prefer the restricted read key; the watchdog only GETs.
+          STRIPE_READ_KEY: ${{ secrets.STRIPE_READ_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          WATCHDOG_REPORT: ${{ runner.temp }}/watchdog.json
+        shell: bash
+        run: |
+          set -uo pipefail
+          if pnpm exec tsx scripts/checkout-watchdog.ts --run --fix; then
+            echo "red=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "red=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open draft fix PR
+        if: steps.watch.outputs.red == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPORT: ${{ runner.temp }}/watchdog.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/lib/plans.ts; then
+            echo "No automatic fix for these findings."
+            exit 0
+          fi
+          git diff --stat
+          # Only ever touch the plan catalogue.
+          if [ -n "$(git diff --name-only | grep -v '^src/lib/plans.ts$' || true)" ]; then
+            echo "::error::watchdog changed files other than plans.ts; refusing"
+            exit 1
+          fi
+          branch="automation/checkout-watchdog"
+          open="$(gh pr list --head "$branch" --state open --json number --jq 'length')"
+          if [ "$open" != "0" ]; then
+            echo "A checkout-watchdog PR is already open; leaving it."
+            git checkout -- src/lib/plans.ts
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add src/lib/plans.ts
+          git commit -m "fix(pricing): take dead Stripe plans off the pricing cards" \
+            -m "Opened by .github/workflows/checkout-watchdog.yml."
+          git push --force origin "$branch"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.REPORT, "utf8"));
+            const fixed = r.applied.map(f => `- ${f.detail}`).join("\n");
+            const rest = r.findings.filter(f => !r.applied.some(a => a.kind === f.kind && a.planId === f.planId));
+            const body = [
+              "Before: the hourly checkout watchdog found pricing cards that lead to a plan Stripe no longer sells.",
+              "",
+              "After: those plans are taken off the pricing cards (`listed: false`), or their dead Payment Link is dropped, in `src/lib/plans.ts`.",
+              "",
+              "#### Fixed here",
+              fixed,
+              ...(rest.length ? ["", "#### Still needs a person", ...rest.map(f => `- ${f.detail}`)] : []),
+              "",
+              "How: `scripts/checkout-watchdog.ts --fix` read Stripe (read-only) and edited the plan catalogue. If the plan should stay on sale, reactivate it in Stripe and close this PR instead. Workflows do not run on PRs opened by this bot token, so push a commit or re-run CI before merging.",
+            ].join("\n");
+            require("fs").writeFileSync(process.env.RUNNER_TEMP + "/body.md", body);
+          '
+          gh pr create --draft --base main --head "$branch" \
+            --title "fix(pricing): take dead Stripe plans off the pricing cards" \
+            --body-file "$RUNNER_TEMP/body.md"
+
+      - name: Fail when red
+        if: steps.watch.outputs.red == 'true'
+        run: |
+          echo "::error::Checkout watchdog is red; see the job summary."
+          exit 1
