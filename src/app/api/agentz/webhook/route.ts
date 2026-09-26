@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -6,8 +7,12 @@ export const dynamic = 'force-dynamic';
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.AGENTZ_WEBHOOK_SECRET;
-  if (!secret) return false;
-  return req.headers.get('x-agentz-secret') === secret;
+  const provided = req.headers.get('x-agentz-secret');
+  if (!secret || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 function getAdmin() {
