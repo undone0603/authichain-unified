@@ -8,24 +8,25 @@ import {
   Leaf,
   FileText,
   Zap,
-  Globe,
   Lock,
   CheckCircle,
-  XCircle,
-  Clock,
   Sparkles,
-  Activity,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'EU Digital Product Passport Compliance | GovChain',
   description:
-    'The EU DPP registry opens July 19, 2026. Get your blockchain-anchored Digital Product Passport before the deadline. GovChain vs Scantrust, VeChain, Circularise.',
+    'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
   openGraph: {
-    title: 'Get EU DPP Compliant Before July 19 | GovChain',
+    title: 'EU Digital Product Passport Compliance | GovChain',
     description:
-      'Registry opens in days. Issue cryptographically-signed Digital Product Passports via GovChain — no enterprise contract, no 6-month onboarding.',
+      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
     url: 'https://govchain.us/eu-dpp',
+  },
+  twitter: {
+    title: 'EU Digital Product Passport Compliance | GovChain',
+    description:
+      'Blockchain-anchored Digital Product Passports, with signed records in development. No enterprise contract.',
   },
 };
 
@@ -35,8 +36,8 @@ const ACCENT_LIGHT = '#3B82F6';
 const FEATURES = [
   {
     icon: ShieldCheck,
-    title: 'Regulation 2024/1789 Ready',
-    desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores out of the box.',
+    title: 'Built on Regulation (EU) 2024/1781',
+    desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores in our data model.',
   },
   {
     icon: Lock,
@@ -58,27 +59,12 @@ const FEATURES = [
     title: 'Material Bill of Materials',
     desc: 'Declare hazardous substances, recycled content percentage, and spare-parts availability per the EU Ecodesign Regulation requirements.',
   },
-  {
-    icon: Globe,
-    title: 'Multi-Market Distribution',
-    desc: 'One GovChain record serves EU DPP, UK PIPA, and US product traceability requirements — one integration, three compliance frameworks.',
-  },
 ];
 
 const TIMELINE = [
-  { date: 'July 19, 2026', label: 'Central EU DPP Registry Opens', active: true, urgent: true },
+  { date: 'Jul 2026', label: 'EU DPP registry rules adopted (Implementing Regulation (EU) 2026/1778)', active: true, urgent: false },
   { date: 'Feb 2027', label: 'Battery Passport Mandatory (EV, Industrial)', active: true },
   { date: '2028', label: 'Textiles & Electronics — Delegated Regulations', active: false },
-  { date: '2030', label: 'All EU Physical Goods — Full Scope', active: false },
-];
-
-const COMPARISON = [
-  { feature: 'No enterprise contract required', govchain: true, scantrust: false, vechain: false, circularise: false },
-  { feature: 'On-chain cryptographic anchoring', govchain: true, scantrust: false, vechain: true, circularise: false },
-  { feature: 'EPCIS 2.0 + JSON-LD export', govchain: true, scantrust: true, vechain: true, circularise: true },
-  { feature: 'Self-serve onboarding < 1 day', govchain: true, scantrust: false, vechain: false, circularise: false },
-  { feature: 'Transparent public pricing', govchain: true, scantrust: false, vechain: false, circularise: false },
-  { feature: 'US federal procurement (FAR/SAM.gov)', govchain: true, scantrust: false, vechain: false, circularise: false },
 ];
 
 const FAQ: FaqItem[] = [
@@ -90,12 +76,12 @@ const FAQ: FaqItem[] = [
   {
     question: 'When does the EU DPP regulation take effect?',
     answer:
-      'The central EU DPP registry opens July 19, 2026. Battery passports become mandatory for EV and industrial batteries in February 2027, textiles and electronics follow under delegated regulations from 2028, and by 2030 nearly all physical goods sold in the EU will require a Digital Product Passport.',
+      'Battery passports become mandatory for EV and industrial batteries in February 2027, textiles and electronics follow under delegated regulations from 2028. The regulation lets the EU require passports for most physical products, one product group at a time.',
   },
   {
     question: 'Which products need a Digital Product Passport?',
     answer:
-      'Priority categories are batteries, textiles and apparel, electronics and ICT equipment, furniture, iron and steel, aluminium, tyres, and construction products. Scope expands through delegated acts until virtually every non-food physical product placed on the EU market is covered by 2030.',
+      'Priority categories are batteries, textiles and apparel, electronics and ICT equipment, furniture, iron and steel, aluminium, tyres, and construction products. Scope expands through delegated acts. The regulation lets the EU require passports for most physical products, one product group at a time.',
   },
   {
     question: 'How does AuthiChain implement EU DPP?',
@@ -105,12 +91,12 @@ const FAQ: FaqItem[] = [
   {
     question: 'What is the cost of EU DPP compliance?',
     answer:
-      'AuthiChain offers transparent, self-serve pricing with no enterprise contract required — a stark contrast to legacy vendors that quote six-figure annual deals. Plans start well below the cost of a single compliance consultant, and there is no per-scan fee for verification.',
+      'Contact for pricing. No enterprise contract is required.',
   },
   {
     question: 'How long does AuthiChain DPP setup take?',
     answer:
-      'Setup takes less than one business day. You import your product catalog, map fields to the DPP schema, and issue registry-ready passports the same day — versus the 3–6 month onboarding typical of enterprise compliance platforms.',
+      'Guided onboarding is in development. Contact us at authichain.com/contact to scope a pilot.',
   },
 ];
 
@@ -133,24 +119,14 @@ export default function EuDppPage() {
           }}
         />
         <div className="relative max-w-4xl mx-auto">
-          {/* Urgency chip */}
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] mb-8 animate-pulse"
-            style={{ borderColor: `${ACCENT_LIGHT}60`, color: ACCENT_LIGHT, backgroundColor: `${ACCENT}15` }}
-          >
-            <Clock className="w-3 h-3" />
-            EU DPP Registry Opens July 19, 2026
-          </span>
-
           <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase leading-[0.92]">
-            Get Compliant<br />
-            <span style={{ color: ACCENT_LIGHT }}>Before July&nbsp;19</span>
+            EU Digital<br />
+            <span style={{ color: ACCENT_LIGHT }}>Product Passports</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-zinc-400 text-base md:text-lg font-medium leading-relaxed mb-10">
-            The EU Digital Product Passport registry goes live July 19, 2026.
-            GovChain issues blockchain-anchored DPPs that meet Regulation 2024/1789
-            — self-serve, no 6-month onboarding, no enterprise contract.
+            GovChain issues blockchain-anchored DPPs that meet Regulation (EU) 2024/1781.
+            No enterprise contract. Start with a scoped pilot.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -176,10 +152,10 @@ export default function EuDppPage() {
       <section className="border-y border-zinc-900 bg-zinc-950/40">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-zinc-900">
           {[
-            { value: 'EU 2024/1789', label: 'Regulation' },
+            { value: 'EU 2024/1781', label: 'Regulation' },
             { value: 'Polygon', label: 'Anchored On-Chain' },
             { value: 'EPCIS 2.0', label: 'Export Format' },
-            { value: '< 1 Day', label: 'Onboarding' },
+            { value: 'In Development', label: 'Guided Onboarding' },
           ].map((s) => (
             <div key={s.label} className="px-6 py-8 text-center">
               <div className="text-2xl font-black" style={{ color: ACCENT_LIGHT }}>
@@ -204,13 +180,11 @@ export default function EuDppPage() {
           <p className="text-zinc-300 text-base leading-relaxed mb-6">
             The EU Digital Product Passport (DPP) is a machine-readable data record — accessible via QR code — that
             carries a product's environmental footprint, material composition, repair instructions, and supply chain
-            provenance. Required under EU Regulation 2024/1789 (Ecodesign for Sustainable Products), it applies to
-            every physical good sold in the EU market starting with batteries in February 2027, with full scope by 2030.
+            provenance. Required under Regulation (EU) 2024/1781 (Ecodesign for Sustainable Products), it starts with
+            batteries in February 2027. The regulation lets the EU require passports for most physical products, one product group at a time.
           </p>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            The central EU DPP registry — the backbone that validates and indexes all passports — goes live{' '}
-            <strong className="text-white">July 19, 2026</strong>. Brands must register and issue valid passports or
-            risk losing EU market access. GovChain handles the entire technical stack so your team focuses on business,
+            GovChain handles the entire technical stack so your team focuses on business,
             not blockchain.
           </p>
         </div>
@@ -257,7 +231,7 @@ export default function EuDppPage() {
           <span style={{ color: ACCENT_LIGHT }}>EU DPP Compliance</span>
         </h2>
         <p className="text-center text-zinc-500 text-sm font-medium mb-16 max-w-xl mx-auto">
-          One platform. Every data field mandated by Regulation 2024/1789. Ready for registry submission on day one.
+          One platform. Every data field mandated by Regulation (EU) 2024/1781. Our goal is passport records ready for submission to the EU registry.
         </p>
         <div className="grid gap-8 md:grid-cols-3">
           {FEATURES.map((f) => (
@@ -273,66 +247,6 @@ export default function EuDppPage() {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* COMPETITOR COMPARISON */}
-      <section className="max-w-5xl mx-auto px-6 py-20">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="h-px flex-1 bg-zinc-900" />
-          <h2 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500">GovChain vs. Alternatives</h2>
-          <div className="h-px flex-1 bg-zinc-900" />
-        </div>
-        <div className="protocol-card overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-5 border-b border-zinc-900 bg-zinc-950">
-            <div className="col-span-2 p-5 text-[10px] font-black uppercase tracking-widest text-zinc-600">Feature</div>
-            <div
-              className="p-5 text-center text-[10px] font-black uppercase tracking-widest"
-              style={{ color: ACCENT_LIGHT }}
-            >
-              GovChain
-            </div>
-            <div className="p-5 text-center text-[10px] font-black uppercase tracking-widest text-zinc-600">
-              Scantrust
-            </div>
-            <div className="p-5 text-center text-[10px] font-black uppercase tracking-widest text-zinc-600">
-              VeChain / Circularise
-            </div>
-          </div>
-          {/* Rows */}
-          {COMPARISON.map((row, i) => (
-            <div
-              key={row.feature}
-              className={`grid grid-cols-5 border-b border-zinc-900 ${i % 2 === 0 ? 'bg-zinc-950/30' : ''}`}
-            >
-              <div className="col-span-2 p-5 text-[12px] font-medium text-zinc-300">{row.feature}</div>
-              <div className="p-5 flex justify-center items-center">
-                {row.govchain ? (
-                  <CheckCircle className="w-5 h-5" style={{ color: ACCENT_LIGHT }} />
-                ) : (
-                  <XCircle className="w-5 h-5 text-zinc-800" />
-                )}
-              </div>
-              <div className="p-5 flex justify-center items-center">
-                {row.scantrust ? (
-                  <CheckCircle className="w-5 h-5 text-zinc-500" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-zinc-800" />
-                )}
-              </div>
-              <div className="p-5 flex justify-center items-center">
-                {row.vechain ? (
-                  <CheckCircle className="w-5 h-5 text-zinc-500" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-zinc-800" />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 text-center text-[10px] text-zinc-700 uppercase tracking-widest">
-          Competitor data based on publicly available pricing & product pages as of July 2026.
-        </p>
       </section>
 
       {/* HOW IT WORKS */}
@@ -352,7 +266,7 @@ export default function EuDppPage() {
               {
                 step: '02',
                 title: 'Issue Passports',
-                desc: 'Each product gets a unique DPP — hashed, signed with Ed25519, and anchored on Polygon in seconds. Your QR code is ready to print.',
+                desc: 'Each product gets a unique DPP — hashed and anchored on Polygon in seconds (Ed25519-signed records are in development). Your QR code is ready to print.',
               },
               {
                 step: '03',
@@ -375,23 +289,6 @@ export default function EuDppPage() {
         </div>
       </section>
 
-      {/* STATUS BADGE */}
-      <section className="max-w-4xl mx-auto px-6 py-12">
-        <div className="protocol-card p-6 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <Activity className="w-5 h-5 text-blue-400 animate-pulse" />
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Platform Status</p>
-              <p className="text-sm font-black text-white uppercase">Registry-Ready · Accepting EU DPP Onboarding</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            All Systems Operational
-          </div>
-        </div>
-      </section>
-
       {/* FAQ */}
       <section className="max-w-3xl mx-auto px-6 py-24">
         <h2 className="text-center text-3xl md:text-4xl font-black uppercase tracking-tighter mb-4">
@@ -399,7 +296,7 @@ export default function EuDppPage() {
         </h2>
         <p className="text-center text-sm text-zinc-500 mb-12 max-w-xl mx-auto leading-relaxed">
           Everything brands need to know about the Digital Product Passport
-          regulation and how AuthiChain gets you compliant before July 19, 2026.
+          regulation and how AuthiChain helps you prepare.
         </p>
         <div className="space-y-4">
           {FAQ.map((item) => (
@@ -426,12 +323,8 @@ export default function EuDppPage() {
 
       {/* CLOSING CTA */}
       <section className="border-t border-zinc-900 px-6 py-24 text-center">
-        <h2 className="mx-auto max-w-2xl text-3xl md:text-4xl font-black uppercase tracking-tighter mb-4">
-          Don't Miss the July 19 Deadline
-        </h2>
         <p className="mx-auto mb-10 max-w-xl text-sm text-zinc-500 leading-relaxed">
-          Setup takes less than one business day. Brands that register early get priority review from our EU compliance
-          team and guaranteed registry submission before the July 19 launch window.
+          Guided onboarding is in development.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
@@ -450,7 +343,7 @@ export default function EuDppPage() {
           </Link>
         </div>
         <ul className="mx-auto mt-12 flex max-w-2xl flex-wrap justify-center gap-x-8 gap-y-3">
-          {['No enterprise contract', 'Self-serve < 1 day', 'Polygon-anchored', 'EPCIS 2.0 export'].map((t) => (
+          {['No enterprise contract', 'Guided onboarding in development', 'Polygon-anchored', 'EPCIS 2.0 export'].map((t) => (
             <li
               key={t}
               className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-zinc-500"

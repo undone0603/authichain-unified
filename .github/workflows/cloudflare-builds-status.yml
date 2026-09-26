@@ -1,0 +1,142 @@
+name: Cloudflare Workers Builds status
+
+# Read-only. Reports how Cloudflare Workers Builds (the Cloudflare-side git
+# integration, not deploy-workers.yml) is set up for a few workers, and the
+# result of their recent builds, into the job summary. Exists because sessions
+# cannot reach api.cloudflare.com and repo secrets cannot be read back out of
+# GitHub; the token is used here and only non-secret results are printed.
+#
+# Runs on manual dispatch, and on a PR only when this file changes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: Space-separated worker script names
+        required: false
+        type: string
+        default: qron-ai-api passport-demo govchain-us
+  pull_request:
+    paths:
+      - .github/workflows/cloudflare-builds-status.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-builds-status-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  status:
+    name: Workers Builds status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query Workers Builds API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKERS: ${{ inputs.workers || 'qron-ai-api passport-demo govchain-us' }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, urllib.error, urllib.request
+
+          token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+          account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+          out = []
+
+          def emit(line=""):
+              print(line)
+              out.append(line)
+
+          def api(path):
+              req = urllib.request.Request(
+                  f"https://api.cloudflare.com/client/v4/accounts/{account}{path}",
+                  headers={"Authorization": f"Bearer {token}"},
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.status, json.load(r)
+              except urllib.error.HTTPError as e:
+                  try:
+                      return e.code, json.load(e)
+                  except Exception:
+                      return e.code, {}
+
+          def errors(body):
+              return "; ".join(
+                  f"{x.get('code')}: {x.get('message')}" for x in body.get("errors") or []
+              ) or "no error detail"
+
+          # Long opaque strings in build logs are redacted before printing.
+          SECRETISH = re.compile(r"[A-Za-z0-9_\-]{32,}")
+
+          emit("# Cloudflare Workers Builds status")
+          if not token or not account:
+              emit("CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for this run.")
+          else:
+              status, scripts = api("/workers/scripts")
+              tags = {}
+              if status == 200:
+                  tags = {s.get("id"): s.get("tag") for s in scripts.get("result") or []}
+              else:
+                  emit(f"Listing scripts failed: HTTP {status} ({errors(scripts)})")
+
+              for name in os.environ["WORKERS"].split():
+                  emit(f"\n## {name}")
+                  tag = tags.get(name)
+                  if not tag:
+                      emit("Worker not found in this account.")
+                      continue
+
+                  status, body = api(f"/builds/workers/{tag}/triggers")
+                  if status != 200:
+                      emit(f"Triggers: HTTP {status} ({errors(body)})")
+                  else:
+                      triggers = body.get("result") or []
+                      if not triggers:
+                          emit("No build triggers: this worker is **not connected** to git.")
+                      for t in triggers:
+                          conn = t.get("repo_connection") or {}
+                          emit(f"- trigger `{t.get('trigger_name')}` ({t.get('trigger_uuid')})")
+                          emit(f"  - repo: {conn.get('repo_name')} ({conn.get('provider_type')})")
+                          emit(f"  - branches: {t.get('branch_includes')} excl {t.get('branch_excludes')}")
+                          emit(f"  - paths: {t.get('path_includes')} excl {t.get('path_excludes')}")
+                          emit(f"  - root directory: `{t.get('root_directory')}`")
+                          emit(f"  - build: `{t.get('build_command')}` / deploy: `{t.get('deploy_command')}`")
+                          emit(f"  - updated: {t.get('modified_on')}; deleted: {t.get('deleted_on')}")
+
+                  status, body = api(f"/builds/workers/{tag}/builds?per_page=5")
+                  if status != 200:
+                      emit(f"Builds: HTTP {status} ({errors(body)})")
+                      continue
+                  builds = body.get("result") or []
+                  if not builds:
+                      emit("No builds recorded.")
+                  for b in builds:
+                      meta = b.get("build_trigger_metadata") or {}
+                      emit(
+                          f"- {b.get('created_on')} {b.get('status')}/{b.get('build_outcome')}"
+                          f" branch={meta.get('branch')} commit={str(meta.get('commit_hash'))[:7]}"
+                      )
+                  failed = next(
+                      (b for b in builds if b.get("build_outcome") not in (None, "success")), None
+                  )
+                  if failed:
+                      status, body = api(f"/builds/builds/{failed.get('build_uuid')}/logs")
+                      lines = []
+                      if status == 200:
+                          for entry in (body.get("result") or {}).get("lines") or []:
+                              text = entry[-1] if isinstance(entry, list) else str(entry)
+                              lines.append(SECRETISH.sub("[redacted]", str(text)))
+                      emit(f"\nLast failed build log (tail, HTTP {status}):")
+                      emit("```")
+                      for line in lines[-40:]:
+                          emit(line)
+                      emit("```")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(out) + "\n")
+          PY

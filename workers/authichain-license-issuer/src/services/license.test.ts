@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { seatsForTier, tierFromPriceId } from "./license";
+import {
+  licenseTierForPriceId,
+  seatsForTier,
+  tierFromPriceId,
+} from "./license";
 import type { Env } from "../index";
 
 function env(overrides: Partial<Env> = {}): Env {
@@ -32,5 +36,17 @@ describe("tierFromPriceId", () => {
 
   it("refuses an unknown catalog price instead of issuing pro", () => {
     expect(() => tierFromPriceId(env(), "price_other")).toThrow(/unknown/i);
+  });
+});
+
+describe("licenseTierForPriceId", () => {
+  it("returns null for unknown or empty prices instead of throwing", () => {
+    expect(licenseTierForPriceId(env(), "price_other")).toBeNull();
+    expect(licenseTierForPriceId(env(), "")).toBeNull();
+  });
+
+  it("maps the bound license prices", () => {
+    expect(licenseTierForPriceId(env(), "price_ent")).toBe("enterprise");
+    expect(licenseTierForPriceId(env(), "price_pro")).toBe("pro");
   });
 });

@@ -17,7 +17,7 @@ describe("createDppCheckoutSession", () => {
   it("returns 500 when Stripe is not configured", async () => {
     const { createDppCheckoutSession } = await import("./dpp-checkout");
     const result = await createDppCheckoutSession({
-      searchParams: new URLSearchParams(),
+      searchParams: new URLSearchParams({ email: "ops@brand.com" }),
       stripeSecretKey: "",
     });
     expect(result.ok).toBe(false);
@@ -37,6 +37,7 @@ describe("createDppCheckoutSession", () => {
       searchParams: new URLSearchParams({
         visit_id: "dpp_paid_1",
         utm_source: "seo",
+        email: "ops@brand.com",
       }),
       stripeSecretKey: "sk_test_x",
     });
@@ -66,6 +67,50 @@ describe("createDppCheckoutSession", () => {
     expect(arg.customer_creation).toBe("always");
   });
 
+  it("forwards a valid email as Stripe customer_email", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_email",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_paid_2",
+        email: "ops@brand.com",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(create.mock.calls[0][0].customer_email).toBe("ops@brand.com");
+  });
+
+  it("303s back to /dpp when GET has no recovery email", async () => {
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({ visit_id: "dpp_paid_3" }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      status: 303,
+      error: "email_required",
+      url: "https://authichain.com/checkout/dpp_readiness?need_email=1&visit_id=dpp_paid_3",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("omits customer_email when the query is not an address", async () => {
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_paid_3",
+        email: "not-an-email",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe("email_required");
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
     create.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
@@ -88,5 +133,42 @@ describe("createDppCheckoutSession", () => {
     expect(arg.metadata.offer).toBe(DPP_OFFER_KEY);
     expect(arg.metadata.stripe_price_id).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
     expect(arg.payment_method_types).toBeUndefined();
+  });
+
+  it("carries affiliate/ref attribution into Stripe metadata", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_aff",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_aff_1",
+        email: "ops@brand.com",
+        affiliate_code: "AFF-TEST",
+        ref_code: "USER-123",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    const arg = create.mock.calls[0][0];
+    expect(arg.metadata.affiliate_code).toBe("AFF-TEST");
+    expect(arg.metadata.ref_code).toBe("USER-123");
+  });
+
+  it("accepts first-touch ?ref= as the affiliate code", async () => {
+    create.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_dpp_ref",
+    });
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_aff_2",
+        email: "ops@brand.com",
+        ref: "FIRST-TOUCH",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result.ok).toBe(true);
+    expect(create.mock.calls[0][0].metadata.affiliate_code).toBe("FIRST-TOUCH");
   });
 });

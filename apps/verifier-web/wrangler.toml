@@ -1,0 +1,14 @@
+# verifier-web: static Vite build served by Cloudflare Workers Static Assets
+# at verify.authichain.com. Replaces the old vercel.json; Cloudflare is the
+# only deploy target. Deployed by .github/workflows/deploy-verifier-web.yml
+# (build first: `pnpm build` in this folder, then `npx wrangler deploy`).
+name = "verifier-web"
+compatibility_date = "2026-08-01"
+
+# Custom domain: wrangler creates the DNS record and certificate on the
+# authichain.com zone. It fails loudly if another record already owns the name.
+routes = [{ pattern = "verify.authichain.com", custom_domain = true }]
+
+[assets]
+directory = "dist"
+not_found_handling = "single-page-application"

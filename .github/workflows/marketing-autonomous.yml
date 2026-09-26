@@ -56,35 +56,56 @@ jobs:
           }
           # Sitemaps plus money URLs. Fail soft per URL so one IndexNow
           # blip does not red the job.
+          # Live /, /dpp, and /x402 already ship buy.stripe.com Payment
+          # Link hrefs (email-gated form actions stay). IndexNow those
+          # HTML pages so crawlers see the links; do not ping Stripe
+          # hosts or /api/checkout|/protocol/checkout endpoints.
           for URL in \
             "https://authichain.com/sitemap.xml" \
             "https://qron.space/sitemap.xml" \
             "https://strainchain.io/sitemap.xml" \
             "https://govchain.us/sitemap.xml" \
             "https://authichain.com/" \
-            "https://authichain.com/pricing" \
             "https://authichain.com/dpp" \
+            "https://authichain.com/digital-product-passport" \
             "https://authichain.com/x402" \
+            "https://authichain.com/pricing" \
+            "https://authichain.com/.well-known/x402" \
+            "https://authichain.com/openapi.json" \
+            "https://authichain.com/llms.txt" \
+            "https://authichain.com/mcp" \
+            "https://authichain.com/m/insulin-vial" \
             "https://authichain.com/onboard" \
             "https://authichain.com/trumark" \
             "https://authichain.com/made-in-america" \
             "https://authichain.com/passport" \
+            "https://authichain.com/genetics" \
             "https://authichain.com/genetics/mendo-love-farms" \
             "https://authichain.com/m" \
             "https://authichain.com/m/mendo" \
             "https://authichain.com/m/trumark" \
             "https://authichain.com/m/musa" \
             "https://authichain.com/m/strainchain" \
+            "https://authichain.com/m/bat-2026-001" \
             "https://authichain.com/blog/eu-dpp-manufacturer" \
+            "https://authichain.com/p/battery-passport-qr-code-requirements" \
+            "https://authichain.com/p/eu-digital-product-passport-batteries" \
             "https://strainchain.io/" \
             "https://strainchain.io/pricing" \
             "https://strainchain.io/onboard" \
+            "https://strainchain.io/llms.txt" \
+            "https://strainchain.io/openapi.json" \
             "https://qron.space/" \
             "https://qron.space/pricing" \
             "https://qron.space/generate" \
+            "https://qron.space/llms.txt" \
+            "https://qron.space/openapi.json" \
             "https://govchain.us/" \
             "https://govchain.us/onboard" \
-            "https://govchain.us/pricing"
+            "https://govchain.us/pricing" \
+            "https://govchain.us/gift" \
+            "https://govchain.us/llms.txt" \
+            "https://govchain.us/openapi.json"
           do
             ping_indexnow "$URL"
           done

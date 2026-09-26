@@ -263,7 +263,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Scan a QR code or enter a product ID to check authenticity.</p>\n" +
+      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
       "<form action=\"/verify\" method=\"get\">\n" +
       "<label for=\"id\">Product ID</label>\n" +
       "<input id=\"id\" name=\"id\" type=\"text\" required>\n" +

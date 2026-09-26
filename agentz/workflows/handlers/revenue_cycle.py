@@ -26,7 +26,7 @@ def _find_repo_root() -> Path:
     for parent in _HERE.parents:
         if (parent / "scripts" / "revenue-cycle.ts").is_file():
             return parent
-    # services/agentz/workflows/handlers → repo is parents[3]
+    # agentz/workflows/handlers → repo is parents[3]
     return _HERE.parents[3]
 
 REPO_ROOT = _find_repo_root()

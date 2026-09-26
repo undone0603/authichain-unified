@@ -2,13 +2,15 @@
  * Live x402 micropayment smoke against https://authichain.com/api/x402.
  *
  * Env (never log secret values):
- *   POLYGON_PRIVATE_KEY | WALLET_PRIVATE_KEY  payTo / tokenomics EOA (expected 0x5db5…)
+ *   POLYGON_PRIVATE_KEY | WALLET_PRIVATE_KEY  funded smoke payer (not live payTo)
  *   DRY_RUN              anything except "false" is a dry run (default dry)
  *   X402_ENDPOINT        default https://authichain.com/api/x402
- *   X402_PAY_TO          default payTo / tokenomics EOA (same as live health payTo)
+ *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
  *   X402_RPC             optional Base RPC (public mainnet.base.org fallback)
  *
- * This is NOT the NFT deployer EOA (0xbad4…). See docs/strategy/WEB3_IDENTITY.md.
+ * Live payTo is the owner's keyed EOA (0x5db5…6AA2), not the $QRON
+ * ERC-20 contract (0xAebf…E437) and not the NFT deployer EOA (0xbad4…).
+ * See docs/strategy/WEB3_IDENTITY.md.
  *
  * Live succeeds only on HTTP 200 with settlement.trustless + txHash.
  * Prints status + txHash only. Fails clearly if USDC < 0.05 (50000 atomic).
@@ -125,11 +127,27 @@ export async function runX402Smoke(): Promise<void> {
     }
   }
 
+  const challengeRes = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sealId: "x402-smoke-challenge" }),
+  });
+  const challenge = (await jsonOrText(challengeRes)) as {
+    x402Version?: number;
+    accepts?: Array<{ payTo?: string; maxAmountRequired?: string }>;
+    extensions?: unknown;
+  };
+  if (challengeRes.status !== 402) {
+    fail(`unpaid_challenge_not_402 http=${challengeRes.status}`);
+  }
+
   const signed = await signExactPayment({
     wallet: new ethers.Wallet(key),
     payTo: challengePayTo,
     amountAtomic,
     asset,
+    resource: endpoint,
+    extensions: challenge.extensions,
   });
   const parsed = parsePaymentHeader(signed.headerB64);
   if (!parsed?.signature) fail("signed_payload_unparseable");

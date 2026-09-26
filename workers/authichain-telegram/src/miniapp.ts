@@ -1,11 +1,18 @@
+import { planPaymentLink } from "../../../src/lib/plans";
+
 /** Apex Mini App URL — BotFather Menu Button and /start web_app target. */
-export const DEFAULT_MINIAPP_URL = 'https://authichain.com/telegram'
+export const DEFAULT_MINIAPP_URL = "https://authichain.com/telegram";
+/**
+ * Published Passport Payment Link — a Telegram URL button is a bare GET with
+ * no email, so it must never point at /api/checkout (anonymous Stripe cart).
+ * Source of truth is src/lib/plans.ts; fallback is the Mini App email form.
+ */
 export const PASSPORT_CHECKOUT_URL =
-  'https://authichain.com/api/checkout/plan/strainchain_passport'
+  planPaymentLink("strainchain_passport") ?? DEFAULT_MINIAPP_URL;
 
 export function miniAppUrl(env?: { MINIAPP_URL?: string }): string {
-  const raw = env?.MINIAPP_URL?.trim()
-  return raw || DEFAULT_MINIAPP_URL
+  const raw = env?.MINIAPP_URL?.trim();
+  return raw || DEFAULT_MINIAPP_URL;
 }
 
 export function startMessage(): string {
@@ -17,26 +24,26 @@ export function startMessage(): string {
     `Open the Mini App for checkout, or send a TruMark™ ID (or /verify &lt;id&gt;) to check a product.`,
     ``,
     `Self-serve only — no scheduled calls.`,
-  ].join('\n')
+  ].join("\n");
 }
 
 export function startReplyMarkup(url: string): object {
   return {
     inline_keyboard: [
-      [{ text: 'Open Passport', web_app: { url } }],
-      [{ text: 'Checkout — $49', url: PASSPORT_CHECKOUT_URL }],
+      [{ text: "Open Passport", web_app: { url } }],
+      [{ text: "Checkout — $49", url: PASSPORT_CHECKOUT_URL }],
     ],
-  }
+  };
 }
 
 export function menuButtonPayload(url: string): object {
   return {
     menu_button: {
-      type: 'web_app',
-      text: 'Passport',
+      type: "web_app",
+      text: "Passport",
       web_app: { url },
     },
-  }
+  };
 }
 
 /**
@@ -47,7 +54,7 @@ export function webhookUrlFrom(
   request: Request,
   env?: { TELEGRAM_WEBHOOK_URL?: string }
 ): string {
-  const override = env?.TELEGRAM_WEBHOOK_URL?.trim()
-  if (override) return override
-  return `${new URL(request.url).origin}/api/telegram/webhook`
+  const override = env?.TELEGRAM_WEBHOOK_URL?.trim();
+  if (override) return override;
+  return `${new URL(request.url).origin}/api/telegram/webhook`;
 }

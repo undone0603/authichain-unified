@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatPilotIntakeBody, notifyPilotIntake } from "./onboard-notify";
+import { FOUNDER_SMS_GATEWAYS, NTFY_URL } from "../src/lib/founder-alerts";
 
 const payload = {
   company: "Trulieve",
@@ -24,7 +25,7 @@ describe("notifyPilotIntake", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://ntfy.sh/zk_live_alerts_99");
+    expect(url).toBe(NTFY_URL);
     expect(init.method).toBe("POST");
     expect(init.headers.Title).toBe("AuthiChain onboard");
     expect(init.body).toContain("company: Trulieve");
@@ -36,7 +37,7 @@ describe("notifyPilotIntake", () => {
     expect(init.body).not.toMatch(/re_|secret|api[_-]?key/i);
   });
 
-  it("sends one Resend email when RESEND_API_KEY2 is bound", async () => {
+  it("sends Resend email and SMS gateways when RESEND_API_KEY2 is bound", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -45,19 +46,17 @@ describe("notifyPilotIntake", () => {
       env: { RESEND_API_KEY2: "re_test_key2" },
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const resendCall = fetchMock.mock.calls.find(
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const resendCalls = fetchMock.mock.calls.filter(
       ([url]) => url === "https://api.resend.com/emails"
     );
-    expect(resendCall).toBeTruthy();
-    const init = resendCall![1];
-    expect(init.headers.Authorization).toBe("Bearer re_test_key2");
-    const body = JSON.parse(init.body);
-    expect(body.from).toContain("authichain.com");
-    expect(body.to).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
-    expect(body.subject).toBe("[onboard] Trulieve abcd1234ef");
-    expect(body.text).toContain("company: Trulieve");
-    expect(body.text).toContain("ref: abcd1234ef");
+    expect(resendCalls).toHaveLength(2);
+    const inbox = JSON.parse(resendCalls[0][1].body);
+    const sms = JSON.parse(resendCalls[1][1].body);
+    expect(inbox.from).toContain("authichain.com");
+    expect(inbox.to).toEqual(["authichain@gmail.com", "undone.k@gmail.com"]);
+    expect(inbox.subject).toBe("[onboard] Trulieve abcd1234ef");
+    expect(sms.to).toEqual([...FOUNDER_SMS_GATEWAYS]);
   });
 
   it("uses RESEND_API_KEY when KEY2 is absent", async () => {

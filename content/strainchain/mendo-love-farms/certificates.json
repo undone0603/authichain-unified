@@ -1,7 +1,7 @@
 {
-  "updated": "2026-09-11",
+  "updated": "2026-09-21",
   "note": "Structured record of the Mendo Love Farms THCV genetics reconciliation, extracted from the DPP prototype passports published 2026-09-10/11. Source of record for any StrainChain passport surface. Every numeric field here is transcribed from an SC Labs certificate of analysis; every prose claim is tagged with its provenance. Discrepancies are recorded, never silently resolved — see reconciliation.md.",
-  "provenance_warning": "Transcribed from the published prototype passports, which are themselves a reconciliation of the source CoA PDFs. The original SC Labs PDFs have NOT been re-read against this file. Treat every value as 'verified against the prototype', not 'verified against the certificate', until that pass is done.",
+  "provenance_warning": "CoAs 240823Q009-001 and 251104R041-001 were re-read from source SC Labs PDFs on 2026-09-21 (canonical bytes in coas/). The remaining certificates are still transcribed from the published prototype passports. Treat those as 'verified against the prototype', not 'verified against the certificate', until that pass is done.",
   "method": {
     "decarboxylation_factor": 0.877,
     "decarboxylation_note": "Molar ratio of THC (314.46) to THCA (358.47) = 0.8772. total_thcv = THCV + THCVA * 0.877; total_thc = d9_THC + THCA * 0.877.",
@@ -67,17 +67,53 @@
     {
       "coa_id": "251104R041-001",
       "cultivar": "VT-26",
-      "sample_name_on_coa": "Clone 11-3",
+      "sample_name_on_coa": "VT-26 Clone 11-3",
       "collected": "2025-11-04",
+      "sample_mass_g": 5.0,
+      "moisture_pct": 69.1,
       "matrix": "flower",
-      "cannabinoids_pct": null,
-      "cannabinoids_note": "Per-compound breakdown not carried onto the prototype passport; only totals were published. Recover from the source PDF.",
+      "source_pdf": "content/strainchain/mendo-love-farms/coas/251104R041-001.pdf",
+      "source_pdf_sha256": "86bc4d288ced18f81accbd210ab31bb858c2b61d7e0e1ad293d665b33af43830",
+      "verified_against_pdf": "2026-09-21",
+      "cannabinoids_pct": {
+        "THCVA": 12.968,
+        "THCA": 7.825,
+        "CBGA": 0.71,
+        "CBCA": 0.13
+      },
+      "cannabinoids_note": "Panel recovered from the source SC Labs PDF on 2026-09-21. Printed THCV is ND; Δ9-THC, CBDa, and CBDVa are <LOQ. Those rows are omitted rather than stored as 0.",
       "totals_pct": {
         "thcv": 11.373,
         "thc": 6.863
       },
       "ratio_thcv_thc": 1.66,
-      "arithmetic_check": "not_possible_without_raw_values"
+      "terpenes_total_pct": 1.2925,
+      "terpenes_tested_count": 39,
+      "terpenes_pct": {
+        "terpinolene": 0.6167,
+        "myrcene": 0.1304,
+        "limonene": 0.0869,
+        "b_ocimene": 0.0864,
+        "b_caryophyllene": 0.0811,
+        "trans_b_farnesene": 0.0609,
+        "b_pinene": 0.0454,
+        "a_humulene": 0.0278,
+        "terpineol": 0.0225,
+        "a_pinene": 0.0203,
+        "a_phellandrene": 0.0201,
+        "d3_carene": 0.0186,
+        "linalool": 0.0142,
+        "a_terpinene": 0.0129,
+        "fenchol": 0.01,
+        "nerolidol": 0.0088,
+        "g_terpinene": 0.0081,
+        "caryophyllene_oxide": 0.0064,
+        "sabinene": 0.0063,
+        "eucalyptol": 0.0033,
+        "a_bisabolol": 0.0028,
+        "borneol": 0.0026
+      },
+      "arithmetic_check": "pass"
     },
     {
       "coa_id": "240823Q009-001",
@@ -86,13 +122,18 @@
       "collected": "2024-08-23",
       "sample_mass_g": 6.0,
       "moisture_pct": 72.2,
-      "matrix": "leaf",
+      "matrix": "flower",
+      "batch": "VT-41",
+      "source_pdf": "content/strainchain/mendo-love-farms/coas/240823Q009-001.pdf",
+      "source_pdf_sha256": "4aaf9691c996d7ea7b7a92c86b9cf224943c82a8b3b025d68ee27312f91f681f",
+      "verified_against_pdf": "2026-09-21",
       "cannabinoids_pct": {
         "THCVA": 7.05,
         "THCA": 1.572,
         "THCV": 0.417,
         "CBCA": 0.18
       },
+      "cannabinoids_note": "Verified against the source SC Labs PDF on 2026-09-21. Two uploaded files were byte-identical; one canonical PDF is stored. Printed Δ9-THC and CBDVa are <LOQ; remaining listed compounds are ND and omitted rather than stored as 0. The certificate prints Flower, Inhalable (prototype had filed this row as leaf).",
       "totals_pct": {
         "thcv": 6.6,
         "thc": 1.379
@@ -465,7 +506,22 @@
   ],
   "source_attachments": {
     "note": "Inventory of every PDF the breeder actually sent, taken from the Gmail attachment manifests on 2026-09-11. Resolves the certificate-count question: 14 attachments, 12 distinct CoA IDs, plus one PhytoFacts report and one second document for sample 251104R041. The proposal's '14' counted attachments; '12 unique CoAs' is the correct certificate count. The library index's '17' was never supportable.",
-    "attachment_bytes_unavailable": "The Gmail tool surface exposes attachment IDs and filenames but not attachment content, so the certificates themselves still have not been opened. Filenames carry the CoA ID, which is what makes this inventory possible.",
+    "attachment_bytes_unavailable": "The Gmail tool surface exposes attachment IDs and filenames but not attachment content. Two of the fourteen attachments are now on file as canonical PDFs in coas/: 240823Q009-001 and 251104R041-001. Duplicate uploads of 240823Q009-001 were byte-identical (sha256 4aaf9691c996d7ea7b7a92c86b9cf224943c82a8b3b025d68ee27312f91f681f); only one copy is stored. The remaining certificates have not been opened. Filenames carry the CoA ID, which is what makes the rest of this inventory possible.",
+    "on_file": [
+      {
+        "coa_id": "240823Q009-001",
+        "path": "content/strainchain/mendo-love-farms/coas/240823Q009-001.pdf",
+        "sha256": "4aaf9691c996d7ea7b7a92c86b9cf224943c82a8b3b025d68ee27312f91f681f",
+        "sample_name_on_coa": "VT-41 N9 x 6.75 #3",
+        "duplicate_uploads_collapsed": true
+      },
+      {
+        "coa_id": "251104R041-001",
+        "path": "content/strainchain/mendo-love-farms/coas/251104R041-001.pdf",
+        "sha256": "86bc4d288ced18f81accbd210ab31bb858c2b61d7e0e1ad293d665b33af43830",
+        "sample_name_on_coa": "VT-26 Clone 11-3"
+      }
+    ],
     "emails": [
       {
         "subject": "VT 26",

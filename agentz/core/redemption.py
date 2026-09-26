@@ -7,13 +7,15 @@ Implements the "Layer 2 Siphon" revenue model.
 from __future__ import annotations
 import uuid
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 logger = logging.getLogger("agentz.redemption")
 
 async def burn_qron_for_discount(supabase, wallet: str, amount: float, business_id: str) -> Dict[str, Any]:
     """
-    Executes a QRON burn event. The user spends QRON to receive a discount.
+    SIMULATED. Records a redemption row; it does not check the wallet's QRON
+    balance and does not burn any QRON on-chain. The result carries
+    `simulated: True` until both exist.
     """
     redemption_id = str(uuid.uuid4())
     discount_value = amount / 10.0 # Example: 10 QRON = $1.00 Discount
@@ -45,7 +47,9 @@ async def burn_qron_for_discount(supabase, wallet: str, amount: float, business_
         "code": redemption_code,
         "discount": f"${discount_value:.2f}",
         "siphon_billed": siphon_fee,
-        "status": "Ready for Merchant Scan"
+        "status": "Ready for Merchant Scan",
+        "simulated": True,
+        "balance_checked": False,
     }
 
 async def verify_merchant_redemption(supabase, redemption_id: str):

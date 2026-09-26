@@ -20,7 +20,9 @@ async def get_user_scan_count(supabase, wallet: str) -> int:
 
 async def issue_qron(wallet: str, amount: float) -> str:
     """
-    Simulates issuing QRON rewards to a wallet via Polygon.
+    SIMULATED. Nothing is sent on-chain: the return value is a sha256 of the
+    request that only looks like a Polygon tx hash. Callers must not present
+    it as a real transfer.
     """
     import hashlib
     import time
@@ -63,5 +65,6 @@ async def reward_repeat_scans(supabase, wallet: str, product_id: Optional[str] =
         "event": event_type,
         "token": "QRON",
         "tx_hash": tx_hash,
+        "simulated": True,
         "gateway": "https://qron.space/rewards"
     }

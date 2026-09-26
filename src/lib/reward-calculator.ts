@@ -20,6 +20,13 @@ export const CATEGORY_MULTIPLIERS: Record<string, number> = {
 };
 
 export const BASE_REWARD = 0.1; // QRON per scan
+/**
+ * Acquisition entitlement for the first authentic scan of a gifted seal.
+ * Ledger only. Does not transfer Polygon $QRON and is not an x402 credit.
+ */
+export const FIRST_SCAN_REWARD_QRON = 1;
+export const FIRST_SCAN_GIFT_URL =
+  "https://authichain.com/digital-product-passport";
 export const DAILY_CAP = 10.0; // Max QRON per user per day
 export const ACCURACY_BONUS = 0.05; // Bonus for consensus-aligned scans
 export const GEO_HOTSPOT_BONUS = 0.03; // Bonus for scanning in known counterfeit hotspots
@@ -28,7 +35,7 @@ export const VELOCITY_THRESHOLD = 5; // Max scans in a 60s window before penalty
 export const VELOCITY_PENALTY_RATE = 0.15; // 15% penalty per excess scan
 
 export interface RewardCalculationInput {
-  scanType: 'authentic' | 'suspicious' | 'fake';
+  scanType: "authentic" | "suspicious" | "fake";
   productCategory: string;
   isConsensusAligned: boolean | null; // null = pending consensus
   isFirstFlag: boolean;
@@ -50,7 +57,9 @@ export interface RewardCalculationResult {
   breakdown: string;
 }
 
-export function calculateReward(input: RewardCalculationInput): RewardCalculationResult {
+export function calculateReward(
+  input: RewardCalculationInput
+): RewardCalculationResult {
   const {
     scanType,
     productCategory,
@@ -62,16 +71,20 @@ export function calculateReward(input: RewardCalculationInput): RewardCalculatio
   } = input;
 
   const base = BASE_REWARD;
-  const catMult = CATEGORY_MULTIPLIERS[productCategory] ?? CATEGORY_MULTIPLIERS.other;
+  const catMult =
+    CATEGORY_MULTIPLIERS[productCategory] ?? CATEGORY_MULTIPLIERS.other;
   const accBonus = isConsensusAligned === true ? ACCURACY_BONUS : 0;
   const geoBonus = isGeoHotspot ? GEO_HOTSPOT_BONUS : 0;
   const flagBonus =
-    isFirstFlag && (scanType === 'suspicious' || scanType === 'fake') ? FIRST_FLAG_BONUS : 0;
+    isFirstFlag && (scanType === "suspicious" || scanType === "fake")
+      ? FIRST_FLAG_BONUS
+      : 0;
 
   const excessScans = Math.max(0, recentScanCount - VELOCITY_THRESHOLD);
   const velPenalty = Math.min(excessScans * VELOCITY_PENALTY_RATE, 0.9); // capped at 90%
 
-  const rawReward = (base * catMult + accBonus + geoBonus + flagBonus) * (1 - velPenalty);
+  const rawReward =
+    (base * catMult + accBonus + geoBonus + flagBonus) * (1 - velPenalty);
 
   const remainingCap = Math.max(0, DAILY_CAP - dailyTotalSoFar);
   const finalReward = Math.min(rawReward, remainingCap);
@@ -84,7 +97,8 @@ export function calculateReward(input: RewardCalculationInput): RewardCalculatio
   if (accBonus > 0) parts.push(`Accuracy bonus: +${accBonus.toFixed(4)}`);
   if (geoBonus > 0) parts.push(`Geo hotspot: +${geoBonus.toFixed(4)}`);
   if (flagBonus > 0) parts.push(`First flag: +${flagBonus.toFixed(4)}`);
-  if (velPenalty > 0) parts.push(`Velocity penalty: -${(velPenalty * 100).toFixed(1)}%`);
+  if (velPenalty > 0)
+    parts.push(`Velocity penalty: -${(velPenalty * 100).toFixed(1)}%`);
   if (dailyCapped) parts.push(`Daily cap applied (${DAILY_CAP} QRON)`);
 
   return {
@@ -97,21 +111,64 @@ export function calculateReward(input: RewardCalculationInput): RewardCalculatio
     finalReward: Number(finalReward.toFixed(8)),
     dailyTotal: Number(dailyTotal.toFixed(8)),
     dailyCapped,
-    breakdown: parts.join(' | '),
+    breakdown: parts.join(" | "),
+  };
+}
+
+export type FirstScanReward = {
+  qron: number;
+  unit: "QRON";
+  settlesOnChain: false;
+  giftUrl: string;
+  reason: "first_scan" | "already_rewarded" | "not_first_scan";
+};
+
+/**
+ * Gift plus a $QRON entitlement on the first authentic scan only.
+ * Later scans use calculateReward. Nothing here moves the token treasury.
+ */
+export function firstScanAcquisitionReward(input: {
+  isFirstScan: boolean;
+  alreadyRewarded: boolean;
+}): FirstScanReward {
+  if (input.alreadyRewarded) {
+    return {
+      qron: 0,
+      unit: "QRON",
+      settlesOnChain: false,
+      giftUrl: FIRST_SCAN_GIFT_URL,
+      reason: "already_rewarded",
+    };
+  }
+  if (!input.isFirstScan) {
+    return {
+      qron: 0,
+      unit: "QRON",
+      settlesOnChain: false,
+      giftUrl: FIRST_SCAN_GIFT_URL,
+      reason: "not_first_scan",
+    };
+  }
+  return {
+    qron: FIRST_SCAN_REWARD_QRON,
+    unit: "QRON",
+    settlesOnChain: false,
+    giftUrl: FIRST_SCAN_GIFT_URL,
+    reason: "first_scan",
   };
 }
 
 /** Estimate reward for a hypothetical scan (used by the public calculator UI). */
 export function estimateReward(
   productCategory: string,
-  scanType: 'authentic' | 'suspicious' | 'fake' = 'authentic',
-  dailyTotalSoFar = 0,
+  scanType: "authentic" | "suspicious" | "fake" = "authentic",
+  dailyTotalSoFar = 0
 ): RewardCalculationResult {
   return calculateReward({
     scanType,
     productCategory,
     isConsensusAligned: true, // assume best case for estimation
-    isFirstFlag: scanType !== 'authentic',
+    isFirstFlag: scanType !== "authentic",
     isGeoHotspot: false,
     recentScanCount: 0,
     dailyTotalSoFar,

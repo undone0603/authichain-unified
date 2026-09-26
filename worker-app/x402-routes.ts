@@ -4,9 +4,16 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
  *      (200, not_configured OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
- * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
+ * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
+ * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid; a
+ *      paid call is forwarded over the VERIFY_APP service binding to the Next
+ *      route that holds the seal-registry lookup, or refused 503 before any
+ *      settlement when the binding is absent
  *
- * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
+ * Do not rebind X402_PAY_TO away from the owner-authorized treasury
+ * 0xaebf…e437. Do not rebind
+ * X402_FACILITATOR_URL / X402_USDC_ASSET.
  *
  * Facilitator is optional. Without X402_FACILITATOR_URL the health report is
  * `not_configured` and paid settlement stays closed ($0 path).
@@ -14,13 +21,17 @@
 import type { Hono } from "hono";
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
-  settlePayment,
-  verifyPaymentProof,
+  readPaymentProofHeader,
+  X402_REGISTRY_NOT_BOUND,
   x402Catalog,
   x402HealthReport,
+  x402OpenApiDocument,
   x402PriceUsd,
+  x402ScanFanout,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../src/lib/x402";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
@@ -29,6 +40,13 @@ type X402Bindings = X402HealthEnv & {
   X402_PAY_TO?: string;
   NODE_ENV?: string;
 };
+
+/** VERIFY_APP is a Fetcher, which X402HealthEnv's string index can't hold. */
+function verifyAppBinding(env: unknown): X402VerifyBinding | undefined {
+  const binding = (env as { VERIFY_APP?: X402VerifyBinding } | undefined)
+    ?.VERIFY_APP;
+  return typeof binding?.fetch === "function" ? binding : undefined;
+}
 
 function hydrateX402(env?: X402Bindings) {
   if (!env) return;
@@ -85,10 +103,33 @@ async function catalog(c: {
   return c.json(await x402Catalog(healthEnv(c.env)), 200, NO_STORE);
 }
 
+async function fanout(c: {
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  return c.json(x402ScanFanout(), 200, NO_STORE);
+}
+
+async function openapi(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  return c.json(await x402OpenApiDocument(healthEnv(c.env)), 200, NO_STORE);
+}
+
 async function agentVerify(c: {
   env?: X402Bindings;
   req: {
     url: string;
+    raw: Request;
     header: (name: string) => string | undefined;
     json: () => Promise<unknown>;
   };
@@ -120,64 +161,24 @@ async function agentVerify(c: {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(c.req.header("x-payment"));
-  if (!proof) {
-    return c.json(required.body, 402, NO_STORE);
+  const proofHeader = readPaymentProofHeader(name => c.req.header(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
+    return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return c.json(
-      { ...required.body, error: verification.reason },
-      402,
-      NO_STORE
+  const verifyApp = verifyAppBinding(c.env);
+  if (verifyApp) {
+    return forwardPaidVerify(
+      verifyApp,
+      c.req.raw,
+      proofHeader,
+      await c.req.raw.text()
     );
   }
-
-  const settlement = await settlePayment(
-    c.req.header("x-payment") ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return c.json(
-      {
-        ...required.body,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      402,
-      NO_STORE
-    );
-  }
-
-  const input = (await c.req.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return c.json(
-    {
-      verified: false,
-      authenticityScore: 0,
-      subject: subject ?? null,
-      details: {
-        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-      },
-      settlement: {
-        payer: proof.payer,
-        amountAtomic: verification.amount.toString(),
-        txHash: settlement.txHash ?? proof.txHash ?? null,
-        trustless: settlement.trustless,
-      },
-      timestamp: new Date().toISOString(),
-    },
-    200,
-    NO_STORE
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return c.json(X402_REGISTRY_NOT_BOUND, 503, NO_STORE);
 }
 
 export function registerX402Routes<
@@ -187,8 +188,9 @@ export function registerX402Routes<
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
   app.get("/api/x402/catalog", c => catalog(c));
-  app.get("/.well-known/x402", c => catalog(c));
+  app.get("/.well-known/x402", c => fanout(c));
   app.get("/.well-known/x402.json", c => catalog(c));
+  app.get("/openapi.json", c => openapi(c));
   app.get("/api/v1/agent-verify", c => health(c));
   app.post("/api/x402", c => agentVerify(c));
   app.post("/api/v1/agent-verify", c => agentVerify(c));

@@ -1,10 +1,11 @@
-export const dynamic = 'force-dynamic';
-import type { Metadata } from 'next';
-import { createClient } from '@/utils/supabase/server';
-import { notFound } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
-import { getSeoPageBySlug, listSeoSlugs } from '@/lib/seo-pages';
+export const dynamic = "force-dynamic";
+import type { Metadata } from "next";
+import { createClient } from "@/utils/supabase/server";
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { CHECKOUT_EMAIL_FORM_CSS } from "@/lib/checkout-email";
+import { getSeoPageBySlug, listSeoSlugs } from "@/lib/seo-pages";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -15,8 +16,8 @@ import {
   Hammer,
   FileText,
   Truck,
-  Sparkles
-} from 'lucide-react';
+  Sparkles,
+} from "lucide-react";
 
 interface PageProps {
   params: Promise<{ serial: string }>;
@@ -33,21 +34,26 @@ interface SupplyChainEvent {
 // lookups (everything else). They can't live in separate [slug]/[serial]
 // sibling folders — Next.js requires one dynamic-segment name per position.
 export function generateStaticParams(): { serial: string }[] {
-  return listSeoSlugs().map((slug) => ({ serial: slug }));
+  return listSeoSlugs().map(slug => ({ serial: slug }));
 }
 
-export async function generateMetadata(
-  { params }: PageProps,
-): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { serial } = await params;
   const seoPage = getSeoPageBySlug(serial);
   if (!seoPage) return {};
-  const canonical = typeof seoPage.jsonLd.url === 'string' ? seoPage.jsonLd.url : undefined;
+  const canonical =
+    typeof seoPage.jsonLd.url === "string" ? seoPage.jsonLd.url : undefined;
   return {
     title: seoPage.title,
     description: seoPage.metaDescription,
     alternates: canonical ? { canonical } : undefined,
-    openGraph: { title: seoPage.title, description: seoPage.metaDescription, type: 'website' },
+    openGraph: {
+      title: seoPage.title,
+      description: seoPage.metaDescription,
+      type: "website",
+    },
   };
 }
 
@@ -65,6 +71,11 @@ export default async function CertificationPage({ params }: PageProps) {
         />
         <h1>{seoPage.h1}</h1>
         {/* bodyHtml is sanitized at generation time (script tags stripped). */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: CHECKOUT_EMAIL_FORM_CSS,
+          }}
+        />
         <div dangerouslySetInnerHTML={{ __html: seoPage.bodyHtml }} />
       </main>
     );
@@ -72,9 +83,9 @@ export default async function CertificationPage({ params }: PageProps) {
 
   const supabase = await createClient();
   const { data: cert, error } = await supabase
-    .from('certifications')
-    .select('*, products(*)')
-    .eq('serial_number', serial)
+    .from("certifications")
+    .select("*, products(*)")
+    .eq("serial_number", serial)
     .single();
 
   if (error || !cert) {
@@ -83,14 +94,14 @@ export default async function CertificationPage({ params }: PageProps) {
 
   // Fetch DPP data if it exists
   const { data: dpp } = await supabase
-    .from('dpp_data')
-    .select('*')
-    .eq('certification_id', cert.id)
+    .from("dpp_data")
+    .select("*")
+    .eq("certification_id", cert.id)
     .single();
 
-  const isValid = cert.status === 'approved';
-  const isRevoked = cert.status === 'revoked';
-  const isPending = cert.status === 'pending';
+  const isValid = cert.status === "approved";
+  const isRevoked = cert.status === "revoked";
+  const isPending = cert.status === "pending";
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -190,7 +201,7 @@ export default async function CertificationPage({ params }: PageProps) {
                     Model Identifier
                   </h3>
                   <p className="font-bold text-zinc-200 uppercase">
-                    {cert.products.model_number || 'Standard Edition'}
+                    {cert.products.model_number || "Standard Edition"}
                   </p>
                 </div>
                 <div>
@@ -207,9 +218,9 @@ export default async function CertificationPage({ params }: PageProps) {
                     {new Date(
                       cert.approved_at || cert.created_at
                     ).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </p>
                 </div>
@@ -229,8 +240,13 @@ export default async function CertificationPage({ params }: PageProps) {
 
             {/* Storymode Narrative */}
             {(() => {
-              const pm = cert.products.metadata as Record<string, unknown> | null;
-              const story = pm?.storymode as { chapters: Array<{ title: string; content: string }> } | undefined;
+              const pm = cert.products.metadata as Record<
+                string,
+                unknown
+              > | null;
+              const story = pm?.storymode as
+                | { chapters: Array<{ title: string; content: string }> }
+                | undefined;
               if (!story?.chapters?.length) return null;
               return (
                 <div className="protocol-card p-8 border-gold/10 bg-gold/5">
@@ -246,7 +262,9 @@ export default async function CertificationPage({ params }: PageProps) {
                         <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-2">
                           {ch.title}
                         </h4>
-                        <p className="text-zinc-400 text-sm leading-relaxed">{ch.content}</p>
+                        <p className="text-zinc-400 text-sm leading-relaxed">
+                          {ch.content}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -274,10 +292,19 @@ export default async function CertificationPage({ params }: PageProps) {
                       </h3>
                     </div>
                     <div className="space-y-2">
-                      {Object.entries(dpp.material_composition as Record<string, string>).map(([m, p]) => (
-                        <div key={m} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-zinc-800/50">
-                          <span className="text-xs font-bold text-zinc-300 uppercase">{m}</span>
-                          <span className="text-xs font-black text-gold">{p}</span>
+                      {Object.entries(
+                        dpp.material_composition as Record<string, string>
+                      ).map(([m, p]) => (
+                        <div
+                          key={m}
+                          className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-zinc-800/50"
+                        >
+                          <span className="text-xs font-bold text-zinc-300 uppercase">
+                            {m}
+                          </span>
+                          <span className="text-xs font-black text-gold">
+                            {p}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -293,8 +320,12 @@ export default async function CertificationPage({ params }: PageProps) {
                         </h3>
                       </div>
                       <div className="bg-black/40 p-4 rounded-xl border border-zinc-800/50 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-white">{dpp.carbon_footprint}</span>
-                        <span className="text-[10px] font-black text-zinc-600 uppercase">kg CO2e</span>
+                        <span className="text-2xl font-black text-white">
+                          {dpp.carbon_footprint}
+                        </span>
+                        <span className="text-[10px] font-black text-zinc-600 uppercase">
+                          kg CO2e
+                        </span>
                       </div>
                     </div>
 
@@ -307,11 +338,16 @@ export default async function CertificationPage({ params }: PageProps) {
                       </div>
                       <div className="bg-black/40 p-4 rounded-xl border border-zinc-800/50 flex items-center justify-between">
                         <div className="flex gap-1">
-                          {[1,2,3,4,5,6,7,8,9,10].map(i => (
-                            <div key={i} className={`w-1.5 h-4 rounded-sm ${i <= (dpp.repairability_score || 0) ? 'bg-gold' : 'bg-zinc-800'}`} />
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+                            <div
+                              key={i}
+                              className={`w-1.5 h-4 rounded-sm ${i <= (dpp.repairability_score || 0) ? "bg-gold" : "bg-zinc-800"}`}
+                            />
                           ))}
                         </div>
-                        <span className="text-sm font-black text-gold">{dpp.repairability_score}/10</span>
+                        <span className="text-sm font-black text-gold">
+                          {dpp.repairability_score}/10
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -327,23 +363,35 @@ export default async function CertificationPage({ params }: PageProps) {
                       </h3>
                     </div>
                     <div className="space-y-4">
-                      {(dpp.supply_chain_provenance as SupplyChainEvent[]).map((event, i) => (
-                        <div key={i} className="flex gap-4 relative">
-                          {i < (dpp.supply_chain_provenance as SupplyChainEvent[]).length - 1 && (
-                            <div className="absolute left-1.5 top-4 w-px h-full bg-zinc-800" />
-                          )}
-                          <div className="w-3 h-3 rounded-full bg-gold/20 border border-gold/40 mt-1 shrink-0 flex items-center justify-center">
-                            <div className="w-1 h-1 rounded-full bg-gold" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase tracking-tighter">{event.event}</p>
-                            <div className="flex gap-4 mt-0.5">
-                              <p className="text-[9px] font-bold text-zinc-500 uppercase">{event.location}</p>
-                              <p className="text-[9px] font-bold text-zinc-700 uppercase">{new Date(event.date).toLocaleDateString()}</p>
+                      {(dpp.supply_chain_provenance as SupplyChainEvent[]).map(
+                        (event, i) => (
+                          <div key={i} className="flex gap-4 relative">
+                            {i <
+                              (
+                                dpp.supply_chain_provenance as SupplyChainEvent[]
+                              ).length -
+                                1 && (
+                              <div className="absolute left-1.5 top-4 w-px h-full bg-zinc-800" />
+                            )}
+                            <div className="w-3 h-3 rounded-full bg-gold/20 border border-gold/40 mt-1 shrink-0 flex items-center justify-center">
+                              <div className="w-1 h-1 rounded-full bg-gold" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-white uppercase tracking-tighter">
+                                {event.event}
+                              </p>
+                              <div className="flex gap-4 mt-0.5">
+                                <p className="text-[9px] font-bold text-zinc-500 uppercase">
+                                  {event.location}
+                                </p>
+                                <p className="text-[9px] font-bold text-zinc-700 uppercase">
+                                  {new Date(event.date).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   </div>
                 )}
@@ -411,10 +459,10 @@ export default async function CertificationPage({ params }: PageProps) {
             </span>
           </div>
           <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em]">
-            Powered by{' '}
+            Powered by{" "}
             <Link href="https://qron.space" className="text-zinc-400">
               QRON
-            </Link>{' '}
+            </Link>{" "}
             &middot; Blockchain-verified product authentication
           </p>
         </div>

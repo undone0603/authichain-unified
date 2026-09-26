@@ -7,113 +7,28 @@
 // secondary gate, and a mandatory CAN-SPAM unsubscribe footer.
 import { promises as dns } from "node:dns";
 import { recordDryRunSend } from "../email-service";
+import { checkClaims, htmlToText } from "./claims";
 
-export type VerificationSource =
-  | "apollo_verified"
-  | "reacher_verified" // deliverable + non-catch-all per self-hosted Reacher (free OSS)
-  | "inbound_optin"
-  | "confirmed_reply"
-  /**
-   * The counterparty published this address itself for exactly this purpose —
-   * e.g. the point-of-contact printed on a SAM.gov solicitation. That is a
-   * different thing from a guess that happens to look plausible: the owner
-   * chose to publish it, so it is neither fabricated nor scraped from an
-   * unrelated context.
-   */
-  | "published_contact"
-  | "pattern_guess"
-  | "scraped"
-  | "unknown";
+import {
+  assessRecipient,
+  canSend,
+  type RecipientAssessment,
+  type VerificationSource,
+} from "./recipient-rules";
 
-const TRUSTED_SOURCES: ReadonlySet<VerificationSource> = new Set([
-  "apollo_verified",
-  "reacher_verified",
-  "inbound_optin",
-  "confirmed_reply",
-  "published_contact",
-]);
-
-// Generic/role inboxes — reject for cold end-buyer segments so we don't hit
-// support queues (the info@ auto-responder problem). Channel-partner desks
-// are the exception: those companies publish contact@ / info@ / hello@ as
-// the partnership inbox. Callers must pass `allowRoleInbox` explicitly;
-// trusted provenance alone is not enough.
-const ROLE_LOCALPARTS = new Set([
-  "info",
-  "support",
-  "help",
-  "contact",
-  "sales",
-  "admin",
-  "hello",
-  "billing",
-  "noreply",
-  "no-reply",
-  "team",
-  "office",
-]);
-
-export function isRoleInboxEmail(email: string): boolean {
-  const local = (email || "").trim().toLowerCase().split("@")[0] ?? "";
-  return ROLE_LOCALPARTS.has(local);
-}
-
-export type AssessRecipientOptions = {
-  /**
-   * Permit a role inbox when the source is already trusted. Only the
-   * channel-partner path sets this — govchain / strainchain / qron / all
-   * must keep role inboxes rejected.
-   */
-  allowRoleInbox?: boolean;
-};
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export interface RecipientAssessment {
-  email: string;
-  source: VerificationSource;
-  validFormat: boolean;
-  trustedSource: boolean;
-  isRoleInbox: boolean;
-  status: "allow" | "reject";
-  reasons: string[];
-}
-
-/** Pure provenance + format assessment (no network). */
-export function assessRecipient(
-  email: string,
-  source: VerificationSource,
-  opts: AssessRecipientOptions = {}
-): RecipientAssessment {
-  const reasons: string[] = [];
-  const normalized = (email || "").trim().toLowerCase();
-  const validFormat = EMAIL_RE.test(normalized);
-  if (!validFormat) reasons.push("invalid_format");
-
-  const isRoleInbox = isRoleInboxEmail(normalized);
-  const roleInboxBlocked = isRoleInbox && opts.allowRoleInbox !== true;
-  if (roleInboxBlocked) reasons.push("role_inbox");
-
-  const trustedSource = TRUSTED_SOURCES.has(source);
-  if (!trustedSource) reasons.push(`untrusted_source:${source}`);
-
-  const status: "allow" | "reject" =
-    validFormat && trustedSource && !roleInboxBlocked ? "allow" : "reject";
-
-  return {
-    email: normalized,
-    source,
-    validFormat,
-    trustedSource,
-    isRoleInbox,
-    status,
-    reasons,
-  };
-}
-
-export function canSend(a: RecipientAssessment): boolean {
-  return a.status === "allow";
-}
+// The provenance rules live in ./recipient-rules so Cloudflare Workers can
+// share them without pulling in node:dns. Re-exported here so existing
+// importers of send-guard keep working unchanged.
+export {
+  assessRecipient,
+  canSend,
+  isGovernmentOrMilitaryAddress,
+  isRoleInboxEmail,
+  TRUSTED_SOURCES,
+  type AssessRecipientOptions,
+  type RecipientAssessment,
+  type VerificationSource,
+} from "./recipient-rules";
 
 /** Secondary gate: does the domain actually accept mail (has MX records)? */
 export async function domainAcceptsMail(email: string): Promise<boolean> {
@@ -125,6 +40,26 @@ export async function domainAcceptsMail(email: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Where the unsubscribe link points when the caller configures nothing.
+ *
+ * This used to default to https://authichain.com/unsubscribe, a route that has
+ * never existed, so every guarded send carried a dead opt-out link. A reply
+ * address is a valid CAN-SPAM opt-out mechanism and it works today: the
+ * reply-to inbox is read, and worker/outreach-loop.ts already classifies
+ * "unsubscribe" replies. Set UNSUBSCRIBE_URL only to a page that actually
+ * records the opt-out.
+ */
+export function defaultUnsubscribeUrl(replyTo: string): string {
+  // "Name <addr@x>" → "addr@x", without a backtracking regex.
+  const open = replyTo.lastIndexOf("<");
+  const close = replyTo.indexOf(">", open);
+  const address = (
+    open >= 0 && close > open ? replyTo.slice(open + 1, close) : replyTo
+  ).trim();
+  return `mailto:${address}?subject=unsubscribe`;
 }
 
 /** CAN-SPAM compliant footer — physical address + working unsubscribe are required. */
@@ -234,10 +169,12 @@ export async function guardedSend(args: {
       assessment,
     };
   }
+  const replyTo =
+    args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com";
   const unsubscribeUrl =
-    args.unsubscribeUrl ??
-    process.env.UNSUBSCRIBE_URL ??
-    "https://authichain.com/unsubscribe";
+    args.unsubscribeUrl ||
+    process.env.UNSUBSCRIBE_URL ||
+    defaultUnsubscribeUrl(replyTo);
 
   const footerOpts = {
     company: args.company ?? "AuthiChain",
@@ -248,6 +185,21 @@ export async function guardedSend(args: {
 
   if (args.body === undefined && args.html === undefined) {
     return { sent: false, reason: "no_body", assessment };
+  }
+
+  // Refuse copy that states awards, customers, statistics, certifications or
+  // prior contact that nobody can back. See ./claims.ts for the rules and the
+  // emails that prompted each one.
+  const visibleText = [args.body ?? "", args.html ? htmlToText(args.html) : ""]
+    .join("\n")
+    .trim();
+  const violations = checkClaims(args.subject, visibleText);
+  if (violations.length > 0) {
+    return {
+      sent: false,
+      reason: violations.map(v => `claim:${v.rule}:${v.match}`).join(","),
+      assessment,
+    };
   }
 
   // Last stop before the network. Placed after every guard above so a dry run
@@ -280,18 +232,21 @@ export async function guardedSend(args: {
         args.from ??
         process.env.RESEND_FROM ??
         "AuthiChain <hello@authichain.com>",
-      reply_to:
-        args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
+      reply_to: replyTo,
       to: assessment.email,
       subject: args.subject,
       ...(args.body !== undefined ? { text: args.body + footer } : {}),
       ...(args.html !== undefined
         ? { html: args.html + unsubscribeFooterHtml(footerOpts) }
         : {}),
-      // One-click unsubscribe (RFC 8058) — improves compliance + deliverability.
+      // List-Unsubscribe (RFC 2369). The One-Click POST header (RFC 8058) is
+      // only valid alongside an https URI that accepts the POST, so a mailto
+      // opt-out goes without it.
       headers: {
         "List-Unsubscribe": `<${unsubscribeUrl}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        ...(unsubscribeUrl.startsWith("https://")
+          ? { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+          : {}),
       },
     }),
   });

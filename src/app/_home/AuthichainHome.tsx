@@ -11,7 +11,7 @@ import { BrandLanding } from "./BrandLanding";
 /**
  * AuthiChain (authichain.com) — flagship authentication brand.
  * Narrative is limited to realized capabilities. Primary money path is
- * EU DPP Readiness via GET /api/checkout/dpp.
+ * EU DPP Readiness via GET https://authichain.com/checkout/dpp_readiness.
  */
 export function AuthichainHome() {
   return (
@@ -20,7 +20,7 @@ export function AuthichainHome() {
       eyebrow="The authentic agentic economy"
       headline="Issue seals. Bind products. Verify anywhere."
       subhead="AuthiChain is the authenticity layer agents and humans use to prove a physical product is real. The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue."
-      primaryCta={{ label: "Start DPP checkout", href: "/api/checkout/dpp" }}
+      primaryCta={{ label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" }}
       secondaryCta={{ label: "View pricing", href: "/pricing" }}
       stats={[
         { value: "Ed25519", label: "Signed seals" },
@@ -118,7 +118,7 @@ export function AuthichainHome() {
               <a href="/trumark" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
                 TruMark brief
               </a>
-              <a href="/api/checkout/plan/strainchain_passport" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
+              <a href="https://authichain.com/checkout/strainchain_passport" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
                 Passport checkout — $49
               </a>
             </div>
@@ -132,7 +132,7 @@ export function AuthichainHome() {
               <a href="/made-in-america" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
                 Made in USA brief
               </a>
-              <a href="/api/checkout/dpp" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
+              <a href="https://authichain.com/checkout/dpp_readiness" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900">
                 DPP checkout — $299
               </a>
             </div>

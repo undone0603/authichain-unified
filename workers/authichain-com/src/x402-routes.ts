@@ -9,22 +9,37 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → 200 health
  *      (not_configured is OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
- * POST /api/x402 + /api/v1/agent-verify → 503/402 until facilitator + payTo
+ * GET  /api/x402/listing → PayAPI-ready pack copied from health
+ * GET  /api/x402/growth → directories + skills + sisters
+ * GET  /.well-known/x402 → x402scan fan-out (version + resources)
+ * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
+ * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid; paid
+ *      calls are forwarded over the VERIFY_APP service binding to the Next
+ *      route, which holds the seal-registry lookup. With no binding, 503
+ *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND)
  *
- * Do not rebind X402_PAY_TO / X402_FACILITATOR_URL / X402_USDC_ASSET.
+ * Do not rebind X402_PAY_TO away from the owner-authorized treasury
+ * 0xaebf…e437. Do not rebind
+ * X402_FACILITATOR_URL / X402_USDC_ASSET.
  */
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
-  settlePayment,
-  verifyPaymentProof,
+  readPaymentProofHeader,
+  X402_REGISTRY_NOT_BOUND,
   x402Catalog,
   x402HealthReport,
+  x402OpenApiDocument,
   x402PriceUsd,
+  x402ScanFanout,
+  type X402EnvVars,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../../../src/lib/x402";
+import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
 
-export type X402Env = X402HealthEnv;
+export type X402Env = X402EnvVars;
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -32,8 +47,15 @@ const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+function json(
+  status: number,
+  body: unknown,
+  extraHeaders?: Record<string, string>
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...JSON_HEADERS, ...extraHeaders },
+  });
 }
 
 function normalizePath(pathname: string): string {
@@ -49,9 +71,12 @@ export function isX402Path(pathname: string): boolean {
     p === "/api/x402" ||
     p === "/api/x402/health" ||
     p === "/api/x402/catalog" ||
+    p === "/api/x402/listing" ||
+    p === "/api/x402/growth" ||
     p === "/api/v1/agent-verify" ||
     p === "/.well-known/x402" ||
-    p === "/.well-known/x402.json"
+    p === "/.well-known/x402.json" ||
+    p === "/openapi.json"
   );
 }
 
@@ -66,11 +91,23 @@ function isHealthPath(pathname: string): boolean {
 
 function isCatalogPath(pathname: string): boolean {
   const p = normalizePath(pathname);
-  return (
-    p === "/api/x402/catalog" ||
-    p === "/.well-known/x402" ||
-    p === "/.well-known/x402.json"
-  );
+  return p === "/api/x402/catalog" || p === "/.well-known/x402.json";
+}
+
+function isListingPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/api/x402/listing";
+}
+
+function isGrowthPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/api/x402/growth";
+}
+
+function isFanoutPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/.well-known/x402";
+}
+
+function isOpenApiPath(pathname: string): boolean {
+  return normalizePath(pathname) === "/openapi.json";
 }
 
 function isPaidPath(pathname: string): boolean {
@@ -80,7 +117,7 @@ function isPaidPath(pathname: string): boolean {
 
 function hydrateX402(env?: X402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -119,7 +156,32 @@ async function catalogResponse(env?: X402Env): Promise<Response> {
   return json(200, await x402Catalog(healthEnv(env)));
 }
 
-async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
+async function listingResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  const health = await x402HealthReport(healthEnv(env));
+  return json(200, x402ListingPack(health));
+}
+
+async function growthResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  const health = await x402HealthReport(healthEnv(env));
+  return json(200, growthDiscovery(health));
+}
+
+function fanoutResponse(): Response {
+  return json(200, x402ScanFanout());
+}
+
+async function openApiResponse(env?: X402Env): Promise<Response> {
+  hydrateX402(env);
+  return json(200, await x402OpenApiDocument(healthEnv(env)));
+}
+
+async function agentVerify(
+  request: Request,
+  env?: X402Env,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
   const resource = new URL(request.url).toString();
@@ -138,59 +200,29 @@ async function agentVerify(request: Request, env?: X402Env): Promise<Response> {
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(request.headers.get("x-payment"));
-  if (!proof) {
-    return json(402, required.body);
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
+    return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(402, { ...required.body, error: verification.reason });
+  if (verifyApp) {
+    return forwardPaidVerify(
+      verifyApp,
+      request,
+      proofHeader,
+      await request.text()
+    );
   }
-
-  const settlement = await settlePayment(
-    request.headers.get("x-payment") ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(402, {
-      ...required.body,
-      error: settlement.reason ?? "not_configured",
-      status: settlement.trustless ? "unpaid" : "not_configured",
-    });
-  }
-
-  let input: Record<string, unknown> = {};
-  try {
-    input = (await request.json()) as Record<string, unknown>;
-  } catch {
-    /* empty body is fine */
-  }
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return json(200, {
-    verified: false,
-    authenticityScore: 0,
-    subject: subject ?? null,
-    details: {
-      note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-    },
-    settlement: {
-      payer: proof.payer,
-      amountAtomic: verification.amount.toString(),
-      txHash: settlement.txHash ?? proof.txHash ?? null,
-      trustless: settlement.trustless,
-    },
-    timestamp: new Date().toISOString(),
-  });
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
 export async function tryHandleX402(
   request: Request,
-  env: X402Env = {}
+  env: X402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isX402Path(url.pathname)) return null;
@@ -209,12 +241,28 @@ export async function tryHandleX402(
     return catalogResponse(env);
   }
 
+  if (request.method === "GET" && isListingPath(url.pathname)) {
+    return listingResponse(env);
+  }
+
+  if (request.method === "GET" && isGrowthPath(url.pathname)) {
+    return growthResponse(env);
+  }
+
+  if (request.method === "GET" && isFanoutPath(url.pathname)) {
+    return fanoutResponse();
+  }
+
+  if (request.method === "GET" && isOpenApiPath(url.pathname)) {
+    return openApiResponse(env);
+  }
+
   if (request.method === "GET" && isHealthPath(url.pathname)) {
     return healthResponse(env);
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env);
+    return agentVerify(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

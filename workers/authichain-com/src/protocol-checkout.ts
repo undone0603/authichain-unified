@@ -1,15 +1,25 @@
 /**
  * Edge checkout for the $299 DPP audit.
- * GET /protocol/checkout/dpp — never cached as landing HTML (unlike /api/checkout/dpp).
+ * GET /protocol/checkout/dpp — 303 to the click-to-confirm page
+ * https://authichain.com/checkout/dpp_readiness (a GET never opens a Stripe
+ * session). Only the DPP-SMOKE-E2E $0 demo still creates a session on GET.
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
 import { applyHostedCheckoutRecovery } from "../../../src/lib/checkout-recovery";
+import {
+  CHECKOUT_REDIRECT_HEADERS,
+  checkoutNeedEmailRedirect,
+  checkoutRedirectResponse,
+  pickCheckoutEmail,
+  planIdFromCheckoutAction,
+} from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
+import { gatedConfirmUrl } from "../../../src/lib/checkout-gate";
 
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
-export const APP_ORIGIN = "https://authichain.com";
+export const APP_ORIGIN = "https://authichain.govchain.us";
 
 export type CheckoutEnv = {
   STRIPE_SECRET_KEY?: string;
@@ -50,25 +60,17 @@ export async function tryHandleProtocolCheckout(
   if (request.method === "HEAD") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Cache-Control": "private, no-store",
-        "CDN-Cache-Control": "no-store",
-      },
+      headers: CHECKOUT_REDIRECT_HEADERS,
     });
   }
   if (request.method !== "GET") {
     return json(405, { error: "method not allowed" });
   }
 
-  const key = (env.STRIPE_SECRET_KEY || "").trim();
-  if (!key) {
-    return json(500, { error: "Stripe is not configured" });
-  }
-
   const params = url.searchParams;
   const visitId =
     pick(params, "visit_id") || pick(params, "prospect_id") || newVisitId();
-  const email = pick(params, "email", 254);
+  const email = pickCheckoutEmail(pick(params, "email", 254));
   const utmSource = pick(params, "utm_source", 64);
   const utmMedium = pick(params, "utm_medium", 64);
   const utmCampaign = pick(params, "utm_campaign", 128);
@@ -77,6 +79,15 @@ export async function tryHandleProtocolCheckout(
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(params, "promo", 32));
+  if (!smoke) {
+    // Click-to-confirm: GET (even with ?email=) renders the confirm page;
+    // only its POST form creates the session. Scanners never POST.
+    return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", params));
+  }
+  const key = (env.STRIPE_SECRET_KEY || "").trim();
+  if (!key) {
+    return json(500, { error: "Stripe is not configured" });
+  }
   const priceId = (env.STRIPE_PRICE_ID || DPP_PRICE_ID).trim();
 
   const body = new URLSearchParams();
@@ -140,12 +151,39 @@ export async function tryHandleProtocolCheckout(
       detail: data.error?.message || `stripe ${stripeRes.status}`,
     });
   }
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: data.url,
-      "Cache-Control": "private, no-store",
-      "CDN-Cache-Control": "no-store",
-    },
-  });
+  return checkoutRedirectResponse(data.url);
+}
+
+/**
+ * GET /api/checkout/* used to open a Stripe session (anonymous, or with
+ * ?email=), so link scanners and previews created unpaid carts. Every GET
+ * now 303s to the click-to-confirm page /checkout/<plan> carrying email and
+ * attribution. HEAD stays 204. Only DPP-SMOKE-E2E ($0 demo) falls through.
+ */
+export function isApiCheckoutPath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  return p === "/api/checkout/dpp" || p.startsWith("/api/checkout/plan/");
+}
+
+export function tryHandleApiCheckoutEmailGate(
+  request: Request
+): Response | null {
+  const url = new URL(request.url);
+  if (!isApiCheckoutPath(url.pathname)) return null;
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: 204,
+      headers: CHECKOUT_REDIRECT_HEADERS,
+    });
+  }
+  if (request.method !== "GET") return null;
+  const smoke = isDppSmokePromo(url.searchParams.get("promo"));
+  if (smoke && planIdFromCheckoutAction(url.pathname) === "dpp_readiness") {
+    return null;
+  }
+  const planId = planIdFromCheckoutAction(url.pathname);
+  if (!planId) {
+    return checkoutRedirectResponse(checkoutNeedEmailRedirect("plan"));
+  }
+  return checkoutRedirectResponse(gatedConfirmUrl(planId, url.searchParams));
 }

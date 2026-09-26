@@ -22,23 +22,23 @@ function detectPlanFromAmount(amountCents: number): B2BPlanKey {
 }
 
 /**
- * Resolves a Stripe price ID + invoiced amount to a B2B plan key.
- * Tries the configured lookup table first, then falls back to amount.
- * Non-B2B keys (e.g. QRON or `contract_setup`) cause a fall-through to
- * amount-based detection — webhook subscription events should always
- * resolve to a B2B plan because that's what `subscriptions.plan` stores.
+ * Resolves a Stripe price ID + invoiced amount to a B2B plan key, or
+ * `null` when the price is a live catalogue SKU (`src/lib/plans.ts`) or a
+ * non-B2B lookup (QRON / contract_setup).
+ *
+ * `null` means: do not write `subscriptions.plan` as starter/pro/enterprise.
+ * Farm $149/mo, Passport $49, DPP $299, and QRON packs used to land on
+ * B2B starter via amount fallback.
  */
 export function detectPlan(
   priceId: string | null | undefined,
   amountCents: number
-): B2BPlanKey {
+): B2BPlanKey | null {
   if (priceId) {
     const known = lookupPlanByPriceId(priceId);
     if (known && isB2BPlan(known)) return known;
-    // Live QRON/DPP catalogue IDs must not be amount-mapped onto B2B SKUs
-    // ($299 is below the $499 professional threshold and used to become
-    // B2B starter).
-    if (planByStripePriceId(priceId)) return "starter";
+    if (planByStripePriceId(priceId)) return null;
+    if (known) return null;
   }
   return detectPlanFromAmount(amountCents);
 }

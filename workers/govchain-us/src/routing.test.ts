@@ -9,7 +9,11 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
+
+const GATED_DPP_ACTION = new URL("/checkout/dpp_readiness", "https://authichain.com").href;
 
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
@@ -49,6 +53,26 @@ async function get(path: string, env: Partial<typeof ENV> = ENV) {
   );
 }
 
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "govchain.us");
+    return url;
+  });
+}
+
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "govchain.us");
+    return url.pathname;
+  });
+}
+
 const ROW = {
   notice_id: "ABC123",
   title: "Cyber support services",
@@ -84,11 +108,186 @@ test("the sitemap lists only real URLs and no fragments", async () => {
   const xml = await res.text();
   assert.equal(res.status, 200);
   assert.ok(!xml.includes("/#"), "fragment URLs are not distinct pages");
-  assert.ok(xml.includes("<loc>https://govchain.us/opportunities</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/onboard</loc>"));
-  assert.ok(xml.includes("<loc>https://govchain.us/pricing</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/opportunities"));
+  assert.ok(paths.includes("/onboard"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/gift"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
+  assert.ok(paths.includes("/mcp"));
   assert.ok(!xml.includes("/rfp"));
   assert.ok(!xml.includes("/compliance"));
+  assert.equal(xml.includes("/api/checkout"), false);
+});
+
+test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
+  const llms = await get("/llms.txt");
+  assert.equal(llms.status, 200);
+  const text = await llms.text();
+  assert.match(text, /POST https:\/\/govchain\.us\/api\/x402/);
+  assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.equal(
+    `href="${planPaymentLink("dpp_readiness")}"`.startsWith(
+      'href="https://authichain.com/checkout/'
+    ),
+    true
+  );
+  assert.doesNotMatch(text, /GET \/api\/checkout/);
+
+  const specRes = await get("/openapi.json");
+  assert.equal(specRes.status, 200);
+  const spec = (await specRes.json()) as {
+    openapi: string;
+    servers: Array<{ url: string }>;
+    paths: {
+      "/api/x402": {
+        get?: { responses: { "200": unknown } };
+        post: {
+          "x-payment-info": { protocols: string[] };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.servers, [{ url: "https://govchain.us" }]);
+  assert.ok(spec.paths["/api/x402"].get?.responses["200"]);
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
+});
+
+test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
+  const unpaid = await worker.fetch(
+    new Request("https://govchain.us/api/x402", { method: "POST" }),
+    ENV
+  );
+  assert.equal(unpaid.status, 402);
+  const body = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string; amount?: string }>;
+    extensions?: { bazaar?: unknown };
+  };
+  assert.equal(body.x402Version, 2);
+  assert.equal(body.resource?.url, "https://govchain.us/api/x402");
+  assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+  assert.equal(body.accepts[0].amount, "50000");
+  assert.ok(body.extensions?.bazaar);
+  assert.ok(unpaid.headers.get("PAYMENT-REQUIRED"));
+  assert.equal(
+    JSON.stringify(body).toLowerCase().includes("facilitator.payai"),
+    false
+  );
+
+  for (const path of ["/api/x402", "/api/x402/health"]) {
+    const health = await get(path);
+    assert.equal(health.status, 200, path);
+    const report = (await health.json()) as { payTo: string };
+    assert.equal(report.payTo, X402_PUBLISHED_PAY_TO, path);
+  }
+});
+
+test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+  for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const body = (await res.json()) as {
+      protocol: string;
+      pay: { x402: string };
+      pricing: {
+        humanCheckout: {
+          passportPaymentLink?: string;
+          dppPaymentLink?: string;
+          farmPaymentLink?: string;
+          starterPaymentLink?: string;
+        };
+      };
+    };
+    assert.equal(body.protocol, "mcp", path);
+    assert.equal(body.pay.x402, "POST https://govchain.us/api/x402", path);
+    assert.equal(
+      body.pricing.humanCheckout.dppPaymentLink,
+      planPaymentLink("dpp_readiness"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.passportPaymentLink,
+      planPaymentLink("strainchain_passport"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.farmPaymentLink,
+      planPaymentLink("strainchain_farm"),
+      path
+    );
+    assert.equal(
+      body.pricing.humanCheckout.starterPaymentLink,
+      undefined,
+      path
+    );
+    const blob = JSON.stringify(body);
+    assert.equal(blob.includes("/api/checkout"), false, path);
+    assert.equal(blob.toLowerCase().includes("facilitator.payai"), false, path);
+  }
+
+  const unpaid = await worker.fetch(
+    new Request("https://govchain.us/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "verify" },
+      }),
+    }),
+    ENV
+  );
+  assert.equal(unpaid.status, 402);
+  const required = (await unpaid.json()) as {
+    x402Version: number;
+    resource?: { url?: string };
+    accepts: Array<{ payTo: string }>;
+  };
+  assert.equal(required.x402Version, 2);
+  assert.equal(required.resource?.url, "https://govchain.us/mcp");
+  assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+});
+
+test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+  const res = await get("/api/x402/catalog");
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    catalog: string;
+    humanCheckout: {
+      farmPaymentLink?: string;
+      passportPaymentLink?: string;
+      dppPaymentLink?: string;
+      starterPaymentLink?: string;
+    };
+  };
+  assert.equal(body.catalog, "/api/x402/catalog");
+  assert.equal(
+    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
+    "authichain.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
+    "authichain.com"
+  );
+  assert.equal(
+    new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
+    "authichain.com"
+  );
+  assert.equal(body.humanCheckout.starterPaymentLink, undefined);
+  const blob = JSON.stringify(body);
+  assert.equal(blob.includes("/api/checkout"), false);
+  assert.equal(blob.toLowerCase().includes("facilitator.payai"), false);
 });
 
 test("/pricing is a live money page, not a 404", async () => {
@@ -97,14 +296,63 @@ test("/pricing is a live money page, not a 404", async () => {
   const html = await res.text();
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
-  assert.match(html, /href="https:\/\/authichain.com\/api\/checkout\/dpp"/);
-  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
+  );
   assert.doesNotMatch(html, /does not exist/);
 });
 
+test("free DoD packet is live, unpaid, and does not claim an award", async () => {
+  for (const path of ["/gift", "/sbir-packet", "/apex-packet"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.ok(html.includes("Nothing here is an award"));
+    const hrefs = [...html.matchAll(/\bhref="([^"]+)"/g)].map(m => m[1]);
+    const actions = [...html.matchAll(/\baction="([^"]+)"/g)].map(m => m[1]);
+    const isAppUrl = (raw: string, pathname: string) => {
+      try {
+        const u = new URL(raw);
+        return (
+          u.protocol === "https:" &&
+          u.hostname === "authichain.govchain.us" &&
+          u.pathname === pathname
+        );
+      } catch {
+        return false;
+      }
+    };
+    assert.ok(hrefs.some(h => isAppUrl(h, "/made-in-america")), path);
+    assert.ok(
+      hrefs.includes(
+        "https://govchain.us/p/sbir-svip-blockchain-document-verification"
+      ) || hrefs.includes("/p/sbir-svip-blockchain-document-verification"),
+      path
+    );
+    assert.ok(hrefs.includes("/onboard"), path);
+    assert.ok(
+      actions.some(a => a === GATED_DPP_ACTION),
+      path
+    );
+    assert.ok(!html.includes("SBIR awarded"));
+    assert.ok(!html.includes("strainchain_farm"));
+  }
+});
+
 test("landing-owned sitemap URLs resolve on this worker", async () => {
-  for (const path of ["/", "/pricing"]) {
+  for (const path of [
+    "/",
+    "/pricing",
+    "/gift",
+    "/llms.txt",
+    "/openapi.json",
+    "/api/x402",
+    "/mcp",
+  ]) {
     const res = await get(path);
     assert.ok(
       res.status >= 200 && res.status < 400,
@@ -125,10 +373,14 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/govchain.us\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/govchain.us\/sitemap.xml/);
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
+  assert.ok(commentPaths.includes("/mcp"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);

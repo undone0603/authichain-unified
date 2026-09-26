@@ -34,8 +34,14 @@ jobs:
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
         run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
 
+      - name: Check sister x402 facilitator bind matches authichain-com
+        run: pnpm exec vitest run scripts/__tests__/bind-x402-secrets.test.ts
+
       - name: Check AgentZ tunnel gh secret set ($0 bring-up)
         run: pnpm exec vitest run scripts/__tests__/resolve-agent-secret.test.ts
+
+      - name: Check autonomy manifest, reconciler, breaker and pulse
+        run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
 
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs

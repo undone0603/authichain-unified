@@ -37,10 +37,10 @@ export default function Whitepapers() {
         {
           "@type": "TechArticle",
           "headline": "AuthiChain: Technical Superiority & Competitive Intelligence",
-          "description": "A multi-dimensional analysis of AuthiChain vs. legacy digital twin architectures including IBM, atma.io, and Arianee.",
+          "description": "Technical overview of AuthiChain's certificate architecture.",
           "author": { "@type": "Organization", "name": "AuthiChain Intelligence Council" },
           "datePublished": "2026-05-18",
-          "keywords": "Competitive Analysis, IBM, atma.io, Blockchain, Digital Twin, Bitcoin L1, W3C VC",
+          "keywords": "Blockchain, Digital Twin, Bitcoin L1, W3C VC",
           "articleSection": "Strategic Intelligence"
         },
         {
@@ -181,33 +181,6 @@ export default function Whitepapers() {
             </div>
           </section>
 
-          {/* Competitive Superiority Matrix */}
-          <section className="space-y-8">
-            <div className="flex items-center gap-3 border-b border-border/50 pb-4">
-              <Layers className="h-6 w-6 text-primary" />
-              <h2 className="text-xl font-bold uppercase tracking-widest">Competitive Technical Matrix</h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border/50 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <th className="py-4 px-4">Technical Feature</th>
-                    <th className="py-4 px-4 text-primary">AuthiChain Protocol</th>
-                    <th className="py-4 px-4">IBM Sovereign Core</th>
-                    <th className="py-4 px-4">Avery Dennison (atma.io)</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs">
-                  <MatrixRow label="Truth Anchor" auth="Bitcoin L1 (Public)" comp1="Hyperledger (Private)" comp2="GS1 Cloud (Centralized)" />
-                  <MatrixRow label="Identity Standard" auth="W3C Verifiable Credentials" comp1="Siloed Enterprise IDs" comp2="Proprietary EPCIS" />
-                  <MatrixRow label="Anti-Poisoning" auth="5-Agent AI Consensus" comp1="Manual Data Entry" comp2="Admin Validation" />
-                  <MatrixRow label="Encryption" auth="Ed25519 (Forensics-Grade)" comp1="Standard PKI" comp2="Database SSL" />
-                  <MatrixRow label="Compliance" auth="EU ESPR + FIPS 140-2" comp1="Custom Integration" comp2="ESPR Only" />
-                </tbody>
-              </table>
-            </div>
-          </section>
 
         </div>
 
@@ -274,13 +247,3 @@ function SpecItem({ title, desc }: any) {
   );
 }
 
-function MatrixRow({ label, auth, comp1, comp2 }: any) {
-  return (
-    <tr className="border-b border-border/30 hover:bg-primary/5 transition-colors">
-      <td className="py-4 px-4 font-medium text-muted-foreground">{label}</td>
-      <td className="py-4 px-4 font-bold text-primary italic">{auth}</td>
-      <td className="py-4 px-4 opacity-60">{comp1}</td>
-      <td className="py-4 px-4 opacity-60">{comp2}</td>
-    </tr>
-  );
-}

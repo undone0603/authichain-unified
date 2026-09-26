@@ -634,13 +634,14 @@ class LaunchGovernor:
         user_prompt = "\n".join(lines)
 
         try:
-            from agentz.core.llm import get_llm
+            from agentz.core.llm import get_llm, invoke_within, plan_budget_seconds
             from langchain_core.messages import SystemMessage, HumanMessage
             llm = get_llm()
-            response = llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt),
-            ])
+            response = invoke_within(
+                llm,
+                [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)],
+                plan_budget_seconds(),
+            )
             return self._parse_llm_plan(response, goal)
         except Exception as e:
             logger.warning(f"LLM plan generation failed: {e}")

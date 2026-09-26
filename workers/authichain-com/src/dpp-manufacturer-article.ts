@@ -3,7 +3,7 @@
  *
  * authichain.com 404s unknown paths. This page must be served here (not only
  * as a content/ markdown draft) or it is unreachable. Checkout CTA is the
- * live DPP $299 rail — do not invent a demo calendar or AuthiChain Inc.
+ * live DPP checkout rail — do not invent a demo calendar or AuthiChain Inc.
  */
 import {
   ESTATE_BASE_CSS,
@@ -16,10 +16,9 @@ import {
   estateSkipLink,
 } from "../../_shared/estate-landing.ts";
 
-export const DPP_CHECKOUT = "/api/checkout/dpp";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 export const DPP_MANUFACTURER_ARTICLE_PATH = "/blog/eu-dpp-manufacturer";
-export const DPP_MANUFACTURER_ARTICLE_CANONICAL =
-  `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
+export const DPP_MANUFACTURER_ARTICLE_CANONICAL = `https://authichain.com${DPP_MANUFACTURER_ARTICLE_PATH}`;
 
 const ARTICLE_PATHS = new Set([
   DPP_MANUFACTURER_ARTICLE_PATH,
@@ -100,7 +99,7 @@ export function renderDppManufacturerArticle(): string {
     title:
       "Why AuthiChain Is Built for Digital Product Passports, Product Authentication, and Brand Protection",
     description:
-      "A manufacturer-focused perspective on EU digital product passport readiness, item-level identity, and how AuthiChain compares to Everledger-style traceability platforms. Live DPP checkout is $299.",
+      "A manufacturer-focused perspective on EU digital product passport readiness and item-level identity.",
     canonical: DPP_MANUFACTURER_ARTICLE_CANONICAL,
     keywords:
       "digital product passport platform, blockchain product authentication, brand protection, anti-counterfeit verification, QR code product provenance, EU DPP manufacturers",
@@ -109,27 +108,28 @@ export function renderDppManufacturerArticle(): string {
       [
         { href: "/dpp", label: "EU DPP" },
         { href: "/pricing", label: "Pricing" },
-        { href: "/vs/everledger", label: "vs Everledger" },
         { href: "/contact", label: "Contact" },
       ],
-      { href: DPP_CHECKOUT, label: "Start DPP checkout" },
+      { href: "/pricing", label: "View pricing" }
     )}
 <main id="main">
   ${estateHero({
-    eyebrow: "Digital Product Passports · Brand Protection · Blockchain Authentication",
-    title: "Why AuthiChain is built for the next generation of product trust infrastructure",
+    eyebrow:
+      "Digital Product Passports · Brand Protection · Blockchain Authentication",
+    title:
+      "Why AuthiChain is built for the next generation of product trust infrastructure",
     lede: "Digital product passports are moving from concept to requirement. Brands now need a way to authenticate products, preserve provenance, support compliance narratives, and give every scan a consumer-facing trust experience.",
-    actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: true },
-      { href: "/pricing", label: "View pricing", primary: false },
-    ],
+    emailCheckout: {
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout",
+    },
+    actions: [{ href: "/pricing", label: "View pricing", primary: false }],
   })}
   <section class="estate-section" id="article">
     <div class="wrap article-wrap article-prose">
       <h2>What this article covers</h2>
       <ul>
         <li>Why item-level identity matters for anti-counterfeit and traceability.</li>
-        <li>Where Everledger set an early benchmark in provenance and digital identity.</li>
         <li>How AuthiChain can position itself as a more agile, product-first platform.</li>
       </ul>
       <table>
@@ -147,43 +147,7 @@ export function renderDppManufacturerArticle(): string {
       <p>The technical challenge is not just storing data; it is establishing a trustworthy product identity that can survive handoffs, audits, resale, and consumer verification.</p>
       <p class="article-note">Regulatory peg (first-party plan notes, not legal advice): EU batteries DPP obligations ramp toward <strong>18 Feb 2027</strong> (Battery Regulation Art. 77); DPP Registry context mid-2026. Confirm against current Commission / ESPR materials before any compliance claim in outbound mail.</p>
 
-      <h2>Why Everledger matters — Early provenance benchmark</h2>
-      <p>Everledger describes itself as a digital transparency company focused on increasing transparency in global supply chains. Platform messaging emphasizes supplier compliance, chain of custody reporting, fraud detection, and media-rich provenance records.</p>
-      <p>Across product and industry pages, Everledger positions around digital identities, smartphone-accessible product experiences, and the ability to authenticate, transfer, and track products. It also highlights blockchain, IoT, AI, RFID, NFC, and QR as part of a broader trust stack for global supply chain visibility.</p>
-      <p>Themes: transparency · provenance · private blockchain · chain of custody · luxury and fashion.</p>
-
-      <h2>Competitive positioning — Where AuthiChain can differentiate</h2>
-      <p>Everledger established a strong narrative around provenance and enterprise transparency, especially in asset-sensitive categories. AuthiChain can differentiate with a more direct, implementation-ready story around product authentication, QR-native verification, digital passports, and consumer trust activation.</p>
-      <table>
-        <thead><tr><th>Dimension</th><th>Everledger-style positioning</th><th>AuthiChain positioning opportunity</th></tr></thead>
-        <tbody>
-          <tr>
-            <th>Core narrative</th>
-            <td>Supply chain transparency, provenance, compliance, digital identities</td>
-            <td>Fast, verifiable product trust: authentication, anti-counterfeit, product passport deployment, and brand engagement in one flow</td>
-          </tr>
-          <tr>
-            <th>User entry point</th>
-            <td>Platform-centered, enterprise workflow oriented</td>
-            <td>Scan-centered, product-centered, easier to understand at the point of interaction</td>
-          </tr>
-          <tr>
-            <th>Physical-to-digital bridge</th>
-            <td>RFID, NFC, QR, AI, IoT-linked records</td>
-            <td>Lead with QR-native verification; extend to additional identifiers as needs grow</td>
-          </tr>
-          <tr>
-            <th>Trust moment</th>
-            <td>Back-office provenance + consumer-facing authenticated experiences</td>
-            <td>Immediate public verification page that proves legitimacy while opening a brand channel</td>
-          </tr>
-          <tr>
-            <th>Go-to-market</th>
-            <td>Transparency platform for regulated / asset-intensive supply chains</td>
-            <td>Composable authentication for brands that need trust, traceability, and DPP readiness without heavyweight complexity</td>
-          </tr>
-        </tbody>
-      </table>
+      <h2>Early provenance registries (2016–2023)</h2><p>Everledger (2016–2023) was an early blockchain provenance company, best known for diamonds. Its operating companies entered liquidation in 2023.</p>
 
       <h2>Strategic angle — Sell outcomes, not “we also use blockchain”</h2>
       <p>The strongest positioning is not “we also use blockchain.” The stronger message is that AuthiChain helps a brand:</p>
@@ -193,8 +157,6 @@ export function renderDppManufacturerArticle(): string {
         <li><strong>Compliance readiness</strong> — Structure product data so it can support evolving digital passport and regulatory demands.</li>
         <li><strong>Consumer trust</strong> — Turn each verification scan into a proof point, not a dead-end serial number check.</li>
       </ol>
-      <h3>Suggested positioning paragraph</h3>
-      <p>Everledger showed the market that provenance and supply chain transparency can be organized around digital identities and immutable records. AuthiChain takes that core trust model and makes it more actionable for modern brands that need QR-linked authentication, product passport deployment, and customer-visible proof at the item level.</p>
       <p>Instead of treating trust as a back-office reporting layer, AuthiChain frames it as a live product interface. A scanned code should not just reference a database entry; it should prove the item, expose its story, and create a trusted connection between brand, buyer, and product lifecycle data.</p>
 
       <h2>Positioning summary</h2>
@@ -204,11 +166,18 @@ export function renderDppManufacturerArticle(): string {
   </section>
   ${estateCtaBand({
     title: "Build your product passport stack on AuthiChain",
-    lede: "If your brand needs verifiable authentication, QR-linked product identity, and a digital product passport foundation that can scale into traceability and compliance, start with the live DPP checkout. Self-serve; no demo calendar required.",
+    lede: "If your brand needs verifiable authentication, QR-linked product identity, and a digital product passport foundation that can scale into traceability and compliance, start with the live DPP checkout. Enter a work email so Stripe can recover the cart. Self-serve; no demo calendar required.",
+    emailCheckout: {
+      action: DPP_CHECKOUT,
+      label: "Start DPP checkout",
+    },
     actions: [
-      { href: DPP_CHECKOUT, label: "Start DPP checkout", primary: true },
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/api/checkout/plan/strainchain_passport", label: "Genetics passport — $49", primary: false },
+      {
+        href: "/pricing",
+        label: "Genetics passport — $49",
+        primary: false,
+      },
     ],
   })}
 </main>
@@ -218,7 +187,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: DPP_CHECKOUT, label: "DPP checkout" },
+        { href: "/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],
@@ -228,7 +197,6 @@ ${estateFooter(
       links: [
         { href: DPP_MANUFACTURER_ARTICLE_PATH, label: "Manufacturer article" },
         { href: "/dpp", label: "EU DPP" },
-        { href: "/vs/everledger", label: "vs Everledger" },
       ],
     },
     {
@@ -239,7 +207,7 @@ ${estateFooter(
       ],
     },
   ],
-  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. No call booking — checkout or a written packet.",
+  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. No call booking — checkout or a written packet."
 )}`,
   });
 }

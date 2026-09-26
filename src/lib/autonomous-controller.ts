@@ -180,7 +180,7 @@ export class AutonomousController {
               html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #c9a227">
                 <h1 style="color:#c9a227">Here's your sample</h1>
                 <p>Hi ${firstName}, as promised — here's a live demo QR code cryptographically anchored on AuthiChain.</p>
-                <p>Every scan is logged on-chain. Your brand, your provenance. <strong>Nothing faked.</strong></p>
+                <p>Our goal: log every scan on-chain. Your brand, your provenance. <strong>Nothing faked.</strong></p>
                 <a href="${APP_URL}/demo" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">View Live Demo</a>
                 <p style="color:#9e9e9e;font-size:13px">I'll follow up in a few days to see if it fits your workflow.</p>
               </div>`,

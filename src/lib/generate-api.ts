@@ -6,7 +6,7 @@
  * This module is the worker-owned handler: credit packs come from
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
-import { listedPlans, type Plan } from "./plans";
+import { listedPlans, planPaymentLink, type Plan } from "./plans";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -33,8 +33,8 @@ export function generateCreditPacks(): CreditPack[] {
       cta: p.cta,
       checkout:
         p.id === "dpp_readiness"
-          ? "/api/checkout/dpp"
-          : p.stripe_payment_link || "/pricing",
+          ? "https://authichain.com/checkout/dpp_readiness"
+          : planPaymentLink(p.id) || "/pricing",
     }));
 }
 

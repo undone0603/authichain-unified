@@ -48,7 +48,7 @@ test("authentic-agentic-economy is not in the redirect set", () => {
   );
   assert.equal(
     tryRedirectSeoRootCanonical(
-      new Request("https://authichain.com/authentic-agentic-economy")
+      new Request("https://authichain.govchain.us/authentic-agentic-economy")
     ),
     null
   );
@@ -69,7 +69,7 @@ test("tryRedirectSeoRootCanonical ignores unknown paths, nested paths, and POST"
   );
   assert.equal(
     tryRedirectSeoRootCanonical(
-      new Request("https://authichain.com/what-is-a-digital-product-passport", {
+      new Request("https://authichain.govchain.us/what-is-a-digital-product-passport", {
         method: "POST",
       })
     ),
@@ -85,13 +85,13 @@ test("every listed slug redirects on GET and HEAD", () => {
   for (const slug of SEO_ROOT_REDIRECT_SLUGS) {
     for (const method of ["GET", "HEAD"] as const) {
       const res = tryRedirectSeoRootCanonical(
-        new Request(`https://authichain.com/${slug}`, { method })
+        new Request(`https://authichain.govchain.us/${slug}`, { method })
       );
       assert.ok(res, `${method} /${slug}`);
       assert.equal(res.status, 301, `${method} /${slug}`);
       assert.equal(
         res.headers.get("location"),
-        `https://authichain.com/p/${slug}`,
+        `https://authichain.govchain.us/p/${slug}`,
         `${method} /${slug}`
       );
     }

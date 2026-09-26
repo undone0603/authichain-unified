@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-20",
+  "updated": "2026-09-21",
   "binding": "MICROSITES_KV",
   "namespaceId": "a992900da1db4b998af1cdf4eccf550a",
   "kvWorker": "authichain",
@@ -10,12 +10,12 @@
     "passport": {
       "sku": "strainchain_passport",
       "priceUsd": 49,
-      "href": "https://authichain.com/api/checkout/plan/strainchain_passport"
+      "href": "https://authichain.com/checkout/strainchain_passport"
     },
     "dpp": {
       "sku": "dpp_readiness",
       "priceUsd": 299,
-      "href": "https://authichain.com/api/checkout/dpp"
+      "href": "https://authichain.com/checkout/dpp_readiness"
     }
   },
   "packs": [
@@ -54,6 +54,15 @@
       "hosts": ["strainchain.authichain.com"],
       "kvKeys": ["strainchain/index.html"],
       "primaryCta": "passport"
+    },
+    {
+      "slug": "bat-2026-001",
+      "file": "bat-2026-001/index.html",
+      "canonicalPath": "/m/bat-2026-001",
+      "aliases": ["/m/insulin-vial"],
+      "hosts": ["bat-2026-001.authichain.com"],
+      "kvKeys": ["bat-2026-001/index.html", "insulin-vial/index.html"],
+      "primaryCta": "dpp"
     }
   ]
 }

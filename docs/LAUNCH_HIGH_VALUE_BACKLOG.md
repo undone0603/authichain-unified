@@ -16,7 +16,7 @@ Secret **names** only. No values.
 | (a) | First Stripe / DPP smoke purchase | **4.0** | `GET /api/checkout/dpp` **303** to `checkout.stripe.com` (live). Smoke buyer owner-attested. Gap: Dashboard must hit `/api/stripe/webhook` (legacy URL 404/410); `/api/funnel` was 404 (fixed in this PR, needs deploy).                                                                                           |
 | (b) | B2B / email live-send reliability | **1.5** | Workflows **active**, `OWNER_LIVE_SEND` attested true, scripts fail-closed. **Guardrail API 404s** on apex; client defaults to `app.authichain.com`. Parallel: _Unblock B2B outreach + guardrail_.                                                                                                                 |
 | (c) | AgentZ ↔ claw productionization   | **3.5** | Tunnel `/health` 200 sovereign; claw `agentz_api: configured`. Chat `run` now sends `?mode=` + JSON; FastAPI honors both. Architect / `*email*` stay dry-run unless explicit `live`. Access service token still owner. Do not invent `OPENCLAW_GATEWAY_URL`.                                                       |
-| (d) | x402 agent payments               | **4.5** | **Ready (not `not_configured`).** Live `GET /api/x402/health` → 200 `ready` / `trustless`; payTo `0x5db5…6AA2`, Base 8453, Circle USDC, $0.05/call, PayAI reachable. `POST /api/x402` → 402 + EIP-712 extra. Public docs `https://authichain.com/x402`. Self-pay smokes already succeeded — do not rebind secrets. |
+| (d) | x402 agent payments               | **4.5** | **Ready (not `not_configured`).** Live `GET /api/x402/health` → 200 `ready` / `trustless`; payTo `0xaebf…e437`, Base 8453, Circle USDC, $0.05/call, PayAI reachable. `POST /api/x402` → 402 + EIP-712 extra. Public docs `https://authichain.com/x402`. Do not rebind secrets away from the owner-authorized treasury. // pragma: allowlist secret |
 | (e) | app.* / brand surfaces            | **4.0** | Four apex + estate `/onboard`/`/generate` **200**. `app.authichain.com/dashboard` **200**. `app.authichain.com/` **302 → /dashboard** (#1068). Vertical `*chain-io` routes mostly commented.                                                                                                                       |
 | (f) | Autonomous revenue loops          | **3.5** | Checkout + genesis + `/api/funnel` live. Schedule `DRY_RUN` fail-closed (orchestration + content-publish). Claw/AgentZ mode honored. `ghost-traffic` does real light probes. Funnel accepts `dpp_published` / `verification` / `retained` aliases. Next `/api/dpp/publish` + `/verify` still not on edge.          |
 
@@ -46,7 +46,7 @@ Secret **names** only. No values.
 | Funnel mount + `isDppOffer` priceId | #1067. Live `POST /api/funnel` → 400 (mounted, not 404).                                                                                                                                                                                                                                                                          |
 | Orchestration schedule fail-closed  | #1065 + this PR. Schedule sets `dry_run=true`; never `inputs.dry_run \|\| 'false'`.                                                                                                                                                                                                                                               |
 | `app.authichain.com/` 302           | #1068. Edge-router + landing redirect `/` → `/dashboard`.                                                                                                                                                                                                                                                                         |
-| x402 health mount                   | #1068. `GET /api/x402/health` on landing + edge. Bind workflow #1072/#1074 (payTo / tokenomics EOA + PayAI) — do not invent pay-to. See `docs/strategy/WEB3_IDENTITY.md`.                                                                                                                                                          |
+| x402 health mount                   | #1068. `GET /api/x402/health` on landing + edge. Bind workflow #1072/#1074 (payTo / tokenomics EOA + PayAI) — do not invent pay-to. See `docs/strategy/WEB3_IDENTITY.md`.                                                                                                                                                         |
 | x402 live rail                      | Health **ready** / trustless; unpaid `POST /api/x402` **402**. PayTo + Circle USDC + PayAI already bound — **do not rebind**. Self-pay smokes succeeded (proof only).                                                                                                                                                             |
 | x402 public docs                    | `GET https://authichain.com/x402` (and `/docs/x402`) → 200 HTML: price, payTo, health URL, unpaid 402 curls. No facilitator URL, no keys.                                                                                                                                                                                         |
 | Claw ↔ AgentZ `mode` contract       | This PR. Query + JSON body; architect/cold-email fail-closed without `live`.                                                                                                                                                                                                                                                      |
@@ -167,11 +167,11 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 
 - **Shipped (this PR):** Claw appends `?mode=` + JSON body. FastAPI `resolve_execution_mode` honors query then body. Architect / `*email*` coerce to dry-run unless `live=true`.
 - **Tests:** `agentz/tests/test_mode_contract.py`, `workers/authichain-openclaw/src/agentz-mode.test.ts`.
-- **Still owner:** Cloudflare Access service token headers on claw if the tunnel policy requires them. Do not invent `OPENCLAW_GATEWAY_URL`. `AGENT_SECRET` default `"authichain-secret"` in `agentz/api/main.py` is still a foot-gun.
+- **Still owner:** Cloudflare Access service token headers on claw if the tunnel policy requires them. Do not invent `OPENCLAW_GATEWAY_URL`. `verify_token` in `agentz/api/main.py` now fails closed (503) when `AGENT_SECRET` is unset; the `"authichain-secret"` fallback is gone, so the container must have `AGENT_SECRET` bound.
 
 ### P1-2. x402 on the edge — **ready (not `not_configured`)**
 
-- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402` (#1068). Bind #1072/#1074/#1076 (payTo / tokenomics EOA + PayAI + Base USDC). Live health: `ready`, `trustless`, $0.05, payTo `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`. Unpaid POST → 402 + EIP-712 extra. Public docs `/x402`. Identity: `docs/strategy/WEB3_IDENTITY.md`.
+- **Shipped:** Landing + edge `GET /api/x402/health` / `GET /api/x402` (#1068). Bind #1072/#1074/#1076 (payTo / tokenomics EOA + PayAI + Base USDC). Live health: `ready`, `trustless`, $0.05, payTo `0xaebf…e437`. Unpaid POST → 402 + EIP-712 extra. Public docs `/x402`. Identity: `docs/strategy/WEB3_IDENTITY.md`.
 - **Do not:** rebind payTo or facilitator; invent a new receiving address; dispatch another live settle unless verifying a deploy regression.
 - **Remaining:** third-party discovery (this docs page) and first _external_ agent payment — not owner plumbing.
 
@@ -217,7 +217,7 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 | P2-2  | Daily DPP exception cron is dispatch-only                       | `autonomous-business-cycle.yml` schedule retired | S      | Ops blind spot; `CRON_SECRET` already required                                         |
 | P2-3  | `app.authichain.com/` 404 — **shipped 302**                     | #1068; live GET `/` 302 → `/dashboard`           | S      | Done                                                                                   |
 | P2-4  | Drop `authichain-telegram` + `passport-demo` from deploy matrix | `deploy-workers.yml`; steward skill flake        | S      | CI noise, not revenue                                                                  |
-| P2-5  | `services/agentz/` vs root `agentz/` drift                      | Containers/API use root `agentz/`                | M      | Wrong-tree PRs never ship                                                              |
+| P2-5  | `services/agentz/` vs root `agentz/` drift — **fork deleted**   | Root `agentz/` is the only tree                  | M      | Done                                                                                   |
 | P2-6  | Expand AgentZ container env beyond 3 secrets                    | `workers/authichain-agentz/src/env.ts`           | M–L    | Chat `run` / architect confirm fail preflight. **$0:** stay on tunnel, not Containers. |
 | P2-7  | OpenClaw gateway reverse path                                   | `OPENCLAW_GATEWAY_URL` health-only; no fetch     | M      | Owner must supply real URL first                                                       |
 | P2-8  | Sibling `gov-*` enable after mint proof                         | `docs/operations/base-chain-integration.md`      | Owner  | ingest → score → proposals → mint → notify → engine                                    |
@@ -240,8 +240,8 @@ This PR only does: fail-closed schedules, claw↔AgentZ mode, ghost-traffic prob
 **claw / AgentZ:**  
 `AGENTZ_API_URL` (secret-only), `AGENTZ_API_KEY`, `AGENT_SECRET`, optional owner `OPENCLAW_GATEWAY_URL` + `OPENCLAW_API_KEY`. Access service token names if policy requires (owner). Do not invent the gateway URL.
 
-**x402 (already bound — do not rebind):**  
-`X402_PAY_TO`, `X402_FACILITATOR_URL`, `X402_USDC_ASSET` on `authichain-com` and `authichain-edge-router`. Names only.
+**x402 (already bound on landing — do not rebind the URL):**  
+`X402_PAY_TO`, `X402_FACILITATOR_URL`, `X402_USDC_ASSET` on `authichain-com` and `authichain-edge-router`. Same names on sister apexes `qron-space`, `strainchain-io`, `govchain-us` so a third-party pay can settle. Names only.
 
 **Do not set:** guessed `GOVCHAIN_NFT_CONTRACT` if `eth_getCode` is empty.
 

@@ -9,6 +9,8 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
 const APP = "https://app.example.com";
@@ -41,6 +43,26 @@ async function get(
   env: { APP_ORIGIN?: string } = { APP_ORIGIN: APP }
 ) {
   return worker.fetch(new Request(`https://strainchain.io${path}`), env);
+}
+
+/** Parse sitemap <loc> values as https URLs — do not concatenate schemes. */
+function sitemapHttpsLocs(xml: string): URL[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "strainchain.io");
+    return url;
+  });
+}
+
+/** Parse robots `# https://…` comment URLs — do not substring-match hosts. */
+function robotsHttpsCommentPaths(text: string): string[] {
+  return [...text.matchAll(/^# (https:\/\/\S+)/gm)].map(match => {
+    const url = new URL(match[1]);
+    assert.equal(url.protocol, "https:");
+    assert.equal(url.hostname, "strainchain.io");
+    return url.pathname;
+  });
 }
 
 test("verification paths are proxied to the app, not answered with marketing", async () => {
@@ -102,6 +124,30 @@ test("query strings survive the hop", async () => {
   }
 });
 
+test("the apex offers Passport checkout and the Farm Plan Payment Link", async () => {
+  const res = await get("/");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /name="email"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
+  );
+  assert.doesNotMatch(
+    html,
+    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
+  );
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
+  );
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+  );
+  assert.doesNotMatch(html, /9B6cN59br5xcaCuazy1Nu1o/);
+  assert.match(html, /Passport checkout — \$49/);
+  assert.doesNotMatch(html, /calendly/i);
+});
+
 test("marketing paths stay on this worker", async () => {
   const f = stubFetch();
   try {
@@ -112,6 +158,10 @@ test("marketing paths stay on this worker", async () => {
       "/sitemap.xml",
       "/favicon.svg",
       "/authichain2026indexnow.txt",
+      "/llms.txt",
+      "/openapi.json",
+      "/api/x402",
+      "/mcp",
     ]) {
       f.calls.length = 0;
       const res = await get(path);
@@ -180,10 +230,14 @@ test("IndexNow key file is served as short-cache plain text", async () => {
 test("robots and sitemap still answer after the IndexNow route", async () => {
   const robots = await get("/robots.txt");
   assert.equal(robots.status, 200);
-  assert.match(
-    await robots.text(),
-    /Sitemap: https:\/\/strainchain.io\/sitemap.xml/
-  );
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Sitemap: https:\/\/strainchain.io\/sitemap.xml/);
+  const commentPaths = robotsHttpsCommentPaths(robotsText);
+  assert.ok(commentPaths.includes("/llms.txt"));
+  assert.ok(commentPaths.includes("/openapi.json"));
+  assert.ok(commentPaths.includes("/api/x402"));
+  assert.ok(commentPaths.includes("/mcp"));
+  assert.doesNotMatch(robotsText, /GET \/api\/checkout/);
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
@@ -192,9 +246,192 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
 test("the sitemap advertises the genetics library", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
-  assert.ok(xml.includes("/genetics/mendo-love-farms"));
-  assert.ok(xml.includes("/onboard"));
-  assert.ok(xml.includes("<loc>https://strainchain.io/pricing</loc>"));
+  const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
+  assert.ok(paths.includes("/genetics/mendo-love-farms"));
+  assert.ok(paths.includes("/onboard"));
+  assert.ok(paths.includes("/pricing"));
+  assert.ok(paths.includes("/llms.txt"));
+  assert.ok(paths.includes("/openapi.json"));
+  assert.ok(paths.includes("/api/x402"));
+  assert.ok(paths.includes("/mcp"));
+  assert.equal(xml.includes("/api/checkout"), false);
+});
+
+test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST x402", async () => {
+  const llms = await get("/llms.txt");
+  assert.equal(llms.status, 200);
+  const text = await llms.text();
+  assert.match(text, /POST https:\/\/strainchain\.io\/api\/x402/);
+  assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
+  assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
+  assert.equal(
+    `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
+      'href="https://authichain.com/checkout/'
+    ),
+    true
+  );
+  assert.doesNotMatch(text, /GET \/api\/checkout/);
+
+  const specRes = await get("/openapi.json");
+  assert.equal(specRes.status, 200);
+  const spec = (await specRes.json()) as {
+    openapi: string;
+    servers: Array<{ url: string }>;
+    paths: {
+      "/api/x402": {
+        get?: { responses: { "200": unknown } };
+        post: {
+          "x-payment-info": { protocols: string[] };
+          responses: { "402": unknown };
+        };
+      };
+    };
+  };
+  assert.equal(spec.openapi, "3.1.0");
+  assert.deepEqual(spec.servers, [{ url: "https://strainchain.io" }]);
+  assert.ok(spec.paths["/api/x402"].get?.responses["200"]);
+  assert.deepEqual(spec.paths["/api/x402"].post["x-payment-info"].protocols, [
+    "x402",
+  ]);
+  assert.ok(spec.paths["/api/x402"].post.responses["402"]);
+});
+
+test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
+  const f = stubFetch();
+  try {
+    const unpaid = await worker.fetch(
+      new Request("https://strainchain.io/api/x402", { method: "POST" }),
+      { APP_ORIGIN: APP }
+    );
+    assert.equal(unpaid.status, 402);
+    assert.notEqual(unpaid.headers.get("x-served-by"), "strainchain-io-proxy");
+    assert.equal(f.calls.length, 0, "x402 must not be proxied");
+    const body = (await unpaid.json()) as {
+      x402Version: number;
+      resource?: { url?: string };
+      accepts: Array<{ payTo: string; amount?: string }>;
+      extensions?: { bazaar?: unknown };
+    };
+    assert.equal(body.x402Version, 2);
+    assert.equal(body.resource?.url, "https://strainchain.io/api/x402");
+    assert.equal(body.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+    assert.equal(body.accepts[0].amount, "50000");
+    assert.ok(body.extensions?.bazaar);
+    assert.ok(unpaid.headers.get("PAYMENT-REQUIRED"));
+
+    for (const path of ["/api/x402", "/api/x402/health"]) {
+      const health = await get(path);
+      assert.equal(health.status, 200, path);
+      const report = (await health.json()) as { payTo: string };
+      assert.equal(report.payTo, X402_PUBLISHED_PAY_TO, path);
+    }
+  } finally {
+    f.restore();
+  }
+});
+
+test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+  const f = stubFetch();
+  try {
+    for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
+      const res = await get(path);
+      assert.equal(res.status, 200, path);
+      assert.notEqual(res.headers.get("x-served-by"), "strainchain-io-proxy");
+      const body = (await res.json()) as {
+        protocol: string;
+        pay: { x402: string };
+        pricing: {
+          humanCheckout: {
+            passportPaymentLink?: string;
+            dppPaymentLink?: string;
+            farmPaymentLink?: string;
+            starterPaymentLink?: string;
+          };
+        };
+      };
+      assert.equal(body.protocol, "mcp", path);
+      assert.equal(body.pay.x402, "POST https://strainchain.io/api/x402", path);
+      assert.equal(
+        body.pricing.humanCheckout.passportPaymentLink,
+        planPaymentLink("strainchain_passport"),
+        path
+      );
+      assert.equal(
+        body.pricing.humanCheckout.farmPaymentLink,
+        planPaymentLink("strainchain_farm"),
+        path
+      );
+      assert.equal(
+        body.pricing.humanCheckout.starterPaymentLink,
+        undefined,
+        path
+      );
+      assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
+    }
+
+    const unpaid = await worker.fetch(
+      new Request("https://strainchain.io/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "verify" },
+        }),
+      }),
+      { APP_ORIGIN: APP }
+    );
+    assert.equal(unpaid.status, 402);
+    assert.equal(f.calls.length, 0, "mcp must not be proxied");
+    const required = (await unpaid.json()) as {
+      x402Version: number;
+      resource?: { url?: string };
+      accepts: Array<{ payTo: string }>;
+    };
+    assert.equal(required.x402Version, 2);
+    assert.equal(required.resource?.url, "https://strainchain.io/mcp");
+    assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
+  } finally {
+    f.restore();
+  }
+});
+
+test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+  const f = stubFetch();
+  try {
+    const res = await get("/api/x402/catalog");
+    assert.equal(res.status, 200);
+    assert.equal(f.calls.length, 0, "catalog must not be proxied");
+    const body = (await res.json()) as {
+      catalog: string;
+      humanCheckout: {
+        farmPaymentLink?: string;
+        passportPaymentLink?: string;
+        dppPaymentLink?: string;
+        starterPaymentLink?: string;
+      };
+    };
+    assert.equal(body.catalog, "/api/x402/catalog");
+    assert.equal(
+      new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
+      "authichain.com"
+    );
+    assert.equal(
+      new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
+      "authichain.com"
+    );
+    assert.equal(
+      new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
+      "authichain.com"
+    );
+    assert.equal(body.humanCheckout.starterPaymentLink, undefined);
+    const blob = JSON.stringify(body);
+    assert.equal(blob.includes("/api/checkout"), false);
+    assert.equal(blob.toLowerCase().includes("facilitator.payai"), false);
+  } finally {
+    f.restore();
+  }
 });
 
 test("/pricing is a real catalogue page, not a 404", async () => {
@@ -206,9 +443,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.equal(f.calls.length, 0, "/pricing must not be proxied");
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-    assert.match(html, /https:\/\/buy\.stripe\.com\/9B6cN59br5xcaCuazy1Nu1o/);
-    assert.match(html, /\$199/);
-    assert.match(html, /StrainChain Basic/);
+    assert.ok(
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+    );
+    assert.match(html, /\$149/);
+    assert.doesNotMatch(html, /StrainChain Basic/);
   } finally {
     f.restore();
   }

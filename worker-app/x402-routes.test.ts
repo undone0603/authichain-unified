@@ -58,6 +58,39 @@ describe("GET /api/x402/health", () => {
     expect(body.catalog).toBe("/api/x402/catalog");
   });
 
+  it("GET /.well-known/x402 is the x402scan fan-out", async () => {
+    const res = await app().request("/.well-known/x402");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      version: number;
+      resources: string[];
+      protocol?: string;
+    };
+    expect(body.version).toBe(1);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.protocol).toBeUndefined();
+  });
+
+  it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
+    const res = await app().request("/openapi.json");
+    expect(res.status).toBe(200);
+    const spec = (await res.json()) as {
+      openapi: string;
+      paths: {
+        "/api/x402": {
+          post: {
+            "x-payment-info": { protocols: string[] };
+          };
+        };
+      };
+    };
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
+      "x402",
+    ]);
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
+  });
+
   it("GET /api/x402 is the same health document", async () => {
     const res = await app().request("/api/x402");
     expect(res.status).toBe(200);
@@ -89,16 +122,38 @@ describe("POST /api/x402", () => {
     expect(res.status).toBe(402);
     const body = (await res.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string; asset: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        asset: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(process.env.X402_PAY_TO);
     expect(body.accepts[0].asset).toBe(
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    const required = res.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as { x402Version: number; accepts: Array<{ amount?: string }> };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
   });
 
-  it("refuses a structural proof when no facilitator is configured", async () => {
+  it("refuses a payment proof with 503 before settlement (no registry bound)", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     process.env.X402_NETWORK = "base";
     const header = proofHeader({
@@ -112,8 +167,47 @@ describe("POST /api/x402", () => {
       headers: { "x-payment": header, "content-type": "application/json" },
       body: JSON.stringify({ sealId: "seal-1" }),
     });
-    expect(res.status).toBe(402);
-    const body = (await res.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
+  });
+});
+
+describe("POST /api/x402 with the VERIFY_APP binding", () => {
+  it("forwards the paid call to the Next registry route", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const seen: Request[] = [];
+    const env = {
+      VERIFY_APP: {
+        fetch: async (r: Request) => {
+          seen.push(r);
+          return new Response(JSON.stringify({ verified: true }), {
+            status: 200,
+          });
+        },
+      },
+    };
+    const res = await app().request(
+      "https://authichain.com/api/x402",
+      {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      },
+      env
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ verified: true });
+    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(seen[0].headers.get("x-payment")).toBe(header);
+    expect(await seen[0].json()).toEqual({ sealId: "seal-1" });
   });
 });

@@ -22,6 +22,7 @@ type SupabaseLike = {
 
 export type DppCheckoutSessionLike = {
   id: string;
+  mode?: string | null;
   metadata?: Record<string, string> | null;
   client_reference_id?: string | null;
   customer_email?: string | null;
@@ -51,6 +52,19 @@ export async function fulfillDppPaidSession(
   // smoke session (payment_status=paid, amount_total=0) must still write
   // payment_succeeded + provisioned. isDppOffer is the only offer gate.
   if (!isDppOffer(md, linePriceId)) {
+    return { handled: false, profileId: null };
+  }
+
+  // Fulfillment-collision guard (shared by both webhook endpoints): DPP
+  // readiness is a one-time audit. A subscription-mode / recurring Session —
+  // mode=subscription, a subscription id, or an unknown recurring price with
+  // no PLANS entry — must never be granted DPP credits. Fail closed without
+  // throwing: an unfulfillable recurring object can never succeed on retry.
+  const subscriptionId = toId(session.subscription);
+  if (session.mode === "subscription" || subscriptionId) {
+    console.error(
+      `[dpp-fulfill] refusing DPP grant for recurring checkout: session=${session.id} mode=${session.mode ?? "unknown"}`
+    );
     return { handled: false, profileId: null };
   }
 

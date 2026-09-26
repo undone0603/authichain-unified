@@ -35,7 +35,7 @@
 // shell rather than 500ing a crawler or a user browser.
 
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
@@ -45,8 +45,13 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
-import { listedPlans } from "../src/lib/plans";
+import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
+import {
+  CHECKOUT_EMAIL_FORM_CSS,
+  catalogPaymentLinkHtml,
+  emailCheckoutWithPaymentLinkHtml,
+} from "../src/lib/checkout-email";
 import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
@@ -72,6 +77,22 @@ function serveSpaShell(c: Context): Promise<Response> {
     new Request(new URL("/index.html", c.req.url), c.req.raw)
   );
 }
+
+// Estate look for the plain server-rendered forms (/onboard, /generate):
+// system font, readable measure, AuthiChain accent, and 44px minimum touch
+// targets on every input, select, button and action link (WCAG 2.5.5).
+export const SITE_FORM_CSS =
+  ":root{color-scheme:dark}" +
+  "body{margin:0;background:#09090b;color:#fafafa;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}" +
+  "main{max-width:40rem;margin:0 auto;padding:2rem 1.25rem 3rem}" +
+  "h1{font-size:1.75rem;line-height:1.2;margin:0 0 .75rem}h2{font-size:1.15rem;margin:1.5rem 0 .5rem}" +
+  "p{color:#d4d4d8}a{color:#00FFD1}code{color:#d4d4d8}" +
+  "label{display:block;margin:1rem 0 .35rem;font-weight:600;color:#fafafa}" +
+  "input,select{box-sizing:border-box;width:100%;min-height:44px;padding:.6rem .75rem;font:inherit;color:#fafafa;background:#18181b;border:1px solid #3f3f46;border-radius:.5rem}" +
+  "input:focus,select:focus{outline:2px solid #00FFD1;outline-offset:1px}" +
+  "button,.btn-link{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:44px;min-width:44px;margin-top:1.25rem;padding:.6rem 1.25rem;font:inherit;font-weight:700;color:#000;background:#00FFD1;border:0;border-radius:.5rem;cursor:pointer;text-decoration:none}" +
+  "main a{display:inline-flex;align-items:center;min-height:44px}" +
+  "[role=alert]{color:#fca5a5}";
 
 function htmlDocument(opts: {
   title: string;
@@ -120,7 +141,10 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     extraHead:
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
-      "</script>\n",
+      "</script>\n" +
+      "<style>" +
+      CHECKOUT_EMAIL_FORM_CSS +
+      "</style>\n",
     bodyHtml:
       "<main>\n<h1>" +
       escapeHtml(page.h1) +
@@ -133,7 +157,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
 function htmlResponse(
   c: Context,
   body: string,
-  status: 200 | 400 | 404
+  status: 200 | 400 | 404 | 500
 ): Response {
   return c.html(body, status);
 }
@@ -284,7 +308,24 @@ async function renderProductPassport(c: Context): Promise<Response> {
     }
 
     const db = getHyperdriveDb(c.env as any);
-    const result = await findPassportBySerial(db, serial);
+    const result = await new Promise<
+      Awaited<ReturnType<typeof findPassportBySerial>>
+    >((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("passport-lookup-timeout")),
+        2500
+      );
+      findPassportBySerial(db, serial).then(
+        value => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
 
     if (!result) {
       return htmlResponse(
@@ -356,6 +397,17 @@ async function renderProductPassport(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /p lookup failed", err);
+    if (err instanceof Error && err.message === "passport-lookup-timeout") {
+      return htmlResponse(
+        c,
+        notFoundHtml(
+          "Product Not Found",
+          "The registry lookup timed out. Publish a StrainChain passport from the live Payment Link on /pricing.",
+          pathname
+        ),
+        404
+      );
+    }
     return serveSpaShell(c);
   }
 }
@@ -376,7 +428,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Scan a QR code or enter a product ID to check authenticity.</p>\n" +
+      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -531,7 +583,7 @@ const LANDING_CONTENT: Record<
 > = {
   authichain: {
     eyebrow: "Product Authentication",
-    headline: "Issue seals. Bind products. Verify anywhere.",
+    headline: "Signed QR seals for real products.",
     subhead:
       "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
     features: [
@@ -548,7 +600,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live self-serve checkout via GET /api/checkout/dpp. $299 credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
       },
       {
         icon: "🌍",
@@ -572,7 +624,7 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "/api/checkout/dpp" },
+    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -772,6 +824,20 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
+  const primaryHtml = primaryIsCheckout
+    ? emailCheckoutWithPaymentLinkHtml({
+        action: content.primaryCta.href,
+        label: content.primaryCta.label,
+        inputId: "landing-checkout-email",
+        formId: "landing-checkout",
+      })
+    : '<a href="' +
+      escapeHtml(content.primaryCta.href) +
+      '">' +
+      escapeHtml(content.primaryCta.label) +
+      "</a>\n";
+
   const body =
     "<main>\n" +
     "<header>\n" +
@@ -787,11 +853,7 @@ function renderLanding(c: Context): Response {
     escapeHtml(content.subhead) +
     "</p>\n" +
     "<p>\n" +
-    '<a href="' +
-    escapeHtml(content.primaryCta.href) +
-    '">' +
-    escapeHtml(content.primaryCta.label) +
-    "</a>\n" +
+    primaryHtml +
     '<a href="' +
     escapeHtml(content.secondaryCta.href) +
     '">' +
@@ -831,6 +893,9 @@ function renderLanding(c: Context): Response {
       title: brand.displayName + " -- " + content.eyebrow,
       description: brand.description,
       canonicalPath,
+      extraHead: primaryIsCheckout
+        ? "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>"
+        : "",
       bodyHtml: body,
     }),
     200
@@ -839,9 +904,9 @@ function renderLanding(c: Context): Response {
 
 // --- /onboard - pilot intake -------------------------------------------------
 // Real intake, not a stub. GET renders a form. POST validates company,
-// contact, work email, vertical, and first product, then 303s to
-// /onboard/received. Persistence of paying pilots is HubSpot + Command;
-// this edge form is the public CTA the freeze doc said was missing.
+// contact, work email, vertical, and first product, writes a lead_captures
+// row, then 303s to /onboard/received. The founder alert is extra; a submit
+// is recorded only when the table write succeeds.
 
 const ONBOARD_VERTICALS = [
   "authichain",
@@ -853,7 +918,47 @@ const ONBOARD_VERTICALS = [
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
-function onboardFormHtml(error?: string): string {
+function onboardPayNowHtml(): string {
+  return (
+    '<section aria-label="Live checkout" class="onboard-pay">\n' +
+    "<h2>Or buy now, no call needed</h2>\n" +
+    "<p>The pilot request is free.</p>\n" +
+    '<p class="onboard-pay-links">\n' +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "StrainChain Passport — $49",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "strainchain_farm",
+      label: "StrainChain Farm Plan — $149/mo",
+    }) +
+    "\n" +
+    catalogPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "EU DPP Readiness Audit — $299",
+    }) +
+    "\n" +
+    "</p>\n" +
+    "</section>\n"
+  );
+}
+
+/** Per-site /onboard title. The estate apexes proxy here with X-Forwarded-Host. */
+export function onboardTitle(host: string): string {
+  const h = host.toLowerCase().replace(/:\d+$/, "");
+  if (h === "govchain.us" || (h.endsWith(".govchain.us") && h !== "authichain.govchain.us"))
+    return "Request access | GovChain";
+  if (h === "strainchain.io" || h.endsWith(".strainchain.io"))
+    return "Request a pilot | StrainChain";
+  return "Request a pilot | AuthiChain";
+}
+
+function onboardHost(c: Context): string {
+  return c.req.header("x-forwarded-host") || new URL(c.req.url).host;
+}
+
+function onboardFormHtml(error?: string, host = ""): string {
   const errorBlock = error
     ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
     : "";
@@ -861,14 +966,20 @@ function onboardFormHtml(error?: string): string {
     id => '<option value="' + id + '">' + escapeHtml(id) + "</option>"
   ).join("\n");
   return htmlDocument({
-    title: "Onboard a Pilot | AuthiChain",
+    title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
     canonicalPath: "/onboard",
+    extraHead:
+      "<style>" +
+      SITE_FORM_CSS +
+      CHECKOUT_EMAIL_FORM_CSS +
+      ".onboard-pay{margin-top:2rem;padding-top:1.25rem;border-top:1px solid #cbd5e1}.onboard-pay h2{font-size:1.1rem;margin:0 0 .4rem}.onboard-pay p{margin:0 0 .75rem}.onboard-pay-links{display:flex;flex-wrap:wrap;gap:.6rem}.onboard-pay-links a{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;text-decoration:none;font-weight:600}" +
+      "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Onboard a Pilot</h1>\n" +
-      "<p>Company, first product, work email. This is the public intake for the authentic economy — not a placeholder.</p>\n" +
+      "<p>Tell us your company, your first product and a work email, and we'll follow up about a free pilot seal.</p>\n" +
       errorBlock +
       '<form action="/onboard" method="post">\n' +
       '<label for="company">Company</label>\n' +
@@ -887,11 +998,52 @@ function onboardFormHtml(error?: string): string {
       '<input id="sku" name="sku" type="text" maxlength="40">\n' +
       '<label for="serial">Serial (optional)</label>\n' +
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
-      '<button type="submit">Request pilot seal</button>\n' +
+      '<button type="submit">Request a free pilot seal</button>\n' +
       "</form>\n" +
-      '<p><a href="/verify">Verify an existing seal</a></p>\n' +
+      onboardPayNowHtml() +
+      '<p>Questions? <a href="https://authichain.com/contact">Talk to us</a></p>\n' +
       "</main>",
   });
+}
+
+type PilotLeadRow = {
+  company: string;
+  contactName: string;
+  email: string;
+  vertical: string;
+  productName: string;
+  sku: string;
+  serial: string;
+  ref: string;
+};
+
+// Hyperdrive connects as the table owner. RLS is on but not forced, so this
+// insert is recorded even though the anon policy only allows launchcheck-grader.
+async function recordPilotLead(c: Context, row: PilotLeadRow): Promise<void> {
+  const db = getHyperdriveDb(
+    c.env as { HYPERDRIVE: { connectionString: string } }
+  );
+  const metadata = JSON.stringify({
+    company: row.company,
+    vertical: row.vertical,
+    product: row.productName,
+    sku: row.sku || undefined,
+    serial: row.serial || undefined,
+    ref: row.ref,
+  });
+  await db.execute(sql`
+    insert into lead_captures (
+      email, name, source, page_url, product_interest, metadata, status
+    ) values (
+      ${row.email},
+      ${row.contactName},
+      'onboard',
+      '/onboard',
+      ${row.vertical},
+      ${metadata},
+      'new'
+    )
+  `);
 }
 
 async function handleOnboardPost(c: Context): Promise<Response> {
@@ -900,6 +1052,8 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   let email = "";
   let vertical = "authichain";
   let productName = "";
+  let sku = "";
+  let serial = "";
   try {
     const form = await c.req.parseBody();
     company = String(form.company || "")
@@ -918,27 +1072,33 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     productName = String(form.productName || "")
       .trim()
       .slice(0, 80);
+    sku = String(form.sku || "")
+      .trim()
+      .slice(0, 40);
+    serial = String(form.serial || "")
+      .trim()
+      .slice(0, 40);
   } catch {
-    return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
+    return htmlResponse(c, onboardFormHtml("Could not read the form.", onboardHost(c)), 400);
   }
   if (!company || !contactName || !productName) {
     return htmlResponse(
       c,
-      onboardFormHtml("Company, contact, and first product are required."),
+      onboardFormHtml("Company, contact, and first product are required.", onboardHost(c)),
       400
     );
   }
   if (!EMAIL_RE.test(email)) {
     return htmlResponse(
       c,
-      onboardFormHtml("A valid work email is required."),
+      onboardFormHtml("A valid work email is required.", onboardHost(c)),
       400
     );
   }
   if (
     !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
   ) {
-    return htmlResponse(c, onboardFormHtml("Unknown vertical."), 400);
+    return htmlResponse(c, onboardFormHtml("Unknown vertical.", onboardHost(c)), 400);
   }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
@@ -948,6 +1108,25 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     .slice(0, 8)
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+  try {
+    await recordPilotLead(c, {
+      company,
+      contactName,
+      email,
+      vertical,
+      productName,
+      sku,
+      serial,
+      ref,
+    });
+  } catch (err) {
+    console.error("[onboard] lead_captures insert failed", err);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Could not record the pilot request. Try again.", onboardHost(c)),
+      500
+    );
+  }
   const dest = new URL("/onboard/received", c.req.url);
   dest.searchParams.set("ref", ref);
   dest.searchParams.set("vertical", vertical);
@@ -1021,10 +1200,15 @@ function renderOnboardReceived(c: Context): Response {
     " in " +
     escapeHtml(vertical) +
     ".</p>\n" +
-    "<p>Next: verify a production JWS against live JWKS, then complete a DPP smoke checkout when ready to pay.</p>\n" +
+    "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
+    emailCheckoutWithPaymentLinkHtml({
+      action: "https://authichain.com/checkout/dpp_readiness",
+      label: "Start DPP checkout — $299",
+      formId: "onboard-dpp-checkout",
+      inputId: "onboard-dpp-email",
+    }) +
     "<ul>\n" +
-    '<li><a href="/verify">Verify a seal</a></li>\n' +
-    '<li><a href="/api/checkout/dpp">DPP checkout</a></li>\n' +
+    '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1034,6 +1218,7 @@ function renderOnboardReceived(c: Context): Response {
       title: "Pilot request received | AuthiChain",
       description: "AuthiChain pilot intake confirmation.",
       canonicalPath: "/onboard/received",
+      extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
       bodyHtml: body,
     }),
     200
@@ -1049,7 +1234,7 @@ async function renderOnboard(c: Context): Promise<Response> {
   if (c.req.method === "POST") {
     return handleOnboardPost(c);
   }
-  return htmlResponse(c, onboardFormHtml(), 200);
+  return htmlResponse(c, onboardFormHtml(undefined, onboardHost(c)), 200);
 }
 
 // --- /story/<id> - StoryMode -------------------------------------------------
@@ -1084,7 +1269,7 @@ function launchProofStoryHtml(): string {
       "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
-      '<p><a href="/verify">Verify a seal</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      '<p><a href="/verify">Verify a seal (in development)</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
       "</main>",
   });
 }
@@ -1182,7 +1367,7 @@ function dashboardHtml(): string {
       "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
-      '<li><a href="/verify">Verify a seal</a></li>\n' +
+      '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
       '<li><a href="/generate">Generate a Living QR</a></li>\n' +
       '<li><a href="/protocol">Protocol</a></li>\n' +
       '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
@@ -1201,6 +1386,7 @@ function authenticateHtml(): string {
     description:
       "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
+    extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
@@ -1209,8 +1395,13 @@ function authenticateHtml(): string {
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
-      '<li><a href="/api/checkout/dpp">Start DPP checkout</a></li>\n' +
       "</ul>\n" +
+      emailCheckoutWithPaymentLinkHtml({
+        action: "https://authichain.com/checkout/dpp_readiness",
+        label: "Start DPP checkout — $299",
+        formId: "auth-dpp-checkout",
+        inputId: "auth-dpp-email",
+      }) +
       "</main>",
   });
 }
@@ -1229,8 +1420,8 @@ function generatePackLinksHtml(): string {
     .map(p => {
       const href =
         p.id === "dpp_readiness"
-          ? "/api/checkout/dpp"
-          : p.stripe_payment_link || "/pricing";
+          ? "/pricing"
+          : planPaymentLink(p.id) || "/pricing";
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1244,10 +1435,11 @@ function generatePackLinksHtml(): string {
     .join(" · ");
 }
 
+// The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
+// Stripe cleanup; the live top-ups are the catalogue Starter and Creator packs.
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
   PAYMENT_LINKS.qron.credits250,
-  PAYMENT_LINKS.qron.credits1000,
 ] as const;
 
 function generateCreditLinksHtml(): string {
@@ -1263,8 +1455,8 @@ function generateCreditLinksHtml(): string {
     );
   }).join("\n");
   return (
-    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
-    "<p>Need generation credits? Buy a credit pack on the published Stripe Payment Link. These are not Starter or Creator packs.</p>\n" +
+    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
+    "<p>Need more generations? Buy a pack:</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1280,14 +1472,15 @@ function generateFormHtml(error?: string): string {
     description:
       "Create a Living QR for a product URL. Public generate CTA for qron.space.",
     canonicalPath: "/generate",
+    extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
-      "<p>Target URL and a short prompt. Signed-in packs spend a generation credit via <code>POST /api/generate</code>. Without a session this form still queues a QRON onboard for a pilot seal.</p>\n" +
+      "<p>Enter a product URL and an optional style prompt. Each generation uses one credit from your pack. Not signed in? Submitting sends us a pilot seal request instead.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
-      '<label for="targetUrl">Product or verify URL</label>\n' +
+      '<label for="targetUrl">Product URL</label>\n' +
       '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
       '<label for="prompt">Style prompt (optional)</label>\n' +
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
@@ -1297,7 +1490,9 @@ function generateFormHtml(error?: string): string {
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
-      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +
+      // Absolute: qron.space proxies this page, and qron.space/dashboard and
+      // /login do not exist (404). Account links stay hidden until they do.
+      '<p><a href="https://authichain.com/onboard">Request a free pilot</a></p>\n' +
       "<script>\n" +
       "(function(){\n" +
       "var form=document.getElementById('generate-form');\n" +

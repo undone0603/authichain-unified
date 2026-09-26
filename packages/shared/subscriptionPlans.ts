@@ -10,7 +10,7 @@ export const SUBSCRIPTION_PLANS = {
     annualPrice: 470,
     monthlyQuota: 100,
     perAuthCost: "0.49",
-    paymentLink: "https://buy.stripe.com/7sY00j87n5xcfWObDC1Nu3r",
+    paymentLink: "https://authichain.com/pricing",
     features: [
       "100 authentications/month",
       "Basic AI image analysis",
@@ -29,7 +29,7 @@ export const SUBSCRIPTION_PLANS = {
     annualPrice: 1910,
     monthlyQuota: 2500,
     perAuthCost: "0.08",
-    paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s",
+    paymentLink: "https://authichain.com/pricing",
     features: [
       "2,500 authentications/month",
       "Advanced AI + blockchain verification",
@@ -51,7 +51,7 @@ export const SUBSCRIPTION_PLANS = {
     annualPrice: 7670,
     monthlyQuota: 25000,
     perAuthCost: "0.03",
-    paymentLink: "https://buy.stripe.com/6oU5kDfzP7Fk6medLK1Nu3t",
+    paymentLink: "https://authichain.com/pricing",
     features: [
       "25,000 authentications/month",
       "Full AI suite with custom models",
@@ -75,7 +75,7 @@ export const SUBSCRIPTION_PLANS = {
     annualPrice: 150000,
     monthlyQuota: 50000,
     perAuthCost: "0.25",
-    paymentLink: "https://buy.stripe.com/bJe00jfzP6Bg5iagXW1Nv2H",
+    paymentLink: "https://authichain.com/pricing",
     features: [
       "50,000 authentications/month",
       "ISO 13485 Compliance Module",

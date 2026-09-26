@@ -1,0 +1,10 @@
+{
+  "id": "I-fake-cert-untrusted-issuer",
+  "input": {
+    "objectFound": true,
+    "depth": "lookup",
+    "crypto": { "signatureValid": true, "issuerTrusted": false, "identityValid": true, "evidenceIntact": false, "statusActive": true },
+    "attestation": { "objectId": "ac:demo:fake-cert-01", "decision": "verified", "status": "active", "issuer": "unknown-issuer.example", "evidence": [] }
+  },
+  "expect": { "decision": "invalid", "reasonsInclude": ["issuer_untrusted"] }
+}

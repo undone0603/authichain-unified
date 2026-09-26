@@ -1,0 +1,15 @@
+{
+  "id": "H-cloned-serial-three-regions",
+  "input": {
+    "objectFound": true,
+    "depth": "history",
+    "crypto": { "signatureValid": true, "issuerTrusted": true, "identityValid": true, "evidenceIntact": true, "statusActive": true },
+    "attestation": { "objectId": "ac:demo:clone-01", "decision": "verified", "status": "active", "issuer": "Authichain-Core", "evidence": [] },
+    "scans": [
+      { "at": "2026-09-26T10:00:00Z", "lat": 42.3314, "lon": -83.0458, "region": "US-MI" },
+      { "at": "2026-09-26T10:08:00Z", "lat": 41.8781, "lon": -87.6298, "region": "US-IL" },
+      { "at": "2026-09-26T10:20:00Z", "lat": 40.7128, "lon": -74.006, "region": "US-NY" }
+    ]
+  },
+  "expect": { "decision": "anomaly", "reasonsInclude": ["cloned_identity_pattern"] }
+}

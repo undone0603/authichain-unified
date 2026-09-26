@@ -6,7 +6,7 @@ import {
   NFT_DEPLOYER_EOA,
   POLYGON_AUTHICHAIN_NFT,
   QRON_FACTORY_CALLER,
-  TOKENOMICS_PAY_TO,
+  QRON_HOLDER_EOA,
 } from "../lib/evm-chains.ts";
 
 const CONTRACT_ADDRESS = POLYGON_AUTHICHAIN_NFT;
@@ -149,7 +149,7 @@ async function main() {
     QRON_FACTORY_CALLER,
     COINBASE_SMART_WALLET,
     NFT_CLUSTER_KNOWN,
-    TOKENOMICS_PAY_TO,
+    QRON_HOLDER_EOA,
   ].map((a) => a.toLowerCase()));
 
   const summary = {

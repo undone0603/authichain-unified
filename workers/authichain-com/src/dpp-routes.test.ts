@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { tryHandleDppRoute } from "./dpp-routes";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 describe("tryHandleDppRoute", () => {
@@ -52,24 +52,24 @@ describe("tryHandleDppRoute", () => {
 
   it("returns null for DPP money APIs so APP_PREFIXES proxy them", async () => {
     const checkout = await tryHandleDppRoute(
-      req("/api/checkout/dpp?visit_id=dpp_abc")
+      req("https://authichain.com/checkout/dpp_readiness?visit_id=dpp_abc")
     );
     const activate = await tryHandleDppRoute(
-      new Request("https://authichain.com/api/dpp/activate", {
+      new Request("https://authichain.govchain.us/api/dpp/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: "cs_test_1" }),
       })
     );
     const webhook = await tryHandleDppRoute(
-      new Request("https://authichain.com/api/stripe/webhook", {
+      new Request("https://authichain.govchain.us/api/stripe/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: '{"type":"checkout.session.completed"}',
       })
     );
     const funnel = await tryHandleDppRoute(
-      new Request("https://authichain.com/api/funnel", {
+      new Request("https://authichain.govchain.us/api/funnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -79,7 +79,7 @@ describe("tryHandleDppRoute", () => {
       })
     );
     const publish = await tryHandleDppRoute(
-      new Request("https://authichain.com/api/dpp/publish", {
+      new Request("https://authichain.govchain.us/api/dpp/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visit_id: "dpp_abc", name: "Widget" }),

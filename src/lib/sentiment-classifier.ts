@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 export const SENTIMENTS = [
   "positive",
@@ -19,6 +19,7 @@ export const OBJECTION_TYPES = [
 export type ObjectionType = (typeof OBJECTION_TYPES)[number];
 
 export const CLASSIFIER_PROVIDERS = [
+  "workers_ai",
   "openai",
   "ollama",
   "heuristic",
@@ -33,11 +34,55 @@ export interface SentimentResult {
   confidence: number;
   reasoning: string;
   provider: ClassifierProvider;
+  /**
+   * Why a configured LLM was skipped, when the result came from a fallback
+   * (e.g. OpenAI 401/429). Redacted of key material. Absent when the first
+   * backend succeeded or none was configured.
+   */
+  fallbackReason?: string;
+}
+
+/**
+ * Minimal shape of the Cloudflare Workers AI binding (`env.AI`). Declared
+ * here so this module stays importable from Node, where there is no binding.
+ */
+export interface WorkersAIBinding {
+  run(model: string, input: Record<string, unknown>): Promise<unknown>;
+}
+
+/**
+ * Free-tier models, tried in order. Workers AI includes 10,000 Neurons a day
+ * at no charge; one reply classification is a few dozen Neurons, so this is
+ * the $0 primary. The plain `@cf/meta/llama-3.1-8b-instruct` was retired on
+ * 2026-05-30 (error 5028); its `-fast` variant stays active. GLM-4.7-Flash is
+ * Cloudflare's recommended replacement, kept second so one more retirement
+ * does not drop the free path.
+ */
+export const WORKERS_AI_REPLY_MODELS = [
+  "@cf/meta/llama-3.1-8b-instruct-fast",
+  "@cf/zai-org/glm-4.7-flash",
+] as const;
+/** Deadline for the whole Workers AI step, across every model tried. */
+export const WORKERS_AI_TIMEOUT_MS = 8000;
+
+/** Current, inexpensive model with reliable JSON output. */
+export const OPENAI_REPLY_MODEL = "gpt-4o-mini";
+
+/** Error text safe to store and return: key fragments removed, length capped. */
+export function describeClassifierError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replace(/sk-[A-Za-z0-9_*-]+/g, "sk-[redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
 }
 
 export interface ClassifierBackendStatus {
   /** First backend the waterfall will attempt. */
-  primary: "openai" | "ollama" | "heuristic";
+  primary: "workers_ai" | "openai" | "ollama" | "heuristic";
+  /** True when the Workers AI binding is present (the free primary). */
+  workersAiAvailable: boolean;
   /** Paid LLM secret that is absent. Unset when OpenAI can run. */
   missingSecret?: "OPENAI_API_KEY";
   paidLlmAvailable: boolean;
@@ -49,6 +94,8 @@ export interface ClassifierBackendStatus {
 export interface ClassifyReplyDeps {
   /** Override env for tests. */
   env?: NodeJS.ProcessEnv;
+  /** Cloudflare Workers AI binding (`env.AI`); tried first when present. */
+  workersAI?: WorkersAIBinding;
   /** Override fetch (Ollama HTTP). */
   fetchImpl?: typeof fetch;
   /** Override the OpenAI generateText call. */
@@ -60,6 +107,14 @@ export interface ClassifyReplyDeps {
 const DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434";
 const DEFAULT_OLLAMA_MODEL = "llama3.2";
 const OLLAMA_TIMEOUT_MS = 2500;
+/**
+ * Resend times out an inbound webhook after a few seconds and retries. With
+ * the SDK's defaults (2 retries with back-off, no deadline) one slow or failing
+ * OpenAI call outlasted it, so the first live reply after #1232 timed out.
+ * One attempt with a hard deadline keeps the route under that limit; on
+ * timeout the waterfall falls back and records why.
+ */
+export const OPENAI_TIMEOUT_MS = 8000;
 
 const CLASSIFY_PROMPT_PREAMBLE = `You are an expert sales analyst. Classify this customer reply to a business proposal.`;
 
@@ -82,8 +137,22 @@ export function ollamaIsConfigured(
 }
 
 export function resolveReplyClassifierBackend(
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  workersAI?: WorkersAIBinding
 ): ClassifierBackendStatus {
+  const base = resolveWithoutWorkersAI(env);
+  if (!workersAI) return { ...base, workersAiAvailable: false };
+  return {
+    ...base,
+    primary: "workers_ai",
+    workersAiAvailable: true,
+    waterfall: ["workers_ai", ...base.waterfall],
+  };
+}
+
+function resolveWithoutWorkersAI(
+  env: NodeJS.ProcessEnv
+): Omit<ClassifierBackendStatus, "workersAiAvailable"> {
   const ollamaHost = (env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST).replace(
     /\/$/,
     ""
@@ -308,18 +377,103 @@ export function classifyReplyEmailHeuristic(
   };
 }
 
+const SENTIMENT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    sentiment: { type: "string", enum: [...SENTIMENTS] },
+    objectionType: {
+      type: ["string", "null"],
+      enum: [...OBJECTION_TYPES, null],
+    },
+    objectionDetails: { type: ["string", "null"] },
+    confidence: { type: "number" },
+    reasoning: { type: "string" },
+  },
+  required: ["sentiment", "confidence", "reasoning"],
+};
+
+/** Pull the completion out of either Workers AI output shape. */
+function workersAIText(output: unknown): unknown {
+  const o = output as {
+    response?: unknown;
+    choices?: Array<{ message?: { content?: unknown } }>;
+  };
+  // Workers AI native shape: { response }. JSON Mode makes it an object.
+  if (o?.response !== undefined && o.response !== null) return o.response;
+  // OpenAI-compatible shape used by newer models: { choices: [{ message }] }.
+  return o?.choices?.[0]?.message?.content;
+}
+
+async function runWorkersAIModel(
+  model: string,
+  prompt: string,
+  ai: WorkersAIBinding
+): Promise<SentimentResult> {
+  const output = await ai.run(model, {
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 300,
+    response_format: {
+      type: "json_schema",
+      json_schema: SENTIMENT_JSON_SCHEMA,
+    },
+  });
+  const response = workersAIText(output);
+  if (response && typeof response === "object") {
+    return parseSentimentPayload(response, "workers_ai");
+  }
+  if (typeof response === "string" && response.trim()) {
+    return parseSentimentJson(response, "workers_ai");
+  }
+  throw new Error("Workers AI returned an empty completion");
+}
+
+async function classifyWithWorkersAI(
+  prompt: string,
+  ai: WorkersAIBinding
+): Promise<SentimentResult> {
+  const attempts = (async () => {
+    const errors: string[] = [];
+    for (const model of WORKERS_AI_REPLY_MODELS) {
+      try {
+        return await runWorkersAIModel(model, prompt, ai);
+      } catch (error) {
+        errors.push(`${model}: ${describeClassifierError(error)}`);
+      }
+    }
+    throw new Error(errors.join(" | "));
+  })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Workers AI timed out")),
+      WORKERS_AI_TIMEOUT_MS
+    );
+  });
+  try {
+    return await Promise.race([attempts, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function classifyWithOpenAI(
   prompt: string,
+  apiKey: string | undefined,
   generateOpenAI?: (prompt: string) => Promise<string>
 ): Promise<SentimentResult> {
+  // Key passed explicitly rather than read from process.env inside the SDK:
+  // on Workers the env is per-request bindings, not a process environment.
   const text = generateOpenAI
     ? await generateOpenAI(prompt)
     : (
         await generateText({
-          model: openai("gpt-4-turbo"),
+          model: createOpenAI({ apiKey })(OPENAI_REPLY_MODEL),
           prompt,
           temperature: 0.3,
           maxOutputTokens: 500,
+          maxRetries: 0,
+          abortSignal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
         })
       ).text;
   return parseSentimentJson(text, "openai");
@@ -365,7 +519,8 @@ async function classifyWithOllama(
 /**
  * Classify an inbound email reply.
  *
- * Waterfall (no new paid spend): OpenAI when OPENAI_API_KEY is set, else
+ * Waterfall (no new paid spend): Cloudflare Workers AI when the `AI` binding
+ * is passed (free daily allocation), then OpenAI when OPENAI_API_KEY is set,
  * local Ollama (ChatOllama-compatible /api/chat), else a conservative
  * heuristic. Any unexpected failure fail-closes to neutral so production
  * inbound capture never 500s on a missing LLM.
@@ -380,25 +535,51 @@ export async function classifyReplyEmail(
   const prompt = buildClassifyPrompt(emailBody, emailSubject);
   const fetchImpl = deps.fetchImpl ?? fetch;
 
+  let fallbackReason: string | undefined;
+  const withReason = (result: SentimentResult): SentimentResult =>
+    fallbackReason ? { ...result, fallbackReason } : result;
+
   try {
+    if (deps.workersAI) {
+      try {
+        return await classifyWithWorkersAI(prompt, deps.workersAI);
+      } catch (error) {
+        fallbackReason = `workers_ai: ${describeClassifierError(error)}`;
+        console.warn(
+          "Workers AI reply classification failed; trying next backend",
+          fallbackReason
+        );
+      }
+    }
+
     if (backend.paidLlmAvailable) {
       try {
-        return await classifyWithOpenAI(prompt, deps.generateOpenAI);
+        return await classifyWithOpenAI(
+          prompt,
+          env.OPENAI_API_KEY?.trim(),
+          deps.generateOpenAI
+        );
       } catch (error) {
+        const reason = `openai: ${describeClassifierError(error)}`;
+        fallbackReason = fallbackReason
+          ? `${fallbackReason}; ${reason}`
+          : reason;
         console.warn(
           "OpenAI reply classification failed; trying local fallback",
-          error
+          fallbackReason
         );
       }
     }
 
     if (ollamaIsConfigured(env)) {
       try {
-        return await classifyWithOllama(
-          prompt,
-          backend.ollamaHost,
-          backend.ollamaModel,
-          fetchImpl
+        return withReason(
+          await classifyWithOllama(
+            prompt,
+            backend.ollamaHost,
+            backend.ollamaModel,
+            fetchImpl
+          )
         );
       } catch (error) {
         console.warn(
@@ -409,10 +590,10 @@ export async function classifyReplyEmail(
     }
 
     const heuristic = deps.heuristic ?? classifyReplyEmailHeuristic;
-    return heuristic(emailBody, emailSubject);
+    return withReason(heuristic(emailBody, emailSubject));
   } catch (error) {
     console.error("Sentiment classification error:", error);
-    return failClosedNeutral(error);
+    return withReason(failClosedNeutral(error));
   }
 }
 

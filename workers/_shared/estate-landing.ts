@@ -7,6 +7,8 @@
  * conversion paths that already exist in the estate.
  */
 
+import { emailCheckoutWithPaymentLinkHtml } from "../../src/lib/checkout-email";
+
 export type EstateBrandId = "authichain" | "qron" | "govchain" | "strainchain";
 
 export interface EstateBrand {
@@ -248,6 +250,52 @@ nav.estate-nav, .nav {
 }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 .btn-sm { padding: 8px 14px; font-size: 0.85rem; width: auto; }
+button.btn { font: inherit; }
+.checkout-email-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: min(100%, 22rem);
+  text-align: left;
+}
+.hero-cta .checkout-email-form,
+.estate-actions .checkout-email-form { flex: 1 1 100%; max-width: 22rem; }
+.price-card .checkout-email-form { width: 100%; }
+.price-card .checkout-email-form .btn { width: 100%; }
+.checkout-email-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.checkout-email-form input[type="email"] {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+  color: var(--text);
+}
+.checkout-email-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+.checkout-need-email {
+  display: none;
+  max-width: 36rem;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  font-size: 0.92rem;
+}
+.checkout-need-email.is-visible { display: block; }
 .hero, .estate-hero {
   padding: 72px 20px 56px;
   text-align: left;
@@ -520,8 +568,24 @@ export function estateHero(opts: {
   eyebrow: string;
   title: string;
   lede: string;
+  lead?: EstateCta;
   actions: EstateCta[];
+  emailCheckout?: {
+    action: string;
+    label: string;
+  };
 }): string {
+  const emailForm = opts.emailCheckout
+    ? emailCheckoutWithPaymentLinkHtml({
+        action: opts.emailCheckout.action,
+        label: opts.emailCheckout.label,
+        formId: "hero-checkout",
+        inputId: "hero-checkout-email",
+      })
+    : "";
+  const lead = opts.lead
+    ? `<a class="btn btn-primary" href="${esc(opts.lead.href)}">${esc(opts.lead.label)}</a>`
+    : "";
   const actions = opts.actions
     .map(
       a =>
@@ -533,7 +597,7 @@ export function estateHero(opts: {
     <p class="estate-badge hero-badge">${esc(opts.eyebrow)}</p>
     <h1>${opts.title}</h1>
     <p class="estate-lede hero-sub">${opts.lede}</p>
-    <div class="estate-actions hero-cta">${actions}</div>
+    <div class="estate-actions hero-cta">${lead}${emailForm}${actions}</div>
   </div>
 </header>`;
 }
@@ -600,7 +664,19 @@ export function estateCtaBand(opts: {
   title: string;
   lede: string;
   actions: EstateCta[];
+  emailCheckout?: {
+    action: string;
+    label: string;
+  };
 }): string {
+  const emailForm = opts.emailCheckout
+    ? emailCheckoutWithPaymentLinkHtml({
+        action: opts.emailCheckout.action,
+        label: opts.emailCheckout.label,
+        formId: "cta-checkout",
+        inputId: "cta-checkout-email",
+      })
+    : "";
   const actions = opts.actions
     .map(
       a =>
@@ -611,7 +687,7 @@ export function estateCtaBand(opts: {
   <div class="wrap">
     <h2>${opts.title}</h2>
     <p class="section-sub">${opts.lede}</p>
-    <div class="estate-actions">${actions}</div>
+    <div class="estate-actions">${emailForm}${actions}</div>
   </div>
 </section>`;
 }
@@ -619,9 +695,12 @@ export function estateCtaBand(opts: {
 export function estateFooter(
   brand: EstateBrandId,
   columns: Array<{ heading: string; links: EstateLink[] }>,
-  note: string
+  note: string,
+  /** Replaces "<brand tagline>. Part of the AuthiChain estate." when set. */
+  tagline?: string
 ): string {
   const b = ESTATE_BRANDS[brand];
+  const taglineText = tagline ?? `${b.tagline}. Part of the AuthiChain estate.`;
   const cols = columns
     .map(col => {
       const lis = col.links
@@ -634,13 +713,13 @@ export function estateFooter(
   <div class="footer-grid">
     <div>
       <a class="nav-logo" href="/">${estateMark(brand)}${esc(b.wordmark)}</a>
-      <p style="margin-top:12px;max-width:280px">${esc(b.tagline)}. Part of the AuthiChain estate.</p>
+      <p style="margin-top:12px;max-width:280px">${esc(taglineText)}</p>
     </div>
     ${cols}
   </div>
   <div class="estate-legal">
     <p>© 2026 ${esc(b.name)}</p>
-    <p>${note}</p>
+    ${note ? `<p>${note}</p>` : ""}
   </div>
 </footer>`;
 }
@@ -650,7 +729,7 @@ export function estateSkipLink(): string {
 }
 
 export const ESTATE_SISTER_LINKS: EstateLink[] = [
-  { href: "https://authichain.com", label: "AuthiChain" },
+  { href: "https://authichain.govchain.us", label: "AuthiChain" },
   { href: "https://qron.space", label: "QRON" },
   { href: "https://govchain.us", label: "GovChain" },
   { href: "https://strainchain.io", label: "StrainChain" },

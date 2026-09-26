@@ -119,7 +119,7 @@ export default function AuthichainEnterprise() {
             <Database className="w-10 h-10 text-gold mb-8 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">Immutable Anchor</h3>
             <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter">
-              Provenance data is hashed and anchored on the Polygon network, providing a permanent, tamper-proof record of every scan and transaction.
+              Provenance data is hashed and anchored on the Polygon network, with the goal of a tamper-evident record of every scan and transaction.
             </p>
           </div>
           <div className="protocol-card p-10 group hover:border-gold/40 transition-all">

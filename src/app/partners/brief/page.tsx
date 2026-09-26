@@ -162,10 +162,10 @@ export default function PartnerBriefPage() {
                 Self-serve rails. Written packet on request. No call booking.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-                <a href="/api/checkout/dpp" className="bg-black text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                <a href="https://authichain.com/checkout/dpp_readiness" className="bg-black text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
                     DPP checkout — $299 <ArrowRight className="w-3 h-3" />
                 </a>
-                <a href="/api/checkout/plan/strainchain_passport" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
+                <a href="https://authichain.com/checkout/strainchain_passport" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
                     Passport checkout — $49 <ArrowRight className="w-3 h-3" />
                 </a>
                 <a href="mailto:hello@authichain.com?subject=Made%20in%20America%20written%20packet" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">

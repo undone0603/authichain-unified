@@ -1,6 +1,8 @@
 -- authichain-outreach-engine schema (D1: authichain-db, ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5)
 -- These tables PRE-EXIST in production (created ~May 2026); this file documents them
--- and is safe to re-run (IF NOT EXISTS). Lead lifecycle: new -> sent | failed | suppressed.
+-- and is safe to re-run (IF NOT EXISTS).
+-- Lead lifecycle: new -> approved -> sent | blocked | failed | suppressed.
+-- Email text lives in src/templates.ts; the `templates` table is no longer read.
 
 CREATE TABLE IF NOT EXISTS leads (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -11,14 +13,15 @@ CREATE TABLE IF NOT EXISTS leads (
   phone TEXT,
   source TEXT,
   score INTEGER DEFAULT 0,          -- AgentZ "priority" maps here
-  status TEXT DEFAULT 'new',        -- new (pending) | sent | failed | suppressed
+  status TEXT DEFAULT 'new',        -- new | approved | sent | blocked | failed | suppressed
   industry TEXT,
   notes TEXT,
   last_contacted_at TEXT,
   assigned_to INTEGER,
   segment TEXT,
   next_action_at TEXT,
-  metadata TEXT,
+  metadata TEXT,                    -- JSON: verification_source/_evidence, personal_note(_source),
+                                    -- approved_draft_hash, resend_id
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -36,7 +39,7 @@ CREATE TABLE IF NOT EXISTS outreach_logs (
   lead_id INTEGER REFERENCES leads(id),
   template_key TEXT,
   provider TEXT,                    -- resend, sendgrid, mailchannels
-  status TEXT,
+  status TEXT,                      -- approved | sent | blocked | failed (legacy rows: ok)
   error_message TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

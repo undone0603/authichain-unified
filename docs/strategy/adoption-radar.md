@@ -932,3 +932,167 @@ Noted here per instructions, not edited into `SPEC.md`:
   two specs side by side.
 
 ---
+
+## 2026-09-22
+
+General web search again this week. `w3.org`, `eprint.iacr.org`, `untp.unece.org`, and
+`route-fifty.com` were all blocked by the network egress proxy on direct fetch attempts this
+session — `eprint.iacr.org` specifically is now blocked on all **six** weeks this radar has tried
+it. Absence of a finding below means "not found by this search," not "did not happen."
+
+### What actually moved this week
+
+- **New this week, not previously logged: a W3C Verifiable Supply Chain Community Group launched
+  2026-02-21**, proposed 2026-02-03 by Amir Hameed Mir
+  ([call for participation](https://www.w3.org/community/vsc/2026/02/21/call-for-participation-in-verifiable-supply-chain-community-group/),
+  [Biometric Update](https://www.biometricupdate.com/202602/w3c-launches-group-to-tackle-supply-chain-fraud-with-vcs),
+  [ID Tech Wire](https://idtechwire.com/w3c-launches-community-group-to-apply-verifiable-credentials-to-supply-chains/)).
+  Its stated mission is to develop "industry-specific profiles, interoperability frameworks, and
+  **certification guidelines**" so businesses can exchange cryptographically verifiable proofs of
+  origin, custody, compliance, and sustainability, with deliverables explicitly including test
+  suites, conformance criteria, and trust-anchor requirements, and it names pharma, automotive,
+  food & beverage, critical minerals, and luxury goods as target verticals. This radar has logged
+  five weeks of W3C VC Working Group activity without once finding a venue this directly aimed at
+  *certifying* supply-chain verification implementations — which is exactly the problem
+  `protocol/conformance/README.md` already ships a solution for. It's a Community Group (open
+  participation, no membership fee, anyone can join or file input) and it's seven months old, not
+  a mature venue with an established roster yet — this is early, not a place we're already
+  overdue to.
+- **The UK GOV.UK digital product record call for evidence closed as scheduled, 21 September
+  2026, unsubmitted through six straight entries.**
+  ([GOV.UK](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy)).
+  No government response or summary-of-evidence has been published yet, and no source found this
+  week gives a timeline for one. Nothing left to act on regarding the original call; the next
+  actionable moment is whenever that response lands. Consistent with 2026-09-20's framing that
+  this was a missed window, not an open one — stated again plainly rather than re-flagged as live.
+- **UNTP's proof-mechanism divergence from last week is now confirmed with a direct technical
+  citation, not just search-summary inference.** Per GS1's own VC/DID technical-landscape
+  reference and W3C's `vc-jose-cose` background material (search-summary level; primary pages
+  blocked): **UNTP mandates JOSE enveloping proof (JWS, RFC 7515) for every credential it issues**,
+  a deliberate choice over the embedded Data Integrity proof our spec uses, explicitly because
+  JOSE verification "does not depend on `@context` resolution at proof-checking time" and lowers
+  the implementation barrier by reusing mainstream web-security tooling. This is a real, named
+  reason for the divergence, not an arbitrary one — worth citing precisely if a future comparison
+  note gets written, rather than just "they chose differently." Separately: UNTP's own published
+  Verifiable Credentials page still lives at a `/docs/0.7.0/` path
+  ([untp.unece.org/docs/0.7.0/specification/VerifiableCredentials/](https://untp.unece.org/docs/0.7.0/specification/VerifiableCredentials/)),
+  and the "1 September 2026" v1.0 target reported last week has now passed with no source found
+  confirming it actually shipped — treat UNTP v1.0 as **still targeted, not confirmed released**,
+  eleven days past its own target date.
+- **Correcting forward, not editing 2026-09-11 or 2026-09-20: the "W3C VC Confidence
+  Method/Render Method published as Recommendations" claim those two entries flagged as
+  contradictory appears to trace to a conflation with a different, already-shipped spec.** The
+  search hit behind that claim ("W3C Verifiable Credentials 2.0 Specifications are Now Standards")
+  is Mike Jones's post about the **VC Data Model v2.0 family becoming a W3C Recommendation in May
+  2025** — over a year before this radar's window, and a different pair of specs from Confidence
+  Method and Render Method, which this week's search still finds tracked as open GitHub
+  horizontal-review issues with a stated review window through 2026-10-12
+  ([w3c/a11y-request#176](https://github.com/w3c/a11y-request/issues/176),
+  [w3cping/privacy-request#225](https://github.com/w3cping/privacy-request/issues/225)). Treating
+  this as resolved rather than still-contradictory: Confidence Method and Render Method are most
+  likely **not yet Recommendations**, and the "published" claim in two prior entries was probably
+  a search-summary mixing up VCDM 2.0 (old, shipped) with Confidence/Render Method (new,
+  in-progress). Primary `/TR/` pages remain blocked this session, so this is a correction of
+  confidence, not a confirmed primary-source read.
+- **The EU DPP Registry launch-date discrepancy flagged 2026-09-20 is resolved: 20 July 2026 is
+  correct.** Multiple independent, dated sources — the European Commission's own news page
+  ([single-market-economy.ec.europa.eu](https://single-market-economy.ec.europa.eu/news/digital-product-passport-registry-now-live-2026-07-20_en)),
+  Euroconsumers, Narravero, and an EU-monitoring outlet — converge on the Registry and testing
+  environment going live **2026-07-20**, consistent with every entry before 2026-09-20. No source
+  found this week corroborates the "launched 2 September 2026" claim that appeared last week;
+  treat it as an error in that one summary, not a second milestone.
+- **FprEN 18246 remains unpublished, and the specific date this radar should check next has now
+  passed.** One source found this week states CEN-CENELEC's own tracker listed the standard as
+  "under approval" with ratification scheduled **17 August 2026** and "definitive texts" expected
+  **16 September 2026** — both now in the past, with no source found confirming either actually
+  happened. Consistent with everything reported since 2026-09-02 (still not among the six DPP
+  standards cited in the Official Journal), but this is the first week a concrete, now-lapsed date
+  has surfaced — worth checking directly next week whether the 16 September date slipped or
+  whether publication happened without fresh coverage yet.
+- **A public "verdict, not a score" framing is visible in the adjacent AI-content-authenticity
+  space this week**, via a Route Fifty piece on AI watermarking and digital trust rules (title and
+  framing only — `route-fifty.com` was blocked on direct fetch, so this is a headline-level
+  finding, not a read article). The line found in search results — "a watermark should be treated
+  as a signal — not a verdict" — argues almost exactly our own §5.1 position (no partial-credit
+  verdict, no numeric score) but for AI-generated-content watermarking rather than physical-item
+  provenance. Noted as a live public argument in the neighboring space, not evidence of anyone
+  discussing our narrow scope specifically.
+- **Quiet or not found this search:** no dated Spherity, Transmute, OriginTrail, IBM TrustChain, or
+  Avery Dennison news specific to this week (Avery Dennison's only dated item, an investor
+  showcase 2026-09-23, is not verification-standard-related). No GS1 Digital Link or EPCIS version
+  change — EPCIS 2.1 remains targeted "end of 2026," unchanged for the third week running. No
+  GS1, ISO, or CEN open public-comment period specific to a provenance/credential standard was
+  found this week (a broad search surfaced only unrelated consultations — net-zero standards, AI
+  standardisation, ETSI cybersecurity drafts — none in our scope).
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged.
+- **Three verdicts, no score** — unchanged; the Route Fifty finding above is a reason to note this
+  argument is happening in public, in an adjacent space, not to claim it's being made about us.
+- **Adversarial conformance suite validated against deliberately broken implementations** —
+  sharpened by this week's finding: a brand-new W3C Community Group has just named "certification
+  guidelines" and "conformance criteria" for verifiable supply-chain credentials as explicit
+  deliverables it doesn't yet have, in a space where — across six weeks of this radar — no
+  comparable adversarial test suite has been found for GS1 Digital Link, EPCIS, the EU DPP
+  Registry, UNTP, or any vendor tooling. We already have the thing a new W3C group is setting out
+  to define.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **No crypto-agility or post-quantum story** — unchanged.
+- **No bridging to the EU's ESDC/ISO-IEC-20248 vocabulary** — unchanged; FprEN 18246 still not
+  published, now past its own reported target dates.
+- **No access-tiering model** — unchanged from 2026-09-09.
+- **No stated position on proof-mechanism interoperability** — unchanged from 2026-09-20, now
+  reinforced with a confirmed, specific reason UNTP chose JOSE over embedded Data Integrity (see
+  above), which makes the omission in `SPEC.md` §3.2 more concrete to fix, not more urgent in
+  itself.
+
+### Named awareness targets
+
+- **W3C Verifiable Supply Chain Community Group** —
+  [w3.org/community/vsc](https://www.w3.org/community/vsc/2026/02/21/call-for-participation-in-verifiable-supply-chain-community-group/),
+  [participant list](https://www.w3.org/community/vsc/participants). New this week and the single
+  most actionable item found: an open-participation venue, seven months old, explicitly building
+  certification and conformance criteria for verifiable supply-chain credentials — precisely the
+  problem our conformance suite already solves. Filing an issue, joining as a participant, or
+  contributing the conformance suite's design (28 fixtures, deliberately-broken reference
+  implementations, `--strict` reason checking) as prior art would put us in front of the exact
+  people defining this category's certification model while the group's roster and deliverables
+  are still forming, rather than after they calcify.
+- **UNTP (UNECE/UNCTAD)** — [untp.unece.org](https://untp.unece.org/docs/specification/). Carried
+  forward as still open and still blocked on direct fetch; now specifically worth checking for
+  whether v1.0 has shipped, since its own "1 September 2026" target has passed unconfirmed.
+- **FprEN 18246 (CEN-CLC/JTC 24)** — unchanged as a watch item, now with two lapsed target dates
+  (17 August ratification, 16 September definitive text) to check against next week.
+- **IACR 2026/804 / UMBC CISA group** —
+  [cisa.umbc.edu](https://cisa.umbc.edu/verifying-provenance-of-digital-media-security-analysis-of-c2pa-and-its-implementation/).
+  Blocked a sixth consecutive week. Secondary sourcing has converged enough (consistent findings
+  across independent searches: timestamp-agreement failure between generators and validators,
+  validators accepting manifests signed by known-compromised certificates, inconsistent
+  cross-implementation results, an exclusion range permitting undetectable alteration, and a
+  conformance program certifying products without technical review; published 2026-04-23) that the
+  substance is probably reliable, but this radar has now cited a paper it has never once been able
+  to read directly for six straight weeks. Repeating from last week, more firmly: this is worth
+  raising with whoever operates this routine, since the block is an infrastructure limitation of
+  this specific session's network path, not a property of the paper.
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over, unresolved: `confidenceMethod`-style interaction with the §5.1 verdict; no named
+  mechanism for v0.2 `credentialStatus` revocation; Ed25519-only with no crypto-agility statement;
+  no bridging to the EU's emerging ESDC/ISO-IEC-20248 vocabulary; no stated scope boundary on the
+  §6 no-auth requirement; no stated position on JOSE/COSE enveloping-proof interoperability
+  (logged 2026-09-20, reinforced this week with UNTP's specific stated rationale for choosing it).
+- No new gap identified this week. This week's findings (UNTP's proof-mechanism rationale, the EU
+  DPP Registry date correction, the Confidence/Render Method status correction) sharpened or
+  resolved existing threads rather than surfacing a new one — noted under differentiation/behind
+  above rather than invented here to fill the section.
+
+---

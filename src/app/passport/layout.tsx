@@ -1,25 +1,9 @@
-import { Fraunces, Public_Sans, IBM_Plex_Mono } from "next/font/google";
+import { systemFont } from "@/lib/system-font";
 import "../genetics/genetics.css";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["300", "400", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
-  display: "swap",
-});
-const publicSans = Public_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-public-sans",
-  display: "swap",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-plex-mono",
-  display: "swap",
-});
+const fraunces = systemFont({ variable: "--font-fraunces" });
+const publicSans = systemFont({ variable: "--font-public-sans" });
+const plexMono = systemFont({ variable: "--font-plex-mono" });
 
 /**
  * Unit passports share the genetics stylesheet on purpose: a verification

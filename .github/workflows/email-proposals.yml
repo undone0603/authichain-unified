@@ -1,5 +1,7 @@
 # .github/workflows/email-proposals.yml
-name: Email Government Proposals
+# Emails the OWNER a digest of high-fit opportunities. It no longer emails any
+# agency: see the header of scripts/email-proposals.ts for why.
+name: Government Opportunity Digest
 
 on:
   schedule:
@@ -10,7 +12,7 @@ on:
       dry_run:
         # STAGED: default true. Live send also requires vars.OWNER_LIVE_SEND=true
         # (one-click flip — see PUBLIC_LOOP_FREEZE.md). Unset / false = no spam.
-        description: "Dry run (log emails without sending)"
+        description: "Dry run (log the digest without sending)"
         required: false
         default: "true"
         type: boolean
@@ -28,7 +30,7 @@ env:
 
 jobs:
   email-proposals:
-    name: Email Proposals to Agencies
+    name: Email opportunity digest to owner
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -80,7 +82,7 @@ jobs:
           echo "dry_run=true" >> "$GITHUB_OUTPUT"
           echo "Resolved dry_run=true"
 
-      - name: Email high-fit proposals to agency contacts
+      - name: Email high-fit opportunity digest to owner
         run: pnpm exec tsx scripts/email-proposals.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -91,22 +93,11 @@ jobs:
           RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
           GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
-          CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
-          SALES_EMAIL: ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
+          # Internal recipient of the digest. Never an agency address.
+          OWNER_NOTIFY_EMAIL: ${{ secrets.OWNER_NOTIFY_EMAIL || secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
           # STAGED: resolve-mode defaults to dry-run. Live requires
           # vars.OWNER_LIVE_SEND=true (one-click flip).
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
-          # CAN-SPAM requires a physical postal address in every commercial
-          # email, and guardedSend fails CLOSED without one. This is NOT a
-          # secret — the whole point is that it is printed in every message —
-          # so it is a plain default rather than a repo secret, and the channel
-          # works out of the box. Value is the address already filed on the DHS
-          # SVIP application and the state partnership proposals
-          # (docs/submissions/, docs/strategy/). Override with the secret if the
-          # registered address changes.
-          MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
-          RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Report email job failure to Slack
         if: failure()

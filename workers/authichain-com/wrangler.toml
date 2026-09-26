@@ -3,6 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+# Not on PR Workers Builds. Live checkout, x402 402, and /m/* update only via
+# deploy-authichain-com.yml / deploy-workers.yml `wrangler deploy` on main.
 
 # Apex + www — the wildcard covers all paths including static assets.
 # The separate per-asset routes were redundant (the /* wildcard already
@@ -21,6 +23,19 @@ zone_name = "authichain.com"
 [[routes]]
 pattern = "app.authichain.com/"
 zone_name = "authichain.com"
+
+# Primary site host (moved from the apex). Workers Custom Domain on the
+# govchain.us zone; attached live 2026-09-25. Declared here so a redeploy keeps it.
+[[routes]]
+pattern = "authichain.govchain.us"
+custom_domain = true
+
+# authichain.com apex Workers Custom Domain (attached out-of-band before #1245;
+# the post-#1245 deploy removed it because it was not declared here, and it had
+# to be reattached via API on 2026-09-25). Declared so deploys keep it.
+[[routes]]
+pattern = "authichain.com"
+custom_domain = true
 
 [observability]
 enabled = true
@@ -43,3 +58,12 @@ binding = "APP_WORKER"
 service = "authichain-edge-router"
 
 # Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID
+
+# VERIFY_APP: service binding to the Next app worker `authichain-app`
+# (wrangler.app.jsonc), which owns the auth_seals lookup behind
+# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
+# without this binding they are refused 503 registry_not_bound before
+# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+[[services]]
+binding = "VERIFY_APP"
+service = "authichain-app"

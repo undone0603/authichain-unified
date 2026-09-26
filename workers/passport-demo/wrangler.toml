@@ -3,11 +3,13 @@ main = "src/index.js"
 compatibility_date = "2026-08-01"
 workers_dev = true
 
-# PUBLIC_LOOP_FREEZE 2026-09-16
+# PUBLIC_LOOP_FREEZE 2026-09-16 / 2026-09-22
 # Cloudflare Workers Builds is git-connected to the whole monorepo, so this
-# worker rebuilds on every PR and paints a red check even for docs diffs
-# (issue #952). Disconnect Git in the dashboard:
+# worker rebuilds on every PR (issue #952). GitHub deploy-workers.yml no
+# longer includes this dir — that only stops Actions deploys. Disconnecting
+# the Cloudflare Git Build still requires dashboard access:
 #   Workers & Pages → passport-demo → Settings → Builds → disable / path-filter
 #   to workers/passport-demo only.
+# cloudflared in this environment has no origin cert (no dash.cloudflare.com).
 # Do not use this worker as a production verify path. Public verify is
 # https://authichain.com/verify (once Access is lifted).

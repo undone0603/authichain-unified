@@ -161,5 +161,8 @@ LT-35's parentage, and the true certificate count. Neither is inferable from the
 data and neither should be guessed.
 
 A verification pass of `certificates.json` against the original SC Labs PDFs is
-still owed. The arithmetic is self-consistent, which is strong evidence of faithful
-transcription, but self-consistency is not verification against the certificate.
+still owed for ten of twelve CoA IDs. 240823Q009-001 and 251104R041-001 were
+re-read from source PDFs on 2026-09-21; canonical bytes live in
+`content/strainchain/mendo-love-farms/coas/`. The remaining arithmetic is
+self-consistent, which is strong evidence of faithful transcription, but
+self-consistency is not verification against the certificate.

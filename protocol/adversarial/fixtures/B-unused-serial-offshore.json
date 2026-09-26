@@ -1,0 +1,11 @@
+{
+  "id": "B-unused-serial-offshore",
+  "input": {
+    "objectFound": true,
+    "depth": "history",
+    "crypto": { "signatureValid": true, "issuerTrusted": true, "identityValid": true, "evidenceIntact": true, "statusActive": true },
+    "attestation": { "objectId": "ac:demo:unused-01", "decision": "verified", "status": "active", "issuer": "Authichain-Core", "evidence": [] },
+    "scans": [{ "at": "2026-09-26T18:00:00Z", "lat": 1.3521, "lon": 103.8198, "region": "SG" }]
+  },
+  "expect": { "decision": "verified", "reasonsExclude": ["impossible_travel", "cloned_identity_pattern"] }
+}

@@ -1,0 +1,79 @@
+# Gemma improvement loops. Gemma runs in LM Studio on the owner's network, so
+# these jobs run on a self-hosted runner labelled `lan-gemma`.
+#
+# SECURITY: this repo is public. Never add pull_request / pull_request_target
+# or any other trigger that forks can fire: that would run a stranger's code on
+# a machine inside the owner's home network. Schedule and manual dispatch only.
+#
+# Gemma only writes suggestions into `gemma` issues (and triage comments on an
+# open ops-alert). It never merges, sends email, charges or edits code.
+# Switch: "gemma-loops.yml" in .github/autonomy.json. Charter: docs/OPERATING_CHARTER.md
+name: Gemma loops
+
+on:
+  schedule:
+    - cron: "30 11 * * *" # copy review, daily
+    - cron: "0 13 * * 1-5" # outreach review, an hour before b2b-outreach
+    - cron: "20 * * * *" # alert triage, after ops-pulse (:07)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which loop to run"
+        required: true
+        default: copy
+        type: choice
+        options: [copy, outreach, triage]
+      dry_run:
+        description: "Print Gemma's output instead of writing to issues"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: gemma-loops
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  run:
+    if: github.repository == 'undone0603/authichain-unified' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: [self-hosted, lan-gemma]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Pick loop
+        id: pick
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_JOB: ${{ inputs.job }}
+        run: |
+          set -euo pipefail
+          case "${SCHEDULE:-}" in
+            "30 11 * * *") job=copy ;;
+            "0 13 * * 1-5") job=outreach ;;
+            "20 * * * *") job=triage ;;
+            *) job="${INPUT_JOB:-copy}" ;;
+          esac
+          case "$job" in
+            copy) script=copy-review ;;
+            outreach) script=outreach-review ;;
+            triage) script=alert-triage ;;
+            *) echo "unknown job $job"; exit 1 ;;
+          esac
+          echo "script=$script" >> "$GITHUB_OUTPUT"
+          echo "Loop: $job"
+      - name: Run
+        env:
+          LOCAL_LLM_URL: ${{ vars.LOCAL_LLM_URL }}
+          LOCAL_LLM_MODEL: ${{ vars.LOCAL_LLM_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GEMMA_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: node "scripts/gemma/${{ steps.pick.outputs.script }}.mjs"

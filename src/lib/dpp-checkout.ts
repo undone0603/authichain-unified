@@ -7,6 +7,7 @@
  */
 
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
+import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
@@ -14,7 +15,7 @@ import {
   recordDppLoopEvent,
 } from "./dpp-loop";
 
-export const DPP_CHECKOUT_ORIGIN = "https://authichain.com";
+export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
 export { DPP_SMOKE_PROMO, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");
@@ -27,9 +28,10 @@ type SupabaseLike = {
 export type DppCheckoutOk = { ok: true; url: string; visitId: string };
 export type DppCheckoutErr = {
   ok: false;
-  status: 500;
+  status: 500 | 303;
   error: string;
   detail?: string;
+  url?: string;
 };
 export type DppCheckoutResult = DppCheckoutOk | DppCheckoutErr;
 
@@ -50,18 +52,11 @@ export async function createDppCheckoutSession(opts: {
   const { searchParams, stripeSecretKey, supabase } = opts;
   const origin = opts.origin || DPP_CHECKOUT_ORIGIN;
 
-  if (!stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
-  }
-  if (!PLAN?.stripe_price_id || PLAN.stripe_mode !== "payment") {
-    return { ok: false, status: 500, error: "DPP offer is not configured" };
-  }
-
   const visitId =
     pick(searchParams, "visit_id") ||
     pick(searchParams, "prospect_id") ||
     newDppVisitId();
-  const email = pick(searchParams, "email", 254);
+  const email = pickCheckoutEmail(pick(searchParams, "email", 254));
   const utmSource = pick(searchParams, "utm_source", 64);
   const utmMedium = pick(searchParams, "utm_medium", 64);
   const utmCampaign = pick(searchParams, "utm_campaign", 128);
@@ -70,6 +65,30 @@ export async function createDppCheckoutSession(opts: {
   const referrer = pick(searchParams, "referrer", 512);
   const source = utmSource || pick(searchParams, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(searchParams, "promo", 32));
+  // Affiliate / referral attribution survives into Stripe metadata so the
+  // webhook can accrue commission. First-touch ?ref= has no cookie yet on
+  // this request, so accept the query aliases the proxy/middleware persists.
+  const affiliateCode =
+    pick(searchParams, "affiliate_code", 64) ||
+    pick(searchParams, "ref", 64) ||
+    pick(searchParams, "aff", 64);
+  const refCode = pick(searchParams, "ref_code", 64);
+
+  if (!email && !smoke) {
+    return {
+      ok: false,
+      status: 303,
+      error: "email_required",
+      url: checkoutNeedEmailRedirect("dpp", visitId),
+    };
+  }
+
+  if (!stripeSecretKey) {
+    return { ok: false, status: 500, error: "Stripe is not configured" };
+  }
+  if (!PLAN?.stripe_price_id || PLAN.stripe_mode !== "payment") {
+    return { ok: false, status: 500, error: "DPP offer is not configured" };
+  }
 
   if (supabase) {
     await recordDppLoopEvent(supabase, {
@@ -132,6 +151,8 @@ export async function createDppCheckoutSession(opts: {
         ...(utmContent ? { utm_content: utmContent } : {}),
         ...(utmTerm ? { utm_term: utmTerm } : {}),
         ...(referrer ? { referrer: referrer } : {}),
+        ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+        ...(refCode ? { ref_code: refCode } : {}),
       },
     });
 

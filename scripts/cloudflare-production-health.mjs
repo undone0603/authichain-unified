@@ -8,14 +8,24 @@ const ORIGIN = process.env.AUTHICHAIN_ORIGIN || "https://authichain.com";
 export const PUBLIC_PROBES = [
   { id: "apex", url: `${ORIGIN}/`, accept: [200] },
   { id: "jwks", url: `${ORIGIN}/protocol/jwks.json`, accept: [200] },
-  { id: "health", url: `${ORIGIN}/api/v1/health`, accept: [200] },
+  { id: "x402", url: `${ORIGIN}/api/x402/health`, accept: [200] },
+  { id: "pricing", url: `${ORIGIN}/pricing`, accept: [200] },
+  {
+    id: "checkout_dpp_head",
+    url: `${ORIGIN}/api/checkout/dpp`,
+    accept: [204],
+    method: "HEAD",
+  },
 ];
 
 export async function probePublic(fetchImpl = fetch) {
   const results = [];
   for (const p of PUBLIC_PROBES) {
     try {
-      const res = await fetchImpl(p.url, { redirect: "follow" });
+      const res = await fetchImpl(p.url, {
+        method: p.method || "GET",
+        redirect: "manual",
+      });
       results.push({
         id: p.id,
         url: p.url,

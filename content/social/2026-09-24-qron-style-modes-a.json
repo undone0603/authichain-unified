@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QRON code doesn't have to look like a QR code. Generate one in Holographic mode, Memory mode, or plain — swap the art style and the artwork changes completely. What doesn't change is what's underneath: every design, however stylized, is still Ed25519-signed and anchored under the AuthiChain protocol.\n\nThat's a deliberate split. The visual style is a decorative layer — pick whatever fits the product, the invitation, the packaging. The signature is a separate, structural layer that a style choice can't touch: a Holographic-mode code and a plain one carry the same kind of cryptographic backing, just wrapped differently.\n\nWe built it this way because most 'designer QR code' tools trade scannability, or any real verification, for looks: heavy stylization can break the scan itself, or the code ends up being just an image with a link baked in, nothing to check. QRON keeps decoration and signing on separate tracks so neither one has to give ground to the other.\n\nIf you've been choosing between a QR code that looks good and one that can actually be checked, that shouldn't be the tradeoff.\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qron-style-modes&utm_content=a\n\n#QRCode #GenerativeArt #ProductAuthentication",
+  "reddit": {
+    "subreddit": "graphic_design",
+    "title": "We separated \"looks good\" from \"can be verified\" in our QR code generator — curious what design folks think",
+    "body": "QRON generates QR codes as actual artwork — Holographic mode, Memory mode, a few others — instead of the standard black-and-white grid, while keeping the code scannable. Separately, every generated design is Ed25519-signed and anchored under the AuthiChain protocol, regardless of which style rendered it.\n\nThe reasoning: most \"designer QR code\" generators either break scannability once they stylize enough to look good, or they look fine but are just an image with a link baked in — no signature, nothing to check. We wanted style and verification to sit on separate layers, so picking a heavier style doesn't cost you anything on the verification side.\n\nWould like feedback from this crowd specifically: does the Holographic/Memory framing read as a style choice worth having, or does \"here's a signed QR code that also looks nice\" undersell what's actually different about it?\n\nhttps://qron.space/?utm_source=reddit&utm_medium=social&utm_campaign=qron-style-modes&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QRON code doesn't have to look like a QR code. Holographic mode, Memory mode, plain — the art style changes completely between them.",
+    "What doesn't change: every design, however stylized, is still Ed25519-signed and anchored under the AuthiChain protocol. Style is decorative, signing is structural — one doesn't touch the other.",
+    "Most \"designer QR code\" tools trade away scannability or verification for looks. We kept them on separate tracks: https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qron-style-modes&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "qron-style-modes",
+    "variant": "a",
+    "hypothesis": "leading with the signature-stays-constant-across-styles framing (decorative style and cryptographic signing are separate layers) outperforms a style/creative-freedom-led hook on click-through to qron.space"
+  }
+}

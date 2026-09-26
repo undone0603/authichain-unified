@@ -51,7 +51,7 @@ export interface BrandLandingProps {
 }
 
 const DEFAULT_PRIMARY: Record<BrandId, LandingCta> = {
-  authichain: { label: 'Start DPP checkout', href: '/api/checkout/dpp' },
+  authichain: { label: 'Start DPP checkout', href: 'https://authichain.com/checkout/dpp_readiness' },
   qron: { label: 'Generate Living QR', href: '/generate' },
   strainchain: { label: 'Request demo', href: '/onboard' },
   govchain: { label: 'Request access', href: '/onboard' },
@@ -194,7 +194,7 @@ export function BrandLanding({
 
       <footer className="px-6 py-12 border-t border-slate-200 bg-white">
         <nav aria-label="Estate" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600 mb-6">
-          <Link href="/api/checkout/dpp" className="hover:text-slate-950">DPP checkout</Link>
+          <Link href="https://authichain.com/checkout/dpp_readiness" className="hover:text-slate-950">DPP checkout</Link>
           <Link href="/trumark" className="hover:text-slate-950">TruMark</Link>
           <Link href="/made-in-america" className="hover:text-slate-950">Made in America</Link>
           <Link href="/partners/brief" className="hover:text-slate-950">Partner brief</Link>

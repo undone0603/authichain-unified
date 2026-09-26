@@ -1,3 +1,4 @@
+import path from "node:path";
 /** @type {import('next').NextConfig} */
 // Sentry is optional: @sentry/nextjs is not a dependency yet (zero-budget),
 // and `next build` must not fail when it's absent. If the SDK is installed
@@ -28,6 +29,10 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+// Cloudflare Workers Builds injects WORKERS_CI=1. Workers cannot run a
+// browser, so that build swaps playwright-core for a stub.
+const IS_WORKERS_BUILD = process.env.WORKERS_CI === "1";
+
 const nextConfig = {
   // Required for @opennextjs/cloudflare: it copies traced server files out of
   // .next/standalone, which next build only emits in this mode. Vercel's own
@@ -48,7 +53,11 @@ const nextConfig = {
     "pino",
     "pino-pretty",
     "@walletconnect/sign-client",
-    "playwright-core",
+    // On Cloudflare Workers Builds (WORKERS_CI=1) playwright-core is aliased
+    // to a throwing stub instead (see webpack below), so it must not be
+    // external there: an external require would be traced into the OpenNext
+    // bundle and fail on its missing chromium-bidi dependency.
+    ...(IS_WORKERS_BUILD ? [] : ["playwright-core"]),
   ],
 
   // The server/* code uses ESM `.js` import specifiers that actually point at
@@ -57,11 +66,41 @@ const nextConfig = {
   // "Module not found: Can't resolve '../db.js'". extensionAlias tells webpack
   // to try the TypeScript sources for a `.js`/`.mjs` request, fixing every such
   // import at once without rewriting the ~135 import statements.
-  webpack: (config, { webpack }) => {
+  webpack: (config, { webpack, isServer }) => {
     config.resolve.extensionAlias = {
       ".js": [".ts", ".tsx", ".js", ".jsx"],
       ".mjs": [".mts", ".mjs"],
     };
+
+    if (IS_WORKERS_BUILD && isServer) {
+      // Next externalizes playwright-core by default (its built-in server
+      // externals list), and externals are decided before aliases apply.
+      // Let this one request fall through to normal resolution so the alias
+      // below replaces it with the stub.
+      const keepBundled = request =>
+        request === "playwright-core" ||
+        request?.startsWith("playwright-core/");
+      config.externals = [config.externals]
+        .flat()
+        .filter(Boolean)
+        .map(external =>
+          typeof external === "function"
+            ? (ctx, cb) =>
+                keepBundled(ctx?.request)
+                  ? cb
+                    ? cb()
+                    : Promise.resolve(undefined)
+                  : external(ctx, cb)
+            : external
+        );
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        "playwright-core$": path.resolve(
+          process.cwd(),
+          "server/stubs/playwright-core.cjs"
+        ),
+      };
+    }
 
     // @coinbase/cdp-sdk's x402 payment-signing path imports the @x402/* packages
     // (@x402/evm, @x402/svm/exact/client, ...). They are optional peers: none is

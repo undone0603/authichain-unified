@@ -33,10 +33,10 @@ Canonical map: [`WEB3_IDENTITY.md`](../strategy/WEB3_IDENTITY.md).
 | Rail | Buyer | Asset / SKU | Chain or processor | Status |
 | --- | --- | --- | --- | --- |
 | **Stripe** | Person with a card | Passport **$49** · DPP **$299** · QRON Living QR packs | Stripe | **LIVE** — `src/lib/plans.ts` |
-| **x402** | Funded agent wallet | Circle **USDC**, **$0.05 / call** | **Base 8453** | **LIVE** — payTo / tokenomics EOA `0x5db5…` (`X402_PAY_TO`). Do not rebind. |
+| **x402** | Funded agent wallet | Circle **USDC**, **$0.05 / call** | **Base 8453** | **LIVE** — payTo / tokenomics EOA `0xaebf…e437` (`X402_PAY_TO`). Do not rebind away from the owner-authorized treasury. |
 | **$QRON** ERC-20 | n/a | 1B supply, 18 decimals | **Polygon 137** | **Deployed, not a payment rail.** Do not add to x402 `accepts[]`. |
 
-`$QRON` held by the same `0x5db5…` EOA that receives Base USDC does **not** make `$QRON` the settlement asset. govchain.us staking figures are **theater**, not circulating supply.
+`$QRON` held by former payTo `0x5db5…` does **not** make `$QRON` the settlement asset. Live USDC `payTo` is `0xaebf…e437`. govchain.us staking figures are **theater**, not circulating supply.
 
 **What "zero human involvement" really means:** fully autonomous _execution_ is real — an agent
 with a funded wallet pays per API call with no human in the loop. But a human/legal entity must

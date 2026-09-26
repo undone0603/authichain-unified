@@ -25,7 +25,7 @@ export default function MadeInAmericaPage() {
             is documentation — it does not replace meeting the standard.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/api/checkout/dpp" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white">
+            <Link href="https://authichain.com/checkout/dpp_readiness" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white">
               DPP checkout — $299
             </Link>
             <Link href="/partners/brief" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900">
@@ -59,7 +59,7 @@ export default function MadeInAmericaPage() {
             at hello@authichain.com. No call booking.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/api/checkout/dpp" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white">
+            <Link href="https://authichain.com/checkout/dpp_readiness" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white">
               Start DPP checkout
             </Link>
             <a

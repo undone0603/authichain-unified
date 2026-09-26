@@ -4,7 +4,7 @@
   "description": "AuthiChain.com Cloudflare Worker",
   "scripts": {
     "deploy": "npx wrangler deploy",
-    "test": "npx tsx --test src/routing.test.ts src/money-surfaces.test.ts src/microsite-routes.test.ts src/genetics-routes.test.ts src/dpp-manufacturer-article.test.ts src/telegram-miniapp.test.ts ../_shared/estate-landing.test.ts ../_shared/estate-pricing.test.ts ../_shared/seo-hub-routes.test.ts && npx vitest run src/authentic-agentic-economy-page.test.ts src/x402-docs-page.test.ts src/x402-routes.test.ts src/dpp-routes.test.ts src/protocol-checkout.test.ts"
+    "test": "npx tsx --test src/routing.test.ts src/money-surfaces.test.ts src/microsite-routes.test.ts src/genetics-routes.test.ts src/dpp-manufacturer-article.test.ts src/telegram-miniapp.test.ts src/desk.test.ts ../_shared/estate-landing.test.ts ../_shared/estate-pricing.test.ts ../_shared/seo-hub-routes.test.ts && npx vitest run src/authentic-agentic-economy-page.test.ts src/x402-docs-page.test.ts src/x402-routes.test.ts src/dpp-routes.test.ts src/protocol-checkout.test.ts src/llms-txt.test.ts src/mcp-routes.test.ts src/battery-passport-page.test.ts src/battery-gap-map.test.ts"
   },
   "devDependencies": {}
 }

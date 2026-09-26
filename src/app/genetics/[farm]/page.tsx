@@ -108,6 +108,19 @@ export default async function FarmIndex({
         </div>
       </header>
 
+      <div className="note note-teal">
+        <strong style={{ color: "var(--ink)" }}>
+          Keep this library current — Farm Plan, $149/mo.
+        </strong>{" "}
+        Unlimited cultivars and passports, updated on every new certificate.{" "}
+        <a
+          href="https://authichain.com/checkout/strainchain_farm"
+          style={{ color: "var(--teal)", fontWeight: 600 }}
+        >
+          Start a Farm Plan →
+        </a>
+      </div>
+
       <section>
         <SectionRule>Chemistry across the family</SectionRule>
         <ThcvTimeline certificates={d.certificates} />
@@ -169,7 +182,9 @@ export default async function FarmIndex({
                         color: "var(--ink)",
                       }}
                     >
-                      {(v.peakThcvPct ?? 0).toFixed(3)}%
+                      {v.peakThcvPct == null
+                        ? "—"
+                        : `${v.peakThcvPct.toFixed(3)}%`}
                     </b>
                     <span style={{ color: "var(--muted)" }}>Peak THCV</span>
                   </div>
@@ -182,7 +197,9 @@ export default async function FarmIndex({
                         color: "var(--ink)",
                       }}
                     >
-                      {(v.peakRatio ?? 0).toFixed(2)}:1
+                      {v.peakRatio == null
+                        ? "—"
+                        : `${v.peakRatio.toFixed(2)}:1`}
                     </b>
                     <span style={{ color: "var(--muted)" }}>Best ratio</span>
                   </div>

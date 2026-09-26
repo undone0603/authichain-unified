@@ -77,6 +77,24 @@ describe("deploy-workers openclaw AGENT_SECRET bind", () => {
     expect(yml).toMatch(/\$w \+ \["authichain-agentz"\]/);
   });
 
+  it("promotes money-path workers with wrangler deploy, not versions upload", () => {
+    const yml = readFileSync(workflowPath, "utf8");
+    const start = yml.indexOf("- name: Deploy Worker");
+    expect(start).toBeGreaterThan(-1);
+    const rest = yml.slice(start);
+    const next = rest.search(/\n      - name: /);
+    const step = next === -1 ? rest : rest.slice(0, next);
+    expect(step).toMatch(/npx wrangler deploy --minify/);
+    expect(step).not.toMatch(/versions upload/);
+    const buildStart = yml.indexOf("workers=$(jq -nc '[");
+    const buildEnd = yml.indexOf("]')", buildStart);
+    const defaultList = yml.slice(buildStart, buildEnd + 2);
+    expect(defaultList).toContain('"qron-space"');
+    expect(defaultList).toContain('"govchain-us"');
+    expect(defaultList).toContain('"strainchain-io"');
+    expect(defaultList).toContain('"authichain-com"');
+  });
+
   it("does not hard-fail the claw bind when AGENT_SECRET is empty", () => {
     const yml = readFileSync(workflowPath, "utf8");
     const step = clawBindStep(yml);

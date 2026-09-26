@@ -146,6 +146,66 @@ describe("the Mendo Love Farms dossier", () => {
   });
 });
 
+describe("source PDF ingest — 2026-09-21", () => {
+  const farm = "mendo-love-farms";
+
+  it("recovers 251104R041-001 from the printed panel, not invented chemistry", () => {
+    const cert = getDossier(farm)!.certificates.find(
+      c => c.coa_id === "251104R041-001"
+    )!;
+    expect(cert.sample_name_on_coa).toBe("VT-26 Clone 11-3");
+    expect(cert.cultivar).toBe("VT-26");
+    expect(cert.cannabinoids_pct).toEqual({
+      THCVA: 12.968,
+      THCA: 7.825,
+      CBGA: 0.71,
+      CBCA: 0.13,
+    });
+    expect(cert.cannabinoids_pct).not.toHaveProperty("THCV");
+    expect(cert.cannabinoids_pct).not.toHaveProperty("d9_THC");
+    expect(cert.derived.totalThcvPct).toBe(11.373);
+    expect(cert.derived.totalThcPct).toBe(6.863);
+    expect(cert.derived.ratio).toBe(1.66);
+    expect(cert.derived.mismatch).toBeNull();
+    expect(cert.arithmetic_check).toBe("pass");
+    expect(cert.source_pdf_sha256).toBe(
+      "86bc4d288ced18f81accbd210ab31bb858c2b61d7e0e1ad293d665b33af43830"
+    );
+  });
+
+  it("verifies 240823Q009-001 against the printed panel", () => {
+    const cert = getDossier(farm)!.certificates.find(
+      c => c.coa_id === "240823Q009-001"
+    )!;
+    expect(cert.sample_name_on_coa).toBe("VT-41 N9 x 6.75 #3");
+    expect(cert.cultivar).toBe("VT-41");
+    expect(cert.batch).toBe("VT-41");
+    expect(cert.matrix).toBe("flower");
+    expect(cert.cannabinoids_pct).toEqual({
+      THCVA: 7.05,
+      THCA: 1.572,
+      THCV: 0.417,
+      CBCA: 0.18,
+    });
+    expect(cert.derived.totalThcvPct).toBe(6.6);
+    expect(cert.derived.totalThcPct).toBe(1.379);
+    expect(cert.derived.mismatch).toBeNull();
+    expect(cert.source_pdf_sha256).toBe(
+      "4aaf9691c996d7ea7b7a92c86b9cf224943c82a8b3b025d68ee27312f91f681f"
+    );
+  });
+
+  it("does not attach either ingested CoA to LT-63", () => {
+    const lt63 = getCultivar(farm, "lt-63")!;
+    expect(lt63.cultivar.coa_ids).toEqual([]);
+    expect(lt63.certificates).toEqual([]);
+    expect(lt63.peakThcvPct).toBeNull();
+    const ids = getDossier(farm)!.certificates.map(c => c.coa_id);
+    expect(ids).toContain("240823Q009-001");
+    expect(ids).toContain("251104R041-001");
+  });
+});
+
 describe("LT-63 — known, licensable, and untested", () => {
   const farm = "mendo-love-farms";
 

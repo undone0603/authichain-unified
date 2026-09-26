@@ -17,7 +17,8 @@ A specification others are forbidden to implement is not a standard, and a
 verifier nobody can run independently is not proof. Competitors are free to
 implement this. What is not licensed here is the platform behind it — the
 multi-agent scoring pipeline, the edge network, the operational tooling — or the
-AuthiChain trademarks. See `../LICENSE.md`.
+AuthiChain trademarks. The Apache-2.0 terms for this directory are in
+[`LICENSE`](./LICENSE).
 
 ## 1. Terminology
 

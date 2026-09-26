@@ -264,6 +264,42 @@ other chemovars.
 
 ### What is still owed
 
-Opening the twelve certificates. The inventory is complete and every CoA ID is
-accounted for, but no field has been read off a source document. `arithmetic_check`
-in `certificates.json` still means "internally consistent", not "matches the PDF".
+Opening the remaining ten certificates. Two source PDFs
+(240823Q009-001, 251104R041-001) were read on 2026-09-21; see the ingest
+section below. For every other row, `arithmetic_check` in
+`certificates.json` still means "internally consistent", not "matches the PDF".
+
+---
+
+## Source PDF ingest — 2026-09-21
+
+Two SC Labs PDFs arrived as uploads. Prior hunts had the CoA IDs in this
+file but no bytes. Neither certificate names LT-63; `coa_ids` for that
+cultivar stays empty.
+
+| File                      | CoA ID         | Sample name on CoA | Batch   | Collected  | Issued     |
+| ------------------------- | -------------- | ------------------ | ------- | ---------- | ---------- |
+| `coas/240823Q009-001.pdf` | 240823Q009-001 | VT-41 N9 x 6.75 #3 | VT-41   | 2024-08-23 | 2024-08-26 |
+| `coas/251104R041-001.pdf` | 251104R041-001 | VT-26 Clone 11-3   | (blank) | 2025-11-04 | 2025-11-07 |
+
+Two uploads of 240823Q009-001 were byte-identical
+(`sha256:4aaf9691c996d7ea7b7a92c86b9cf224943c82a8b3b025d68ee27312f91f681f`);
+one canonical PDF is stored. 251104R041-001 is
+`sha256:86bc4d288ced18f81accbd210ab31bb858c2b61d7e0e1ad293d665b33af43830`.
+
+What changed in the structured record, quoting only printed values:
+
+- **240823Q009-001** (already transcribed). Printed panel matches the stored
+  compounds (THCVa 7.050%, THCa 1.572%, THCV 0.417%, CBCa 0.18%). The
+  certificate prints Flower, Inhalable and batch VT-41; the prototype had
+  filed matrix as leaf. Δ9-THC and CBDVa print `<LOQ`; remaining listed
+  compounds print ND and stay omitted.
+- **251104R041-001** (totals-only on the prototype). Recovered printed
+  quantified rows: THCVa 12.968%, THCa 7.825%, CBGa 0.71%, CBCa 0.13%.
+  Printed THCV is ND; Δ9-THC, CBDa, CBDVa are `<LOQ` — omitted, not stored
+  as 0. Derived totals at decarb 0.877 reproduce the lab's printed
+  11.373% total THCV and 6.863% total THC. Terpene panel recovered;
+  printed total terpenoids 1.2925% (39 tested). Sample size 5.0 g,
+  moisture 69.1%.
+
+Ten certificates still have no PDF bytes on file.

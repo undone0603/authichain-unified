@@ -1,0 +1,73 @@
+# Keeps GitHub Actions in lockstep with .github/autonomy.json.
+#
+# - PRs that touch workflows or the manifest: offline check that every
+#   workflow file is classified exactly once (stops silent sprawl).
+# - Push to main / daily / manual: enable or disable managed workflows to
+#   match the manifest. Changes are listed in the job summary.
+#
+# To turn a loop on or off: edit one line in .github/autonomy.json and merge.
+# Charter: docs/OPERATING_CHARTER.md
+name: Autonomy reconcile
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/autonomy.json"
+      - "scripts/autonomy/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/autonomy.json"
+      - "scripts/autonomy/**"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "plan = show diff only, apply = enable/disable to match"
+        required: false
+        default: plan
+        type: choice
+        options: [plan, apply]
+
+concurrency:
+  group: autonomy-reconcile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Manifest covers every workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/autonomy/reconcile.mjs --check
+
+  reconcile:
+    name: Reconcile GitHub to manifest
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Reconcile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'apply' }}
+        run: node scripts/autonomy/reconcile.mjs "--${MODE}"
