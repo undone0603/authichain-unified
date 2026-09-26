@@ -500,7 +500,7 @@ export default function Home() {
             style={{ color: '#9e9e9e', textDecoration: 'none' }}>QRON Creative Studio ↗</a>
           <a href="mailto:Z@authichain.com"
             style={{ color: '#6b6b6b', textDecoration: 'none' }}>Contact</a>
-          <span>© {new Date().getFullYear()} AuthiChain, Inc.</span>
+          <span>© 2026 AuthiChain</span>
         </div>
       </footer>
 

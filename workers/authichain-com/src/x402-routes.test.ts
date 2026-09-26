@@ -4,7 +4,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 function proofHeader(p: Record<string, unknown>) {
@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("/api/checkout/dpp"))).toBeNull();
+    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -56,6 +56,10 @@ describe("tryHandleX402", () => {
         paid: boolean;
         priceUsd: number | null;
       }>;
+      humanCheckout: {
+        farmUsd: number;
+        farmPaymentLink?: string;
+      };
     };
     expect(body.protocol).toBe("x402");
     expect(body.payTo).toBe("0xabc0000000000000000000000000000000000001");
@@ -63,6 +67,65 @@ describe("tryHandleX402", () => {
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );
+    expect(body.humanCheckout.farmUsd).toBe(149);
+    expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
+      "authichain.com"
+    );
+  });
+
+  it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {
+    const res = await tryHandleX402(req("/api/x402/listing"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      name: string;
+      category: string;
+      paidRoute: string;
+      wallet: string;
+      priceUsd: number;
+      endpoints: number;
+      tools: number;
+      payapi: { form: { wallet: string; paidRoute: string } };
+    };
+    expect(body.name).toBe("AuthiChain Agent Verify");
+    expect(body.category).toBe("Verification");
+    expect(body.paidRoute).toBe(
+      "https://authichain.com/api/v1/agent-verify"
+    );
+    expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
+    expect(body.payapi.form.wallet).toBe(body.wallet);
+    expect(body.priceUsd).toBe(0.05);
+    expect(body.endpoints).toBe(2);
+    expect(body.tools).toBe(3);
+    expect(JSON.stringify(body)).not.toContain(
+      "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"
+    );
+  });
+
+  it("GET /api/x402/growth lists directories and sister aliases", async () => {
+    const res = await tryHandleX402(req("/api/x402/growth"), {
+      X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      listing: string;
+      directories: Array<{ id: string }>;
+      sisters: Array<{ origin: string }>;
+      pack: { wallet: string };
+    };
+    expect(body.listing).toBe("/api/x402/listing");
+    expect(body.directories.some(d => d.id === "payapi")).toBe(true);
+    expect(body.sisters.map(s => s.origin)).toEqual(
+      expect.arrayContaining([
+        "https://authichain.com",
+        "https://qron.space",
+        "https://strainchain.io",
+        "https://govchain.us",
+      ])
+    );
+    expect(body.pack.wallet).toBe("0xabc0000000000000000000000000000000000001");
   });
 
   it("GET /.well-known/x402.json is the catalog", async () => {
@@ -70,6 +133,47 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(200);
     const body = (await res!.json()) as { catalog: string };
     expect(body.catalog).toBe("/api/x402/catalog");
+  });
+
+  it("GET /.well-known/x402 is the x402scan fan-out", async () => {
+    const res = await tryHandleX402(req("/.well-known/x402"));
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as {
+      version: number;
+      resources: string[];
+      protocol?: string;
+    };
+    expect(body.version).toBe(1);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
+    expect(body.protocol).toBeUndefined();
+  });
+
+  it("GET /openapi.json declares x-payment-info for POST /api/x402", async () => {
+    const res = await tryHandleX402(req("/openapi.json"), {
+      X402_PRICE_USD: "0.05",
+    });
+    expect(res!.status).toBe(200);
+    const spec = (await res!.json()) as {
+      openapi: string;
+      paths: {
+        "/api/x402": {
+          post: {
+            "x-payment-info": {
+              protocols: string[];
+              price: { amount: string };
+            };
+          };
+        };
+      };
+    };
+    expect(spec.openapi).toBe("3.1.0");
+    expect(spec.paths["/api/x402"].post["x-payment-info"].protocols).toEqual([
+      "x402",
+    ]);
+    expect(spec.paths["/api/x402"].post["x-payment-info"].price.amount).toBe(
+      "0.05"
+    );
+    expect(JSON.stringify(spec)).not.toContain("/api/checkout");
   });
 
   it("POST /api/x402/catalog is 405", async () => {
@@ -117,15 +221,56 @@ describe("tryHandleX402", () => {
     expect(res!.status).toBe(402);
     const body = (await res!.json()) as {
       x402Version: number;
-      accepts: Array<{ payTo: string }>;
+      resource?: { url?: string };
+      accepts: Array<{
+        payTo: string;
+        amount?: string;
+        maxAmountRequired?: string;
+        network?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string } } } };
     };
-    expect(body.x402Version).toBe(1);
+    expect(body.x402Version).toBe(2);
+    expect(body.resource?.url).toContain("/api/v1/agent-verify");
+    expect(body.accepts[0].amount).toBe("50000");
+    expect(body.accepts[0].maxAmountRequired).toBeUndefined();
+    expect(body.accepts[0].network).toBe("eip155:8453");
     expect(body.accepts[0].payTo).toBe(
       "0xabc0000000000000000000000000000000000001"
     );
+    expect(body.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(body.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(body.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    expect(JSON.stringify(body).toLowerCase()).not.toContain(
+      "facilitator.payai"
+    );
+    const required = res!.headers.get("PAYMENT-REQUIRED");
+    expect(required).toBeTruthy();
+    const v2 = JSON.parse(
+      Buffer.from(required!, "base64").toString("utf8")
+    ) as {
+      x402Version: number;
+      accepts: Array<{
+        amount?: string;
+        network?: string;
+        resource?: string;
+        outputSchema?: { input?: { type?: string; method?: string } };
+      }>;
+      extensions?: { bazaar?: unknown };
+    };
+    expect(v2.x402Version).toBe(2);
+    expect(v2.accepts[0].amount).toBe("50000");
+    expect(v2.accepts[0].network).toBe("eip155:8453");
+    expect(v2.accepts[0].outputSchema?.input?.type).toBe("http");
+    expect(v2.accepts[0].outputSchema?.input?.method).toBe("POST");
+    expect(v2.accepts[0].resource).toBeUndefined();
+    expect(v2.extensions?.bazaar).toBeTruthy();
+    expect(body.x402Version).toBe(v2.x402Version);
+    expect(body.accepts[0].amount).toBe(v2.accepts[0].amount);
   });
 
-  it("refuses a structural proof when no facilitator is configured", async () => {
+  it("refuses a payment proof with 503 before settlement (no registry bound)", async () => {
     const header = proofHeader({
       scheme: "exact",
       network: "base",
@@ -143,9 +288,39 @@ describe("tryHandleX402", () => {
         X402_NETWORK: "base",
       }
     );
-    expect(res!.status).toBe(402);
-    const body = (await res!.json()) as { status: string };
-    expect(body.status).toBe("not_configured");
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
+  });
+
+  it("refuses a v2 PAYMENT-SIGNATURE proof the same as X-PAYMENT", async () => {
+    const header = proofHeader({
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:8453", amount: "50000" },
+      payload: {
+        signature: "0xabc",
+        authorization: { from: PAYER, to: "0xdef", value: "50000" },
+      },
+    });
+    const res = await tryHandleX402(
+      req("/api/x402", {
+        method: "POST",
+        headers: {
+          "PAYMENT-SIGNATURE": header,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ sealId: "demo" }),
+      }),
+      {
+        X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+        X402_NETWORK: "base",
+      }
+    );
+    expect(res!.status).toBe(503);
+    const body = (await res!.json()) as { error: string; settled: boolean };
+    expect(body.error).toBe("registry_not_bound");
+    expect(body.settled).toBe(false);
   });
 });
 
@@ -172,6 +347,63 @@ describe("tryHandleAppHost", () => {
   });
 
   it("ignores the apex root", () => {
-    expect(tryHandleAppHost(new Request("https://authichain.com/"))).toBeNull();
+    expect(
+      tryHandleAppHost(new Request("https://authichain.govchain.us/"))
+    ).toBeNull();
+  });
+});
+
+describe("POST /api/x402 with the VERIFY_APP binding", () => {
+  it("forwards the paid call to the Next registry route and returns its answer", async () => {
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const seen: Request[] = [];
+    const verifyApp = {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+          headers: { "PAYMENT-RESPONSE": "settled" },
+        });
+      },
+    };
+    const res = await tryHandleX402(
+      req("/api/x402?x=1", {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      verifyApp
+    );
+    expect(res!.status).toBe(200);
+    expect(res!.headers.get("PAYMENT-RESPONSE")).toBe("settled");
+    expect(await res!.json()).toEqual({ verified: true });
+    expect(seen).toHaveLength(1);
+    expect(new URL(seen[0].url).pathname).toBe("/api/v1/agent-verify");
+    expect(new URL(seen[0].url).search).toBe("");
+    expect(seen[0].method).toBe("POST");
+    expect(seen[0].headers.get("x-payment")).toBe(header);
+    expect(await seen[0].json()).toEqual({ sealId: "seal-1" });
+  });
+
+  it("still answers an unpaid call with the 402 challenge, without forwarding", async () => {
+    let calls = 0;
+    const res = await tryHandleX402(
+      req("/api/v1/agent-verify", { method: "POST" }),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async () => {
+          calls++;
+          return new Response(null, { status: 500 });
+        },
+      }
+    );
+    expect(res!.status).toBe(402);
+    expect(calls).toBe(0);
   });
 });

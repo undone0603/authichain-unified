@@ -643,6 +643,31 @@ export async function runDppExceptionsReport(
   };
 }
 
+/**
+ * Build the founder alert for one paid-loop exception.
+ *
+ * Pure construction only — sending stays with `publishFounderAlert`, so the
+ * report → alert path is unit-coverable with no secrets and no live sends.
+ * Shape matches `FounderAlert` without importing that module.
+ */
+export function dppExceptionAlert(exc: DppException): {
+  title: string;
+  text: string;
+  subject: string;
+  kind: "draft";
+} {
+  const hours =
+    exc.stall.hours == null ? "unknown age" : `${exc.stall.hours.toFixed(1)}h`;
+  return {
+    title: `DPP exception: ${exc.visitId} stalled at ${exc.furthest}`,
+    text:
+      `visit ${exc.visitId} paid but never ${exc.stall.nextExpected} ` +
+      `(${exc.stall.reason}, ${hours})`,
+    subject: `DPP exception: ${exc.visitId}`,
+    kind: "draft",
+  };
+}
+
 /** Adapter used by `scripts/revenue-cycle.ts --phase=report`. */
 export type LoopStall = {
   visitId: string;
@@ -716,7 +741,7 @@ export function dppActivateUrl(
   sessionId: string,
   visitId?: string | null
 ): string {
-  const base = "https://authichain.com/dpp/activate";
+  const base = "https://authichain.govchain.us/dpp/activate";
   const params = new URLSearchParams({ session_id: sessionId });
   if (visitId) params.set("visit_id", visitId);
   return `${base}?${params.toString()}`;

@@ -17,8 +17,11 @@ const manifest = JSON.parse(
 
 const entries = manifest.packs.map((pack) => {
   const html = readFileSync(join(root, "content/microsites", pack.file), "utf8");
-  if (!html.includes("api/checkout/")) {
+  if (!html.includes("/checkout/")) {
     throw new Error(`${pack.file} is missing a checkout href`);
+  }
+  if (html.includes("buy.stripe.com")) {
+    throw new Error(`${pack.file} still links buy.stripe.com`);
   }
   return `  ${JSON.stringify(pack.slug)}: ${JSON.stringify(html)}`;
 });
