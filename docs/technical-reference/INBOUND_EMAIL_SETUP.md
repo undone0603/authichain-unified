@@ -14,9 +14,10 @@
 > - `authichain.com` sending DNS records were re-added on 2026-09-24 and were
 >   pending verification. Check it shows **Verified** in Resend before sending
 >   proposals from `proposals@authichain.com` (Phase 7).
-> - `/api/cron/nurture-replies` is still a Next.js route that only ran on
->   Vercel, which is retired, so replies are captured but not auto-nurtured
->   until it is ported (Phase 5).
+> - `/api/cron/nurture-replies` is ported on `authichain-edge-router`
+>   (`worker-app/nurture-replies.ts`) but stays GROUP B / HELD. Default GET is
+>   dry-run. It does not ride the hourly dispatcher. Live send needs
+>   `NURTURE_SEND_ENABLED=true` and `?send=1`, plus an explicit founder yes.
 
 ## Overview
 
@@ -269,10 +270,11 @@ The nurture cron runs every 2 hours via your platform's cron service.
 ### For Cloudflare (current platform)
 
 The edge router has one hourly cron trigger, fanned out by
-`worker-app/cron-dispatch.ts`. Once `/api/cron/nurture-replies` is ported,
-add the job there with schedule `0 */2 * * *`. It sends email to prospects,
-so it belongs in GROUP B ("HELD") in `worker-app/wrangler.toml` until it is
-deliberately cleared. There is no `vercel.json` cron any more.
+`worker-app/cron-dispatch.ts`. `/api/cron/nurture-replies` is ported there
+(`worker-app/nurture-replies.ts`) with schedule `0 */2 * * *` documented in
+GROUP B (`crons_HELD`). It is **not** in `CLEARED_JOBS`. Default mode is
+dry-run. Sending mail to prospects requires `NURTURE_SEND_ENABLED=true` and
+`?send=1`. There is no `vercel.json` cron any more.
 
 ### For other platforms (AWS Lambda, Google Cloud, etc.)
 
