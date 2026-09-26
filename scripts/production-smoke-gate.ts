@@ -41,6 +41,12 @@ export function smokeSteps(origin = DEFAULT_ORIGIN): SmokeStep[] {
       method: "HEAD",
     },
     {
+      id: "farm_head",
+      url: `${base}/api/checkout/plan/strainchain_farm`,
+      accept: [204],
+      method: "HEAD",
+    },
+    {
       id: "x402_health",
       url: `${base}/api/x402/health`,
       accept: [200],

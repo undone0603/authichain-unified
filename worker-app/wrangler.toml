@@ -72,6 +72,10 @@ pattern = "authichain.com/api/automation/cron"
 zone_name = "authichain.com"
 
 [[routes]]
+pattern = "authichain.com/api/cron/nurture-replies"
+zone_name = "authichain.com"
+
+[[routes]]
 pattern = "authichain.com/api/v1/attestation"
 zone_name = "authichain.com"
 
@@ -149,6 +153,21 @@ zone_name = "authichain.com"
 pattern = "authichain.com/generate*"
 zone_name = "authichain.com"
 
+# Public lead forms (LeadCapturePopup.tsx, SocialShareCTA.tsx, /book). More
+# specific than authichain-com's authichain.com/* glob so POSTs reach
+# worker-app/lead-routes.ts directly. Attached live 2026-09-25 via the API.
+[[routes]]
+pattern = "authichain.com/api/leads/capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/lead-capture"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/book"
+zone_name = "authichain.com"
+
 # Preferred app host. 522s when DNS still points at a dead origin (old Vercel).
 # Attaching the edge router here is the in-repo fix; owner must CNAME app
 # onto this zone and orange-cloud it (see docs/ROUTING.md).
@@ -156,9 +175,108 @@ zone_name = "authichain.com"
 pattern = "app.authichain.com/*"
 zone_name = "authichain.com"
 
+# Mirrors of the apex path routes on the primary host authichain.govchain.us
+# (govchain.us zone; attached live 2026-09-25 via the API).
+[[routes]]
+pattern = "authichain.govchain.us/.well-known/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/jwks.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/issuer.json"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/protocol/launch-proof"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/automation/cron"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/attestation"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/attestation/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/guardrail/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/v1/agent-verify*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/checkout"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/checkout/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/generate"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/generate/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/stripe/webhook"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/webhooks/stripe"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attest"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attest/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attestations"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/attestations/*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/dashboard*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/dapp*"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/generate*"
+zone_name = "govchain.us"
+
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
+
+# Workers AI classifies inbound replies (/api/webhooks/resend-inbound) inside
+# the free 10,000 Neurons/day allocation, ahead of OpenAI.
+[ai]
+binding = "AI"
 
 [[hyperdrive]]
 binding = "HYPERDRIVE"
@@ -229,6 +347,7 @@ new_sqlite_classes = ["RateLimiter"]
 # firing autonomously).
 # crons_HELD = [
 #   "0 9 * * *",   # lead-nurturing — writes/syncs unsynced leads to HubSpot (external CRM writes)
+#   "0 */2 * * *", # nurture-replies — emails prospects from inbound reply sequences (OUTREACH). Port lives at GET/POST /api/cron/nurture-replies. Default is dry-run. Do not move to GROUP A. To send for real: bind NURTURE_SEND_ENABLED=true and call with ?send=1. Still a per-job founder yes.
 #   "0 */4 * * *", # hubspot-crm-sync — syncs leads/payment events to HubSpot (external CRM writes)
 #   "0 4 * * *",   # staking-rewards — inserts pending $QRON reward-ledger entries (creates financial obligations)
 #   "0 9 1 * *",   # founder-payout — monthly Stripe pay-yourself-first split (MOVES REAL MONEY; 1st of month)
@@ -237,3 +356,12 @@ new_sqlite_classes = ["RateLimiter"]
 #   "*/10 * * * *",# vertical-cloner — autonomously spawns industry-expansion missions
 #   "*/30 * * * *",# newsjacking-monitor — monitors news and triggers PR/outreach missions (autonomous external)
 # ]
+
+# VERIFY_APP: service binding to the Next app worker `authichain-app`
+# (wrangler.app.jsonc), which owns the auth_seals lookup behind
+# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
+# without this binding they are refused 503 registry_not_bound before
+# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+[[services]]
+binding = "VERIFY_APP"
+service = "authichain-app"

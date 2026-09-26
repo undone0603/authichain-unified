@@ -78,7 +78,12 @@ export async function runWinbackCampaign(): Promise<{ checked: number; sent: num
     const mail = renderBillingEmail('winback', brandId, {
       name: p.full_name?.split(' ')[0] || undefined,
       days: age,
-      offerCode: step === 'day_30' ? 'COMEBACK20' : undefined,
+      // Only promise a code that exists in Stripe. COMEBACK20 was hardcoded
+      // here but no such promotion code exists (checked 2026-09-23), so the
+      // day-30 email promised a discount checkout would refuse. Creating a
+      // promo is a pricing decision: set WINBACK_PROMO_CODE after the owner
+      // creates it (docs/OPERATING_CHARTER.md).
+      offerCode: step === 'day_30' ? process.env.WINBACK_PROMO_CODE || undefined : undefined,
     });
 
     const result = await sendEmail({

@@ -13,12 +13,14 @@ describe("production smoke gate", () => {
       "checkout_api",
       "checkout_dpp_head",
       "passport_head",
+      "farm_head",
       "x402_health",
     ]);
     const heads = smokeSteps().filter(s => s.method === "HEAD");
     expect(heads.map(s => s.id)).toEqual([
       "checkout_dpp_head",
       "passport_head",
+      "farm_head",
     ]);
   });
 

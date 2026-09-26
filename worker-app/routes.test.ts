@@ -61,45 +61,42 @@ describe("GET /api/checkout/dpp", () => {
     expect(dppCreate).not.toHaveBeenCalled();
   });
 
-  it("returns 500 JSON when Stripe is not configured", async () => {
-    const res = await app.request("/api/checkout/dpp?email=ops%40brand.com");
-    expect(res.status).toBe(500);
-    const body = await res.json();
-    expect(body.error).toMatch(/Stripe is not configured/);
-    expect(dppCreate).not.toHaveBeenCalled();
-  });
-
-  it("303s to /dpp when GET has no recovery email", async () => {
+  it("GET with email 303s to the confirm page and never calls Stripe", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
-    const res = await app.request("/api/checkout/dpp?visit_id=dpp_worker_anon");
-    expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(
-      "https://authichain.com/dpp?need_email=1&visit_id=dpp_worker_anon"
-    );
-    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
-    expect(dppCreate).not.toHaveBeenCalled();
-  });
-
-  it("303s to Stripe Checkout with the DPP price and visit id", async () => {
-    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
-    dppCreate.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_worker",
-    });
     const res = await app.request(
       "/api/checkout/dpp?visit_id=dpp_worker_1&utm_source=seo&email=ops%40brand.com"
     );
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_worker"
+      "https://authichain.com/checkout/dpp_readiness?email=ops%40brand.com&visit_id=dpp_worker_1&utm_source=seo"
     );
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("GET without email 303s to the confirm page", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    const res = await app.request("/api/checkout/dpp?visit_id=dpp_worker_anon");
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_worker_anon"
+    );
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("DPP-SMOKE-E2E still creates the $0 demo session on GET", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    dppCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
+    });
+    const res = await app.request(
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_smoke"
+    );
     expect(dppCreate).toHaveBeenCalledOnce();
-    const arg = dppCreate.mock.calls[0][0];
-    expect(arg.line_items[0].price).toBe("price_1TwmD8GqTruSqV8TpAF8dfyA");
-    expect(arg.client_reference_id).toBe("dpp_worker_1");
-    expect(arg.metadata.plan).toBe("dpp_readiness");
-    expect(arg.after_expiration.recovery.enabled).toBe(true);
-    expect(arg.customer_creation).toBe("always");
   });
 });
 
@@ -118,37 +115,23 @@ describe("GET /api/checkout/plan/:planId", () => {
     expect(dppCreate).not.toHaveBeenCalled();
   });
 
-  it("303s to /pricing when GET has no recovery email", async () => {
+  it("GET (with or without email) 303s to the confirm page, never Stripe", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_plan";
-    const res = await app.request("/api/checkout/plan/strainchain_passport");
-    expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(
-      "https://authichain.com/pricing?need_email=1"
+    const bare = await app.request("/api/checkout/plan/strainchain_passport");
+    expect(bare.status).toBe(303);
+    expect(bare.headers.get("location")).toBe(
+      "https://authichain.com/checkout/strainchain_passport"
     );
-    expect(dppCreate).not.toHaveBeenCalled();
-  });
-
-  it("303s to Stripe Checkout with the catalogue price", async () => {
-    process.env.STRIPE_SECRET_KEY = "sk_test_plan";
-    dppCreate.mockResolvedValue({
-      url: "https://checkout.stripe.com/c/pay/cs_test_passport",
-    });
-    const res = await app.request(
+    const withEmail = await app.request(
       "/api/checkout/plan/strainchain_passport?utm_source=pricing&email=ops%40brand.com"
     );
-    expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_passport"
+    expect(withEmail.status).toBe(303);
+    expect(withEmail.headers.get("location")).toBe(
+      "https://authichain.com/checkout/strainchain_passport?email=ops%40brand.com&utm_source=pricing"
     );
-    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
-    expect(dppCreate).toHaveBeenCalledOnce();
-    const arg = dppCreate.mock.calls[0][0];
-    expect(arg.line_items[0].price).toBe("price_1UHjCZGqTruSqV8T35M6AmoJ");
-    expect(arg.metadata.plan).toBe("strainchain_passport");
-    expect(arg.metadata.brand).toBe("strainchain");
-    expect(arg.after_expiration.recovery.enabled).toBe(true);
-    expect(arg.consent_collection).toBeUndefined();
-    expect(arg.allow_promotion_codes).toBeUndefined();
+    const unknown = await app.request("/api/checkout/plan/nope");
+    expect(unknown.headers.get("location")).toBe("https://authichain.com/checkout");
+    expect(dppCreate).not.toHaveBeenCalled();
   });
 });
 
@@ -158,16 +141,38 @@ describe("GET /api/checkout", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.smoke).toBe("GET /api/checkout/dpp");
+    expect(body.smoke).toBe("GET /api/checkout/dpp?promo=DPP-SMOKE-E2E");
     expect(body.webhook).toBe("POST /api/stripe/webhook");
   });
 });
 
 describe("POST /api/checkout", () => {
+  it("403s an automated (no UA / bot UA / prefetch) POST", async () => {
+    for (const headers of [
+      { "content-type": "application/json" },
+      { "content-type": "application/json", "user-agent": "Googlebot/2.1" },
+      {
+        "content-type": "application/json",
+        "user-agent": "Mozilla/5.0",
+        "sec-purpose": "prefetch",
+      },
+    ]) {
+      const res = await app.request("/api/checkout", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ planId: "creator" }),
+      });
+      expect(res.status).toBe(403);
+    }
+  });
+
   it("returns 400 without planId", async () => {
     const res = await app.request("/api/checkout", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)",
+      },
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);

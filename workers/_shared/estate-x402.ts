@@ -7,7 +7,7 @@
  * does, with this host as resource.url so the listing is the sister origin.
  *
  * payTo / asset / price come from the published AuthiChain rail
- * (X402_PUBLISHED_PAY_TO, Base USDC, $0.05). Do not rebind
+ * (X402_PUBLISHED_PAY_TO = 0xaebf…e437, Base USDC, $0.05). Do not rebind
  * X402_FACILITATOR_URL. Do not invent a second wallet. Settle needs the
  * same secret bind as authichain-com (bind-x402-secrets.yml + Deploy
  * Workers). Without X402_FACILITATOR_URL, health is not_configured and a
@@ -15,16 +15,17 @@
  */
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
-  paymentResponseHeaders,
   readPaymentProofHeader,
-  settlePayment,
-  verifyPaymentProof,
+  X402_REGISTRY_NOT_BOUND,
   x402HealthReport,
   x402PriceUsd,
   x402ScanFanout,
   X402_PUBLISHED_PAY_TO,
+  type X402EnvVars,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import { ESTATE_BRANDS } from "./estate-landing.ts";
 import type { SisterDiscoveryBrand } from "./estate-agent-discovery.ts";
@@ -33,7 +34,7 @@ import {
   sisterX402Catalog,
 } from "./estate-x402-catalog.ts";
 
-export type SisterX402Env = X402HealthEnv;
+export type SisterX402Env = X402EnvVars;
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -103,7 +104,7 @@ function publishedPayTo(env?: SisterX402Env): string {
 
 function hydrateX402(env?: SisterX402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -159,7 +160,8 @@ function fanoutResponse(request: Request): Response {
 
 async function agentVerify(
   request: Request,
-  env?: SisterX402Env
+  env?: SisterX402Env,
+  verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = publishedPayTo(env);
@@ -171,79 +173,30 @@ async function agentVerify(
     payTo,
     description: "AuthiChain agent verification",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
-  const verification = verifyPaymentProof(proof, required.body.accepts[0]);
-  if (!verification.valid) {
-    return json(
-      402,
-      { ...required.v2, error: verification.reason },
-      required.headers
+  if (verifyApp) {
+    return forwardPaidVerify(
+      verifyApp,
+      request,
+      proofHeader,
+      await request.text()
     );
   }
-
-  const settlement = await settlePayment(
-    readPaymentProofHeader(name => request.headers.get(name)) ?? "",
-    required.body.accepts[0]
-  );
-  if (!settlement.settled || !settlement.trustless) {
-    return json(
-      402,
-      {
-        ...required.v2,
-        error: settlement.reason ?? "not_configured",
-        status: settlement.trustless ? "unpaid" : "not_configured",
-      },
-      required.headers
-    );
-  }
-
-  let input: Record<string, unknown> = {};
-  try {
-    input = (await request.json()) as Record<string, unknown>;
-  } catch {
-    /* empty body is fine */
-  }
-  const subject = (input.sealId ??
-    input.seal_id ??
-    input.productId ??
-    input.serial) as string | undefined;
-
-  return json(
-    200,
-    {
-      verified: false,
-      authenticityScore: 0,
-      subject: subject ?? null,
-      details: {
-        note: "Paid settlement accepted; registry lookup is not bound on this edge path.",
-      },
-      settlement: {
-        payer: proof.payer,
-        amountAtomic: verification.amount.toString(),
-        txHash: settlement.txHash ?? proof.txHash ?? null,
-        trustless: settlement.trustless,
-      },
-      timestamp: new Date().toISOString(),
-    },
-    paymentResponseHeaders({
-      success: true,
-      transaction: settlement.txHash ?? proof.txHash,
-      network: required.body.accepts[0].network,
-      payer: proof.payer,
-    })
-  );
+  // No registry lookup is bound here: refuse before settlePayment() so the
+  // agent is never charged for an answer that cannot be real.
+  return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
 /** Serve GET/HEAD health + catalog and unpaid POST 402 on a sister landing. */
 export async function tryHandleSisterX402(
   request: Request,
-  env: SisterX402Env = {}
+  env: SisterX402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
@@ -271,7 +224,7 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env);
+    return agentVerify(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

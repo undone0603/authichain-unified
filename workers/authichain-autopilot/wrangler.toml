@@ -3,8 +3,9 @@ main = "index.js"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
-[triggers]
-crons = ["0 */6 * * *"]
+workers_dev = false
+# Cron and workers.dev were disabled live; keep them off so a redeploy does
+# not re-arm this worker. Do not re-add [triggers] without an explicit decision.
 
 [observability]
 enabled = true

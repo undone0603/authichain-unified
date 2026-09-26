@@ -3,13 +3,14 @@
  *
  * Folded from the Grok App Builder preview. Command tokens (ink / paper /
  * steel). Not a second homepage — existing /verify /pricing /dpp stay.
- * Checkout uses GET + ?email= (#1141). $QRON is not a payment rail (#1143).
+ * Checkout is a confirm page (#1255). GET does not call Stripe. POST starts
+ * the session. $QRON is not a payment rail (#1143). Theater SKUs are not listed.
  */
 import {
   catalogPaymentLinkHtml,
   checkoutEmailFormHtml,
 } from "../../../src/lib/checkout-email";
-import { PAYMENT_LINKS } from "../../../server/payment-links";
+import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402";
 
 const HTML_HEADERS: Record<string, string> = {
   "Content-Type": "text/html; charset=utf-8",
@@ -22,10 +23,10 @@ const HTML_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
-export const DESK_AS_OF = "21 Sep 2026";
-export const DESK_COMMIT = "259290d";
+export const DESK_AS_OF = "25 Sep 2026";
+export const DESK_COMMIT = "d519d62";
 
-const PAYTO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+const PAYTO = X402_PUBLISHED_PAY_TO;
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const SMART = "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
 const POLYGON_NFT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
@@ -38,13 +39,13 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "Cloudflare apex",
     state: "live",
-    detail: "authichain.com workers. Money path is not Vercel. #1138 on main.",
+    detail: "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
   },
   {
     surface: "EU DPP checkout",
     state: "live",
     detail:
-      "GET /api/checkout/dpp needs ?email=. Else 303 to /dpp?need_email=1.",
+      "GET https://authichain.com/checkout/dpp_readiness is a confirm page and does not call Stripe. POST with a work email starts the $299 session.",
   },
   {
     surface: "Passport $49",
@@ -76,6 +77,12 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "Certificate count",
     state: "pending",
     detail: "Apex cards show — until /api/authichain/certificates answers.",
+  },
+  {
+    surface: "Public catalogue",
+    state: "live",
+    detail:
+      "Passport $49, Farm $149/mo, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
   },
   {
     surface: "gov-mint",
@@ -135,6 +142,399 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
+type AgentId = "guardian" | "sentinel" | "archivist" | "scout" | "arbiter";
+type AgentVote = "pass" | "fail" | "unknown";
+type SealStatus = "verified" | "failed" | "unknown";
+
+const AGENTS: { id: AgentId; name: string; role: string }[] = [
+  { id: "guardian", name: "Guardian", role: "Seal integrity" },
+  { id: "sentinel", name: "Sentinel", role: "Clone / anomaly" },
+  { id: "archivist", name: "Archivist", role: "Registry record" },
+  { id: "scout", name: "Scout", role: "Custody graph" },
+  { id: "arbiter", name: "Arbiter", role: "Consensus" },
+];
+
+const ALL_PASS: Record<AgentId, AgentVote> = {
+  guardian: "pass",
+  sentinel: "pass",
+  archivist: "pass",
+  scout: "pass",
+  arbiter: "pass",
+};
+
+const SAMPLE_NOTE =
+  "Desk sample. query_provenance never attests an unknown ID, and it labels this row a sample — not a live registry write.";
+
+type DeskSeal = {
+  id: string;
+  status: SealStatus;
+  sample: boolean;
+  product: string;
+  holder: string;
+  origin: string;
+  finding: string;
+  disclaimer: string;
+  plan?: "dpp_readiness" | "strainchain_farm" | "strainchain_passport";
+  gift?: string;
+  fields: { label: string; value: string }[];
+  votes: Record<AgentId, AgentVote>;
+};
+
+const DESK_SEALS: DeskSeal[] = [
+  {
+    id: SEED,
+    status: "verified",
+    sample: true,
+    product: "Michigan METRC sample",
+    holder: "Self-serve desk seed",
+    origin: "Michigan",
+    finding:
+      "Five-agent consensus on the published desk seed. Not a live METRC filing and not a cryptographic attestation.",
+    disclaimer: SAMPLE_NOTE,
+    plan: "strainchain_passport",
+    fields: [
+      { label: "Source", value: "Desk seed · AC-7C2A91E4" },
+      { label: "Protocol", value: "AuthiChain attestation 0.1" },
+      { label: "MCP", value: "query_provenance status desk_sample, verified false" },
+      { label: "Scan", value: "2.1s · Guardian → Arbiter" },
+    ],
+    votes: ALL_PASS,
+  },
+  {
+    id: "AC-DPP-BATT-8841",
+    status: "verified",
+    sample: true,
+    product: "Harbor-3 LFP industrial pack · 3.2 kWh",
+    holder: "Great Lakes Energy Works",
+    origin: "Grand Rapids, MI",
+    finding: "Five-agent consensus. Seal matches the sample DPP for this pack.",
+    disclaimer: SAMPLE_NOTE,
+    plan: "dpp_readiness",
+    fields: [
+      { label: "Carbon", value: "68.4 kg CO2e / kWh" },
+      { label: "Recycled Co", value: "14%" },
+      { label: "Recycled Li", value: "6%" },
+      { label: "Repair", value: "Module swap · 8-year residual" },
+      { label: "ESPR gate", value: "18 Feb 2027 · batteries ≥2 kWh" },
+      { label: "DPP class", value: "Industrial / LMT battery" },
+    ],
+    votes: ALL_PASS,
+  },
+  {
+    id: "SC-FARM-LT63-0912",
+    status: "verified",
+    sample: true,
+    product: "Mendo / LT-63 genetics passport",
+    holder: "Sun-grown Michigan cultivar desk",
+    origin: "Northern Lower Peninsula, MI",
+    finding: "Genetics passport matches the sample CoA hash. Not a METRC filing.",
+    disclaimer: SAMPLE_NOTE,
+    plan: "strainchain_farm",
+    fields: [
+      { label: "Cultivar", value: "LT-63" },
+      { label: "CoA hash", value: "sha256:7c91…e2ab" },
+      { label: "METRC lot", value: "1A4060300002DEMO" },
+      { label: "Pack", value: "Jar + CoA, not a dispensary license" },
+      { label: "SKU", value: "Farm $149/mo · Passport $49" },
+    ],
+    votes: ALL_PASS,
+  },
+  {
+    id: "GC-MIA-DLA-0005",
+    status: "verified",
+    sample: true,
+    product: "ACPT seal · token 5 · DLA Aviation Philadelphia",
+    holder: "Founder-held AuthiChainProduct",
+    origin: "United States",
+    finding:
+      "Founder-held ACPT seal. Metadata is live. This is not a government mint and not an award.",
+    disclaimer:
+      "No SBIR/STTR/SVIP win is asserted. On-chain government seals wait on a live contract with bytecode.",
+    gift: "https://govchain.us/gift",
+    fields: [
+      { label: "Agency", value: "DLA Aviation · Philadelphia" },
+      { label: "Fit", value: "From mint calldata, not an award" },
+      { label: "Mint", value: "No government NFT. No SBIR win claimed." },
+      { label: "Origin brief", value: "FTC 16 CFR Part 323 · EO 14392 context" },
+      { label: "Packet", value: "govchain.us/gift · free DoD packet" },
+    ],
+    votes: ALL_PASS,
+  },
+  {
+    id: "AC-DPP-BATT-8841X",
+    status: "failed",
+    sample: true,
+    product: "Harbor-3 LFP industrial pack · clone attempt",
+    holder: "Unknown presenter",
+    origin: "Claimed Grand Rapids, MI",
+    finding:
+      "Sentinel rejected a copied QR. The original pack still verifies. This mark does not.",
+    disclaimer: SAMPLE_NOTE,
+    plan: "dpp_readiness",
+    fields: [
+      { label: "Cloned from", value: "AC-DPP-BATT-8841" },
+      { label: "Signature", value: "Does not verify against JWKS" },
+      { label: "Registry", value: "No matching tokenURI" },
+    ],
+    votes: {
+      guardian: "fail",
+      sentinel: "fail",
+      archivist: "fail",
+      scout: "unknown",
+      arbiter: "fail",
+    },
+  },
+];
+
+const SEAL_INDEX = new Map(DESK_SEALS.map(s => [s.id, s]));
+
+function normalizeSealId(raw: string): string {
+  return String(raw ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^A-Z0-9._:-]/g, "")
+    .slice(0, 64);
+}
+
+function lookupDeskSeal(raw: string): DeskSeal {
+  const id = normalizeSealId(raw);
+  const hit = SEAL_INDEX.get(id);
+  if (hit) return hit;
+  return {
+    id: id || "—",
+    status: "unknown",
+    sample: false,
+    product: "No registry row",
+    holder: "—",
+    origin: "—",
+    finding:
+      "Not in this desk and not attested. The live MCP query_provenance path returns the same class of answer: unknown, never verified.",
+    disclaimer:
+      "Honesty is the product. This desk never upgrades an unknown ID to a readiness stamp.",
+    fields: [
+      { label: "Lookup", value: "Public query_provenance" },
+      { label: "Attestation", value: "None — unknown stays unknown" },
+    ],
+    votes: {
+      guardian: "unknown",
+      sentinel: "unknown",
+      archivist: "unknown",
+      scout: "unknown",
+      arbiter: "unknown",
+    },
+  };
+}
+
+
+type StoryChapter = { phase: string; title: string; body: string };
+
+function storyChapters(seal: DeskSeal): StoryChapter[] {
+  const table: Record<string, StoryChapter[]> = {
+    [SEED]: [
+      {
+        phase: "Origin",
+        title: "A Michigan desk seed",
+        body: "AC-7C2A91E4 is the published seed on this desk. It is a Michigan sample row. It is not a live METRC filing.",
+      },
+      {
+        phase: "Classification",
+        title: "Labeled, not attested",
+        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false. The scan is Guardian through Arbiter in about 2.1 seconds.",
+      },
+      {
+        phase: "Sealing",
+        title: "Passport is the SKU",
+        body: "One cultivar passport is $49. This story belongs to the seed. It is not a dispensary record.",
+      },
+    ],
+    "AC-DPP-BATT-8841": [
+      {
+        phase: "Origin",
+        title: "Cells, then a pack",
+        body: "Cell lot sealed 2 Apr 2026 in Holland, Michigan. Assembled 11 Jun 2026 in Grand Rapids as Harbor-3, a 3.2 kWh LFP pack, held on this desk by Great Lakes Energy Works.",
+      },
+      {
+        phase: "Classification",
+        title: "The numbers on the tag",
+        body: "68.4 kg CO2e per kWh. Recycled cobalt 14%. Recycled lithium 6%. Repair is a module swap with an 8-year residual. ESPR batteries at or above 2 kWh face the 18 Feb 2027 gate. This is the sample DPP class, not a filed passport.",
+      },
+      {
+        phase: "Sealing",
+        title: "The seal on this lot",
+        body: "American Seal issued 14 Aug 2026 as a desk sample. query_provenance does not treat this row as a live registry write.",
+      },
+    ],
+    "SC-FARM-LT63-0912": [
+      {
+        phase: "Origin",
+        title: "The mother",
+        body: "Mother selected 18 Mar 2026 on farm lot A, Northern Lower Peninsula. Cultivar LT-63. This story is that jar, not the category.",
+      },
+      {
+        phase: "Classification",
+        title: "A hash, not a license",
+        body: "CoA posted 9 Jul 2026. Hash sha256:7c91…e2ab. The METRC string 1A4060300002DEMO is a desk demo. Not a METRC filing and not a dispensary license.",
+      },
+      {
+        phase: "Sealing",
+        title: "Passport on the jar",
+        body: "Sealed 12 Sep 2026. Farm is $149 a month. A single cultivar passport is $49. This page is the sample story for that jar.",
+      },
+    ],
+    "GC-MIA-DLA-0005": [
+      {
+        phase: "Origin",
+        title: "A founder-held mark",
+        body: "ACPT token 5 on Base. Held by the founder. United States origin. This is not a government mint.",
+      },
+      {
+        phase: "Classification",
+        title: "A fit, not an award",
+        body: "DLA Aviation Philadelphia is named from mint calldata. That describes a fit. It is not an award and not an SBIR win.",
+      },
+      {
+        phase: "Sealing",
+        title: "The packet you can open",
+        body: "Metadata served 22 Sep 2026. The public document is the free gift at govchain.us/gift. On-chain government seals wait until a contract has bytecode.",
+      },
+    ],
+    "AC-DPP-BATT-8841X": [
+      {
+        phase: "Origin",
+        title: "Presented as the pack",
+        body: "Shown on this desk as a copy that borrows the Harbor-3 name.",
+      },
+      {
+        phase: "Classification",
+        title: "The signature breaks",
+        body: "The signature does not verify against JWKS. There is no matching tokenURI. Sentinel fails the copy.",
+      },
+      {
+        phase: "Refusal",
+        title: "This mark does not inherit the story",
+        body: "The original Harbor-3 tag still has its own chapters. Scanning the copy does not play them.",
+      },
+    ],
+  };
+  return (
+    table[seal.id] ?? [
+      {
+        phase: "None",
+        title: "No story on this tag",
+        body: "This ID was not issued. Story Mode does not borrow another lot and does not stamp an unknown ID verified.",
+      },
+    ]
+  );
+}
+
+function renderStory(seal: DeskSeal): string {
+  const items = storyChapters(seal)
+    .map(
+      (c, i) =>
+        `<li class="card"><p class="kicker">0${i + 1} / ${esc(c.phase)}</p><h3 style="margin:.4rem 0">${esc(c.title)}</h3><p>${esc(c.body)}</p></li>`
+    )
+    .join("");
+  return `<section id="story">
+    <p class="kicker">Story Mode · this lot only</p>
+    <h2 style="margin:.4rem 0 0">${esc(seal.product)}</h2>
+    <p class="mono">${esc(seal.id)}</p>
+    <ol class="grid" style="margin-top:1rem;list-style:none;padding:0">${items}</ol>
+    <p class="muted">End of this tag's story. Another ID does not play these chapters.</p>
+  </section>`;
+}
+
+function voteLabel(vote: AgentVote): string {
+  if (vote === "pass") return "Pass";
+  if (vote === "fail") return "Fail";
+  return "Unknown";
+}
+
+function agentRail(votes: Record<AgentId, AgentVote>): string {
+  return `<ol class="agents">${AGENTS.map(
+    a =>
+      `<li class="agent"><p class="kicker">${esc(a.role)}</p><p style="margin:.35rem 0 0;font-family:Newsreader,serif;font-size:1.15rem">${esc(a.name)}</p><p class="vote-${votes[a.id]}">${voteLabel(votes[a.id])}</p></li>`
+  ).join("")}</ol>`;
+}
+
+function sealCta(seal: DeskSeal): string {
+  if (seal.gift) {
+    return `<a class="btn" href="${esc(seal.gift)}">Open free DoD packet</a>`;
+  }
+  if (seal.plan === "dpp_readiness") {
+    return catalogPaymentLinkHtml({
+      planId: "dpp_readiness",
+      label: "Pay $299 DPP Readiness",
+      className: "btn",
+    });
+  }
+  if (seal.plan === "strainchain_farm") {
+    return catalogPaymentLinkHtml({
+      planId: "strainchain_farm",
+      label: "Pay Farm $149/mo",
+      className: "btn",
+    });
+  }
+  if (seal.plan === "strainchain_passport") {
+    return catalogPaymentLinkHtml({
+      planId: "strainchain_passport",
+      label: "Pay Passport $49",
+      className: "btn",
+    });
+  }
+  return `<a class="btn" href="/desk/pricing">See live SKUs</a>`;
+}
+
+function renderCertificate(seal: DeskSeal): string {
+  const statusLabel =
+    seal.status === "verified"
+      ? "Verified"
+      : seal.status === "failed"
+        ? "Rejected"
+        : "Unknown";
+  const headline =
+    seal.status === "verified"
+      ? "Consensus reached."
+      : seal.status === "failed"
+        ? "The mark does not hold."
+        : "Unknown. Not attested.";
+  const fields = seal.fields
+    .map(
+      f =>
+        `<div><p class="kicker">${esc(f.label)}</p><p style="margin:.3rem 0 0">${esc(f.value)}</p></div>`
+    )
+    .join("");
+  return `${renderStory(seal)}
+  <section style="margin-top:2rem">
+    <p class="kicker">Verification · ${esc(seal.id)}</p>
+    <h2 style="margin:.4rem 0 0">${esc(headline)}</h2>
+    <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. Target 2.1 seconds. No agent may upgrade an unknown ID to verified.</p>
+    ${agentRail(seal.votes)}
+    <article class="card" style="margin-top:1.25rem">
+      <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""} <span class="muted">2.1s consensus</span></p>
+      <h3 style="margin:.6rem 0 .35rem">${esc(seal.product)}</h3>
+      <p class="mono">${esc(seal.id)}</p>
+      <p>${esc(seal.finding)}</p>
+      <div class="fields">${fields}
+        <div><p class="kicker">Holder</p><p style="margin:.3rem 0 0">${esc(seal.holder)}</p></div>
+        <div><p class="kicker">Origin</p><p style="margin:.3rem 0 0">${esc(seal.origin)}</p></div>
+      </div>
+      <p class="muted" style="margin-top:1rem">${esc(seal.disclaimer)}</p>
+      <div class="row">${sealCta(seal)}
+        <a class="btn ghost" href="https://authichain.govchain.us/onboard">Start a pilot</a>
+      </div>
+    </article>
+  </section>`;
+}
+
+const SAMPLE_CHIPS = [
+  [SEED, "METRC seed"],
+  ["AC-DPP-BATT-8841", "Battery DPP"],
+  ["SC-FARM-LT63-0912", "Farm genetics"],
+  ["GC-MIA-DLA-0005", "ACPT token 5"],
+  ["AC-DPP-BATT-8841X", "Clone"],
+] as const;
+
 const CSS = `
 :root{--ink:#0c0c0d;--char:#141416;--paper:#f2efe8;--steel:#b8b4aa;--muted:#8b8880;--line:#2c2c2e;--ok:#7a9478}
 *{box-sizing:border-box}
@@ -166,6 +566,19 @@ footer .bar{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between
 input,select{height:2.75rem;width:100%;padding:0 .75rem;border:1px solid var(--line);border-radius:10px;background:var(--char);color:var(--paper);font:inherit}
 label{display:block;margin:.75rem 0 .35rem;font-size:.85rem}
 .row{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}
+.agents{display:grid;gap:.5rem;margin:1.25rem 0 0}
+@media(min-width:640px){.agents{grid-template-columns:repeat(5,1fr)}}
+.agent{border:1px solid var(--line);border-radius:12px;padding:.75rem;background:var(--ink);animation:rise .45s ease both}
+.agent:nth-child(1){animation-delay:.32s}.agent:nth-child(2){animation-delay:.64s}.agent:nth-child(3){animation-delay:.96s}.agent:nth-child(4){animation-delay:1.28s}.agent:nth-child(5){animation-delay:1.6s}
+@keyframes rise{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.agent{animation:none}}
+.vote-pass,.vote-fail,.vote-unknown{font-family:IBM Plex Mono,ui-monospace,Menlo,monospace;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;margin:.65rem 0 0}
+.vote-pass{color:var(--ok)}.vote-fail{color:#c45c5c}.vote-unknown{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
+.chip{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;font-size:.8rem;color:var(--paper)}
+.fields{display:grid;gap:1px;background:var(--line);margin-top:1rem;border-radius:12px;overflow:hidden}
+@media(min-width:640px){.fields{grid-template-columns:1fr 1fr}}
+.fields div{background:var(--char);padding:.85rem 1rem}
 `;
 
 function shell(
@@ -208,7 +621,7 @@ function shell(
 
 function home(): string {
   const dppForm = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-dpp",
     inputId: "desk-dpp-email",
@@ -240,7 +653,6 @@ function home(): string {
          label: "Farm $149/mo",
          className: "btn ghost",
        })}
-       <a class="btn ghost" href="${PAYMENT_LINKS.strainchain.basic.url}">${PAYMENT_LINKS.strainchain.basic.name} ${PAYMENT_LINKS.strainchain.basic.price}</a>
      </div>
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
@@ -281,58 +693,74 @@ function status(): string {
 
 function pricing(): string {
   const dpp = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-price-dpp",
     inputId: "desk-price-dpp-email",
     buttonClass: "btn",
   });
   const passport = checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Publish one passport",
     formId: "desk-price-pass",
     inputId: "desk-price-pass-email",
     buttonClass: "btn",
   });
+  const farm = checkoutEmailFormHtml({
+    action: "https://authichain.com/checkout/strainchain_farm",
+    label: "Start a Farm Plan",
+    formId: "desk-price-farm",
+    inputId: "desk-price-farm-email",
+    buttonClass: "btn",
+  });
   return shell(
     "Pricing — AuthiChain desk",
-    "Live catalogue. $49 is a StrainChain passport. Checkout requires a recovery email.",
+    "Live catalogue. Farm $149/mo is the recurring SKU. A POST on the confirm page starts Stripe.",
     "/desk/pricing",
     `<p class="kicker">Published catalogue</p>
      <h1>Prices that already charge.</h1>
-     <p class="muted">GET checkout without email 303s to a capture page. Anonymous carts never get Stripe recovery mail.</p>
-     <div class="grid g3" style="margin-top:1.5rem">
-       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
-       <div class="card"><p class="kicker">AuthiChain Starter</p><p class="price">$299<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Not the QRON Starter Pack ($29).</p>
-         <p style="margin-top:1rem"><a class="btn ghost" href="https://buy.stripe.com/28E8wP0EVf7M6mefTS1Nu1p">Open $299/mo</a></p></div>
+     <p class="muted">The confirm page is a GET. Stripe starts only when that form is posted with a work email.</p>
+     <div class="grid g2" style="margin-top:1.5rem">
+       <div class="card"><p class="kicker">Farm</p><p class="price">$149<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Unlimited cultivars. Recurring. Same live Stripe link as strainchain.io.</p>${farm}
+         <p style="margin-top:.75rem">${catalogPaymentLinkHtml({
+           planId: "strainchain_farm",
+           label: "Pay $149/mo on Stripe",
+           className: "btn ghost",
+         })}</p></div>
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
+       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
      </div>
-     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only.</p>`
+     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
   );
 }
 
-function verify(): string {
+function verify(request: Request): string {
+  const raw = new URL(request.url).searchParams.get("id") ?? "";
+  const pending = raw.trim();
+  const seal = pending ? lookupDeskSeal(pending) : null;
+  const inputValue = esc(pending || SEED);
+  const chips = SAMPLE_CHIPS.map(
+    ([id, label]) =>
+      `<a class="chip" href="/desk/verify?id=${esc(id)}">${esc(label)} · ${esc(id)}</a>`
+  ).join("");
+  const result = seal ? renderCertificate(seal) : "";
   return shell(
     "Verify — AuthiChain desk",
-    "Enter a cert ID. Typical scan is 2.1 seconds.",
+    "Five-agent consensus on this desk. Typical scan is 2.1 seconds. Unknown IDs stay unknown.",
     "/desk/verify",
-    `<h1>Verify</h1>
-     <p class="muted">Desk sample is ${SEED} (Michigan METRC). Live protocol is on the apex.</p>
-     <form id="vf" class="card" style="max-width:28rem">
+    `<p class="kicker">Five-agent consensus</p>
+     <h1>Verify</h1>
+     <p class="muted">Guardian, Sentinel, Archivist, Scout, Arbiter. Desk samples are labeled. query_provenance never attests an unknown ID.</p>
+     <form id="vf" class="card" style="max-width:28rem" method="get" action="/desk/verify">
        <label for="cert">Certificate ID</label>
-       <input id="cert" name="id" value="${SEED}" autocomplete="off">
-       <div class="row"><button class="btn" type="submit">Verify on apex</button>
+       <input id="cert" name="id" value="${inputValue}" autocomplete="off" maxlength="64">
+       <div class="row"><button class="btn" type="submit">Run 2.1s consensus</button>
        <a class="btn ghost" href="/protocol">Open Verification Protocol</a></div>
      </form>
-     <p class="muted" style="margin-top:1rem">This form submits to <a href="/verify">authichain.com/verify</a>.</p>
-     <script>
-       document.getElementById('vf').addEventListener('submit', function (e) {
-         e.preventDefault();
-         var id = document.getElementById('cert').value.trim();
-         location.href = '/verify' + (id ? ('?id=' + encodeURIComponent(id)) : '');
-       });
-     </script>`
+     <p class="muted" style="margin-top:1rem">Scan stays on this desk. Samples first:</p>
+     <div class="chips">${chips}</div>
+     ${result}`
   );
 }
 
@@ -372,23 +800,25 @@ function hubs(): string {
      <h1>Seed hubs live on each apex.</h1>
      <p class="muted">W3C Render Method, Confidence Method, and Data Model 2.1 are research pages. This protocol does not implement them yet.</p>
      <div class="grid g2" style="margin-top:1.5rem">${cards}</div>
-     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / QRON packs / GovChain onboard.</p>`
+     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / Farm $149/mo / QRON packs / GovChain onboard.</p>`
   );
 }
 
-const PAGES: Record<string, () => string> = {
-  "/desk": home,
-  "/desk/": home,
-  "/desk/status": status,
-  "/desk/status/": status,
-  "/desk/pricing": pricing,
-  "/desk/pricing/": pricing,
+type PageRender = (request: Request) => string;
+
+const PAGES: Record<string, PageRender> = {
+  "/desk": () => home(),
+  "/desk/": () => home(),
+  "/desk/status": () => status(),
+  "/desk/status/": () => status(),
+  "/desk/pricing": () => pricing(),
+  "/desk/pricing/": () => pricing(),
   "/desk/verify": verify,
   "/desk/verify/": verify,
-  "/desk/token": token,
-  "/desk/token/": token,
-  "/desk/hubs": hubs,
-  "/desk/hubs/": hubs,
+  "/desk/token": () => token(),
+  "/desk/token/": () => token(),
+  "/desk/hubs": () => hubs(),
+  "/desk/hubs/": () => hubs(),
 };
 
 export function isDeskPath(pathname: string): boolean {
@@ -410,5 +840,5 @@ export function tryHandleDesk(request: Request): Response | null {
       { status: 404, headers: { ...HTML_HEADERS, "X-Robots-Tag": "noindex" } }
     );
   }
-  return new Response(render(), { headers: HTML_HEADERS });
+  return new Response(render(request), { headers: HTML_HEADERS });
 }

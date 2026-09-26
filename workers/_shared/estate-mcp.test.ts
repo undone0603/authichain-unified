@@ -35,7 +35,7 @@ function httpsUrl(raw: string): URL {
 
 function stripeLink(raw: string): URL {
   const url = httpsUrl(raw);
-  assert.equal(url.hostname, "buy.stripe.com");
+  assert.equal(url.hostname, "authichain.com");
   return url;
 }
 
@@ -45,7 +45,7 @@ test("recognizes sister MCP paths and ignores checkout", () => {
   assert.equal(isSisterMcpPath("/api/mcp"), true);
   assert.equal(isSisterMcpPath("/.well-known/mcp.json"), true);
   assert.equal(isSisterMcpPath("/api/x402"), false);
-  assert.equal(isSisterMcpPath("/api/checkout/dpp"), false);
+  assert.equal(isSisterMcpPath("https://authichain.com/checkout/dpp_readiness"), false);
   assert.equal(isSisterMcpPath("/pricing"), false);
 });
 
@@ -262,6 +262,49 @@ test("tools/call verify is unpaid HTTP 402 with published payTo", async () => {
   }
 });
 
+test("tools/call verify with a payment proof is 503 and never settles", async () => {
+  const orig = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify({ success: true, txHash: "0xabc" }));
+  }) as typeof fetch;
+  try {
+    const proof = Buffer.from(
+      JSON.stringify({
+        scheme: "exact",
+        network: "base",
+        payer: "0x1234567890abcdef1234567890abcdef12345678",
+        amount: "50000",
+        signature: "0xdead",
+      })
+    ).toString("base64");
+    const res = await tryHandleSisterMcp(
+      req("qron.space", "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-payment": proof },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "verify", arguments: { serial: "AC-1" } },
+        }),
+      }),
+      "qron",
+      { X402_FACILITATOR_URL: "https://facilitator.example" }
+    );
+    assert.ok(res);
+    assert.equal(res.status, 503);
+    const body = (await res.json()) as { error?: string; settled?: boolean };
+    assert.equal(body.error, "registry_not_bound");
+    assert.equal(body.settled, false);
+    assert.deepEqual(calls, []);
+  } finally {
+    globalThis.fetch = orig;
+    delete process.env.X402_FACILITATOR_URL;
+  }
+});
+
 test("HEAD /mcp is 204 and other paths are ignored", async () => {
   const head = await tryHandleSisterMcp(
     req("qron.space", "/mcp", { method: "HEAD" }),
@@ -275,7 +318,7 @@ test("HEAD /mcp is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterMcp(req("qron.space", "/api/checkout/dpp"), "qron"),
+    await tryHandleSisterMcp(req("qron.space", "https://authichain.com/checkout/dpp_readiness"), "qron"),
     null
   );
   assert.equal(
@@ -304,4 +347,52 @@ test("unknown tool calls are errors, not fake verify", async () => {
   assert.equal(body.result.isError, true);
   assert.ok(body.result.content[0].text.includes("verify"));
   assert.equal(body.result.content[0].text.includes("SECURED"), false);
+});
+
+test("paid MCP verify is forwarded and wrapped as JSON-RPC when VERIFY_APP is bound", async () => {
+  const proof = Buffer.from(
+    JSON.stringify({
+      scheme: "exact",
+      network: "base",
+      payer: "0x1234567890abcdef1234567890abcdef12345678",
+      amount: "50000",
+      signature: "0xdead",
+    })
+  ).toString("base64");
+  const seen: Request[] = [];
+  const res = await tryHandleSisterMcp(
+    req("qron.space", "/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-payment": proof },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "verify", arguments: { serial: "AC-1" } },
+      }),
+    }),
+    "qron",
+    {},
+    {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(
+          JSON.stringify({ verified: false, subject: "AC-1" }),
+          {
+            status: 200,
+          }
+        );
+      },
+    }
+  );
+  assert.ok(res);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    id: number;
+    result: { structuredContent: { subject: string } };
+  };
+  assert.equal(body.id, 4);
+  assert.equal(body.result.structuredContent.subject, "AC-1");
+  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  assert.deepEqual(await seen[0].json(), { serial: "AC-1" });
 });

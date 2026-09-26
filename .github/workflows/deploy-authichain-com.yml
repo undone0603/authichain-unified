@@ -63,7 +63,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2'
+          PAY_TO='0x5db511706FB6317cd23A7655F67450c5AC6e6AA2' # pragma: allowlist secret
           FACILITATOR='https://facilitator.payai.network'
           USDC_ASSET='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
           printf '%s' "$PAY_TO" | npx wrangler secret put X402_PAY_TO --name authichain-com
