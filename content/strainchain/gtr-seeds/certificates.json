@@ -1,0 +1,124 @@
+{
+  "updated": "2026-09-26",
+  "unlisted": true,
+  "note": "Private GTR Seeds / Oregon CBD sample. Seed-matrix CoAs transcribed from PREE Laboratories South PDFs in GTR's public Drive Seed COA folder (Double Durban.pdf C231203-41, Garlic Berry.pdf C231203-42). Not finished flower. Not a public genetics library.",
+  "provenance_warning": "These COA's were taken from plants 30 days pre-harvest as required by the US Department of Agriculture, and are not an accurate representation of finished flower cannabinoid content. Separately: the two certificates ingested here are Seed COAs (matrix hemp / photograph of seeds), informational use only. They are not 30-day pre-harvest flower panels and they do not support GTR's commercial claim of up to 10% THCV and 10% THC in finished flower. GTR states they do not post finished-flower results.",
+  "method": {
+    "decarboxylation_factor": 0.877,
+    "decarboxylation_note": "total_thc = d9_THC + THCA * 0.877. total_thcv = THCV + THCVA * 0.877. Δ8-THC is recorded when present and is not added to total THC.",
+    "verification": "Garlic Berry published total THC 3.374% recomputes to 3.373% from THCA 3.49 + d9-THC 0.313. Double Durban lists every named cannabinoid including THCV as <LOQ 0.010%; no THCV total can be derived."
+  },
+  "laboratory": {
+    "name": "PREE Laboratories South",
+    "address": "Corvallis, OR",
+    "license": null,
+    "accreditation": null,
+    "method": "Informational use only; seed matrix"
+  },
+  "party_of_record": {
+    "role": "seed_breeder",
+    "name": "GTR Seeds",
+    "address": "3395 S Pacific Hwy W, Independence OR 97351",
+    "contact_name": null,
+    "cultivator_disclosure": "GTR Seeds LLC and Jack Hempicine LLC / Oregon CBD share this address and phone. Oregon CBD checkout is processed through GTR Seeds. One buying decision. ZIP on their own pages conflicts (97531 vs 97351); 97351 is Polk County and is used here.",
+    "relationship": "cold — no thread. Sample is private until founder reviews."
+  },
+  "certificates": [
+    {
+      "coa_id": "C231203-41",
+      "cultivar": "Double Durban THCV",
+      "sample_name_on_coa": "Double Durban",
+      "collected": "2023-08-16",
+      "analyzed": "2023-08-22",
+      "client": "GTR Seeds LLC AG-R1079515IHH",
+      "matrix": "seed",
+      "cannabinoids_pct": null,
+      "cannabinoids_note": "PREE South seed CoA. THCA, d9-THC, d8-THC, THCV, CBGA, CBDA, CBD, CBDV, CBN, CBG, CBC, CBDVA, CBL all printed <LOQ (0.010%). THCVA not on this panel. Total THC <LOQ. Total CBD <LOQ. No raw pair exists from which to derive a THCV or THC total.",
+      "totals_pct": { "thcv": null, "thc": null },
+      "ratio_thcv_thc": 0,
+      "arithmetic_check": "not_possible_without_raw_values",
+      "source_pdf": "https://drive.google.com/file/d/1Qgnj7VIYBZoj9d5IfOpXHcNTOsmPYL9B/view",
+      "verified_against_pdf": "2026-09-26",
+      "open_question": "flower_panel_missing"
+    },
+    {
+      "coa_id": "C231203-42",
+      "cultivar": "Garlic Berry THCV",
+      "sample_name_on_coa": "Garlic Berry",
+      "collected": "2023-08-16",
+      "analyzed": "2023-08-22",
+      "client": "GTR Seeds LLC AG-R1079515IHH",
+      "matrix": "seed",
+      "cannabinoids_pct": {
+        "THCA": 3.49,
+        "d9_THC": 0.313,
+        "d8_THC": 0.563,
+        "CBGA": 0.096,
+        "CBDA": 0.055,
+        "CBN": 0.202,
+        "CBG": 0.03
+      },
+      "cannabinoids_note": "PREE South seed CoA. THCV printed <LOQ and omitted. THCVA not on the panel. Δ8-THC 0.563% is recorded and is not included in derived total THC.",
+      "totals_pct": { "thcv": null, "thc": 3.374 },
+      "ratio_thcv_thc": 0,
+      "arithmetic_check": "pass",
+      "source_pdf": "https://drive.google.com/file/d/1zM5jWmZKtD0ahLyo2F-Ku3sLec5vYI8-/view",
+      "verified_against_pdf": "2026-09-26",
+      "open_question": "flower_panel_missing"
+    }
+  ],
+  "cultivars": [
+    {
+      "id": "Double Durban THCV",
+      "role": "thcv_sampler",
+      "description": "Durban Poison V1 × Auto Durban THCV. GTR claims up to 10% THCV and 10% THC in commercial testing. The only ingested certificate is a 2023 seed CoA with THCV <LOQ.",
+      "coa_ids": ["C231203-41"],
+      "peak_total_thcv_pct": null,
+      "chemotype_claim": {
+        "claim": "Commercial testing has shown up to 10% THCV and 10% THC; THCV to THC ratio ~1:1.",
+        "provenance": "claimed",
+        "evidence": "gtrseeds.com/products/double-durban-thcv. Not supported by C231203-41."
+      }
+    },
+    {
+      "id": "Garlic Berry THCV",
+      "role": "thcv_sampler",
+      "description": "Urkle Kush V × Auto Durban THCV. GTR claims ~50% of the cannabinoid fraction as THCV and ~1:1 THCV:THC. The ingested certificate is a 2023 seed CoA with measurable THC and THCV <LOQ.",
+      "coa_ids": ["C231203-42"],
+      "peak_total_thcv_pct": null,
+      "chemotype_claim": {
+        "claim": "Approximately 50% of the total cannabinoid fraction as THCV; ~1:1 THCV to THC.",
+        "provenance": "claimed",
+        "evidence": "gtrseeds.com/products/varin-berry-skunk. Not supported by C231203-42."
+      }
+    }
+  ],
+  "lineage_edges": [
+    {
+      "parents": ["Durban Poison V1", "Auto Durban THCV"],
+      "child": "Double Durban THCV",
+      "relation": "f1",
+      "provenance": "claimed",
+      "evidence": "Product page lineage on gtrseeds.com/products/double-durban-thcv. Not stated on the seed CoA."
+    },
+    {
+      "parents": ["Urkle Kush V", "Auto Durban THCV"],
+      "child": "Garlic Berry THCV",
+      "relation": "f1",
+      "provenance": "claimed",
+      "evidence": "Product page lineage on gtrseeds.com/products/varin-berry-skunk. Not stated on the seed CoA."
+    }
+  ],
+  "open_questions_for_breeder": [
+    {
+      "id": "flower_panel_missing",
+      "question": "Do you have a finished-flower or 30-day pre-harvest flower panel for Double Durban and Garlic Berry that lists THCVA/THCV and THCA/Δ9-THC as numbers rather than <LOQ?",
+      "blocks": "Publishing a derived THCV total or a 10% figure as verified."
+    },
+    {
+      "id": "seed_vs_preharvest",
+      "question": "The public Drive folder's Seed COA files for these two lines are 2023 seed tests. Which file, if any, is the USDA 30-day pre-harvest flower CoA referenced on the product pages?",
+      "blocks": "Calling C231203-41/42 a pre-harvest flower record."
+    }
+  ]
+}
