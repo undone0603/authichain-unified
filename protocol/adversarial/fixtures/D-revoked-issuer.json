@@ -1,0 +1,10 @@
+{
+  "id": "D-revoked-issuer",
+  "input": {
+    "objectFound": true,
+    "depth": "lookup",
+    "crypto": { "signatureValid": true, "issuerTrusted": true, "identityValid": true, "evidenceIntact": true, "statusActive": false },
+    "attestation": { "objectId": "ac:demo:revoked-01", "decision": "verified", "status": "revoked", "issuer": "Authichain-Core", "evidence": [] }
+  },
+  "expect": { "decision": "blocked", "reasonsInclude": ["attestation_revoked"] }
+}
