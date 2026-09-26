@@ -29,10 +29,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
-      - name: Audit production database
-        run: node scripts/audit-production-drizzle.mjs
+      - name: Run audit
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/audit-production-drizzle.mjs
+
 
       - name: Upload audit artifact
         uses: actions/upload-artifact@v4
