@@ -39,6 +39,8 @@ origin → verification endpoint → signed attestation / JWKS → object lookup
 
 It is GET/read-only. It does not create Stripe sessions or write funnel events.
 
+`.github/workflows/production-smoke-gate.yml` runs it after every Cloudflare deploy of authichain.com finishes (`workflow_run` on Deploy to Cloudflare, Deploy authichain-com and Deploy Cloudflare Edge Worker), plus once a day. A failure is retried once after 30s to ride out Worker propagation; a red run is raised by `ops-pulse.yml`.
+
 ## Autonomous repair loop
 
 On a failed required check:
