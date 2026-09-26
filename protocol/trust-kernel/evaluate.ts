@@ -1,8 +1,22 @@
 /**
- * Workers-safe Trust Kernel. Twin of evaluate.mjs without the Node CLI block.
- * Crypto verdict is an INPUT. Do not invent signatureValid:false.
+ * Workers-safe Trust Kernel twin of evaluate.mjs.
+ * Zero deps. No node:fs CLI block.
  */
-export type Decision =
+const MAX_PLAUSIBLE_MPS = 250;
+const EARTH_KM = 6371;
+const MOCK_DIGEST = /^sha256:mock-digest/;
+const REAL_SHA256 = /^sha256:[A-Fa-f0-9]{64}$/;
+
+export type CheckState =
+  | "verified"
+  | "failed"
+  | "partial"
+  | "clear"
+  | "unknown"
+  | "not_supplied"
+  | "anomalous";
+
+export type TrustDecision =
   | "verified"
   | "anomaly"
   | "blocked"
@@ -10,80 +24,43 @@ export type Decision =
   | "invalid"
   | "not_found";
 
-export type Depth = "lookup" | "history";
-
-export type Scan = { at: string; lat?: number; lon?: number; region?: string };
-
-export type Evidence = {
-  type: string;
-  issuer?: string;
-  timestamp?: string;
-  digest?: string;
-};
-
-export type CryptoInput = {
-  signatureValid?: boolean;
-  issuerTrusted?: boolean;
-  identityValid?: boolean;
-  evidenceIntact?: boolean;
-  statusActive?: boolean;
-};
-
-export type EvaluateInput = {
+export type TrustInput = {
   objectFound?: boolean;
-  depth?: Depth;
-  crypto?: CryptoInput;
+  objectId?: string;
   identity?: { serial?: string };
   attestation?: {
     objectId?: string;
-    decision?: string;
     status?: string;
+    decision?: string;
     issuer?: string;
-    evidence?: Evidence[];
+    evidence?: Array<{ type?: string; digest?: string }>;
   };
-  evidence?: Evidence[];
-  scans?: Scan[];
+  crypto?: {
+    signatureValid?: boolean;
+    issuerTrusted?: boolean;
+    identityValid?: boolean;
+    evidenceIntact?: boolean;
+    statusActive?: boolean;
+  };
+  evidence?: Array<{ type?: string; digest?: string }>;
+  scans?: Array<{ at: string; lat?: number; lon?: number; region?: string }>;
+  depth?: "lookup" | "history";
 };
 
-export type Vector = {
-  identity: string;
-  issuer: string;
-  signature: string;
-  provenance: string;
-  physical_binding: string;
-  scan_behavior: string;
-  revocation: string;
-  freshness: string;
-};
-
-export type Verdict = {
-  decision: Decision;
-  vector: Vector;
-  reasons: string[];
-  unknowns: string[];
-  depthUsed: Depth;
-};
-
-const MAX_PLAUSIBLE_MPS = 250;
-const EARTH_KM = 6371;
-const MOCK_DIGEST = /^sha256:mock-digest/;
-const REAL_SHA256 = /^sha256:[A-Fa-f0-9]{64}$/;
-
-export function isMockDigest(d: unknown): boolean {
+export function isMockDigest(d?: string) {
   return typeof d === "string" && MOCK_DIGEST.test(d);
 }
-export function isRealSha256(d: unknown): boolean {
+export function isRealSha256(d?: string) {
   return typeof d === "string" && REAL_SHA256.test(d);
 }
 
-function toRad(n: number): number {
+function toRad(n: number) {
   return (n * Math.PI) / 180;
 }
-
 export function haversineKm(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number },
-): number {
+) {
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.lon - a.lon);
   const x =
@@ -92,13 +69,13 @@ export function haversineKm(
   return 2 * EARTH_KM * Math.asin(Math.sqrt(x));
 }
 
-function parseTs(at: string): number {
+function parseTs(at: string) {
   const n = Date.parse(at);
   if (Number.isNaN(n)) throw new Error(`scan_timestamp_malformed:${at}`);
   return n / 1000;
 }
 
-export function scanAnomalies(scans: Scan[] = []): string[] {
+export function scanAnomalies(scans: TrustInput["scans"] = []) {
   const reasons: string[] = [];
   const ordered = [...scans].sort((x, y) => parseTs(x.at) - parseTs(y.at));
   for (let i = 0; i < ordered.length - 1; i++) {
@@ -114,7 +91,8 @@ export function scanAnomalies(scans: Scan[] = []): string[] {
       reasons.push("scan_timestamp_non_monotonic");
       continue;
     }
-    if ((km * 1000) / dt > MAX_PLAUSIBLE_MPS) {
+    const mps = (km * 1000) / dt;
+    if (mps > MAX_PLAUSIBLE_MPS) {
       reasons.push(`impossible_travel:${Math.round(km)}km_in_${Math.round(dt)}s`);
     }
   }
@@ -126,31 +104,31 @@ export function scanAnomalies(scans: Scan[] = []): string[] {
   return reasons;
 }
 
-function emptyVector(): Vector {
+function emptyVector() {
   return {
-    identity: "not_supplied",
-    issuer: "unknown",
-    signature: "unknown",
-    provenance: "unknown",
-    physical_binding: "unknown",
-    scan_behavior: "clear",
-    revocation: "clear",
-    freshness: "unknown",
+    identity: "not_supplied" as CheckState,
+    issuer: "unknown" as CheckState,
+    signature: "unknown" as CheckState,
+    provenance: "unknown" as CheckState,
+    physical_binding: "unknown" as const,
+    scan_behavior: "clear" as CheckState,
+    revocation: "clear" as CheckState,
+    freshness: "unknown" as CheckState,
   };
 }
 
-export function evaluate(input: EvaluateInput = {}): Verdict {
-  const depthUsed: Depth = input.depth === "history" ? "history" : "lookup";
+export function evaluate(input: TrustInput = {}) {
+  const depthUsed = input.depth === "history" ? "history" : "lookup";
   const vector = emptyVector();
   const reasons: string[] = [];
-  const unknowns: string[] = ["physical_binding_not_inspected"];
+  const unknowns = ["physical_binding_not_inspected"];
   const att = input.attestation;
   const crypto = input.crypto || {};
   const evidence = [...(input.evidence || []), ...((att && att.evidence) || [])];
 
   if (!input.objectFound && !att && !input.crypto) {
     return {
-      decision: "not_found",
+      decision: "not_found" as TrustDecision,
       vector,
       reasons: ["object_not_found"],
       unknowns,
@@ -205,7 +183,8 @@ export function evaluate(input: EvaluateInput = {}): Verdict {
   }
   if (att?.decision === "blocked") reasons.push("attestation_blocked");
 
-  if (realEvidence.some((e) => e.type === "inspection")) {
+  const inspected = realEvidence.some((e) => e.type === "inspection");
+  if (inspected) {
     vector.physical_binding = "partial";
     const idx = unknowns.indexOf("physical_binding_not_inspected");
     if (idx >= 0) unknowns.splice(idx, 1);
@@ -225,7 +204,7 @@ export function evaluate(input: EvaluateInput = {}): Verdict {
     unknowns.push("scan_history_not_in_lookup_depth");
   }
 
-  let decision: Decision;
+  let decision: TrustDecision;
   if (reasons.includes("object_not_found")) decision = "not_found";
   else if (reasons.includes("signature_invalid") || reasons.includes("issuer_untrusted"))
     decision = "invalid";
