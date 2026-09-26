@@ -1,0 +1,57 @@
+{
+  "name": "authichain-verify",
+  "version": "0.1.0",
+  "description": "Offline reference verifier for the AuthiChain Verification Specification v0.1.0. Zero dependencies, runs without contacting any AuthiChain server.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "AuthiChain Inc.",
+  "homepage": "https://github.com/undone0603/authichain-unified/tree/main/protocol#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/undone0603/authichain-unified.git",
+    "directory": "protocol"
+  },
+  "bugs": {
+    "url": "https://github.com/undone0603/authichain-unified/issues"
+  },
+  "keywords": [
+    "authichain",
+    "verifier",
+    "provenance",
+    "verifiable-credentials",
+    "did-key",
+    "ed25519",
+    "digital-product-passport",
+    "gs1"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./verifier.mjs",
+  "types": "./verifier.d.ts",
+  "exports": {
+    ".": {
+      "types": "./verifier.d.ts",
+      "import": "./verifier.mjs",
+      "default": "./verifier.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "authichain-verify": "./bin/authichain-verify.mjs"
+  },
+  "files": [
+    "verifier.mjs",
+    "verifier.d.ts",
+    "bin/authichain-verify.mjs",
+    "examples/record.json",
+    "SPEC.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "conformance": "node conformance/run.mjs --strict -- node verifier.mjs",
+    "prepublishOnly": "node conformance/run.mjs --strict -- node verifier.mjs"
+  }
+}

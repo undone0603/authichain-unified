@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { listedPlans, planPaymentLink } from "@/lib/plans";
-import { CheckoutModal, TrialButton } from "./pricing-client";
+import {
+  CheckoutModal,
+  PricingTestHeadline,
+  TrialButton,
+} from "./pricing-client";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
@@ -33,6 +37,11 @@ export default function PricingPage() {
         url: "https://qron.space/pricing",
       })),
   });
+  const fromUsd = Math.min(
+    ...listedPlans("qron")
+      .filter(p => p.price > 0)
+      .map(p => p.price)
+  );
   const breadcrumbLd = breadcrumbSchema([
     { name: "Home", url: "https://qron.space" },
     { name: "Pricing", url: "https://qron.space/pricing" },
@@ -43,9 +52,11 @@ export default function PricingPage() {
       <JsonLd data={[productLd, breadcrumbLd]} />
       {/* Header */}
       <section className="pt-32 pb-20 px-6 text-center">
-        <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase leading-none">
-          PROTOCOL <span className="gold-text">ECONOMY</span>
-        </h1>
+        <PricingTestHeadline fromUsd={fromUsd}>
+          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase leading-none">
+            PROTOCOL <span className="gold-text">ECONOMY</span>
+          </h1>
+        </PricingTestHeadline>
         <p className="max-w-2xl mx-auto text-zinc-500 text-lg font-medium uppercase tracking-widest leading-relaxed">
           Start free. Scale with industrial power. <br />
           Every QRON is cryptographically signed.
