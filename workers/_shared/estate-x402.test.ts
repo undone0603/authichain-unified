@@ -31,7 +31,7 @@ test("recognizes sister x402 paths and ignores marketing paths", () => {
   assert.equal(isSisterX402Path("/.well-known/x402.json"), true);
   assert.equal(isSisterX402Path("/.well-known/x402"), true);
   assert.equal(isSisterX402Path("/openapi.json"), false);
-  assert.equal(isSisterX402Path("/api/checkout/dpp"), false);
+  assert.equal(isSisterX402Path("https://authichain.com/checkout/dpp_readiness"), false);
   assert.equal(isSisterX402Path("/pricing"), false);
 });
 
@@ -131,7 +131,7 @@ function proofHeader(p: Record<string, unknown>): string {
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
 
-test("POST with a structural proof and no facilitator is 402 not_configured", async () => {
+test("POST with a structural proof is refused 503 before any settlement", async () => {
   const header = proofHeader({
     scheme: "exact",
     network: "base",
@@ -146,25 +146,21 @@ test("POST with a structural proof and no facilitator is 402 not_configured", as
     })
   );
   assert.ok(res);
-  assert.equal(res.status, 402);
-  const body = (await res.json()) as { status: string; error?: string };
-  assert.equal(body.status, "not_configured");
-  assert.equal(body.error, "dev_mode_no_facilitator");
+  assert.equal(res.status, 503);
+  const body = (await res.json()) as { error?: string; settled?: boolean };
+  assert.equal(body.error, "registry_not_bound");
+  assert.equal(body.settled, false);
 });
 
-test("POST with a facilitator mock settles trustless (no live /settle)", async () => {
+test("POST with a live facilitator never calls /settle: no registry, no charge", async () => {
   const orig = globalThis.fetch;
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = String(input);
-    calls.push(url);
-    if (url.endsWith("/settle")) {
-      return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }
-    throw new Error(`unexpected fetch ${url}`);
+    calls.push(String(input));
+    return new Response(JSON.stringify({ success: true, txHash: "0xabc" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   }) as typeof fetch;
   try {
     const header = proofHeader({
@@ -183,14 +179,17 @@ test("POST with a facilitator mock settles trustless (no live /settle)", async (
       { X402_FACILITATOR_URL: "https://facilitator.example" }
     );
     assert.ok(res);
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 503);
     const body = (await res.json()) as {
-      settlement?: { trustless?: boolean; txHash?: string };
+      error?: string;
+      verified?: boolean;
+      settlement?: unknown;
     };
-    assert.equal(body.settlement?.trustless, true);
-    assert.equal(body.settlement?.txHash, "0xabc");
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0], "https://facilitator.example/settle");
+    assert.equal(body.error, "registry_not_bound");
+    assert.equal(body.verified, undefined);
+    assert.equal(body.settlement, undefined);
+    assert.equal(res.headers.get("PAYMENT-RESPONSE"), null);
+    assert.deepEqual(calls, []);
   } finally {
     globalThis.fetch = orig;
     delete process.env.X402_FACILITATOR_URL;
@@ -215,7 +214,7 @@ test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
     null
   );
   assert.equal(
-    await tryHandleSisterX402(req("qron.space", "/api/checkout/dpp")),
+    await tryHandleSisterX402(req("qron.space", "https://authichain.com/checkout/dpp_readiness")),
     null
   );
 });
@@ -224,9 +223,9 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
   const passport = planPaymentLink("strainchain_passport") ?? "";
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const farm = planPaymentLink("strainchain_farm") ?? "";
-  assert.equal(new URL(passport).hostname, "buy.stripe.com");
-  assert.equal(new URL(dpp).hostname, "buy.stripe.com");
-  assert.equal(new URL(farm).hostname, "buy.stripe.com");
+  assert.equal(new URL(passport).hostname, "authichain.com");
+  assert.equal(new URL(dpp).hostname, "authichain.com");
+  assert.equal(new URL(farm).hostname, "authichain.com");
 
   for (const { brand, host } of BRANDS) {
     const res = await tryHandleSisterX402(req(host, "/api/x402/catalog"));
@@ -285,17 +284,17 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     assert.equal(body.humanCheckout.farmPaymentLink, farm, host);
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
     assert.equal(
       new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
     assert.equal(
       new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "buy.stripe.com",
+      "authichain.com",
       host
     );
 
@@ -310,8 +309,8 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       assert.equal(body.humanCheckout.creatorUsd, planUsd("creator"), host);
       assert.equal(body.humanCheckout.starterPaymentLink, starter, host);
       assert.equal(body.humanCheckout.creatorPaymentLink, creator, host);
-      assert.equal(new URL(starter).hostname, "buy.stripe.com");
-      assert.equal(new URL(creator).hostname, "buy.stripe.com");
+      assert.equal(new URL(starter).hostname, "authichain.com");
+      assert.equal(new URL(creator).hostname, "authichain.com");
     } else {
       assert.equal(body.humanCheckout.starterPaymentLink, undefined, host);
       assert.equal(body.humanCheckout.creatorPaymentLink, undefined, host);
@@ -347,4 +346,36 @@ test("GET /.well-known/x402.json is the catalog; /.well-known/x402 is fan-out", 
   );
   assert.ok(post);
   assert.equal(post.status, 405);
+});
+
+test("POST with a proof is forwarded to the Next registry route when VERIFY_APP is bound", async () => {
+  const header = proofHeader({
+    scheme: "exact",
+    network: "base",
+    payer: PAYER,
+    amount: "50000",
+  });
+  const seen: Request[] = [];
+  const res = await tryHandleSisterX402(
+    req("qron.space", "/api/x402", {
+      method: "POST",
+      headers: { "x-payment": header, "content-type": "application/json" },
+      body: JSON.stringify({ sealId: "seal-1" }),
+    }),
+    {},
+    {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+        });
+      },
+    }
+  );
+  assert.ok(res);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { verified: true });
+  assert.equal(seen[0].url, "https://qron.space/api/v1/agent-verify");
+  assert.equal(seen[0].headers.get("x-payment"), header);
+  assert.deepEqual(await seen[0].json(), { sealId: "seal-1" });
 });

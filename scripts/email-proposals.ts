@@ -1,433 +1,155 @@
 // scripts/email-proposals.ts
-// Email high-fit government proposals to agency contacts.
-// Queries gov_proposals with email_status='unsent' and fit_score >= 70,
-// sends personalized HTML emails via Resend, updates delivery status.
+// Daily digest of high-fit government opportunities, emailed to the owner.
+//
+// This script used to email the solicitation's point of contact directly: an
+// AI-written "proposal" under the subject "GovChain Proposal: <agency> —
+// 87/100 Match", opening "We've identified a government opportunity that
+// aligns exceptionally well with your agency's mission", with a fit reason
+// claiming "our core expertise in NFT-based government contracts" and an
+// unsubscribe link to govchain.us/unsubscribe, which does not exist.
+//
+// A contracting officer's address on SAM.gov is there for questions about that
+// solicitation, not for marketing, and a proposal is submitted the way the
+// solicitation says, not by cold email. guardedSend now refuses .gov and .mil
+// recipients outright (server/outreach/recipient-rules.ts). What is useful is
+// knowing which opportunities matched, so a person can read the solicitation
+// and respond through it. That is what this sends, to one internal inbox.
+//
+// Proposals included in a digest move from email_status 'unsent' to
+// 'owner_notified' so each appears once.
 
+import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
-import { paymentLinkWithPrefilledEmail } from "../src/lib/checkout-email";
-import { planPaymentLink } from "../src/lib/plans";
 import {
   checkSender,
   reportSenderFailure,
   CREDENTIAL_ENV_VARS,
 } from "./lib/resend-preflight";
-import { guardedSend } from "../server/outreach/send-guard";
 
-// Fail-closed: unset / any value other than "false" is dry-run. Live send
-// requires DRY_RUN=false from the workflow resolve-mode step.
+// Fail-closed: unset / any value other than "false" is dry-run.
 const isDryRun = process.env.DRY_RUN !== "false";
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? "https://govchain.us";
-// authichain.com is verified on the second Resend account (RESEND_API_KEY2);
-// the preflight resolves which credential owns this sender at run time.
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "proposals@authichain.com";
-const CALENDAR_LINK =
-  process.env.CALENDLY_LINK ?? "https://calendly.com/authichain/discovery";
-const SALES_EMAIL = process.env.SALES_EMAIL ?? "sales@authichain.com";
-// Soft self-serve CTA (DPP readiness / pilot) — live catalog link, not a guessed price.
-// Prefer env override so ops can swap without a code change.
-const PILOT_PAYMENT_LINK =
-  process.env.GOVCHAIN_PILOT_PAYMENT_LINK ??
-  planPaymentLink("dpp_readiness") ??
-  "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"; // DPP Readiness Audit $299
-
-// Gracefully skip if no Resend credential is configured. The two accounts hold
-// different verified domains, so either may be the one that owns FROM_EMAIL.
-if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
-  console.warn(
-    `⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(" / ")}) — skipping email delivery.`
-  );
-  process.exit(0);
-}
-
-// Resolved by the preflight to whichever account owns FROM_EMAIL.
-let resendApiKey: string | undefined;
+// Internal only: the digest goes to the people who will read the
+// solicitations, never to an agency.
+const OWNER_EMAIL =
+  process.env.OWNER_NOTIFY_EMAIL ??
+  process.env.RESEND_REPLY_TO ??
+  "hello@authichain.com";
 
 interface Proposal {
   notice_id: string;
   title: string;
   agency: string;
   fit_score: number;
-  proposal_draft: string;
-  contact_email?: string;
-  contact_person?: string;
-  govchain_url: string;
-  deadline: string;
+  deadline?: string | null;
+  sam_url?: string | null;
+  contact_email?: string | null;
 }
 
-/**
- * Append funnel-attribution params to a CTA URL so the FunnelTracker on the
- * landing page can tie this click back to the originating proposal/email.
- * Safely respects any query string the base URL already carries.
- */
-function withAttribution(url: string, prospectId: string): string {
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}prospect_id=${encodeURIComponent(prospectId)}&utm_source=email&utm_medium=gov_proposal&utm_campaign=govchain_outreach`;
-}
-
-function generateEmailHtml(proposal: Proposal): string {
-  const fitReason = generateFitReason(proposal.fit_score);
-  const opportunityId = proposal.notice_id;
-  const detailsUrl = withAttribution(
-    `${GOVCHAIN}/${opportunityId}`,
-    opportunityId
+function esc(s: unknown): string {
+  return String(s ?? "").replace(
+    /[&<>"]/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!
   );
-  const calendarUrl = withAttribution(CALENDAR_LINK, opportunityId);
-  const pilotUrl = withAttribution(
-    paymentLinkWithPrefilledEmail(PILOT_PAYMENT_LINK, proposal.contact_email),
-    opportunityId
+}
+
+function samUrl(p: Proposal): string {
+  return p.sam_url || `https://sam.gov/opp/${encodeURIComponent(p.notice_id)}/view`;
+}
+
+export function digestHtml(proposals: Proposal[]): string {
+  const rows = proposals
+    .map(
+      p => `<li>
+  <strong>${esc(p.title)}</strong><br>
+  ${esc(p.agency)} · fit ${esc(p.fit_score)}/100 (our internal score) · deadline ${esc(p.deadline || "not stated")}<br>
+  <a href="${esc(samUrl(p))}">Solicitation on SAM.gov</a> ·
+  <a href="${esc(`${GOVCHAIN}/${encodeURIComponent(p.notice_id)}`)}">Our draft notes</a>
+</li>`
+    )
+    .join("\n");
+  return `<div style="font-family:sans-serif;max-width:640px;line-height:1.5;color:#1f2937">
+<p>${proposals.length} opportunit${proposals.length === 1 ? "y" : "ies"} scored 70 or higher and ${proposals.length === 1 ? "has" : "have"} not been reviewed yet.</p>
+<p>Respond through each solicitation's own instructions. Nothing was emailed to any agency.</p>
+<ol>
+${rows}
+</ol>
+</div>`;
+}
+
+async function main(): Promise<void> {
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GovChain Proposal: ${proposal.agency}</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f9fafb;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 40px 20px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-    }
-    .header p {
-      margin: 8px 0 0 0;
-      font-size: 14px;
-      opacity: 0.9;
-    }
-    .content {
-      padding: 40px 20px;
-    }
-    .greeting {
-      margin-bottom: 20px;
-      font-size: 16px;
-    }
-    .opportunity {
-      background-color: #f3f4f6;
-      border-left: 4px solid #667eea;
-      padding: 16px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .opportunity h3 {
-      margin: 0 0 8px 0;
-      color: #1f2937;
-      font-size: 16px;
-    }
-    .opportunity p {
-      margin: 4px 0;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .fit-score {
-      display: inline-block;
-      background-color: #dbeafe;
-      color: #0c4a6e;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-weight: 600;
-      font-size: 14px;
-      margin: 12px 0;
-    }
-    .fit-reason {
-      font-size: 14px;
-      color: #4b5563;
-      margin-top: 12px;
-      line-height: 1.5;
-    }
-    .cta-section {
-      margin: 30px 0;
-      text-align: center;
-    }
-    .btn {
-      display: inline-block;
-      padding: 12px 24px;
-      margin: 8px 4px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .btn-primary {
-      background-color: #667eea;
-      color: white;
-    }
-    .btn-primary:hover {
-      background-color: #5568d3;
-    }
-    .btn-secondary {
-      background-color: #e5e7eb;
-      color: #1f2937;
-    }
-    .btn-secondary:hover {
-      background-color: #d1d5db;
-    }
-    .proposal-preview {
-      background-color: #f9fafb;
-      border: 1px solid #e5e7eb;
-      padding: 16px;
-      border-radius: 4px;
-      margin: 20px 0;
-      font-size: 13px;
-      color: #4b5563;
-      max-height: 200px;
-      overflow: hidden;
-      position: relative;
-    }
-    .proposal-preview::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: linear-gradient(to top, #f9fafb, transparent);
-    }
-    .footer {
-      background-color: #f3f4f6;
-      padding: 24px 20px;
-      font-size: 12px;
-      color: #6b7280;
-      border-top: 1px solid #e5e7eb;
-    }
-    .footer p {
-      margin: 8px 0;
-    }
-    .footer a {
-      color: #667eea;
-      text-decoration: none;
-    }
-    .footer a:hover {
-      text-decoration: underline;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>GovChain Proposal Match</h1>
-      <p>High-fit opportunity from ${proposal.agency}</p>
-    </div>
-
-    <div class="content">
-      <div class="greeting">
-        <p>Dear ${proposal.contact_person || "Government Affairs Team"},</p>
-        <p>We've identified a government opportunity that aligns exceptionally well with your agency's mission and our blockchain authentication capabilities. See details below.</p>
-      </div>
-
-      <div class="opportunity">
-        <h3>${proposal.title}</h3>
-        <p><strong>Agency:</strong> ${proposal.agency}</p>
-        <p><strong>Deadline:</strong> ${proposal.deadline || "Not specified"}</p>
-        <div class="fit-score">${proposal.fit_score}/100 Match</div>
-        <div class="fit-reason">${fitReason}</div>
-      </div>
-
-      <div class="proposal-preview">
-        <strong>Proposal Summary:</strong>
-        <p>${proposal.proposal_draft}</p>
-      </div>
-
-      <div class="cta-section">
-        <p style="margin-top: 0; font-size: 14px;"><strong>Ready to discuss this opportunity?</strong></p>
-        <a href="${calendarUrl}" class="btn btn-primary">Schedule Discovery Call</a>
-        <a href="${detailsUrl}" class="btn btn-secondary">View Full Details</a>
-        <p style="margin: 16px 0 0; font-size: 13px; color: #4b5563;">
-          Prefer self-serve? Start with a
-          <a href="${pilotUrl}">$299 EU DPP Readiness Audit</a>
-          — credited toward AuthiChain if you convert. No pressure either way.
-        </p>
-      </div>
-
-      <p style="font-size: 14px; color: #6b7280; text-align: center;">
-        Have questions? Reach out to our government solutions team at <a href="mailto:${SALES_EMAIL}">${SALES_EMAIL}</a>
-      </p>
-    </div>
-
-    <div class="footer">
-      <p><strong>AuthiChain — Blockchain Authentication for Government</strong></p>
-      <p>This email was sent because your agency matches our high-fit criteria for blockchain authentication solutions.</p>
-      <p>
-        <a href="${GOVCHAIN}/preferences">Update Communication Preferences</a> |
-        <a href="${GOVCHAIN}/unsubscribe">Unsubscribe</a>
-      </p>
-      <p>&copy; ${new Date().getFullYear()} AuthiChain. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-`;
-}
-
-function generateFitReason(fitScore: number): string {
-  if (fitScore >= 90) {
-    return "Exceptional match: Your agency requires blockchain authentication for compliance and digital asset management, matching our core expertise in NFT-based government contracts and secure credential verification.";
-  }
-  if (fitScore >= 80) {
-    return "Strong match: Your procurement priorities align with our blockchain authentication and smart contract capabilities for federal acquisition and transparency requirements.";
-  }
-  if (fitScore >= 70) {
-    return "Good match: Your agency's needs include authentication and record-keeping where our blockchain solutions provide immutable verification and auditability.";
-  }
-  return "Opportunity match: AuthiChain's authentication platform may support your agency's digital transformation goals.";
-}
-
-async function emailProposals(): Promise<{
-  sent: number;
-  failed: number;
-  total: number;
-}> {
-  const { data: proposals, error } = await supabase
+  const { data, error } = await supabase
     .from("gov_proposals")
-    .select("*")
+    .select("notice_id,title,agency,fit_score,deadline,sam_url,contact_email")
     .eq("email_status", "unsent")
     .gte("fit_score", 70)
     .order("fit_score", { ascending: false })
     .limit(50);
-
   if (error) throw error;
-  if (!proposals?.length) {
-    console.log("No proposals ready for email delivery.");
-    return { sent: 0, failed: 0, total: 0 };
+
+  const proposals = (data ?? []) as Proposal[];
+  if (!proposals.length) {
+    console.log("No new high-fit proposals to report.");
+    return;
   }
 
-  // Preflight once, before the send loop. A bad key or unverified sender
-  // rejects every proposal identically, and each rejection would otherwise be
-  // recorded as a per-proposal failure — burying one infrastructure problem
-  // under 50 identical-looking data problems.
-  if (!isDryRun) {
-    const check = await checkSender(FROM_EMAIL);
-    if (!check.ok) {
-      reportSenderFailure(check, "gov-proposals");
-      throw new Error(
-        `Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`
-      );
+  const subject = `GovChain: ${proposals.length} new high-fit opportunit${proposals.length === 1 ? "y" : "ies"} to review`;
+  const html = digestHtml(proposals);
+
+  if (isDryRun) {
+    console.log(`[DRY RUN] Would email ${OWNER_EMAIL}: ${subject}`);
+    for (const p of proposals) {
+      console.log(`  • ${p.notice_id} ${p.agency} fit=${p.fit_score} ${samUrl(p)}`);
     }
-    resendApiKey = process.env[check.credential!];
-    console.log(`✅ Sender verified: ${FROM_EMAIL} (via ${check.credential})`);
+    return;
   }
 
-  let sent = 0;
-  let failed = 0;
-
-  for (const proposal of proposals) {
-    // Validate required fields
-    if (!proposal.contact_email) {
-      console.warn(
-        `  ⚠️  Skipped ${proposal.notice_id}: no contact_email found`
-      );
-      continue;
-    }
-
-    try {
-      const html = generateEmailHtml(proposal);
-      const subject = `GovChain Proposal: ${proposal.agency} — ${proposal.fit_score}/100 Match`;
-
-      if (!isDryRun) {
-        // Routed through the send guard so every proposal carries a reply-to,
-        // one-click List-Unsubscribe headers and the CAN-SPAM postal address.
-        // `published_contact`: these addresses are the points-of-contact the
-        // agency itself printed on the SAM.gov solicitation, so they are
-        // published-by-the-owner rather than guessed.
-        const response = await guardedSend({
-          to: proposal.contact_email,
-          source: "published_contact",
-          subject,
-          html,
-          from: FROM_EMAIL,
-          company: "GovChain / AuthiChain",
-          apiKey: resendApiKey,
-        });
-
-        if (!response.sent) {
-          throw new Error(`Send refused or failed: ${response.reason}`);
-        }
-
-        // Update proposal status to 'sent' and record timestamp
-        await supabase
-          .from("gov_proposals")
-          .update({
-            status: "sent",
-            email_status: "sent",
-            sent_at: new Date().toISOString(),
-          })
-          .eq("notice_id", proposal.notice_id);
-
-        console.log(
-          `  ✉️  Email sent: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`
-        );
-        sent++;
-      } else {
-        // Dry run: log without sending
-        console.log(
-          `  [DRY RUN] Would email: ${proposal.contact_email} (${proposal.notice_id}, fit=${proposal.fit_score})`
-        );
-        console.log(`           Subject: ${subject}`);
-        sent++;
-      }
-    } catch (err: any) {
-      // Per-proposal failure: log and continue
-      failed++;
-      const shortMsg = (err?.message || String(err))
-        .split("\n")[0]
-        .slice(0, 200);
-      console.warn(`  ⚠️  Failed to email ${proposal.notice_id}: ${shortMsg}`);
-
-      // Record failure in database (even in dry-run we track the attempt)
-      if (!isDryRun) {
-        try {
-          await supabase
-            .from("gov_proposals")
-            .update({
-              email_status: "failed",
-            })
-            .eq("notice_id", proposal.notice_id);
-        } catch {
-          // Silently ignore DB update errors during failure handling
-        }
-      }
-    }
+  if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
+    console.warn(
+      `⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(" / ")}) — digest not sent.`
+    );
+    return;
+  }
+  const check = await checkSender(FROM_EMAIL);
+  if (!check.ok) {
+    reportSenderFailure(check, "gov-proposals-digest");
+    throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
   }
 
-  return { sent, failed, total: proposals.length };
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env[check.credential!]}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: FROM_EMAIL, to: [OWNER_EMAIL], subject, html }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(`Digest send failed: HTTP ${res.status} ${body.message ?? ""}`);
+  }
+  console.log(`✉️  Digest of ${proposals.length} opportunities sent to ${OWNER_EMAIL}`);
+
+  const { error: updateErr } = await supabase
+    .from("gov_proposals")
+    .update({ email_status: "owner_notified" })
+    .in(
+      "notice_id",
+      proposals.map(p => p.notice_id)
+    );
+  if (updateErr) {
+    console.error(
+      `::warning::Digest sent but proposals not marked owner_notified (${updateErr.message}); they will appear in tomorrow's digest too.`
+    );
+  }
 }
 
-const { sent, failed, total } = await emailProposals();
-console.log(`✅ Sent ${sent}/${total} proposal emails (${failed} failed)`);
-
-if (total > 0 && sent === 0 && failed > 0) {
-  console.warn(
-    "⚠️  All email attempts failed — no contact emails found or all errored out. Add contact_email to gov_proposals table."
-  );
-  // exit(0) - failed sends due to missing contacts is a data issue, not a code error
-  process.exit(0);
+// Import-safe for tests: only run when executed directly.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
 }
-
-process.exit(0);

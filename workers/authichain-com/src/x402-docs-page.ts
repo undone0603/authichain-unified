@@ -5,9 +5,11 @@
  * only — published payTo / asset / price, health URL, and unpaid 402 curls.
  * No facilitator URL, no private keys, no settle steps.
  *
- * payTo is the tokenomics EOA (X402_PUBLISHED_PAY_TO), not the NFT
- * deployer and not the Coinbase Smart Wallet. Asset is Circle USDC on
- * Base — not $QRON. Map: docs/strategy/WEB3_IDENTITY.md.
+ * payTo is the owner-authorized treasury / tokenomics EOA
+ * (X402_PUBLISHED_PAY_TO = 0xaebf…e437), not the $QRON holder EOA
+ * (0x5db5…), not the NFT deployer, and not the Coinbase Smart Wallet.
+ * Asset is Circle USDC on Base — not $QRON. Map:
+ * docs/strategy/WEB3_IDENTITY.md. Do not rebind away from that treasury.
  *
  * Visual system (interim): light-enterprise chrome + a dark Web3-adjacent
  * rail/code surface. Markup is semantic and uses Tailwind-shaped utilities
@@ -381,7 +383,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_passport",
+        action: "https://authichain.com/checkout/strainchain_passport",
         label: `Passport checkout — $${planUsd("strainchain_passport")}`,
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
@@ -395,13 +397,13 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_farm",
+        action: "https://authichain.com/checkout/strainchain_farm",
         label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
         inputId: "x402-farm-email",
         formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: `DPP checkout — $${planUsd("dpp_readiness")}`,
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",

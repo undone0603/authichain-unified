@@ -2,13 +2,15 @@
  * Live x402 micropayment smoke against https://authichain.com/api/x402.
  *
  * Env (never log secret values):
- *   POLYGON_PRIVATE_KEY | WALLET_PRIVATE_KEY  payTo / tokenomics EOA (expected 0x5db5…)
+ *   POLYGON_PRIVATE_KEY | WALLET_PRIVATE_KEY  funded smoke payer (not live payTo)
  *   DRY_RUN              anything except "false" is a dry run (default dry)
  *   X402_ENDPOINT        default https://authichain.com/api/x402
- *   X402_PAY_TO          default payTo / tokenomics EOA (same as live health payTo)
+ *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
  *   X402_RPC             optional Base RPC (public mainnet.base.org fallback)
  *
- * This is NOT the NFT deployer EOA (0xbad4…). See docs/strategy/WEB3_IDENTITY.md.
+ * Live payTo is the owner's keyed EOA (0x5db5…6AA2), not the $QRON
+ * ERC-20 contract (0xAebf…E437) and not the NFT deployer EOA (0xbad4…).
+ * See docs/strategy/WEB3_IDENTITY.md.
  *
  * Live succeeds only on HTTP 200 with settlement.trustless + txHash.
  * Prints status + txHash only. Fails clearly if USDC < 0.05 (50000 atomic).

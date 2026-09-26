@@ -43,6 +43,7 @@ Shared routes (`/dashboard`, `/login`, `/api`, `/onboard`) stay unified.
 - Web app: Vite + React (`pnpm dev`, `pnpm build`)
 - Database: Drizzle + Postgres (Supabase) and D1 on Workers
 - Edge: Cloudflare Workers
+- Workers CLI: Wrangler 4 (root devDependency; each `workers/<name>/` pins its own). Local: `pnpm exec wrangler dev`. Deploy: `wrangler deploy` from the worker's folder. Root configs: `wrangler.toml` (`worker/index.ts`) and `wrangler.app.jsonc` (OpenNext build of the Next.js app)
 - Package manager: pnpm
 
 ### Getting started

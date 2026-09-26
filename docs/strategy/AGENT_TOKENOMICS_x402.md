@@ -6,6 +6,8 @@ This is the canonical economics document for the **already live** x402 micropaym
 
 **Do not change** `X402_PAY_TO`, `X402_FACILITATOR_URL`, or `X402_USDC_ASSET`. Bind workflow: `.github/workflows/bind-x402-secrets.yml`. Public HTML: `https://authichain.com/x402`. Machine catalog: `https://authichain.com/api/x402/catalog` and `https://authichain.com/.well-known/x402.json`.
 
+Owner-authorized treasury is `0xaebf…e437`. Do not rebind `X402_PAY_TO` away from that address.
+
 Verified live on 2026-09-20: `GET https://authichain.com/api/x402/health` → `ready` / `trustless`; unpaid `POST /api/x402` → HTTP 402.
 
 ---
@@ -30,7 +32,7 @@ There is **no new token launch** in this work and none is required for agent-to-
 - **Unit of account:** USD-denominated Circle USDC on **Base** (CAIP-2 / chain id `8453`).
 - **Asset (do not rebind):** `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
 - **Meter:** one priced **verification (or seal) call**. Default **$0.05** = **50000** atomic units (USDC 6 decimals). Override only via `X402_PRICE_USD` in the same config `x402HealthReport` / `x402Catalog` already read. Never display a second hardcoded schedule.
-- **Recipient / treasury (do not rebind):** payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (`X402_PAY_TO`). Same address holds nearly all Polygon `$QRON`; that does **not** make `$QRON` the rail. Distinct from the NFT deployer EOA `0xbad4…`. Map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
+- **Recipient / treasury (do not rebind away):** owner-authorized payTo / tokenomics EOA `0xaebf…e437` (`X402_PAY_TO`). `$QRON` remains held by former payTo `0x5db5…`; that does **not** make `$QRON` the rail. Distinct from the NFT deployer EOA `0xbad4…`. Map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
 - **Cap:** `dailyCapUsd` default **10** (`X402_DAILY_CAP_USD`). 200 calls/day at $0.05. Next.js `POST /api/v1/agent-verify` also rate-limits 120/window and writes `automation_logs` (`workflow_name = x402_spend`).
 - **Facilitator:** PayAI, reachable. URL is an operational secret/binding — **not republished** on `/x402` or in this file. The edge calls `/settle`; agents use any compatible x402 client.
 
@@ -49,7 +51,7 @@ Stripe, x402 USDC, and `$QRON` are **three** paths. Full wallet map: [`WEB3_IDEN
 | SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater       |
 | Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement   |
 | Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`       |
-| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0x5db5…` on Base   | Same `0x5db5…` holds the Polygon token |
+| Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0xaebf…e437` on Base | Former payTo `0x5db5…` holds the Polygon token |
 
 A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. Genetics public verify (`GET /api/genetics/verify`) remains **free** and is not a second paid skill.
 
@@ -101,7 +103,7 @@ If `X402_PAY_TO` is missing: POST returns **503** `payments_not_configured` (the
       "network": "eip155:8453",
       "amount": "50000",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "payTo": "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2",
+      "payTo": "0xaebf…e437",
       "maxTimeoutSeconds": 60,
       "extra": { "name": "USD Coin", "version": "2" },
       "outputSchema": {
@@ -244,7 +246,7 @@ Sitemap includes `/x402`, `/.well-known/x402`, `/openapi.json`, and `/llms.txt`.
 
 ## 7. Forbidden changes
 
-- Do **not** invent or rotate `X402_PAY_TO`. Live treasury: payTo / tokenomics EOA `0x5db511706FB6317cd23A7655F67450c5AC6e6AA2` (not the NFT deployer).
+- Do **not** invent a `payTo` or rotate `X402_PAY_TO` away from the owner-authorized treasury `0xaebf…e437` (not the `$QRON` holder `0x5db5…`, not the NFT deployer).
 - Do **not** rebind `X402_FACILITATOR_URL` or publish it on HTML/docs.
 - Do **not** replace Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` with a ticker-only asset or another chain.
 - Do **not** add `$QRON`, a governance token, or a mint to `accepts[]`.
