@@ -7,7 +7,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "authichain-app",
-  "main": ".open-next/worker.js",
+  // Thin wrapper around .open-next/worker.js that also exports RateLimiter.
+  // See app-worker-entry.ts for why (Cloudflare error 10064).
+  "main": "app-worker-entry.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -23,16 +25,42 @@
   //     "id": "<KV_NAMESPACE_ID>"
   //   }
   // ],
+  // Bindings already live on the authichain-app script (read from the
+  // Cloudflare API, 2026-09-25). wrangler deploy replaces non-secret bindings
+  // with what this file declares, so omitting them would silently drop them.
+  // Same ids as worker-app/wrangler.toml.
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "7c8e9466e57843199f6f768615e42a5c"
+    }
+  ],
   // Hyperdrive accelerates the Supabase session pooler for pg/postgres TCP
-  // connections. Create with:
-  //   npx wrangler hyperdrive create authichain-db --connection-string="$DATABASE_URL"
-  // Then uncomment and paste the id.
-  // "hyperdrive": [
-  //   {
-  //     "binding": "HYPERDRIVE",
-  //     "id": "<HYPERDRIVE_ID>"
-  //   }
-  // ],
+  // connections.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "97d767ff69584161a0672cd942e9364a"
+    }
+  ],
+  // RateLimiter DO namespace already exists on the live script (SQLite-backed,
+  // live migration_tag "v1"). This v1 mirrors that history exactly; wrangler
+  // skips tags already applied, so nothing is re-created. Never add a
+  // delete-class migration here: it would wipe the namespace's data.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimiter"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RateLimiter"]
+    }
+  ],
   "vars": {
     "APP_ORIGIN": "https://app.authichain.com"
   },

@@ -359,7 +359,7 @@ export default function QronHome() {
             <p className="text-sm text-muted-foreground text-center">AI-Powered QR Code Art Studio. Part of the AuthiChain Protocol.</p>
           </div>
           <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
-          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 QRON by AuthiChain, Inc.</p>
+          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 QRON by AuthiChain</p>
         </div>
       </footer>
     </div>

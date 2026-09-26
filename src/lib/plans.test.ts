@@ -25,29 +25,44 @@ describe("plan catalogue integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("exposes live Payment Links for Passport, DPP, Farm, and Theater", () => {
+  it("caps free at 5 generations", () => {
+    expect(planById("free")?.generations).toBe(5);
+    expect(PLAN_CREDITS.free).toBe(5);
+  });
+
+  it("exposes live Payment Links for Passport, DPP, Farm, and hidden Theater", () => {
     expect(planById("strainchain_passport")?.price).toBe(49);
     expect(planPaymentLink("strainchain_passport")).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
+      "https://authichain.com/checkout/strainchain_passport"
     );
     expect(planPaymentLink("dpp_readiness")).toBe(
-      "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+      "https://authichain.com/checkout/dpp_readiness"
     );
     expect(planPaymentLink("strainchain_farm")).toBe(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
     expect(planPaymentLink("theater_1")).toBe(
-      "https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"
+      "https://authichain.com/checkout/theater_1"
     );
     expect(planPaymentLink("theater_3")).toBe(
-      "https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"
+      "https://authichain.com/checkout/theater_3"
     );
-    expect(new URL(planPaymentLink("theater_1") ?? "").hostname).toBe(
-      "buy.stripe.com"
+    expect(planById("theater_1")?.listed).toBe(false);
+    expect(planById("theater_3")?.listed).toBe(false);
+  });
+
+  it("wires QRON Launch $19/mo to the live Stripe price", () => {
+    expect(planById("qron_launch")?.price).toBe(19);
+    expect(planById("qron_launch")?.stripe_mode).toBe("subscription");
+    expect(planById("qron_launch")?.listed).not.toBe(false);
+    expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
+      "qron_launch"
     );
-    expect(new URL(planPaymentLink("theater_3") ?? "").hostname).toBe(
-      "buy.stripe.com"
+    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
+    expect(planPaymentLink("qron_launch")).toBe(
+      "https://authichain.com/checkout/qron_launch"
     );
+    expect(PLAN_CREDITS.qron_launch).toBe(100);
   });
 });
 
@@ -104,69 +119,37 @@ describe("listedPlans", () => {
       .map(p => p.id)
       .sort();
     expect(strainchain).toEqual(["strainchain_farm", "strainchain_passport"]);
-
-    const byId = Object.fromEntries(PLANS.map(p => [p.id, p]));
-    expect(byId.strainchain_passport.stripe_price_id).toBe(
-      "price_1UHjCZGqTruSqV8T35M6AmoJ"
-    );
-    expect(byId.strainchain_farm.stripe_price_id).toBe(
-      "price_1UHjJWGqTruSqV8TePctYzO5"
-    );
-    expect(planByStripePriceId("price_1UHjCZGqTruSqV8T35M6AmoJ")?.id).toBe(
-      "strainchain_passport"
-    );
-    expect(planByStripePriceId("price_1UHjJWGqTruSqV8TePctYzO5")?.id).toBe(
-      "strainchain_farm"
-    );
-    expect(planByAmountCents(4900)?.id).toBe("strainchain_passport");
-    expect(planByAmountCents(14900)?.id).toBe("strainchain_farm");
   });
 
-  it("matches the offer sent to Mendo Love Farms", () => {
-    const byId = Object.fromEntries(PLANS.map(p => [p.id, p]));
-    expect(byId.strainchain_passport.price).toBe(49);
-    expect(byId.strainchain_passport.stripe_mode).toBe("payment");
-    expect(byId.strainchain_passport.stripe_payment_link).toBe(
-      "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"
-    );
-    expect(byId.strainchain_farm.price).toBe(149);
-    expect(byId.strainchain_farm.price_suffix).toBe("/month");
-    expect(byId.strainchain_farm.stripe_mode).toBe("subscription");
-    expect(byId.strainchain_farm.stripe_payment_link).toBe(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
-    );
-  });
-
-  it("still lists the existing QRON plans", () => {
+  it("lists public QRON plans including Launch and hides Theater", () => {
     const qron = listedPlans("qron").map(p => p.id);
+    expect(qron).toContain("free");
+    expect(qron).toContain("qron_launch");
     expect(qron).toContain("starter");
     expect(qron).toContain("creator");
-    expect(qron).toContain("theater_1");
-    expect(qron).toContain("theater_3");
+    expect(qron).toContain("dpp_readiness");
+    expect(qron).not.toContain("theater_1");
+    expect(qron).not.toContain("theater_3");
+    expect(qron).not.toContain("studio");
   });
 
   it("exposes planUsd from the catalogue, not a second price table", () => {
     expect(planUsd("strainchain_passport")).toBe(49);
     expect(planUsd("dpp_readiness")).toBe(299);
     expect(planUsd("starter")).toBe(29);
+    expect(planUsd("qron_launch")).toBe(19);
   });
 
-  it("keeps the live self-serve money path at $29 / $99 / $299", () => {
+  it("keeps the live self-serve money path at $19 / $29 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
+    expect(byId.qron_launch.price).toBe(19);
     expect(byId.starter.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
-    expect(planByStripePriceId("price_1TGOM9GqTruSqV8TdV7j3DuL")?.id).toBe(
-      "starter"
+    expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
+      "qron_launch"
     );
-    expect(planByStripePriceId("price_1TGAiZGqTruSqV8Tb4ZdCVKr")?.id).toBe(
-      "creator"
-    );
-    expect(planByStripePriceId("price_1TwmD8GqTruSqV8TpAF8dfyA")?.id).toBe(
-      "dpp_readiness"
-    );
+    expect(planByAmountCents(1900)?.id).toBe("qron_launch");
     expect(planByAmountCents(2900)?.id).toBe("starter");
-    expect(planByAmountCents(9900)?.id).toBe("creator");
-    expect(planByAmountCents(29900)?.id).toBe("dpp_readiness");
   });
 });

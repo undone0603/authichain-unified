@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Terms of Service | QRON by AuthiChain',
   description:
-    'Terms of Service for QRON (qron.space), the AI-powered QR code generation platform operated by AuthiChain.',
+    'Terms of Service for QRON (qron.space), the AI-powered QR code generation platform operated by Zachary Kietzman, doing business as AuthiChain.',
 };
 
 export default function TermsPage() {
@@ -18,7 +18,7 @@ export default function TermsPage() {
           Effective Date: April 12, 2026
         </p>
         <p className="text-zinc-600 text-xs font-medium uppercase tracking-tighter">
-          QRON is operated by AuthiChain, Michigan, USA
+          QRON is operated by Zachary Kietzman, doing business as AuthiChain, Michigan, USA
         </p>
       </section>
 
@@ -33,7 +33,7 @@ export default function TermsPage() {
               you agree to be bound by these Terms of Service (&quot;Terms&quot;).
               If you do not agree to these Terms, you may not use the Service.
               These Terms constitute a legally binding agreement between you and
-              AuthiChain (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or
+              Zachary Kietzman, doing business as AuthiChain (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or
               &quot;our&quot;).
             </p>
           </section>
@@ -109,7 +109,7 @@ export default function TermsPage() {
               </Link>
             </div>
             <p className="text-[10px] font-bold text-zinc-600 uppercase">
-              &copy; 2026 AuthiChain Inc.
+              &copy; 2026 AuthiChain
             </p>
           </div>
         </div>

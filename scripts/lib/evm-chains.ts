@@ -2,7 +2,10 @@
  * Shared EVM chain targets and AuthiChain web3 identity constants.
  *
  * Canonical names and “do not mix” rules: docs/strategy/WEB3_IDENTITY.md
- * Do not invent addresses. Do not rebind X402_PAY_TO. $QRON is not x402.
+ * Do not invent addresses. X402_PAY_TO is the owner's keyed EOA
+ * 0x5db5…6AA2 (TOKENOMICS_PAY_TO). 0xAebf…E437 is the $QRON ERC-20
+ * contract (QRON_ERC20), never a payTo.
+ * $QRON is not x402.
  */
 
 export type ChainKey = "base" | "base-sepolia" | "polygon" | "polygon-amoy";
@@ -78,15 +81,23 @@ export const NFT_DEPLOYER_EOA = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 export const POLYGON_DEPLOYER = NFT_DEPLOYER_EOA;
 
 /**
- * payTo / tokenomics EOA. Holds nearly all Polygon $QRON. Same address
- * receives Base USDC for x402 (X402_PAY_TO). Do not rebind.
+ * Owner's keyed EOA (EIP-7702-delegated on Base). Holds nearly all Polygon
+ * $QRON and is also the live x402 payTo (TOKENOMICS_PAY_TO / X402_PAY_TO).
  */
-export const TOKENOMICS_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+export const QRON_HOLDER_EOA = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+
+/**
+ * Owner-authorized x402 payTo (X402_PAY_TO / tokenomics EOA).
+ * Receives Base USDC for live agent pay. Same keyed EOA as QRON_HOLDER_EOA;
+ * distinct from the NFT deployer. Never QRON_ERC20 (a Polygon token contract
+ * with no code or key on Base — USDC sent there on Base is unrecoverable).
+ */
+export const TOKENOMICS_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2"; // pragma: allowlist secret
 
 /** Historical $QRON Smithii factory caller. Not an ops wallet. */
 export const QRON_FACTORY_CALLER = "0x8df0057ffb210444b927511b2d416ad7854fb81e";
 
-/** $QRON ERC-20 contract on Polygon. Not a wallet. Not an x402 asset. */
+/** $QRON ERC-20 contract on Polygon. Not a wallet. Not an x402 asset or payTo. */
 export const QRON_ERC20 = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 
 /** Circle USDC on Base 8453. Live x402 asset. Do not rebind. */

@@ -20,6 +20,17 @@
  *   GET  /api/v1/analytics                → dashboard metrics (REAL DATA)
  *   GET  /api/v1/me                       → account info
  *   POST /api/v1/qr/generate              → generate QR art via qron-image-gen
+ *   GET  /api/v1/.well-known/jwks.json    → Ed25519 public key for certificates
+ *
+ * Secrets / vars (service-worker globals):
+ *   SUPABASE_ANON_KEY           (secret, required)
+ *   CERT_SIGNING_KEY            (secret, optional) Ed25519 private key; enables
+ *                               signed verification certificates + JWKS
+ *   CERT_SIGNING_KEY_ID         (optional) kid override; default RFC 7638 thumbprint
+ *   POLYGON_RPC_URL             (optional) JSON-RPC used to confirm stored anchor tx
+ *   ANCHOR_CONTRACT_ADDRESSES   (optional) comma list; default the AuthiChain contract
+ *   ALLOW_UNREGISTERED_SELF_SERVE_KEYS ("true" to keep accepting unsaved
+ *                               ac_live_ keys issued before key persistence)
  */
 
 const SUPA_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co";
@@ -234,32 +245,393 @@ function j(data, status, extraHeaders) {
   });
 }
 
-// ── Refactored Supabase helpers for tenant scoping ────────────────────────────
-function supaHeaders(tenantId) {
-  const headers = {
+// ── Supabase helpers ──────────────────────────────────────────────────────────
+// NOTE: products has no tenant_id column (the 20260829_add_tenant_isolation
+// migration was never applied to the live database — see
+// supabase/REMOTE_APPLIED_VERSIONS.txt). Do not filter on it.
+function supaHeaders(prefer) {
+  return {
     apikey: SUPABASE_ANON_KEY,
     Authorization: "Bearer " + SUPABASE_ANON_KEY,
     "Content-Type": "application/json",
-    Prefer: "return=representation",
+    Prefer: prefer || "return=representation",
   };
-  if (tenantId) headers["app-current-tenant-id"] = String(tenantId);
-  return headers;
 }
 
-async function supaGet(table, params, tenantId) {
+async function supaGet(table, params) {
   const res = await fetch(SUPA_URL + "/rest/v1/" + table + (params || ""), {
-    headers: supaHeaders(tenantId),
+    headers: supaHeaders(),
   });
   return res.json();
 }
 
-async function supaPost(table, body, tenantId) {
+// Inserts that only need to land (audit logs) must use return=minimal: with
+// return=representation PostgREST also needs a SELECT policy on the new row,
+// and tables like `verifications` only grant anon INSERT — so every log write
+// was rejected (verifications had 0 rows in production).
+async function supaInsert(table, body) {
   const res = await fetch(SUPA_URL + "/rest/v1/" + table, {
     method: "POST",
-    headers: supaHeaders(tenantId),
+    headers: supaHeaders("return=minimal"),
     body: JSON.stringify(body),
   });
-  return { data: await res.json(), status: res.status };
+  return { ok: res.ok, status: res.status };
+}
+
+async function supaPost(table, body) {
+  const res = await fetch(SUPA_URL + "/rest/v1/" + table, {
+    method: "POST",
+    headers: supaHeaders(),
+    body: JSON.stringify(body),
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    data = null;
+  }
+  return { ok: res.ok, data: data, status: res.status };
+}
+
+// SECURITY DEFINER functions from
+// supabase/migrations/20260925180000_authichain_api_self_serve_keys.sql.
+async function supaRpc(fn, args) {
+  const res = await fetch(SUPA_URL + "/rest/v1/rpc/" + fn, {
+    method: "POST",
+    headers: supaHeaders(),
+    body: JSON.stringify(args || {}),
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data: data };
+}
+
+// Service-worker syntax: vars and secrets are globals.
+function envVar(name) {
+  const v = globalThis[name];
+  return typeof v === "string" && v.length > 0 ? v : null;
+}
+
+// ── Base64url / Ed25519 certificate signing ──────────────────────────────────
+function b64urlFromBytes(bytes) {
+  let bin = "";
+  const arr = new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function b64urlFromString(str) {
+  return b64urlFromBytes(new TextEncoder().encode(str));
+}
+
+function bytesFromB64(b64) {
+  const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, ""));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// Accepts the same formats as the attestation issuer (worker-app/jwks.ts):
+// base64(PKCS#8 PEM) as written by scripts/bind-attestation-jwks.mjs, a raw
+// PEM, base64 PKCS#8 DER, or a private OKP JWK JSON string.
+function parseSigningKeyMaterial(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{")) {
+    const jwk = JSON.parse(trimmed);
+    if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519" || !jwk.d || !jwk.x)
+      throw new Error("CERT_SIGNING_KEY JWK must be a private Ed25519 OKP key");
+    return { format: "jwk", jwk: jwk };
+  }
+  let pem = trimmed;
+  if (!pem.includes("BEGIN PRIVATE KEY")) {
+    try {
+      const decoded = atob(trimmed.replace(/\s+/g, ""));
+      if (decoded.includes("BEGIN PRIVATE KEY")) pem = decoded;
+    } catch (e) {
+      /* not base64 PEM */
+    }
+  }
+  const body = pem.includes("BEGIN PRIVATE KEY")
+    ? pem
+        .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+        .replace(/-----END PRIVATE KEY-----/g, "")
+    : pem;
+  return { format: "pkcs8", der: bytesFromB64(body) };
+}
+
+let signingKeyPromise = null;
+let signingKeySource = null;
+
+async function loadSigningKey() {
+  const raw = envVar("CERT_SIGNING_KEY");
+  if (!raw) return null;
+  if (signingKeyPromise && signingKeySource === raw) return signingKeyPromise;
+  signingKeySource = raw;
+  signingKeyPromise = (async function () {
+    const material = parseSigningKeyMaterial(raw);
+    let privateKey;
+    let publicJwk;
+    if (material.format === "jwk") {
+      privateKey = await crypto.subtle.importKey(
+        "jwk",
+        material.jwk,
+        { name: "Ed25519" },
+        false,
+        ["sign"]
+      );
+      publicJwk = { kty: "OKP", crv: "Ed25519", x: material.jwk.x };
+    } else {
+      const extractable = await crypto.subtle.importKey(
+        "pkcs8",
+        material.der,
+        { name: "Ed25519" },
+        true,
+        ["sign"]
+      );
+      const exported = await crypto.subtle.exportKey("jwk", extractable);
+      publicJwk = { kty: "OKP", crv: "Ed25519", x: exported.x };
+      privateKey = await crypto.subtle.importKey(
+        "pkcs8",
+        material.der,
+        { name: "Ed25519" },
+        false,
+        ["sign"]
+      );
+    }
+    // RFC 7638 thumbprint — same default kid as worker-app/jwks.ts (jose).
+    const thumbInput = JSON.stringify({
+      crv: publicJwk.crv,
+      kty: publicJwk.kty,
+      x: publicJwk.x,
+    });
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(thumbInput)
+    );
+    const kid = envVar("CERT_SIGNING_KEY_ID") || b64urlFromBytes(digest);
+    return {
+      kid: kid,
+      privateKey: privateKey,
+      publicJwk: { ...publicJwk, kid: kid, use: "sig", alg: "EdDSA" },
+    };
+  })();
+  signingKeyPromise.catch(function () {
+    signingKeyPromise = null;
+    signingKeySource = null;
+  });
+  return signingKeyPromise;
+}
+
+// Compact JWS (RFC 7515) with alg EdDSA — verifiable with any JOSE library
+// against the JWKS served at /api/v1/.well-known/jwks.json.
+async function signCertificate(payload, origin) {
+  let key;
+  try {
+    key = await loadSigningKey();
+  } catch (e) {
+    return { certificate: null, certificate_error: "signing key invalid" };
+  }
+  if (!key)
+    return {
+      certificate: null,
+      certificate_error: "signing key not configured (CERT_SIGNING_KEY)",
+    };
+  const header = { alg: "EdDSA", kid: key.kid, typ: "authichain-cert+jws" };
+  const signingInput =
+    b64urlFromString(JSON.stringify(header)) +
+    "." +
+    b64urlFromString(JSON.stringify(payload));
+  const sig = await crypto.subtle.sign(
+    { name: "Ed25519" },
+    key.privateKey,
+    new TextEncoder().encode(signingInput)
+  );
+  const signature = b64urlFromBytes(sig);
+  return {
+    certificate: {
+      format: "JWS",
+      alg: "EdDSA",
+      kid: key.kid,
+      jwks_url: origin + "/api/v1/.well-known/jwks.json",
+      payload: payload,
+      signature: signature,
+      jws: signingInput + "." + signature,
+    },
+  };
+}
+
+// ── Evidence-based trust assessment ──────────────────────────────────────────
+// Only facts present on the product row (plus an optional on-chain receipt
+// lookup) count. The stored `authenticity_score` / `confidence` values are
+// self-reported and are NOT used. No confirmed evidence => verified:false.
+const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
+const CONTENT_HASH_RE = /^(0x)?[0-9a-fA-F]{64}$/;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IDENT_RE = /^[A-Za-z0-9._:\-]{1,128}$/;
+const DEFAULT_ANCHOR_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+const UNIT_MATCH_TYPES = ["truemark_id", "serial_number", "id"];
+
+function anchorContracts() {
+  return (envVar("ANCHOR_CONTRACT_ADDRESSES") || DEFAULT_ANCHOR_CONTRACT)
+    .split(",")
+    .map(function (s) {
+      return s.trim().toLowerCase();
+    })
+    .filter(Boolean);
+}
+
+// Looks up the stored tx hash on Polygon via POLYGON_RPC_URL (unset => the
+// anchor is reported "unchecked" and cannot contribute to verification).
+async function checkOnchainAnchor(txHash) {
+  if (!txHash || !TX_HASH_RE.test(txHash))
+    return {
+      status: "absent",
+      detail: txHash ? "stored value is not a transaction hash" : null,
+    };
+  const rpc = envVar("POLYGON_RPC_URL");
+  if (!rpc)
+    return {
+      status: "unchecked",
+      detail: "POLYGON_RPC_URL not configured; stored hash not checked",
+    };
+  try {
+    const res = await fetch(rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const body = await res.json();
+    const receipt = body && body.result;
+    if (!receipt)
+      return { status: "not_found", detail: "no receipt on chain for tx" };
+    if (receipt.status !== "0x1")
+      return { status: "failed", detail: "transaction reverted" };
+    const to = String(receipt.to || "").toLowerCase();
+    if (anchorContracts().indexOf(to) === -1)
+      return {
+        status: "wrong_contract",
+        detail: "tx is not to a known AuthiChain anchor contract",
+        to: receipt.to,
+      };
+    return {
+      status: "confirmed",
+      detail: "receipt found, status success, known anchor contract",
+      block: receipt.blockNumber,
+      to: receipt.to,
+    };
+  } catch (e) {
+    return { status: "error", detail: "RPC lookup failed" };
+  }
+}
+
+function assessEvidence(product, matchType, anchor) {
+  const checks = [];
+  function add(id, passed, weight, detail) {
+    checks.push({
+      id: id,
+      passed: !!passed,
+      weight: passed ? weight : 0,
+      detail: detail || null,
+    });
+  }
+  add(
+    "registered",
+    product.is_registered === true && !!product.truemark_id,
+    20,
+    "product is registered with a TrueMark id"
+  );
+  add(
+    "unit_identifier",
+    UNIT_MATCH_TYPES.indexOf(matchType) !== -1,
+    10,
+    matchType === "sku"
+      ? "matched by SKU, which identifies a product line, not a unit"
+      : "matched by " + matchType
+  );
+  add(
+    "attributed_origin",
+    product.data_origin === "attributed",
+    10,
+    "data_origin=" + (product.data_origin || "null")
+  );
+  add(
+    "content_hash",
+    !!product.blockchain_hash && CONTENT_HASH_RE.test(product.blockchain_hash),
+    5,
+    "stored content fingerprint (not independently checkable here)"
+  );
+  add(
+    "onchain_anchor",
+    anchor.status === "confirmed",
+    50,
+    "anchor " + anchor.status + (anchor.detail ? ": " + anchor.detail : "")
+  );
+  const reports = Number(product.counterfeit_reports || 0);
+  add(
+    "no_counterfeit_reports",
+    reports === 0,
+    5,
+    reports ? reports + " counterfeit report(s)" : "none on record"
+  );
+  const statusOk =
+    !product.status ||
+    product.status === "active" ||
+    product.status === "published";
+  add("status_active", statusOk, 0, "status=" + (product.status || "null"));
+
+  let score = checks.reduce(function (sum, c) {
+    return sum + c.weight;
+  }, 0);
+  score -= Math.min(60, reports * 30);
+  score = Math.max(0, Math.min(100, score));
+  const byId = {};
+  checks.forEach(function (c) {
+    byId[c.id] = c.passed;
+  });
+  const verified =
+    byId.registered &&
+    byId.unit_identifier &&
+    byId.onchain_anchor &&
+    byId.no_counterfeit_reports &&
+    byId.status_active;
+  return { verified: !!verified, trust_score: score, checks: checks };
+}
+
+function pickMatch(rows, candidates) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const order = ["id", "truemark_id", "serial_number", "sku"];
+  for (let i = 0; i < order.length; i++) {
+    const col = order[i];
+    const hits = rows.filter(function (r) {
+      const v = r[col];
+      return (
+        v != null &&
+        candidates.indexOf(col === "id" ? String(v).toLowerCase() : String(v)) !==
+          -1
+      );
+    });
+    if (hits.length === 1) return { product: hits[0], matchType: col };
+    if (hits.length > 1)
+      return {
+        product: null,
+        matchType: col,
+        ambiguous: hits.map(function (h) {
+          return h.truemark_id;
+        }),
+      };
+  }
+  return null;
 }
 
 // ── Auth & Tenant Resolution ──────────────────────────────────────────────────
@@ -271,27 +643,23 @@ async function resolveKey(req) {
   if (!key) return null;
   if (DEMO_KEYS[key]) return { valid: true, ...DEMO_KEYS[key] };
 
-  // Check Supabase white_label_clients table for real, provisioned tenant API keys.
-  // NOTE: this used to query a `subscriptions` table for `api_key`/`tenant_id`
-  // columns that do not exist on the live schema (that table only carries the
-  // main app's per-user Stripe subscription state: userId/plan/status/...).
-  // Provisioned API tenants (server/tenant-billing.ts `provisionTenant`) live in
-  // `white_label_clients`, which does have api_key/status/billing_plan/
-  // monthly_api_calls/api_call_limit — that's the correct table to check here.
+  // Provisioned tenants and self-serve keys both live in white_label_clients.
+  // That table has RLS enabled with no anon policies, so a direct anon SELECT
+  // always returned [] (every key fell through to the degraded fallback).
+  // Lookups go through the SECURITY DEFINER function authichain_api_resolve_key
+  // (matches plaintext keys from provisionTenant and sha256-hashed self-serve keys).
+  let lookupWorked = false;
   try {
-    const clients = await supaGet(
-      "white_label_clients",
-      "?api_key=eq." +
-        encodeURIComponent(key) +
-        "&status=eq.active&select=id,billing_plan,company_name,monthly_api_calls,api_call_limit"
-    );
-    if (Array.isArray(clients) && clients.length > 0) {
-      const client = clients[0];
+    const r = await supaRpc("authichain_api_resolve_key", { p_api_key: key });
+    lookupWorked = r.ok;
+    const client = r.ok && Array.isArray(r.data) ? r.data[0] : null;
+    if (client) {
       const plan = client.billing_plan || "free";
       return {
         valid: true,
         id: client.id,
-        tenant_id: client.id,
+        client_id: client.id,
+        user_id: client.user_id == null ? null : client.user_id,
         plan,
         limit: client.api_call_limit || (PLANS[plan] || PLANS.free).dailyLimit,
         name: client.company_name || "API User",
@@ -302,8 +670,13 @@ async function resolveKey(req) {
     /* fall through */
   }
 
-  // If key starts with ac_live_, it's a self-serve key — allow free tier
-  if (key.startsWith("ac_live_")) {
+  // Legacy: ac_live_ keys issued before persistence worked were never saved.
+  // Accept them (degraded, free tier) only while the lookup function is not
+  // deployed yet, or when ALLOW_UNREGISTERED_SELF_SERVE_KEYS=true.
+  if (
+    key.startsWith("ac_live_") &&
+    (!lookupWorked || envVar("ALLOW_UNREGISTERED_SELF_SERVE_KEYS") === "true")
+  ) {
     return {
       valid: true,
       plan: "free",
@@ -368,12 +741,36 @@ async function handleRequest(req) {
   if (path === "/" || path === "/health" || path === "/api/v1/health") {
     return j({
       status: secretsConfigured() ? "ok" : "missing_secrets",
-      version: "3.0.1",
+      version: "3.1.0",
       service: "authichain-api",
       rapidapi: true,
       realData: true,
       secrets_configured: secretsConfigured(),
+      signing_configured: !!envVar("CERT_SIGNING_KEY"),
       timestamp: new Date().toISOString(),
+    });
+  }
+
+  // ── JWKS: public key for verification certificates (no auth) ─────────────
+  if (
+    method === "GET" &&
+    (path === "/api/v1/.well-known/jwks.json" ||
+      path === "/.well-known/jwks.json")
+  ) {
+    let key = null;
+    try {
+      key = await loadSigningKey();
+    } catch (e) {
+      return j({ error: "signing key invalid" }, 503, {
+        "Cache-Control": "no-store",
+      });
+    }
+    if (!key)
+      return j({ error: "signing key not configured" }, 503, {
+        "Cache-Control": "no-store",
+      });
+    return j({ keys: [key.publicJwk] }, 200, {
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
     });
   }
 
@@ -442,36 +839,34 @@ async function handleRequest(req) {
         .join("")
         .slice(0, 32);
 
-    var apiSecretBytes = new Uint8Array(32);
-    crypto.getRandomValues(apiSecretBytes);
-    var apiSecret = Array.from(apiSecretBytes)
-      .map(function (x) {
-        return x.toString(16).padStart(2, "0");
-      })
-      .join("");
-
-    // Was: supaPost('subscriptions', { email, api_key, product_limit, ... }) —
-    // none of those columns exist on the live `subscriptions` table (see
-    // resolveKey() above), so the key was silently never persisted anywhere
-    // and callers always fell back to the degraded free tier. Provisioned API
-    // tenants live in `white_label_clients` (verified against the live
-    // PostgREST schema: only `id`/`name` are actually required — `user_id` is
-    // nullable, so an anonymous self-serve signup is fine here).
-    supaPost("white_label_clients", {
-      name: email,
-      company_name: email,
-      api_key: apiKey,
-      api_secret: apiSecret,
-      status: "active",
-      billing_plan: "free",
-      monthly_api_calls: 0,
-      api_call_limit: PLANS.free.dailyLimit * 30,
-    }).catch(function () {});
-    supaPost("leads", {
-      email: email,
-      source: "api_key_signup",
-      name: bk.name || null,
-    }).catch(function () {});
+    // Was: fire-and-forget anon inserts into white_label_clients and leads.
+    // Both were rejected by RLS (white_label_clients: RLS on, no policies;
+    // leads: insert requires assigned_to = auth.uid()) and the errors were
+    // swallowed, so keys and leads were never saved. Persist through the
+    // SECURITY DEFINER function instead (stores only a sha256 of the key and
+    // upserts the lead) and refuse to hand out a key that was not saved.
+    var saved = await supaRpc("authichain_api_create_key", {
+      p_email: email,
+      p_api_key: apiKey,
+      p_name: bk.name ? String(bk.name).slice(0, 200) : null,
+    }).catch(function () {
+      return { ok: false, status: 0, data: null };
+    });
+    if (!saved.ok) {
+      var tooMany =
+        saved.data &&
+        typeof saved.data.message === "string" &&
+        saved.data.message.indexOf("key_limit_reached") !== -1;
+      return j(
+        tooMany
+          ? { error: "Key limit reached for this email" }
+          : {
+              error: "Could not save API key",
+              message: "Key storage is unavailable. Please try again later.",
+            },
+        tooMany ? 429 : 503
+      );
+    }
 
     return j(
       {
@@ -514,99 +909,176 @@ async function handleRequest(req) {
   };
 
   try {
-    // ── VERIFY (REAL DATA) ────────────────────────────────────────────────
+    // ── VERIFY (REAL DATA, SIGNED) ──────────────────────────────────────────
     if (path === "/api/v1/verify" && method === "POST") {
+      var started = Date.now();
       var b = await req.json().catch(function () {
         return {};
       });
       var serial = b.serial || b.productId || b.id || b.truemark_id || "";
       if (!serial) return j({ error: "serial or productId required" }, 400);
-
-      var identifier = serial.trim().toUpperCase();
-
-      // Query real Supabase products table
-      var products = await supaGet(
-        "products",
-        "?truemark_id=eq." +
-          encodeURIComponent(identifier) +
-          "&tenant_id=eq." +
-          kd.tenant_id +
-          "&is_registered=eq.true&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story",
-        kd.tenant_id
-      );
-      var product = Array.isArray(products) ? products[0] : null;
-
-      if (!product) {
-        // Try partial match
-        products = await supaGet(
-          "products",
-          "?truemark_id=ilike.*" +
-            encodeURIComponent(identifier.slice(-8)) +
-            "*&tenant_id=eq." +
-            kd.tenant_id +
-            "&is_registered=eq.true&limit=1&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story",
-          kd.tenant_id
-        );
-        product = Array.isArray(products) ? products[0] : null;
-      }
-
-      // Log verification attempt
-      supaPost("verifications", {
-        raw_input: serial.substring(0, 200),
-        result: product ? "authentic" : "not_found",
-        trust_score: product ? Math.min(100, product.confidence || 95) : 0,
-        ip_address: req.headers.get("CF-Connecting-IP"),
-        country: req.headers.get("CF-IPCountry"),
-        product_id: product ? product.id : null,
-        truemark_id: product ? product.truemark_id : null,
-      }).catch(function () {});
-
-      if (!product) {
+      var identifier = String(serial).trim();
+      if (!IDENT_RE.test(identifier))
         return j(
           {
-            success: false,
-            verified: false,
-            status: "not_found",
-            message: "No registered product found for this identifier.",
-            raw_input: serial,
-            plan: kd.plan,
+            error: "Invalid identifier",
+            message: "Use 1-128 characters: letters, digits, . _ : -",
           },
-          200,
-          rateHeaders
+          400
         );
-      }
 
-      return j(
-        {
-          success: true,
-          verified: false,
-          status: "unverified",
-          message:
-            "Product registered, but awaiting evidence-based trust verification.",
-          trust_score: 0,
-          product: {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            brand: product.brand,
-            category: product.category,
-            image_url: product.image_url,
-            truemark_id: product.truemark_id,
-            industry: product.industry_id,
-            story: product.story,
-            registered_at: product.created_at,
-          },
-          blockchain: {
-            network: "Polygon",
-            contract: "0x4da4D2675e52374639C9c954f4f653887A9972BE",
-            tx_hash: product.blockchain_tx_hash,
-            verified_at: null,
-          },
-          plan: kd.plan,
-        },
-        200,
-        rateHeaders
+      // Exact matches on real columns only (truemark_id, serial_number, sku,
+      // id). The old query filtered on products.tenant_id, which does not
+      // exist, so PostgREST returned an error object and every lookup was
+      // "not_found". The old fuzzy fallback (ilike on the last 8 chars) is
+      // gone: a verifier must not report a different product as a match.
+      var candidates = [identifier];
+      if (identifier.toUpperCase() !== identifier)
+        candidates.push(identifier.toUpperCase());
+      var ors = [];
+      candidates.forEach(function (v) {
+        ors.push('truemark_id.eq."' + v + '"');
+        ors.push('serial_number.eq."' + v + '"');
+        ors.push('sku.eq."' + v + '"');
+      });
+      if (UUID_RE.test(identifier)) {
+        ors.push("id.eq." + identifier.toLowerCase());
+        candidates.push(identifier.toLowerCase());
+      }
+      // Optional tenant scope on a real column: products.user_id.
+      var scope =
+        b.scope === "tenant" && kd.user_id != null
+          ? "&user_id=eq." + encodeURIComponent(String(kd.user_id))
+          : "";
+      var rows = await supaGet(
+        "products",
+        "?or=" +
+          encodeURIComponent("(" + ors.join(",") + ")") +
+          "&is_registered=eq.true" +
+          scope +
+          "&limit=10&select=id,name,description,brand,category,image_url,truemark_id,sku,serial_number,blockchain_tx_hash,blockchain_hash,nft_token_id,nft_contract_address,counterfeit_reports,data_origin,status,is_registered,industry_id,created_at,story"
       );
+      if (!Array.isArray(rows))
+        return j(
+          { error: "Product lookup failed", message: "upstream query error" },
+          502
+        );
+
+      var match = pickMatch(rows, candidates);
+      var product = match && match.product ? match.product : null;
+      var anchor = product
+        ? await checkOnchainAnchor(product.blockchain_tx_hash)
+        : { status: "absent", detail: null };
+      var assessment = product
+        ? assessEvidence(product, match.matchType, anchor)
+        : { verified: false, trust_score: 0, checks: [] };
+      var status = product
+        ? assessment.verified
+          ? "verified"
+          : "unverified"
+        : match && match.ambiguous
+          ? "ambiguous"
+          : "not_found";
+
+      var certId = crypto.randomUUID();
+      var nowSec = Math.floor(Date.now() / 1000);
+      var certPayload = {
+        typ: "authichain.verification.v1",
+        iss: url.origin,
+        jti: certId,
+        iat: nowSec,
+        query: identifier,
+        result: {
+          status: status,
+          verified: assessment.verified,
+          trust_score: assessment.trust_score,
+          match_type: match ? match.matchType : null,
+        },
+        product: product
+          ? {
+              id: product.id,
+              truemark_id: product.truemark_id,
+              sku: product.sku,
+              serial_number: product.serial_number,
+              name: product.name,
+              brand: product.brand,
+            }
+          : null,
+        evidence: assessment.checks,
+        anchor: product
+          ? {
+              network: "Polygon",
+              tx_hash: product.blockchain_tx_hash || null,
+              status: anchor.status,
+              block: anchor.block || null,
+            }
+          : null,
+      };
+      var signed = await signCertificate(certPayload, url.origin);
+
+      // Log verification attempt (return=minimal — see supaInsert).
+      await supaInsert("verifications", {
+        raw_input: identifier.substring(0, 200),
+        result: status,
+        verdict: status,
+        trust_score: assessment.trust_score,
+        score: assessment.trust_score,
+        signals: { checks: assessment.checks, anchor: anchor.status },
+        cert_id: signed.certificate ? certId : null,
+        ip_address: req.headers.get("CF-Connecting-IP"),
+        country: req.headers.get("CF-IPCountry"),
+        user_agent: (req.headers.get("User-Agent") || "").substring(0, 300),
+        product_id: product ? product.id : null,
+        truemark_id: product ? product.truemark_id : null,
+        product_name: product ? product.name : null,
+        brand: product ? product.brand : null,
+        latency_ms: Date.now() - started,
+      }).catch(function () {});
+
+      var out = {
+        success: !!product,
+        verified: assessment.verified,
+        status: status,
+        trust_score: assessment.trust_score,
+        message: product
+          ? assessment.verified
+            ? "Verified: registered unit with a confirmed on-chain anchor."
+            : "Registered product found, but the evidence on record is not sufficient to verify it."
+          : status === "ambiguous"
+            ? "Identifier matches several registered products (e.g. a SKU). Use the TrueMark id or serial number."
+            : "No registered product found for this identifier.",
+        evidence: assessment.checks,
+        certificate: signed.certificate,
+        plan: kd.plan,
+      };
+      if (signed.certificate_error)
+        out.certificate_error = signed.certificate_error;
+      if (status === "ambiguous") out.candidates = match.ambiguous;
+      if (!product) out.raw_input = identifier;
+      if (product) {
+        out.product = {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          brand: product.brand,
+          category: product.category,
+          image_url: product.image_url,
+          truemark_id: product.truemark_id,
+          sku: product.sku,
+          serial_number: product.serial_number,
+          industry: product.industry_id,
+          story: product.story,
+          registered_at: product.created_at,
+        };
+        out.blockchain = {
+          network: "Polygon",
+          contract: DEFAULT_ANCHOR_CONTRACT,
+          tx_hash: product.blockchain_tx_hash,
+          anchor_status: anchor.status,
+          verified_at: anchor.status === "confirmed" ? new Date().toISOString() : null,
+        };
+      }
+      return j(out, 200, rateHeaders);
     }
 
     // ── CLASSIFY (REAL AI) ────────────────────────────────────────────────
@@ -663,7 +1135,6 @@ async function handleRequest(req) {
       var cls2 = classifyIndustry(
         b3.name + " " + b3.category + " " + (b3.brand || "")
       );
-      var ts = Date.now();
       var randBytes = new Uint8Array(8);
       crypto.getRandomValues(randBytes);
       var tmSuffix = Array.from(randBytes)
@@ -682,36 +1153,49 @@ async function handleRequest(req) {
 
       var txHash = "pending_anchoring";
 
-      // Insert into real Supabase products table
-      var insertResult = await supaPost(
-        "products",
-        {
-          name: b3.name,
-          brand: b3.brand || "Unknown",
-          category: b3.category,
-          description: b3.description || null,
-          image_url: b3.image_url || null,
-          industry_id: cls2.id,
-          truemark_id: truemarkId,
-          blockchain_tx_hash: txHash,
-          is_registered: true,
-          confidence: 0,
-          story:
-            b3.name + " has been registered. Awaiting blockchain anchoring.",
-          tenant_id: kd.tenant_id,
-        },
-        kd.tenant_id
-      );
+      // Insert into real Supabase products table. products has no tenant_id
+      // column; the owning user (if the key belongs to a provisioned tenant
+      // with a user_id) goes in products.user_id.
+      var insertBody = {
+        name: b3.name,
+        brand: b3.brand || "Unknown",
+        category: b3.category,
+        description: b3.description || null,
+        image_url: b3.image_url || null,
+        industry_id: cls2.id,
+        truemark_id: truemarkId,
+        blockchain_tx_hash: txHash,
+        is_registered: true,
+        confidence: 0,
+        story: b3.name + " has been registered. Awaiting blockchain anchoring.",
+      };
+      if (kd.user_id != null) insertBody.user_id = kd.user_id;
+      var insertResult = await supaPost("products", insertBody);
 
       var newProduct = Array.isArray(insertResult.data)
         ? insertResult.data[0]
         : insertResult.data;
 
+      // Previously a failed insert still returned success with a made-up id.
+      if (!insertResult.ok || !newProduct || !newProduct.id) {
+        return j(
+          {
+            success: false,
+            error: "Product was not saved",
+            message:
+              "Registration storage rejected the insert; nothing was registered.",
+            upstream_status: insertResult.status,
+          },
+          502,
+          rateHeaders
+        );
+      }
+
       return j(
         {
           success: true,
           product: {
-            id: newProduct ? newProduct.id : "prod_" + ts,
+            id: newProduct.id,
             name: b3.name,
             brand: b3.brand || "Unknown",
             category: b3.category,
@@ -741,18 +1225,23 @@ async function handleRequest(req) {
       var offset = parseInt(url.searchParams.get("offset") || "0");
       var filter = cat ? "&category=eq." + encodeURIComponent(cat) : "";
 
+      // Scope to the key owner's products (products.user_id) when the key
+      // belongs to a provisioned tenant with a user_id; otherwise list
+      // registered products (the same rows the public RLS policy exposes).
+      var ownerFilter =
+        kd.user_id != null
+          ? "&user_id=eq." + encodeURIComponent(String(kd.user_id))
+          : "";
       var prods = await supaGet(
         "products",
-        "?tenant_id=eq." +
-          kd.tenant_id +
-          "&is_registered=eq.true" +
+        "?is_registered=eq.true" +
+          ownerFilter +
           filter +
           "&order=created_at.desc&limit=" +
           limit +
           "&offset=" +
           offset +
-          "&select=id,name,brand,category,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at",
-        kd.tenant_id
+          "&select=id,name,brand,category,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at"
       );
 
       return j(
@@ -883,12 +1372,17 @@ async function handleRequest(req) {
         return {};
       });
       if (!b5.email) return j({ error: "email required" }, 400);
-      var leadResult = await supaPost("leads", {
-        email: b5.email,
-        source: b5.source || "api",
-        company: b5.company || null,
-        name: b5.name || null,
+      // Anon inserts into leads are rejected by RLS; use the lead RPC.
+      var leadResult = await supaRpc("authichain_api_capture_lead", {
+        p_email: String(b5.email).trim().toLowerCase(),
+        p_source: b5.source ? String(b5.source).slice(0, 100) : "api",
+        p_name: b5.name ? String(b5.name).slice(0, 200) : null,
+        p_company: b5.company ? String(b5.company).slice(0, 200) : null,
+      }).catch(function () {
+        return { ok: false };
       });
+      if (!leadResult.ok)
+        return j({ error: "Could not save lead" }, 503, rateHeaders);
       return j(
         { success: true, lead: { email: b5.email }, plan: kd.plan },
         201,
@@ -913,6 +1407,7 @@ async function handleRequest(req) {
           "/api/v1/industries",
           "/api/v1/keys/create",
           "/api/v1/leads",
+          "/api/v1/.well-known/jwks.json",
         ],
       },
       404

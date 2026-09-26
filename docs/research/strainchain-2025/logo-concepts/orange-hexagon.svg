@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Earthy orange hexagon">
+  <rect width="256" height="256" fill="#FFF3E0"/>
+  <polygon points="128,28 214,78 214,178 128,228 42,178 42,78" fill="#FB8C00"/>
+  <polygon points="128,92 156,108 156,148 128,164 100,148 100,108" fill="#E65100"/>
+</svg>
