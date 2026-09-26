@@ -39,14 +39,14 @@ const BRANDS = {
 // Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
 // estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
-  authichainDppCheckout: 'https://authichain.govchain.us/api/checkout/dpp',
-  authichainDppPay: 'https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c',
+  authichainDppCheckout: 'https://authichain.com/checkout/dpp_readiness',
+  authichainDppPay: 'https://authichain.com/checkout/dpp_readiness',
   authichainPricing: 'https://authichain.govchain.us/pricing',
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
-  strainchainPassportCheckout: 'https://authichain.govchain.us/api/checkout/plan/strainchain_passport',
-  strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
-  strainchainFarmCheckout: 'https://authichain.govchain.us/api/checkout/plan/strainchain_farm',
-  strainchainFarmPay: 'https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z',
+  strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
+  strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
+  strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
+  strainchainFarmPay: 'https://authichain.com/checkout/strainchain_farm',
 };
 
 function isDppKeyword(keyword) {
@@ -72,16 +72,16 @@ function isTrumarkKeyword(keyword) {
  * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
  */
 function isCheckoutUrl(href) {
-  return /\/api\/checkout\//.test(href);
+  return /\/api\/checkout\/|\/checkout\//.test(href);
 }
 
 function checkoutEmailFormHtml(action, label) {
   return (
-    `<form class="checkout-email-form" action="${esc(action)}" method="get">` +
+    `<form class="checkout-email-form" action="${esc(action).replace(/"/g, "&quot;")}" method="${isCheckoutUrl(action) && /^https:\/\/authichain\.com\/checkout\//.test(action) ? "post" : "get"}">` +
     `<label class="checkout-email-label" for="checkout-email">Work email` +
     `<input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">` +
     `</label>` +
-    `<p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>` +
+    `<p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p>` +
     `<button class="btn btn-primary" type="submit">${esc(label)}</button>` +
     `</form>`
   );

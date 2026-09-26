@@ -29,8 +29,8 @@ import {
 } from "./battery-gap-map";
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
-export const BATTERY_PASSPORT_CANONICAL = `https://authichain.govchain.us${BATTERY_PASSPORT_PATH}`;
-export const BATTERY_CHECKOUT_ACTION = "/api/checkout/dpp";
+export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
+export const BATTERY_CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
 export const BATTERY_UTM = {
   utm_source: "site",
   utm_medium: "offer-page",
@@ -64,7 +64,7 @@ function checkoutForm(id: string, label: string): string {
   const hidden = Object.entries(BATTERY_UTM)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`)
     .join("");
-  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="get" id="${id}">
+  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="post" id="${id}">
   <label class="checkout-email-label" for="${id}-email">Work email
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
@@ -278,7 +278,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
-          url: "https://authichain.govchain.us",
+          url: "https://authichain.com",
         },
         areaServed: "European Union",
         url: BATTERY_PASSPORT_CANONICAL,
@@ -315,7 +315,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:url" content="${BATTERY_PASSPORT_CANONICAL}">
-  <meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+  <meta property="og:image" content="https://authichain.com/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/<\/script/gi, "<\\/script")}</script>
   ${ESTATE_FONTS_LINK}

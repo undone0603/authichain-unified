@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("tryHandleX402", () => {
   it("returns null for other API paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleX402(req("/api/checkout/dpp"))).toBeNull();
+    expect(await tryHandleX402(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
     expect(await tryHandleX402(req("/api/stripe/webhook"))).toBeNull();
     expect(await tryHandleX402(req("/dashboard"))).toBeNull();
   });
@@ -69,7 +69,7 @@ describe("tryHandleX402", () => {
     );
     expect(body.humanCheckout.farmUsd).toBe(149);
     expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
   });
 
@@ -92,7 +92,7 @@ describe("tryHandleX402", () => {
     expect(body.name).toBe("AuthiChain Agent Verify");
     expect(body.category).toBe("Verification");
     expect(body.paidRoute).toBe(
-      "https://authichain.govchain.us/api/v1/agent-verify"
+      "https://authichain.com/api/v1/agent-verify"
     );
     expect(body.wallet).toBe("0xabc0000000000000000000000000000000000001");
     expect(body.payapi.form.wallet).toBe(body.wallet);
@@ -119,7 +119,7 @@ describe("tryHandleX402", () => {
     expect(body.directories.some(d => d.id === "payapi")).toBe(true);
     expect(body.sisters.map(s => s.origin)).toEqual(
       expect.arrayContaining([
-        "https://authichain.govchain.us",
+        "https://authichain.com",
         "https://qron.space",
         "https://strainchain.io",
         "https://govchain.us",
@@ -144,7 +144,7 @@ describe("tryHandleX402", () => {
       protocol?: string;
     };
     expect(body.version).toBe(1);
-    expect(body.resources).toEqual(["https://authichain.govchain.us/api/x402"]);
+    expect(body.resources).toEqual(["https://authichain.com/api/x402"]);
     expect(body.protocol).toBeUndefined();
   });
 

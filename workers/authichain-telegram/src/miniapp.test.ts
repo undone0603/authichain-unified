@@ -39,9 +39,10 @@ test("Mini App defaults to the apex URL, never authichain.com/api/telegram", () 
   );
   assert.equal(DEFAULT_MINIAPP_URL, "https://authichain.com/telegram");
   assert.equal(PASSPORT_CHECKOUT_URL, planPaymentLink("strainchain_passport"));
+  // Gated confirm page: a GET (Telegram link preview) never opens a Stripe session.
   assert.equal(
-    PASSPORT_CHECKOUT_URL.startsWith("https://buy.stripe.com/"),
-    true
+    PASSPORT_CHECKOUT_URL,
+    "https://authichain.com/checkout/strainchain_passport"
   );
   assert.equal(PASSPORT_CHECKOUT_URL.includes("/api/checkout"), false);
 });

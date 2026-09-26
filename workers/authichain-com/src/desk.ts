@@ -3,7 +3,8 @@
  *
  * Folded from the Grok App Builder preview. Command tokens (ink / paper /
  * steel). Not a second homepage — existing /verify /pricing /dpp stay.
- * Checkout uses GET + ?email= (#1141). $QRON is not a payment rail (#1143).
+ * Checkout is a confirm page (#1255). GET does not call Stripe. POST starts
+ * the session. $QRON is not a payment rail (#1143). Theater SKUs are not listed.
  */
 import {
   catalogPaymentLinkHtml,
@@ -22,8 +23,8 @@ const HTML_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
-export const DESK_AS_OF = "22 Sep 2026";
-export const DESK_COMMIT = "259290d";
+export const DESK_AS_OF = "25 Sep 2026";
+export const DESK_COMMIT = "d519d62";
 
 const PAYTO = X402_PUBLISHED_PAY_TO;
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
@@ -38,13 +39,13 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
   {
     surface: "Cloudflare apex",
     state: "live",
-    detail: "authichain.com workers. Money path is not Vercel. #1138 on main.",
+    detail: "Canonical host is https://authichain.com (#1258). authichain.govchain.us is a fallback. Money path is not Vercel. #1138 on main.",
   },
   {
     surface: "EU DPP checkout",
     state: "live",
     detail:
-      "GET /api/checkout/dpp needs ?email=. Else 303 to /dpp?need_email=1.",
+      "GET https://authichain.com/checkout/dpp_readiness is a confirm page and does not call Stripe. POST with a work email starts the $299 session.",
   },
   {
     surface: "Passport $49",
@@ -78,6 +79,12 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     detail: "Apex cards show — until /api/authichain/certificates answers.",
   },
   {
+    surface: "Public catalogue",
+    state: "live",
+    detail:
+      "Passport $49, Farm $149/mo, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
+  },
+  {
     surface: "gov-mint",
     state: "off",
     detail: "Frozen until a Base getCode proof. Default dry_run=true.",
@@ -87,17 +94,17 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
 const HUBS = [
   {
     brand: "AuthiChain",
-    href: "https://authichain.govchain.us/p/what-is-a-digital-product-passport",
+    href: "https://authichain.com/p/what-is-a-digital-product-passport",
     label: "What is a DPP",
   },
   {
     brand: "AuthiChain",
-    href: "https://authichain.govchain.us/p/eu-digital-product-passport-registry-test-environment",
+    href: "https://authichain.com/p/eu-digital-product-passport-registry-test-environment",
     label: "EU DPP registry test env",
   },
   {
     brand: "AuthiChain",
-    href: "https://authichain.govchain.us/p/w3c-verifiable-credentials-data-model-2-1-changes",
+    href: "https://authichain.com/p/w3c-verifiable-credentials-data-model-2-1-changes",
     label: "W3C VC Data Model 2.1",
   },
   {
@@ -596,7 +603,7 @@ function shell(
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="https://authichain.govchain.us${esc(path)}">
+<link rel="canonical" href="https://authichain.com${esc(path)}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${CSS}</style>
 </head><body>
@@ -614,7 +621,7 @@ function shell(
 
 function home(): string {
   const dppForm = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-dpp",
     inputId: "desk-dpp-email",
@@ -686,21 +693,21 @@ function status(): string {
 
 function pricing(): string {
   const dpp = checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
     formId: "desk-price-dpp",
     inputId: "desk-price-dpp-email",
     buttonClass: "btn",
   });
   const passport = checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Publish one passport",
     formId: "desk-price-pass",
     inputId: "desk-price-pass-email",
     buttonClass: "btn",
   });
   const farm = checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_farm",
+    action: "https://authichain.com/checkout/strainchain_farm",
     label: "Start a Farm Plan",
     formId: "desk-price-farm",
     inputId: "desk-price-farm-email",
@@ -708,11 +715,11 @@ function pricing(): string {
   });
   return shell(
     "Pricing — AuthiChain desk",
-    "Live catalogue. Farm $149/mo is the recurring SKU. Checkout requires a recovery email.",
+    "Live catalogue. Farm $149/mo is the recurring SKU. A POST on the confirm page starts Stripe.",
     "/desk/pricing",
     `<p class="kicker">Published catalogue</p>
      <h1>Prices that already charge.</h1>
-     <p class="muted">GET checkout without email 303s to a capture page. Anonymous carts never get Stripe recovery mail.</p>
+     <p class="muted">The confirm page is a GET. Stripe starts only when that form is posted with a work email.</p>
      <div class="grid g2" style="margin-top:1.5rem">
        <div class="card"><p class="kicker">Farm</p><p class="price">$149<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Unlimited cultivars. Recurring. Same live Stripe link as strainchain.io.</p>${farm}
          <p style="margin-top:.75rem">${catalogPaymentLinkHtml({
@@ -723,14 +730,8 @@ function pricing(): string {
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
        <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
-       <div class="card"><p class="kicker">Theater 1: AgTech</p><p class="price">$499<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Recurring. 5,000 industrial generations a month.</p>
-         <p style="margin-top:1rem">${catalogPaymentLinkHtml({
-           planId: "theater_1",
-           label: "Pay $499/mo on Stripe",
-           className: "btn ghost",
-         })}</p></div>
      </div>
-     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Farm $149/mo is the founder-income recurring rail.</p>`
+     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
   );
 }
 

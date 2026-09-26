@@ -8,9 +8,9 @@
  */
 import { catalogPaymentLinkHtml } from "../../../src/lib/checkout-email";
 
-export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
-export const PASSPORT_CHECKOUT_URL = `https://authichain.govchain.us${PASSPORT_CHECKOUT_PATH}`;
-export const MINIAPP_CANONICAL = "https://authichain.govchain.us/telegram";
+export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
+export const PASSPORT_CHECKOUT_URL = PASSPORT_CHECKOUT_PATH;
+export const MINIAPP_CANONICAL = "https://authichain.com/telegram";
 
 const MINIAPP_PATHS = new Set([
   "/telegram",
@@ -131,11 +131,11 @@ export function renderTelegramMiniApp(): string {
     </section>
 
     <div class="actions">
-      <form class="checkout-email-form" id="checkout-form" action="${PASSPORT_CHECKOUT_URL}" method="get">
+      <form class="checkout-email-form" id="checkout-form" action="${PASSPORT_CHECKOUT_URL}" method="post">
         <label for="checkout-email">Work email
           <input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
         </label>
-        <p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>
+        <p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p>
         <button class="btn btn-primary" id="checkout" type="submit">Publish Passport — $49</button>
       </form>
       ${catalogPaymentLinkHtml({

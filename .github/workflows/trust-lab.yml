@@ -1,0 +1,22 @@
+name: trust-lab
+on:
+  pull_request:
+  push:
+    paths:
+      - "protocol/trust-kernel/**"
+      - "protocol/adversarial/**"
+      - "protocol/attestation/**"
+      - "packages/verifier/**"
+      - "packages/policy/**"
+      - ".github/workflows/trust-lab.yml"
+jobs:
+  adversarial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run adversarial fixtures
+        run: node protocol/adversarial/run.mjs --strict

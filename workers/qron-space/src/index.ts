@@ -2099,11 +2099,14 @@ h1{font-size:1.25rem;font-weight:700;margin:.75rem 0 .5rem}
 p{color:var(--muted);margin-bottom:1.75rem}
 code{background:rgba(148,163,184,.12);border:1px solid var(--border);border-radius:.375rem;padding:.15rem .45rem;font-size:.85rem;color:var(--text);word-break:break-all}
 a{display:inline-block;padding:.75rem 1.75rem;border-radius:.5rem;font-weight:600;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;text-decoration:none}
+.links{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+a.ghost{background:transparent;border:1px solid #27272a}
 </style></head><body><main>
 <div class="code">404</div>
 <h1>This page does not exist</h1>
 <p><code>${escapeHtml(pathname)}</code> is not a page on qron.space.</p>
-<a href="/">Back to the $QRON hub</a>
+<a href="/">Back to qron.space</a>
+<p class="links"><a class="ghost" href="https://authichain.com/onboard">Request a free pilot</a> <a class="ghost" href="https://authichain.com/pricing">Pricing</a></p>
 </main></body></html>`;
   return new Response(html, {
     status: 404,
@@ -2159,7 +2162,9 @@ export default {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
     if (
-      /^\/(?:generate|api\/generate)(?:\/|$)/.test(url.pathname) ||
+      // /onboard is linked from /generate ("Request a free pilot"); it used
+      // to 404 here. Same app intake govchain.us and strainchain.io proxy.
+      /^\/(?:generate|api\/generate|onboard)(?:\/|$)/.test(url.pathname) ||
       isSeoPassportPath(url.pathname)
     ) {
       if (!env?.APP_ORIGIN) {
@@ -2223,11 +2228,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QRON — Living QR codes that scan</title>
-<meta name="description" content="Generate a signed Living QR for packaging and labels. Ed25519-signed, Polygon-anchored, scannable from any camera.">
+<meta name="description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QRON">
 <meta property="og:title" content="QRON — Living QR codes that scan">
-<meta property="og:description" content="Generate a signed Living QR for packaging and labels. Ed25519-signed and still scannable.">
+<meta property="og:description" content="Generate a Living QR for packaging and labels, scannable from any camera. In development: Ed25519-signed codes anchored to AuthiChain's certificate contract on Polygon.">
 <meta property="og:url" content="https://qron.space/">
 <meta property="og:image" content="https://qron.space/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2267,9 +2272,9 @@ ${estateHero({
   ],
 })}
 ${estateTrust([
-  { value: "Ed25519", label: "Signed payload" },
+  { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
-  { value: "Polygon", label: "On-chain anchor" },
+  { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
 ${estateFeatures(
@@ -2278,7 +2283,7 @@ ${estateFeatures(
   [
     { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Estate verification", body: "Each QRON is signed for AuthiChain verification. Scan to confirm the destination and the certificate behind it." },
+    { title: "Estate verification (in development)", body: "QRON codes will link to an AuthiChain certificate on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Scan-to-verify is in development." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
     { title: "Utility token, not the CTA", body: "$QRON is the estate utility token on Polygon. Staking and governance are secondary; generation is how you start." },
     { title: "Public contract", body: "Staking contract 0xAebf…E437 is published on Polygonscan. Inspect it there — we do not invent vote counts or APY theater on this page." },

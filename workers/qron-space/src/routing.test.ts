@@ -121,7 +121,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
   assert.equal(
     `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
-      'href="https://buy.stripe.com'
+      'href="https://authichain.com/checkout/'
     ),
     true
   );
@@ -264,15 +264,15 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", a
   assert.equal(body.catalog, "/api/x402/catalog");
   assert.equal(
     new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     body.humanCheckout.starterPaymentLink,
@@ -298,25 +298,14 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.match(html, /\$299/);
   assert.match(html, /href="\/generate"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.doesNotMatch(
     html,
-    /href="https:\/\/authichain\.govchain\.us\/api\/checkout\/dpp"/
+    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
   );
-  assert.ok(
-    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
-  );
-  assert.ok(
-    html.includes('href="https://buy.stripe.com/7sYdR95ZfcZEcKCfTS1ND3B"')
-  );
-  assert.match(
-    html,
-    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_1"/
-  );
-  assert.match(
-    html,
-    /action="https:\/\/authichain\.govchain\.us\/api\/checkout\/plan\/theater_3"/
-  );
+  // Theater is unlisted since the #1234 catalog freeze.
+  assert.equal(html.includes("checkout/theater_1"), false);
+  assert.equal(html.includes("checkout/theater_3"), false);
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {

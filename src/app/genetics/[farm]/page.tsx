@@ -114,7 +114,7 @@ export default async function FarmIndex({
         </strong>{" "}
         Unlimited cultivars and passports, updated on every new certificate.{" "}
         <a
-          href="/api/checkout/plan/strainchain_farm"
+          href="https://authichain.com/checkout/strainchain_farm"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
           Start a Farm Plan →

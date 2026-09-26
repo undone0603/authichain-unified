@@ -44,6 +44,120 @@ describe("resolveReplyClassifierBackend", () => {
   });
 });
 
+describe("Workers AI (free primary)", () => {
+  const positive = {
+    sentiment: "positive",
+    objectionType: null,
+    objectionDetails: null,
+    confidence: 0.9,
+    reasoning: "Asks for a call.",
+  };
+
+  it("puts workers_ai first in the waterfall when the binding is present", () => {
+    const ai = { run: vi.fn() };
+    const status = resolveReplyClassifierBackend(
+      { OPENAI_API_KEY: "sk-test" },
+      ai
+    );
+    expect(status.primary).toBe("workers_ai");
+    expect(status.workersAiAvailable).toBe(true);
+    expect(status.waterfall).toEqual([
+      "workers_ai",
+      "openai",
+      "heuristic",
+      "neutral_fallback",
+    ]);
+  });
+
+  it("classifies with Workers AI and never calls OpenAI", async () => {
+    const ai = { run: vi.fn(async () => ({ response: positive })) };
+    const generateOpenAI = vi.fn();
+    const result = await classifyReplyEmail("Can we talk?", "Re: proposal", {
+      env: { OPENAI_API_KEY: "sk-test" },
+      workersAI: ai,
+      generateOpenAI,
+    });
+    expect(result.provider).toBe("workers_ai");
+    expect(result.sentiment).toBe("positive");
+    expect(result.fallbackReason).toBeUndefined();
+    expect(generateOpenAI).not.toHaveBeenCalled();
+    expect(ai.run).toHaveBeenCalledWith(
+      "@cf/meta/llama-3.1-8b-instruct-fast",
+      expect.objectContaining({
+        response_format: expect.objectContaining({ type: "json_schema" }),
+      })
+    );
+  });
+
+  it("parses a text completion when JSON Mode is not honoured", async () => {
+    const ai = {
+      run: vi.fn(async () => ({
+        response: "```json\n" + JSON.stringify(positive) + "\n```",
+      })),
+    };
+    const result = await classifyReplyEmail("Can we talk?", "Re: proposal", {
+      env: {},
+      workersAI: ai,
+    });
+    expect(result.provider).toBe("workers_ai");
+  });
+
+  it("tries the next free model when the first is retired", async () => {
+    const ai = {
+      run: vi.fn(async (model: string) => {
+        if (model === "@cf/meta/llama-3.1-8b-instruct-fast") {
+          throw new Error("5028: model was deprecated");
+        }
+        // OpenAI-compatible output shape.
+        return {
+          choices: [{ message: { content: JSON.stringify(positive) } }],
+        };
+      }),
+    };
+    const result = await classifyReplyEmail("Can we talk?", "Re: proposal", {
+      env: {},
+      workersAI: ai,
+    });
+    expect(result.provider).toBe("workers_ai");
+    expect(result.fallbackReason).toBeUndefined();
+    expect(ai.run).toHaveBeenLastCalledWith(
+      "@cf/zai-org/glm-4.7-flash",
+      expect.anything()
+    );
+  });
+
+  it("falls back to the heuristic and records why when Workers AI fails", async () => {
+    const ai = {
+      run: vi.fn(async () => {
+        throw new Error("4006: daily free allocation exceeded");
+      }),
+    };
+    const result = await classifyReplyEmail(
+      "Let's schedule a call",
+      "Re: proposal",
+      { env: {}, workersAI: ai }
+    );
+    expect(result.provider).toBe("heuristic");
+    expect(result.fallbackReason).toBe(
+      "workers_ai: @cf/meta/llama-3.1-8b-instruct-fast: 4006: daily free allocation exceeded | @cf/zai-org/glm-4.7-flash: 4006: daily free allocation exceeded"
+    );
+  });
+
+  it("chains both reasons when Workers AI and OpenAI both fail", async () => {
+    const result = await classifyReplyEmail("Hi", "Re: proposal", {
+      env: { OPENAI_API_KEY: "sk-test" },
+      workersAI: { run: vi.fn(async () => ({ response: "" })) },
+      generateOpenAI: async () => {
+        throw new Error("no credits");
+      },
+    });
+    expect(result.provider).toBe("heuristic");
+    expect(result.fallbackReason).toBe(
+      "workers_ai: @cf/meta/llama-3.1-8b-instruct-fast: Workers AI returned an empty completion | @cf/zai-org/glm-4.7-flash: Workers AI returned an empty completion; openai: no credits"
+    );
+  });
+});
+
 describe("fail-closed classifier", () => {
   it("never throws and always returns a valid neutral payload", () => {
     const result = failClosedNeutral(

@@ -1,6 +1,8 @@
 /**
  * Edge checkout for the $299 DPP audit.
- * GET /protocol/checkout/dpp — never cached as landing HTML (unlike /api/checkout/dpp).
+ * GET /protocol/checkout/dpp — 303 to the click-to-confirm page
+ * https://authichain.com/checkout/dpp_readiness (a GET never opens a Stripe
+ * session). Only the DPP-SMOKE-E2E $0 demo still creates a session on GET.
  * Uses STRIPE_SECRET_KEY on authichain-com (bound from GitHub secrets at deploy).
  * Promo DPP-SMOKE-E2E creates a $0 one-time session (no live $299 charge).
  */
@@ -14,6 +16,7 @@ import {
 } from "../../../src/lib/checkout-email";
 import { DPP_OFFER_KEY } from "../../../src/lib/plans";
 import { DPP_SMOKE_PROMO, isDppSmokePromo } from "../../../src/lib/dpp-loop";
+import { gatedConfirmUrl } from "../../../src/lib/checkout-gate";
 
 export const DPP_PRICE_ID = "price_1TwmD8GqTruSqV8TpAF8dfyA";
 export const APP_ORIGIN = "https://authichain.govchain.us";
@@ -76,8 +79,10 @@ export async function tryHandleProtocolCheckout(
   const referrer = pick(params, "referrer", 512);
   const source = utmSource || pick(params, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(params, "promo", 32));
-  if (!email && !smoke) {
-    return checkoutRedirectResponse(checkoutNeedEmailRedirect("dpp", visitId));
+  if (!smoke) {
+    // Click-to-confirm: GET (even with ?email=) renders the confirm page;
+    // only its POST form creates the session. Scanners never POST.
+    return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", params));
   }
   const key = (env.STRIPE_SECRET_KEY || "").trim();
   if (!key) {
@@ -150,12 +155,10 @@ export async function tryHandleProtocolCheckout(
 }
 
 /**
- * Live GET /api/checkout/* is proxied to APP_WORKER, which still opens
- * anonymous Stripe sessions on the last edge-router deploy. Sister sites
- * (strainchain.io, qron.space, govchain.us) one-click those URLs today.
- * Bounce GET without ?email= here so an authichain-com deploy stops
- * anonymous carts even if APP_WORKER is stale. HEAD stays 204. GET with
- * a recovery email falls through to APP_WORKER to create the session.
+ * GET /api/checkout/* used to open a Stripe session (anonymous, or with
+ * ?email=), so link scanners and previews created unpaid carts. Every GET
+ * now 303s to the click-to-confirm page /checkout/<plan> carrying email and
+ * attribution. HEAD stays 204. Only DPP-SMOKE-E2E ($0 demo) falls through.
  */
 export function isApiCheckoutPath(pathname: string): boolean {
   const p = pathname.replace(/\/+$/, "") || "/";
@@ -174,17 +177,13 @@ export function tryHandleApiCheckoutEmailGate(
     });
   }
   if (request.method !== "GET") return null;
-  const email = pickCheckoutEmail(url.searchParams.get("email"));
   const smoke = isDppSmokePromo(url.searchParams.get("promo"));
-  if (email || smoke) return null;
-  const visitId = (
-    url.searchParams.get("visit_id") ||
-    url.searchParams.get("prospect_id") ||
-    ""
-  ).trim();
-  const kind =
-    planIdFromCheckoutAction(url.pathname) === "dpp_readiness" ? "dpp" : "plan";
-  return checkoutRedirectResponse(
-    checkoutNeedEmailRedirect(kind, visitId || undefined)
-  );
+  if (smoke && planIdFromCheckoutAction(url.pathname) === "dpp_readiness") {
+    return null;
+  }
+  const planId = planIdFromCheckoutAction(url.pathname);
+  if (!planId) {
+    return checkoutRedirectResponse(checkoutNeedEmailRedirect("plan"));
+  }
+  return checkoutRedirectResponse(gatedConfirmUrl(planId, url.searchParams));
 }

@@ -13,8 +13,8 @@ import {
 import { MICROSITE_HTML } from "./microsite-packs.ts";
 
 export const PASSPORT_CHECKOUT =
-  "https://authichain.govchain.us/api/checkout/plan/strainchain_passport";
-export const DPP_CHECKOUT = "https://authichain.govchain.us/api/checkout/dpp";
+  "https://authichain.com/checkout/strainchain_passport";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
 export type MicrositePackId =
   "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
@@ -70,9 +70,9 @@ for (const def of Object.values(MICROSITES)) {
 
 export function micrositeSitemapUrls(): string[] {
   return [
-    "https://authichain.govchain.us/m",
+    "https://authichain.com/m",
     ...Object.values(MICROSITES).map(
-      def => `https://authichain.govchain.us${def.canonicalPath}`
+      def => `https://authichain.com${def.canonicalPath}`
     ),
   ];
 }
@@ -122,8 +122,8 @@ function renderHub(): string {
       const { title, dpp } = hubCardCopy(def.pack);
       const cta = dpp ? "DPP checkout — $299" : "Passport checkout — $49";
       const action = dpp
-        ? "/api/checkout/dpp"
-        : "/api/checkout/plan/strainchain_passport";
+        ? "https://authichain.com/checkout/dpp_readiness"
+        : "https://authichain.com/checkout/strainchain_passport";
       return `<article class="card"><h2><a href="${def.canonicalPath}">${title}</a></h2>${checkoutEmailFormHtml(
         {
           action,
@@ -145,7 +145,7 @@ function renderHub(): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Money-path microsites | AuthiChain</title>
 <meta name="description" content="Targeted AuthiChain microsites. Passport $49 and EU DPP Readiness $299. Self-serve — no call.">
-<link rel="canonical" href="https://authichain.govchain.us/m">
+<link rel="canonical" href="https://authichain.com/m">
 <style>
 body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;margin:0;color:#0f172a;background:#fff}
 .wrap{width:min(880px,calc(100% - 32px));margin:0 auto;padding:48px 0}
@@ -166,7 +166,7 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
   <p>Passport $49 and EU DPP Readiness $299. No call booking. AuthiChain is a brand; the SAM legal entity is ZACHARY KIETZMAN.</p>
   ${cards}
   ${checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
     inputId: "hub-footer-passport-email",
     formId: "hub-footer-passport-checkout",
@@ -176,7 +176,7 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
     label: "Pay $49 on Stripe",
   })}
   ${checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "DPP checkout — $299",
     inputId: "hub-footer-dpp-email",
     formId: "hub-footer-dpp-checkout",

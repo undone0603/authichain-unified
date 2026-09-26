@@ -2,11 +2,19 @@
  * Prefill Stripe Checkout `customer_email` so abandoned-cart recovery
  * can mail a buyer who never typed an address on hosted Checkout.
  *
- * GET /api/checkout/* stays a 303 (or JSON error) — never marketing HTML.
- * Landing pages collect the address and pass `?email=`.
+ * GET /api/checkout/* stays a 303 — to the click-to-confirm page at
+ * https://authichain.com/checkout/<plan> (see ./checkout-gate.ts). A GET
+ * never creates a Stripe session; landing forms POST to the gated path.
  */
 
-import { type PlanId, planById, planPaymentLink } from "./plans";
+import {
+  GATED_CHECKOUT_ORIGIN,
+  type PlanId,
+  PLANS,
+  gatedCheckoutUrl,
+  planById,
+  planPaymentLink,
+} from "./plans";
 
 export const CHECKOUT_REDIRECT_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store",
@@ -44,15 +52,18 @@ export function pickCheckoutEmail(
   return "";
 }
 
-/** Bounce a GET one-click (no `?email=`) to a landing that captures it. */
+/**
+ * Bounce a GET one-click to the click-to-confirm page. `kind: "dpp"` (or a
+ * planId) lands on /checkout/<plan>; otherwise the /checkout plan chooser.
+ */
 export function checkoutNeedEmailRedirect(
   kind: "dpp" | "plan",
-  visitId?: string
+  visitId?: string,
+  planId?: PlanId
 ): string {
+  const id: PlanId | undefined = kind === "dpp" ? "dpp_readiness" : planId;
   const url = new URL(
-    kind === "dpp"
-      ? "https://authichain.govchain.us/dpp"
-      : "https://authichain.govchain.us/pricing"
+    id && planById(id) ? gatedCheckoutUrl(id) : `${GATED_CHECKOUT_ORIGIN}/checkout`
   );
   url.searchParams.set("need_email", "1");
   if (visitId) url.searchParams.set("visit_id", visitId.slice(0, 128));
@@ -113,12 +124,17 @@ export function checkoutEmailFormHtml(opts: {
   const formId = opts.formId ? ` id="${esc(opts.formId)}"` : "";
   const inputId = opts.inputId || "checkout-email";
   const hint =
-    opts.hint ?? "Receipt and abandoned-checkout recovery. Not a newsletter.";
+    opts.hint ?? "We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.";
   const cls = ["checkout-email-form", opts.extraClass]
     .filter(Boolean)
     .join(" ");
   const buttonClass = opts.buttonClass || "btn btn-primary";
-  return `<form class="${esc(cls)}" action="${esc(opts.action)}" method="get"${formId}>
+  // Checkout forms POST to the gated confirm path: scanners and prefetchers
+  // only ever GET, so they can never start a Stripe session.
+  const gatedPlan = planIdFromCheckoutAction(opts.action);
+  const action = gatedPlan ? gatedCheckoutUrl(gatedPlan) : opts.action;
+  const method = gatedPlan ? "post" : "get";
+  return `<form class="${esc(cls)}" action="${esc(action)}" method="${method}"${formId}>
   <label class="checkout-email-label" for="${esc(inputId)}">Work email
     <input id="${esc(inputId)}" name="email" type="email"${required ? " required" : ""} maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">
   </label>
@@ -145,6 +161,10 @@ export function paymentLinkWithPrefilledEmail(
   if (!url || !looksLikeCheckoutEmail(trimmed)) return url;
   const encoded = encodeURIComponent(trimmed);
   const sep = url.includes("?") ? "&" : "?";
+  // Gated confirm page (authichain.com/checkout/<plan>) prefills from ?email=.
+  if (url.startsWith(`${GATED_CHECKOUT_ORIGIN}/checkout`)) {
+    return `${url}${sep}email=${encoded}`;
+  }
   return `${url}${sep}prefilled_email=${encoded}&locked_prefilled_email=${encoded}`;
 }
 
@@ -189,7 +209,9 @@ export function planIdFromCheckoutAction(action: string): PlanId | undefined {
   if (path === "/api/checkout/dpp" || path === "/protocol/checkout/dpp") {
     return "dpp_readiness";
   }
-  const match = path.match(/^\/api\/checkout\/plan\/([a-z0-9_]+)$/);
+  const match =
+    path.match(/^\/api\/checkout\/plan\/([a-z0-9_]+)$/) ||
+    path.match(/^\/checkout\/([a-z0-9_]+)$/);
   if (!match) return undefined;
   const id = match[1] as PlanId;
   return planById(id) ? id : undefined;
@@ -225,21 +247,38 @@ export function emailCheckoutWithPaymentLinkHtml(opts: {
 }
 
 /**
- * Map a one-click checkout <a href> to the catalogue Payment Link for that
- * SKU. Stale APP_WORKER HTML still one-clicks /api/checkout; the landing
- * worker rewrites those anchors so Bing SEO hubs can pay before edge-router
- * deploys. Form actions stay email-gated.
+ * Map a one-click checkout <a href> (legacy /api/checkout/* or a raw
+ * buy.stripe.com Payment Link, both of which open a Stripe session on GET)
+ * to the gated confirm page https://authichain.com/checkout/<plan>, keeping
+ * the query (email / utm / visit_id). Stale APP_WORKER HTML still ships
+ * those anchors; the landing worker rewrites them on the way out.
  */
 export function rewriteCheckoutHref(href: string): string | undefined {
-  const raw = href.trim();
+  const raw = href.trim().replace(/&amp;/g, "&");
   if (!raw || raw.startsWith("#") || raw.startsWith("mailto:")) {
     return undefined;
   }
   let pathname = raw;
+  let search = "";
   try {
     if (/^https?:\/\//i.test(raw)) {
       const url = new URL(raw);
       const host = url.hostname.toLowerCase();
+      if (host === "buy.stripe.com") {
+        const slug = url.toString().split("?")[0];
+        const plan = PLANS.find(p => p.stripe_payment_link === slug);
+        if (!plan) return undefined;
+        const email = pickCheckoutEmail(
+          url.searchParams.get("prefilled_email"),
+          url.searchParams.get("locked_prefilled_email")
+        );
+        const out = new URL(gatedCheckoutUrl(plan.id));
+        if (email) out.searchParams.set("email", email);
+        for (const [k, v] of url.searchParams) {
+          if (k.startsWith("utm_")) out.searchParams.set(k, v);
+        }
+        return out.toString();
+      }
       if (
         host !== "authichain.com" &&
         host !== "www.authichain.com" &&
@@ -248,22 +287,27 @@ export function rewriteCheckoutHref(href: string): string | undefined {
         return undefined;
       }
       pathname = url.pathname;
+      search = url.search;
     } else {
-      pathname = raw.split("?")[0].split("#")[0];
+      pathname = raw.split("#")[0].split("?")[0];
+      const q = raw.split("#")[0].indexOf("?");
+      search = q >= 0 ? raw.split("#")[0].slice(q) : "";
     }
   } catch {
     return undefined;
   }
+  if (/^\/checkout(\/|$)/.test(pathname)) return undefined;
   const planId = planIdFromCheckoutAction(pathname);
   if (!planId) return undefined;
-  return planPaymentLink(planId);
+  const base = planPaymentLink(planId);
+  return base ? `${base}${search}` : undefined;
 }
 
 /** Replace checkout <a href> only. Leave <form action> so email capture still posts. */
 export function rewriteCheckoutHrefsInHtml(html: string): string {
   return html.replace(/href=(["'])([^"']*)\1/gi, (full, quote, href) => {
     const next = rewriteCheckoutHref(String(href));
-    return next ? `href=${quote}${next}${quote}` : full;
+    return next ? `href=${quote}${next.replace(/&/g, "&amp;")}${quote}` : full;
   });
 }
 

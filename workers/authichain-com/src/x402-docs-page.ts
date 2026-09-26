@@ -40,14 +40,14 @@ export const X402_DOCS_PATHS = [
 
 export const X402_PUBLIC = {
   canonicalPath: "/x402",
-  canonicalUrl: "https://authichain.govchain.us/x402",
-  healthUrl: "https://authichain.govchain.us/api/x402/health",
-  catalogUrl: "https://authichain.govchain.us/api/x402/catalog",
-  wellKnownUrl: "https://authichain.govchain.us/.well-known/x402.json",
-  fanoutUrl: "https://authichain.govchain.us/.well-known/x402",
-  openApiUrl: "https://authichain.govchain.us/openapi.json",
-  payUrl: "https://authichain.govchain.us/api/x402",
-  verifyUrl: "https://authichain.govchain.us/api/v1/agent-verify",
+  canonicalUrl: "https://authichain.com/x402",
+  healthUrl: "https://authichain.com/api/x402/health",
+  catalogUrl: "https://authichain.com/api/x402/catalog",
+  wellKnownUrl: "https://authichain.com/.well-known/x402.json",
+  fanoutUrl: "https://authichain.com/.well-known/x402",
+  openApiUrl: "https://authichain.com/openapi.json",
+  payUrl: "https://authichain.com/api/x402",
+  verifyUrl: "https://authichain.com/api/v1/agent-verify",
   identityUrl:
     "https://github.com/undone0603/authichain-unified/blob/main/docs/strategy/WEB3_IDENTITY.md",
   tokenomicsUrl:
@@ -235,7 +235,7 @@ export function renderX402DocsPage(): string {
 <meta property="og:title" content="x402 agent pay — AuthiChain">
 <meta property="og:description" content="${esc(p.priceUsd)} ${esc(p.assetName)} on ${esc(p.network)} per agent verification. Discover the live rail, then POST unpaid for a 402 challenge.">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+<meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
@@ -332,24 +332,24 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <div class="examples-grid">
         <figure>
           <figcaption>curl — health</figcaption>
-          <pre><code>curl -sS https://authichain.govchain.us/api/x402/health</code></pre>
+          <pre><code>curl -sS https://authichain.com/api/x402/health</code></pre>
           <p>Expect HTTP 200 with <code>"status":"ready"</code>, <code>"mode":"trustless"</code>, the payTo and Circle USDC addresses above, and <code>"pricePerCall":{"usd":0.05}</code>.</p>
         </figure>
         <figure>
           <figcaption>curl — unpaid challenge</figcaption>
-          <pre><code>curl -sS -i -X POST https://authichain.govchain.us/api/x402 \\
+          <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -d '{"sealId":"demo"}'</code></pre>
           <p>Expect HTTP 402. The body lists the asset, payTo, and EIP-712 extra. No wallet, key, or <code>X-PAYMENT</code> header is required for this probe.</p>
         </figure>
         <figure>
           <figcaption>curl — catalog</figcaption>
-          <pre><code>curl -sS https://authichain.govchain.us/api/x402/catalog</code></pre>
+          <pre><code>curl -sS https://authichain.com/api/x402/catalog</code></pre>
           <p>Machine-readable paid endpoints, price, payTo, and health URL. Same numbers as health — not a second price list. Catalog also at <a href="${esc(p.wellKnownUrl)}"><code>/.well-known/x402.json</code></a>. x402scan fan-out is <a href="${esc(p.fanoutUrl)}"><code>/.well-known/x402</code></a>. OpenAPI with <code>x-payment-info</code> is <a href="${esc(p.openApiUrl)}"><code>/openapi.json</code></a>.</p>
         </figure>
         <figure>
           <figcaption>curl — settle retry (Agent A → AuthiChain)</figcaption>
-          <pre><code>curl -sS -i -X POST https://authichain.govchain.us/api/x402 \\
+          <pre><code>curl -sS -i -X POST https://authichain.com/api/x402 \\
   -H 'content-type: application/json' \\
   -H 'X-PAYMENT: &lt;base64-x402-payload&gt;' \\
   -d '{"sealId":"demo"}'</code></pre>
@@ -383,7 +383,7 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_passport",
+        action: "https://authichain.com/checkout/strainchain_passport",
         label: `Passport checkout — $${planUsd("strainchain_passport")}`,
         inputId: "x402-passport-email",
         formId: "x402-passport-checkout",
@@ -397,13 +397,13 @@ ${CHECKOUT_EMAIL_FORM_CSS}
         label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/plan/strainchain_farm",
+        action: "https://authichain.com/checkout/strainchain_farm",
         label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
         inputId: "x402-farm-email",
         formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: `DPP checkout — $${planUsd("dpp_readiness")}`,
         inputId: "x402-dpp-email",
         formId: "x402-dpp-checkout",

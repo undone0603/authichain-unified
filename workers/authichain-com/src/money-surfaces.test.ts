@@ -30,22 +30,22 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.match(html, /<title>TruMark seals \| AuthiChain<\/title>/);
   assert.match(
     html,
-    /rel="canonical" href="https:\/\/authichain\.govchain\.us\/trumark"/
+    /rel="canonical" href="https:\/\/authichain\.com\/trumark"/
   );
   assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_PATH}"`), true);
   assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /Passport checkout — \$49/);
   assert.match(html, /DPP checkout — \$299/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
-  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.match(html, /href="\/pricing"/);
   assert.match(
@@ -66,19 +66,19 @@ test("Made in America page uses live DPP checkout and partner-brief alias story"
   );
   assert.match(
     html,
-    /rel="canonical" href="https:\/\/authichain\.govchain\.us\/made-in-america"/
+    /rel="canonical" href="https:\/\/authichain\.com\/made-in-america"/
   );
   assert.match(html, /16 CFR Part 323/);
   assert.match(html, /EO 14392|Executive Order 14392/);
   assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /href="\/partners\/brief"/);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.match(
     html,

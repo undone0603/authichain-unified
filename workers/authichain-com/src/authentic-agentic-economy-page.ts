@@ -29,7 +29,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY_PATHS = [
 
 export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalPath: "/authentic-agentic-economy",
-  canonicalUrl: "https://authichain.govchain.us/authentic-agentic-economy",
+  canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
     "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
@@ -66,9 +66,9 @@ const JSON_LD = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://authichain.govchain.us/#organization",
+      "@id": "https://authichain.com/#organization",
       name: "AuthiChain",
-      url: "https://authichain.govchain.us",
+      url: "https://authichain.com",
       slogan: "The authentic agentic economy",
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
     },
@@ -78,7 +78,7 @@ const JSON_LD = {
       url: AUTHENTIC_AGENTIC_ECONOMY.canonicalUrl,
       name: AUTHENTIC_AGENTIC_ECONOMY.title,
       description: AUTHENTIC_AGENTIC_ECONOMY.description,
-      isPartOf: { "@id": "https://authichain.govchain.us/#organization" },
+      isPartOf: { "@id": "https://authichain.com/#organization" },
     },
     {
       "@type": "Article",
@@ -182,7 +182,7 @@ export function renderAuthenticAgenticEconomyPage(): string {
 <meta property="og:title" content="${esc(p.title)}">
 <meta property="og:description" content="${esc(p.description)}">
 <meta property="og:url" content="${esc(p.canonicalUrl)}">
-<meta property="og:image" content="https://authichain.govchain.us/og-image.png">
+<meta property="og:image" content="https://authichain.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(p.title)}">
 <meta name="twitter:description" content="${esc(p.description)}">
@@ -210,7 +210,7 @@ ${estateHero({
   title: "Agents can pay. They still need to know if it is real.",
   lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
   emailCheckout: {
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout — $299",
   },
   actions: [
@@ -222,7 +222,6 @@ ${estateTrust([
   { value: "Ed25519", label: "Signed seals" },
   { value: "Polygon", label: "On-chain anchor" },
   { value: "$0.05", label: "x402 per verify" },
-  { value: "2.1s", label: "Agent consensus" },
 ])}
 ${estateFeatures(
   "What is live on this estate",
@@ -279,7 +278,7 @@ ${estateCtaBand({
   title: "Start on a live path",
   lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
   emailCheckout: {
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
   },
   actions: [

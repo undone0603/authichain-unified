@@ -212,13 +212,13 @@ export default async function CultivarDossier({
         One published passport per cultivar, built from your existing CoAs; the
         Farm Plan keeps every cultivar current on each new certificate.{" "}
         <a
-          href="/api/checkout/plan/strainchain_passport"
+          href="https://authichain.com/checkout/strainchain_passport"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
           Publish one passport →
         </a>{" "}
         <a
-          href="/api/checkout/plan/strainchain_farm"
+          href="https://authichain.com/checkout/strainchain_farm"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
           Start a Farm Plan →

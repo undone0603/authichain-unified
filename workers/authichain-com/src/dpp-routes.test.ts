@@ -52,7 +52,7 @@ describe("tryHandleDppRoute", () => {
 
   it("returns null for DPP money APIs so APP_PREFIXES proxy them", async () => {
     const checkout = await tryHandleDppRoute(
-      req("/api/checkout/dpp?visit_id=dpp_abc")
+      req("https://authichain.com/checkout/dpp_readiness?visit_id=dpp_abc")
     );
     const activate = await tryHandleDppRoute(
       new Request("https://authichain.govchain.us/api/dpp/activate", {

@@ -10,7 +10,7 @@
  * archived in the 2026-08-31 Stripe cleanup, so each key now points at the
  * closest live catalogue SKU and shows that SKU's real name and price.
  */
-import { planById, type PlanId } from "../src/lib/plans";
+import { planById, planPaymentLink, type PlanId } from "../src/lib/plans";
 
 export interface PaymentLinkOffer {
   name: string;
@@ -27,7 +27,8 @@ function offer(id: PlanId): PaymentLinkOffer {
   return {
     name: plan.name,
     price: `$${plan.price.toLocaleString("en-US")}${suffix}`,
-    url: plan.stripe_payment_link,
+    // Gated authichain.com/checkout/<plan> (GET = confirm page, no session).
+    url: planPaymentLink(id) ?? plan.stripe_payment_link,
   };
 }
 
@@ -35,7 +36,9 @@ export const PAYMENT_LINKS = {
   qron: {
     singleDesign: offer("starter"),
     brandPack: offer("creator"),
-    enterprise: offer("theater_3"),
+    // theater_3 is unlisted since the #1234 catalog freeze; no importer
+    // reads this key, so it follows credits1000 to the top listed QRON pack.
+    enterprise: offer("creator"),
     credits50: offer("starter"),
     credits250: offer("creator"),
     credits1000: offer("creator"),

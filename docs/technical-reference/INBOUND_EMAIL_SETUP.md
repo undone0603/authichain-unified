@@ -14,13 +14,14 @@
 > - `authichain.com` sending DNS records were re-added on 2026-09-24 and were
 >   pending verification. Check it shows **Verified** in Resend before sending
 >   proposals from `proposals@authichain.com` (Phase 7).
-> - `/api/cron/nurture-replies` is still a Next.js route that only ran on
->   Vercel, which is retired, so replies are captured but not auto-nurtured
->   until it is ported (Phase 5).
+> - `/api/cron/nurture-replies` is ported on `authichain-edge-router`
+>   (`worker-app/nurture-replies.ts`) but stays GROUP B / HELD. Default GET is
+>   dry-run. It does not ride the hourly dispatcher. Live send needs
+>   `NURTURE_SEND_ENABLED=true` and `?send=1`, plus an explicit founder yes.
 
 ## Overview
 
-This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
+This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct-fast`, then `@cf/zai-org/glm-4.7-flash`) through the edge router's free `AI` binding, then OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
 
 **Expected Results:**
 
@@ -269,10 +270,11 @@ The nurture cron runs every 2 hours via your platform's cron service.
 ### For Cloudflare (current platform)
 
 The edge router has one hourly cron trigger, fanned out by
-`worker-app/cron-dispatch.ts`. Once `/api/cron/nurture-replies` is ported,
-add the job there with schedule `0 */2 * * *`. It sends email to prospects,
-so it belongs in GROUP B ("HELD") in `worker-app/wrangler.toml` until it is
-deliberately cleared. There is no `vercel.json` cron any more.
+`worker-app/cron-dispatch.ts`. `/api/cron/nurture-replies` is ported there
+(`worker-app/nurture-replies.ts`) with schedule `0 */2 * * *` documented in
+GROUP B (`crons_HELD`). It is **not** in `CLEARED_JOBS`. Default mode is
+dry-run. Sending mail to prospects requires `NURTURE_SEND_ENABLED=true` and
+`?send=1`. There is no `vercel.json` cron any more.
 
 ### For other platforms (AWS Lambda, Google Cloud, etc.)
 
@@ -397,7 +399,7 @@ await sendEmail({
 **Fix**:
 
 1. `GET /api/webhooks/resend-inbound` and read `classifier.missingSecret`. If it is `OPENAI_API_KEY`, the paid LLM is unset; the path is still live via Ollama/heuristic.
-2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `openai` / `ollama`).
+2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `workers_ai` / `openai` / `ollama`). On the edge router `workers_ai` is expected; `fallbackReason` names why it was skipped (e.g. the free 10,000 Neurons/day allocation is spent).
 3. Optional: set `OPENAI_API_KEY`, or run local Ollama (`ollama serve` + `ollama pull llama3.2`) and set `OLLAMA_HOST`.
 4. Neutral/negative replies are **not** drafted or auto-sent. Review them at `/dashboard/inbound-replies`. This webhook does not write HubSpot.
 

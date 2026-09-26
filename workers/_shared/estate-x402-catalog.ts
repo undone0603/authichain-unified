@@ -125,7 +125,7 @@ export async function sisterX402Catalog(
     protocol: "x402",
     x402Version: 2,
     brand: name,
-    docs: "https://authichain.govchain.us/x402",
+    docs: "https://authichain.com/x402",
     health: "/api/x402/health",
     catalog: "/api/x402/catalog",
     wellKnown: "/.well-known/x402.json",
