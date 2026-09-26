@@ -195,12 +195,25 @@ class LimitProofLLM:
             base += "/v1"
         return base
 
+    @staticmethod
+    def _local_timeout() -> float:
+        # Seconds to wait on the local model before moving to the next
+        # provider. Claw aborts an /architect/cycle call at 95s
+        # (AGENTZ_TIMEOUT_MS), and two local attempts at the old 120s each
+        # guaranteed a 502 whenever the local model was slow or on the wrong
+        # port. 40s each leaves room for a cloud provider after both.
+        raw = os.environ.get("LOCAL_MODEL_TIMEOUT", "40")
+        try:
+            value = float(raw)
+        except ValueError:
+            return 40.0
+        return min(max(value, 5.0), 120.0)
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID", "gemma2:2b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
@@ -208,7 +221,7 @@ class LimitProofLLM:
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
@@ -344,6 +357,41 @@ class LimitProofLLM:
                 self._mark_failed(name, e)
                 continue
         raise RuntimeError("All LLM providers failed or are out of quota (async).")
+
+class PlanTimeout(TimeoutError):
+    """The LLM plan call ran past its budget; callers use their no-LLM plan."""
+
+
+def plan_budget_seconds() -> float:
+    # Wall-clock budget for one architect/governor plan call across the whole
+    # provider waterfall. Claw aborts /architect/cycle at 95s
+    # (AGENTZ_TIMEOUT_MS); 80s leaves room for the rest of the cycle, so a
+    # slow or unreachable model yields the fallback plan and a 200, not a 502.
+    raw = os.environ.get("AGENTZ_PLAN_TIMEOUT", "80")
+    try:
+        value = float(raw)
+    except ValueError:
+        return 80.0
+    return min(max(value, 5.0), 300.0)
+
+
+def invoke_within(llm: Any, messages: Any, seconds: float) -> Any:
+    """Run llm.invoke(messages), raising PlanTimeout after `seconds`.
+
+    The call runs on a worker thread that is abandoned, not killed, on
+    timeout: it may finish in the background but its result is discarded.
+    """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="llm-plan")
+    future = pool.submit(llm.invoke, messages)
+    try:
+        return future.result(timeout=seconds)
+    except FuturesTimeout:
+        raise PlanTimeout(f"LLM plan exceeded {seconds:.0f}s budget") from None
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+
 
 def _is_ollama_model(model: str) -> bool:
     """True for llama* / local* / ollama* tags that should stay on ChatOllama."""

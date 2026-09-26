@@ -49,7 +49,10 @@ agentz/runs.jsonl
 .DS_Store
 .vscode/
 .idea/
-.claude/
+.claude/*
+# Shared Claude Code config (SessionStart hook); settings.local.json stays ignored.
+!.claude/settings.json
+!.claude/hooks/
 Thumbs.db
 
 # TypeScript

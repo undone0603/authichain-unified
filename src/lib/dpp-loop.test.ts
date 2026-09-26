@@ -75,7 +75,7 @@ describe("dpp-loop", () => {
 
   it("builds activate URL with session and visit", () => {
     expect(dppActivateUrl("cs_test_1", "dpp_abc")).toBe(
-      "https://authichain.com/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
+      "https://authichain.govchain.us/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
     );
   });
 
@@ -315,9 +315,9 @@ describe("dpp-loop", () => {
       recorded: false,
       reason: "no_usage_after_horizon",
     });
-    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
-      0
-    );
+    expect(
+      stored.filter(r => r.event_type === "dpp_loop:retained")
+    ).toHaveLength(0);
   });
 
   it("does not record retained before the horizon or for same-day usage", async () => {
@@ -343,9 +343,9 @@ describe("dpp-loop", () => {
       recorded: false,
       reason: "no_usage_after_horizon",
     });
-    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
-      0
-    );
+    expect(
+      stored.filter(r => r.event_type === "dpp_loop:retained")
+    ).toHaveLength(0);
   });
 
   it("records retained for DPP-SMOKE/demo visits that earned it", async () => {
@@ -404,7 +404,9 @@ describe("dpp-loop", () => {
       reason: "horizon_not_reached",
     });
     expect(
-      stored.filter(r => r.prospect_id === "paid_1" && r.event_type === "dpp_loop:retained")
+      stored.filter(
+        r => r.prospect_id === "paid_1" && r.event_type === "dpp_loop:retained"
+      )
     ).toHaveLength(0);
   });
 
@@ -474,8 +476,48 @@ describe("dpp-loop", () => {
     );
     expect(report.demoVisits).toBe(1);
     expect(report.visits).toBe(1);
-    expect(stored.filter(r => r.event_type === "dpp_loop:retained")).toHaveLength(
-      2
-    );
+    expect(
+      stored.filter(r => r.event_type === "dpp_loop:retained")
+    ).toHaveLength(2);
+  });
+});
+
+describe("dppExceptionAlert", () => {
+  it("builds a send-ready founder alert from a paid stall (no live send)", async () => {
+    const { dppExceptionAlert } = await import("./dpp-loop");
+    const alert = dppExceptionAlert({
+      visitId: "term_esc_1",
+      furthest: "payment_succeeded",
+      stall: {
+        kind: "exception",
+        stalledAt: "payment_succeeded",
+        nextExpected: "provisioned",
+        hours: 3.25,
+        reason: "threshold_exceeded",
+        holes: [],
+      },
+    });
+    expect(alert.kind).toBe("draft");
+    expect(alert.title).toContain("term_esc_1");
+    expect(alert.title).toContain("payment_succeeded");
+    expect(alert.subject).toContain("term_esc_1");
+    expect(alert.text).toContain("provisioned");
+    expect(alert.text).toContain("threshold_exceeded");
+    // publishFounderAlert accepts this shape with fetch stubbed — the
+    // report → alert → fan-out path stays covered without secrets.
+    const { publishFounderAlert } = await import("./founder-alerts");
+    const { NTFY_URL } = await import("./founder-alerts");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await publishFounderAlert(alert);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(NTFY_URL);
+    expect(String(fetchMock.mock.calls[0][1].body)).toContain("term_esc_1");
   });
 });

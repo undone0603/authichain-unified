@@ -2,27 +2,39 @@ import { describe, expect, it } from "vitest";
 import { runSmokeGate, smokeSteps } from "../production-smoke-gate";
 
 describe("production smoke gate", () => {
-  it("covers the money + verification path", () => {
+  it("covers the live Cloudflare money + verify path", () => {
     const ids = smokeSteps().map(s => s.id);
     expect(ids).toEqual([
       "origin",
-      "verification",
+      "verify_surface",
       "jwks",
       "issuer",
-      "attestation",
-      "object_lookup",
       "checkout_surface",
       "checkout_api",
-      "provisioning",
-      "crm_status",
+      "checkout_dpp_head",
+      "passport_head",
+      "farm_head",
+      "x402_health",
+    ]);
+    const heads = smokeSteps().filter(s => s.method === "HEAD");
+    expect(heads.map(s => s.id)).toEqual([
+      "checkout_dpp_head",
+      "passport_head",
+      "farm_head",
     ]);
   });
 
-  it("does not POST to Stripe or write events", () => {
+  it("does not GET checkout 303s or write events", () => {
     for (const step of smokeSteps()) {
       const parsed = new URL(step.url);
       expect(parsed.protocol).toBe("https:");
       expect(parsed.hostname).toBe("authichain.com");
+      if (step.url.includes("/api/checkout/dpp")) {
+        expect(step.method).toBe("HEAD");
+      }
+      if (step.url.includes("/api/checkout/plan/")) {
+        expect(step.method).toBe("HEAD");
+      }
     }
   });
 
@@ -30,15 +42,7 @@ describe("production smoke gate", () => {
     const fetchImpl = async (url: string) => {
       const path = new URL(url).pathname;
       const status =
-        path === "/api/v1/verify"
-          ? url.includes("serial=")
-            ? 404
-            : 400
-          : path === "/api/checkout"
-            ? 405
-            : path === "/api/v1/attestations/verify"
-              ? 405
-              : 200;
+        path.includes("/api/checkout/") && path !== "/api/checkout" ? 204 : 200;
       const keys = path.includes("jwks") ? [] : undefined;
       return {
         status,
@@ -46,7 +50,7 @@ describe("production smoke gate", () => {
           return this;
         },
         async json() {
-          return keys ? { keys } : { ok: true };
+          return keys ? { keys } : { ok: true, ready: true };
         },
       } as Response;
     };
@@ -55,19 +59,12 @@ describe("production smoke gate", () => {
     expect(report.failed.some(f => f.id === "jwks")).toBe(true);
   });
 
-  it("passes when every step returns an accepted status", async () => {
-    const fetchImpl = async (url: string) => {
+  it("passes when every live money step returns an accepted status", async () => {
+    const fetchImpl = async (url: string, init?: RequestInit) => {
       const path = new URL(url).pathname;
+      const method = (init?.method || "GET").toUpperCase();
       const status =
-        path === "/api/v1/verify"
-          ? url.includes("serial=")
-            ? 404
-            : 400
-          : path === "/api/checkout"
-            ? 405
-            : path === "/api/v1/attestations/verify"
-              ? 405
-              : 200;
+        method === "HEAD" && path.startsWith("/api/checkout/") ? 204 : 200;
       return {
         status,
         clone() {
@@ -76,7 +73,7 @@ describe("production smoke gate", () => {
         async json() {
           return path.includes("jwks")
             ? { keys: [{ kid: "k1" }] }
-            : { ok: true };
+            : { ok: true, ready: true };
         },
       } as Response;
     };

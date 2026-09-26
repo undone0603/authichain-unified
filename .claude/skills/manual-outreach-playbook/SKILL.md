@@ -21,7 +21,7 @@ This skill exists to run that manual phase well and leave a record of what worke
 - You know their actual contact, not a guessed or scraped one.
 - You want to turn that relationship into revenue: a paid passport, a subscription, a licensing deal, a contract.
 
-If any of those isn't true -- no real data, no verified contact, no existing relationship -- this playbook doesn't apply yet. Get a verified contact first (see `docs/CAPABILITIES.md`'s address-provenance findings: Apollo-verified or published-by-the-company-itself only; never a pattern guess).
+If any of those isn't true -- no real data, no verified contact, no existing relationship -- this playbook doesn't apply yet. Get a verified contact first (see `docs/CAPABILITIES.md`'s address-provenance findings: Apollo-verified or published-by-the-company-itself only; never a pattern guess). The current Apollo plan has no Organization Search; `scripts/prospecting/qualify-prospects.mjs` shortlists companies from Wikidata and reads only the addresses they publish on their own site, each with its source URL.
 
 ## The cycle
 

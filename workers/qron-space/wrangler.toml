@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+# PR Workers Builds uses `npx wrangler versions upload` (dashboard deploy
+# command). That updates the latest version; qron.space/* keeps serving the
+# last `wrangler deploy` from .github/workflows/deploy-workers.yml on main.
 
 [[routes]]
 pattern = "qron.space/*"
@@ -18,3 +21,12 @@ APP_ORIGIN = "https://authichain.com"
 
 [observability]
 enabled = true
+
+# VERIFY_APP: service binding to the Next app worker `authichain-app`
+# (wrangler.app.jsonc), which owns the auth_seals lookup behind
+# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
+# without this binding they are refused 503 registry_not_bound before
+# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+[[services]]
+binding = "VERIFY_APP"
+service = "authichain-app"

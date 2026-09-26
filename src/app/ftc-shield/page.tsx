@@ -51,7 +51,7 @@ export default function FtcShieldPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/api/checkout/dpp" className="bg-red-600 hover:bg-red-500 text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
+            <Link href="https://authichain.com/checkout/dpp_readiness" className="bg-red-600 hover:bg-red-500 text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
               DPP checkout — $299 <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/made-in-america" className="btn-outline-gold border-zinc-800 text-zinc-300 inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs">
@@ -100,7 +100,7 @@ export default function FtcShieldPage() {
             { 
               icon: Lock, 
               title: 'Ed25519 Security', 
-              desc: 'Every scan verifies the cryptographic signature of the original factory node, completely eliminating counterfeiting risks.' 
+              desc: 'Our goal: every scan verifies the cryptographic signature of the original factory node, so counterfeits show up at the scan.' 
             },
           ].map((item, i) => (
             <div key={i} className="protocol-card p-8 group hover:border-red-500/30 transition-all border-zinc-900 bg-zinc-950/50">

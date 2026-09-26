@@ -55,6 +55,7 @@ MONEY_PATHS = (
     "https://authichain.com/m/trumark",
     "https://authichain.com/m/musa",
     "https://authichain.com/m/strainchain",
+    "https://authichain.com/m/bat-2026-001",
     CHECKOUT_DPP_URL,
     CHECKOUT_PASSPORT_URL,
     "https://strainchain.io/pricing",

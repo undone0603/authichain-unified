@@ -11,7 +11,7 @@ import {
 } from "./money-surfaces.ts";
 
 function req(path: string) {
-  return new Request(`https://authichain.com${path}`);
+  return new Request(`https://authichain.govchain.us${path}`);
 }
 
 test("path helpers recognize canonical and alias URLs", () => {
@@ -28,13 +28,30 @@ test("path helpers recognize canonical and alias URLs", () => {
 test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   const html = renderTrumarkPage();
   assert.match(html, /<title>TruMark seals \| AuthiChain<\/title>/);
-  assert.match(html, /rel="canonical" href="https:\/\/authichain.com\/trumark"/);
-  assert.match(html, new RegExp(`href="${PASSPORT_CHECKOUT_PATH.replace(/\//g, "\\/")}"`));
-  assert.match(html, new RegExp(`href="${DPP_CHECKOUT.replace(/\//g, "\\/")}"`));
+  assert.match(
+    html,
+    /rel="canonical" href="https:\/\/authichain\.com\/trumark"/
+  );
+  assert.equal(html.includes(`action="${PASSPORT_CHECKOUT_PATH}"`), true);
+  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
   assert.match(html, /Passport checkout — \$49/);
   assert.match(html, /DPP checkout — \$299/);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.doesNotMatch(html, /href="\/api\/checkout/);
+  assert.doesNotMatch(html, /GET \/api\/checkout/);
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
+  );
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
+  );
   assert.match(html, /href="\/pricing"/);
-  assert.match(html, /mailto:hello@authichain.com\?subject=TruMark%20written%20packet/);
+  assert.match(
+    html,
+    /mailto:hello@authichain.com\?subject=TruMark%20written%20packet/
+  );
   assert.doesNotMatch(html, /calendly/i);
   assert.doesNotMatch(html, /schedule a (call|demo)/i);
   assert.doesNotMatch(html, /AuthiChain Inc/i);
@@ -43,16 +60,30 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
 
 test("Made in America page uses live DPP checkout and partner-brief alias story", () => {
   const html = renderMadeInAmericaPage();
-  assert.match(html, /<title>Made in America origin claims \| AuthiChain<\/title>/);
   assert.match(
     html,
-    /rel="canonical" href="https:\/\/authichain.com\/made-in-america"/,
+    /<title>Made in America origin claims \| AuthiChain<\/title>/
+  );
+  assert.match(
+    html,
+    /rel="canonical" href="https:\/\/authichain\.com\/made-in-america"/
   );
   assert.match(html, /16 CFR Part 323/);
   assert.match(html, /EO 14392|Executive Order 14392/);
-  assert.match(html, new RegExp(`href="${DPP_CHECKOUT.replace(/\//g, "\\/")}"`));
+  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
+  assert.match(html, /name="email"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /href="\/partners\/brief"/);
-  assert.match(html, /mailto:hello@authichain.com\?subject=Made%20in%20America%20written%20packet/);
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
+  );
+  assert.ok(
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
+  );
+  assert.match(
+    html,
+    /mailto:hello@authichain.com\?subject=Made%20in%20America%20written%20packet/
+  );
   assert.doesNotMatch(html, /calendly/i);
   assert.doesNotMatch(html, /schedule a (call|demo)/i);
   assert.doesNotMatch(html, /AuthiChain Inc/i);
