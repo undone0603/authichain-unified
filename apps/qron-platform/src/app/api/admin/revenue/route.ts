@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -8,11 +9,17 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key"
 );
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const key = searchParams.get('key');
+function dashboardKeyMatches(provided: string | null): boolean {
+  const expected = process.env.ADMIN_DASHBOARD_KEY;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
-  if (key !== process.env.ADMIN_DASHBOARD_KEY && key !== '***REMOVED***') {
+export async function GET(request: Request) {
+  if (!dashboardKeyMatches(new URL(request.url).searchParams.get('key'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,7 +47,7 @@ export async function GET(request: Request) {
     const { data: brands } = await admin
       .from('brands')
       .select('staking_tier, id');
-    
+
     const tierCounts = (brands || []).reduce((acc: Record<string, number>, b) => {
       acc[b.staking_tier] = (acc[b.staking_tier] || 0) + 1;
       return acc;

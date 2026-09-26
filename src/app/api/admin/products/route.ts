@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await request.json();
     const { data, error } = await supabase
       .from('products')
@@ -23,6 +27,9 @@ export async function POST(request: NextRequest) {
 export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
