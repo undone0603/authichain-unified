@@ -20,7 +20,7 @@
 
 ## Overview
 
-This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (Cloudflare Workers AI `@cf/meta/llama-3.1-8b-instruct` through the edge router's free `AI` binding, then OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
+This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct-fast`, then `@cf/zai-org/glm-4.7-flash`) through the edge router's free `AI` binding, then OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
 
 **Expected Results:**
 
