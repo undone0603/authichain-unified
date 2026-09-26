@@ -2,12 +2,27 @@ name: Production smoke gate
 
 # Money + verification path. Read-only. HEAD on checkout 303s so CI
 # never creates a Stripe session. GET /api/checkout is JSON health (200).
+#
+# Runs after each Cloudflare deploy of authichain.com finishes, so it probes
+# the version that was just published. It used to run on push to main, in
+# parallel with the deploy, and finished before the new Worker was live.
+# A red run here is picked up by ops-pulse.yml (ops-alert issue).
 on:
-  push:
+  workflow_run:
+    workflows:
+      - "Deploy to Cloudflare"
+      - "Deploy authichain-com"
+      - "Deploy Cloudflare Edge Worker"
+    types: [completed]
     branches: [main]
   schedule:
     - cron: "35 6 * * *"
   workflow_dispatch:
+
+# Several deploys can finish close together; only the newest probe matters.
+concurrency:
+  group: production-smoke-gate
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -15,6 +30,12 @@ permissions:
 jobs:
   smoke:
     name: authichain.com money + verify path
+    # A cancelled or skipped deploy published nothing. A failed one may have
+    # published part of the stack, so probe it too.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' ||
+      github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -30,4 +51,29 @@ jobs:
       - name: Run smoke gate
         env:
           AUTHICHAIN_ORIGIN: https://authichain.com
-        run: pnpm exec tsx scripts/production-smoke-gate.ts --run
+          TRIGGER: ${{ github.event_name == 'workflow_run' && format('after {0} ({1})', github.event.workflow_run.name, github.event.workflow_run.conclusion) || github.event_name }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          # A fresh Worker version can take a few seconds to reach every
+          # colo, so one failure right after a deploy gets a second look.
+          attempt=1
+          until pnpm exec tsx scripts/production-smoke-gate.ts --run > /tmp/smoke.json; do
+            if [ "$attempt" -ge 2 ]; then break; fi
+            echo "smoke gate red on attempt $attempt, retrying in 30s"
+            cat /tmp/smoke.json
+            attempt=$((attempt + 1))
+            sleep 30
+          done
+          cat /tmp/smoke.json
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("/tmp/smoke.json", "utf8"));
+            const lines = r.results.map(s => `| ${s.ok ? "ok" : "FAIL"} | ${s.id} | ${s.status} | ${s.url} | ${s.detail ?? ""} |`);
+            const head = `### Production smoke: ${r.ok ? "green" : "RED"}\n\nTrigger: ${process.env.TRIGGER}, commit ${process.env.DEPLOY_SHA.slice(0, 7)}\n\n| | step | status | url | detail |\n|---|---|---|---|---|\n`;
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, head + lines.join("\n") + "\n");
+            if (!r.ok) {
+              for (const s of r.failed) console.log(`::error title=Smoke ${s.id}::${s.url} ${s.detail ?? s.status}`);
+              process.exit(1);
+            }
+          '

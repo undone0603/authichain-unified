@@ -237,7 +237,7 @@ describe("generated SEO money-path CTAs", () => {
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(dpp?.bodyHtml).toContain('name="email"');
-    expect(dpp?.bodyHtml).toContain('href="https://authichain.govchain.us/pricing"');
+    expect(dpp?.bodyHtml).toContain('href="https://authichain.com/pricing"');
     expect(dpp?.bodyHtml).not.toContain('href="/api/checkout');
     expect(dpp?.bodyHtml).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
@@ -261,5 +261,17 @@ describe("generated SEO money-path CTAs", () => {
     const qron = getSeoPageBySlug("ai-qr-code-art-generator");
     expect(qron?.bodyHtml).toContain('href="https://qron.space/pricing"');
     expect(qron?.bodyHtml).not.toContain("/api/checkout/");
+  });
+
+  it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
+    const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
+    expect(dpp?.bodyHtml).toContain("What a DPP contains");
+    expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
+    expect(dpp?.bodyHtml).toContain("Ed25519-signed and anchored on Polygon");
+    expect(dpp?.bodyHtml).not.toContain("$49/mo");
+    expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
+    expect(dpp?.jsonLd.url).toBe(
+      "https://authichain.com/what-is-a-digital-product-passport"
+    );
   });
 });

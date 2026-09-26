@@ -18,7 +18,34 @@ export interface SeoPage {
   jsonLd: Record<string, unknown>;
 }
 
-const ALL: SeoPage[] = pagesData as unknown as SeoPage[];
+/**
+ * Protected seed `what-is-a-digital-product-passport` still ships costume
+ * copy in pages.json ($49/mo, Bitcoin L1, govchain.us/pricing). The Friday
+ * generator preserves that seed by slug, so rewrite it here instead of
+ * touching the 819KB catalogue.
+ */
+function applyDppExplainerLiveMoney(page: SeoPage): SeoPage {
+  if (page.slug !== 'what-is-a-digital-product-passport') return page;
+  const bodyHtml = page.bodyHtml
+    .replace(/anchored to Bitcoin L1/g, 'Ed25519-signed and anchored on Polygon')
+    .replace(/Plans start at \$49\/mo\./g, 'EU DPP Readiness is $299 one-time.')
+    .replace(
+      /https:\/\/authichain\.govchain\.us\/pricing/g,
+      'https://authichain.com/pricing'
+    );
+  const jsonLd: Record<string, unknown> = { ...page.jsonLd };
+  if (typeof jsonLd.url === 'string') {
+    jsonLd.url = jsonLd.url.replace(
+      'https://authichain.govchain.us/what-is-a-digital-product-passport',
+      'https://authichain.com/what-is-a-digital-product-passport'
+    );
+  }
+  return { ...page, bodyHtml, jsonLd };
+}
+
+const ALL: SeoPage[] = (pagesData as unknown as SeoPage[]).map(
+  applyDppExplainerLiveMoney
+);
 
 export function listSeoPages(): SeoPage[] {
   return ALL;
