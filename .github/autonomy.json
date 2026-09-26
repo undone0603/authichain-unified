@@ -78,7 +78,8 @@
         "repo-maintenance.yml": "off",
         "branch-hygiene.yml": "on",
         "pipeline-tick.yml": "on",
-        "genesis-cron.yml": "on"
+        "genesis-cron.yml": "on",
+        "trust-lab.yml": "on"
       }
     },
     "revenue": {

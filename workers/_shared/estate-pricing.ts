@@ -14,7 +14,7 @@
  * belonged to no live Stripe account, and the 2026-08-31 Stripe cleanup had
  * archived those products. Every card here is now a `plans.ts` SKU.
  */
-import { listedPlans, type Plan } from "../../src/lib/plans.ts";
+import { gatedCheckoutUrl, listedPlans, planPaymentLink, type Plan } from "../../src/lib/plans.ts";
 import {
   CHECKOUT_NEED_EMAIL_BANNER_HTML,
   CHECKOUT_NEED_EMAIL_DECORATE_JS,
@@ -46,12 +46,12 @@ function esc(value: string): string {
 }
 
 /**
- * JSON-LD Offer.url is followed by crawlers. Never put a GET checkout path
- * there — live GET /api/checkout opens an anonymous Stripe cart. Prefer the
- * published Payment Link; otherwise the public pricing page.
+ * JSON-LD Offer.url is followed by crawlers. Use the gated confirm page
+ * (authichain.com/checkout/<plan>): its GET renders HTML and never opens a
+ * Stripe session, unlike a raw buy.stripe.com Payment Link.
  */
 function planJsonLdOfferUrl(plan: Plan, listingUrl: string): string {
-  return plan.stripe_payment_link ?? listingUrl;
+  return planPaymentLink(plan.id) ?? listingUrl;
 }
 
 function attributedCheckoutCta(
@@ -59,7 +59,7 @@ function attributedCheckoutCta(
   cta: { href: string; label: string; external: boolean },
   featured: boolean
 ): string {
-  if (!/\/api\/checkout\//.test(cta.href)) {
+  if (!/\/api\/checkout\/|\/checkout\//.test(cta.href)) {
     const rel = cta.external ? ` target="_blank" rel="noopener"` : "";
     return `<a class="btn ${featured ? "btn-primary" : "btn-outline"}" style="width:100%;text-align:center" href="${esc(cta.href)}"${rel}>${esc(cta.label)}</a>`;
   }
@@ -82,10 +82,7 @@ export function planCheckoutCta(
 ): { href: string; label: string; external: boolean } {
   if (plan.id === "dpp_readiness") {
     return {
-      href:
-        origin === "authichain"
-          ? "/api/checkout/dpp"
-          : "https://authichain.com/api/checkout/dpp",
+      href: gatedCheckoutUrl("dpp_readiness"),
       label: plan.cta,
       external: origin !== "authichain",
     };
@@ -99,28 +96,21 @@ export function planCheckoutCta(
       plan.id === "theater_3") &&
     plan.stripe_price_id
   ) {
-    const path = `/api/checkout/plan/${plan.id}`;
-    if (origin === "authichain") {
-      return { href: path, label: plan.cta, external: false };
-    }
     return {
-      href: `https://authichain.com${path}`,
+      href: gatedCheckoutUrl(plan.id),
       label: plan.cta,
-      external: true,
+      external: origin !== "authichain",
     };
   }
   if (plan.stripe_payment_link) {
-    return { href: plan.stripe_payment_link, label: plan.cta, external: true };
+    // Gated confirm page — a bare buy.stripe.com GET opens a Stripe session.
+    return { href: gatedCheckoutUrl(plan.id), label: plan.cta, external: origin !== "authichain" };
   }
   if (plan.stripe_price_id) {
-    const path = `/api/checkout/plan/${plan.id}`;
-    if (origin === "authichain") {
-      return { href: path, label: plan.cta, external: false };
-    }
     return {
-      href: `https://authichain.com${path}`,
+      href: gatedCheckoutUrl(plan.id),
       label: plan.cta,
-      external: true,
+      external: origin !== "authichain",
     };
   }
   if (plan.price === 0) {
@@ -132,11 +122,16 @@ export function planCheckoutCta(
   }
   return {
     href:
-      origin === "authichain" ? "/contact" : "https://authichain.com/contact",
+      origin === "authichain" ? "/contact" : "https://authichain.govchain.us/contact",
     label: "Contact",
     external: origin !== "authichain",
   };
 }
+
+/** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */
+const QRON_TITLED_PLANS = new Set(["starter", "creator", "theater_1", "theater_3"]);
+/** Plain-language Theater 1 button; the price matches the card. */
+const THEATER_1_BUTTON = "Subscribe — $499/mo";
 
 function cataloguePricingGrid(
   origin: Exclude<PricingOrigin, "strainchain">
@@ -151,13 +146,20 @@ function cataloguePricingGrid(
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
       const features = plan.features.map(f => `<li>${esc(f)}</li>`).join("");
+      // On the AuthiChain page, QRON products carry the QRON name Stripe shows.
+      const title =
+        origin === "authichain" && QRON_TITLED_PLANS.has(plan.id)
+          ? `QRON ${plan.name}`
+          : plan.name;
+      const cardCta =
+        plan.id === "theater_1" ? { ...cta, label: THEATER_1_BUTTON } : cta;
       return `<article class="price-card${featured ? " featured" : ""}">
-  <h3>${esc(plan.name)}</h3>
+  <h3>${esc(title)}</h3>
   <div class="price-amount">${esc(amount)}</div>
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(plan, cta, featured)}
+  ${attributedCheckoutCta(plan, cardCta, featured)}
 </article>`;
     })
     .join("");
@@ -203,8 +205,13 @@ type PricingPage = {
   themeColor: string;
   primary: EstateCta;
   nav: EstateLink[];
+  eyebrow?: string;
   heroTitle: string;
   heroLede: string;
+  /** Short label for the sticky header CTA (defaults to primary.label). */
+  navLabel?: string;
+  footerTagline?: string;
+  footerNote?: string;
   secondary: EstateCta;
   plansNote: string;
   ctaTitle: string;
@@ -272,14 +279,14 @@ function pricingPage(origin: PricingOrigin): PricingPage {
             ]
           : []),
         ...(farm?.stripe_payment_link
-          ? [{ href: farm.stripe_payment_link, label: farm.name }]
+          ? [{ href: gatedCheckoutUrl(farm.id), label: farm.name }]
           : []),
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
         { href: "/genetics/mendo-love-farms", label: "Genetics library" },
-        { href: "https://authichain.com/contact", label: "Contact" },
+        { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
       offers: catalogueOffers,
     };
@@ -297,7 +304,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       url: planJsonLdOfferUrl(
         p,
         isAuthichain
-          ? "https://authichain.com/pricing"
+          ? "https://authichain.govchain.us/pricing"
           : "https://qron.space/pricing"
       ),
     }));
@@ -311,22 +318,26 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
-      primary: { href: "/api/checkout/dpp", label: "Start DPP checkout" },
+      primary: { href: "https://authichain.com/checkout/dpp_readiness", label: "Start DPP checkout" },
       nav: [
         { href: "/", label: "Home" },
         { href: "/x402", label: "x402" },
         { href: "/digital-product-passport", label: "EU DPP" },
         { href: "/contact", label: "Contact" },
       ],
-      heroTitle: "Prices that already charge.",
+      eyebrow: "Pricing",
+      heroTitle: "Plans and prices",
       heroLede:
-        "These figures come from the AuthiChain plan catalogue. The primary money path is EU DPP Readiness via live Stripe checkout.",
+        "Start with the $299 EU DPP Readiness Audit, or request a free pilot seal. Every paid plan below checks out on Stripe.",
+      navLabel: "Start audit",
       secondary: { href: "/onboard", label: "Onboard", primary: false },
       plansNote:
-        "Catalogue plans with a Stripe price or Payment Link stay listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
-      ctaTitle: "Start EU DPP Readiness",
+        "QRON generation packs and plans, the EU DPP Readiness Audit, and a free pilot.",
+      ctaTitle: "Start your EU DPP Readiness Audit",
       ctaLede:
-        "EU DPP Readiness is $299 on the published Payment Link, or enter a work email so Stripe can recover the cart.",
+        "$299, one time. Pay on Stripe, or add your work email first so we can send your receipt.",
+      footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
+      footerNote: "",
       footerStart: [
         { href: "/pricing", label: "DPP checkout" },
         { href: "/onboard", label: "Onboard" },
@@ -352,7 +363,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.com/pricing",
+        href: "https://authichain.govchain.us/pricing",
         label: "DPP checkout",
       },
     ],
@@ -360,12 +371,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     heroLede:
       "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
     secondary: {
-      href: "https://authichain.com/pricing",
+      href: "https://authichain.govchain.us/pricing",
       label: "Start DPP checkout",
       primary: false,
     },
     plansNote:
-      "Only plans with a Stripe price or Payment Link are listed. Theater 1 ($499/mo) and Theater 3 ($1499/mo) use email-gated checkout plus published Payment Links.",
+      "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
       "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand.",
@@ -373,12 +384,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/generate", label: "Generate Living QR" },
       { href: "/pricing", label: "Pricing" },
       {
-        href: "https://authichain.com/pricing",
+        href: "https://authichain.govchain.us/pricing",
         label: "DPP checkout",
       },
     ],
     footerMore: [
-      { href: "https://authichain.com/x402", label: "x402 agent pay" },
+      { href: "https://authichain.govchain.us/x402", label: "x402 agent pay" },
     ],
     offers,
   };
@@ -387,9 +398,9 @@ function pricingPage(origin: PricingOrigin): PricingPage {
 export function renderEstatePricingPage(origin: PricingOrigin): string {
   const page = pricingPage(origin);
   const brand: EstateBrandId = page.brand;
-  const checkoutPrimary = /\/api\/checkout\//.test(page.primary.href);
+  const checkoutPrimary = /\/api\/checkout\/|\/checkout\//.test(page.primary.href);
   const navPrimary = checkoutPrimary
-    ? { href: "#pricing", label: page.primary.label }
+    ? { href: "#pricing", label: page.navLabel ?? page.primary.label }
     : page.primary;
 
   return `<!DOCTYPE html>
@@ -420,7 +431,7 @@ ${estateNav(brand, page.nav, navPrimary)}
 <main id="main">
 ${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
-  eyebrow: "Published catalogue",
+  eyebrow: page.eyebrow ?? "Published catalogue",
   title: page.heroTitle,
   lede: page.heroLede,
   emailCheckout: checkoutPrimary
@@ -467,7 +478,7 @@ ${estateFooter(
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com", label: "AuthiChain" },
+        { href: "https://authichain.govchain.us", label: "AuthiChain" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
         {
@@ -481,9 +492,11 @@ ${estateFooter(
       links: page.footerMore,
     },
   ],
-  origin === "strainchain"
-    ? "StrainChain prices from the published catalogue and Payment Links"
-    : "Prices from the published AuthiChain plan catalogue"
+  page.footerNote ??
+    (origin === "strainchain"
+      ? "StrainChain prices from the published catalogue and Payment Links"
+      : "Prices from the published AuthiChain plan catalogue"),
+  page.footerTagline
 )}
 ${CHECKOUT_NEED_EMAIL_DECORATE_JS}
 </body>
@@ -513,7 +526,7 @@ export function tryHandleEstatePricing(
 }
 
 /** Live AuthiChain DPP checkout — absolute so it works off govchain.us. */
-export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+export const GOVCHAIN_DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
 /**
  * GovChain has no self-serve SKU. /pricing must not invent one and must not
@@ -578,7 +591,7 @@ ${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
-  lede: "GovChain does not publish a catalogue SKU. Request access on the live /onboard intake, or start EU DPP Readiness on AuthiChain — the same $299 checkout already used on authichain.com.",
+  lede: "Request access and we'll talk through what you need. If you also sell into the EU, you can start AuthiChain's $299 EU DPP Readiness Audit today.",
   emailCheckout: {
     action: GOVCHAIN_DPP_CHECKOUT,
     label: dppCta,
@@ -628,7 +641,7 @@ ${estateCtaBand({
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     {
-      href: "https://authichain.com/pricing",
+      href: "https://authichain.govchain.us/pricing",
       label: "AuthiChain pricing",
       primary: false,
     },
@@ -642,14 +655,14 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: "/onboard", label: "Onboard" },
-        { href: "https://authichain.com/pricing", label: "DPP checkout" },
+        { href: "https://authichain.govchain.us/pricing", label: "DPP checkout" },
         { href: "/pricing", label: "Pricing" },
       ],
     },
     {
       heading: "Estate",
       links: [
-        { href: "https://authichain.com/pricing", label: "AuthiChain pricing" },
+        { href: "https://authichain.govchain.us/pricing", label: "AuthiChain pricing" },
         { href: "https://qron.space/generate", label: "QRON generate" },
         {
           href: "https://strainchain.io/onboard",

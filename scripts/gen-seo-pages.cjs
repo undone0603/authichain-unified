@@ -39,14 +39,14 @@ const BRANDS = {
 // Live money paths from src/lib/plans.ts + workers/_shared/estate-pricing.ts +
 // estate landing workers. Do not invent checkout URLs or dollar amounts.
 const LIVE_MONEY = {
-  authichainDppCheckout: 'https://authichain.com/api/checkout/dpp',
-  authichainDppPay: 'https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c',
-  authichainPricing: 'https://authichain.com/pricing',
+  authichainDppCheckout: 'https://authichain.com/checkout/dpp_readiness',
+  authichainDppPay: 'https://authichain.com/checkout/dpp_readiness',
+  authichainPricing: 'https://authichain.govchain.us/pricing',
   // GET /api/checkout/plan/:planId on authichain.com (plans.ts comment).
-  strainchainPassportCheckout: 'https://authichain.com/api/checkout/plan/strainchain_passport',
-  strainchainPassportPay: 'https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y',
-  strainchainFarmCheckout: 'https://authichain.com/api/checkout/plan/strainchain_farm',
-  strainchainFarmPay: 'https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z',
+  strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
+  strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
+  strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
+  strainchainFarmPay: 'https://authichain.com/checkout/strainchain_farm',
 };
 
 function isDppKeyword(keyword) {
@@ -72,16 +72,16 @@ function isTrumarkKeyword(keyword) {
  * QRON → /pricing. GovChain /pricing 404s (routing.test.ts); /onboard is live.
  */
 function isCheckoutUrl(href) {
-  return /\/api\/checkout\//.test(href);
+  return /\/api\/checkout\/|\/checkout\//.test(href);
 }
 
 function checkoutEmailFormHtml(action, label) {
   return (
-    `<form class="checkout-email-form" action="${esc(action)}" method="get">` +
+    `<form class="checkout-email-form" action="${esc(action).replace(/"/g, "&quot;")}" method="${isCheckoutUrl(action) && /^https:\/\/authichain\.com\/checkout\//.test(action) ? "post" : "get"}">` +
     `<label class="checkout-email-label" for="checkout-email">Work email` +
     `<input id="checkout-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com">` +
     `</label>` +
-    `<p class="checkout-email-hint">Receipt and abandoned-checkout recovery. Not a newsletter.</p>` +
+    `<p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p>` +
     `<button class="btn btn-primary" type="submit">${esc(label)}</button>` +
     `</form>`
   );
@@ -101,13 +101,13 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   if (trumark) {
     primaryHref = LIVE_MONEY.strainchainPassportCheckout;
     primaryLabel = 'Start StrainChain passport checkout';
-    secondaryHref = 'https://authichain.com/trumark';
+    secondaryHref = 'https://authichain.govchain.us/trumark';
     secondaryLabel = 'Read the TruMark brief';
   } else if (musa || ((dpp || brandKey === 'authichain') && !cannabis)) {
     primaryHref = LIVE_MONEY.authichainDppCheckout;
     primaryLabel = 'Start DPP readiness checkout';
     secondaryHref = musa
-      ? 'https://authichain.com/made-in-america'
+      ? 'https://authichain.govchain.us/made-in-america'
       : LIVE_MONEY.authichainPricing;
     secondaryLabel = musa ? 'Read the Made in America brief' : 'View AuthiChain pricing';
   } else if (cannabis || brandKey === 'strainchain') {
@@ -198,7 +198,7 @@ function ensureMoneyCta(page) {
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF' };
+const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF', cmmc: 'CMMC', mcp: 'MCP' };
 const titleCase = (s) =>
   s.split(/\b/).map((w) => {
     const lw = w.toLowerCase();

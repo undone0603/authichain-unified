@@ -173,3 +173,41 @@ describe("POST /api/x402", () => {
     expect(body.settled).toBe(false);
   });
 });
+
+describe("POST /api/x402 with the VERIFY_APP binding", () => {
+  it("forwards the paid call to the Next registry route", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const seen: Request[] = [];
+    const env = {
+      VERIFY_APP: {
+        fetch: async (r: Request) => {
+          seen.push(r);
+          return new Response(JSON.stringify({ verified: true }), {
+            status: 200,
+          });
+        },
+      },
+    };
+    const res = await app().request(
+      "https://authichain.com/api/x402",
+      {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      },
+      env
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ verified: true });
+    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(seen[0].headers.get("x-payment")).toBe(header);
+    expect(await seen[0].json()).toEqual({ sealId: "seal-1" });
+  });
+});

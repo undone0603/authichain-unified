@@ -3,7 +3,7 @@ import { DB } from "../services/db";
 import {
   issueLicenseKey,
   hashKey,
-  tierFromPriceId,
+  licenseTierForPriceId,
   seatsForTier,
 } from "../services/license";
 import {
@@ -65,25 +65,46 @@ export async function stripeWebhook(
   // Process before answering Stripe. Returning 2xx from waitUntil used to
   // ack events that never wrote a D1 license (missing customer id, missing
   // signing key, line_items not expanded). Stripe will not retry a 200.
+  let outcome: EventOutcome;
   try {
-    await handleEvent(env, event);
+    outcome = await handleEvent(env, event);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     await DB.logEvent(env, event.id, event.type, "error", message);
     return json(500, { status: "error", error: message });
   }
 
+  if (outcome.ignored) {
+    // Signature is already verified. Ack with 200 so Stripe stops retrying an
+    // event this Worker will never be able to process.
+    return json(200, { received: true, ignored: outcome.ignored });
+  }
+
   return json(200, { status: "processed" });
 }
+
+type EventOutcome = { ignored?: "unknown_price" };
 
 async function handleEvent(
   env: Env,
   event: { id: string; type: string; data?: { object?: unknown } }
-): Promise<void> {
+): Promise<EventOutcome> {
   switch (event.type) {
-    case "checkout.session.completed":
-      await handleCheckout(env, event.data?.object as CheckoutSession);
+    case "checkout.session.completed": {
+      const result = await handleCheckout(
+        env,
+        event.data?.object as CheckoutSession
+      );
+      if (result?.ignored === "unknown_price") {
+        const detail = `unknown license price id: ${result.priceId}`;
+        console.warn(
+          `[license-issuer] ignoring ${event.id} (${event.type}): ${detail}`
+        );
+        await DB.logEvent(env, event.id, event.type, "ignored", detail);
+        return { ignored: "unknown_price" };
+      }
       break;
+    }
     case "customer.subscription.deleted":
       await handleCancellation(
         env,
@@ -94,6 +115,7 @@ async function handleEvent(
       break;
   }
   await DB.logEvent(env, event.id, event.type, "success", "");
+  return {};
 }
 
 type CheckoutSession = {
@@ -133,10 +155,15 @@ export async function resolveCheckoutPriceId(
   return expanded.line_items?.data?.[0]?.price?.id || "";
 }
 
+export type CheckoutResult = {
+  ignored: "unknown_price";
+  priceId: string;
+} | void;
+
 export async function handleCheckout(
   env: Env,
   session: CheckoutSession
-): Promise<void> {
+): Promise<CheckoutResult> {
   const email = (
     session.customer_details?.email ??
     session.customer_email ??
@@ -154,8 +181,18 @@ export async function handleCheckout(
   }
 
   const priceId = await resolveCheckoutPriceId(env, session);
+  if (!priceId) {
+    // Could be a transient Stripe API failure while expanding line_items, so
+    // keep this a 5xx and let Stripe retry.
+    throw new Error("checkout.session.completed missing price id");
+  }
 
-  const tier = tierFromPriceId(env, priceId);
+  // A price that is not a license SKU (another product on the same Stripe
+  // account) will never succeed on retry. Skip it instead of throwing.
+  const tier = licenseTierForPriceId(env, priceId);
+  if (!tier) {
+    return { ignored: "unknown_price", priceId };
+  }
   const seats = seatsForTier(tier);
   const jti = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);

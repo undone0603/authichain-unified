@@ -695,9 +695,12 @@ export function estateCtaBand(opts: {
 export function estateFooter(
   brand: EstateBrandId,
   columns: Array<{ heading: string; links: EstateLink[] }>,
-  note: string
+  note: string,
+  /** Replaces "<brand tagline>. Part of the AuthiChain estate." when set. */
+  tagline?: string
 ): string {
   const b = ESTATE_BRANDS[brand];
+  const taglineText = tagline ?? `${b.tagline}. Part of the AuthiChain estate.`;
   const cols = columns
     .map(col => {
       const lis = col.links
@@ -710,13 +713,13 @@ export function estateFooter(
   <div class="footer-grid">
     <div>
       <a class="nav-logo" href="/">${estateMark(brand)}${esc(b.wordmark)}</a>
-      <p style="margin-top:12px;max-width:280px">${esc(b.tagline)}. Part of the AuthiChain estate.</p>
+      <p style="margin-top:12px;max-width:280px">${esc(taglineText)}</p>
     </div>
     ${cols}
   </div>
   <div class="estate-legal">
     <p>© 2026 ${esc(b.name)}</p>
-    <p>${note}</p>
+    ${note ? `<p>${note}</p>` : ""}
   </div>
 </footer>`;
 }
@@ -726,7 +729,7 @@ export function estateSkipLink(): string {
 }
 
 export const ESTATE_SISTER_LINKS: EstateLink[] = [
-  { href: "https://authichain.com", label: "AuthiChain" },
+  { href: "https://authichain.govchain.us", label: "AuthiChain" },
   { href: "https://qron.space", label: "QRON" },
   { href: "https://govchain.us", label: "GovChain" },
   { href: "https://strainchain.io", label: "StrainChain" },

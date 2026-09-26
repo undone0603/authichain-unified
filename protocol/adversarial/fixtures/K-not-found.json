@@ -1,0 +1,5 @@
+{
+  "id": "K-not-found",
+  "input": { "objectFound": false, "depth": "lookup" },
+  "expect": { "decision": "not_found", "reasonsInclude": ["object_not_found"] }
+}

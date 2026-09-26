@@ -28,7 +28,7 @@ const req: PaymentRequirement = {
   scheme: "exact",
   network: "polygon",
   maxAmountRequired: usdToAtomic(0.05),
-  resource: "https://authichain.com/api/v1/agent-verify",
+  resource: "https://authichain.govchain.us/api/v1/agent-verify",
   description: "verify",
   payTo: "0xabc",
   asset: "USDC",
@@ -78,7 +78,7 @@ describe("buildPaymentRequired", () => {
 
   it("declares bazaar discovery on the 402 without a facilitator URL", () => {
     const r = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc",
     });
@@ -95,14 +95,14 @@ describe("buildPaymentRequired", () => {
 
   it("puts a v2 PAYMENT-REQUIRED header that matches the unpaid JSON crawlers read", () => {
     const r = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc0000000000000000000000000000000000001",
     });
     expect(r.headers["PAYMENT-REQUIRED"]).toBeTruthy();
     expect(r.body.x402Version).toBe(1);
     expect(r.v2.x402Version).toBe(2);
-    expect(r.v2.resource.url).toBe("https://authichain.com/api/x402");
+    expect(r.v2.resource.url).toBe("https://authichain.govchain.us/api/x402");
     expect(r.v2.resource.serviceName).toBe("AuthiChain");
     expect(r.v2.accepts[0].network).toBe("eip155:8453");
     expect(r.v2.accepts[0].amount).toBe("50000");
@@ -124,7 +124,7 @@ describe("buildPaymentRequired", () => {
 
   it("unpaid v2 JSON has the CDP Bazaar validate preflight fields", () => {
     const r = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc0000000000000000000000000000000000001",
     });
@@ -364,7 +364,7 @@ describe("settlePayment (facilitator)", () => {
       json: async () => ({ success: true, txHash: "0xdead" }),
     } as Response);
     const requirement = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc",
     }).body.accepts[0];
@@ -391,7 +391,7 @@ describe("settlePayment (facilitator)", () => {
     expect(body.paymentRequirements?.outputSchema?.input?.method).toBe("POST");
     expect(body.paymentPayload?.resource).toBe(requirement.resource);
     expect(body.paymentRequirements?.resource).toBe(
-      "https://authichain.com/api/x402"
+      "https://authichain.govchain.us/api/x402"
     );
   });
 
@@ -402,7 +402,7 @@ describe("settlePayment (facilitator)", () => {
       json: async () => ({ success: true, txHash: "0xdead" }),
     } as Response);
     const requirement = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: "0xabc",
     }).body.accepts[0];
@@ -461,16 +461,16 @@ describe("settlePayment (facilitator)", () => {
     expect(
       attachResourceToPaymentPayload(
         { scheme: "exact" },
-        "https://authichain.com/api/x402"
+        "https://authichain.govchain.us/api/x402"
       )
     ).toEqual({
       scheme: "exact",
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
     });
     expect(
       attachResourceToPaymentPayload(
         { resource: "https://client.example/skill" },
-        "https://authichain.com/api/x402"
+        "https://authichain.govchain.us/api/x402"
       )
     ).toEqual({ resource: "https://client.example/skill" });
   });
@@ -531,10 +531,11 @@ describe("settlePayment (facilitator)", () => {
 describe("published rail identity", () => {
   it("documents payTo / tokenomics EOA and Base USDC without rebinding env", () => {
     expect(X402_PUBLISHED_PAY_TO.toLowerCase()).toBe(
-      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
+      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2" // pragma: allowlist secret
     );
+    // $QRON ERC-20 contract (Polygon) — never a payTo.
     expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
-      "0x5db511706fb6317cd23a7655f67450c5ac6e6aa2"
+      "0xaebfa6b08fb25b59748c93273ab8880e20ffe437" // pragma: allowlist secret
     );
     expect(BASE_USDC_ASSET).toBe("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
     expect(X402_PUBLISHED_PAY_TO.toLowerCase()).not.toBe(
@@ -548,7 +549,7 @@ describe("published rail identity", () => {
   it("does not put $QRON in accepts[]", async () => {
     const { QRON_ERC20 } = await import("../../scripts/lib/evm-chains");
     const r = buildPaymentRequired({
-      resource: "https://authichain.com/api/x402",
+      resource: "https://authichain.govchain.us/api/x402",
       priceUsd: 0.05,
       payTo: X402_PUBLISHED_PAY_TO,
     });
@@ -624,7 +625,7 @@ describe("x402Catalog", () => {
     );
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
     expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(JSON.stringify(catalog)).not.toContain("/api/checkout");
     expect(JSON.stringify(catalog).toLowerCase()).not.toContain(
@@ -639,7 +640,7 @@ describe("x402ScanFanout", () => {
     expect(doc.version).toBe(1);
     expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
-    expect(JSON.stringify(doc)).not.toContain("buy.stripe.com");
+    expect(JSON.stringify(doc)).not.toContain("authichain.com");
   });
 });
 
@@ -647,10 +648,10 @@ describe("x402OpenApiDocument", () => {
   it("copies price from health and marks POST /api/x402 as x402", async () => {
     const spec = await x402OpenApiDocument(
       { X402_PRICE_USD: "0.10", X402_NETWORK: "base" },
-      "https://authichain.com"
+      "https://authichain.govchain.us"
     );
     expect(spec.openapi).toBe("3.1.0");
-    expect(spec.servers[0].url).toBe("https://authichain.com");
+    expect(spec.servers[0].url).toBe("https://authichain.govchain.us");
     const post = (
       spec.paths["/api/x402"] as {
         post: {

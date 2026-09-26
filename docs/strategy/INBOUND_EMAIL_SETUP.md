@@ -20,7 +20,7 @@
 
 ## Overview
 
-This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
+This system automatically captures replies to proposal emails sent from `proposals@authichain.com`, classifies sentiment (Cloudflare Workers AI (`@cf/meta/llama-3.1-8b-instruct-fast`, then `@cf/zai-org/glm-4.7-flash`) through the edge router's free `AI` binding, then OpenAI when `OPENAI_API_KEY` is set, otherwise local Ollama, otherwise a conservative heuristic that fail-closes to `neutral`), and triggers intelligent follow-up sequences to nurture interested prospects.
 
 **Expected Results:**
 
@@ -397,7 +397,7 @@ await sendEmail({
 **Fix**:
 
 1. `GET /api/webhooks/resend-inbound` and read `classifier.missingSecret`. If it is `OPENAI_API_KEY`, the paid LLM is unset; the path is still live via Ollama/heuristic.
-2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `openai` / `ollama`).
+2. For a clear sample, POST a body that includes "very interested" or "too expensive" and confirm `classifier.provider` is `heuristic` (or `workers_ai` / `openai` / `ollama`). On the edge router `workers_ai` is expected; `fallbackReason` names why it was skipped (e.g. the free 10,000 Neurons/day allocation is spent).
 3. Optional: set `OPENAI_API_KEY`, or run local Ollama (`ollama serve` + `ollama pull llama3.2`) and set `OLLAMA_HOST`.
 4. Neutral/negative replies are **not** drafted or auto-sent. Review them at `/dashboard/inbound-replies`. This webhook does not write HubSpot.
 

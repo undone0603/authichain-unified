@@ -8,9 +8,10 @@ import {
 } from "./battery-passport-page.ts";
 import { planById } from "../../../src/lib/plans";
 import { ICP_SEO_SITEMAP_PATHS } from "./icp-seo-sitemap.ts";
+import { GAP_MAP_DISCLAIMER } from "./battery-gap-map.ts";
 
 const req = (path: string, method = "GET") =>
-  new Request(`https://authichain.com${path}`, { method });
+  new Request(`https://authichain.govchain.us${path}`, { method });
 
 describe("battery passport offer page", () => {
   const html = renderBatteryPassportPage(new Date("2026-09-23T12:00:00Z"));
@@ -30,9 +31,9 @@ describe("battery passport offer page", () => {
 
   it("sells the existing $299 plan through the email-gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
-    expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain('type="email" required');
   });
 
@@ -59,5 +60,53 @@ describe("battery passport offer page", () => {
     expect(res.headers.get("Content-Type")).toContain("text/html");
     expect(tryHandleBatteryPassport(req("/pricing"))).toBeNull();
     expect(ICP_SEO_SITEMAP_PATHS).toContain("/battery-passport");
+  });
+
+  it("adds a no-network gap map before #what-you-get with the exact disclaimer", () => {
+    expect(html).toContain('id="gap-map"');
+    expect(html).toContain("Not issued as a battery passport");
+    expect(html).toContain(GAP_MAP_DISCLAIMER);
+    const gap = html.indexOf('id="gap-map"');
+    const what = html.indexOf('id="what-you-get"');
+    expect(gap).toBeGreaterThan(-1);
+    expect(what).toBeGreaterThan(gap);
+    const section = html.slice(gap, what);
+    for (const n of [
+      "model",
+      "statedWh",
+      "ah",
+      "nominalV",
+      "cyclesLow",
+      "cyclesHigh",
+      "placing",
+    ])
+      expect(section).toContain(`name="${n}"`);
+    for (const v of ["self", "cell_maker", "unknown"])
+      expect(section).toContain(`<option value="${v}"`);
+    expect(section).toContain("preventDefault");
+    expect(section).not.toMatch(
+      /fetch\(|XMLHttpRequest|sendBeacon|innerHTML|action=/
+    );
+    expect(section).toContain("textContent");
+  });
+
+  it("keeps the $299 dpp_readiness checkout tagged battery-passport", () => {
+    expect(plan.id).toBe("dpp_readiness");
+    expect(html).toContain(`$${plan.price}`);
+    expect(html).toMatch(
+      /<form class="checkout-email-form" action="https:\/\/authichain\.com\/checkout\/dpp_readiness" method="post"/
+    );
+    expect(html).toContain('name="utm_campaign" value="battery-passport"');
+  });
+
+  it("answers the legal FAQ without claiming to issue a passport", () => {
+    expect(html).toContain(
+      "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
+    );
+    expect(html).not.toContain("working passport you control");
+    expect(html).not.toMatch(
+      /gets your first passport published|publish your first passport/i
+    );
+    expect(html).toContain("gets you ready for your first passport");
   });
 });

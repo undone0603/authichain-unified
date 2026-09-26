@@ -28,7 +28,10 @@ vi.mock("../services/db", () => ({
 vi.mock("../services/license", () => ({
   issueLicenseKey: vi.fn().mockResolvedValue("license.jwt"),
   hashKey: vi.fn().mockResolvedValue("abc123"),
-  tierFromPriceId: vi.fn().mockReturnValue("pro"),
+  licenseTierForPriceId: vi.fn(
+    (_env: unknown, priceId: string) =>
+      ({ price_pro: "pro", price_ent: "enterprise" })[priceId] ?? null
+  ),
   seatsForTier: vi.fn().mockReturnValue(5),
 }));
 
@@ -45,6 +48,7 @@ vi.mock("../utils/crypto", () => ({
   verifyStripeSignature: vi.fn().mockResolvedValue(true),
 }));
 
+import { verifyStripeSignature } from "../utils/crypto";
 import { handleCheckout, stripeWebhook } from "./stripe-webhook";
 import { licenseHealth } from "./health";
 import type { Env } from "../index";
@@ -230,5 +234,80 @@ describe("stripeWebhook", () => {
     const retry = await stripeWebhook(req(), env(), dummyCtx);
     expect(retry.status).toBe(200);
     expect(createLicense).toHaveBeenCalledTimes(1);
+  });
+
+  function checkoutRequest(
+    id: string,
+    object: Record<string, unknown>
+  ): Request {
+    return new Request("https://issuer.example/api/license/stripe-webhook", {
+      method: "POST",
+      headers: { "Stripe-Signature": "t=1,v1=abc" },
+      body: JSON.stringify({
+        id,
+        type: "checkout.session.completed",
+        data: { object },
+      }),
+    });
+  }
+
+  it("acks an unknown price with 200 so Stripe stops retrying", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await stripeWebhook(
+      checkoutRequest("evt_other_product", {
+        id: "cs_other",
+        customer: "cus_2",
+        customer_details: { email: "buyer@example.com" },
+        metadata: { priceId: "price_1TwmD8notalicense" },
+      }),
+      env(),
+      dummyCtx
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      received: true,
+      ignored: "unknown_price",
+    });
+    expect(createLicense).not.toHaveBeenCalled();
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      "evt_other_product",
+      "checkout.session.completed",
+      "ignored",
+      expect.stringContaining("price_1TwmD8notalicense")
+    );
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("still rejects a bad signature before looking at the price", async () => {
+    vi.mocked(verifyStripeSignature).mockResolvedValueOnce(false);
+    const res = await stripeWebhook(
+      checkoutRequest("evt_forged", {
+        id: "cs_forged",
+        customer: "cus_3",
+        customer_details: { email: "x@example.com" },
+        metadata: { priceId: "price_unknown" },
+      }),
+      env(),
+      dummyCtx
+    );
+    expect(res.status).toBe(401);
+    expect(logEvent).not.toHaveBeenCalled();
+    expect(createLicense).not.toHaveBeenCalled();
+  });
+
+  it("keeps a 500 when the price id cannot be resolved, so Stripe retries", async () => {
+    const res = await stripeWebhook(
+      checkoutRequest("evt_no_price", {
+        id: "cs_no_price",
+        customer: "cus_4",
+        customer_details: { email: "y@example.com" },
+      }),
+      env(),
+      dummyCtx
+    );
+    expect(res.status).toBe(500);
+    expect(createLicense).not.toHaveBeenCalled();
   });
 });

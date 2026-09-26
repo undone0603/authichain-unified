@@ -1,14 +1,16 @@
 {
-  "updated": "2026-09-23",
+  "updated": "2026-09-25",
   "note": "Regulatory milestones for the EU Digital Product Passport. Dates drive the live countdowns on /digital-product-passport, so every entry needs a real ISO date and a source anyone can check. Maintained by the 'DPP regulatory watch' Routine; see docs/strategy/persuasion-doctrine.md for the copy rules.",
   "milestones": [
     {
       "id": "central-registry",
-      "date": "2026-07-19",
-      "precision": "day",
-      "label": "EU DPP Registry Launch",
-      "detail": "Official EU registry goes live. Brands can begin voluntary DPP issuance.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
+      "date": "2026-07-16",
+      "precision": "month",
+      "label": "EU DPP registry rules adopted",
+      "detail": "The Commission adopted Implementing Regulation (EU) 2026/1778 on the DPP registry on 16 July 2026.",
+      "badge": "EU DPP registry rules adopted: Implementing Regulation (EU) 2026/1778",
+      "hideStatus": true,
+      "source": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202601778",
       "urgent": false
     },
     {

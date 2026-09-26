@@ -20,10 +20,17 @@ import {
   estateSkipLink,
 } from "../../_shared/estate-landing.ts";
 import { planById } from "../../../src/lib/plans";
+import {
+  CONSISTENCY_TOLERANCE,
+  GAP_MAP_DISCLAIMER,
+  annexXiiiRows,
+  type AnnexRow,
+  type Placing,
+} from "./battery-gap-map";
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
 export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
-export const BATTERY_CHECKOUT_ACTION = "/api/checkout/dpp";
+export const BATTERY_CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
 export const BATTERY_UTM = {
   utm_source: "site",
   utm_medium: "offer-page",
@@ -57,7 +64,7 @@ function checkoutForm(id: string, label: string): string {
   const hidden = Object.entries(BATTERY_UTM)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`)
     .join("");
-  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="get" id="${id}">
+  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="post" id="${id}">
   <label class="checkout-email-label" for="${id}-email">Work email
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
@@ -107,11 +114,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to publish your first QR-linked passport. The $299 is credited toward AuthiChain Basic if you continue.",
+    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The $299 is credited toward AuthiChain Basic if you continue.",
   },
   {
     q: "Is this legal advice or a certification?",
-    a: "No. It is a readiness assessment and a working passport you control. Confirm your final obligations against the Regulation and your notified body or counsel.",
+    a: "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice.",
   },
   {
     q: "Do I have to book a call?",
@@ -119,12 +126,134 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
 ];
 
+const GAP_PLACINGS: Placing[] = ["self", "cell_maker", "unknown"];
+
+/**
+ * Row templates per placing, computed server-side from battery-gap-map.ts with
+ * no figures typed, so the browser script only flips the typed rows to
+ * user_provided. Keeps a single source of truth for wording and statuses.
+ */
+function gapMapTemplates(): Record<Placing, AnnexRow[]> {
+  const out = {} as Record<Placing, AnnexRow[]>;
+  for (const placing of GAP_PLACINGS)
+    out[placing] = annexXiiiRows({
+      model: "",
+      statedWh: 0,
+      ah: 0,
+      nominalV: 0,
+      placing,
+    });
+  return out;
+}
+
+const jsonForScript = (v: unknown) =>
+  JSON.stringify(v)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+
+/**
+ * Browser-only calculator. Never fetches, never stores, never submits: the
+ * submit handler calls preventDefault and renders with textContent only.
+ * Formulas mirror scorePack() in battery-gap-map.ts.
+ */
+const GAP_MAP_SCRIPT = `(function () {
+  var form = document.getElementById("gap-map-form");
+  var out = document.getElementById("gap-map-results");
+  var dataEl = document.getElementById("gap-map-data");
+  if (!form || !out || !dataEl) return;
+  var DATA = JSON.parse(dataEl.textContent || "{}");
+  var TOL = DATA.tolerance, SLACK = 1e-9, DISCLAIMER = DATA.disclaimer;
+  function rnd(x, dp) { var f = Math.pow(10, dp); var r = Math.round((x + Math.sign(x) * Number.EPSILON) * f) / f; return r === 0 ? 0 : r; }
+  function num(v) { if (v === null || v === undefined || String(v).trim() === "") return null; var n = Number(v); return isFinite(n) ? n : null; }
+  function pos(v) { var n = num(v); return n !== null && n > 0 ? n : null; }
+  function nonneg(v) { var n = num(v); return n !== null && n >= 0 ? n : null; }
+  function el(tag, text, cls) { var e = document.createElement(tag); if (text !== undefined && text !== null) e.textContent = String(text); if (cls) e.className = cls; return e; }
+  function row(tbody, cells, th) { var tr = document.createElement("tr"); for (var i = 0; i < cells.length; i++) { var c = el(th && i === 0 ? "th" : "td", cells[i].t, cells[i].c); tr.appendChild(c); } tbody.appendChild(tr); }
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var f = form.elements;
+    var model = String(f.namedItem("model").value || "").replace(/\\s+/g, " ").trim().slice(0, 120);
+    var wh = pos(f.namedItem("statedWh").value), ah = pos(f.namedItem("ah").value), v = pos(f.namedItem("nominalV").value);
+    var lo = nonneg(f.namedItem("cyclesLow").value), hi = nonneg(f.namedItem("cyclesHigh").value);
+    var placing = String(f.namedItem("placing").value);
+    if (placing !== "self" && placing !== "cell_maker") placing = "unknown";
+    var errors = [];
+    if (!model) errors.push("Model is required.");
+    if (wh === null) errors.push("Stated energy (Wh) must be a number above 0.");
+    if (ah === null) errors.push("Capacity (Ah) must be a number above 0.");
+    if (v === null) errors.push("Nominal voltage (V) must be a number above 0.");
+    if (lo !== null && hi !== null && lo > hi) { errors.push("Cycle range low is above high; ignored."); lo = null; hi = null; }
+    var vah = v !== null && ah !== null ? rnd(v * ah, 1) : null;
+    var iv = wh !== null && ah !== null ? rnd(wh / ah, 2) : null;
+    var dev = null, ok = false;
+    if (wh !== null && vah !== null && vah > 0) { var d = Math.abs(wh - vah) / vah; if (isFinite(d)) { dev = rnd(d, 4); ok = d <= TOL + SLACK; } }
+    var cycles = lo !== null && hi !== null ? lo + "\u2013" + hi + " cycles" : lo !== null ? "\u2265 " + lo + " cycles" : hi !== null ? "\u2264 " + hi + " cycles" : null;
+    var typed = { model: model || null, energy: wh !== null ? wh + " Wh" : null, capacity: ah !== null ? ah + " Ah" : null, voltage: v !== null ? v + " V" : null, cycles: cycles };
+    while (out.firstChild) out.removeChild(out.firstChild);
+    if (errors.length) { var ul = el("ul", null, "gm-errors"); errors.forEach(function (e) { ul.appendChild(el("li", e)); }); out.appendChild(ul); }
+    out.appendChild(el("h3", "Figures"));
+    var t1 = el("table", null, "gm-table"), b1 = document.createElement("tbody");
+    row(b1, [{ t: "Model" }, { t: model || "\u2014" }], true);
+    row(b1, [{ t: "Stated energy" }, { t: wh !== null ? wh + " Wh" : "\u2014" }], true);
+    row(b1, [{ t: "Nominal V \u00d7 Ah" }, { t: vah !== null ? vah + " Wh" : "\u2014" }], true);
+    row(b1, [{ t: "Implied voltage (Wh \u00f7 Ah)" }, { t: iv !== null ? iv + " V" : "\u2014" }], true);
+    row(b1, [{ t: "Deviation" }, { t: dev !== null ? rnd(dev * 100, 2) + "%" : "\u2014" }], true);
+    row(b1, [{ t: "Consistent within 1%" }, { t: dev === null ? "Cannot check" : ok ? "Yes" : "No \u2014 recheck Wh, Ah and V" }], true);
+    t1.appendChild(b1); out.appendChild(t1);
+    out.appendChild(el("h3", "Annex XIII information items"));
+    var t2 = el("table", null, "gm-table"), h2 = document.createElement("thead"), b2 = document.createElement("tbody");
+    row(h2, [{ t: "Item" }, { t: "Layer" }, { t: "Status" }, { t: "Value / next step" }], false);
+    (DATA.rows[placing] || []).forEach(function (r) {
+      var status = r.status, note = r.note;
+      if (Object.prototype.hasOwnProperty.call(typed, r.id) && typed[r.id] !== null) { status = "user_provided"; note = typed[r.id] + " (figure you typed, not verified)"; }
+      row(b2, [{ t: r.item }, { t: r.layer }, { t: status, c: "gm-status" }, { t: note }], false);
+    });
+    t2.appendChild(h2); t2.appendChild(b2); out.appendChild(t2);
+    out.appendChild(el("p", DISCLAIMER, "bp-note"));
+  });
+})();`;
+
+function gapMapSection(): string {
+  const data = {
+    tolerance: CONSISTENCY_TOLERANCE,
+    disclaimer: GAP_MAP_DISCLAIMER,
+    rows: gapMapTemplates(),
+  };
+  return `<section class="estate-section" id="gap-map">
+    <div class="wrap">
+      <h2>Free gap map: check your pack in your browser</h2>
+      <p class="section-sub">Type the figures from your datasheet. The check runs on this page only: nothing is sent, stored or submitted.</p>
+      <form class="gm-form" id="gap-map-form" novalidate autocomplete="off">
+        <label>Model<input name="model" type="text" maxlength="120" required placeholder="e.g. LMT-36V-13Ah"></label>
+        <label>Stated energy (Wh)<input name="statedWh" type="number" step="any" min="0" inputmode="decimal" required></label>
+        <label>Capacity (Ah)<input name="ah" type="number" step="any" min="0" inputmode="decimal" required></label>
+        <label>Nominal voltage (V)<input name="nominalV" type="number" step="any" min="0" inputmode="decimal" required></label>
+        <label>Cycle life, low (optional)<input name="cyclesLow" type="number" step="1" min="0" inputmode="numeric"></label>
+        <label>Cycle life, high (optional)<input name="cyclesHigh" type="number" step="1" min="0" inputmode="numeric"></label>
+        <label>Who places it on the EU market?<select name="placing">
+          <option value="self">We do (self)</option>
+          <option value="cell_maker">Our cell maker (cell_maker)</option>
+          <option value="unknown" selected>Not sure yet (unknown)</option>
+        </select></label>
+        <div class="gm-actions"><button class="btn btn-secondary" type="submit">Map my gaps</button></div>
+      </form>
+      <div id="gap-map-results" aria-live="polite"></div>
+      <p class="bp-note" id="gap-map-disclaimer">${esc(GAP_MAP_DISCLAIMER)}</p>
+    </div>
+    <script type="application/json" id="gap-map-data">${jsonForScript(data)}</script>
+    <script>${GAP_MAP_SCRIPT}</script>
+  </section>`;
+}
+
 export function renderBatteryPassportPage(now: Date = new Date()): string {
   const plan = planById("dpp_readiness");
   const price = plan?.price ?? 299;
   const days = daysUntilDeadline(now);
   const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Get a written readiness assessment and publish your first passport for $${price}, self-serve.`;
+  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Get a written readiness assessment that gets you ready for your first passport, for $${price}, self-serve.`;
   const checklist = CHECKLIST.map(
     g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
@@ -203,6 +332,14 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
     .bp-faq p { margin:.6rem 0 0; line-height:1.65; }
     .bp-note { font-size:.9rem; color: var(--text-dim); }
     .bp-price { font-size:2rem; font-weight:750; }
+    .gm-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); gap:.75rem 1rem; margin:1rem 0; }
+    .gm-form label { display:flex; flex-direction:column; gap:.3rem; font-size:.92rem; font-weight:600; }
+    .gm-form input, .gm-form select { padding:.5rem .6rem; border:1px solid var(--border); border-radius:.5rem; font:inherit; background:transparent; color:inherit; }
+    .gm-form .gm-actions { grid-column:1/-1; }
+    .gm-table { width:100%; border-collapse:collapse; margin:.75rem 0; font-size:.92rem; }
+    .gm-table th, .gm-table td { text-align:left; padding:.45rem .5rem; border-top:1px solid var(--border); vertical-align:top; }
+    .gm-status { font-family:ui-monospace,monospace; font-size:.82rem; white-space:nowrap; }
+    .gm-errors { color:#c0392b; }
   </style>
 </head>
 <body>
@@ -222,8 +359,8 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <p class="estate-badge hero-badge">EU Battery Regulation · Digital Battery Passport</p>
       <p class="bp-countdown"><strong>${days}</strong> <span>days until 18 February 2027</span></p>
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
-      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets your first passport published, for a one-time $${price}. No sales call.</p>
-      <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Start my battery passport — $${price}`)}</div>
+      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
+      <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
     </div>
   </header>
 
@@ -236,12 +373,14 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
     </div>
   </section>
 
+${gapMapSection()}
+
   <section class="estate-section" id="what-you-get">
     <div class="wrap">
       <h2>What you get</h2>
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
-      <p class="section-sub">Every passport AuthiChain publishes is signed and publicly verifiable, so a scan proves the record came from you and hasn't been altered.</p>
+      <p class="section-sub">Every record you publish from your AuthiChain workspace is signed and publicly verifiable, so a scan proves it came from you and hasn't been altered. It supports, and does not replace, the Art. 77 passport issued by the operator placing the battery on the EU market.</p>
     </div>
   </section>
 
@@ -256,7 +395,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
     <div class="wrap">
       <h2>Start before your importer asks for it</h2>
       <p class="section-sub">Enter your work email to open Stripe checkout. You'll get your readiness assessment and workspace access by email.</p>
-      <div class="estate-actions">${checkoutForm("cta-checkout", `Start my battery passport — $${price}`)}</div>
+      <div class="estate-actions">${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}</div>
     </div>
   </section>
 </main>

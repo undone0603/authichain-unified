@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listedPlans } from "@/lib/plans";
+import { listedPlans, planPaymentLink } from "@/lib/plans";
 import { CheckoutModal, TrialButton } from "./pricing-client";
 import { Check } from "lucide-react";
 import Link from "next/link";
@@ -107,7 +107,7 @@ export default function PricingPage() {
                   planId={plan.id}
                   label={plan.name}
                   price={`$${plan.price}`}
-                  paymentLink={plan.stripe_payment_link}
+                  paymentLink={planPaymentLink(plan.id)}
                 />
               )}
             </div>
