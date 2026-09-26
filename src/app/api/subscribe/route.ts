@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
+import { gatedCheckoutUrl, listedPlans } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -109,7 +110,9 @@ export async function POST(req: NextRequest) {
     };
 
     // Add trial if requested
-    const trialDays = trial_days ? Number.parseInt(String(trial_days), 10) : Number.NaN;
+    const trialDays = trial_days
+      ? Number.parseInt(String(trial_days), 10)
+      : Number.NaN;
     if (!Number.isNaN(trialDays) && trialDays > 0) {
       sessionParams.subscription_data = {
         ...sessionParams.subscription_data,
@@ -143,60 +146,16 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(_unused_req_131: NextRequest) {
-  // Return available plans with prices for self-serve pricing page
-  const plans = [
-    {
-      id: "starter",
-      name: "Starter",
-      price_monthly: 29,
-      price_yearly: 290,
-      qr_codes: 100,
-      scans: 10000,
-      features: ["Custom QR styles", "Analytics", "API access"],
-    },
-    {
-      id: "pro",
-      name: "Pro",
-      price_monthly: 79,
-      price_yearly: 790,
-      qr_codes: 1000,
-      scans: 100000,
-      features: [
-        "Everything in Starter",
-        "AI art styles",
-        "Priority support",
-        "Bulk generation",
-      ],
-    },
-    {
-      id: "business",
-      name: "Business",
-      price_monthly: 199,
-      price_yearly: 1990,
-      qr_codes: 10000,
-      scans: 1000000,
-      features: [
-        "Everything in Pro",
-        "White label",
-        "Team seats",
-        "Custom domains",
-        "SLA",
-      ],
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      price_monthly: null,
-      price_yearly: null,
-      qr_codes: null,
-      scans: null,
-      features: [
-        "Unlimited everything",
-        "Dedicated support",
-        "Custom contracts",
-        "On-premise option",
-      ],
-    },
-  ];
+  // Public plans come from the catalogue so hidden SKUs (Theater, Studio,
+  // Business) never reappear here. Checkout goes through the gated confirm page.
+  const plans = listedPlans().map(p => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    price_suffix: p.price_suffix ?? null,
+    mode: p.stripe_mode,
+    features: p.features,
+    checkout_url: p.price === 0 ? null : gatedCheckoutUrl(p.id),
+  }));
   return NextResponse.json({ success: true, plans, currency: "usd" });
 }
