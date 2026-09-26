@@ -2,16 +2,16 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
-// 2026-09-24 freeze: public listed SKUs are free(5), starter $29, creator $99,
-// dpp_readiness $299, strainchain_passport $49. Theater stays in this file so
-// webhooks still resolve price IDs; listed:false keeps them off /pricing.
-// Stripe products are NOT archived this pass.
+// 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
+// starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
+// Theater stays unlisted. Studio stays unlisted until a hard cap exists.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
 export type PlanId =
   | "free"
   | "starter"
   | "creator"
+  | "qron_launch"
   | "studio"
   | "business"
   | "theater_1"
@@ -26,7 +26,7 @@ export interface Plan {
   price: number;
   price_suffix?: string;
   description: string;
-  generations: number; // 0 = no grant; 999999 = unlimited sentinel
+  generations: number;
   stripe_price_id: string | null;
   stripe_payment_link?: string;
   stripe_mode: "payment" | "subscription" | null;
@@ -34,13 +34,7 @@ export interface Plan {
   features: string[];
   cta: string;
   highlighted?: boolean;
-  /**
-   * Brand surface this plan belongs to. Absent means QRON, which is what every
-   * pre-existing plan is and what /pricing renders. A StrainChain SKU must not
-   * appear on the QRON pricing page just because it gained a Stripe price.
-   */
   brand?: "qron" | "strainchain";
-  /** When false, listedPlans() hides the card. Webhook lookup still works. */
   listed?: boolean;
 }
 
@@ -54,11 +48,7 @@ export const PLANS: Plan[] = [
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
-    features: [
-      "5 generations",
-      "Lookup verify only (no GPT-4V)",
-      "Then Starter $29 or DPP $299",
-    ],
+    features: ["5 generations", "Lookup verify only (no GPT-4V)", "Then Starter $29 or DPP $299"],
     cta: "Start with 5 free",
   },
   {
@@ -71,13 +61,28 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
     tier: "pro",
-    features: [
-      "100 generations (one-time)",
-      "All free modes",
-      "Holographic & Memory modes",
-      "Designed for AuthiChain signed verification (in development)",
-    ],
+    features: ["100 generations (one-time)", "All free modes", "Holographic & Memory modes", "Designed for AuthiChain signed verification (in development)"],
     cta: "Buy Starter Pack",
+  },
+  {
+    id: "qron_launch",
+    name: "QRON Launch",
+    price: 19,
+    price_suffix: "/mo",
+    description: "100 AI QR generations each month. Cancel any time.",
+    generations: 100,
+    stripe_price_id: "price_1UJjzPGqTruSqV8TmhFSc8vh",
+    stripe_mode: "subscription",
+    tier: "pro",
+    brand: "qron",
+    listed: true,
+    features: [
+      "100 generations / month",
+      "All free modes",
+      "Designed for AuthiChain signed verification (in development)",
+      "Cancel any time",
+    ],
+    cta: "Start Launch $19/mo",
   },
   {
     id: "creator",
@@ -89,13 +94,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F",
     stripe_mode: "payment",
     tier: "pro",
-    features: [
-      "500 generations (one-time)",
-      "All Pro modes",
-      "Premium styles",
-      "Priority generation queue",
-      "Designed for AuthiChain signed verification (in development)",
-    ],
+    features: ["500 generations (one-time)", "All Pro modes", "Premium styles", "Priority generation queue", "Designed for AuthiChain signed verification (in development)"],
     cta: "Buy Creator Pack",
     highlighted: true,
   },
@@ -111,13 +110,7 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: [
-      "5,000 Industrial generations / mo",
-      "Full DPP Data Integration",
-      "StrainChain Genetic Mapping",
-      "On our roadmap: supply-chain watchdog alerts",
-      "On our roadmap: geo-fencing alerts for unexpected scan locations",
-    ],
+    features: ["5,000 Industrial generations / mo", "Full DPP Data Integration", "StrainChain Genetic Mapping", "On our roadmap: supply-chain watchdog alerts", "On our roadmap: geo-fencing alerts for unexpected scan locations"],
     cta: "Initialize Theater 1",
   },
   {
@@ -132,13 +125,7 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: [
-      "Unlimited Industrial Artifacts",
-      "Custom AI Model Training",
-      "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)",
-      "Real-time Security Webhooks",
-      "24/7 AuthiChain Core Support",
-    ],
+    features: ["Unlimited Industrial Artifacts", "Custom AI Model Training", "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)", "Real-time Security Webhooks", "24/7 AuthiChain Core Support"],
     cta: "Contact for Theater 3",
     highlighted: true,
   },
@@ -152,32 +139,21 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
     stripe_mode: "payment",
     tier: "pro",
-    features: [
-      "Written EU DPP readiness assessment",
-      "Self-serve merchant activation",
-      "50 workspace generations to publish first DPP",
-      "$299 credited toward AuthiChain Basic on conversion",
-    ],
+    features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299 credited toward AuthiChain Basic on conversion"],
     cta: "Start DPP Readiness Audit",
   },
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
     price: 49,
-    description:
-      "One published genetics passport, built from your existing CoAs",
+    description: "One published genetics passport, built from your existing CoAs",
     generations: 0,
     stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
     stripe_payment_link: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",
-    features: [
-      "One passport, one cultivar",
-      "Full cannabinoid and terpene panel from your certificates",
-      "Every total recomputed from the source panel, not transcribed",
-      "QR code and shareable link",
-    ],
+    features: ["One passport, one cultivar", "Full cannabinoid and terpene panel from your certificates", "Every total recomputed from the source panel, not transcribed", "QR code and shareable link"],
     cta: "Publish one passport",
   },
   {
@@ -192,121 +168,75 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
-    features: [
-      "Unlimited cultivars and passports",
-      "Auto-updates on every new CoA",
-      "Lineage and batch history across the full library",
-      "Discrepancies surfaced rather than smoothed over",
-      "Export or withdraw your record at any time",
-    ],
+    features: ["Unlimited cultivars and passports", "Auto-updates on every new CoA", "Lineage and batch history across the full library", "Discrepancies surfaced rather than smoothed over", "Export or withdraw your record at any time"],
     cta: "Start a Farm Plan",
   },
 ];
 
 export const PUBLIC_PLAN_IDS = [
   "free",
+  "qron_launch",
   "starter",
   "creator",
   "dpp_readiness",
   "strainchain_passport",
 ] as const;
 
-/**
- * A plan can be shown and sold only when a real Stripe price backs it.
- *
- * /pricing previously rendered every entry in PLANS and emitted them all into
- * JSON-LD offers, so a plan without a price id would have advertised a price
- * — to shoppers and to search engines — that nothing could actually charge.
- */
 export function isPurchasable(plan: Plan): boolean {
-  return (
-    plan.price === 0 ||
-    Boolean(plan.stripe_price_id || plan.stripe_payment_link)
-  );
+  return plan.price === 0 || Boolean(plan.stripe_price_id || plan.stripe_payment_link);
 }
 
-/** Plans safe to display on a given brand's pricing page. */
 export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
   return PLANS.filter(
-    p =>
-      (p.brand ?? "qron") === brand &&
-      isPurchasable(p) &&
-      p.listed !== false
+    p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
   );
 }
 
-/** Stripe metadata.offer value for the autonomous DPP revenue loop. */
 export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
-/** Look up a live catalogue plan by id. */
 export function planById(id: PlanId): Plan | undefined {
   return PLANS.find(p => p.id === id);
 }
 
-/**
- * Stable, bot-safe checkout URL Marketing, sites and outreach link to.
- *
- * GET renders a confirm page (never calls Stripe); only a human POST of the
- * confirm form creates a Checkout Session. Served by workers/authichain-com.
- */
 export const GATED_CHECKOUT_ORIGIN = "https://authichain.com";
 
 export function gatedCheckoutUrl(id: PlanId): string {
   return `${GATED_CHECKOUT_ORIGIN}/checkout/${id}`;
 }
 
-/**
- * Public checkout link for a catalogue plan.
- *
- * Used to return the raw buy.stripe.com Payment Link, but opening a Payment
- * Link on GET creates a Checkout Session — so link scanners, email security
- * gateways and chat previews created ~28 unpaid sessions/day. Every public
- * surface now gets the gated authichain.com/checkout/<plan> URL instead.
- * Use `planStripePaymentLink()` only server-side after a human confirmed.
- */
 export function planPaymentLink(id: PlanId): string | undefined {
   const plan = planById(id);
-  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link)) {
-    return undefined;
-  }
+  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link)) return undefined;
   return gatedCheckoutUrl(id);
 }
 
-/** Raw Stripe Payment Link. Never render this in HTML/email (GET opens a session). */
 export function planStripePaymentLink(id: PlanId): string | undefined {
   return planById(id)?.stripe_payment_link;
 }
 
-/** Dollar amount for a catalogue plan. Charge source of truth is this file. */
 export function planUsd(id: PlanId): number {
   const plan = planById(id);
   if (!plan) throw new Error(`plans.ts has no ${id}`);
   return plan.price;
 }
 
-/** Look up a live catalogue plan by Stripe price ID. */
-export function planByStripePriceId(
-  priceId: string | null | undefined
-): Plan | undefined {
+export function planByStripePriceId(priceId: string | null | undefined): Plan | undefined {
   if (!priceId) return undefined;
   return PLANS.find(p => p.stripe_price_id === priceId);
 }
 
-/** Match a paid amount to a unique live catalogue price (cents). */
-export function planByAmountCents(
-  amountCents: number | null | undefined
-): Plan | undefined {
+export function planByAmountCents(amountCents: number | null | undefined): Plan | undefined {
   if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
   const dollars = amountCents / 100;
   const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
   return matches.length === 1 ? matches[0] : undefined;
 }
 
-// Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {
   free: 5,
   starter: 100,
   creator: 500,
+  qron_launch: 100,
   studio: 2000,
   business: 999999,
   theater_1: 5000,
@@ -316,11 +246,11 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   strainchain_farm: 0,
 };
 
-// Tier granted per plan
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   free: "free",
   starter: "pro",
   creator: "pro",
+  qron_launch: "pro",
   studio: "pro",
   business: "enterprise",
   theater_1: "enterprise",
