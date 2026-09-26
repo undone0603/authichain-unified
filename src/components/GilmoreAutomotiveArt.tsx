@@ -48,7 +48,7 @@ export default function GilmoreAutomotiveArt() {
           <h2 className="text-xl font-black uppercase tracking-tight">Gilmore Automotive Art</h2>
         </div>
         <span className="text-[10px] px-2 py-1 rounded bg-gold/10 text-gold font-black uppercase tracking-widest">
-          Theater 3: Industrial
+          Industrial
         </span>
       </div>
 

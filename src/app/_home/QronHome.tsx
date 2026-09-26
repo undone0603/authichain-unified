@@ -1010,7 +1010,7 @@ export function QronHome() {
           <div className="text-center mb-12">
             <span className="protocol-badge mb-4 inline-flex">
               <Zap className="w-3 h-3" />
-              Elite / Theater 3 Capabilities
+              Art Engine Capabilities
             </span>
             <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4 uppercase tracking-tighter">
               <span className="gold-text">Cryptographic Art Engine</span>
@@ -1514,7 +1514,7 @@ export function QronHome() {
               },
               {
                 q: 'What if I need more generations than my plan includes?',
-                a: 'QRON Studio Pro gives you unlimited generations for $99/month, or contact us for a custom enterprise contract.',
+                a: 'Buy another pack. Starter adds 100 generations for $29 and Creator adds 500 for $99, both one-time.',
               },
               {
                 q: 'What AI model generates the QR art?',
