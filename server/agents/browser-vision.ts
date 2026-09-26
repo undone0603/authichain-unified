@@ -10,7 +10,7 @@
  *   - PLAYWRIGHT_EXECUTABLE_PATH env var, or Chromium found on PATH
  */
 
-import { chromium, type Browser, type Page } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
 import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm.js';
 import { logActivity, getDb, enqueueTask } from '../db.js';
 import type { VerificationSource } from '../outreach/send-guard.js';
@@ -18,7 +18,7 @@ import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
-// ── Config ──────────────────────────────────────────────────────────────────
+// ── Config ───────────────────────────────────────────────────────────────
 const VIEWPORT   = { width: 1280, height: 800 };
 const MAX_STEPS  = 12;
 const PAGE_WAIT  = 1_200;       // ms after navigation/click
@@ -102,8 +102,18 @@ const VISION_TOOLS: Tool[] = [
   },
 ];
 
-// ── Browser lifecycle helpers ────────────────────────────────────────────────
+// ── Browser lifecycle helpers ────────────────────────────────────────
 async function launchBrowser(): Promise<Browser> {
+  // playwright-core is loaded lazily, at runtime, through a computed specifier.
+  // A static import made it part of the cron route's module graph (via
+  // server/jobs/task-runner.ts), so OpenNext's esbuild pass tried to bundle it
+  // for Workers and failed resolving its chromium-bidi internals. Browser
+  // automation only ever runs on Node (Railway); on Workers this path is never
+  // reached, so there is nothing to bundle. The computed specifier keeps both
+  // webpack and esbuild from tracing into the package; the type-only import
+  // above is erased at compile time.
+  const specifier = 'playwright-core';
+  const { chromium } = (await import(/* webpackIgnore: true */ specifier)) as typeof import('playwright-core');
   return chromium.launch({
     headless: true,
     executablePath: EXEC_PATH,
@@ -116,7 +126,7 @@ async function screenshot(page: Page): Promise<string> {
   return buf.toString('base64');
 }
 
-// ── Core vision loop ─────────────────────────────────────────────────────────
+// ── Core vision loop ─────────────────────────────────────────────
 async function visionLoop(page: Page, objective: string): Promise<string> {
   const findings: string[] = [];
   const history: Message[] = [
@@ -207,7 +217,7 @@ async function visionLoop(page: Page, objective: string): Promise<string> {
   return findings.join('\n\n') || 'Max steps reached — partial findings only.';
 }
 
-// ── Public task handlers ─────────────────────────────────────────────────────
+// ── Public task handlers ───────────────────────────────────
 
 export interface VisionResearchLeadPayload {
   leadEmail:  string;
