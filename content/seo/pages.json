@@ -5684,7 +5684,7 @@
     "title": "Blockchain QR Code For Luxury | AuthiChain",
     "metaDescription": "Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at.",
     "h1": "Blockchain QR Code For Luxury",
-    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Our goal: 5-agent AI consensus that screens every scan for anomalies</li><li>NFT certificate of authenticity travels with the item on resale</li><li>Bitcoin L1 anchoring makes the provenance record unforgeable</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
+    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Our goal: 5-agent AI consensus that screens every scan for anomalies</li><li>NFT certificate of authenticity travels with the item on resale</li><li>Bitcoin L1 anchoring makes the provenance record unforgeable</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -9996,6 +9996,260 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "No — AP2 is Google’s consumer payment-authorization protocol built on signed Mandates; x402 is a per-request HTTP payment protocol AuthiChain uses for agent-to-server payment in USDC on Base. They cover different steps of an agent transaction, and using one doesn’t require the other."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "vechain-alternative-without-tokens-or-gas-fees",
+    "keyword": "vechain alternative without tokens or gas fees",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Vechain Alternative Without Tokens Or Gas Fees | AuthiChain",
+    "metaDescription": "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing.",
+    "h1": "Vechain Alternative Without Tokens Or Gas Fees",
+    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li><li>The public verifier and signing keys are live at /.well-known/jwks.json, so a buyer checks a signed record without an AuthiChain account or a blockchain wallet</li><li>The certificate contract is live on Polygon; self-serve issuance and EU DPP export are still in development, so a pilot today starts with the $299 EU DPP Readiness audit rather than a full platform rollout</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. AuthiChain anchors certificates on Polygon and signs records with Ed25519 keys published in its JWKS. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Readiness audit at $299, a one-time payment that includes a written readiness assessment and is credited toward AuthiChain Basic if you convert.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Vechain Alternative Without Tokens Or Gas Fees",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.govchain.us"
+          },
+          "description": "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.",
+          "url": "https://authichain.govchain.us/p/vechain-alternative-without-tokens-or-gas-fees"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Vechain Alternative Without Tokens Or Gas Fees",
+              "item": "https://authichain.govchain.us/p/vechain-alternative-without-tokens-or-gas-fees"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is AuthiChain built on VeChain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. AuthiChain anchors certificates on Polygon and signs records with Ed25519 keys published in its JWKS. VeChain is a separate L1 blockchain that other authentication vendors build on."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does it cost to start?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The live self-serve entry point is the EU DPP Readiness audit at $299, a one-time payment that includes a written readiness assessment and is credited toward AuthiChain Basic if you convert."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "circularise-alternative-for-smaller-brands",
+    "keyword": "circularise alternative for smaller brands",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Circularise Alternative For Smaller Brands | AuthiChain",
+    "metaDescription": "Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller.",
+    "h1": "Circularise Alternative For Smaller Brands",
+    "bodyHtml": "<p>Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller brand that needs to start its DPP work without an enterprise sales cycle can begin with AuthiChain’s $299 EU DPP Readiness audit, paid by card.</p><h2>Why AuthiChain</h2><ul><li>The $299 audit is a one-time payment with a written EU DPP readiness assessment, self-serve merchant activation, and 50 workspace generations to publish a first record</li><li>AuthiChain covers anti-counterfeit authentication as well as DPP readiness, while Circularise specializes in material traceability for large supply chains</li><li>EU DPP export is still in development at AuthiChain; if you need a production passport export for a delegated act deadline today, weigh that honestly against a platform that already ships one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain export an EU Digital Product Passport today?</h3><p>Not yet. DPP export is in development. The live product is the readiness audit, which tells you what your passport will need and publishes a first record in the workspace.</p><h3>Is the $299 wasted if we later need more?</h3><p>No. The $299 is credited toward AuthiChain Basic if you convert, according to the published plan terms.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Circularise Alternative For Smaller Brands",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.govchain.us"
+          },
+          "description": "Circularise is an enterprise platform for material traceability and EU Digital Product Passports aimed at large manufacturers on quoted contracts; a smaller brand that needs to start its DPP work without an enterprise sales cycle can begin with AuthiChain’s $299 EU DPP Readiness audit, paid by card.",
+          "url": "https://authichain.govchain.us/p/circularise-alternative-for-smaller-brands"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Circularise Alternative For Smaller Brands",
+              "item": "https://authichain.govchain.us/p/circularise-alternative-for-smaller-brands"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain export an EU Digital Product Passport today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. DPP export is in development. The live product is the readiness audit, which tells you what your passport will need and publishes a first record in the workspace."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the $299 wasted if we later need more?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The $299 is credited toward AuthiChain Basic if you convert, according to the published plan terms."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "scantrust-alternative-with-a-public-verifier",
+    "keyword": "scantrust alternative with a public verifier",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Scantrust Alternative With A Public Verifier | AuthiChain",
+    "metaDescription": "Scantrust is an established secure-QR and brand-protection platform with self-serve plans; the difference AuthiChain leads with is a record anyone can check.",
+    "h1": "Scantrust Alternative With A Public Verifier",
+    "bodyHtml": "<p>Scantrust is an established secure-QR and brand-protection platform with self-serve plans; the difference AuthiChain leads with is a record anyone can check against published keys, so a buyer, customs officer or marketplace can verify a signed claim without asking the brand or AuthiChain.</p><h2>Why AuthiChain</h2><ul><li>Signing keys are published at /.well-known/jwks.json and the verification rules are open, so the check does not depend on AuthiChain staying online or on a vendor account</li><li>A valid signature is signed evidence of what the issuer recorded, not a guarantee that the object in hand is genuine; the page says so rather than implying more</li><li>AI image analysis and NFT certificates are in development and are not part of what you buy today; the live starting point is the $299 EU DPP Readiness audit</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.govchain.us/pricing\">View AuthiChain pricing</a>. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can a customer verify without an app?</h3><p>Yes. Scanning the code opens the public verifier in a normal browser, and the signature can also be checked offline against the published JWKS.</p><h3>Does AuthiChain use secure copy-detection QR codes like Scantrust?</h3><p>No. AuthiChain signs the record behind the code rather than relying on a print pattern, so the two approaches answer different questions and can be used together.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Scantrust Alternative With A Public Verifier",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Scantrust is an established secure-QR and brand-protection platform with self-serve plans; the difference AuthiChain leads with is a record anyone can check against published keys, so a buyer, customs officer or marketplace can verify a signed claim without asking the brand or AuthiChain.",
+          "url": "https://authichain.govchain.us/p/scantrust-alternative-with-a-public-verifier"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Scantrust Alternative With A Public Verifier",
+              "item": "https://authichain.govchain.us/p/scantrust-alternative-with-a-public-verifier"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can a customer verify without an app?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Scanning the code opens the public verifier in a normal browser, and the signature can also be checked offline against the published JWKS."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain use secure copy-detection QR codes like Scantrust?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. AuthiChain signs the record behind the code rather than relying on a print pattern, so the two approaches answer different questions and can be used together."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cannabis-coa-passport-pricing-per-cultivar",
+    "keyword": "cannabis coa passport pricing per cultivar",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Cannabis Coa Passport Pricing Per Cultivar | StrainChain",
+    "metaDescription": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each.",
+    "h1": "Cannabis Coa Passport Pricing Per Cultivar",
+    "bodyHtml": "<p>A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each passport when a new certificate of analysis arrives.</p><h2>Why StrainChain</h2><ul><li>Passport, $49 once: one published passport for one cultivar, with the full cannabinoid and terpene panel taken from your existing certificates and a QR code and shareable link</li><li>Farm Plan, $149 a month: unlimited cultivars and passports, automatic updates on every new CoA, and lineage and batch history across the library</li><li>On both plans every THC and THCV total is recomputed from the raw panel rather than copied from the certificate, and discrepancies are shown rather than smoothed over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Is a StrainChain passport a lab result?</h3><p>No. It is a published record built from the certificates you supply. The lab that issued the CoA remains the source of the test result.</p><h3>When does the Farm Plan make more sense than single passports?</h3><p>When you publish several cultivars or re-test often. The Farm Plan updates every passport on each new CoA, where single passports mean buying a new $49 passport for each cultivar.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "StrainChain — Cannabis Coa Passport Pricing Per Cultivar",
+          "brand": {
+            "@type": "Brand",
+            "name": "StrainChain"
+          },
+          "description": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each passport when a new certificate of analysis arrives.",
+          "url": "https://strainchain.io/p/cannabis-coa-passport-pricing-per-cultivar"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Cannabis Coa Passport Pricing Per Cultivar",
+              "item": "https://strainchain.io/p/cannabis-coa-passport-pricing-per-cultivar"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is a StrainChain passport a lab result?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It is a published record built from the certificates you supply. The lab that issued the CoA remains the source of the test result."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When does the Farm Plan make more sense than single passports?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When you publish several cultivars or re-test often. The Farm Plan updates every passport on each new CoA, where single passports mean buying a new $49 passport for each cultivar."
               }
             }
           ]

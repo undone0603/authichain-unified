@@ -70,6 +70,7 @@
         "ops-pulse.yml": "on",
         "cloudflare-production-health.yml": "on",
         "production-smoke-gate.yml": "on",
+        "checkout-watchdog.yml": "on",
         "schema-drift.yml": "on",
         "supabase-baseline.yml": "on",
         "verify-integrations.yml": "on",
