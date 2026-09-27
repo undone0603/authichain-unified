@@ -40,6 +40,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [operations/stripe-webhook-setup.md](operations/stripe-webhook-setup.md)
 - [operations/stripe-webhook-checklist.md](operations/stripe-webhook-checklist.md)
 - [operations/SBA_Disaster_Loan_Template.md](operations/SBA_Disaster_Loan_Template.md)
+- [operations/autonomy-v7-gemini-spark-prompt.md](operations/autonomy-v7-gemini-spark-prompt.md) — Autonomy v7 setup prompt for Gemini Spark (Phase 0 = read-only audit)
 
 ## Marketing, growth & outreach
 
