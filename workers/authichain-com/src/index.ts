@@ -40,7 +40,12 @@ import {
   isBatteryPassportPath,
   renderBatteryPassportPage,
 } from "./battery-passport-page.ts";
-import { isDppCheckPath, renderDppCheckPage } from "./dpp-check-page.ts";
+import {
+  dppCheckCompleteEvent,
+  dppCheckoutClickEvent,
+  isDppCheckPath,
+  renderDppCheckPage,
+} from "./dpp-check-page.ts";
 import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
@@ -3514,6 +3519,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
       });
     }
     if (isDppCheckPath(p)) {
+      const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
+      if (done) console.log(JSON.stringify(done));
       return new Response(renderDppCheckPage(url), {
         headers: {
           ...HTML_SECURITY_HEADERS,
@@ -3573,6 +3580,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     // Stable gated checkout: GET /checkout (chooser) and /checkout/<plan>
     // (confirm page) never call Stripe; only the confirm form's POST does.
+    const dppClick = await dppCheckoutClickEvent(request);
+    if (dppClick) console.log(JSON.stringify(dppClick));
     const gated = await tryHandleGatedCheckout(request, env);
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
