@@ -116,7 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/gen-seo-pages.cjs
-          if ! git diff --exit-code -- content/seo/pages.json; then
+          if ! git diff --exit-code -- content/seo/pages.json content/seo/sitemap-slugs.json; then
             echo "::error::content/seo/pages.json does not match what scripts/gen-seo-pages.cjs produces from the current DATA. Run 'node scripts/gen-seo-pages.cjs' and commit the result."
             exit 1
           fi

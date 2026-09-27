@@ -1,11 +1,11 @@
 /**
- * AuthiChain Verify Worker
- * /api/verify stays the public lookup.
- * /agents + /status restore the archived consensus-engine contract as a goal.
- * Agent notes are always simulated:true until each agent has a real signal.
+ * AuthiChain Verify Worker — draft branch feat/verify-evaluate-wire
+ * Public contract: { decision, vector, reasons, unknowns, depthUsed }
+ * No trust_score. Fixtures are labeled source=fixture (not a live mint).
  */
 
-import { AGENTS, agentNotes, scoreSeal } from "./score";
+import { evaluate } from "./evaluate";
+import { libraryPageFor, lookupFixture } from "./fixtures";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -21,6 +21,7 @@ const CORS_HEADERS = {
 };
 
 const JWKS_URL = "https://authichain.com/.well-known/jwks.json";
+const POLYGON_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 
 function json(body: unknown, status = 200, extra?: Record<string, string>): Response {
   return Response.json(body, {
@@ -68,6 +69,7 @@ interface SupabaseProduct {
 }
 
 async function lookupProduct(identifier: string, env: Env): Promise<SupabaseProduct | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
   const url = `${env.SUPABASE_URL}/rest/v1/products?product_identifier=eq.${encodeURIComponent(identifier)}&limit=1`;
   const response = await fetch(url, {
     headers: {
@@ -104,12 +106,67 @@ async function parseInput(request: Request, url: URL): Promise<string> {
   }
 }
 
+function kernelEnvelope(
+  identifier: string,
+  rawInput: string,
+  keysLive: boolean,
+  kernel: ReturnType<typeof evaluate>,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    decision: kernel.decision,
+    vector: kernel.vector,
+    reasons: kernel.reasons,
+    unknowns: kernel.unknowns,
+    depthUsed: kernel.depthUsed,
+    qron_id: identifier,
+    anchored: false,
+    polygon: { contract: POLYGON_CONTRACT, queried: false, status: "in_development" },
+    jwks: { url: JWKS_URL, live: keysLive },
+    verifiedAt: new Date().toISOString(),
+    input: rawInput,
+    ...extra,
+  };
+}
+
 async function handleVerify(request: Request, env: Env, url: URL): Promise<Response> {
   const rawInput = await parseInput(request, url);
   if (rawInput === "__INVALID_JSON__") return json({ error: "Invalid JSON body" }, 400);
   if (!rawInput.trim()) return json({ error: "Missing input parameter" }, 400);
 
   const identifier = deriveInputIdentifier(rawInput);
+  const keysLive = await jwksLive();
+
+  const fixture = lookupFixture(identifier);
+  if (fixture) {
+    const kernel = evaluate(fixture.input);
+    console.log(JSON.stringify({ evt: "verify", identifier, decision: kernel.decision, source: "fixture" }));
+    return json(
+      kernelEnvelope(identifier, rawInput, keysLive, kernel, {
+        source: "fixture",
+        label: fixture.label,
+        product: null,
+      }),
+      200,
+      { "Cache-Control": "no-store" },
+    );
+  }
+
+  const library = libraryPageFor(identifier);
+  if (library) {
+    const kernel = evaluate({});
+    kernel.reasons.push("library_page_is_not_a_seal");
+    return json(
+      kernelEnvelope(identifier, rawInput, keysLive, kernel, {
+        source: "library",
+        page: library,
+        product: null,
+      }),
+      200,
+      { "Cache-Control": "no-store" },
+    );
+  }
+
   let product: SupabaseProduct | null = null;
   try {
     product = await lookupProduct(identifier, env);
@@ -117,61 +174,46 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
     console.log(JSON.stringify({ evt: "verify_lookup_error", err: String(err) }));
   }
 
-  const keysLive = await jwksLive();
-  const scored = scoreSeal({
-    product,
-    jwksLive: keysLive,
-    jwsValid: false,
-    receiptOk: false,
-  });
-  const agents = agentNotes(scored);
-
-  console.log(
-    JSON.stringify({
-      evt: "verify",
-      identifier,
-      trust_score: scored.trust_score,
-      authentic: scored.authentic,
-      jwks_live: keysLive,
-      agents_simulated: true,
-    }),
+  const kernel = evaluate(
+    product
+      ? {
+          objectFound: true,
+          objectId: product.product_identifier,
+          identity: { serial: product.product_identifier },
+          depth: "lookup",
+          crypto: {
+            signatureValid: undefined,
+            issuerTrusted: undefined,
+            identityValid: true,
+            evidenceIntact: undefined,
+            statusActive: product.is_active !== false,
+          },
+          attestation: {
+            objectId: product.product_identifier,
+            status: product.is_active === false ? "inactive" : "registered",
+            issuer: "supabase-products",
+          },
+        }
+      : {},
   );
 
+  console.log(JSON.stringify({ evt: "verify", identifier, decision: kernel.decision, source: product ? "supabase" : "none" }));
+
   return json(
-    {
-      result: scored.authentic ? "authentic" : product ? "inactive" : "not_found",
-      authentic: scored.authentic,
-      trust_score: scored.trust_score,
-      confidence: scored.confidence,
-      qron_id: product?.product_identifier || identifier,
-      actions: scored.actions,
-      goal: scored.goal,
-      anchored: scored.anchored,
-      jwks: { url: JWKS_URL, live: keysLive },
-      agents,
+    kernelEnvelope(identifier, rawInput, keysLive, kernel, {
+      source: product ? "supabase" : "none",
       product: product
         ? {
             productIdentifier: product.product_identifier,
             isActive: product.is_active,
             name: product.name,
             industryId: product.industry_id,
-            story: product.story,
-            workflow: product.workflow,
-            features: product.features,
-            authenticityFeatures: product.authenticity_features,
           }
         : null,
-      supplyChain: product?.supply_chain ?? null,
       tokenId: typeof product?.token_id === "number" ? product.token_id : null,
-      success: scored.authentic,
-      message: scored.message,
-      verifiedAt: new Date().toISOString(),
-      input: rawInput,
-    },
+    }),
     200,
-    {
-      "Cache-Control": scored.authentic ? "s-maxage=60, stale-while-revalidate=300" : "no-store",
-    },
+    { "Cache-Control": "no-store" },
   );
 }
 
@@ -185,26 +227,12 @@ export default {
     const path = url.pathname.replace(/\/$/, "") || "/";
 
     if (path === "/health" || path === "/api/health") {
-      return json({ status: "ok", worker: "authichain-verify-worker", ts: Date.now(), goal: "jwks_and_receipt" });
-    }
-
-    if (path === "/agents" || path === "/api/agents") {
       return json({
-        goal: "five_agent_consensus",
-        simulated: true,
-        threshold: 0.75,
-        jwks: JWKS_URL,
-        agents: AGENTS.map((a) => ({ ...a, simulated: true })),
-      });
-    }
-
-    if (path === "/status" || path === "/api/status") {
-      const keysLive = await jwksLive();
-      return json({
+        status: "ok",
         worker: "authichain-verify-worker",
-        jwks_live: keysLive,
-        agents_simulated: true,
-        goal: "real_agent_signals",
+        ts: Date.now(),
+        contract: "evaluate",
+        draft: true,
       });
     }
 

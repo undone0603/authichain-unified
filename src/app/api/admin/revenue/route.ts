@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
+import { checkAdminKey } from '@/lib/admin-key';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const key = searchParams.get('key');
-
-  if (key !== process.env.ADMIN_DASHBOARD_KEY && key !== 'authichain2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Shared-key path: ADMIN_DASHBOARD_KEY only, min 16 chars, fail-closed.
+  // Session path: requireAdmin so the founder dashboard still works without
+  // a query-string key. Do not drop this fallback.
+  if (!checkAdminKey(request)) {
+    const supabase = await createClient();
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
   }
 
   try {
@@ -37,7 +42,7 @@ export async function GET(request: Request) {
     const { data: brands } = await admin
       .from('brands')
       .select('staking_tier, id');
-    
+
     const tierCounts = (brands || []).reduce((acc: Record<string, number>, b) => {
       acc[b.staking_tier] = (acc[b.staking_tier] || 0) + 1;
       return acc;

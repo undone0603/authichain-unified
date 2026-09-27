@@ -41,6 +41,12 @@ import {
   renderBatteryPassportPage,
 } from "./battery-passport-page.ts";
 import {
+  dppCheckCompleteEvent,
+  dppCheckoutClickEvent,
+  isDppCheckPath,
+  renderDppCheckPage,
+} from "./dpp-check-page.ts";
+import {
   micrositeSitemapUrls,
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
@@ -3473,6 +3479,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/genetics/mendo-love-farms', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
+        { loc: 'https://authichain.com/dpp-check', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
@@ -3509,6 +3516,17 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (isBatteryPassportPath(p)) {
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    if (isDppCheckPath(p)) {
+      const done = request.method === 'GET' ? dppCheckCompleteEvent(url) : null;
+      if (done) console.log(JSON.stringify(done));
+      return new Response(renderDppCheckPage(url), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': url.search ? 'private, no-store' : 'public, max-age=300',
+        },
       });
     }
     if (isDppManufacturerArticlePath(p)) {
@@ -3562,6 +3580,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     // Stable gated checkout: GET /checkout (chooser) and /checkout/<plan>
     // (confirm page) never call Stripe; only the confirm form's POST does.
+    const dppClick = await dppCheckoutClickEvent(request);
+    if (dppClick) console.log(JSON.stringify(dppClick));
     const gated = await tryHandleGatedCheckout(request, env);
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
