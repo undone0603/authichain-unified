@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDossier, getCultivar, listFarms, toSlug } from "@/lib/genetics";
+import { farmIsUnlisted, getDossier, getCultivar, listFarms, toSlug } from "@/lib/genetics";
 import {
   IssuerCommitment,
   PassportFooter,
@@ -22,6 +22,9 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { farm } = await params;
+  if (farmIsUnlisted(farm)) {
+    return { title: "Not found", robots: { index: false, follow: false } };
+  }
   const d = getDossier(farm);
   if (!d) return { title: "Not found" };
   return {
@@ -36,6 +39,7 @@ export default async function FarmIndex({
   params: Promise<Params>;
 }) {
   const { farm } = await params;
+  if (farmIsUnlisted(farm)) notFound();
   const d = getDossier(farm);
   if (!d) notFound();
 

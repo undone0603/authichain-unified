@@ -4,9 +4,10 @@
  * Source of record is `content/strainchain/<farm>/certificates.json`.
  * Totals are derived at render, never transcribed.
  *
- * Unlisted farms (private samples) load through getDossier() so a direct
- * /genetics/<slug> URL can render, but listFarms() omits them from the
- * public index. Workers must also send noindex on those URLs.
+ * Unlisted farms are omitted from listFarms(). getDossier() returns null
+ * for them unless the caller passes an explicit gate: GENETICS_UNLISTED_PREVIEW=1
+ * or a token that matches GENETICS_UNLISTED_TOKEN (at least 16 characters).
+ * Public routes must not pass that gate.
  */
 
 import mendoRaw from "../../content/strainchain/mendo-love-farms/certificates.json";
@@ -221,6 +222,45 @@ export function toSlug(cultivarId: string): string {
     .replace(/^-|-$/g, "");
 }
 
+
+export const UNLISTED_PREVIEW_ENV = "GENETICS_UNLISTED_PREVIEW";
+export const UNLISTED_TOKEN_ENV = "GENETICS_UNLISTED_TOKEN";
+export const MIN_UNLISTED_TOKEN_LENGTH = 16;
+export const UNLISTED_CACHE_CONTROL = "private, no-store, max-age=0";
+export const UNLISTED_ROBOTS_TAG = "noindex, nofollow";
+
+export type UnlistedAccess = {
+  token?: string | null;
+  env?: Record<string, string | undefined>;
+};
+
+function constantTimeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+function readEnv(access?: UnlistedAccess): Record<string, string | undefined> {
+  if (access?.env) return access.env;
+  if (typeof process !== "undefined" && process.env) return process.env;
+  return {};
+}
+
+/** True only for an explicit preview env or a long matching token. Default is deny. */
+export function unlistedAccessGranted(access?: UnlistedAccess): boolean {
+  const env = readEnv(access);
+  if (env[UNLISTED_PREVIEW_ENV] === "1") return true;
+  const expected = env[UNLISTED_TOKEN_ENV];
+  const presented = access?.token?.trim() ?? "";
+  if (!expected || expected.length < MIN_UNLISTED_TOKEN_LENGTH || !presented) {
+    return false;
+  }
+  return constantTimeEqual(presented, expected);
+}
+
 const FARMS: Record<string, FarmFile> = {
   "mendo-love-farms": mendoRaw as FarmFile,
   "gtr-seeds": gtrRaw as FarmFile,
@@ -235,9 +275,13 @@ export function farmIsUnlisted(slug: string): boolean {
   return Boolean(FARMS[slug]?.unlisted);
 }
 
-export function getDossier(farmSlug: string): Dossier | null {
+export function getDossier(
+  farmSlug: string,
+  access?: UnlistedAccess
+): Dossier | null {
   const data = FARMS[farmSlug];
   if (!data) return null;
+  if (data.unlisted && !unlistedAccessGranted(access)) return null;
   return {
     farm: {
       slug: farmSlug,
@@ -276,9 +320,10 @@ function edgeParents(e: LineageEdge): string[] {
 
 export function getCultivar(
   farmSlug: string,
-  cultivarSlug: string
+  cultivarSlug: string,
+  access?: UnlistedAccess
 ): CultivarView | null {
-  const d = getDossier(farmSlug);
+  const d = getDossier(farmSlug, access);
   if (!d) return null;
   const cultivar = d.cultivars.find(c => toSlug(c.id) === cultivarSlug);
   if (!cultivar) return null;
@@ -316,8 +361,11 @@ export function getCultivar(
   };
 }
 
-export function timeline(farmSlug: string): DerivedCertificate[] {
-  const d = getDossier(farmSlug);
+export function timeline(
+  farmSlug: string,
+  access?: UnlistedAccess
+): DerivedCertificate[] {
+  const d = getDossier(farmSlug, access);
   if (!d) return [];
   return [...d.certificates].sort((a, b) =>
     a.collected.localeCompare(b.collected)
