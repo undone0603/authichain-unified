@@ -20,6 +20,8 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
+// ─── Checkout Session Creation ──────────────────────────────────────
+
 export interface CreateCheckoutParams {
   userId: number;
   userEmail: string;
@@ -85,12 +87,14 @@ export async function createSubscriptionCheckout(
   return session.url!;
 }
 
+// ─── One-time Payment Checkout ──────────────────────────────────────
+
 export interface CreatePaymentCheckoutParams {
   userId: number;
   userEmail: string;
   userName: string;
   description: string;
-  amount: number;
+  amount: number; // in cents
   origin: string;
   stripeCustomerId?: string;
   metadata?: Record<string, string>;
@@ -100,6 +104,7 @@ export async function createPaymentCheckout(
   params: CreatePaymentCheckoutParams
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
@@ -117,7 +122,9 @@ export async function createPaymentCheckout(
       {
         price_data: {
           currency: "usd",
-          product_data: { name: params.description },
+          product_data: {
+            name: params.description,
+          },
           unit_amount: params.amount,
         },
         quantity: 1,
@@ -126,8 +133,11 @@ export async function createPaymentCheckout(
     success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
     cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
   });
+
   return { url: session.url!, sessionId: session.id };
 }
+
+// ─── Customer Management ────────────────────────────────────────
 
 export async function getOrCreateStripeCustomer(
   userId: number,
@@ -136,6 +146,7 @@ export async function getOrCreateStripeCustomer(
   existingCustomerId?: string
 ): Promise<string> {
   const stripe = getStripe();
+
   if (existingCustomerId) {
     try {
       const customer = await stripe.customers.retrieve(existingCustomerId);
@@ -144,16 +155,21 @@ export async function getOrCreateStripeCustomer(
       // Customer doesn't exist, create new
     }
   }
+
   const customer = await stripe.customers.create({
     email,
     name,
     metadata: { user_id: userId.toString() },
   });
+
   return customer.id;
 }
 
+// ─── Subscription Management ──────────────────────────────────────
+
 export async function getSubscriptionDetails(subscriptionId: string) {
-  return await getStripe().subscriptions.retrieve(subscriptionId);
+  const stripe = getStripe();
+  return await stripe.subscriptions.retrieve(subscriptionId);
 }
 
 export async function cancelSubscription(
@@ -161,14 +177,22 @@ export async function cancelSubscription(
   immediately = false
 ) {
   const stripe = getStripe();
-  if (immediately) return await stripe.subscriptions.cancel(subscriptionId);
+  if (immediately) {
+    return await stripe.subscriptions.cancel(subscriptionId);
+  }
   return await stripe.subscriptions.update(subscriptionId, {
     cancel_at_period_end: true,
   });
 }
 
+// ─── Payment History ────────────────────────────────────────────
+
 export async function getCustomerPayments(customerId: string, limit = 20) {
-  const charges = await getStripe().charges.list({ customer: customerId, limit });
+  const stripe = getStripe();
+  const charges = await stripe.charges.list({
+    customer: customerId,
+    limit,
+  });
   return charges.data.map((charge: any) => ({
     id: charge.id,
     amount: charge.amount,
@@ -181,7 +205,11 @@ export async function getCustomerPayments(customerId: string, limit = 20) {
 }
 
 export async function getCustomerInvoices(customerId: string, limit = 20) {
-  const invoices = await getStripe().invoices.list({ customer: customerId, limit });
+  const stripe = getStripe();
+  const invoices = await stripe.invoices.list({
+    customer: customerId,
+    limit,
+  });
   return invoices.data.map((inv: any) => ({
     id: inv.id,
     number: inv.number,
@@ -193,6 +221,8 @@ export async function getCustomerInvoices(customerId: string, limit = 20) {
     pdfUrl: inv.invoice_pdf,
   }));
 }
+
+// ─── Webhook Processing ────────────────────────────────────────
 
 export interface WebhookResult {
   eventType: string;
@@ -221,7 +251,10 @@ function invoiceSubscriptionId(invoice: {
 export async function processWebhookEvent(
   event: Stripe.Event
 ): Promise<WebhookResult> {
-  const result: WebhookResult = { eventType: event.type, handled: false };
+  const result: WebhookResult = {
+    eventType: event.type,
+    handled: false,
+  };
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -238,6 +271,7 @@ export async function processWebhookEvent(
       result.handled = true;
       break;
     }
+
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
       result.subscriptionId = subscription.id;
@@ -245,6 +279,7 @@ export async function processWebhookEvent(
       result.handled = true;
       break;
     }
+
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       result.subscriptionId = subscription.id;
@@ -252,6 +287,7 @@ export async function processWebhookEvent(
       result.handled = true;
       break;
     }
+
     case "invoice.paid": {
       const invoice = event.data.object as any;
       result.customerId =
@@ -262,6 +298,7 @@ export async function processWebhookEvent(
       result.handled = true;
       break;
     }
+
     case "invoice.payment_failed": {
       const invoice = event.data.object as any;
       result.customerId =
@@ -272,6 +309,7 @@ export async function processWebhookEvent(
       result.handled = true;
       break;
     }
+
     default:
       result.handled = false;
   }
@@ -279,32 +317,59 @@ export async function processWebhookEvent(
   return result;
 }
 
+// ─── Founder Payout via Stripe Connect ────────────────────────────────────
+
 export interface PayoutConfig {
   stripeConnectAccountId: string;
   minPayoutCents: number;
 }
 
+/**
+ * Create a payout to a Stripe Connect account (founder's connected bank).
+ * Requires:
+ * - Founder has connected a Stripe Connect account
+ * - Bank account is verified
+ * - Payout amount >= minimum threshold
+ *
+ * @param amountCents Amount to payout in cents
+ * @param config Payout configuration (Connect account ID, minimum threshold)
+ * @returns Payout object with ID, status, and arrival date
+ * @throws Error if payout fails (invalid account, insufficient balance, etc.)
+ */
 export async function createFounderPayout(
   amountCents: number,
   config: PayoutConfig
-): Promise<{ payoutId: string; status: string; arrivalDate: Date }> {
+): Promise<{
+  payoutId: string;
+  status: string;
+  arrivalDate: Date;
+}> {
   if (!config.stripeConnectAccountId) {
     throw new Error(
       "[founder-payout] No Stripe Connect account configured for founder"
     );
   }
   if (amountCents < config.minPayoutCents) {
-    return { payoutId: "skipped", status: "below_minimum", arrivalDate: new Date() };
+    return {
+      payoutId: "skipped",
+      status: "below_minimum",
+      arrivalDate: new Date(),
+    };
   }
-  const payout = await getStripe().payouts.create(
+
+  const stripe = getStripe();
+  const payout = await stripe.payouts.create(
     {
       amount: Math.round(amountCents),
       currency: "usd",
-      method: "instant",
+      method: "instant", // Instant payout if account supports it
       statement_descriptor: "AuthiChain Founder Revenue",
     },
-    { stripeAccount: config.stripeConnectAccountId }
+    {
+      stripeAccount: config.stripeConnectAccountId,
+    }
   );
+
   return {
     payoutId: payout.id,
     status: payout.status,
