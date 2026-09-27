@@ -1,0 +1,20 @@
+{
+  "hub": "/docs",
+  "canonical_host": "https://authichain.com",
+  "banned_strings": [
+    "GS1 Conformant Resolver",
+    "Bitcoin L1",
+    "$49/mo",
+    "AC-DEMO-001",
+    "notified body",
+    "EU registry filing"
+  ],
+  "nodes": [
+    { "slug": "protocol", "path": "/protocol", "title": "Protocol", "status": "live" },
+    { "slug": "gs1-digital-link", "path": "/docs/gs1-digital-link", "title": "GS1 Digital Link", "status": "wave1" },
+    { "slug": "verification", "path": "/docs/verification", "title": "Verification", "status": "wave1" },
+    { "slug": "dpp-architecture", "path": "/docs/dpp-architecture", "title": "DPP architecture", "status": "wave1" },
+    { "slug": "examples", "path": "/docs/examples", "title": "Examples", "status": "wave1" },
+    { "slug": "x402", "path": "/docs/x402", "title": "x402", "status": "live" }
+  ]
+}
