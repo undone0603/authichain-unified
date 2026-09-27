@@ -1,12 +1,12 @@
 {
-  "updated": "2026-09-26",
+  "updated": "2026-09-27",
   "unlisted": true,
   "note": "Private GTR Seeds / Oregon CBD sample. Seed-matrix CoAs transcribed from PREE Laboratories South PDFs in GTR's public Drive Seed COA folder (Double Durban.pdf C231203-41, Garlic Berry.pdf C231203-42). Not finished flower. Not a public genetics library.",
   "provenance_warning": "These COA's were taken from plants 30 days pre-harvest as required by the US Department of Agriculture, and are not an accurate representation of finished flower cannabinoid content. Separately: the two certificates ingested here are Seed COAs (matrix hemp / photograph of seeds), informational use only. They are not 30-day pre-harvest flower panels and they do not support GTR's commercial claim of up to 10% THCV and 10% THC in finished flower. GTR states they do not post finished-flower results.",
   "method": {
     "decarboxylation_factor": 0.877,
     "decarboxylation_note": "total_thc = d9_THC + THCA * 0.877. total_thcv = THCV + THCVA * 0.877. Δ8-THC is recorded when present and is not added to total THC.",
-    "verification": "Garlic Berry published total THC 3.374% recomputes to 3.373% from THCA 3.49 + d9-THC 0.313. Double Durban lists every named cannabinoid including THCV as <LOQ 0.010%; no THCV total can be derived."
+    "verification": "Garlic Berry published total THC 3.374% recomputes to 3.37373 from THCA 3.49 + d9-THC 0.313 and rounds to 3.374. Double Durban lists every named cannabinoid including THCV as <LOQ 0.010%; no THCV total can be derived. Stored ratio_thcv_thc is null when either side is <LOQ so preview tables print —, not 0.00:1."
   },
   "laboratory": {
     "name": "PREE Laboratories South",
@@ -35,7 +35,7 @@
       "cannabinoids_pct": null,
       "cannabinoids_note": "PREE South seed CoA. THCA, d9-THC, d8-THC, THCV, CBGA, CBDA, CBD, CBDV, CBN, CBG, CBC, CBDVA, CBL all printed <LOQ (0.010%). THCVA not on this panel. Total THC <LOQ. Total CBD <LOQ. No raw pair exists from which to derive a THCV or THC total.",
       "totals_pct": { "thcv": null, "thc": null },
-      "ratio_thcv_thc": 0,
+      "ratio_thcv_thc": null,
       "arithmetic_check": "not_possible_without_raw_values",
       "source_pdf": "https://drive.google.com/file/d/1Qgnj7VIYBZoj9d5IfOpXHcNTOsmPYL9B/view",
       "verified_against_pdf": "2026-09-26",
@@ -60,7 +60,7 @@
       },
       "cannabinoids_note": "PREE South seed CoA. THCV printed <LOQ and omitted. THCVA not on the panel. Δ8-THC 0.563% is recorded and is not included in derived total THC.",
       "totals_pct": { "thcv": null, "thc": 3.374 },
-      "ratio_thcv_thc": 0,
+      "ratio_thcv_thc": null,
       "arithmetic_check": "pass",
       "source_pdf": "https://drive.google.com/file/d/1zM5jWmZKtD0ahLyo2F-Ku3sLec5vYI8-/view",
       "verified_against_pdf": "2026-09-26",
