@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
-    "@supabase/ssr": "^0.10.2",
+    "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.105.1",
     "@types/nodemailer": "^8.0.1",
     "@x402/core": "^2.25.0",
