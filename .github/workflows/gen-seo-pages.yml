@@ -30,7 +30,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet content/seo/pages.json; then
+          if git diff --quiet content/seo/pages.json content/seo/sitemap-slugs.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -41,6 +41,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content/seo/pages.json
+          git add content/seo/pages.json content/seo/sitemap-slugs.json
           git commit -m "chore(seo): regenerate programmatic SEO pages [skip ci]"
           git push
