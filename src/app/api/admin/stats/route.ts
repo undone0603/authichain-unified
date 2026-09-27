@@ -7,21 +7,20 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/admin/stats
- * 
+ *
  * Centralized aggregator for ecosystem-wide performance metrics.
  */
 export async function GET(_request: Request) {
   try {
     const supabase = await createClient();
-    
-    // Auth Check
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
 
     // 1. Ecosystem Adoption (Scans & QRONs)
     const { data: qrons } = await supabase.from('qrons').select('scan_count');
@@ -32,7 +31,7 @@ export async function GET(_request: Request) {
     const { count: certCount } = await supabase
       .from('certifications')
       .select('*', { count: 'exact', head: true });
-    
+
     const { count: productCount } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true });

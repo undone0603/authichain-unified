@@ -28,6 +28,7 @@ import {
 } from "./lib/b2b-send-policy";
 import {
   checkSender,
+  checkSenderWithFallback,
   reportSenderFailure,
   CREDENTIAL_ENV_VARS,
 } from "./lib/resend-preflight";
@@ -44,19 +45,12 @@ import {
 } from "./lib/lead-email-resolver";
 import { ensureLiveB2bChannel } from "../shared/guardrail-store";
 import {
-  countdownLabel,
-  formatMilestoneDate,
-  listMilestones,
-  nextDeadline,
-} from "../src/lib/dpp-timeline";
-import {
   CHANNEL_PARTNER_LEAD_SOURCE,
   CHANNEL_PARTNER_TARGETS,
   allowPartnerLiveSends,
   assertPartnerRunAllowed,
   orderPartnerTargetsForSend,
   shouldLoadPartnerTargets,
-  type ChannelPartnerTarget,
 } from "./lib/channel-partners";
 import {
   HIGH_LEVERAGE_LEAD_SOURCE,
@@ -312,7 +306,6 @@ const QRON_TARGETS = [
 // Copy lives in scripts/lib/b2b-templates.ts so it can be tested against the
 // claim checker; see that file for what the previous copy got wrong.
 
-
 /** Dry-run only (see assertHighLeverageRunAllowed). Research notes stay out of the body. */
 function highLeverageEmail(t: HighLeverageTarget): EmailDraft {
   const product =
@@ -376,7 +369,7 @@ async function processTargets<
   let queued = 0;
   totalAttempted += targets.length;
 
-  const from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
+  let from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
 
   if (!hasResendKey && !isDryRun) {
     console.warn(
@@ -391,7 +384,13 @@ async function processTargets<
   let senderOk = true;
   let credential: string | undefined;
   if (hasResendKey && !isDryRun) {
-    const check = await checkSender(from);
+    // Launch mode (OUTREACH_SENDER_FALLBACK=true) swaps an unverified segment
+    // sender for the verified FALLBACK_FROM instead of skipping the segment.
+    const check = await checkSenderWithFallback(
+      from,
+      FALLBACK_FROM,
+      process.env.OUTREACH_SENDER_FALLBACK === "true"
+    );
     senderOk = check.ok;
     if (!check.ok) {
       reportSenderFailure(check, `b2b:${segmentName}`);
@@ -400,6 +399,12 @@ async function processTargets<
       );
       sendFailures.push(`${segmentName} sender ${from}: ${check.reason}`);
     } else {
+      if (check.fellBackFrom) {
+        console.warn(
+          `::warning::[b2b:${segmentName}] ${check.fellBackFrom} cannot send (${check.primaryReason}); using ${check.from}`
+        );
+        from = check.from;
+      }
       credential = check.credential;
       console.log(`  ✅ Sender verified: ${from} (via ${check.credential})`);
     }
@@ -524,7 +529,9 @@ async function processTargets<
     }
 
     if (!email) {
-      console.log(`     ℹ️  ${t.company}: ${(via ? describeSkipReason(via) : "no address listed")}`);
+      console.log(
+        `     ℹ️  ${t.company}: ${via ? describeSkipReason(via) : "no address listed"}`
+      );
       queued++;
       continue;
     }

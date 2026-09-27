@@ -12,41 +12,29 @@
   "main": "app-worker-entry.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Last-mile: OpenNext esbuild still traces playwright-core via the cron
+  // task-runner graph. worker-app/wrangler.toml already aliases it; this
+  // file is the one Cloudflare Workers Builds: authichain-app actually uses.
+  "alias": {
+    "playwright-core": "./server/stubs/playwright-core.cjs",
+    "chromium-bidi": "./server/stubs/playwright-core.cjs"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // KV namespace for OpenNext incremental cache (ISR).
-  // Create with: npx wrangler kv namespace create authichain-app-cache
-  // Then uncomment and paste the namespace id.
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "NEXT_INC_CACHE_KV",
-  //     "id": "<KV_NAMESPACE_ID>"
-  //   }
-  // ],
-  // Bindings already live on the authichain-app script (read from the
-  // Cloudflare API, 2026-09-25). wrangler deploy replaces non-secret bindings
-  // with what this file declares, so omitting them would silently drop them.
-  // Same ids as worker-app/wrangler.toml.
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
       "id": "7c8e9466e57843199f6f768615e42a5c"
     }
   ],
-  // Hyperdrive accelerates the Supabase session pooler for pg/postgres TCP
-  // connections.
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "97d767ff69584161a0672cd942e9364a"
     }
   ],
-  // RateLimiter DO namespace already exists on the live script (SQLite-backed,
-  // live migration_tag "v1"). This v1 mirrors that history exactly; wrangler
-  // skips tags already applied, so nothing is re-created. Never add a
-  // delete-class migration here: it would wipe the namespace's data.
   "durable_objects": {
     "bindings": [
       {

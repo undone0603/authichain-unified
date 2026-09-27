@@ -24,6 +24,12 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
+import {
+  DPP_CATEGORIES,
+  DPP_QUESTIONS,
+  parseDppReadinessInput,
+  scoreDppReadiness,
+} from "../../../src/lib/dpp-readiness.ts";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -41,10 +47,9 @@ const TOOLS = [
   },
   {
     name: "verify",
-    description:
-      x402PaidVerifyStatus().bound
-        ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
-        : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
+    description: x402PaidVerifyStatus().bound
+      ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
+      : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
     inputSchema: {
       type: "object",
       properties: {
@@ -72,7 +77,38 @@ const TOOLS = [
       required: ["assetId"],
     },
   },
+  {
+    name: "dpp_readiness_check",
+    description:
+      "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        category: {
+          type: "string",
+          enum: DPP_CATEGORIES.map(c => c.id),
+          description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join(
+            "; "
+          ),
+        },
+        sells_in_eu: {
+          type: "boolean",
+          description:
+            "Sold into the EU directly or via an importer. Default true.",
+        },
+        ...Object.fromEntries(
+          DPP_QUESTIONS.map(q => [
+            q.id,
+            { type: "boolean", description: q.question },
+          ])
+        ),
+      },
+      required: ["category"],
+    },
+  },
 ];
+
+const DPP_CHECK_URL = "https://authichain.com/dpp-check";
 
 function normalizePath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
@@ -342,11 +378,38 @@ async function handleRpc(
         ],
       });
     }
+    if (name === "dpp_readiness_check") {
+      const args = params.arguments ?? {};
+      const input = parseDppReadinessInput(k => args[k]);
+      if (!input) {
+        return rpcResult(id, {
+          content: [
+            {
+              type: "text",
+              text: `category is required, one of: ${DPP_CATEGORIES.map(c => c.id).join(", ")}`,
+            },
+          ],
+          isError: true,
+        });
+      }
+      const result = scoreDppReadiness(input, {
+        auditPrice: planUsd("dpp_readiness"),
+        auditUrl: planPaymentLink("dpp_readiness"),
+      });
+      return rpcResult(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2),
+          },
+        ],
+      });
+    }
     return rpcResult(id, {
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,
