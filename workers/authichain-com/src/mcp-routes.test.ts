@@ -19,7 +19,9 @@ describe("mcp discovery", () => {
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
     expect(isMcpPath("/api/x402")).toBe(false);
-    expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(false);
+    expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(
+      false
+    );
   });
 
   it("GET discovery points at Payment Links and unpaid POST x402, not GET checkout", async () => {
@@ -39,9 +41,7 @@ describe("mcp discovery", () => {
         };
       };
       expect(body.protocol).toBe("mcp");
-      expect(body.pay.x402).toBe(
-        "POST https://authichain.com/api/x402"
-      );
+      expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
       expect(body.pricing.humanCheckout.dppPaymentLink).toBe(
         planPaymentLink("dpp_readiness")
       );
@@ -102,6 +102,42 @@ describe("mcp discovery", () => {
       "authichain.com"
     );
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
+  });
+
+  it("tools/call dpp_readiness_check is free and scores the answers", async () => {
+    const call = (args: Record<string, unknown>) =>
+      tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 3,
+            method: "tools/call",
+            params: { name: "dpp_readiness_check", arguments: args },
+          }),
+        })
+      );
+    const ok = await call({
+      category: "battery_passport",
+      unique_id: true,
+      supplier_data: true,
+    });
+    expect(ok?.status).toBe(200);
+    const body = (await ok!.json()) as {
+      result: { content: Array<{ text: string }>; isError?: boolean };
+    };
+    expect(body.result.isError).toBeUndefined();
+    const result = JSON.parse(body.result.content[0].text);
+    expect(result.score).toBe(40);
+    expect(result.category.date).toBe("2027-02-18");
+    expect(result.web).toBe("https://authichain.com/dpp-check");
+    expect(result.nextStep).toContain(planPaymentLink("dpp_readiness"));
+
+    const bad = (await (await call({}))!.json()) as {
+      result: { isError?: boolean };
+    };
+    expect(bad.result.isError).toBe(true);
   });
 
   it("tools/call verify is unpaid HTTP 402, not fake SECURED JSON", async () => {
@@ -304,7 +340,9 @@ describe("mcp discovery", () => {
   });
 
   it("returns null for other paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleMcp(req("https://authichain.com/checkout/dpp_readiness"))).toBeNull();
+    expect(
+      await tryHandleMcp(req("https://authichain.com/checkout/dpp_readiness"))
+    ).toBeNull();
     expect(await tryHandleMcp(req("/dashboard"))).toBeNull();
   });
 });

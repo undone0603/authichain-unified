@@ -8,6 +8,11 @@ import {
 } from "../autonomy/reconcile.mjs";
 import { evaluate } from "../autonomy/deliverability-breaker.mjs";
 import {
+  MAX_WINDOW_DAYS,
+  launchMode,
+  validateLaunchMode,
+} from "../autonomy/launch-mode.mjs";
+import {
   decideIssueAction,
   evaluateWorkflows,
   runProbes,
@@ -69,6 +74,98 @@ describe("autonomy manifest", () => {
     expect(
       validateManifest(m, ["ci.yml", "a.yml", "b.yml", "m.yml"]).join()
     ).toMatch(/0-50/);
+  });
+});
+
+describe("launch mode", () => {
+  const NOW = new Date("2026-09-27T12:00:00Z");
+  const withLaunch = (launch_mode: Record<string, unknown>) => ({
+    ...mini(),
+    launch_mode,
+  });
+
+  it("is active until the end of its expiry day, with its own cap", () => {
+    const m = withLaunch({
+      enabled: true,
+      expires: "2026-10-31",
+      cold_outreach_cap: 25,
+    });
+    expect(launchMode(m, NOW)).toEqual({
+      active: true,
+      expires: "2026-10-31",
+      daysLeft: 35,
+      coldOutreachCap: 25,
+    });
+    expect(launchMode(m, new Date("2026-10-31T23:00:00Z")).active).toBe(true);
+  });
+
+  it("tightens back on its own after expiry", () => {
+    const m = withLaunch({
+      enabled: true,
+      expires: "2026-10-31",
+      cold_outreach_cap: 25,
+    });
+    const after = launchMode(m, new Date("2026-11-01T00:00:01Z"));
+    expect(after.active).toBe(false);
+    expect(after.coldOutreachCap).toBe(10);
+  });
+
+  it("is inactive when absent, disabled or malformed", () => {
+    expect(launchMode(mini(), NOW).active).toBe(false);
+    expect(
+      launchMode(withLaunch({ enabled: false, expires: "2026-10-31" }), NOW)
+        .active
+    ).toBe(false);
+    expect(
+      launchMode(withLaunch({ enabled: true, expires: "soon" }), NOW).active
+    ).toBe(false);
+    expect(
+      launchMode(withLaunch({ enabled: "yes", expires: "2026-10-31" }), NOW)
+        .active
+    ).toBe(false);
+  });
+
+  it("falls back to the normal cap when no launch cap is set", () => {
+    expect(
+      launchMode(withLaunch({ enabled: true, expires: "2026-10-31" }), NOW)
+        .coldOutreachCap
+    ).toBe(10);
+  });
+
+  it(`rejects a window over ${MAX_WINDOW_DAYS} days, a bad date and a cap over 50`, () => {
+    expect(
+      validateLaunchMode(
+        withLaunch({ enabled: true, expires: "2027-06-01" }),
+        NOW
+      ).join()
+    ).toMatch(/within 90 days/);
+    expect(
+      validateLaunchMode(
+        withLaunch({ enabled: true, expires: "31/10/2026" }),
+        NOW
+      ).join()
+    ).toMatch(/YYYY-MM-DD/);
+    expect(
+      validateLaunchMode(
+        withLaunch({
+          enabled: true,
+          expires: "2026-10-31",
+          cold_outreach_cap: 500,
+        }),
+        NOW
+      ).join()
+    ).toMatch(/0-50/);
+    expect(
+      validateLaunchMode(
+        withLaunch({ enabled: false, expires: "2027-06-01" }),
+        NOW
+      )
+    ).toEqual([]);
+    expect(validateLaunchMode(mini(), NOW)).toEqual([]);
+  });
+
+  it("the real manifest's launch window is within bounds", () => {
+    expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
 });
 
@@ -461,9 +558,9 @@ describe("owner digest scoreboard", async () => {
     expect(
       isRealCheckout({ ...live, customer_details: { email: null } }, founders)
     ).toBe(false);
-    expect(
-      isRealCheckout({ ...live, customer_email: "   " }, founders)
-    ).toBe(false);
+    expect(isRealCheckout({ ...live, customer_email: "   " }, founders)).toBe(
+      false
+    );
     // walkthrough / fixture emails
     expect(
       isRealCheckout(

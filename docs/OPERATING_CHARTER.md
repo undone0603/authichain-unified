@@ -55,6 +55,29 @@ To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 - Merging a PR that touches security, revenue, schema, or this charter.
 - Any claim of a customer, partner, certification or result that isn't verifiable.
 
+## Launch mode
+
+The owner decided on 2026-09-27 to loosen named gates until first revenue, then
+tighten back automatically. The switch is `launch_mode` in
+`.github/autonomy.json`; `scripts/autonomy/launch-mode.mjs` is the only reader.
+
+- **Expires on its own.** After `expires` every loop falls back to the gate it
+  had before. CI rejects a window longer than 90 days. To end it early, set
+  `enabled` to `false` and merge.
+- **What loosens while active:**
+  - `agentz-orchestration` runs live lead qualification and HubSpot sync on its
+    schedule (the AgentZ architect stays dry-run).
+  - The owner-LAN AgentZ ping and its webhook become warnings, not failures.
+  - `b2b-outreach` uses `launch_mode.cold_outreach_cap` instead of
+    `cold_outreach.max_new_prospects_per_day`, and an unverified segment sender
+    falls back to the verified `OUTREACH_FROM_EMAIL` instead of skipping.
+  - `gov-engine` is on; its Slack digest to the owner is live on schedule.
+- **What never loosens:** the send guard (verified or opt-in addresses only, MX
+  check, CAN-SPAM footer and address, opt-out), the deliverability breaker and
+  its latch, `OWNER_LIVE_SEND`, the truth rule, model-credit or gas spend
+  (`gov-score`, `gov-proposals`, `gov-mint` stay dry on schedule), prices,
+  secrets and DNS, and owner-only merges.
+
 ## Cold outreach
 
 The owner decided on 2026-09-23 to allow autonomous first-touch email. That

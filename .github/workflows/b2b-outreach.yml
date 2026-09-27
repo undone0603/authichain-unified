@@ -83,8 +83,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Launch mode
+        id: launch
+        run: node scripts/autonomy/launch-mode.mjs
+
       - name: Read autonomy manifest
         id: autonomy
+        env:
+          # launch_mode.cold_outreach_cap while launch mode is active, else
+          # cold_outreach.max_new_prospects_per_day (scripts/autonomy/launch-mode.mjs).
+          LAUNCH_CAP: ${{ steps.launch.outputs.cold_outreach_cap }}
         run: |
           set -euo pipefail
           node -e '
@@ -92,9 +100,10 @@ jobs:
             const segs = m.segments.filter((s) => !["partners", "high_leverage", "all"].includes(s));
             const day = new Date().getUTCDay();
             const seg = segs.length ? segs[day % segs.length] : "qron";
+            const cap = Number.parseInt(process.env.LAUNCH_CAP, 10);
             const out = [
               `enabled=${m.enabled === true}`,
-              `cap=${m.max_new_prospects_per_day}`,
+              `cap=${Number.isInteger(cap) ? cap : m.max_new_prospects_per_day}`,
               `segment=${seg}`,
             ].join("\n");
             require("fs").appendFileSync(process.env.GITHUB_OUTPUT, out + "\n");
@@ -204,6 +213,9 @@ jobs:
           AUTHICHAIN_BOOK_URL: ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           FLUSH_QUEUED_ONLY: ${{ inputs.flush_queued || 'false' }}
+          # Launch mode: an unverified segment sender falls back to the verified
+          # OUTREACH_FROM_EMAIL instead of skipping the segment.
+          OUTREACH_SENDER_FALLBACK: ${{ steps.launch.outputs.active }}
           # Scheduled: cold_outreach.max_new_prospects_per_day from the manifest.
           # Manual dispatch: tiny batch of 2. Never a list dump.
           MAX_LIVE_SENDS: ${{ steps.mode.outputs.cap != '0' && steps.mode.outputs.cap || '2' }}
