@@ -23,7 +23,7 @@ export async function GET() {
       },
       blockchain: "Polygon PoS + Base",
       consensus: "5-Agent AI Weighted",
-      status: "Elite / Theater 3 Active",
+      status: "operational",
       docs: "https://authichain.com/api-docs",
     },
     {
