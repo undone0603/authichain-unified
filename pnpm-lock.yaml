@@ -290,8 +290,8 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       stripe:
-        specifier: ^22.5.0
-        version: 22.6.0(@types/node@26.4.0)
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.4.0)
       superjson:
         specifier: ^2.2.6
         version: 2.2.6
@@ -550,8 +550,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       stripe:
-        specifier: ^17.4.0
-        version: 17.7.0
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.5.1)
       thirdweb:
         specifier: ^5.119.4
         version: 5.121.1(1885f59a696a9890617c458c111e33be)
@@ -680,8 +680,8 @@ importers:
         specifier: ^4.13.1
         version: 4.13.5
       stripe:
-        specifier: ^22.6.0
-        version: 22.6.0(@types/node@26.5.1)
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.5.1)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260915.1
@@ -876,8 +876,8 @@ importers:
         specifier: ^2.112.2
         version: 2.112.4
       stripe:
-        specifier: ^22.4.0
-        version: 22.6.0(@types/node@26.5.1)
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.5.1)
 
   workers/threadchain-io: {}
 
@@ -12168,12 +12168,8 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@17.7.0:
-    resolution: {integrity: sha512-aT2BU9KkizY9SATf14WhhYVv2uOapBWX0OFWF4xvcj1mPaNotlSc2CsxpS4DS46ZueSppmCF5BX1sNYBtwBvfw==}
-    engines: {node: '>=12.*'}
-
-  stripe@22.6.0:
-    resolution: {integrity: sha512-Ezk+WYEEwX2DLxFrKfb6coznlCMZvCaCYMNPXNHFSZkBIEzF5Hgm7RLb38q/0h9Ol5jsUJGJRorvhzAvckgfhw==}
+  stripe@22.6.2:
+    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/node': '>=18'
@@ -27874,16 +27870,11 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@17.7.0:
-    dependencies:
-      '@types/node': 26.5.1
-      qs: 6.16.0
-
-  stripe@22.6.0(@types/node@26.4.0):
+  stripe@22.6.2(@types/node@26.4.0):
     optionalDependencies:
       '@types/node': 26.4.0
 
-  stripe@22.6.0(@types/node@26.5.1):
+  stripe@22.6.2(@types/node@26.5.1):
     optionalDependencies:
       '@types/node': 26.5.1
 

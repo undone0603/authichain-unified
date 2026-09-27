@@ -133,7 +133,7 @@
     "sanitize-html": "^2.13.0",
     "sonner": "^2.0.8",
     "streamdown": "^2.6.0",
-    "stripe": "^22.5.0",
+    "stripe": "^22.6.2",
     "superjson": "^2.2.6",
     "thirdweb": "^5.121.1",
     "ts-command-line-args": "^2.5.1",
