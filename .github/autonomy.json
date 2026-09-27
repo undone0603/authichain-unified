@@ -88,7 +88,8 @@
         "branch-hygiene.yml": "on",
         "pipeline-tick.yml": "on",
         "genesis-cron.yml": "on",
-        "trust-lab.yml": "on"
+        "trust-lab.yml": "on",
+        "estate-drift.yml": "on"
       }
     },
     "revenue": {
