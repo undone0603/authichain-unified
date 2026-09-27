@@ -96,9 +96,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: resolve-mode
     if: needs.resolve-mode.outputs.ping_agentz == 'true'
-    # AgentZ runs on the owner's LAN behind a tunnel. In launch mode it being
-    # offline must not turn the revenue loop red.
-    continue-on-error: ${{ needs.resolve-mode.outputs.launch == 'true' }}
     outputs:
       status: ${{ job.status }}
     # Job-level env cannot interpolate ${{ env.* }} (Actions parse error:
@@ -117,6 +114,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Health + optional architect dry-run
+        # AgentZ runs on the owner's LAN behind a tunnel. In launch mode it being
+        # offline must not turn the revenue loop red; the failed step stays visible.
+        continue-on-error: ${{ needs.resolve-mode.outputs.launch == 'true' }}
         run: |
           set -euo pipefail
           if [ -n "${OPENCLAW_GATEWAY_URL:-}" ]; then
