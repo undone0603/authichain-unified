@@ -761,7 +761,7 @@
     "title": "EU Digital Product Passport Batteries | AuthiChain",
     "metaDescription": "Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.",
     "h1": "EU Digital Product Passport Batteries",
-    "bodyHtml": "<p>Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Carbon footprint and material composition</li><li>State-of-health and recycled-content tracking</li><li>Ready for the Feb 2027 battery mandate</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the battery passport mandatory?</h3><p>EV and industrial battery passports become mandatory in February 2027.</p><h3>What data is required?</h3><p>Carbon footprint, material composition, state-of-health, and recycled content, among others.</p>",
+    "bodyHtml": "<p>Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Carbon footprint and material composition</li><li>State-of-health and recycled-content tracking</li><li>Ready for the Feb 2027 battery mandate</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When is the battery passport mandatory?</h3><p>From 18 February 2027 for every EV battery, every light means of transport (LMT) battery such as e-bike and e-scooter packs, and every industrial battery over 2 kWh placed on the EU market.</p><h3>What data is required?</h3><p>Carbon footprint, material composition, state-of-health, and recycled content, among others.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -801,7 +801,7 @@
               "name": "When is the battery passport mandatory?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "EV and industrial battery passports become mandatory in February 2027."
+                "text": "From 18 February 2027 for every EV battery, every light means of transport (LMT) battery such as e-bike and e-scooter packs, and every industrial battery over 2 kWh placed on the EU market."
               }
             },
             {
@@ -5606,6 +5606,326 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Flow-down still applies: a prime contractor remains responsible for ensuring subcontractors meet the CMMC level appropriate to the federal contract information or controlled unclassified information they handle, under whichever phase requirement is currently in effect."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "e-bike-battery-passport",
+    "keyword": "e-bike battery passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "E-Bike Battery Passport | AuthiChain",
+    "metaDescription": "From 18 February 2027 every e-bike battery placed on the EU market needs a digital battery passport reachable through a QR code on the battery — at any.",
+    "h1": "E-Bike Battery Passport",
+    "bodyHtml": "<p>From 18 February 2027 every e-bike battery placed on the EU market needs a digital battery passport reachable through a QR code on the battery — at any capacity, not only packs over 2 kWh (Regulation (EU) 2023/1542, Article 77).</p><h2>Why AuthiChain</h2><ul><li>The obligation sits with the economic operator that places the battery on the EU market — usually the brand or importer, not the overseas cell or pack factory</li><li>Each battery needs a unique identifier, a QR code on the pack, and a record covering the Annex XIII fields for its public, interested-party and authority layers</li><li>Start with the free readiness check to see which data you already hold and which you still need from your pack supplier</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the 2 kWh threshold apply to e-bike batteries?</h3><p>No. The 2 kWh threshold applies to industrial batteries. Light means of transport (LMT) batteries, which include e-bike packs, are in scope at any capacity from 18 February 2027.</p><h3>Who creates the passport — us or our battery supplier?</h3><p>The economic operator placing the battery on the EU market is responsible. Your supplier provides much of the data, but the obligation follows whoever puts the battery on the market under their name or imports it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — E-Bike Battery Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "From 18 February 2027 every e-bike battery placed on the EU market needs a digital battery passport reachable through a QR code on the battery — at any capacity, not only packs over 2 kWh (Regulation (EU) 2023/1542, Article 77).",
+          "url": "https://authichain.com/p/e-bike-battery-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "E-Bike Battery Passport",
+              "item": "https://authichain.com/p/e-bike-battery-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the 2 kWh threshold apply to e-bike batteries?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The 2 kWh threshold applies to industrial batteries. Light means of transport (LMT) batteries, which include e-bike packs, are in scope at any capacity from 18 February 2027."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who creates the passport — us or our battery supplier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The economic operator placing the battery on the EU market is responsible. Your supplier provides much of the data, but the obligation follows whoever puts the battery on the market under their name or imports it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-e-bike-importer-obligations",
+    "keyword": "battery passport e-bike importer obligations",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport E-Bike Importer Obligations | AuthiChain",
+    "metaDescription": "If you import e-bikes, e-cargo bikes or e-scooters into the EU under your own brand, the battery passport obligation from 18 February 2027 is yours, not your.",
+    "h1": "Battery Passport E-Bike Importer Obligations",
+    "bodyHtml": "<p>If you import e-bikes, e-cargo bikes or e-scooters into the EU under your own brand, the battery passport obligation from 18 February 2027 is yours, not your factory’s.</p><h2>Why AuthiChain</h2><ul><li>The importer or brand owner placing an LMT battery on the EU market is the responsible economic operator under the Battery Regulation</li><li>Your contract with the pack maker needs to deliver the passport data — identifiers, chemistry, capacity, expected lifetime and supply-chain information — before shipment, not after</li><li>A missing passport means the battery cannot be placed on the market from 18 February 2027, so the gap has to close in your 2026 production runs</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>We only resell a Chinese-built e-bike — are we affected?</h3><p>If you are the first to place it on the EU market, as importer or under your own brand, yes. A dealer buying from an EU importer is generally not the responsible operator.</p><h3>What should we ask our factory for now?</h3><p>A unique identifier per battery, the Annex XIII technical data, and a commitment to supply updates. The free readiness check lists what you still need.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport E-Bike Importer Obligations",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "If you import e-bikes, e-cargo bikes or e-scooters into the EU under your own brand, the battery passport obligation from 18 February 2027 is yours, not your factory’s.",
+          "url": "https://authichain.com/p/battery-passport-e-bike-importer-obligations"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport E-Bike Importer Obligations",
+              "item": "https://authichain.com/p/battery-passport-e-bike-importer-obligations"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "We only resell a Chinese-built e-bike — are we affected?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "If you are the first to place it on the EU market, as importer or under your own brand, yes. A dealer buying from an EU importer is generally not the responsible operator."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What should we ask our factory for now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A unique identifier per battery, the Annex XIII technical data, and a commitment to supply updates. The free readiness check lists what you still need."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "e-scooter-battery-passport-eu",
+    "keyword": "e-scooter battery passport eu",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "E-Scooter Battery Passport EU | AuthiChain",
+    "metaDescription": "E-scooter batteries are light means of transport (LMT) batteries under the EU Battery Regulation, so from 18 February 2027 each one placed on the EU market.",
+    "h1": "E-Scooter Battery Passport EU",
+    "bodyHtml": "<p>E-scooter batteries are light means of transport (LMT) batteries under the EU Battery Regulation, so from 18 February 2027 each one placed on the EU market needs a QR-linked digital passport.</p><h2>Why AuthiChain</h2><ul><li>Applies to e-scooter packs at any capacity, whether sold with the scooter or as a replacement battery</li><li>The brand or importer placing the battery on the EU market carries the obligation</li><li>Replacement and spare batteries placed on the market after the deadline need their own passports too</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do replacement e-scooter batteries need a passport?</h3><p>Yes — a replacement LMT battery placed on the EU market from 18 February 2027 is a battery placed on the market in its own right.</p><h3>Is there a free way to check our readiness?</h3><p>Yes. The AuthiChain DPP readiness check scores your data against the obligation in a few minutes, free and without sign-up.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — E-Scooter Battery Passport EU",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "E-scooter batteries are light means of transport (LMT) batteries under the EU Battery Regulation, so from 18 February 2027 each one placed on the EU market needs a QR-linked digital passport.",
+          "url": "https://authichain.com/p/e-scooter-battery-passport-eu"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "E-Scooter Battery Passport EU",
+              "item": "https://authichain.com/p/e-scooter-battery-passport-eu"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do replacement e-scooter batteries need a passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — a replacement LMT battery placed on the EU market from 18 February 2027 is a battery placed on the market in its own right."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is there a free way to check our readiness?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The AuthiChain DPP readiness check scores your data against the obligation in a few minutes, free and without sign-up."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "lmt-battery-passport-requirements",
+    "keyword": "lmt battery passport requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Lmt Battery Passport Requirements | AuthiChain",
+    "metaDescription": "Light means of transport (LMT) batteries — the packs in e-bikes, e-scooters and similar vehicles — need an EU battery passport from 18 February 2027 under.",
+    "h1": "Lmt Battery Passport Requirements",
+    "bodyHtml": "<p>Light means of transport (LMT) batteries — the packs in e-bikes, e-scooters and similar vehicles — need an EU battery passport from 18 February 2027 under Article 77 of Regulation (EU) 2023/1542.</p><h2>Why AuthiChain</h2><ul><li>A unique identifier per battery, linked by a QR code printed or engraved on the battery</li><li>Annex XIII data split into what the public, interested parties and authorities can see</li><li>Carbon footprint and recycled-content declarations follow their own later timelines under separate delegated acts, so check each field’s date rather than assuming all apply at once</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What counts as an LMT battery?</h3><p>A sealed battery weighing 25 kg or less that powers wheeled vehicles such as e-bikes and e-scooters. Heavier traction batteries fall under the EV or industrial categories instead.</p><h3>Is this legal advice?</h3><p>No. This is a summary of the regulation; confirm your specific obligations against Regulation (EU) 2023/1542 and with counsel.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Lmt Battery Passport Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Light means of transport (LMT) batteries — the packs in e-bikes, e-scooters and similar vehicles — need an EU battery passport from 18 February 2027 under Article 77 of Regulation (EU) 2023/1542.",
+          "url": "https://authichain.com/p/lmt-battery-passport-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Lmt Battery Passport Requirements",
+              "item": "https://authichain.com/p/lmt-battery-passport-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What counts as an LMT battery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A sealed battery weighing 25 kg or less that powers wheeled vehicles such as e-bikes and e-scooters. Heavier traction batteries fall under the EV or industrial categories instead."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is this legal advice?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. This is a summary of the regulation; confirm your specific obligations against Regulation (EU) 2023/1542 and with counsel."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-for-small-e-bike-brands",
+    "keyword": "battery passport for small e-bike brands",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport For Small E-Bike Brands | AuthiChain",
+    "metaDescription": "Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.",
+    "h1": "Battery Passport For Small E-Bike Brands",
+    "bodyHtml": "<p>Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.</p><h2>Why AuthiChain</h2><ul><li>There is no SME exemption for LMT battery passports under Article 77</li><li>The first step is knowing which data you already have and which your pack supplier must provide — a written gap list, not a software platform</li><li>AuthiChain’s EU DPP Readiness audit turns that gap list into a written plan for your product line for a one-time fee</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do small brands get more time?</h3><p>No. The 18 February 2027 date applies to every economic operator placing LMT batteries on the EU market, regardless of size.</p><h3>Do we need to buy a passport platform now?</h3><p>Not first. Establish your data gaps and supplier commitments, then choose how to publish the passport. The free readiness check is a good starting point.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport For Small E-Bike Brands",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Small e-bike and e-cargo brands face the same 18 February 2027 battery passport deadline as the largest manufacturers, without a compliance team to build it.",
+          "url": "https://authichain.com/p/battery-passport-for-small-e-bike-brands"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport For Small E-Bike Brands",
+              "item": "https://authichain.com/p/battery-passport-for-small-e-bike-brands"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do small brands get more time?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The 18 February 2027 date applies to every economic operator placing LMT batteries on the EU market, regardless of size."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do we need to buy a passport platform now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not first. Establish your data gaps and supplier commitments, then choose how to publish the passport. The free readiness check is a good starting point."
               }
             }
           ]
