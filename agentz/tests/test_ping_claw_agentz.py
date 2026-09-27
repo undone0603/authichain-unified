@@ -140,15 +140,25 @@ def test_orchestration_workflow_wires_live_hosts_and_dry_run():
 
 
 def test_scheduled_dry_run_is_fail_closed():
-    """Schedule must never inherit inputs.dry_run || 'false' (that was live)."""
+    """Schedule never inherits inputs.dry_run || 'false' (that was live).
+
+    It goes live only behind the launch-mode resolver, which reports inactive
+    when launch mode is disabled, expired or malformed; otherwise dry-run.
+    """
     yml = (REPO / ".github" / "workflows" / "agentz-orchestration.yml").read_text()
     assert "${{ inputs.dry_run || 'false' }}" not in yml
     assert "${{ inputs.dry_run || 'true' }}" not in yml
+    assert "run: node scripts/autonomy/launch-mode.mjs" in yml
     assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' in yml
     schedule_block = yml.split('if [ "${{ github.event_name }}" = "schedule" ]; then', 1)[1]
     schedule_block = schedule_block.split("fi", 1)[0]
-    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in schedule_block
-    assert 'echo "dry_run=false"' not in schedule_block
+    guard = 'if [ "${{ steps.launch.outputs.active }}" = "true" ]; then'
+    before, guarded = schedule_block.split(guard, 1)
+    live, fallback = guarded.split("else", 1)
+    assert 'echo "dry_run=false"' not in before
+    assert 'echo "dry_run=false" >> "$GITHUB_OUTPUT"' in live
+    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in fallback
+    assert 'echo "dry_run=false"' not in fallback
     assert "OWNER_LIVE_SEND" not in schedule_block
     assert "DRY_RUN: ${{ needs.resolve-mode.outputs.dry_run }}" in yml
 

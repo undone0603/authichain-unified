@@ -26,6 +26,12 @@
       "min_sample": 10
     }
   },
+  "launch_mode": {
+    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced).",
+    "enabled": true,
+    "expires": "2026-10-31",
+    "cold_outreach_cap": 25
+  },
   "stripe_webhooks": [
     {
       "id": "we_1UGTCSGqTruSqV8ThM9bXVWp",
@@ -60,7 +66,9 @@
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
         "autonomy-reconcile.yml": "on",
-        "stripe-webhook-reconcile.yml": "on"
+        "stripe-webhook-reconcile.yml": "on",
+        "mcp-registry-publish.yml": "on",
+        "npm-publish-verify.yml": "on"
       }
     },
     "health": {
@@ -90,11 +98,11 @@
         "revenue-cycle.yml": "on",
         "agentz-orchestration.yml": "on",
         "email-proposals.yml": "on",
-        "gov-engine.yml": "off",
-        "gov-ingest.yml": "off",
-        "gov-score.yml": "off",
-        "gov-proposals.yml": "off",
-        "gov-notify.yml": "off",
+        "gov-engine.yml": "on",
+        "gov-ingest.yml": "on",
+        "gov-score.yml": "on",
+        "gov-proposals.yml": "on",
+        "gov-notify.yml": "on",
         "gov-mint.yml": "on",
         "owner-digest.yml": "on"
       }

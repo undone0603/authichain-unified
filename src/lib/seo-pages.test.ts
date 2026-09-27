@@ -49,10 +49,12 @@ describe("seo-pages loader", () => {
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(page?.bodyHtml).toContain('name="email"');
-    expect(page?.bodyHtml).toContain('href="https://authichain.govchain.us/x402"');
+    expect(page?.bodyHtml).toContain(
+      'href="https://authichain.govchain.us/x402"'
+    );
     expect(page?.bodyHtml).not.toContain("GET /api/checkout");
     expect(page?.jsonLd.url).toBe(
-      "https://authichain.govchain.us/authentic-agentic-economy"
+      "https://authichain.com/authentic-agentic-economy"
     );
   });
 
@@ -144,7 +146,10 @@ describe("generated SEO money-path CTAs", () => {
       'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(batteries?.bodyHtml).toContain(
-      'href="https://authichain.govchain.us/pricing"'
+      'href="https://authichain.com/pricing"'
+    );
+    expect(batteries?.bodyHtml).toContain(
+      'href="https://authichain.com/dpp-check"'
     );
   });
 
@@ -271,7 +276,7 @@ describe("generated SEO money-path CTAs", () => {
     expect(dpp?.bodyHtml).not.toContain("$49/mo");
     expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
     expect(dpp?.jsonLd.url).toBe(
-      "https://authichain.com/what-is-a-digital-product-passport"
+      "https://authichain.com/p/what-is-a-digital-product-passport"
     );
   });
 });
