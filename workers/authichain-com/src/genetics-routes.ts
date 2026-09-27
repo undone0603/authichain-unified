@@ -12,6 +12,9 @@
 
 import {
   DECARB,
+  UNLISTED_CACHE_CONTROL,
+  UNLISTED_ROBOTS_TAG,
+  farmIsUnlisted,
   getCultivar,
   getDossier,
   listFarms,
@@ -438,6 +441,24 @@ ${checkoutCard()}
   });
 }
 
+
+const UNLISTED_HEADERS: Record<string, string> = {
+  ...HTML_SECURITY_HEADERS,
+  "cache-control": UNLISTED_CACHE_CONTROL,
+  "x-robots-tag": UNLISTED_ROBOTS_TAG,
+};
+
+/** No chemistry, no farm name, no checkout. Private and unindexed. */
+function unlistedDenied(): Response {
+  const body = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Not found</title>
+</head><body>Not found</body></html>`;
+  return new Response(body, { status: 404, headers: UNLISTED_HEADERS });
+}
+
 function html(status: number, body: string): Response {
   return new Response(body, { status, headers: HTML_SECURITY_HEADERS });
 }
@@ -456,6 +477,9 @@ export function tryHandleGeneticsRoutes(request: Request): Response | null {
   }
   if (p.startsWith("/passport/")) {
     return Response.redirect(new URL("/passport", url).toString(), 302);
+  }
+  if (parts[0] === "genetics" && (parts.length === 2 || parts.length === 3)) {
+    if (farmIsUnlisted(parts[1])) return unlistedDenied();
   }
   if (parts[0] === "genetics" && parts.length === 2) {
     const page = farmPage(parts[1]);
