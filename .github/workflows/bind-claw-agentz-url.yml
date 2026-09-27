@@ -91,7 +91,7 @@ jobs:
           echo "bound claw to ${AGENTZ_URL} (secret values not logged)"
           echo "skipped OPENCLAW_GATEWAY_URL (owner-set only; do not invent)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: agentz-agent-secret
           path: ${{ runner.temp }}/agent_secret.value

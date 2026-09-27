@@ -1,0 +1,55 @@
+name: MCP Registry Publish
+
+# Lists the live remote MCP server (https://authichain.com/mcp) in the official
+# MCP registry as io.github.undone0603/authichain. GitHub OIDC login: no secret.
+# Bump "version" in server.json to publish a new entry; an already-listed
+# version is skipped.
+
+on:
+  push:
+    branches: [main]
+    paths: [server.json]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mcp-registry-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish server.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install mcp-publisher
+        run: curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+
+      - name: Validate
+        run: ./mcp-publisher validate
+
+      - name: Skip if this version is already listed
+        id: listed
+        run: |
+          set -euo pipefail
+          name=$(jq -r .name server.json)
+          ver=$(jq -r .version server.json)
+          if curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=${name}&version=${ver}" \
+            | jq -e --arg n "$name" --arg v "$ver" '[.servers[]? | select(.server.name == $n and .server.version == $v)] | length > 0' >/dev/null; then
+            echo "listed=true" >> "$GITHUB_OUTPUT"
+            echo "$name@$ver is already in the registry"
+          else
+            echo "listed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login (GitHub OIDC) and publish
+        if: steps.listed.outputs.listed == 'false'
+        run: |
+          set -euo pipefail
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
