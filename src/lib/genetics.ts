@@ -110,11 +110,21 @@ export interface DerivedCertificate extends Certificate {
   };
 }
 
+/** The testing lab named on every certificate in a farm file. */
+type Laboratory = {
+  name: string;
+  address: string;
+  /** null when the certificate does not publish it (GTR's PREE CoAs). */
+  license: string | null;
+  accreditation: string | null;
+  method: string;
+};
+
 type FarmFile = {
   updated: string;
   unlisted?: boolean;
   provenance_warning: string;
-  laboratory: unknown;
+  laboratory: Laboratory;
   party_of_record: {
     name: string;
     address: string;
@@ -221,7 +231,6 @@ export function toSlug(cultivarId: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
-
 
 export const UNLISTED_PREVIEW_ENV = "GENETICS_UNLISTED_PREVIEW";
 export const UNLISTED_TOKEN_ENV = "GENETICS_UNLISTED_TOKEN";
