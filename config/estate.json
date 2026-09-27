@@ -1,0 +1,87 @@
+{
+  "$comment": "Cloudflare estate inventory. Read by scripts/autonomy/estate-drift.mjs (weekly, read-only). Every live Worker must either have a wrangler config in this repo (matched by name) or be listed under off_repo_workers with a disposition. Snapshot taken 2026-09-26 from the Cloudflare API: 66 Workers, 7 D1 databases, 20 KV namespaces, 10 R2 buckets. Counts here are a snapshot for humans; the drift job always reads the live list.",
+  "snapshot": {
+    "taken": "2026-09-26",
+    "workers": 66,
+    "d1": 7,
+    "kv": 20,
+    "r2": 10
+  },
+  "dispositions": {
+    "archive": "Source recovered into docs/archive/cf-workers/. Goal: move to workers/<name> with a wrangler config that matches the live name.",
+    "retire": "Superseded. Owner confirms nothing routes to it, then deletes it in the Cloudflare dashboard (deleting is an owner action).",
+    "unrelated": "Not an AuthiChain surface. Keep off AuthiChain docs; ignore in drift.",
+    "unknown": "Source not found anywhere. Owner decides: snapshot or retire."
+  },
+  "off_repo_workers": {
+    "first-dollar-desk": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/first-dollar-desk.js",
+      "note": "Live money path: Stripe payment links, Base USDC ledger in KV first-dollar-ledger, /mcp and /api/agent/verify. Highest-priority source to restore."
+    },
+    "authichain-agentz-webhook": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/authichain-agentz-webhook.js",
+      "note": "Receives agentz-orchestration.yml events (x-agentz-secret) into KV with a 90-day TTL."
+    },
+    "gmail-relay-z": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/gmail-relay-z.js",
+      "note": "See OFFREPO_WORKERS.md."
+    },
+    "qron-self-heal": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/qron-self-heal.js",
+      "note": "See OFFREPO_WORKERS.md. Superseded in spirit by ops-pulse."
+    },
+    "qron-daily-ops": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/qron-daily-ops.js",
+      "note": "See OFFREPO_WORKERS.md. Superseded in spirit by owner-digest. Named in SECURITY-REMEDIATION-CRITICAL.md."
+    },
+    "qron-portfolio": {
+      "disposition": "archive",
+      "archive": "docs/archive/cf-workers/qron-portfolio.js",
+      "note": "See OFFREPO_WORKERS.md."
+    },
+    "qron-stripe-webhook": {
+      "disposition": "retire",
+      "archive": "docs/archive/cf-workers/qron-stripe-webhook.js",
+      "note": "Named in SECURITY-REMEDIATION-CRITICAL.md (pending rotation). Retire after the Stripe keys it used are rolled."
+    },
+    "authichain-unified": {
+      "disposition": "retire",
+      "archive": "docs/archive/cf-workers/authichain-unified.js",
+      "note": "June 2026 script; the app now runs as authichain-app (wrangler.app.jsonc)."
+    },
+    "authichain-consensus-engine": {
+      "disposition": "retire",
+      "archive": "docs/archive/cf-workers/authichain-consensus-engine.js",
+      "note": "Last modified 2026-06-18."
+    },
+    "stripe-webhook-worker": {
+      "disposition": "retire",
+      "note": "Last modified 2026-06-18; stripe-webhook (workers/stripe-webhook) is the live handler."
+    },
+    "qron-edge": {
+      "disposition": "unknown",
+      "note": "Last modified 2026-06-22. apps/qron-platform/wrangler.toml deploys qron-edge-fleet, not qron-edge."
+    },
+    "storepilot": {
+      "disposition": "unknown",
+      "note": "StorePilot is hidden in src/lib/plans.ts. Billing tables exist in supabase/migrations/20260920143338_storepilot_billing_tables.sql."
+    },
+    "esktop": {
+      "disposition": "retire",
+      "note": "Created 2026-09-13; name looks like a typo and the script has no readable code (assets only)."
+    },
+    "collective-cloud": {
+      "disposition": "unrelated",
+      "note": "Static site plus a USGS earthquake feed proxy. Not an AuthiChain surface."
+    }
+  },
+  "expected_not_live": {
+    "$comment": "Repo configs that are intentionally not deployed under their own name.",
+    "qron-edge-fleet": "apps/qron-platform legacy fleet config"
+  }
+}

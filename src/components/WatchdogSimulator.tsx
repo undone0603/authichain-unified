@@ -45,7 +45,7 @@ export default function WatchdogSimulator() {
           <h2 className="text-xl font-black uppercase tracking-tight">Live Transport: Fleet 04</h2>
         </div>
         <span className="text-[10px] px-2 py-1 rounded bg-zinc-900 text-zinc-500 font-black uppercase tracking-widest border border-zinc-800">
-          Theater 1: AgTech
+          AgTech
         </span>
       </div>
 
