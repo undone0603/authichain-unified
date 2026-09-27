@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 const OUT = path.join(__dirname, '..', 'content', 'seo', 'pages.json');
+const SLUGS_OUT = path.join(__dirname, '..', 'content', 'seo', 'sitemap-slugs.json');
 
 const BRANDS = {
   authichain: { name: 'AuthiChain', domain: 'authichain.com', origin: 'authichain.com', price: 'EU DPP Readiness is $299 one-time.' },
@@ -31,6 +32,7 @@ const LIVE_MONEY = {
   authichainDppCheckout: 'https://authichain.com/checkout/dpp_readiness',
   authichainDppPay: 'https://authichain.com/checkout/dpp_readiness',
   authichainPricing: 'https://authichain.com/pricing',
+  authichainDppCheck: 'https://authichain.com/dpp-check',
   strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
   strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
   strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
@@ -124,8 +126,13 @@ function moneyCtaHtml(brandKey, keyword, brand) {
             'Start Farm Plan $149/mo'
           ) + `<p><a href="${LIVE_MONEY.strainchainFarmPay}">Pay $149/mo on Stripe</a></p>`
         : '';
+    const freeCheck =
+      dpp && primaryHref === LIVE_MONEY.authichainDppCheckout
+        ? `<p>Not sure what applies to you? <a href="${LIVE_MONEY.authichainDppCheck}">Take the free DPP readiness check</a> first.</p>`
+        : '';
     return (
       `<h2>Get started</h2>` +
+      freeCheck +
       checkoutEmailFormHtml(primaryHref, primaryLabel) +
       pay +
       farm +
@@ -142,6 +149,21 @@ function brandKeyForPage(page) {
   const byName = Object.keys(BRANDS).find((k) => BRANDS[k].name === page.brand);
   if (byName) return byName;
   return Object.keys(BRANDS).find((k) => BRANDS[k].domain === page.domain) || null;
+}
+
+// authichain.govchain.us is only a fallback host. Seed pages that still name
+// it in jsonLd hand their canonical (worker-app renders jsonLd.url as
+// <link rel=canonical>) to the wrong host. Root seed URLs 301 to /p/<slug>.
+const AUTHICHAIN_ROOT_PAGES = new Set(['authentic-agentic-economy']);
+function normalizeAuthichainHost(page) {
+  if (page.domain !== 'authichain.com' || !page.jsonLd) return page;
+  const target = AUTHICHAIN_ROOT_PAGES.has(page.slug)
+    ? `https://authichain.com/${page.slug}`
+    : `https://authichain.com/p/${page.slug}`;
+  const json = JSON.stringify(page.jsonLd)
+    .split(`https://authichain.govchain.us/${page.slug}"`).join(`${target}"`)
+    .split('https://authichain.govchain.us').join('https://authichain.com');
+  return { ...page, jsonLd: JSON.parse(json) };
 }
 
 function ensureMoneyCta(page) {
@@ -290,7 +312,10 @@ if (clobberedSeeds.length > 0) {
       `slug from PROTECTED_SEED_SLUGS in this file first.`
   );
 }
-const seeds = existing.filter((e) => !genSlugs.has(e.slug)).map(ensureMoneyCta);
+const seeds = existing
+  .filter((e) => !genSlugs.has(e.slug))
+  .map(ensureMoneyCta)
+  .map(normalizeAuthichainHost);
 const unprotectedSeeds = seeds.filter((e) => !PROTECTED_SEED_SLUGS.has(e.slug));
 if (unprotectedSeeds.length > 0) {
   console.warn(
@@ -311,6 +336,12 @@ if (duplicateSlugs.length > 0) {
   );
 }
 fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
+// Landing workers must not import the full catalogue; they list /p/<slug> in
+// their sitemaps from this small per-domain index instead.
+const byDomain = {};
+for (const p of merged) (byDomain[p.domain] ||= []).push(p.slug);
+for (const d of Object.keys(byDomain)) byDomain[d].sort();
+fs.writeFileSync(SLUGS_OUT, JSON.stringify(byDomain, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
 seeds.forEach((s) => console.log(`  - ${s.slug}`));
 console.log(`generated pages: ${generated.length}`);
