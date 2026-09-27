@@ -6,7 +6,7 @@
   "method": {
     "decarboxylation_factor": 0.877,
     "decarboxylation_note": "total_thc = d9_THC + THCA * 0.877. total_thcv = THCV + THCVA * 0.877. Δ8-THC is recorded when present and is not added to total THC.",
-    "verification": "Garlic Berry published total THC 3.374% recomputes to 3.37373 from THCA 3.49 + d9-THC 0.313 and rounds to 3.374. Double Durban lists every named cannabinoid including THCV as <LOQ 0.010%; no THCV total can be derived. Stored ratio_thcv_thc is null when either side is <LOQ so preview tables print —, not 0.00:1."
+    "verification": "Garlic Berry published total THC 3.374% recomputes to 3.374% from THCA 3.49 + d9-THC 0.313. Double Durban lists every named cannabinoid including THCV as <LOQ 0.010%; no THCV total can be derived. A missing pair stores ratio_thcv_thc as null, never 0."
   },
   "laboratory": {
     "name": "PREE Laboratories South",
