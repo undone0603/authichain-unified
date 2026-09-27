@@ -60,7 +60,9 @@
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
         "autonomy-reconcile.yml": "on",
-        "stripe-webhook-reconcile.yml": "on"
+        "stripe-webhook-reconcile.yml": "on",
+        "mcp-registry-publish.yml": "on",
+        "npm-publish-verify.yml": "on"
       }
     },
     "health": {
