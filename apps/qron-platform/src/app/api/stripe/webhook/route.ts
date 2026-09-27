@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-08-26.dahlia' as const });
 
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
