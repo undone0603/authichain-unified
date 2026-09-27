@@ -66,7 +66,8 @@ export const GROWTH_DIRECTORIES: GrowthDirectory[] = [
     url: "https://payapi.market",
     listUrl: "https://payapi.market/list",
     mcp: "https://payapi.market/mcp",
-    probe: "unpaid POST paidRoute must 402 with Base USDC to listing wallet at <= $0.05",
+    probe:
+      "unpaid POST paidRoute must 402 with Base USDC to listing wallet at <= $0.05",
     status: "ready",
     notes: "Submit from /api/x402/listing. Do not type a wallet by hand.",
   },
@@ -76,7 +77,8 @@ export const GROWTH_DIRECTORIES: GrowthDirectory[] = [
     url: "https://payai.network",
     probe: "unpaid 402 body extensions.bazaar + PAYMENT-REQUIRED header",
     status: "declared",
-    notes: "Declared on the 402. Facilitator stays https://facilitator.payai.network.",
+    notes:
+      "Declared on the 402. Facilitator stays https://facilitator.payai.network.",
   },
   {
     id: "mcp-clients",
@@ -174,7 +176,12 @@ export type X402ListingPack = {
   listing: string;
   ready: boolean;
   railStatus: string;
-  directories: Array<{ id: string; status: GrowthDirectoryStatus; listUrl?: string }>;
+  paidVerify: string;
+  directories: Array<{
+    id: string;
+    status: GrowthDirectoryStatus;
+    listUrl?: string;
+  }>;
   sisters: Array<{ origin: string; paidPath: string }>;
   skills: Array<{ id: string; path: string; mcpTool?: string }>;
   payapi: {
@@ -212,10 +219,7 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
       "Paid product-authenticity verify for agents. Unpaid POST returns HTTP 402 ($0.05 USDC on Base). Free catalog, health, and MCP discovery.",
     baseUrl: GROWTH_ORIGIN,
     paidRoute: `${GROWTH_ORIGIN}/api/v1/agent-verify`,
-    paidAliases: [
-      `${GROWTH_ORIGIN}/api/x402`,
-      `${GROWTH_ORIGIN}/mcp`,
-    ],
+    paidAliases: [`${GROWTH_ORIGIN}/api/x402`, `${GROWTH_ORIGIN}/mcp`],
     wallet,
     priceUsd: price.usd,
     priceAtomic: price.atomic,
@@ -285,7 +289,9 @@ export type GrowthDiscoveryBody = {
   pack: X402ListingPack;
 };
 
-export function growthDiscovery(health: ListingHealth = {}): GrowthDiscoveryBody {
+export function growthDiscovery(
+  health: ListingHealth = {}
+): GrowthDiscoveryBody {
   return {
     protocol: "x402",
     origin: GROWTH_ORIGIN,
