@@ -8,6 +8,7 @@
 import { promises as dns } from "node:dns";
 import { recordDryRunSend } from "../email-service";
 import { checkClaims, htmlToText } from "./claims";
+import { signedUnsubscribeUrl } from "./unsubscribe-link";
 
 import {
   assessRecipient,
@@ -47,10 +48,11 @@ export async function domainAcceptsMail(email: string): Promise<boolean> {
  *
  * This used to default to https://authichain.com/unsubscribe, a route that has
  * never existed, so every guarded send carried a dead opt-out link. A reply
- * address is a valid CAN-SPAM opt-out mechanism and it works today: the
- * reply-to inbox is read, and worker/outreach-loop.ts already classifies
- * "unsubscribe" replies. Set UNSUBSCRIBE_URL only to a page that actually
- * records the opt-out.
+ * address is a valid CAN-SPAM opt-out mechanism only if someone reads the
+ * inbox: worker/outreach-loop.ts can classify "unsubscribe" replies, but it is
+ * not wired to any deployed route, so guardedSend refuses a mailto-only send
+ * unless OUTREACH_ALLOW_MAILTO_OPTOUT=true (see optOutIsRecordable). Prefer
+ * OUTREACH_UNSUBSCRIBE_SECRET, which gives every send a signed one-click link.
  */
 export function defaultUnsubscribeUrl(replyTo: string): string {
   // "Name <addr@x>" → "addr@x", without a backtracking regex.
@@ -60,6 +62,57 @@ export function defaultUnsubscribeUrl(replyTo: string): string {
     open >= 0 && close > open ? replyTo.slice(open + 1, close) : replyTo
   ).trim();
   return `mailto:${address}?subject=unsubscribe`;
+}
+
+export type OptOutKind = "signed_link" | "configured_url" | "mailto";
+
+/**
+ * Which opt-out a send carries, most recordable first:
+ *
+ * 1. an explicit `unsubscribeUrl` from the caller;
+ * 2. a per-recipient signed link, when OUTREACH_UNSUBSCRIBE_SECRET is set. The
+ *    edge router verifies it and writes guardrail_suppression_list, the table
+ *    the send gate reads (worker-app/unsubscribe-routes.ts);
+ * 3. UNSUBSCRIBE_URL, a page the operator says records opt-outs;
+ * 4. `mailto:<reply-to>`, which nothing deployed processes automatically.
+ */
+export async function resolveUnsubscribeUrl(opts: {
+  explicit?: string;
+  email: string;
+  replyTo: string;
+  env?: Record<string, string | undefined>;
+}): Promise<{ url: string; kind: OptOutKind }> {
+  const env = opts.env ?? process.env;
+  const kindOf = (url: string): OptOutKind =>
+    url.startsWith("mailto:") ? "mailto" : "configured_url";
+  if (opts.explicit) return { url: opts.explicit, kind: kindOf(opts.explicit) };
+  const secret = env.OUTREACH_UNSUBSCRIBE_SECRET;
+  if (secret) {
+    return {
+      url: await signedUnsubscribeUrl({
+        secret,
+        email: opts.email,
+        origin: env.UNSUBSCRIBE_ORIGIN,
+      }),
+      kind: "signed_link",
+    };
+  }
+  if (env.UNSUBSCRIBE_URL) {
+    return { url: env.UNSUBSCRIBE_URL, kind: kindOf(env.UNSUBSCRIBE_URL) };
+  }
+  return { url: defaultUnsubscribeUrl(opts.replyTo), kind: "mailto" };
+}
+
+/**
+ * A mailto opt-out is only acceptable when someone has said they process that
+ * inbox by hand (OUTREACH_ALLOW_MAILTO_OPTOUT=true). CAN-SPAM gives ten business
+ * days to honor an opt-out; an unread inbox honors none.
+ */
+export function optOutIsRecordable(
+  kind: OptOutKind,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  return kind !== "mailto" || env.OUTREACH_ALLOW_MAILTO_OPTOUT === "true";
 }
 
 /** CAN-SPAM compliant footer — physical address + working unsubscribe are required. */
@@ -171,10 +224,12 @@ export async function guardedSend(args: {
   }
   const replyTo =
     args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com";
-  const unsubscribeUrl =
-    args.unsubscribeUrl ||
-    process.env.UNSUBSCRIBE_URL ||
-    defaultUnsubscribeUrl(replyTo);
+  const optOut = await resolveUnsubscribeUrl({
+    explicit: args.unsubscribeUrl,
+    email: assessment.email,
+    replyTo,
+  });
+  const unsubscribeUrl = optOut.url;
 
   const footerOpts = {
     company: args.company ?? "AuthiChain",
@@ -200,6 +255,12 @@ export async function guardedSend(args: {
       reason: violations.map(v => `claim:${v.rule}:${v.match}`).join(","),
       assessment,
     };
+  }
+
+  // An opt-out nobody records is not an opt-out. Checked before the dry-run
+  // stop so a dry run reports this the way a live run would.
+  if (!optOutIsRecordable(optOut.kind)) {
+    return { sent: false, reason: "optout_not_recordable", assessment };
   }
 
   // Last stop before the network. Placed after every guard above so a dry run

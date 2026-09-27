@@ -2,7 +2,9 @@
 // scripts/gemma/outreach-review.mjs
 //
 // Weekdays, an hour before B2B outreach: Gemma reviews the email templates in
-// scripts/b2b-cold-outreach.ts and suggests clearer, more personal versions in
+// scripts/lib/b2b-templates.ts (the copy scripts/b2b-cold-outreach.ts sends,
+// kept separate so it can be tested against the claim checker) and suggests
+// clearer, more personal versions in
 // one `gemma` issue. It reads template source only (already public in this
 // repo), never prospect data, and never touches the send path, caps or gates.
 
@@ -20,8 +22,13 @@ import {
 } from "./lib.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const SOURCE = join(ROOT, "scripts", "b2b-cold-outreach.ts");
-export const TEMPLATES = ["govchainEmail", "strainchaineEmail", "qronEmail"];
+export const SOURCE = join(ROOT, "scripts", "lib", "b2b-templates.ts");
+export const TEMPLATES = [
+  "govchainEmail",
+  "strainchainEmail",
+  "qronEmail",
+  "partnerEmail",
+];
 export const TITLE = "Gemma: outreach draft suggestions";
 
 export const SYSTEM = [
@@ -32,13 +39,23 @@ export const SYSTEM = [
   "Shorter and more specific beats longer. One clear ask per email.",
 ].join(" ");
 
-/** Source text of each named template function, from `function name(` to the next top-level function. */
+/**
+ * Source text of each named template function, from `function name(` (with or
+ * without `export`) to the next top-level function or doc comment.
+ */
 export function extractTemplates(src, names = TEMPLATES) {
   const out = {};
   for (const name of names) {
-    const start = src.indexOf(`\nfunction ${name}(`);
+    const exported = src.indexOf(`\nexport function ${name}(`);
+    const start =
+      exported !== -1 ? exported : src.indexOf(`\nfunction ${name}(`);
     if (start === -1) continue;
-    const next = src.indexOf("\nfunction ", start + 1);
+    const next = Math.min(
+      ...["\nfunction ", "\nexport function "]
+        .map(m => src.indexOf(m, start + 1))
+        .filter(i => i > start),
+      src.length
+    );
     const nextDoc = src.indexOf("\n/**", start + 1);
     const ends = [next, nextDoc].filter(i => i > start);
     const end = ends.length ? Math.min(...ends) : src.length;
@@ -79,7 +96,7 @@ async function main() {
       sections.push(`## \`${name}\`\n\n_Skipped: ${e.message}_`);
     }
   }
-  const body = `Updated ${new Date().toISOString().slice(0, 10)}. Suggestions for the templates in \`scripts/b2b-cold-outreach.ts\`; the send gates, caps and breaker are unchanged.\n\n${sections.join("\n\n")}${FOOTER}`;
+  const body = `Updated ${new Date().toISOString().slice(0, 10)}. Suggestions for the templates in \`scripts/lib/b2b-templates.ts\`; the send gates, caps and breaker are unchanged.\n\n${sections.join("\n\n")}${FOOTER}`;
   if (cfg.dry || !cfg.token || !cfg.repo) {
     say(body);
     return 0;

@@ -1,10 +1,11 @@
 import type { Hono } from "hono";
 import { importPKCS8 } from "jose";
 import {
+  evaluateAttestation,
+  inspectAttestationJws,
   publicJwkFromPrivateKey,
   signAttestation,
   validateAttestation,
-  verifyAttestationJws,
 } from "../packages/verifier/src/index";
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
 
@@ -20,6 +21,60 @@ async function loadPrivateKey(env?: AttestationEnv) {
     privateKey,
     kid: resolved.key.kid,
     publicJwk: resolved.key.publicJwk,
+  };
+}
+
+/**
+ * The consumer-facing verification contract (docs/attestation/v0.1.md): a
+ * signature failure is 400; a good signature returns the attestation with its
+ * decision and status preserved, and valid=true (200) only when it is
+ * verified, active and unexpired, otherwise valid=false (409). Before this,
+ * any active, unexpired attestation came back valid=true, including ones the
+ * issuer marked `blocked` or `warning`, and a revoked one lost its decision.
+ */
+function hasJws(body: unknown): boolean {
+  const jws = (body as Record<string, unknown> | null)?.jws;
+  return typeof jws === "string" && jws.trim().length > 0;
+}
+
+async function verifyResponse(
+  body: unknown,
+  publicJwk: Record<string, unknown>
+): Promise<{ status: 200 | 400 | 409; payload: Record<string, unknown> }> {
+  const input = (body ?? {}) as Record<string, unknown>;
+  const jws = input.jws;
+  if (typeof jws !== "string" || !jws.trim()) {
+    return { status: 400, payload: { valid: false, error: "jws is required" } };
+  }
+  const expected = input.expected_object_id ?? input.expectedObjectId;
+  let attestation;
+  try {
+    attestation = await inspectAttestationJws(jws.trim(), publicJwk, {
+      expectedObjectId: typeof expected === "string" ? expected : undefined,
+    });
+  } catch (error) {
+    return {
+      status: 400,
+      payload: {
+        valid: false,
+        error: error instanceof Error ? error.message : "invalid signature",
+      },
+    };
+  }
+  const evaluation = evaluateAttestation(attestation);
+  return {
+    status: evaluation.valid ? 200 : 409,
+    payload: {
+      valid: evaluation.valid,
+      contract: "AuthiChain Attestation Contract",
+      version: "0.1",
+      decision: evaluation.decision,
+      status: evaluation.status,
+      expired: evaluation.expired,
+      reasons: evaluation.reasons,
+      signature: "valid",
+      attestation,
+    },
   };
 }
 
@@ -61,6 +116,10 @@ export function registerAttestationApi<
   app.post("/api/attestations/verify", c =>
     rewrite(c, "/api/v1/attestation/verify")
   );
+  // The path docs/attestation/v0.1.md documents.
+  app.post("/api/v1/attestations/verify", c =>
+    rewrite(c, "/api/v1/attestation/verify")
+  );
 
   app.post("/api/v1/attestation", async c => {
     try {
@@ -88,57 +147,40 @@ export function registerAttestationApi<
   });
 
   app.put("/api/v1/attestation", async c => {
+    const body = await c.req.json().catch(() => ({}));
+    if (!hasJws(body)) {
+      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
+    }
+    let publicJwk: Record<string, unknown>;
     try {
-      const body = await c.req.json();
-      const jws = body?.jws;
-      if (typeof jws !== "string") throw new Error("jws is required");
-      const { publicJwk } = await loadPrivateKey(c.env);
-      const attestation = await verifyAttestationJws(jws, publicJwk);
-      return c.json(
-        {
-          valid: true,
-          contract: "AuthiChain Attestation Contract",
-          version: "0.1",
-          attestation,
-        },
-        200,
-        NO_STORE
-      );
+      ({ publicJwk } = await loadPrivateKey(c.env));
     } catch (error) {
       return c.json(
         {
           valid: false,
-          error: error instanceof Error ? error.message : "invalid signature",
+          error: error instanceof Error ? error.message : "key unavailable",
         },
-        400,
+        503,
         NO_STORE
       );
     }
+    const { status, payload } = await verifyResponse(body, publicJwk);
+    return c.json(payload, status, NO_STORE);
   });
 
   app.post("/api/v1/attestation/verify", async c => {
-    try {
-      const body = await c.req.json();
-      const jws = body?.jws;
-      if (typeof jws !== "string") throw new Error("jws is required");
-      const resolved = await resolveAttestationKey(c.env);
-      if (!resolved.ok) {
-        return c.json({ valid: false, error: resolved.error }, 503, NO_STORE);
-      }
-      const attestation = await verifyAttestationJws(
-        jws,
-        resolved.key.publicJwk
-      );
-      return c.json({ valid: true, attestation }, 200, NO_STORE);
-    } catch (error) {
-      return c.json(
-        {
-          valid: false,
-          error: error instanceof Error ? error.message : "invalid signature",
-        },
-        400,
-        NO_STORE
-      );
+    const body = await c.req.json().catch(() => ({}));
+    if (!hasJws(body)) {
+      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
     }
+    const resolved = await resolveAttestationKey(c.env);
+    if (!resolved.ok) {
+      return c.json({ valid: false, error: resolved.error }, 503, NO_STORE);
+    }
+    const { status, payload } = await verifyResponse(
+      body,
+      resolved.key.publicJwk
+    );
+    return c.json(payload, status, NO_STORE);
   });
 }
