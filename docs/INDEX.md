@@ -40,7 +40,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [operations/stripe-webhook-setup.md](operations/stripe-webhook-setup.md)
 - [operations/stripe-webhook-checklist.md](operations/stripe-webhook-checklist.md)
 - [operations/SBA_Disaster_Loan_Template.md](operations/SBA_Disaster_Loan_Template.md)
-- [ops/remote-control.md](ops/remote-control.md) — steer a local Claude Code session from phone/browser (manual lane, not a loop)
+- [operations/remote-control.md](operations/remote-control.md) — steer a local Claude Code session from phone/browser (manual lane, not a loop)
 
 ## Marketing, growth & outreach
 
