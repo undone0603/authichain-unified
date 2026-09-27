@@ -253,3 +253,86 @@ export function tryHandleDppCheck(request: Request): Response | null {
     }
   );
 }
+
+// ── Funnel events ────────────────────────────────────────────────────────────
+// One structured log line per completed check and per $299 checkout POST.
+// authichain-com has [observability] on, so these are countable in Workers
+// Logs at no cost (query in docs/growth/DPP_CHECK_FUNNEL.md). Stripe sessions
+// already carry utm_campaign=dpp-check for paid conversions. No email, IP or
+// free text is logged: only the answers' shape and UTM tags.
+
+const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+] as const;
+
+function utmFrom(get: (k: string) => string | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const k of UTM_KEYS) {
+    const v = get(k)?.trim().slice(0, 64);
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
+export type DppFunnelEvent = Record<string, string | number | boolean>;
+
+/** Event for a /dpp-check GET that produced a result; null for a blank form. */
+export function dppCheckCompleteEvent(
+  url: URL,
+  now: Date = new Date()
+): DppFunnelEvent | null {
+  if (!isDppCheckPath(url.pathname)) return null;
+  const input = parseDppReadinessInput(
+    k => url.searchParams.get(k) ?? undefined
+  );
+  if (!input) return null;
+  const r = scoreDppReadiness(input, {
+    now,
+    auditPrice: planById("dpp_readiness")?.price ?? 299,
+  });
+  return {
+    evt: "dpp_check_complete",
+    category: input.category,
+    sells_in_eu: input.sellsInEu,
+    score: r.score,
+    band: r.band,
+    in_scope: r.inScope,
+    ...utmFrom(k => url.searchParams.get(k)),
+  };
+}
+
+const DPP_CHECKOUT_PATHS = new Set([
+  "/checkout/dpp_readiness",
+  "/checkout/dpp",
+]);
+
+/**
+ * Event for a POST to the $299 DPP checkout. Reads a clone, so the checkout
+ * handler still gets the original body. from_dpp_check marks clicks that came
+ * from the free checker's result CTA.
+ */
+export async function dppCheckoutClickEvent(
+  request: Request
+): Promise<DppFunnelEvent | null> {
+  if (request.method.toUpperCase() !== "POST") return null;
+  const path = new URL(request.url).pathname.replace(/\/+$/, "");
+  if (!DPP_CHECKOUT_PATHS.has(path)) return null;
+  let form: FormData;
+  try {
+    form = await request.clone().formData();
+  } catch {
+    return { evt: "dpp_checkout_click", from_dpp_check: false };
+  }
+  const utm = utmFrom(k => {
+    const v = form.get(k);
+    return typeof v === "string" ? v : null;
+  });
+  return {
+    evt: "dpp_checkout_click",
+    from_dpp_check: utm.utm_campaign === "dpp-check",
+    ...utm,
+  };
+}
