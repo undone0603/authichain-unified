@@ -70,7 +70,10 @@ export async function POST(req: NextRequest) {
       case 'invoice.paid': {
         const invoice = event.data.object;
         const customerId = invoice.customer;
-        const subscriptionId = invoice.subscription;
+        const subscriptionId =
+          invoice.parent?.subscription_details?.subscription ??
+          (invoice as { subscription?: string | null }).subscription ??
+          null;
         const amountPaid = invoice.amount_paid / 100;
 
         const { data: profile } = await supabase
