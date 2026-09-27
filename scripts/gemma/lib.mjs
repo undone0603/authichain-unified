@@ -34,6 +34,32 @@ export function config(env = process.env) {
   };
 }
 
+// Logs and model output can carry prospect emails and credentials. Anything
+// that reaches the model or a public issue goes through redact() first.
+// Kept on purpose: 40-hex git SHAs, 0x wallet addresses, GitHub's *** masks.
+const REDACTIONS = [
+  [/-----BEGIN [A-Z ]+-----[\s\S]*?-----END [A-Z ]+-----/g, "[redacted:pem]"],
+  [/\beyJ[\w-]+\.[\w-]+\.[\w-]+/g, "[redacted:jwt]"],
+  [/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, "$1[redacted:creds]@"],
+  [/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[redacted:email]"],
+  [/\b(Bearer)\s+[\w.~+/-]+=*/gi, "$1 [redacted:token]"],
+  [/\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]+/g, "[redacted:stripe]"],
+  [/\bre_[A-Za-z0-9_]{8,}/g, "[redacted:resend]"],
+  [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})/g, "[redacted:github]"],
+  [
+    /\b([A-Z][A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|PWD)[A-Z0-9_]*)(\s*[=:]\s*)(?!\*{3})[^\s'"]+/g,
+    "$1$2[redacted:secret]",
+  ],
+  [/([?&](?:t|token|key|access_token|api_key|sig|signature|code)=)[^&\s#]+/gi, "$1[redacted:param]"],
+  [/\b(?:0x)?[a-fA-F0-9]{64}\b/g, "[redacted:hex]"],
+];
+
+export function redact(text) {
+  let s = String(text ?? "");
+  for (const [re, to] of REDACTIONS) s = s.replace(re, to);
+  return s;
+}
+
 export function clip(text, max) {
   const s = String(text ?? "");
   return s.length > max ? `${s.slice(0, max)}\n[truncated]` : s;

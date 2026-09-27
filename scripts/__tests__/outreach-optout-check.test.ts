@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
-import { checkOptOut } from "../outreach-optout-check";
+import { checkOptOut, outputSafe } from "../outreach-optout-check";
 import {
   registerUnsubscribeRoutes,
   type UnsubscribeBindings,
@@ -89,5 +89,14 @@ describe("checkOptOut", () => {
     expect((await checkOptOut({ UNSUBSCRIBE_URL: "mailto:x@y.z" })).ready).toBe(
       false
     );
+  });
+});
+
+describe("outputSafe", () => {
+  it("keeps GITHUB_OUTPUT to one bounded printable line", () => {
+    const out = outputSafe("fetch failed\r\nready=true\u0000 \u2028x", 40);
+    expect(out).toBe("fetch failed ready=true x");
+    expect(out).not.toMatch(/[\r\n\u0000]/);
+    expect(outputSafe("a".repeat(500)).length).toBe(240);
   });
 });

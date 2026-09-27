@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { newReplyText, senderAddress, wantsOptOut } from "./reply-optout";
+import {
+  htmlReplyToText,
+  newReplyText,
+  senderAddress,
+  wantsOptOut,
+} from "./reply-optout";
 import { svixSignature, verifySvix } from "./svix-verify";
 
 const QUOTED_ORIGINAL = [
@@ -158,5 +163,13 @@ describe("verifySvix", () => {
         now,
       })
     ).toEqual({ ok: false, reason: "missing_headers" });
+  });
+});
+
+describe("htmlReplyToText", () => {
+  it("decodes &amp; last, so an escaped entity stays literal", () => {
+    expect(
+      htmlReplyToText("<p>&amp;quot;stop&amp;quot; &amp; &quot;x&quot;</p>")
+    ).toContain('&quot;stop&quot; & "x"');
   });
 });

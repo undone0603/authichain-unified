@@ -38,16 +38,19 @@ export function newReplyText(text: string): string {
 
 /** Crude HTML to text for replies that arrive without a text part. */
 export function htmlReplyToText(html: string): string {
-  return String(html ?? "")
-    .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, "\n")
-    .replace(/<div class="gmail_quote"[\s\S]*$/i, "\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&quot;/g, '"');
+  return (
+    String(html ?? "")
+      .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, "\n")
+      .replace(/<div class="gmail_quote"[\s\S]*$/i, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li)>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      // Last, so "&amp;quot;" stays the literal text "&quot;" instead of a quote.
+      .replace(/&amp;/g, "&")
+  );
 }
 
 export function wantsOptOut(reply: {

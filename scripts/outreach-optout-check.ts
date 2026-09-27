@@ -107,14 +107,28 @@ export async function checkOptOut(
   };
 }
 
+/**
+ * `reason` can carry a network error message. GITHUB_OUTPUT is line-based, so
+ * a stray \r or control character could smuggle in another output key. Keep
+ * printable ASCII only, one line, bounded.
+ */
+export function outputSafe(text: string, max = 240): string {
+  return text
+    .replace(/[^\x20-\x7E]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
 async function main() {
   const result = await checkOptOut();
-  const line = `Opt-out check: ${result.ready ? "ready" : "NOT READY"} (${result.kind}) - ${result.reason}`;
+  const reason = outputSafe(result.reason);
+  const line = `Opt-out check: ${result.ready ? "ready" : "NOT READY"} (${result.kind}) - ${reason}`;
   console.log(line);
   if (process.env.GITHUB_OUTPUT) {
     appendFileSync(
       process.env.GITHUB_OUTPUT,
-      `ready=${result.ready}\nkind=${result.kind}\nreason=${result.reason.replace(/\n/g, " ")}\n`
+      `ready=${result.ready === true}\nkind=${outputSafe(result.kind, 32)}\nreason=${reason}\n`
     );
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
