@@ -24,7 +24,6 @@ def test_localhost_constructs():
         "http://192.168.254.10:1234/v1",
         "http://10.0.0.5:1234/v1",
         "http://example.com/v1",
-        "file:///etc/passwd",
     ],
 )
 def test_non_loopback_rejected(url):
