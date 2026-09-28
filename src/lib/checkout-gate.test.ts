@@ -84,7 +84,29 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain('href="/checkout/dpp_readiness"');
+    expect(html).toContain('href="/checkout/starter"');
+    expect(html).not.toContain("strainchain_farm");
+    expect(html).not.toContain("Farm Plan");
     expect(html).toContain("noindex");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("GET /checkout/starter renders confirm and never calls Stripe", async () => {
+    const fetchImpl = vi.fn();
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/starter", {
+        headers: { "user-agent": HUMAN_UA },
+      }),
+      { STRIPE_SECRET_KEY: "sk_live_x" },
+      { fetchImpl }
+    );
+    expect(res!.status).toBe(200);
+    const html = await res!.text();
+    expect(html).toContain("Starter Pack");
+    expect(html).toContain("$29");
+    expect(html).toContain('method="post"');
+    expect(html).toContain('action="/checkout/starter"');
+    expect(html).not.toContain("js.stripe.com");
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
