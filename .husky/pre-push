@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Whole index: catch ADS / colon paths even if they were committed earlier.
+bash scripts/check-windows-paths.sh
