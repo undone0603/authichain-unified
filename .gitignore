@@ -27,6 +27,11 @@ credentials.json
 *.key
 supabase/key.txt
 
+# NTFS Alternate Data Stream sidecars. A colon in the filename is legal on
+# Linux/Git and illegal on Windows NTFS, so a committed *:Zone.Identifier
+# file makes `git checkout` fail on founder Windows boxes.
+*Zone.Identifier
+
 # Python
 __pycache__/
 *.py[cod]
