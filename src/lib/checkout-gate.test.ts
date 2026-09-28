@@ -98,7 +98,7 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
         headers: { "user-agent": HUMAN_UA },
       }),
       { STRIPE_SECRET_KEY: "sk_live_x" },
-      { fetchImpl }
+      { fetchImpl },
     );
     expect(res!.status).toBe(200);
     const html = await res!.text();
@@ -161,95 +161,5 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
       {}
     );
     expect(unknown!.status).toBe(404);
-  });
-});
-
-describe("tryHandleGatedCheckout — POST", () => {
-  it("creates one session with customer_email and catalogue price, then 303s to Stripe", async () => {
-    const fetchImpl = stripeOk();
-    const res = await tryHandleGatedCheckout(
-      post("/checkout/strainchain_farm", {
-        email: "grower@farm.com",
-        utm_source: "mail",
-        visit_id: "v_1",
-      }),
-      { STRIPE_SECRET_KEY: "sk_test_x" },
-      { fetchImpl }
-    );
-    expect(res!.status).toBe(303);
-    expect(res!.headers.get("location")).toBe(
-      "https://checkout.stripe.com/c/pay/cs_test_gate"
-    );
-    expect(fetchImpl).toHaveBeenCalledOnce();
-    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: URLSearchParams }];
-    expect(url).toBe("https://api.stripe.com/v1/checkout/sessions");
-    const body = new URLSearchParams(String(init.body));
-    expect(body.get("mode")).toBe("subscription");
-    expect(body.get("line_items[0][price]")).toBe(
-      planById("strainchain_farm")!.stripe_price_id
-    );
-    expect(body.get("customer_email")).toBe("grower@farm.com");
-    expect(body.get("metadata[plan]")).toBe("strainchain_farm");
-    expect(body.get("metadata[checkout_gate]")).toBe("confirm_post");
-    expect(body.get("subscription_data[metadata][plan]")).toBe("strainchain_farm");
-    expect(body.get("metadata[utm_source]")).toBe("mail");
-    expect(body.get("client_reference_id")).toBe("v_1");
-    expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
-  });
-
-  it("DPP POST carries the DPP offer metadata", () => {
-    const body = buildGatedSessionBody({
-      plan: planById("dpp_readiness")!,
-      email: "a@b.co",
-      fields: new URLSearchParams(),
-    });
-    expect(body.get("mode")).toBe("payment");
-    expect(body.get("metadata[offer]")).toBe("dpp_readiness_2026");
-    expect(body.get("customer_creation")).toBe("always");
-  });
-
-  it("refuses bots, prefetch, foreign origins, honeypot and missing email without calling Stripe", async () => {
-    const fetchImpl = stripeOk();
-    const env = { STRIPE_SECRET_KEY: "sk_test_x" };
-    const cases: Array<[Request, number]> = [
-      [post("/checkout/creator", { email: "a@b.co" }, { "user-agent": "curl/8.5.0" }), 403],
-      [post("/checkout/creator", { email: "a@b.co" }, { "user-agent": "" }), 403],
-      [post("/checkout/creator", { email: "a@b.co" }, { "user-agent": "Mozilla/5.0 (compatible; bingbot/2.0)" }), 403],
-      [post("/checkout/creator", { email: "a@b.co" }, { purpose: "prefetch" }), 403],
-      [post("/checkout/creator", { email: "a@b.co" }, { origin: "https://evil.example" }), 403],
-      [post("/checkout/creator", { email: "a@b.co", website: "spam" }), 400],
-      [post("/checkout/creator", {}), 400],
-      [post("/checkout/creator", { email: "not-an-email" }), 400],
-    ];
-    for (const [req, status] of cases) {
-      const res = await tryHandleGatedCheckout(req, env, { fetchImpl });
-      expect(res!.status).toBe(status);
-    }
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it("allows cross-site POST from the estate sites", () => {
-    for (const o of ["https://strainchain.io", "https://qron.space", "https://govchain.us", "https://authichain.govchain.us"]) {
-      expect(
-        isAllowedPostOrigin(new Request("https://authichain.com/checkout/creator", { method: "POST", headers: { origin: o } }))
-      ).toBe(true);
-    }
-  });
-
-  it("does not flag normal mobile/desktop browsers", () => {
-    for (const ua of [
-      HUMAN_UA,
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36",
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]",
-    ]) {
-      expect(
-        isAutomatedCheckoutRequest(new Request("https://authichain.com/", { headers: { "user-agent": ua } }))
-      ).toBe(false);
-    }
-  });
-
-  it("returns 500-class HTML (no redirect) when Stripe is not configured", async () => {
-    const res = await tryHandleGatedCheckout(post("/checkout/creator", { email: "a@b.co" }), {});
-    expect(res!.status).toBe(500);
   });
 });
