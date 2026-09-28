@@ -11,6 +11,8 @@ import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
+import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
+import { renderDocsPage } from "./docs-render";
 import {
   isAuthenticAgenticEconomyPath,
   renderAuthenticAgenticEconomyPage,
@@ -3484,6 +3486,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/docs', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/gs1-digital-link', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/verification', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/dpp-architecture', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/examples', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/.well-known/x402', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
@@ -3574,6 +3581,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    const docsDest = docsRedirect(p);
+    if (docsDest) return Response.redirect(new URL(docsDest, url.origin), 301);
+    if (isDocsHub(p) || isDocsPage(p)) {
+      return new Response(renderDocsPage(p), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     if (isAuthenticAgenticEconomyPath(p)) {
       return new Response(renderAuthenticAgenticEconomyPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

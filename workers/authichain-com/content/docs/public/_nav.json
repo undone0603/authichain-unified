@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "host": "https://authichain.com",
+  "index": "/docs",
+  "canonical_protocol": "/protocol",
+  "items": [
+    {
+      "slug": "index",
+      "path": "/docs",
+      "title": "Documentation",
+      "status": "ship_wave1",
+      "cta": ["/verify", "/dpp-check", "/onboard"]
+    },
+    {
+      "slug": "protocol",
+      "path": "/docs/protocol",
+      "canonical": "/protocol",
+      "redirect": 301,
+      "title": "Open Verification Protocol",
+      "status": "alias",
+      "note": "Do not fork copy. Keep /protocol as canonical."
+    },
+    {
+      "slug": "gs1-digital-link",
+      "path": "/docs/gs1-digital-link",
+      "title": "GS1 Digital Link",
+      "status": "ship_wave1",
+      "cluster": 1,
+      "money": false
+    },
+    {
+      "slug": "verification",
+      "path": "/docs/verification",
+      "title": "Verification states",
+      "status": "ship_wave1",
+      "cluster": 2,
+      "money": "x402"
+    },
+    {
+      "slug": "dpp-architecture",
+      "path": "/docs/dpp-architecture",
+      "aliases": ["/docs/dpp", "/docs/digital-product-passports"],
+      "title": "Digital Product Passport architecture",
+      "status": "ship_wave1",
+      "cluster": 3,
+      "money": "dpp_readiness_299"
+    },
+    {
+      "slug": "examples",
+      "path": "/docs/examples",
+      "title": "Examples and fixtures",
+      "status": "ship_wave1",
+      "money": false
+    },
+    {
+      "slug": "x402",
+      "path": "/docs/x402",
+      "canonical": "/x402",
+      "title": "x402 agent pay",
+      "status": "live"
+    },
+    {
+      "slug": "product-identity",
+      "path": "/docs/product-identity",
+      "title": "Product identity",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "attestations",
+      "path": "/docs/attestations",
+      "title": "Signed attestations",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "evidence",
+      "path": "/docs/evidence",
+      "title": "Evidence",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "provenance",
+      "path": "/docs/provenance",
+      "title": "Provenance",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "apis",
+      "path": "/docs/apis",
+      "title": "APIs",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "mcp",
+      "path": "/docs/mcp",
+      "title": "MCP",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "security",
+      "path": "/docs/security",
+      "title": "Security",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "compliance",
+      "path": "/docs/compliance",
+      "title": "Compliance",
+      "status": "stub_wave2"
+    },
+    {
+      "slug": "glossary",
+      "path": "/docs/glossary",
+      "title": "Glossary",
+      "status": "stub_wave2"
+    }
+  ],
+  "banned_strings": [
+    "GS1 Conformant Resolver",
+    "gs1ConformantResolver: true",
+    "Bitcoin L1",
+    "anchored to Bitcoin",
+    "$49/mo",
+    "notified body",
+    "EU DPP registry registration complete",
+    "REVIEW",
+    "customer logo",
+    "*.vercel.app",
+    "*.workers.dev"
+  ]
+}
