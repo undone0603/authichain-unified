@@ -8,7 +8,6 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
 }
 
-// Supabase REST helper — uses fetch directly (CF Worker compatible)
 async function supabaseUpsert(
   env: Env,
   table: string,
@@ -52,11 +51,12 @@ async function supabaseUpdate(
 }
 
 function priceIdFromSession(session: Stripe.Checkout.Session): string | null {
-  const fromMeta = (session.metadata?.stripe_price_id || "").trim();
+  const fromMeta = session.metadata?.stripe_price_id?.trim();
   if (fromMeta) return fromMeta;
-  const item = session.line_items?.data?.[0]?.price;
-  if (item && typeof item === "object" && "id" in item && item.id) return item.id;
-  if (typeof item === "string" && item) return item;
+  const item = session.line_items?.data?.[0];
+  const price = item?.price;
+  if (price && typeof price === "object" && "id" in price) return price.id;
+  if (typeof price === "string") return price;
   return null;
 }
 
@@ -95,46 +95,45 @@ export default {
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
       const grant = grantForPrice(priceIdFromSession(session));
+      const plan = grant?.plan || session.metadata?.plan || "starter";
 
       if (email) {
-        const row: Record<string, unknown> = {
-          email,
-          full_name: name,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          plan: grant?.plan || session.metadata?.plan || "starter",
-          updated_at: new Date().toISOString(),
-        };
-        if (grant) {
-          row.generations_limit = grant.generations;
-          row.generations_used = 0;
-        }
-        await supabaseUpsert(env, "profiles", row, "email");
-      }
-    }
-
-    if (event.type === "invoice.paid") {
-      const invoice = event.data.object as Stripe.Invoice;
-      const customerId =
-        typeof invoice.customer === "string" ? invoice.customer : null;
-      const priceId =
-        invoice.lines?.data?.[0]?.price &&
-        typeof invoice.lines.data[0].price === "object"
-          ? invoice.lines.data[0].price.id
-          : null;
-      const grant = grantForPrice(priceId);
-      if (customerId && grant?.refillOnInvoicePaid) {
-        await supabaseUpdate(
+        await supabaseUpsert(
           env,
           "profiles",
-          { stripe_customer_id: customerId },
           {
-            plan: grant.plan,
-            generations_limit: grant.generations,
-            generations_used: 0,
+            email,
+            full_name: name,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            plan,
             updated_at: new Date().toISOString(),
-          }
+          },
+          "email"
         );
+        // Unified grant rail: SET not +=. Matches provisionPurchase.
+        if (grant) {
+          console.log(
+            JSON.stringify({
+              evt: "stripe_grant_set",
+              plan: grant.plan,
+              generations_limit: grant.generations,
+              generations_used: 0,
+              refill: grant.refillOnInvoicePaid,
+            })
+          );
+          await supabaseUpdate(
+            env,
+            "profiles",
+            { email },
+            {
+              plan: grant.plan,
+              generations_limit: grant.generations,
+              generations_used: 0,
+              updated_at: new Date().toISOString(),
+            }
+          );
+        }
       }
     }
 
@@ -151,6 +150,41 @@ export default {
           { stripe_customer_id: customerId },
           {
             stripe_subscription_status: sub.status,
+            updated_at: new Date().toISOString(),
+          }
+        );
+      }
+    }
+
+    if (event.type === "invoice.paid") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId =
+        typeof invoice.customer === "string" ? invoice.customer : null;
+      const linePrice =
+        invoice.lines?.data?.[0]?.price &&
+        typeof invoice.lines.data[0].price === "object"
+          ? invoice.lines.data[0].price.id
+          : null;
+      const grant = grantForPrice(linePrice);
+      // One-time packs (starter/creator/dpp/passport): refillOnInvoicePaid=false — no-op.
+      // Launch/Farm subscriptions: SET the period grant, used=0. Never +=.
+      if (customerId && grant?.refillOnInvoicePaid) {
+        console.log(
+          JSON.stringify({
+            evt: "stripe_grant_refill",
+            plan: grant.plan,
+            generations_limit: grant.generations,
+            generations_used: 0,
+          })
+        );
+        await supabaseUpdate(
+          env,
+          "profiles",
+          { stripe_customer_id: customerId },
+          {
+            plan: grant.plan,
+            generations_limit: grant.generations,
+            generations_used: 0,
             updated_at: new Date().toISOString(),
           }
         );
