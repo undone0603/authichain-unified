@@ -43,7 +43,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.66",
+    "@ai-sdk/openai": "^4.0.75",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@clerk/nextjs": "^7.8.3",
