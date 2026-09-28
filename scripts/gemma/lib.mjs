@@ -7,6 +7,8 @@
 // Gemma only ever writes suggestions into GitHub issues. It never merges,
 // sends, charges or edits code; a person decides what ships.
 
+import { localLlmHeaders } from "../lib/local-llm-auth.mjs";
+
 export const DEFAULTS = {
   url: "http://192.168.254.10:1234",
   model: "google/gemma-4-e4b",
@@ -120,10 +122,11 @@ export async function chat({
   fetchImpl = fetch,
   timeoutMs = 180_000,
   maxTokens = 1400,
+  env = process.env,
 }) {
   const res = await fetchImpl(`${url}/v1/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: localLlmHeaders(url, env),
     body: JSON.stringify({
       model,
       temperature: 0.3,
