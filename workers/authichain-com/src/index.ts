@@ -2457,6 +2457,7 @@ function ecosystemFooter() {
           { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
           { href: "/authentic-agentic-economy", label: "Authentic agentic economy" },
+          { href: "/docs", label: "Docs" },
           { href: "/x402", label: "Agent pay (x402)" },
           { href: "/vs", label: "Compare" },
         ],
@@ -2492,6 +2493,7 @@ const HTML = `<!DOCTYPE html>
       { href: "/made-in-america", label: "Made in USA" },
       { href: "/authentic-agentic-economy", label: "Agentic economy" },
       { href: "/pricing", label: "Pricing" },
+      { href: "/docs", label: "Docs" },
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
@@ -3046,6 +3048,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
+      <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
     </div>

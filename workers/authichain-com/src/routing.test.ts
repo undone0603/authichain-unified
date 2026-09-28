@@ -242,10 +242,12 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
   }
 });
 
-test("homepage and /dpp link to /x402", async () => {
+test("homepage and /dpp link to /docs and /x402", async () => {
   const home = await (await get("/")).text();
+  assert.match(home, /href="\/docs"/);
   assert.match(home, /href="\/x402"/);
   const dpp = await (await get("/dpp")).text();
+  assert.match(dpp, /href="\/docs"/);
   assert.match(dpp, /href="\/x402"/);
   assert.match(dpp, /name="email"/);
   assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
