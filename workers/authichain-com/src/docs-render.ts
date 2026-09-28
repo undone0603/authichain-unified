@@ -177,13 +177,16 @@ function renderMarkdown(body: string): string {
 }
 
 /**
- * The source pages deny conformance in the sentence "not a GS1 Conformant
- * Resolver" and name AC-DEMO-001 only to say it is not a live scan. Those
+ * The markdown denies conformance in the sentence "not a GS1 Conformant
+ * Resolver" and names AC-DEMO-001 only to say it is not a live scan. Those
  * phrases are allowed. An affirmative claim is not.
  */
-export function residualBannedCopy(html: string): string[] {
-  const text = html.replace(/<[^>]+>/g, "");
-  const allowed = text
+function plainMarkdown(source: string): string {
+  return source.replaceAll("**", "").replaceAll("`", "");
+}
+
+export function residualBannedCopy(source: string): string[] {
+  const allowed = plainMarkdown(source)
     .replaceAll("not a GS1 Conformant Resolver", "")
     .replaceAll("Is AuthiChain a GS1 Conformant Resolver?", "")
     .replaceAll(
@@ -279,7 +282,7 @@ ${ESTATE_FONTS_LINK}
 <main class="wrap" id="content"><article>${article}</article></main>
 <footer class="site"><div class="wrap">AuthiChain documentation. A signature is not proof a physical item is genuine.</div></footer>
 </body></html>`;
-  const banned = residualBannedCopy(html);
+  const banned = residualBannedCopy(SOURCES[slug]);
   if (banned.length) {
     throw new Error(`docs page ${pathname} contains banned copy: ${banned.join(", ")}`);
   }

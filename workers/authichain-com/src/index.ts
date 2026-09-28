@@ -3583,7 +3583,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const docsDest = docsRedirect(p);
-    if (docsDest) return Response.redirect(new URL(docsDest, url.origin), 301);
+    if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);
     if (isDocsHub(p) || isDocsPage(p)) {
       return new Response(renderDocsPage(p), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }

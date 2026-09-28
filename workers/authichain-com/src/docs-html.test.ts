@@ -7,11 +7,11 @@ test("rendered docs HTML passes the claim guard", () => {
   const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
   for (const path of pages) {
     const html = renderDocsPage(path);
-    assert.match(html, /<title>/, path);
-    assert.doesNotMatch(html, /Bitcoin L1/, path);
-    assert.doesNotMatch(html, /\$49\/mo/, path);
-    assert.doesNotMatch(html, /gs1ConformantResolver: true/, path);
-    assert.doesNotMatch(html, /id\.authichain\.com\/01\//, path);
+    assert.ok(html.includes("<title>"), path);
+    assert.equal(html.includes("Bitcoin L1"), false, path);
+    assert.equal(html.includes("$49/mo"), false, path);
+    assert.equal(html.includes("gs1ConformantResolver: true"), false, path);
+    assert.equal(html.includes("id.authichain.com/01/"), false, path);
   }
 });
 
