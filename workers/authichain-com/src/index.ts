@@ -12,6 +12,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
+import { docsCtaClickEvent, docsViewEvent } from "./docs-events";
 import { renderDocsPage } from "./docs-render";
 import {
   isAuthenticAgenticEconomyPath,
@@ -3454,6 +3455,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
+    const docsClick = docsCtaClickEvent(request.method, url);
+    if (docsClick) console.log(JSON.stringify(docsClick));
     if (p === '/og-image.png' || p === '/og.png') {
       return pngResponse(OG_IMAGE_PNG_B64);
     }
@@ -3587,6 +3590,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     const docsDest = docsRedirect(p);
     if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);
+    const docsView = docsViewEvent(request.method, p);
+    if (docsView) console.log(JSON.stringify(docsView));
     if (isDocsHub(p) || isDocsPage(p)) {
       return new Response(renderDocsPage(p), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
