@@ -78,6 +78,7 @@ export const DYNAMIC_HANDLER_PATHS: Set<string> = new Set([
   "/brand/qron/artwork",
   "/landing",
   "/onboard",
+  "/checkout",
   "/story",
   "/dashboard",
   "/dapp",
