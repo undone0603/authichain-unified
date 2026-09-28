@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { grantForPrice } from "./grant-map";
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
@@ -50,6 +51,15 @@ async function supabaseUpdate(
   });
 }
 
+function priceIdFromSession(session: Stripe.Checkout.Session): string | null {
+  const fromMeta = (session.metadata?.stripe_price_id || "").trim();
+  if (fromMeta) return fromMeta;
+  const item = session.line_items?.data?.[0]?.price;
+  if (item && typeof item === "object" && "id" in item && item.id) return item.id;
+  if (typeof item === "string" && item) return item;
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
@@ -84,21 +94,46 @@ export default {
         typeof session.customer === "string" ? session.customer : null;
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
+      const grant = grantForPrice(priceIdFromSession(session));
 
       if (email) {
-        // Upsert profile
-        await supabaseUpsert(
+        const row: Record<string, unknown> = {
+          email,
+          full_name: name,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          plan: grant?.plan || session.metadata?.plan || "starter",
+          updated_at: new Date().toISOString(),
+        };
+        if (grant) {
+          row.generations_limit = grant.generations;
+          row.generations_used = 0;
+        }
+        await supabaseUpsert(env, "profiles", row, "email");
+      }
+    }
+
+    if (event.type === "invoice.paid") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId =
+        typeof invoice.customer === "string" ? invoice.customer : null;
+      const priceId =
+        invoice.lines?.data?.[0]?.price &&
+        typeof invoice.lines.data[0].price === "object"
+          ? invoice.lines.data[0].price.id
+          : null;
+      const grant = grantForPrice(priceId);
+      if (customerId && grant?.refillOnInvoicePaid) {
+        await supabaseUpdate(
           env,
           "profiles",
+          { stripe_customer_id: customerId },
           {
-            email,
-            full_name: name,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            plan: session.metadata?.plan || "starter",
+            plan: grant.plan,
+            generations_limit: grant.generations,
+            generations_used: 0,
             updated_at: new Date().toISOString(),
-          },
-          "email"
+          }
         );
       }
     }
