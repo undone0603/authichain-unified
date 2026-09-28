@@ -16,6 +16,8 @@ export const APP_PREFIXES = [
   "/subscriptions",
   "/settings",
   "/onboard",
+  // Gated confirm page. Belt if tryHandleGatedCheckout is skipped on a stale deploy.
+  "/checkout",
   "/admin",
   // Linked from the homepage nav and footer ("Get Started", "Brand
   // Onboarding", "Sign In") and served by worker-app — see
