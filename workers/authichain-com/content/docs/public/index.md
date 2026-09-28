@@ -34,7 +34,7 @@ Cite these. Do not infer the rest.
 | [/protocol](/protocol) | Open verifier. Verdicts: `verified`, `valid-unanchored`, `invalid` |
 | Polygon contract | `0x4da4D2675e52374639C9c954f4f653887A9972BE` |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |
-| [/dpp-check](/dpp-check) | Free EU DPP readiness check |
+| [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) | Free EU DPP readiness check |
 | [/anchor](/anchor) | Public product-anchor UI |
 | [/openapi.json](https://authichain.com/openapi.json) | Machine description of public HTTP |
 
@@ -49,5 +49,5 @@ Cite these. Do not infer the rest.
 ## Do something
 
 - [Verify a record](/verify)
-- [Map DPP gaps](/dpp-check) — free
-- [Onboard a pilot](/onboard) — work email, no call
+- [Map DPP gaps](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) — free
+- [Onboard a pilot](/onboard?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) — work email, no call

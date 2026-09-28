@@ -135,7 +135,7 @@ ESPR (Regulation (EU) 2024/1781) requires a machine-readable product passport fo
 - [DPP architecture](/docs/dpp-architecture)
 - [Open Verification Protocol](/protocol)
 - [Examples](/docs/examples)
-- [Free DPP readiness check](/dpp-check)
+- [Free DPP readiness check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=gs1-digital-link)
 
 ## FAQ
 

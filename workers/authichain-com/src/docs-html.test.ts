@@ -13,6 +13,11 @@ test("rendered docs HTML passes the claim guard", () => {
     assert.equal(html.includes("gs1ConformantResolver: true"), false, path);
     assert.equal(html.includes("id.authichain.com/01/"), false, path);
   }
+  const hub = renderDocsPage("/docs");
+  assert.ok(hub.includes("utm_source=docs"));
+  assert.ok(hub.includes("utm_campaign=docs-hub"));
+  const architecture = renderDocsPage("/docs/dpp-architecture");
+  assert.ok(architecture.includes("/checkout/dpp_readiness?utm_source=docs"));
 });
 
 test("an unknown docs slug is not a rendered article", () => {
