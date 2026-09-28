@@ -57,7 +57,7 @@ export default {
     }
 
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-05-27.dahlia' as const,
+      apiVersion: '2026-08-26.dahlia' as const,
       httpClient: Stripe.createFetchHttpClient(),
     });
 

@@ -45,6 +45,7 @@ jobs:
   deploy-matrix:
     name: Build worker matrix
     runs-on: ubuntu-latest
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
@@ -117,6 +118,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [secret-scan, deploy-matrix]
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +156,7 @@ jobs:
             fi
           done
           echo "needs=$NEEDS" >> "$GITHUB_OUTPUT"
-          echo "containers needed for ${{ matrix.worker }}: $NEEDS"
+          echo "containers needed for ${{ matrix.worker }}:$NEEDS"
 
       - name: Set up Docker Buildx
         if: |

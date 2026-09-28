@@ -32,6 +32,7 @@ jobs:
   deploy:
     needs: secret-scan
     runs-on: ubuntu-latest
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 20
 
     env:
