@@ -936,3 +936,114 @@ test("every URL the sitemap claims actually resolves", async () => {
     );
   }
 });
+
+/**
+ * authichain.com/api/v1/<authichain-api endpoint> is forwarded to the
+ * authichain-api Worker (API_WORKER binding, src/api-v1-routes.ts). Every other
+ * /api path keeps its APP_WORKER owner — /api/leads/capture above all.
+ */
+function jsonBinding(name: string) {
+  const seen: Request[] = [];
+  return {
+    seen,
+    binding: {
+      fetch: async (r: Request) => {
+        seen.push(r);
+        return new Response(JSON.stringify({ from: name }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    },
+  };
+}
+
+function apiEnv() {
+  const api = jsonBinding("api");
+  const app = jsonBinding("app");
+  return {
+    api,
+    app,
+    env: { API_WORKER: api.binding, APP_WORKER: app.binding } as unknown as Env,
+  };
+}
+
+test("GET /api/v1/.well-known/jwks.json on the apex comes from authichain-api", async () => {
+  for (const host of ["authichain.com", "authichain.govchain.us"]) {
+    const t = apiEnv();
+    const res = await worker.fetch(
+      new Request(`https://${host}/api/v1/.well-known/jwks.json`),
+      t.env
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { from: "api" });
+    assert.equal(t.api.seen.length, 1);
+    assert.equal(
+      t.api.seen[0].url,
+      `https://${host}/api/v1/.well-known/jwks.json`
+    );
+    assert.equal(t.app.seen.length, 0);
+  }
+});
+
+test("POST /api/v1/verify and OPTIONS preflight are forwarded to authichain-api", async () => {
+  const t = apiEnv();
+  await worker.fetch(
+    new Request("https://authichain.com/api/v1/verify", {
+      method: "POST",
+      body: JSON.stringify({ serial: "X" }),
+      headers: { "Content-Type": "application/json" },
+    }),
+    t.env
+  );
+  await worker.fetch(
+    new Request("https://authichain.com/api/v1/verify", { method: "OPTIONS" }),
+    t.env
+  );
+  assert.deepEqual(
+    t.api.seen.map(r => r.method),
+    ["POST", "OPTIONS"]
+  );
+  assert.equal(t.app.seen.length, 0);
+});
+
+test("existing /api routes (leads capture, edge-router /api/v1) still go to APP_WORKER", async () => {
+  for (const [path, method] of [
+    ["/api/leads/capture", "POST"],
+    ["/api/lead-capture", "POST"],
+    ["/api/book", "POST"],
+    ["/api/v1/attestations/verify", "POST"],
+    ["/api/v1/unknown", "GET"],
+    ["/api/health", "GET"],
+  ] as const) {
+    const t = apiEnv();
+    const res = await worker.fetch(
+      new Request(`https://authichain.com${path}`, {
+        method,
+        body: method === "POST" ? "{}" : undefined,
+      }),
+      t.env
+    );
+    assert.deepEqual(await res.json(), { from: "app" }, path);
+    assert.equal(t.api.seen.length, 0, `${path} must not reach authichain-api`);
+  }
+});
+
+test("/api/v1/agent-verify stays on the x402 intercept, not authichain-api", async () => {
+  const t = apiEnv();
+  const res = await worker.fetch(
+    new Request("https://authichain.com/api/v1/agent-verify"),
+    t.env
+  );
+  assert.equal(res.status, 200);
+  assert.equal(t.api.seen.length, 0);
+});
+
+test("without API_WORKER bound, /api/v1 keeps today's APP_WORKER routing", async () => {
+  const app = jsonBinding("app");
+  const res = await worker.fetch(
+    new Request("https://authichain.com/api/v1/.well-known/jwks.json"),
+    { APP_WORKER: app.binding } as unknown as Env
+  );
+  assert.deepEqual(await res.json(), { from: "app" });
+});

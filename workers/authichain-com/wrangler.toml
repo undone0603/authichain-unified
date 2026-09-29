@@ -62,6 +62,15 @@ fallthrough = true
 binding = "APP_WORKER"
 service = "authichain-edge-router"
 
+# API_WORKER: service binding to `authichain-api` (workers/authichain-api),
+# the public REST API. authichain.com/api/v1/<endpoint> for the endpoints that
+# worker serves (list in src/api-v1-routes.ts) is forwarded over this binding
+# instead of 404ing on APP_WORKER. wrangler deploy fails if `authichain-api`
+# is not deployed (it is live on authichain-api.undone-k.workers.dev).
+[[services]]
+binding = "API_WORKER"
+service = "authichain-api"
+
 # Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
