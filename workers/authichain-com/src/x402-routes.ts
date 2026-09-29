@@ -13,10 +13,11 @@
  * GET  /api/x402/growth → directories + skills + sisters
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid; paid
- *      calls are forwarded over the VERIFY_APP service binding to the Next
- *      route, which holds the seal-registry lookup. With no binding, 503
- *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND)
+ * POST /api/x402 + /api/v1/agent-verify → 402 challenge when unpaid. A paid
+ *      call reads auth_seals on this worker when SUPABASE_URL and a key are
+ *      set (src/lib/paid-seal-verify.ts) and settles only after that read.
+ *      Otherwise it forwards over VERIFY_APP. With neither, 503
+ *      registry_not_bound before any settlement (X402_REGISTRY_NOT_BOUND).
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0xaebf…e437. Do not rebind
@@ -38,8 +39,12 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402";
 import { growthDiscovery, x402ListingPack } from "../../../src/lib/x402-growth";
+import {
+  resolvePaidSealVerify,
+  type SealLookupEnv,
+} from "../../../src/lib/paid-seal-verify";
 
-export type X402Env = X402EnvVars;
+export type X402Env = X402EnvVars & SealLookupEnv;
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -206,13 +211,22 @@ async function agentVerify(
     return json(402, required.v2, required.headers);
   }
 
-  if (verifyApp) {
-    return forwardPaidVerify(
-      verifyApp,
-      request,
-      proofHeader,
-      await request.text()
-    );
+  const bodyText = await request.text();
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: Boolean(verifyApp),
+    proofHeader,
+    bodyText,
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain agent verification",
+    env,
+  });
+  if (decision.action === "answer") {
+    return json(decision.status, decision.body, decision.headers);
+  }
+  if (decision.action === "forward" && verifyApp) {
+    return forwardPaidVerify(verifyApp, request, proofHeader, bodyText);
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.

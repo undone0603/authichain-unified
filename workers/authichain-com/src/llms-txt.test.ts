@@ -20,6 +20,9 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/.well-known/x402");
     expect(text).toContain("https://authichain.com/openapi.json");
     expect(text).toContain("https://authichain.com/mcp");
+    expect(text).toContain("https://authichain.com/battery-passport");
+    expect(text).toContain("18 February 2027");
+    expect(text).toContain("e-bike / LMT");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).toContain(planPaymentLink("strainchain_passport"));
     expect(text).toContain(planPaymentLink("strainchain_farm"));
