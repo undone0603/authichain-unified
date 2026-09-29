@@ -107,6 +107,7 @@ export function renderDppManufacturerArticle(): string {
       "authichain",
       [
         { href: "/dpp", label: "EU DPP" },
+        { href: "/battery-passport", label: "Battery example" },
         { href: "/pricing", label: "Pricing" },
         { href: "/contact", label: "Contact" },
       ],
@@ -197,6 +198,7 @@ ${estateFooter(
       links: [
         { href: DPP_MANUFACTURER_ARTICLE_PATH, label: "Manufacturer article" },
         { href: "/dpp", label: "EU DPP" },
+        { href: "/battery-passport", label: "Battery example" },
       ],
     },
     {
