@@ -305,15 +305,22 @@ export function buildGatedSessionBody(opts: {
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
   body.set("payment_method_types[0]", "card");
+  // The claim file has its own landing: /dpp/thanks would tell a Made in USA
+  // buyer their "DPP audit" was provisioned.
+  const isClaimFile = plan.id === "musa_claim_file";
   body.set(
     "success_url",
-    `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+    isClaimFile
+      ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
+      : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
   );
   body.set(
     "cancel_url",
     isDpp
       ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
-      : `${origin}/pricing?cancelled=1`
+      : isClaimFile
+        ? `${origin}/made-in-usa-claim-file?cancelled=1`
+        : `${origin}/pricing?cancelled=1`
   );
   body.set("client_reference_id", visitId.slice(0, 200));
   body.set("customer_email", email);

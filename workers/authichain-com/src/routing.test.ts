@@ -672,7 +672,7 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/, path);
+    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/musa_claim_file"/, path);
     assert.doesNotMatch(html, /href="\/api\/checkout/, path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /schedule a (call|demo)/i);

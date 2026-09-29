@@ -74,6 +74,12 @@ export async function activateDppMerchant(opts: {
   }
 
   const md = (session.metadata || {}) as Record<string, unknown>;
+  // Another $299 product (the Made in USA claim file) shares the DPP amount,
+  // so an explicit non-DPP plan must never activate a DPP workspace.
+  const otherPlan = typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
+  if (otherPlan && !isDppOffer(md)) {
+    return { ok: false, status: 400, error: "Not a DPP audit session" };
+  }
   if (
     !isDppOffer(md) &&
     session.amount_total !== 29900 &&

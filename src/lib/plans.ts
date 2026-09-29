@@ -18,7 +18,9 @@ export type PlanId =
   | "theater_3"
   | "dpp_readiness"
   | "strainchain_passport"
-  | "strainchain_farm";
+  | "strainchain_farm"
+  | "musa_claim_file"
+  | "musa_audit_bundle";
 
 export interface Plan {
   id: PlanId;
@@ -171,6 +173,42 @@ export const PLANS: Plan[] = [
     features: ["Unlimited cultivars and passports", "Auto-updates on every new CoA", "Lineage and batch history across the full library", "Discrepancies surfaced rather than smoothed over", "Export or withdraw your record at any time"],
     cta: "Start a Farm Plan",
   },
+  {
+    // Created by Z in Stripe 2026-09-29 (prod_VLiM8xIrFVFa1M). Priced per SKU;
+    // the Payment Link allows 1–25 SKUs, the gated checkout sells one.
+    // Unlisted: sold from /made-in-usa-claim-file, not the pricing grid.
+    id: "musa_claim_file",
+    name: "Made in USA Claim File",
+    price: 299,
+    price_suffix: " per SKU",
+    description: "Substantiation support for one product's Made in USA claim. Not legal advice.",
+    generations: 0,
+    stripe_price_id: "price_1UL0vVGqTruSqV8T5WYjrq6i",
+    stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
+    stripe_mode: "payment",
+    tier: "pro",
+    listed: false,
+    features: ["Origin records for one SKU", "Bill-of-materials origin attestations from your suppliers", "A signed attestation anyone can verify", "Substantiation support, not legal advice"],
+    cta: "Start my claim file",
+  },
+  {
+    // Created by Z in Stripe 2026-09-29. One engagement, base scope 10 SKUs;
+    // larger scopes are quoted. Sold only through its Payment Link, which
+    // collects company name, SKU count, address and tax ID for the invoice.
+    id: "musa_audit_bundle",
+    name: "Made in USA Claim File — Audit Bundle",
+    price: 2500,
+    price_suffix: " per engagement",
+    description: "Claim files for up to 10 SKUs in one engagement. Larger scopes quoted separately. Not legal advice.",
+    generations: 0,
+    stripe_price_id: "price_1UL15AGqTruSqV8TQHP3yNiR",
+    stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
+    stripe_mode: "payment",
+    tier: "pro",
+    listed: false,
+    features: ["Claim files for up to 10 SKUs", "One engagement, invoiced to your company", "Larger scopes quoted separately", "Substantiation support, not legal advice"],
+    cta: "Buy the audit bundle",
+  },
 ];
 
 export const PUBLIC_PLAN_IDS = [
@@ -244,6 +282,8 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   dpp_readiness: 50,
   strainchain_passport: 0,
   strainchain_farm: 0,
+  musa_claim_file: 0,
+  musa_audit_bundle: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -258,4 +298,6 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   dpp_readiness: "pro",
   strainchain_passport: "pro",
   strainchain_farm: "pro",
+  musa_claim_file: "pro",
+  musa_audit_bundle: "pro",
 };

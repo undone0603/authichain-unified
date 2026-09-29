@@ -50,6 +50,7 @@ export function renderLlmsTxt(): string {
     "",
     "## Human checkout (Stripe Payment Links)",
     `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
+    `- Made in USA Claim File $${planUsd("musa_claim_file")} per SKU: https://authichain.com/made-in-usa-claim-file`,
     `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
     `- StrainChain Farm Plan $${planUsd("strainchain_farm")}/mo: ${FARM_LINK}`,
     "- Pricing: https://authichain.com/pricing",
