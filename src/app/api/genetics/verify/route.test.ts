@@ -1,8 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "./route";
 import { fingerprintCultivar } from "@/lib/fingerprint";
 import { getCultivar } from "@/lib/genetics";
+
+// Mendo Love Farms is withdrawn from public surfaces, but it is still the only
+// farm with real certificates, so these tests open the gate to exercise the
+// digest logic against it. route.withdrawn.test.ts covers the real gate.
+vi.mock("@/lib/genetics", async importOriginal => {
+  const actual = await importOriginal();
+  return { ...actual, isPublicFarm: () => true };
+});
 
 const call = (qs: string) =>
   GET(new NextRequest(`https://strainchain.io/api/genetics/verify${qs}`));

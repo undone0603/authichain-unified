@@ -4,6 +4,9 @@ import {
   derive,
   getCultivar,
   getDossier,
+  isPublicFarm,
+  listFarms,
+  listPublicFarms,
   timeline,
   toSlug,
   type Certificate,
@@ -238,4 +241,16 @@ describe("toSlug", () => {
 
 it("uses the standard decarboxylation factor", () => {
   expect(DECARB).toBeCloseTo(314.46 / 358.47, 3);
+});
+
+describe("the public gate", () => {
+  it("keeps the withdrawn Mendo library as a fixture but off public lists", () => {
+    expect(listFarms()).toContain("mendo-love-farms");
+    expect(isPublicFarm("mendo-love-farms")).toBe(false);
+    expect(listPublicFarms()).not.toContain("mendo-love-farms");
+  });
+
+  it("treats an unknown farm as not public", () => {
+    expect(isPublicFarm("no-such-farm")).toBe(false);
+  });
 });

@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { farmIsUnlisted, getDossier, getCultivar, listFarms, toSlug } from "@/lib/genetics";
+import {
+  farmIsUnlisted,
+  getDossier,
+  getCultivar,
+  isPublicFarm,
+  listPublicFarms,
+  toSlug,
+} from "@/lib/genetics";
 import {
   IssuerCommitment,
   PassportFooter,
@@ -13,7 +20,7 @@ import { ThcvTimeline } from "../ThcvTimeline";
 type Params = { farm: string };
 
 export function generateStaticParams(): Params[] {
-  return listFarms().map(farm => ({ farm }));
+  return listPublicFarms().map(farm => ({ farm }));
 }
 
 export async function generateMetadata({
@@ -22,7 +29,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { farm } = await params;
-  if (farmIsUnlisted(farm)) {
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) {
     return { title: "Not found", robots: { index: false, follow: false } };
   }
   const d = getDossier(farm);
@@ -39,7 +46,7 @@ export default async function FarmIndex({
   params: Promise<Params>;
 }) {
   const { farm } = await params;
-  if (farmIsUnlisted(farm)) notFound();
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) notFound();
   const d = getDossier(farm);
   if (!d) notFound();
 

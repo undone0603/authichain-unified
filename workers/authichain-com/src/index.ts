@@ -2344,7 +2344,7 @@ function originMoneySurfaces() {
   <div class="wrap">
     <p class="section-tag">Money surfaces</p>
     <h2>TruMark seals and Made in America claims</h2>
-    <p class="section-sub">Live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims are documentation under FTC 16 CFR Part 323. Mendo / LT-63 is the genetics passport. No call booking.</p>
+    <p class="section-sub">Live self-serve paths. TruMark is the scan seal, not a SKU. Origin claims are documentation under FTC 16 CFR Part 323. The StrainChain Passport is the genetics record. No call booking.</p>
     <div class="estate-grid">
       <article class="estate-card card">
         <h3>TruMark</h3>
@@ -2381,15 +2381,15 @@ function originMoneySurfaces() {
         </div>
       </article>
       <article class="estate-card card">
-        <h3>Mendo / LT-63</h3>
-        <p>Genetics library is live. The Mendo campaign microsite goes straight to Passport $49 checkout.</p>
+        <h3>Genetics passport</h3>
+        <p>One cultivar, built from the breeder's own lab certificates. Every total is recomputed from the panel, and the breeder can export or withdraw the record.</p>
         <div class="estate-actions" style="margin-top:1rem">
-          <a class="btn btn-primary" href="/m/mendo">Mendo microsite</a>
+          <a class="btn btn-primary" href="/passport">Passport brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/strainchain_passport",
             label: "Passport checkout — $49",
-            inputId: "origin-mendo-email",
-            formId: "origin-mendo-checkout",
+            inputId: "origin-passport-email",
+            formId: "origin-passport-checkout",
           })}
           ${catalogPaymentLinkHtml({
             planId: "strainchain_passport",
@@ -2454,7 +2454,7 @@ function ecosystemFooter() {
           { href: "/contact", label: "Contact" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
-          { href: "/m/mendo", label: "Mendo / LT-63" },
+          { href: "/passport", label: "Genetics passport" },
           { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
           { href: "/authentic-agentic-economy", label: "Authentic agentic economy" },
@@ -3049,6 +3049,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
+      <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
@@ -3078,11 +3079,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           inputId: "dpp-email",
           buttonClass: "btn btn-outline",
         })}
+        <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
         The $299 is credited in full toward AuthiChain Basic if you move forward.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
       </p>
     </div>
   </section>
@@ -3484,7 +3487,6 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/digital-product-passport', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/genetics', freq: 'weekly', pri: '0.85' },
-        { loc: 'https://authichain.com/genetics/mendo-love-farms', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/passport', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/dpp', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/dpp-check', freq: 'weekly', pri: '0.9' },

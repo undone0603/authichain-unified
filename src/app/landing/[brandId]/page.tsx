@@ -205,8 +205,8 @@ function getLandingContent(brandId: BrandId): LandingContent {
       closingLine: "Get compliant without the complexity. No setup fees.",
       primaryCta: { label: "Request demo", href: "/onboard" },
       secondaryCta: {
-        label: "View genetics library",
-        href: "/genetics/mendo-love-farms",
+        label: "How a passport works",
+        href: "https://strainchain.io/passport",
       },
     },
     govchain: {

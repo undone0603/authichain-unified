@@ -7,8 +7,6 @@
 #   CLOUDFLARE_ACCOUNT_ID
 #
 # Keys (see content/microsites/manifest.json):
-#   mendo/index.html
-#   realthcv/index.html          (same bytes as mendo)
 #   trumark/index.html
 #   musa/index.html
 #   made-in-america/index.html   (same bytes as musa)
@@ -19,6 +17,9 @@
 # Live serving today is authichain-com /m/<slug>. KV + *.authichain.com
 # only works after the root `authichain` worker is actually routed to
 # those hostnames (currently 522/523). This script is the upload half.
+#
+# It also deletes the retired mendo/ and realthcv/ keys: the breeder declined
+# on 2026-09-21, so that pack must not be served from KV either.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,7 +28,7 @@ NAMESPACE_ID="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$MAN
 
 if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
   echo "CLOUDFLARE_API_TOKEN is required (Workers KV Storage:Edit). Not uploading."
-  echo "Live path after authichain-com deploy: https://authichain.com/m/mendo"
+  echo "Live path after authichain-com deploy: https://authichain.com/m/trumark"
   exit 1
 fi
 
@@ -43,8 +44,14 @@ put_key() {
   npx wrangler kv key put "$key" --path "$file" --namespace-id "$NAMESPACE_ID"
 }
 
-put_key "mendo/index.html" "$ROOT/content/microsites/mendo/index.html"
-put_key "realthcv/index.html" "$ROOT/content/microsites/mendo/index.html"
+delete_key() {
+  local key="$1"
+  echo "DELETE $key"
+  npx wrangler kv key delete "$key" --namespace-id "$NAMESPACE_ID" || true
+}
+
+delete_key "mendo/index.html"
+delete_key "realthcv/index.html"
 put_key "trumark/index.html" "$ROOT/content/microsites/trumark/index.html"
 put_key "musa/index.html" "$ROOT/content/microsites/musa/index.html"
 put_key "made-in-america/index.html" "$ROOT/content/microsites/musa/index.html"
@@ -53,4 +60,4 @@ put_key "bat-2026-001/index.html" "$ROOT/content/microsites/bat-2026-001/index.h
 put_key "insulin-vial/index.html" "$ROOT/content/microsites/bat-2026-001/index.html"
 
 echo "KV upload complete. Subdomain DNS is still 522/523 until a worker route is attached."
-echo "Apex URLs (no DNS change): https://authichain.com/m/mendo"
+echo "Apex URLs (no DNS change): https://authichain.com/m/trumark"
