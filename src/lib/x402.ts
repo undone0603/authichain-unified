@@ -1158,6 +1158,16 @@ export async function x402OpenApiDocument(
         },
         post: { ...paidPost, operationId: "agentVerifyAlias" },
       },
+      "/battery-passport": {
+        get: {
+          summary: "Battery passport gap map (free)",
+          description:
+            "E-bike and other light means of transport (LMT) batteries, plus industrial and EV batteries over 2 kWh, need a battery passport from 18 February 2027 under Regulation (EU) 2023/1542. This page is that gap map, with a worked example on a fictional e-bike pack at /battery-passport/sample-audit.",
+          responses: {
+            "200": { description: "HTML gap map. Not an x402 payment endpoint." },
+          },
+        },
+      },
     },
   };
 }

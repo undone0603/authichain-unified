@@ -27,6 +27,12 @@ compatibility_flags = ["nodejs_compat"]
 # the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
 # catch a `new_classes` regression in either file.
 
+# Public auth_seals SELECT for paid POST /api/x402. Service role is a secret,
+# not a var. Deploy with --keep-vars so dashboard X402_PAY_TO stays put.
+[vars]
+SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"
+
 [alias]
 playwright-core = "./playwright-unavailable.ts"
 
