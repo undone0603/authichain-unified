@@ -68,13 +68,20 @@ type Env = {
   SUPABASE_ANON_KEY?: string;
 };
 
+function generateServiceKey(env?: Env): string | undefined {
+  return env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
 function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
-    ["NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL],
+    [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL,
+    ],
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
     ["CRON_SECRET", env.CRON_SECRET],
@@ -373,13 +380,7 @@ app.get("/api/generate", async c => {
     c.env?.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.SUPABASE_URL;
-  const supabaseKey =
-    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = generateServiceKey(c.env);
   return c.json(
     generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
       authConfigured: Boolean(supabaseUrl && supabaseKey),
@@ -405,13 +406,7 @@ app.post("/api/generate", async c => {
       c.env?.SUPABASE_URL ||
       process.env.NEXT_PUBLIC_SUPABASE_URL ||
       process.env.SUPABASE_URL;
-    const supabaseKey =
-      c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      c.env?.SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      c.env?.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = generateServiceKey(c.env);
     const userId = await resolveGenerateUserId({
       request: c.req.raw,
       supabaseUrl,
