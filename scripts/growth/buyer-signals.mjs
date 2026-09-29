@@ -46,6 +46,14 @@ export const DPP_TERMS =
 export const MUSA_TERMS =
   /made in (the )?u\.?s\.?a?\b|made in america|country[- ]of[- ]origin|domestic content|\busmca\b/i;
 
+// Job posts are long and generic, so they must name the regulation or the
+// claim itself; a passing "anti-counterfeit" or "country of origin" in a
+// pharma QA posting is noise.
+export const JOB_DPP_TERMS =
+  /digital product passport|battery passport|\bESPR\b|battery regulation|2023\/1542/i;
+export const JOB_MUSA_TERMS =
+  /made in (the )?usa\b|made in america|country[- ]of[- ]origin (marking|labell?ing|claims?|compliance)/i;
+
 // ---------- helpers ----------
 
 export function daysAgo(n, now = new Date()) {
@@ -241,10 +249,10 @@ export const JOB_SEARCHES = [
 
 export function jobLead({ company, title, url, date, text }, source) {
   const hay = `${title} ${text}`;
-  const dpp = DPP_TERMS.test(hay);
-  const musa = MUSA_TERMS.test(hay);
+  const dpp = JOB_DPP_TERMS.test(hay);
+  const musa = JOB_MUSA_TERMS.test(hay);
   if (!dpp && !musa) return null;
-  const term = (hay.match(dpp ? DPP_TERMS : MUSA_TERMS) ?? [""])[0];
+  const term = (hay.match(dpp ? JOB_DPP_TERMS : JOB_MUSA_TERMS) ?? [""])[0];
   return {
     source: "jobs",
     id: `jobs:${url}`,
@@ -357,7 +365,8 @@ export function opener(lead) {
   const o = OFFERS[lead.offer];
   switch (lead.source) {
     case "ted":
-      return `Saw ${lead.org || "your"} tender "${lead.title}". If passport readiness is in scope, a written gap map is ${o.label}: ${o.url}`;
+      // A tender is a bid decision for the owner, not a cold pitch.
+      return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
     case "jobs":

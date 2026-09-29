@@ -7,6 +7,7 @@ import {
   dedupe,
   ftcLeads,
   idsFromBody,
+  opener,
   parseArbeitnow,
   parseRemotive,
   parseRss,
@@ -131,11 +132,42 @@ describe("jobs", () => {
           title: "Trade analyst",
           url: "https://a/1",
           created_at: 1790000000,
-          description: "Country of origin determinations",
+          description: "Own country of origin marking for US imports",
         },
       ],
     });
     expect(arbeit[0]).toMatchObject({ org: "Forge", offer: "musa_claim_file" });
+  });
+});
+
+describe("job noise", () => {
+  it("ignores postings that only mention origin or counterfeiting in passing", () => {
+    const noisy = parseRemotive({
+      jobs: [
+        {
+          company_name: "PharmaCo",
+          title: "Sr. Manager, Quality Assurance",
+          url: "https://r/9",
+          publication_date: "2026-09-25",
+          description:
+            "Track country of origin for APIs and anti-counterfeit packaging",
+        },
+      ],
+    });
+    expect(noisy).toEqual([]);
+  });
+});
+
+describe("openers", () => {
+  it("frames a tender as a bid decision, not a pitch", () => {
+    const text = opener({
+      source: "ted",
+      offer: "dpp_readiness",
+      url: "https://ted.europa.eu/en/notice/-/detail/1-2026",
+      deadline: "2026-10-30",
+    });
+    expect(text).toMatch(/^Bid decision, not a pitch/);
+    expect(text).toContain("before 2026-10-30");
   });
 });
 
