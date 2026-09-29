@@ -11,6 +11,9 @@ import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
+import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
+import { docsCtaClickEvent, docsViewEvent } from "./docs-events";
+import { renderDocsPage } from "./docs-render";
 import {
   isAuthenticAgenticEconomyPath,
   renderAuthenticAgenticEconomyPage,
@@ -2455,6 +2458,7 @@ function ecosystemFooter() {
           { href: "/partners/brief", label: "Partner brief" },
           { href: "/digital-product-passport", label: "EU DPP" },
           { href: "/authentic-agentic-economy", label: "Authentic agentic economy" },
+          { href: "/docs", label: "Docs" },
           { href: "/x402", label: "Agent pay (x402)" },
           { href: "/vs", label: "Compare" },
         ],
@@ -2490,6 +2494,7 @@ const HTML = `<!DOCTYPE html>
       { href: "/made-in-america", label: "Made in USA" },
       { href: "/authentic-agentic-economy", label: "Agentic economy" },
       { href: "/pricing", label: "Pricing" },
+      { href: "/docs", label: "Docs" },
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
@@ -3044,6 +3049,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
+      <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
     </div>
@@ -3449,6 +3455,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     const appHost = tryHandleAppHost(request);
     if (appHost) return appHost;
     const p = url.pathname;
+    const docsClick = docsCtaClickEvent(request.method, url);
+    if (docsClick) console.log(JSON.stringify(docsClick));
     if (p === '/og-image.png' || p === '/og.png') {
       return pngResponse(OG_IMAGE_PNG_B64);
     }
@@ -3484,6 +3492,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
+        { loc: 'https://authichain.com/docs', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/gs1-digital-link', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/verification', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/dpp-architecture', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/docs/examples', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/x402', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/.well-known/x402', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/blog/eu-dpp-manufacturer', freq: 'weekly', pri: '0.85' },
@@ -3574,6 +3587,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    const docsDest = docsRedirect(p);
+    if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);
+    const docsView = docsViewEvent(request.method, p);
+    if (docsView) console.log(JSON.stringify(docsView));
+    if (isDocsHub(p) || isDocsPage(p)) {
+      return new Response(renderDocsPage(p), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     if (isAuthenticAgenticEconomyPath(p)) {
       return new Response(renderAuthenticAgenticEconomyPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
