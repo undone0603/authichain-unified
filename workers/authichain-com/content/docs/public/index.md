@@ -20,6 +20,7 @@ A QR names an item. A signature binds a claim to a key. An anchor binds a hash t
 - [GS1 Digital Link](/docs/gs1-digital-link) — identifier syntax, not a proof of authenticity.
 - [Verification states](/docs/verification) — protocol verdicts vs product decisions. An anomaly is evidence, not a conviction.
 - [Digital Product Passport architecture](/docs/dpp-architecture) — identity, carrier, resolver, evidence, verification, policy.
+- [Battery passport example](/battery-passport) — e-bike and other LMT batteries. A passport is required from 18 February 2027.
 - [Examples and fixtures](/docs/examples) — signed records you can check against the published JWKS.
 - [Open Verification Protocol](/protocol) — run `verifier.mjs` on your own machine. v0.1.0 draft.
 - [x402 agent pay](/x402) — $0.05 USDC per verification call on Base.
@@ -35,6 +36,7 @@ Cite these. Do not infer the rest.
 | Polygon contract | `0x4da4D2675e52374639C9c954f4f653887A9972BE` |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |
 | [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) | Free EU DPP readiness check |
+| [/battery-passport](/battery-passport) | E-bike / LMT gap map. Battery passport from 18 February 2027. |
 | [/anchor](/anchor) | Public product-anchor UI |
 | [/openapi.json](https://authichain.com/openapi.json) | Machine description of public HTTP |
 

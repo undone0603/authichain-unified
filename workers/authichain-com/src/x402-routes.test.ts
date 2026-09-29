@@ -407,3 +407,51 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("POST /api/x402 with supabase credentials", () => {
+  const registryEnv = {
+    X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+    X402_NETWORK: "base",
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_ANON_KEY: "anon-test",
+  };
+
+  it("rejects a structurally invalid proof before fetch or VERIFY_APP", async () => {
+    const original = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    let forwarded = 0;
+    try {
+      const header = proofHeader({
+        scheme: "exact",
+        network: "not-a-network",
+        payer: "not-an-address",
+        amount: "1",
+      });
+      const res = await tryHandleX402(
+        req("/api/x402", {
+          method: "POST",
+          headers: { "x-payment": header, "content-type": "application/json" },
+          body: JSON.stringify({ sealId: "probe" }),
+        }),
+        registryEnv,
+        {
+          fetch: async () => {
+            forwarded += 1;
+            return new Response("no");
+          },
+        }
+      );
+      expect(res!.status).toBe(402);
+      const body = (await res!.json()) as { error?: string };
+      expect(body.error).not.toBe("registry_not_bound");
+      expect(calls).toEqual([]);
+      expect(forwarded).toBe(0);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

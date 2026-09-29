@@ -24,6 +24,7 @@ import {
   type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
+import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
 import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
@@ -301,7 +302,40 @@ async function unpaidOrRefusedVerify(
     return json(402, required.v2, required.headers);
   }
 
-  if (verifyApp) {
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: Boolean(verifyApp),
+    proofHeader,
+    bodyText: JSON.stringify(args),
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain MCP verify",
+    env,
+  });
+  if (decision.action === "answer") {
+    if (decision.status !== 200) {
+      return json(decision.status, decision.body, decision.headers);
+    }
+    const headers: Record<string, string> = { ...decision.headers };
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id: id ?? null,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(decision.body, null, 2),
+            },
+          ],
+          structuredContent: decision.body,
+        },
+      },
+      headers
+    );
+  }
+  if (decision.action === "forward" && verifyApp) {
     return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
   }
   // No registry lookup is bound here: refuse before settlePayment() so the

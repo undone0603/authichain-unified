@@ -3322,6 +3322,10 @@ interface Env {
   X402_USDC_ASSET?: string;
   X402_PRICE_USD?: string;
   X402_DAILY_CAP_USD?: string;
+  /** Public auth_seals read for paid verify. Service role stays a secret. */
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
 const APP_WORKER_TIMEOUT_MS_DEFAULT = 4000;
