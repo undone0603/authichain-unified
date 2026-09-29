@@ -6,6 +6,7 @@
 
 import { evaluate } from "./evaluate";
 import { libraryPageFor, lookupFixture } from "./fixtures";
+import { verifySubmitted } from "./protocol-verify.mjs";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -94,24 +95,13 @@ async function jwksLive(): Promise<boolean> {
   }
 }
 
-async function parseInput(request: Request, url: URL): Promise<string> {
-  if (request.method === "GET") {
-    return url.searchParams.get("input") || url.searchParams.get("id") || "";
-  }
-  try {
-    const body = (await request.json()) as { input?: string; id?: string; qrCode?: string };
-    return body.input || body.id || body.qrCode || "";
-  } catch {
-    return "__INVALID_JSON__";
-  }
-}
-
 function kernelEnvelope(
   identifier: string,
   rawInput: string,
   keysLive: boolean,
   kernel: ReturnType<typeof evaluate>,
   extra: Record<string, unknown> = {},
+  anchored = false,
 ) {
   return {
     decision: kernel.decision,
@@ -120,8 +110,12 @@ function kernelEnvelope(
     unknowns: kernel.unknowns,
     depthUsed: kernel.depthUsed,
     qron_id: identifier,
-    anchored: false,
-    polygon: { contract: POLYGON_CONTRACT, queried: false, status: "in_development" },
+    anchored,
+    polygon: {
+      contract: POLYGON_CONTRACT,
+      queried: false,
+      status: anchored ? "hash_accepted_tx_not_queried" : "in_development",
+    },
     jwks: { url: JWKS_URL, live: keysLive },
     verifiedAt: new Date().toISOString(),
     input: rawInput,
@@ -129,9 +123,95 @@ function kernelEnvelope(
   };
 }
 
+type Submission = {
+  invalid: boolean;
+  raw: string;
+  record: Record<string, unknown> | null;
+  anchor: Record<string, unknown> | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+async function parseSubmission(request: Request, url: URL): Promise<Submission> {
+  if (request.method === "GET") {
+    return {
+      invalid: false,
+      raw: url.searchParams.get("input") || url.searchParams.get("id") || "",
+      record: null,
+      anchor: null,
+    };
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return { invalid: true, raw: "", record: null, anchor: null };
+  }
+  if (!isRecord(body)) {
+    return { invalid: false, raw: "", record: null, anchor: null };
+  }
+  return {
+    invalid: false,
+    raw: String(body.input || body.id || body.qrCode || ""),
+    record: isRecord(body.record) ? body.record : null,
+    anchor: isRecord(body.anchor) ? body.anchor : null,
+  };
+}
+
 async function handleVerify(request: Request, env: Env, url: URL): Promise<Response> {
-  const rawInput = await parseInput(request, url);
-  if (rawInput === "__INVALID_JSON__") return json({ error: "Invalid JSON body" }, 400);
+  const submitted = await parseSubmission(request, url);
+  if (submitted.invalid) return json({ error: "Invalid JSON body" }, 400);
+
+  const protocol = verifySubmitted(submitted.record, submitted.anchor);
+  if (protocol) {
+    const identifier = submitted.raw.trim()
+      ? deriveInputIdentifier(submitted.raw)
+      : "";
+    const keysLive = await jwksLive();
+    const signature = protocol.checks.signature;
+    const vector = {
+      identity: "not_supplied" as const,
+      issuer: "unknown" as const,
+      signature: signature === true ? ("verified" as const) : signature === false ? ("failed" as const) : ("unknown" as const),
+      provenance: "unknown" as const,
+      physical_binding: "unknown" as const,
+      scan_behavior: "unknown" as const,
+      revocation: "clear" as const,
+      freshness: "unknown" as const,
+    };
+    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source: "submitted_record" }));
+    return json(
+      {
+        verdict: protocol.verdict,
+        reasons: protocol.reasons,
+        checks: protocol.checks,
+        decision: protocol.decision,
+        vector,
+        unknowns: ["physical_binding_not_inspected", "anchor_transaction_not_queried"],
+        depthUsed: "protocol",
+        qron_id: identifier || null,
+        anchored: protocol.anchored,
+        anchorTransactionQueried: false,
+        polygon: {
+          contract: POLYGON_CONTRACT,
+          queried: false,
+          status: "not_queried",
+        },
+        jwks: { url: JWKS_URL, live: keysLive },
+        verifiedAt: new Date().toISOString(),
+        input: submitted.raw,
+        source: "submitted_record",
+        product: null,
+        tokenId: null,
+      },
+      200,
+      { "Cache-Control": "no-store" },
+    );
+  }
+
+  const rawInput = submitted.raw;
   if (!rawInput.trim()) return json({ error: "Missing input parameter" }, 400);
 
   const identifier = deriveInputIdentifier(rawInput);
@@ -140,13 +220,25 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
   const fixture = lookupFixture(identifier);
   if (fixture) {
     const kernel = evaluate(fixture.input);
-    console.log(JSON.stringify({ evt: "verify", identifier, decision: kernel.decision, source: "fixture" }));
+    const decision = kernel.decision === "verified" ? "invalid" : kernel.decision;
+    const reasons =
+      kernel.decision === "verified"
+        ? [...kernel.reasons, "no_ed25519_record"]
+        : kernel.reasons;
+    console.log(JSON.stringify({ evt: "verify", identifier, decision, source: "fixture" }));
     return json(
-      kernelEnvelope(identifier, rawInput, keysLive, kernel, {
-        source: "fixture",
-        label: fixture.label,
-        product: null,
-      }),
+      kernelEnvelope(
+        identifier,
+        rawInput,
+        keysLive,
+        { ...kernel, decision, reasons },
+        {
+          source: "fixture",
+          label: fixture.label,
+          product: null,
+          protocol: null,
+        },
+      ),
       200,
       { "Cache-Control": "no-store" },
     );
