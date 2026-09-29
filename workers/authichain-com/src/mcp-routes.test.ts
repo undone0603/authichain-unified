@@ -219,6 +219,106 @@ describe("mcp discovery", () => {
     }
   });
 
+  it("uses the seal lookup instead of VERIFY_APP when supabase is set", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    let forwarded = 0;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "not-a-network",
+          payer: "not-an-address",
+          amount: "1",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 11,
+            method: "tools/call",
+            params: { name: "verify", arguments: { sealId: "probe" } },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        },
+        {
+          fetch: async () => {
+            forwarded += 1;
+            return new Response("no");
+          },
+        }
+      );
+      expect(res?.status).toBe(402);
+      const body = (await res!.json()) as { error?: string };
+      expect(body.error).not.toBe("registry_not_bound");
+      expect(calls).toEqual([]);
+      expect(forwarded).toBe(0);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance stays free when a payment header and supabase are present", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "base",
+          payer: "0x1234567890abcdef1234567890abcdef12345678",
+          amount: "50000",
+          signature: "0xdead",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 12,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "NOPE-XYZ" },
+            },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          X402_FACILITATOR_URL: "https://facilitator.example",
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      expect(res?.status).toBe(200);
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as { verified: boolean };
+      expect(data.verified).toBe(false);
+      expect(calls).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
   it("query_provenance is free and never stamps unknown IDs verified", async () => {
     const res = await tryHandleMcp(
       req("/mcp", {

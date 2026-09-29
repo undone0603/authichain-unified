@@ -65,6 +65,14 @@ test("every listed card renders its wording from the plan catalogue", () => {
   }
 });
 
+test("authichain pricing names the battery passport deadline", () => {
+  const html = renderEstatePricingPage("authichain");
+  assert.match(html, /18 February 2027/);
+  assert.match(html, /LMT/);
+  assert.match(html, /href="\/battery-passport"/);
+  assert.match(html, /e-bike pack/);
+});
+
 test("pricing paths are exact /pricing only", () => {
   assert.equal(isPricingPath("/pricing"), true);
   assert.equal(isPricingPath("/pricing/"), true);

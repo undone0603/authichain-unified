@@ -423,6 +423,8 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
     assert.match(res.headers.get("content-type") ?? "", /text\/plain/, path);
     const text = await res.text();
     assert.match(text, /POST https:\/\/authichain\.com\/api\/x402/);
+    assert.match(text, /18 February 2027/);
+    assert.match(text, /battery-passport/);
     assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
     assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
     assert.doesNotMatch(text, /GET \/api\/checkout/);
@@ -529,6 +531,9 @@ test("GET /openapi.json declares x-payment-info for unpaid POST /api/x402", asyn
   ]);
   assert.ok(spec.paths["/api/x402"].post.responses["402"]);
   assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
+  assert.match(JSON.stringify(spec), /\/battery-passport/);
+  assert.match(JSON.stringify(spec), /18 February 2027/);
+  assert.match(JSON.stringify(spec), /LMT/);
 });
 
 test("other /api paths still proxy to the app", async () => {
