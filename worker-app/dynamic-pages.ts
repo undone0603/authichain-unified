@@ -1456,7 +1456,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Need more generations? Buy a pack:</p>\n" +
+    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1470,13 +1470,13 @@ function generateFormHtml(error?: string): string {
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
-      "Create a Living QR for a product URL. Public generate CTA for qron.space.",
+      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
-      "<p>Enter a product URL and an optional style prompt. Each generation uses one credit from your pack. Not signed in? Submitting sends us a pilot seal request instead.</p>\n" +
+      "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +

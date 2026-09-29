@@ -204,6 +204,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
       <p class="estate-badge hero-badge">Free tool · EU Digital Product Passport</p>
       <h1>How ready are your products for the EU Digital Product Passport?</h1>
       <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, no sign-up, nothing stored.</p>
+      <p class="bp-note">The written plan is $299. <a href="/battery-passport/sample-audit">See a sample assessment</a> on a fictional e-bike battery.</p>
       ${formHtml(input)}
     </div>
   </header>
