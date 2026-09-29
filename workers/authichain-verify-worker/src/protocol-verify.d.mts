@@ -9,3 +9,14 @@ export function verifySubmitted(
   anchored: boolean;
   anchorTransactionQueried: false;
 } | null;
+
+export function readAnchorOnChain(
+  record: unknown,
+  anchor: unknown,
+  opts?: { rpcUrl?: string },
+): Promise<{
+  queried: boolean;
+  onChain: boolean;
+  status: string;
+  block?: string | null;
+}>;

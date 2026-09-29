@@ -6,7 +6,7 @@
 
 import { evaluate } from "./evaluate";
 import { libraryPageFor, lookupFixture } from "./fixtures";
-import { verifySubmitted } from "./protocol-verify.mjs";
+import { verifySubmitted, readAnchorOnChain } from "./protocol-verify.mjs";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -181,7 +181,12 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
       revocation: "clear" as const,
       freshness: "unknown" as const,
     };
-    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source: "submitted_record" }));
+    const chainName = String(submitted.anchor?.chain || "");
+    const polygonChain = chainName === "polygon:137" || chainName === "eip155:137";
+    const chain = await readAnchorOnChain(submitted.record, submitted.anchor, {
+      rpcUrl: polygonChain ? env.POLYGON_RPC_URL : undefined,
+    });
+    console.log(JSON.stringify({ evt: "verify", identifier, decision: protocol.decision, source: "submitted_record", chain: chain.status }));
     return json(
       {
         verdict: protocol.verdict,
@@ -189,15 +194,20 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         checks: protocol.checks,
         decision: protocol.decision,
         vector,
-        unknowns: ["physical_binding_not_inspected", "anchor_transaction_not_queried"],
+        unknowns: chain.onChain
+          ? ["physical_binding_not_inspected"]
+          : ["physical_binding_not_inspected", "anchor_transaction_not_on_chain"],
         depthUsed: "protocol",
         qron_id: identifier || null,
         anchored: protocol.anchored,
-        anchorTransactionQueried: false,
+        anchorTransactionQueried: chain.queried,
+        anchorOnChain: chain.onChain,
+        anchorChainStatus: chain.status,
         polygon: {
           contract: POLYGON_CONTRACT,
-          queried: false,
-          status: "not_queried",
+          queried: chain.queried,
+          status: chain.status,
+          block: chain.block ?? null,
         },
         jwks: { url: JWKS_URL, live: keysLive },
         verifiedAt: new Date().toISOString(),
