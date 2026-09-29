@@ -160,11 +160,12 @@ export default {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId =
         typeof invoice.customer === "string" ? invoice.customer : null;
+      const line = invoice.lines?.data?.[0] as
+        | { price?: { id?: string } | string | null }
+        | undefined;
+      const price = line?.price;
       const linePrice =
-        invoice.lines?.data?.[0]?.price &&
-        typeof invoice.lines.data[0].price === "object"
-          ? invoice.lines.data[0].price.id
-          : null;
+        price && typeof price === "object" ? (price.id ?? null) : null;
       const grant = grantForPrice(linePrice);
       // One-time packs (starter/creator/dpp/passport): refillOnInvoicePaid=false — no-op.
       // Launch/Farm subscriptions: SET the period grant, used=0. Never +=.

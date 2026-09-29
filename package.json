@@ -43,7 +43,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.66",
+    "@ai-sdk/openai": "^4.0.75",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@clerk/nextjs": "^7.8.3",
@@ -90,7 +90,7 @@
     "@trpc/server": "^11.0.0-rc.446",
     "@types/express": "^5.0.6",
     "@types/google.maps": "^3.65.5",
-    "ai": "^7.0.84",
+    "ai": "^7.0.116",
     "axios": "^1.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -142,7 +142,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260915.1",
+    "@cloudflare/workers-types": "^5.20260926.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.15",
     "@opennextjs/cloudflare": "^1.20.6",
     "@openzeppelin/contracts": "5.6.1",
@@ -161,7 +161,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.9.1",
     "eslint-config-next": "16.2.10",
-    "hardhat": "^3.16.0",
+    "hardhat": "^3.18.0",
     "husky": "^9.1.7",
     "ioredis": "file:./stubs/empty-redis",
     "jsdom": "^30.1.0",

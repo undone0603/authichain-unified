@@ -40,6 +40,11 @@ custom_domain = true
 [observability]
 enabled = true
 
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
 # APP_WORKER: service binding to `authichain-edge-router` (worker-app/index.ts),
 # the native Cloudflare replacement for the old Vercel deployment
 # (authichain-unified.vercel.app — that Vercel project no longer exists).
