@@ -670,6 +670,12 @@ describe("x402OpenApiDocument", () => {
       amount: "0.1",
     });
     expect(post.responses["402"]).toBeTruthy();
+    const battery = spec.paths["/battery-passport"] as {
+      get: { description: string };
+    };
+    expect(battery.get.description).toContain("18 February 2027");
+    expect(battery.get.description).toContain("LMT");
+    expect(battery.get.description).toContain("e-bike");
     expect(JSON.stringify(spec)).not.toContain("/api/checkout");
     expect(JSON.stringify(spec).toLowerCase()).not.toContain(
       "facilitator.payai"

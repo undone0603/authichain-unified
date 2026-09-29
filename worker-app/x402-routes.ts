@@ -6,10 +6,10 @@
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid; a
- *      paid call is forwarded over the VERIFY_APP service binding to the Next
- *      route that holds the seal-registry lookup, or refused 503 before any
- *      settlement when the binding is absent
+ * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid. A
+ *      paid call reads auth_seals on this worker when SUPABASE_URL and a key
+ *      are set, and settles only after that read. Otherwise it is forwarded
+ *      over VERIFY_APP, or refused 503 before settlement when neither is set.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0xaebf…e437. Do not rebind
@@ -33,13 +33,18 @@ import {
   type X402HealthEnv,
   type X402VerifyBinding,
 } from "../src/lib/x402";
+import {
+  resolvePaidSealVerify,
+  type SealLookupEnv,
+} from "../src/lib/paid-seal-verify";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
-type X402Bindings = X402HealthEnv & {
-  X402_PAY_TO?: string;
-  NODE_ENV?: string;
-};
+type X402Bindings = X402HealthEnv &
+  SealLookupEnv & {
+    X402_PAY_TO?: string;
+    NODE_ENV?: string;
+  };
 
 /** VERIFY_APP is a Fetcher, which X402HealthEnv's string index can't hold. */
 function verifyAppBinding(env: unknown): X402VerifyBinding | undefined {
@@ -168,13 +173,25 @@ async function agentVerify(c: {
   }
 
   const verifyApp = verifyAppBinding(c.env);
-  if (verifyApp) {
-    return forwardPaidVerify(
-      verifyApp,
-      c.req.raw,
-      proofHeader,
-      await c.req.raw.text()
-    );
+  const bodyText = await c.req.raw.text();
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: Boolean(verifyApp),
+    proofHeader,
+    bodyText,
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain agent verification",
+    env: c.env,
+  });
+  if (decision.action === "answer") {
+    return c.json(decision.body, decision.status, {
+      ...NO_STORE,
+      ...decision.headers,
+    });
+  }
+  if (decision.action === "forward" && verifyApp) {
+    return forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText);
   }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.

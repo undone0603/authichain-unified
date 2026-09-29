@@ -16,6 +16,9 @@ test("rendered docs HTML passes the claim guard", () => {
   const hub = renderDocsPage("/docs");
   assert.ok(hub.includes("utm_source=docs"));
   assert.ok(hub.includes("utm_campaign=docs-hub"));
+  assert.ok(hub.includes("/battery-passport"));
+  assert.ok(hub.includes("18 February 2027"));
+  assert.ok(hub.includes("LMT"));
   const architecture = renderDocsPage("/docs/dpp-architecture");
   assert.ok(architecture.includes("/checkout/dpp_readiness?utm_source=docs"));
 });
