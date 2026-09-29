@@ -33,6 +33,7 @@ import {
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
 import { planByStripePriceId } from "../../src/lib/plans";
+import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -779,6 +780,35 @@ export async function handleStripeWebhook(
           ),
         ]);
 
+        // Recurring affiliate commission, renewals only: the first payment is
+        // credited from checkout.session.completed. Both invoice.paid and
+        // invoice.payment_succeeded fire for one invoice, so only invoice.paid
+        // credits.
+        if (
+          event.type === "invoice.paid" &&
+          inv.billing_reason === "subscription_cycle" &&
+          amountCents > 0
+        ) {
+          let affiliateCode: string | undefined =
+            inv.parent?.subscription_details?.metadata?.affiliate_code;
+          if (!affiliateCode && subscriptionId) {
+            try {
+              const sub = await stripe.subscriptions.retrieve(subscriptionId);
+              affiliateCode = sub.metadata?.affiliate_code;
+            } catch (e) {
+              console.error("[stripe-webhook] affiliate sub lookup failed", e);
+            }
+          }
+          if (affiliateCode) {
+            const accrual = await accrueAffiliateCommission(supabase, {
+              affiliateCode,
+              amountCents,
+              conversion: false,
+            });
+            console.log("[stripe-webhook] affiliate renewal accrual", accrual);
+          }
+        }
+
         console.log(
           `[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`
         );
@@ -883,6 +913,19 @@ export async function handleStripeWebhook(
             ),
           undefined
         );
+
+        // Affiliate commission on the first paid sale. Guest checkouts count.
+        // An unpaid (async) session is credited later by
+        // checkout.session.async_payment_succeeded.
+        const affiliateCode = session.metadata?.affiliate_code;
+        if (affiliateCode && session.payment_status === "paid") {
+          const accrual = await accrueAffiliateCommission(supabase, {
+            affiliateCode,
+            amountCents,
+            conversion: true,
+          });
+          console.log("[stripe-webhook] affiliate accrual", accrual);
+        }
 
         if (session.metadata?.type === "one_time_service") {
           await handleServiceOrderPayment({
