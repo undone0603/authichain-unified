@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AUTHICHAIN_API_V1_PATHS,
@@ -52,8 +53,10 @@ describe("isAuthichainApiV1Path", () => {
   });
 
   it("stays in sync with authichain-api's own endpoint list", () => {
+    // jsdom's URL resolves a file: base against http://localhost:3000, so
+    // readFileSync(new URL(..., import.meta.url)) is not a file path here.
     const src = readFileSync(
-      new URL("../../authichain-api/index.js", import.meta.url),
+      join(import.meta.dirname, "../../authichain-api/index.js"),
       "utf8"
     );
     const block = src.slice(src.lastIndexOf("endpoints: ["));
