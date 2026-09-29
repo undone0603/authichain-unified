@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { logAutomation } from '@/lib/automation';
+import { AFFILIATE_BASE_RATE } from '@/lib/affiliate-rate';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export async function POST(_request: Request) {
         affiliatecode: affiliateId,
         email,
         status: 'active',
-        commission_rate: 0.1,
+        commission_rate: AFFILIATE_BASE_RATE,
         pending_payout: 0,
         total_referrals: 0,
         total_conversions: 0,
