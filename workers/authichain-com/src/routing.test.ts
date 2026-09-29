@@ -250,6 +250,7 @@ test("homepage and /dpp link to /docs and /x402", async () => {
   const dpp = await (await get("/dpp")).text();
   assert.match(dpp, /href="\/docs"/);
   assert.match(dpp, /href="\/x402"/);
+  assert.match(dpp, /href="\/battery-passport"/);
   assert.match(dpp, /name="email"/);
   assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(dpp, /id="dpp-cancelled-banner"/);

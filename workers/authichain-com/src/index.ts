@@ -3049,6 +3049,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="/pricing">Pricing</a>
+      <a class="nav-link" href="/battery-passport">Battery example</a>
       <a class="nav-link" href="/docs">Docs</a>
       <a class="nav-link" href="/x402">Agent pay</a>
       <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="${escHtml(planPaymentLink("dpp_readiness") ?? "#hero")}">Start DPP Audit — $299</a>
@@ -3078,11 +3079,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           inputId: "dpp-email",
           buttonClass: "btn btn-outline",
         })}
+        <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
         The $299 is credited in full toward AuthiChain Basic if you move forward.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
       </p>
     </div>
   </section>
