@@ -118,6 +118,7 @@
         "content-publish.yml": "on",
         "marketing-autonomous.yml": "on",
         "reddit-monitor.yml": "on",
+        "buyer-signals.yml": "on",
         "ghost-traffic.yml": "on",
         "b2b-outreach.yml": "on",
         "weekly-video.yml": "off"

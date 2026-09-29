@@ -1,0 +1,59 @@
+# Weekly, read-only lead finder (Loop 3, growth). Pulls public buying signals
+# (EU tenders, FTC Made in USA actions, hiring posts, CA cannabis licences),
+# maps each to a live offer, and opens ONE issue labelled `buyer-signal` with
+# the leads and a draft opener per lead. It sends nothing: every outreach still
+# waits for the owner's go. See scripts/growth/buyer-signals.mjs.
+name: Buyer signals
+
+on:
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print only; do not open the issue
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - scripts/growth/buyer-signals.mjs
+      - .github/workflows/buyer-signals.yml
+
+concurrency:
+  group: buyer-signals-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  signals:
+    if: github.repository == 'undone0603/authichain-unified'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Collect signals
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DCC_APP_ID: ${{ secrets.DCC_APP_ID }}
+          DCC_APP_KEY: ${{ secrets.DCC_APP_KEY }}
+          BUYER_SIGNALS_DRY_RUN: ${{ (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)) && 'true' || 'false' }}
+        run: node scripts/growth/buyer-signals.mjs
+      - name: Probe source shapes (temporary)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          set -x
+          curl -sS -m 30 -X POST https://api.ted.europa.eu/v3/notices/search -H 'content-type: application/json' \
+            -d '{"query":"FT ~ (\"product passport\") AND PD >= 20260801","fields":["publication-number","notice-title","buyer-name","buyer-country","publication-date","deadline-receipt-tender-date-lot","notice-type"],"limit":2,"page":1,"scope":"ACTIVE","paginationMode":"PAGE_NUMBER"}' | head -c 3000; echo
+          curl -sS -m 30 -A 'Mozilla/5.0' https://www.ftc.gov/feeds/press-release-consumer-protection.xml | head -c 1500; echo
+          curl -sS -m 30 'https://remotive.com/api/remote-jobs?search=compliance&limit=1' | head -c 800; echo
+          curl -sS -m 30 'https://www.arbeitnow.com/api/job-board-api?page=1' | head -c 800; echo
+          sudo apt-get install -y -qq poppler-utils >/dev/null 2>&1 || true
+          curl -sSL -m 60 -o guide.pdf https://bcc.ca.gov/about_us/documents/iservices_api_user_guide.pdf && pdftotext guide.pdf - | grep -v '^\s*$' | head -250
