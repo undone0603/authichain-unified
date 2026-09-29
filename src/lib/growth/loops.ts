@@ -106,7 +106,7 @@ export const GROWTH_LOOPS: GrowthLoop[] = [
     killIf:
       "30 days after event wiring: 0 purchase_passport_succeeded from a non-founder email AND genetics_view ≥ 150.",
     liveSurfaces: [
-      "https://strainchain.io/genetics/mendo-love-farms/vt-26",
+      "https://authichain.com/passport",
       "https://strainchain.io/onboard",
       "https://authichain.com/checkout/strainchain_passport",
     ],
