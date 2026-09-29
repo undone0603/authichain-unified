@@ -43,3 +43,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           BUYER_SIGNALS_DRY_RUN: ${{ (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)) && 'true' || 'false' }}
         run: node scripts/growth/buyer-signals.mjs
+      - name: Probe EAR register (temporary)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: bash scripts/growth/ear-probe.sh
