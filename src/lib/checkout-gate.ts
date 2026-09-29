@@ -24,6 +24,7 @@ import {
   gatedCheckoutUrl,
   listedPlans,
   planById,
+  PUBLIC_PLAN_IDS,
   type Plan,
   type PlanId,
 } from "./plans";
@@ -223,10 +224,13 @@ export function renderCheckoutChooserPage(params?: URLSearchParams | null): stri
     }
   }
   const qs = carry.toString() ? `?${carry.toString()}` : "";
+  const publicIds = new Set<string>(PUBLIC_PLAN_IDS);
   const plans = [
     ...listedPlans("qron"),
     ...listedPlans("strainchain"),
-  ].filter(p => p.stripe_price_id && p.stripe_mode);
+  ].filter(
+    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode),
+  );
   const items = plans
     .map(
       p =>
