@@ -4,6 +4,7 @@ import { PLANS } from "../../src/lib/plans";
 import {
   OFFERS,
   collect,
+  dccLeads,
   dedupe,
   ftcLeads,
   idsFromBody,
@@ -158,6 +159,77 @@ describe("job noise", () => {
   });
 });
 
+describe("DCC", () => {
+  const row = (over: Record<string, unknown>) => ({
+    licenseNumber: "CCL26-0000401",
+    licenseStatus: "Active",
+    licenseType: "Cultivation -  Small Outdoor",
+    issueDate: "2026-09-28T00:00:00",
+    businessLegalName: "Clear Flower LLC",
+    businessOwnerName: "Private Person",
+    businessEmail: "owner@example.com",
+    businessPhone: "(707) 555-0100",
+    premiseCounty: "Trinity",
+    ...over,
+  });
+
+  it("keeps new active cultivation licences, one lead per business", () => {
+    const leads = dccLeads(
+      [
+        row({}),
+        row({
+          licenseNumber: "CCL26-0000402",
+          licenseType: "Cultivation - Nursery",
+        }),
+        row({
+          licenseNumber: "OLD",
+          issueDate: "2026-08-01T00:00:00",
+          businessLegalName: "Old Farm",
+        }),
+        row({
+          licenseNumber: "X",
+          licenseStatus: "Expired",
+          businessLegalName: "Gone",
+        }),
+        row({
+          licenseNumber: "P",
+          licenseType: "Cultivation -  Processor",
+          businessLegalName: "Trim Co",
+        }),
+        row({
+          licenseNumber: "R",
+          licenseType: "Commercial -  Retailer",
+          businessLegalName: "Shop",
+        }),
+      ],
+      SINCE
+    );
+    expect(leads).toHaveLength(1);
+    expect(leads[0]).toMatchObject({
+      id: "dcc:CCL26-0000401",
+      org: "Clear Flower LLC",
+      title: "New cultivation licence CCL26-0000401: Small Outdoor",
+      country: "Trinity County",
+      date: "2026-09-28",
+      offer: "strainchain_passport",
+      licences: ["CCL26-0000401", "CCL26-0000402"],
+    });
+  });
+
+  it("never carries owner names or contact details into the public digest", () => {
+    const md = render(dccLeads([row({})], SINCE), {}, "2026-09-29");
+    expect(md).not.toMatch(/Private Person|owner@example\.com|555-0100/);
+  });
+
+  it("drops the farm that declined", () => {
+    const leads = dccLeads(
+      [row({ businessLegalName: "Mendo Love Farms LLC" })],
+      SINCE
+    );
+    expect(dedupe(leads)).toEqual([]);
+  });
+});
+
 describe("openers", () => {
   it("frames a tender as a bid decision, not a pitch", () => {
     const text = opener({
@@ -196,7 +268,7 @@ describe("dedupe", () => {
 });
 
 describe("collect", () => {
-  it("reports each source's outcome and skips DCC without credentials", async () => {
+  it("reports each source's outcome", async () => {
     const fetchImpl = async (url: string) => {
       const host = new URL(url).hostname;
       if (host === "api.ted.europa.eu")
@@ -204,18 +276,19 @@ describe("collect", () => {
       if (host === "www.ftc.gov") return new Response("boom", { status: 503 });
       if (host === "remotive.com")
         return new Response(JSON.stringify({ jobs: [] }));
+      if (host === "as-dcc-pub-cann-w-p-002.azurewebsites.net")
+        return new Response(JSON.stringify({ metadata: {}, data: [] }));
       return new Response(JSON.stringify({ data: [], links: {} }));
     };
     const { leads, status } = await collect({
       now: NOW,
       fetchImpl: fetchImpl as typeof fetch,
-      env: {},
     });
     expect(leads).toEqual([]);
     expect(status.ted).toBe("0 found");
     expect(status.ftc).toMatch(/^error: 503/);
     expect(status.jobs).toBe("0 found");
-    expect(status.dcc).toMatch(/^skipped: needs DCC_APP_ID/);
+    expect(status.dcc).toBe("0 found");
   });
 
   it("renders a drafts-only digest", () => {

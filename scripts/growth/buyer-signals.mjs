@@ -9,8 +9,8 @@
 //   ted   EU tenders (TED Search API v3, keyless)          -> dpp_readiness
 //   ftc   FTC consumer-protection press releases (RSS)     -> musa_claim_file
 //   jobs  Remotive + Arbeitnow public job APIs (keyless)   -> dpp_readiness | musa_claim_file
-//   dcc   California cannabis licences (DCA iServices)     -> strainchain_passport
-//         Needs DCC_APP_ID + DCC_APP_KEY; skipped without them.
+//   dcc   California cannabis licences (DCC public search API, keyless)
+//                                                          -> strainchain_passport
 
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
@@ -333,16 +333,79 @@ export async function fetchJobs({ since, fetchImpl } = {}) {
   return fresh;
 }
 
-// ---------- DCC (credential-gated) ----------
+// ---------- DCC ----------
 
-export async function fetchDcc({ env = process.env } = {}) {
-  if (!env.DCC_APP_ID || !env.DCC_APP_KEY)
-    return {
-      skipped: "needs DCC_APP_ID and DCC_APP_KEY (free DCA iServices sign-up)",
-    };
-  // Endpoint and field names are wired once the iServices guide is confirmed
-  // against a live response; until then report instead of guessing.
-  return { skipped: "credentials present; licence endpoint not wired yet" };
+// The backend behind search.cannabis.ca.gov (its /config.js names CANNA_API).
+// Keyless; the DCA iServices keys are not needed for it.
+export const DCC_API =
+  "https://as-dcc-pub-cann-w-p-002.azurewebsites.net/licenses/AdvancedSearch";
+const DCC_PAGE = 50;
+
+// Processors dry and trim other people's plants; they hold no cultivars.
+const DCC_SKIP_TYPES = /processor/i;
+
+/**
+ * One lead per business: a farm issued several licences in the window is one
+ * conversation. Only public registry fields go into the lead, because the
+ * digest is a public issue: no owner names, emails or phone numbers.
+ */
+export function dccLeads(rows, since) {
+  /** @type {Map<string, any>} */
+  const byOrg = new Map();
+  for (const r of rows ?? []) {
+    const issued = Date.parse(r.issueDate ?? "");
+    if (!issued || issued < since.getTime()) continue;
+    if (r.licenseStatus !== "Active") continue;
+    const type = String(r.licenseType ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!/^cultivation/i.test(type) || DCC_SKIP_TYPES.test(type)) continue;
+    const org = String(r.businessLegalName ?? "").trim();
+    if (!org) continue;
+    const key = org.toLowerCase();
+    const county =
+      r.premiseCounty && r.premiseCounty !== "Data Not Available"
+        ? `${r.premiseCounty} County`
+        : "";
+    const prev = byOrg.get(key);
+    if (prev) {
+      prev.licences.push(r.licenseNumber);
+      continue;
+    }
+    byOrg.set(key, {
+      id: `dcc:${r.licenseNumber}`,
+      source: "dcc",
+      org,
+      title: `New cultivation licence ${r.licenseNumber}: ${type.replace(/^Cultivation - /i, "")}`,
+      detail: county,
+      country: county,
+      date: new Date(issued).toISOString().slice(0, 10),
+      url: "https://search.cannabis.ca.gov/",
+      offer: "strainchain_passport",
+      licences: [r.licenseNumber],
+    });
+  }
+  return [...byOrg.values()];
+}
+
+export async function fetchDcc({ since, fetchImpl } = {}) {
+  /** @type {any[]} */
+  const rows = [];
+  for (let page = 1; page <= 4; page++) {
+    const q = new URLSearchParams({
+      licenseType: "Cultivation",
+      licenseStatus: "Active",
+      sortOrder: "issueDate desc",
+      pageSize: String(DCC_PAGE),
+      pageNumber: String(page),
+    });
+    const d = await getJson(`${DCC_API}?${q}`, { fetchImpl });
+    const data = d?.data ?? [];
+    rows.push(...data);
+    const oldest = Date.parse(data.at(-1)?.issueDate ?? "");
+    if (!d?.metadata?.hasNext || !oldest || oldest < since.getTime()) break;
+  }
+  return dccLeads(rows, since);
 }
 
 // ---------- assemble ----------
@@ -367,6 +430,8 @@ export function opener(lead) {
       return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
+    case "dcc":
+      return `Congratulations on the new California cultivation licence. If you breed or hold cultivars worth proving, ${o.label} gives each cultivar a verifiable provenance record: ${o.url}`;
     case "jobs":
       return `Saw ${lead.org} is hiring for "${lead.title.replace(/^Hiring: /, "")}". While the seat is open, ${o.label} covers the first pass: ${o.url}`;
     default:
@@ -449,13 +514,12 @@ async function gh(path, { method = "GET", token, body } = {}) {
 }
 
 /**
- * @param {{ now?: Date, windowDays?: number, fetchImpl?: typeof fetch, env?: Record<string, string | undefined> }} [opts]
+ * @param {{ now?: Date, windowDays?: number, fetchImpl?: typeof fetch }} [opts]
  */
 export async function collect({
   now = new Date(),
   windowDays = 8,
   fetchImpl,
-  env = process.env,
 } = {}) {
   const since = daysAgo(windowDays, now);
   /** @type {Record<string, string>} */
@@ -474,9 +538,7 @@ export async function collect({
   await run("ted", () => fetchTed({ since, fetchImpl }));
   await run("ftc", () => fetchFtc({ since, fetchImpl }));
   await run("jobs", () => fetchJobs({ since, fetchImpl }));
-  const dcc = await fetchDcc({ env });
-  status.dcc = dcc.skipped ? `skipped: ${dcc.skipped}` : `${dcc.length} found`;
-  if (Array.isArray(dcc)) leads.push(...dcc);
+  await run("dcc", () => fetchDcc({ since, fetchImpl }));
   return { leads, status };
 }
 
