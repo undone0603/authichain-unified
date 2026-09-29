@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolvePaidSealVerify } from "./paid-seal-verify";
 
 const PAYER = "0x1234567890abcdef1234567890abcdef12345678";
@@ -195,8 +195,10 @@ describe("resolvePaidSealVerify", () => {
   });
 
   it("refuses dev-mode settlement when NODE_ENV is production", async () => {
-    const previous = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    // vi.stubEnv rather than assigning: NODE_ENV is read-only in the Node
+    // types, so a direct write is three type errors, and unstubAllEnvs below
+    // restores the previous value without a manual save.
+    vi.stubEnv("NODE_ENV", "production");
     delete process.env.X402_FACILITATOR_URL;
     try {
       const { fetchImpl, calls } = callsOf(() => new Response("[]"));
@@ -210,8 +212,7 @@ describe("resolvePaidSealVerify", () => {
       expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
       expect(calls.some(call => call.url.includes("auth_seals"))).toBe(true);
     } finally {
-      if (previous === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = previous;
+      vi.unstubAllEnvs();
     }
   });
 
