@@ -25,6 +25,8 @@ describe("/dpp-check", () => {
     expect(html).toContain("index, follow");
     expect(html).not.toContain('id="result"');
     expect(html).not.toContain("checkout/dpp_readiness");
+    expect(html).toContain("/battery-passport/sample-audit");
+    expect(html).toContain("$299");
   });
 
   it("in-scope battery result shows countdown, gaps and the $299 checkout", () => {

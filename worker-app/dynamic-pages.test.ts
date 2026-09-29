@@ -611,7 +611,8 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("Need more generations? Buy a pack:");
+    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
     expect(body).not.toContain("/dashboard");
     expect(body).not.toContain('href="/login"');
@@ -650,7 +651,10 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("Need more generations");
+    expect(body).toContain("5 free, then 100 for $29");
+    expect(body).not.toContain("buy.stripe.com");
+    expect(body).not.toContain("Those 5 are signed");
+    expect(body).not.toContain("Those 5 are signed");
   });
 
   it("303s a valid URL to /onboard", async () => {
