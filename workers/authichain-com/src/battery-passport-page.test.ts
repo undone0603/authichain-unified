@@ -104,6 +104,10 @@ describe("battery passport offer page", () => {
       "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
     );
     expect(html).not.toContain("working passport you control");
+    expect(html).not.toContain("signed and publicly verifiable");
+    expect(html).toContain(
+      "A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out."
+    );
     expect(html).not.toMatch(
       /gets your first passport published|publish your first passport/i
     );
