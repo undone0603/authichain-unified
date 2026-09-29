@@ -1,0 +1,23 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://authichain.com/protocol/v1"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "ProvenanceRecord"
+  ],
+  "issuer": "did:key:z6MkfcH7Xe1bFoos1vr6ogWkV4hmdx2qM2dDXkg3VJ4cpAeS",
+  "validFrom": "2026-09-01T00:00:00Z",
+  "credentialSubject": {
+    "id": "https://authichain.com/protocol/examples/polygon-anchor-1",
+    "name": "Protocol demonstration. Not a product, not a battery passport."
+  },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "2026-09-01T00:00:00Z",
+    "verificationMethod": "did:key:z6MkfcH7Xe1bFoos1vr6ogWkV4hmdx2qM2dDXkg3VJ4cpAeS#z6MkfcH7Xe1bFoos1vr6ogWkV4hmdx2qM2dDXkg3VJ4cpAeS",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "z4oDKwJV31uqF3vL8hX8ALnjtzWUeVdACCtnKiG3kHZsgq7Rfb3eL1wH2qjYf3aD5czYysG74AzqE2LbFJAKymZKQ"
+  }
+}
