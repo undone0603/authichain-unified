@@ -284,8 +284,8 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
   assert.equal((await get("/agentic-economy")).status, 404);
 });
 
-test("every comparison page renders, and /vs/everledger is retired", async () => {
-  for (const slug of ["scantrust", "circularise", "vechain"]) {
+test("every comparison page renders, including the restored pilot pages", async () => {
+  for (const slug of ["scantrust", "circularise", "vechain", "everledger", "strainsecure"]) {
     const res = await get(`/vs/${slug}`);
     assert.equal(res.status, 200, `/vs/${slug} should render`);
     const html = await res.text();
@@ -297,15 +297,20 @@ test("every comparison page renders, and /vs/everledger is retired", async () =>
   assert.ok(scantrust.includes(`href="${dppPay}"`));
   assert.doesNotMatch(scantrust, /Start Free Trial/);
   assert.doesNotMatch(scantrust, /can be altered or lost|hides pricing/);
-  assert.equal((await get("/vs/everledger")).status, 404);
+  for (const slug of ["everledger", "strainsecure"]) {
+    const html = await (await get(`/vs/${slug}`)).text();
+    assert.ok(html.includes(`href="/onboard?ref=vs-${slug}"`), `/vs/${slug} asks for a pilot`);
+    assert.ok(html.includes('href="/verify"'), `/vs/${slug} links the verifier`);
+    if (dppPay) assert.ok(!html.includes(dppPay), `/vs/${slug} must not carry the DPP checkout`);
+    assert.doesNotMatch(html, /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i);
+  }
 });
 
 test("the /vs index lists every comparison", async () => {
   const html = await (await get("/vs")).text();
-  for (const name of ["Scantrust", "Circularise", "VeChain"]) {
+  for (const name of ["Scantrust", "Circularise", "VeChain", "Everledger", "StrainSecure"]) {
     assert.match(html, new RegExp(name));
   }
-  assert.doesNotMatch(html, /Everledger/);
 });
 
 test("an invented competitor slug is a 404, not the index at 200", async () => {
@@ -870,7 +875,8 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/openapi.json</loc>"));
-  assert.ok(!xml.includes("/vs/everledger"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/strainsecure</loc>"));
 });
 
 test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {
