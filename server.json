@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.undone0603/authichain",
   "title": "AuthiChain",
-  "description": "Product authenticity and EU Digital Product Passport tools. Free DPP check. x402 paid verify at $0.05 USDC on Base.",
+  "description": "Authenticity and EU DPP tools. Free DPP check. x402 paid verify $0.05 USDC on Base.",
   "version": "1.1.1",
   "websiteUrl": "https://authichain.com",
   "repository": {
