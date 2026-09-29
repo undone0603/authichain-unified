@@ -1,4 +1,5 @@
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { RESTORED_VS_PAGES } from "./vs-pages-restored.ts";
 
 /**
  * Worker-native /vs/* comparison pages.
@@ -34,7 +35,7 @@ export interface VsDefinition {
 
 const ACCENT = "#00FFD1";
 
-export const VS_PAGES: VsDefinition[] = [
+const BASE_VS_PAGES: VsDefinition[] = [
   {
     slug: "scantrust",
     competitor: "Scantrust",
@@ -220,6 +221,15 @@ export const VS_PAGES: VsDefinition[] = [
   },
 ];
 
+/**
+ * Everledger and StrainSecure were retired in #1251 while their copy carried
+ * $299 and unverified claims. They return as pilot pages: honest cells, no
+ * price, and a pilot request instead of the DPP checkout.
+ */
+export const VS_PAGES: VsDefinition[] = [...BASE_VS_PAGES, ...RESTORED_VS_PAGES];
+
+const PILOT_SLUGS = new Set(RESTORED_VS_PAGES.map(d => d.slug));
+
 /** Escapes text interpolated into these documents. */
 function esc(value: unknown): string {
   return String(value ?? "").replace(
@@ -300,6 +310,9 @@ function cell(value: boolean | string): string {
 /** Renders one head-to-head comparison page. */
 export function renderVsPage(def: VsDefinition): string {
   const canonical = `https://authichain.com/vs/${def.slug}`;
+  const ctas = PILOT_SLUGS.has(def.slug)
+    ? `<a class="cta" href="/onboard?ref=vs-${esc(def.slug)}">Request a pilot seal</a><a class="cta ghost" href="/verify">Verify a seal</a>`
+    : `<a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Get started</a><a class="cta ghost" href="/anchor">See Live Demo</a>`;
   const rows = def.rows
     .map(
       r =>
@@ -350,7 +363,7 @@ export function renderVsPage(def: VsDefinition): string {
   <span class="badge">Head-to-Head Comparison</span>
   <h1>AuthiChain vs ${esc(def.competitor)}:<br><span class="accent">Which Is Better for Product Authentication?</span></h1>
   <p class="lede">${esc(def.competitorSummary)} Below is a feature-by-feature comparison so you can decide which platform fits your supply chain, budget, and compliance timeline.</p>
-  <div class="ctas"><a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Get started</a><a class="cta ghost" href="/anchor">See Live Demo</a></div>
+  <div class="ctas">${ctas}</div>
 </section>
 <table>
   <thead><tr><th>Feature</th><th class="ac">AuthiChain</th><th class="co">${esc(def.competitor)}</th></tr></thead>
@@ -371,7 +384,7 @@ export function renderVsIndex(): string {
 
   return shell(
     "Compare AuthiChain — Product Authentication Platforms Side by Side",
-    "Honest, feature-by-feature comparisons of AuthiChain against Scantrust, Circularise and VeChain.",
+    `Honest, feature-by-feature comparisons of AuthiChain against ${VS_PAGES.map(d => d.competitor).join(", ")}.`,
     "https://authichain.com/vs",
     `<div class="wrap">
 <section class="hero">
