@@ -12,6 +12,7 @@
 //   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
 //   dcc   California cannabis licences (DCC public search API, keyless)
 //                                                          -> strainchain_passport
+//   ear   German battery register, newest registrations     -> dpp_readiness, no email
 
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
@@ -571,6 +572,166 @@ export async function fetchDcc({ since, fetchImpl } = {}) {
   return dccLeads(rows, since);
 }
 
+// ---------- German battery register (stiftung ear) ----------
+
+// A JSF form, not an API: each step posts the whole form back with one
+// button pressed. German law (UWG section 7) needs prior consent even for
+// B2B marketing email, so these leads are marked no-email and their draft is
+// a call or letter note, never an email.
+export const EAR_URL =
+  "https://www.ear-system.de/ear-verzeichnis/battghersteller.jsf";
+const EAR_MAX = 15;
+
+function decodeEntities(s) {
+  return String(s ?? "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
+/** Every successful control of the page's form, minus its submit buttons. */
+export function jsfForm(html) {
+  const action = decodeEntities(
+    html.match(/<form[^>]*\baction="([^"]+)"/)?.[1] ?? ""
+  );
+  /** @type {[string, string][]} */
+  const fields = [];
+  for (const m of html.matchAll(/<input\b[^>]*>/g)) {
+    const tag = m[0];
+    const type = tag.match(/\btype="([^"]*)"/)?.[1] ?? "text";
+    const name = tag.match(/\bname="([^"]*)"/)?.[1];
+    if (!name || type === "submit" || type === "button") continue;
+    if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag))
+      continue;
+    fields.push([
+      name,
+      decodeEntities(tag.match(/\bvalue="([^"]*)"/)?.[1] ?? ""),
+    ]);
+  }
+  for (const m of html.matchAll(
+    /<select\b[^>]*\bname="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g
+  )) {
+    const sel = m[2].match(
+      /<option[^>]*\bselected\b[^>]*\bvalue="([^"]*)"|<option[^>]*\bvalue="([^"]*)"[^>]*\bselected\b/
+    );
+    fields.push([m[1], decodeEntities(sel?.[1] ?? sel?.[2] ?? "")]);
+  }
+  return { action, fields };
+}
+
+/** The name of the submit button whose label matches. */
+export function jsfButton(html, label) {
+  for (const m of html.matchAll(/<input\b[^>]*\btype="submit"[^>]*>/g)) {
+    const value = decodeEntities(m[0].match(/\bvalue="([^"]*)"/)?.[1] ?? "");
+    if (label instanceof RegExp ? label.test(value) : value === label) {
+      if (/\bdisabled\b/.test(m[0])) return null;
+      return m[0].match(/\bname="([^"]*)"/)?.[1] ?? null;
+    }
+  }
+  return null;
+}
+
+function cellText(html) {
+  return decodeEntities(html.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Rows of the results table as arrays of cell text. */
+export function earRows(html) {
+  const body = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
+  return [...body.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
+    .map(r =>
+      [...r[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => cellText(c[1]))
+    )
+    .filter(cells => cells.length >= 3);
+}
+
+/**
+ * Cells: registration number, producer, battery category, OfH, market exit.
+ * Registrants that already left the market are not buyers.
+ */
+export function earLeads(rows) {
+  const out = [];
+  for (const [reg, name, category, , exit] of rows) {
+    const number = reg.match(/DE\s*\d+/i)?.[0].replace(/\s+/g, " ");
+    if (!number || !name || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
+    out.push({
+      id: `ear:${number}`,
+      source: "ear",
+      org: name,
+      title: `New battery registration ${number}`,
+      detail: category,
+      country: "DEU",
+      url: EAR_URL.replace(/\.jsf$/, ""),
+      offer: "dpp_readiness",
+      channel: "no-email",
+    });
+    if (out.length >= EAR_MAX) break;
+  }
+  return out;
+}
+
+export async function fetchEar({ fetchImpl = fetch } = {}) {
+  let cookie = "";
+  const go = async (url, form) => {
+    const res = await fetchImpl(url, {
+      method: form ? "POST" : "GET",
+      headers: {
+        "User-Agent": UA,
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(form
+          ? { "Content-Type": "application/x-www-form-urlencoded" }
+          : {}),
+      },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const set = res.headers.get("set-cookie");
+    if (set) cookie = set.split(";")[0];
+    const text = await res.text();
+    if (!res.ok) throw new Error(`${res.status} ${text.slice(0, 120)}`);
+    return text;
+  };
+  const press = async (html, label, overrides = {}) => {
+    const button = jsfButton(html, label);
+    if (!button) return null;
+    const { action, fields } = jsfForm(html);
+    const form = fields.map(([k, v]) => [k, k in overrides ? overrides[k] : v]);
+    form.push([button, "x"]);
+    return go(new URL(action, EAR_URL).toString(), form);
+  };
+
+  let html = await go(EAR_URL);
+  const nameField = jsfForm(html).fields.find(([k]) =>
+    /herstellername$/.test(k)
+  )?.[0];
+  if (!nameField) throw new Error("search form not found");
+  html = await press(html, /^Hersteller/, { [nameField]: "*" });
+  if (!html) throw new Error("search button not found");
+  // Newest registrations carry the highest numbers: sort that column
+  // descending, then show 100 rows.
+  for (
+    let i = 0;
+    i < 2 &&
+    !/sortable-desc[^>]*value="Batt-Reg|value="Batt-Reg[^"]*"[^>]*sortable-desc/.test(
+      html
+    );
+    i++
+  ) {
+    html = (await press(html, /^Batt-Reg/)) ?? html;
+  }
+  html = (await press(html, "100")) ?? html;
+  const rows = earRows(html);
+  if (!rows.length) throw new Error("no rows in the register table");
+  if (process.env.BUYER_SIGNALS_DEBUG_EAR)
+    console.log(JSON.stringify(rows.slice(0, 5)));
+  return earLeads(rows);
+}
+
 // ---------- assemble ----------
 
 export function dedupe(leads, seenIds = new Set()) {
@@ -593,6 +754,8 @@ export function opener(lead) {
       return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
+    case "ear":
+      return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about their ${lead.detail || "battery"} passport due in February 2027; ${o.label} is the first step: ${o.url}`;
     case "dcc":
       return `Congratulations on the new California cultivation licence. If you breed or hold cultivars worth proving, ${o.label} gives each cultivar a verifiable provenance record: ${o.url}`;
     case "jobs":
@@ -608,6 +771,7 @@ const SOURCE_NAMES = {
   jobs: "Hiring signals",
   boards: "Company career boards",
   dcc: "California cannabis licences",
+  ear: "German battery registrations (no email)",
 };
 
 export function render(leads, status, weekOf) {
@@ -710,6 +874,7 @@ export async function collect({
     status.boards = `error: ${String(e.message).slice(0, 160)}`;
   }
   await run("dcc", () => fetchDcc({ since, fetchImpl }));
+  await run("ear", () => fetchEar({ fetchImpl }));
   return { leads, status };
 }
 
