@@ -1,5 +1,5 @@
 import { planPaymentLink } from "../../../src/lib/plans.ts";
-import { RESTORED_VS_PAGES } from "./vs-pages-restored.ts";
+import { RESTORED_VS_PAGES } from "./vs-pages-restored";
 
 /**
  * Worker-native /vs/* comparison pages.
