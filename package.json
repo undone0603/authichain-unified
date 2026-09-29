@@ -43,7 +43,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.66",
+    "@ai-sdk/openai": "^4.0.75",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@clerk/nextjs": "^7.8.3",
@@ -90,7 +90,7 @@
     "@trpc/server": "^11.0.0-rc.446",
     "@types/express": "^5.0.6",
     "@types/google.maps": "^3.65.5",
-    "ai": "^7.0.84",
+    "ai": "^7.0.116",
     "axios": "^1.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
