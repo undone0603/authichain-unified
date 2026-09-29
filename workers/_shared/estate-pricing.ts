@@ -257,7 +257,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       nav: [
         { href: "/", label: "Home" },
         { href: "/onboard", label: "Onboard" },
-        { href: "/genetics/mendo-love-farms", label: "Genetics" },
+        { href: "/passport", label: "Passport" },
       ],
       heroTitle: "Prices that already charge.",
       heroLede:
@@ -285,7 +285,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
-        { href: "/genetics/mendo-love-farms", label: "Genetics library" },
+        { href: "/passport", label: "Genetics passport" },
         { href: "https://authichain.govchain.us/contact", label: "Contact" },
       ],
       offers: catalogueOffers,

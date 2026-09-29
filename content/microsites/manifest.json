@@ -20,15 +20,6 @@
   },
   "packs": [
     {
-      "slug": "mendo",
-      "file": "mendo/index.html",
-      "canonicalPath": "/m/mendo",
-      "aliases": ["/m/realthcv", "/m/lt-63"],
-      "hosts": ["mendo.authichain.com", "realthcv.authichain.com"],
-      "kvKeys": ["mendo/index.html", "realthcv/index.html"],
-      "primaryCta": "passport"
-    },
-    {
       "slug": "trumark",
       "file": "trumark/index.html",
       "canonicalPath": "/m/trumark",

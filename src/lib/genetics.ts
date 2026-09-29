@@ -8,6 +8,9 @@
  * for them unless the caller passes an explicit gate: GENETICS_UNLISTED_PREVIEW=1
  * or a token that matches GENETICS_UNLISTED_TOKEN (at least 16 characters).
  * Public routes must not pass that gate.
+ *
+ * Withdrawn farms stay in listFarms() so tests can load the fixture, but
+ * isPublicFarm() is false and no page, sitemap, or API may serve them.
  */
 
 import mendoRaw from "../../content/strainchain/mendo-love-farms/certificates.json";
@@ -275,13 +278,36 @@ const FARMS: Record<string, FarmFile> = {
   "gtr-seeds": gtrRaw as FarmFile,
 };
 
-/** Public index only. Unlisted private samples are omitted. */
+/**
+ * Farms whose library is withdrawn from every public surface. The data stays
+ * in the repo as a reconciliation fixture for the recompute tests, but no
+ * page, sitemap, or API may serve it.
+ *
+ * mendo-love-farms: the breeder declined on 2026-09-21. A declined breeder
+ * cannot anchor the public demo (decision D2 in
+ * docs/strategy/strainchain-genetics-passport.md: the record is theirs, and
+ * revoke is first-class).
+ */
+const WITHDRAWN_FARMS = new Set<string>(["mendo-love-farms"]);
+
+/** Fixture index. Unlisted private samples are omitted; withdrawn farms remain. */
 export function listFarms(): string[] {
   return Object.keys(FARMS).filter(slug => !FARMS[slug].unlisted);
 }
 
 export function farmIsUnlisted(slug: string): boolean {
   return Boolean(FARMS[slug]?.unlisted);
+}
+
+/** True only for farms that may appear on a public page or API. */
+export function isPublicFarm(farmSlug: string): boolean {
+  const data = FARMS[farmSlug];
+  if (!data || data.unlisted) return false;
+  return !WITHDRAWN_FARMS.has(farmSlug);
+}
+
+export function listPublicFarms(): string[] {
+  return listFarms().filter(isPublicFarm);
 }
 
 export function getDossier(

@@ -29,7 +29,7 @@ export const RESTORED_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Pilot, not a smash page",
-        desc: "Request a contractor or brand seal. No $299 on this URL.",
+        desc: "Request a contractor or brand seal. There is no checkout on this page.",
       },
     ],
   },

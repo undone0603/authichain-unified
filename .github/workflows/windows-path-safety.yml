@@ -1,0 +1,19 @@
+name: Windows path safety
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  paths:
+    name: Reject NTFS-illegal filenames
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Scan index
+        run: bash scripts/check-windows-paths.sh

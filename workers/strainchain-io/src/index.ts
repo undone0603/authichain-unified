@@ -1955,7 +1955,7 @@ export default {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://strainchain.io/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://strainchain.io/pricing</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
-  <url><loc>https://strainchain.io/genetics/mendo-love-farms</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://strainchain.io/passport</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://strainchain.io/onboard</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://strainchain.io/llms.txt</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://strainchain.io/openapi.json</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>
@@ -2021,7 +2021,7 @@ ${estateNav(
     { href: "#how", label: "How it works" },
     { href: "#advantages", label: "Capabilities" },
     { href: "/pricing", label: "Pricing" },
-    { href: "/genetics/mendo-love-farms", label: "Genetics" },
+    { href: "/passport", label: "Passport" },
     { href: "#start", label: "Start" },
   ],
   { href: "/pricing", label: "View pricing" },
@@ -2172,7 +2172,7 @@ ${estateFooter(
       links: [
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
-        { href: "/genetics/mendo-love-farms", label: "Genetics library" },
+        { href: "/passport", label: "Genetics passport" },
       ],
     },
     {

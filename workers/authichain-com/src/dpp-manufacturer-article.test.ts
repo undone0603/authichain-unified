@@ -42,6 +42,7 @@ test("article HTML uses the live DPP checkout and no AuthiChain Inc", () => {
   assert.match(html, /name="email"/);
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(html, /href="\/pricing"/);
+  assert.match(html, /href="\/battery-passport"/);
   assert.match(html, /Everledger \(2016–2023\)/);
   assert.match(html, /entered liquidation in 2023/);
   // The article copy no longer quotes $299. The shared catalog checkout

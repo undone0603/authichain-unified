@@ -16,7 +16,7 @@ export default function SupplyChainPage() {
       headline="Prove Every Hand-Off, On-Chain."
       subhead="Track products from origin to shelf with QR-anchored custody events, lab-certificate hashing, and verifiable digital product passports."
       primaryCta={{ label: 'Request demo', href: '/onboard' }}
-      secondaryCta={{ label: 'View genetics library', href: '/genetics/mendo-love-farms' }}
+      secondaryCta={{ label: 'How a passport works', href: 'https://strainchain.io/passport' }}
       stats={[
         { value: 'QR', label: 'Anchored events' },
         { value: 'METRC', label: 'Synced' },

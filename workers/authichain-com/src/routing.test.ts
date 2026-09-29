@@ -72,7 +72,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/x402"/);
   assert.match(html, /href="\/trumark"/);
   assert.match(html, /href="\/made-in-america"/);
-  assert.match(html, /href="\/m\/mendo"/);
+  assert.match(html, /href="\/passport"/);
+  assert.doesNotMatch(html, /\/m\/mendo|Mendo/);
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
@@ -159,6 +160,47 @@ test("/contact is a real page, not the homepage", async () => {
   assert.match(html, /<title>Contact AuthiChain<\/title>/);
 });
 
+test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
+  const hub = await get("/docs");
+  assert.equal(hub.status, 200);
+  const hubHtml = await hub.text();
+  assert.match(hubHtml, /AuthiChain Docs/);
+  assert.match(hubHtml, /not a GS1 Conformant Resolver/);
+  assert.doesNotMatch(hubHtml, /Bitcoin L1/);
+
+  for (const path of [
+    "/docs/gs1-digital-link",
+    "/docs/verification",
+    "/docs/dpp-architecture",
+    "/docs/examples",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+  }
+
+  const alias = await get("/docs/resolver");
+  assert.equal(alias.status, 301);
+  assert.equal(
+    new URL(alias.headers.get("location") ?? "", "https://authichain.com").pathname,
+    "/docs/gs1-digital-link"
+  );
+
+  const protocol = await get("/docs/protocol");
+  assert.equal(protocol.status, 301);
+  assert.equal(
+    new URL(protocol.headers.get("location") ?? "", "https://authichain.com").pathname,
+    "/protocol"
+  );
+
+  for (const path of ["/onboard", "/verify", "/pricing", "/checkout/dpp_readiness"]) {
+    const res = await get(path);
+    const body = await res.text();
+    assert.doesNotMatch(body, /AuthiChain Docs — verification infrastructure/, path);
+    assert.ok(res.status === 200 || res.status === 302 || res.status === 303, `${path} ${res.status}`);
+  }
+});
+
 test("/x402 is public HTML for the live agent-pay rail", async () => {
   for (const path of ["/x402", "/x402/", "/docs/x402"]) {
     const res = await get(path);
@@ -201,11 +243,14 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
   }
 });
 
-test("homepage and /dpp link to /x402", async () => {
+test("homepage and /dpp link to /docs and /x402", async () => {
   const home = await (await get("/")).text();
+  assert.match(home, /href="\/docs"/);
   assert.match(home, /href="\/x402"/);
   const dpp = await (await get("/dpp")).text();
+  assert.match(dpp, /href="\/docs"/);
   assert.match(dpp, /href="\/x402"/);
+  assert.match(dpp, /href="\/battery-passport"/);
   assert.match(dpp, /name="email"/);
   assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
   assert.match(dpp, /id="dpp-cancelled-banner"/);
@@ -241,8 +286,8 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
   assert.equal((await get("/agentic-economy")).status, 404);
 });
 
-test("every comparison page renders, and /vs/everledger is retired", async () => {
-  for (const slug of ["scantrust", "circularise", "vechain"]) {
+test("every comparison page renders, including the restored pilot pages", async () => {
+  for (const slug of ["scantrust", "circularise", "vechain", "everledger", "strainsecure"]) {
     const res = await get(`/vs/${slug}`);
     assert.equal(res.status, 200, `/vs/${slug} should render`);
     const html = await res.text();
@@ -254,15 +299,20 @@ test("every comparison page renders, and /vs/everledger is retired", async () =>
   assert.ok(scantrust.includes(`href="${dppPay}"`));
   assert.doesNotMatch(scantrust, /Start Free Trial/);
   assert.doesNotMatch(scantrust, /can be altered or lost|hides pricing/);
-  assert.equal((await get("/vs/everledger")).status, 404);
+  for (const slug of ["everledger", "strainsecure"]) {
+    const html = await (await get(`/vs/${slug}`)).text();
+    assert.ok(html.includes(`href="/onboard?ref=vs-${slug}"`), `/vs/${slug} asks for a pilot`);
+    assert.ok(html.includes('href="/verify"'), `/vs/${slug} links the verifier`);
+    if (dppPay) assert.ok(!html.includes(dppPay), `/vs/${slug} must not carry the DPP checkout`);
+    assert.doesNotMatch(html, /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i);
+  }
 });
 
 test("the /vs index lists every comparison", async () => {
   const html = await (await get("/vs")).text();
-  for (const name of ["Scantrust", "Circularise", "VeChain"]) {
+  for (const name of ["Scantrust", "Circularise", "VeChain", "Everledger", "StrainSecure"]) {
     assert.match(html, new RegExp(name));
   }
-  assert.doesNotMatch(html, /Everledger/);
 });
 
 test("an invented competitor slug is a 404, not the index at 200", async () => {
@@ -583,22 +633,15 @@ test("/api/telegram is still proxied to the app, not the Mini App", async () => 
   assert.equal(await res.text(), "app");
 });
 
-test("money-path microsites are live with checkout CTAs", async () => {
-  const mendo = await get("/m/mendo");
-  assert.equal(mendo.status, 200);
-  const mendoHtml = await mendo.text();
-  assert.match(
-    mendoHtml,
-    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
-  );
-  assert.doesNotMatch(
-    mendoHtml,
-    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
-  );
-  assert.match(mendoHtml, /Passport checkout — \$49/);
-  assert.match(mendoHtml, /LT-63/);
-  assert.doesNotMatch(mendoHtml, /calendly/i);
-  assert.doesNotMatch(mendoHtml, /book a call/i);
+test("retired Mendo microsite no longer serves the breeder's page", async () => {
+  // The breeder declined on 2026-09-21, so /m/mendo, its aliases and its
+  // hostnames must not render their library or campaign copy.
+  for (const path of ["/m/mendo", "/m/realthcv", "/m/lt-63"]) {
+    const res = await get(path);
+    assert.equal(res.status, 404, path);
+    const html = await res.text();
+    assert.doesNotMatch(html, /RealTHCV|Mendo Love Farms|LT-63/, path);
+  }
 
   const host = await worker.fetch(
     new Request("https://mendo.authichain.com/", {
@@ -606,8 +649,10 @@ test("money-path microsites are live with checkout CTAs", async () => {
     }),
     ENV
   );
-  assert.equal(host.status, 200);
-  assert.match(await host.text(), /RealTHCV/);
+  assert.doesNotMatch(await host.text(), /RealTHCV|LT-63/);
+
+  const genetics = await get("/genetics/mendo-love-farms");
+  assert.equal(genetics.status, 404);
 });
 
 test("TruMark and Made in America pages are live with checkout CTAs", async () => {
@@ -794,7 +839,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/mendo</loc>"));
+  assert.ok(!xml.includes("mendo"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/musa</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/strainchain</loc>"));
@@ -827,7 +872,8 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/llms.txt</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/mcp</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/openapi.json</loc>"));
-  assert.ok(!xml.includes("/vs/everledger"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/everledger</loc>"));
+  assert.ok(xml.includes("<loc>https://authichain.com/vs/strainsecure</loc>"));
 });
 
 test("EU DPP manufacturer article is a public page with live checkout CTA", async () => {

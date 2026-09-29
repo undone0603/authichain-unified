@@ -291,7 +291,8 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   );
   assert.equal(strainLd.includes("/api/checkout"), false);
   assert.match(html, /href="\/onboard"/);
-  assert.match(html, /href="\/genetics\/mendo-love-farms"/);
+  assert.match(html, /href="\/passport"/);
+  assert.doesNotMatch(html, /mendo/i);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(html, /\$2,990/);
 });
