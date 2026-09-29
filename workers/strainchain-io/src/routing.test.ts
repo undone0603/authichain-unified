@@ -69,8 +69,8 @@ test("verification paths are proxied to the app, not answered with marketing", a
   const f = stubFetch();
   try {
     for (const path of [
-      "/genetics/mendo-love-farms",
-      "/genetics/mendo-love-farms/vt-26",
+      "/genetics/example-farm",
+      "/genetics/example-farm/vt-26",
       "/passport/AC-DEMO-001",
       "/onboard",
       "/p/cannabis-blockchain-provenance",
@@ -243,11 +243,12 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.match(await sitemap.text(), /<urlset/);
 });
 
-test("the sitemap advertises the genetics library", async () => {
+test("the sitemap advertises the passport, not the withdrawn Mendo library", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
   const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
-  assert.ok(paths.includes("/genetics/mendo-love-farms"));
+  assert.ok(paths.includes("/passport"));
+  assert.ok(!paths.includes("/genetics/mendo-love-farms"));
   assert.ok(paths.includes("/onboard"));
   assert.ok(paths.includes("/pricing"));
   assert.ok(paths.includes("/llms.txt"));

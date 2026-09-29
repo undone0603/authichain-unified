@@ -6,7 +6,8 @@ import {
   farmIsUnlisted,
   getCultivar,
   getDossier,
-  listFarms,
+  isPublicFarm,
+  listPublicFarms,
   toSlug,
   type DerivedCertificate,
 } from "@/lib/genetics";
@@ -22,7 +23,7 @@ import {
 type Params = { farm: string; cultivar: string };
 
 export function generateStaticParams(): Params[] {
-  return listFarms().flatMap(farm => {
+  return listPublicFarms().flatMap(farm => {
     const d = getDossier(farm);
     return d ? d.cultivars.map(c => ({ farm, cultivar: toSlug(c.id) })) : [];
   });
@@ -34,7 +35,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { farm, cultivar } = await params;
-  if (farmIsUnlisted(farm)) {
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) {
     return { title: "Not found", robots: { index: false, follow: false } };
   }
   const view = getCultivar(farm, cultivar);
@@ -89,7 +90,7 @@ export default async function CultivarDossier({
   params: Promise<Params>;
 }) {
   const { farm, cultivar } = await params;
-  if (farmIsUnlisted(farm)) notFound();
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) notFound();
   const view = getCultivar(farm, cultivar);
   const dossier = getDossier(farm);
   if (!view || !dossier) notFound();

@@ -2,9 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { tryHandleGeneticsRoutes } from "./genetics-routes.ts";
 
-function get(path: string): Response {
+// Mendo Love Farms is withdrawn from public pages (the breeder declined on
+// 2026-09-21). Its data stays as the rendering fixture, so the page tests pass
+// a gate that lets it render. The default gate is covered at the bottom.
+const showFixture = () => true;
+
+function get(
+  path: string,
+  gate?: (farmSlug: string) => boolean
+): Response {
   const res = tryHandleGeneticsRoutes(
-    new Request(`https://authichain.govchain.us${path}`)
+    new Request(`https://authichain.govchain.us${path}`),
+    gate
   );
   assert.ok(res, `expected handler for ${path}`);
   return res!;
@@ -12,7 +21,7 @@ function get(path: string): Response {
 
 describe("genetics routes", () => {
   it("serves /genetics index", async () => {
-    const res = get("/genetics");
+    const res = get("/genetics", showFixture);
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /Mendo Love Farms/);
@@ -28,7 +37,7 @@ describe("genetics routes", () => {
   });
 
   it("serves Mendo farm library with derived peaks and LT-63 gap", async () => {
-    const res = get("/genetics/mendo-love-farms");
+    const res = get("/genetics/mendo-love-farms", showFixture);
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /LT-63/);
@@ -43,12 +52,11 @@ describe("genetics routes", () => {
     assert.ok(
       html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
-    assert.ok(html.includes("/m/mendo"));
     assert.match(html, /11\.618%/);
   });
 
   it("serves VT-26 dossier with CoA id and derived totals", async () => {
-    const res = get("/genetics/mendo-love-farms/vt-26");
+    const res = get("/genetics/mendo-love-farms/vt-26", showFixture);
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /260320S005-001/);
@@ -68,7 +76,7 @@ describe("genetics routes", () => {
   });
 
   it("serves LT-63 as an empty dossier, not invented chemistry", async () => {
-    const res = get("/genetics/mendo-love-farms/lt-63");
+    const res = get("/genetics/mendo-love-farms/lt-63", showFixture);
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /No CoA in library/);
@@ -83,7 +91,7 @@ describe("genetics routes", () => {
   });
 
   it("404s an unknown cultivar", async () => {
-    const res = get("/genetics/mendo-love-farms/nope");
+    const res = get("/genetics/mendo-love-farms/nope", showFixture);
     assert.equal(res.status, 404);
   });
 
@@ -92,12 +100,33 @@ describe("genetics routes", () => {
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /\$49/);
-    assert.match(html, /\/genetics\/mendo-love-farms\/lt-63/);
+    assert.doesNotMatch(html, /mendo|realthcv|LT-63/i);
     assert.match(html, /name="email"/);
     assert.doesNotMatch(html, /href="[^"]*\/api\/checkout/);
     assert.ok(
       html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
+  });
+
+  it("404s the withdrawn Mendo library on the default gate", async () => {
+    for (const path of [
+      "/genetics/mendo-love-farms",
+      "/genetics/mendo-love-farms/vt-26",
+      "/genetics/mendo-love-farms/lt-63",
+    ]) {
+      const res = get(path);
+      assert.equal(res.status, 404, path);
+      const html = await res.text();
+      assert.doesNotMatch(html, /Mendo|260320S005/, path);
+    }
+  });
+
+  it("lists no withdrawn farm on the default /genetics index", async () => {
+    const res = get("/genetics");
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    assert.doesNotMatch(html, /mendo|LT-63/i);
+    assert.match(html, /No public libraries yet/);
   });
 
   it("ignores unrelated paths", () => {

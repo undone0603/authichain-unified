@@ -112,7 +112,7 @@ function surfaceFooter() {
         links: [
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
-          { href: "/m/mendo", label: "Mendo / LT-63" },
+          { href: "/passport", label: "Genetics passport" },
           { href: "/partners/brief", label: "Partner brief" },
         ],
       },
