@@ -6,6 +6,11 @@ import {
   collect,
   dccLeads,
   dedupe,
+  earLeads,
+  earParty,
+  earRows,
+  jsfButton,
+  jsfForm,
   fetchAts,
   parseAshby,
   parseGreenhouse,
@@ -315,6 +320,80 @@ describe("DCC", () => {
       SINCE
     );
     expect(dedupe(leads)).toEqual([]);
+  });
+});
+
+describe("German battery register", () => {
+  const page = `
+    <form id="formId" action="/ear-verzeichnis/battghersteller.jsf;jsessionid=A.b" method="post">
+      <input type="hidden" name="formId" value="formId" />
+      <input id="formId:herstellername" type="text" name="formId:herstellername" />
+      <select name="formId:batterieart"><option value="" selected="selected">- -</option><option value="X">X</option></select>
+      <input type="hidden" name="javax.faces.ViewState" value="1:2&amp;3" />
+      <input type="submit" name="formId:j_idt62" value="Hersteller/Bevollm&auml;chtigten anzeigen" />
+      <input type="submit" name="formId:j_idt66:j_idt220" value="&lt;&lt;" disabled="disabled" />
+      <input type="submit" name="formId:j_idt66:j_idt259" value="100" />
+    </form>
+    <table><tbody>
+      <tr><td>
+        99999872</td><td>ECOPV-EU GmbH, Frankfurter Str. 70, 65760 Eschborn, Deutschland f\u00fcr Volt Cells Co., 1 Road, Guangzhou, China</td>
+        <td>Ger\u00e4tebatterien</td><td>Landbell</td><td></td></tr>
+      <tr><td>99999691</td><td>Gone Ltd, Street 1, Shenzhen</td><td>Ger\u00e4tebatterien</td><td></td><td>23.08.2025</td></tr>
+      <tr><td>99994470</td><td>Miraja AB, Sn\u00e5rvindev\u00e4gen 109, Stockholm</td><td>Industriebatterien</td><td></td><td></td></tr>
+    </tbody></table>`;
+
+  it("posts the whole form back with one button", () => {
+    const { action, fields } = jsfForm(page);
+    expect(action).toBe("/ear-verzeichnis/battghersteller.jsf;jsessionid=A.b");
+    expect(fields).toContainEqual(["javax.faces.ViewState", "1:2&3"]);
+    expect(fields).toContainEqual(["formId:batterieart", ""]);
+    expect(fields.map(([k]) => k)).not.toContain("formId:j_idt62");
+    expect(jsfButton(page, "100")).toBe("formId:j_idt66:j_idt259");
+    expect(jsfButton(page, "<<")).toBeNull();
+  });
+
+  it("keeps active registrants by company name only, never the address", () => {
+    const leads = earLeads(earRows(page));
+    expect(leads.map(l => l.org)).toEqual(["Volt Cells Co.", "Miraja AB"]);
+    expect(leads[0]).toMatchObject({
+      id: "ear:99999872",
+      title: "Battery registrant 99999872: Ger\u00e4tebatterien",
+      detail: "registered via ECOPV-EU GmbH",
+      offer: "dpp_readiness",
+      channel: "no-email",
+    });
+    const md = render(leads, {}, "2026-09-29");
+    expect(md).not.toMatch(/Frankfurter|Road|109/);
+  });
+
+  it("drafts a call or letter, never an email", () => {
+    const [lead] = earLeads(earRows(page));
+    const text = opener(lead);
+    expect(text).toMatch(/^No email/);
+    expect(text).not.toMatch(/@/);
+  });
+
+  it("splits representative and producer", () => {
+    expect(earParty("Rep GmbH, x f\u00fcr Maker Ltd, y")).toEqual({
+      org: "Maker Ltd",
+      via: "Rep GmbH",
+    });
+    expect(earParty("Solo AG, x")).toEqual({ org: "Solo AG", via: "" });
+  });
+
+  it("caps the register after dedupe so each week surfaces new names", () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      id: `ear:${i}`,
+      source: "ear",
+      org: `Org ${i}`,
+      title: "t",
+      offer: "dpp_readiness",
+    }));
+    const seen = new Set(many.slice(0, 15).map(l => l.id));
+    expect(dedupe(many).length).toBe(15);
+    expect(dedupe(many, seen).map(l => l.id)).toEqual(
+      many.slice(15).map(l => l.id)
+    );
   });
 });
 

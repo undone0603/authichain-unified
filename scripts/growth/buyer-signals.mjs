@@ -12,7 +12,7 @@
 //   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
 //   dcc   California cannabis licences (DCC public search API, keyless)
 //                                                          -> strainchain_passport
-//   ear   German battery register, newest registrations     -> dpp_readiness, no email
+//   ear   German battery register, highest active numbers   -> dpp_readiness, no email
 
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
@@ -580,7 +580,6 @@ export async function fetchDcc({ since, fetchImpl } = {}) {
 // a call or letter note, never an email.
 export const EAR_URL =
   "https://www.ear-system.de/ear-verzeichnis/battghersteller.jsf";
-const EAR_MAX = 15;
 
 function decodeEntities(s) {
   return String(s ?? "")
@@ -650,27 +649,39 @@ export function earRows(html) {
     .filter(cells => cells.length >= 3);
 }
 
+/** "Rep GmbH, street, city für Producer Ltd, street, city" -> names only. */
+export function earParty(cell) {
+  const [rep, producer] = String(cell ?? "").split(/\s+für\s+/);
+  const name = s => (s ?? "").split(",")[0].trim();
+  return producer
+    ? { org: name(producer), via: name(rep) }
+    : { org: name(rep), via: "" };
+}
+
 /**
- * Cells: registration number, producer, battery category, OfH, market exit.
- * Registrants that already left the market are not buyers.
+ * Cells: registration number, producer (with address), battery category,
+ * take-back scheme, market exit date. The register shows no registration
+ * date, so these are active registrants with the highest numbers, not
+ * provably new ones; the issue marker keeps each from repeating. Addresses
+ * are dropped: the digest carries the company name only.
  */
 export function earLeads(rows) {
   const out = [];
-  for (const [reg, name, category, , exit] of rows) {
-    const number = reg.match(/DE\s*\d+/i)?.[0].replace(/\s+/g, " ");
-    if (!number || !name || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
+  for (const [reg, party, category, , exit] of rows) {
+    const number = reg.match(/\d{6,}/)?.[0];
+    const { org, via } = earParty(party);
+    if (!number || !org || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
     out.push({
       id: `ear:${number}`,
       source: "ear",
-      org: name,
-      title: `New battery registration ${number}`,
-      detail: category,
+      org,
+      title: `Battery registrant ${number}${category ? `: ${category}` : ""}`,
+      detail: via ? `registered via ${via}` : "",
       country: "DEU",
       url: EAR_URL.replace(/\.jsf$/, ""),
       offer: "dpp_readiness",
       channel: "no-email",
     });
-    if (out.length >= EAR_MAX) break;
   }
   return out;
 }
@@ -727,19 +738,26 @@ export async function fetchEar({ fetchImpl = fetch } = {}) {
   html = (await press(html, "100")) ?? html;
   const rows = earRows(html);
   if (!rows.length) throw new Error("no rows in the register table");
-  if (process.env.BUYER_SIGNALS_DEBUG_EAR)
-    console.log(JSON.stringify(rows.slice(0, 5)));
   return earLeads(rows);
 }
 
 // ---------- assemble ----------
 
+// Sources that return a long list are capped after dedupe, so each week
+// surfaces the next unreported ones instead of the same top of the list.
+export const SOURCE_CAPS = { ear: 15 };
+
 export function dedupe(leads, seenIds = new Set()) {
   const out = [];
   const ids = new Set();
+  /** @type {Record<string, number>} */
+  const counts = {};
   for (const l of leads) {
     if (!l || !l.id || ids.has(l.id) || seenIds.has(l.id) || isExcluded(l))
       continue;
+    const cap = SOURCE_CAPS[l.source];
+    if (cap && (counts[l.source] ?? 0) >= cap) continue;
+    counts[l.source] = (counts[l.source] ?? 0) + 1;
     ids.add(l.id);
     out.push(l);
   }
@@ -755,7 +773,7 @@ export function opener(lead) {
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
     case "ear":
-      return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about their ${lead.detail || "battery"} passport due in February 2027; ${o.label} is the first step: ${o.url}`;
+      return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about the battery passport their batteries need from February 2027; ${o.label} is the first step: ${o.url}`;
     case "dcc":
       return `Congratulations on the new California cultivation licence. If you breed or hold cultivars worth proving, ${o.label} gives each cultivar a verifiable provenance record: ${o.url}`;
     case "jobs":
@@ -771,7 +789,7 @@ const SOURCE_NAMES = {
   jobs: "Hiring signals",
   boards: "Company career boards",
   dcc: "California cannabis licences",
-  ear: "German battery registrations (no email)",
+  ear: "German battery registrants (no email)",
 };
 
 export function render(leads, status, weekOf) {
