@@ -43,7 +43,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.66",
+    "@ai-sdk/openai": "^4.0.75",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@clerk/nextjs": "^7.8.3",
@@ -142,7 +142,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260915.1",
+    "@cloudflare/workers-types": "^5.20260926.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.15",
     "@opennextjs/cloudflare": "^1.20.6",
     "@openzeppelin/contracts": "5.6.1",
