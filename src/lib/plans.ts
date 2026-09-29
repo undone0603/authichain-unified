@@ -176,7 +176,9 @@ export const PLANS: Plan[] = [
   {
     // Created by Z in Stripe 2026-09-29 (prod_VLiM8xIrFVFa1M). Priced per SKU;
     // the Payment Link allows 1–25 SKUs, the gated checkout sells one.
-    // Unlisted: sold from /made-in-usa-claim-file, not the pricing grid.
+    // Listed 2026-09-29: also on the pricing grid and in PUBLIC_PLAN_IDS, not
+    // only /made-in-usa-claim-file. Carries no brand, so listedPlans() files it
+    // under QRON; give it its own brand if that grid should stay AI-QR only.
     id: "musa_claim_file",
     name: "Made in USA Claim File",
     price: 299,
@@ -187,14 +189,15 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
     stripe_mode: "payment",
     tier: "pro",
-    listed: false,
+    listed: true,
     features: ["Origin records for one SKU", "Bill-of-materials origin attestations from your suppliers", "A signed attestation anyone can verify", "Substantiation support, not legal advice"],
     cta: "Start my claim file",
   },
   {
     // Created by Z in Stripe 2026-09-29. One engagement, base scope 10 SKUs;
-    // larger scopes are quoted. Sold only through its Payment Link, which
-    // collects company name, SKU count, address and tax ID for the invoice.
+    // larger scopes are quoted. The Payment Link collects company name, SKU
+    // count, address and tax ID for the invoice; listed 2026-09-29, so the
+    // gated checkout and the pricing grid sell it too.
     id: "musa_audit_bundle",
     name: "Made in USA Claim File — Audit Bundle",
     price: 2500,
@@ -205,7 +208,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
     stripe_mode: "payment",
     tier: "pro",
-    listed: false,
+    listed: true,
     features: ["Claim files for up to 10 SKUs", "One engagement, invoiced to your company", "Larger scopes quoted separately", "Substantiation support, not legal advice"],
     cta: "Buy the audit bundle",
   },
@@ -218,6 +221,8 @@ export const PUBLIC_PLAN_IDS = [
   "creator",
   "dpp_readiness",
   "strainchain_passport",
+  "musa_claim_file",
+  "musa_audit_bundle",
 ] as const;
 
 export function isPurchasable(plan: Plan): boolean {
