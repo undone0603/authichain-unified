@@ -52,6 +52,7 @@
         "codeql.yml": "on",
         "compliance-audit.yml": "on",
         "security-scan.yml": "on",
+        "windows-path-safety.yml": "on",
         "nightstamp-scan-gate.yml": "on",
         "production-drizzle-audit.yml": "on",
         "vercel-deploy-guard.yml": "on",
