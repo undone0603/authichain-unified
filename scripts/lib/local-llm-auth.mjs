@@ -12,6 +12,10 @@ const TOKEN_KEYS = [
 const PRIVATE_HOST =
   /^(localhost|127\.0\.0\.1|::1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})$/i;
 
+/**
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {string}
+ */
 export function localLlmToken(env = process.env) {
   for (const key of TOKEN_KEYS) {
     const value = String(env[key] ?? "").trim();
@@ -29,6 +33,11 @@ export function isPrivateLlmUrl(raw) {
   }
 }
 
+/**
+ * @param {string} url
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {{ "Content-Type": string, Authorization?: string }}
+ */
 export function localLlmHeaders(url, env = process.env) {
   const headers = { "Content-Type": "application/json" };
   const token = localLlmToken(env);
