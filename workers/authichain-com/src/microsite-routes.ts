@@ -17,7 +17,7 @@ export const PASSPORT_CHECKOUT =
 export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
 export type MicrositePackId =
-  "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
+  "trumark" | "musa" | "strainchain" | "bat-2026-001";
 
 export interface MicrositeDef {
   pack: MicrositePackId;
@@ -27,12 +27,6 @@ export interface MicrositeDef {
 }
 
 export const MICROSITES: Record<string, MicrositeDef> = {
-  mendo: {
-    pack: "mendo",
-    canonicalPath: "/m/mendo",
-    aliases: ["/m/realthcv", "/m/lt-63"],
-    hosts: ["mendo.authichain.com", "realthcv.authichain.com"],
-  },
   trumark: {
     pack: "trumark",
     canonicalPath: "/m/trumark",
@@ -103,8 +97,6 @@ function hubCardCopy(pack: MicrositePackId): {
   dpp: boolean;
 } {
   switch (pack) {
-    case "mendo":
-      return { title: "Mendo / RealTHCV / LT-63", dpp: false };
     case "trumark":
       return { title: "TruMark seal", dpp: false };
     case "musa":

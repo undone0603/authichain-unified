@@ -221,17 +221,17 @@ const DESK_SEALS: DeskSeal[] = [
     votes: ALL_PASS,
   },
   {
-    id: "SC-FARM-LT63-0912",
+    id: "SC-FARM-SAMPLE-0912",
     status: "verified",
     sample: true,
-    product: "Mendo / LT-63 genetics passport",
+    product: "Sample cultivar genetics passport",
     holder: "Sun-grown Michigan cultivar desk",
     origin: "Northern Lower Peninsula, MI",
     finding: "Genetics passport matches the sample CoA hash. Not a METRC filing.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_farm",
     fields: [
-      { label: "Cultivar", value: "LT-63" },
+      { label: "Cultivar", value: "SAMPLE-01" },
       { label: "CoA hash", value: "sha256:7c91…e2ab" },
       { label: "METRC lot", value: "1A4060300002DEMO" },
       { label: "Pack", value: "Jar + CoA, not a dispensary license" },
@@ -365,11 +365,11 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
         body: "American Seal issued 14 Aug 2026 as a desk sample. query_provenance does not treat this row as a live registry write.",
       },
     ],
-    "SC-FARM-LT63-0912": [
+    "SC-FARM-SAMPLE-0912": [
       {
         phase: "Origin",
         title: "The mother",
-        body: "Mother selected 18 Mar 2026 on farm lot A, Northern Lower Peninsula. Cultivar LT-63. This story is that jar, not the category.",
+        body: "Mother selected 18 Mar 2026 on farm lot A, Northern Lower Peninsula. Cultivar SAMPLE-01. This story is that jar, not the category.",
       },
       {
         phase: "Classification",
@@ -530,7 +530,7 @@ function renderCertificate(seal: DeskSeal): string {
 const SAMPLE_CHIPS = [
   [SEED, "METRC seed"],
   ["AC-DPP-BATT-8841", "Battery DPP"],
-  ["SC-FARM-LT63-0912", "Farm genetics"],
+  ["SC-FARM-SAMPLE-0912", "Farm genetics"],
   ["GC-MIA-DLA-0005", "ACPT token 5"],
   ["AC-DPP-BATT-8841X", "Clone"],
 ] as const;

@@ -109,11 +109,10 @@ export function lookupFixture(identifier: string): FixtureRecord | null {
   return CATALOG[mapped] ?? null;
 }
 
-/** Public genetics pages are not seals. Do not map them to verified. */
-export function libraryPageFor(identifier: string): string | null {
-  const id = identifier.trim().toUpperCase();
-  if (id === "VT-26" || id === "MENDO" || id === "MENDO-VT-26" || id === "MENDO-LOVE-FARMS") {
-    return "https://strainchain.io/genetics/mendo-love-farms";
-  }
+/**
+ * Public genetics pages are not seals. Do not map them to verified.
+ * Withdrawn libraries (Mendo Love Farms) must not be advertised here.
+ */
+export function libraryPageFor(_identifier: string): string | null {
   return null;
 }

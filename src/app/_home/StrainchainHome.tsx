@@ -12,7 +12,7 @@ export function StrainchainHome() {
       themeClass="theme-agricultural"
       eyebrow="Seed-to-Sale Provenance"
       primaryCta={{ label: 'Request demo', href: '/onboard' }}
-      secondaryCta={{ label: 'View genetics library', href: '/genetics/mendo-love-farms' }}
+      secondaryCta={{ label: 'How a passport works', href: 'https://strainchain.io/passport' }}
       stats={[
         { value: '/onboard', label: 'Live intake' },
         { value: '/genetics', label: 'Passport library' },
