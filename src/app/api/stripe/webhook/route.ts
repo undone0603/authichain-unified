@@ -14,7 +14,7 @@ import {
   resolveSku,
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
-import { AFFILIATE_BASE_RATE } from "@/lib/affiliate-rate";
+import { AFFILIATE_BASE_RATE } from "../../../../lib/affiliate-rate";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {

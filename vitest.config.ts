@@ -35,10 +35,6 @@ export default defineConfig({
           path.resolve(templateRoot, "src", "lib", "fingerprint") + "$1",
       },
       {
-        find: /^@\/lib\/affiliate-rate$/,
-        replacement: path.resolve(templateRoot, "src", "lib", "affiliate-rate"),
-      },
-      {
         find: /^@\/lib\/genetics(\/.*)?$/,
         replacement:
           path.resolve(templateRoot, "src", "lib", "genetics") + "$1",
