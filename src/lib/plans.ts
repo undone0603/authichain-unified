@@ -5,6 +5,11 @@
 // 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
 // starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
+// 2026-09-29: added made_in_usa_claim_file $299/SKU and made_in_usa_audit_bundle
+// $2,500/engagement (AuthiChain compliance line, live in Stripe). Both are listed
+// and in PUBLIC_PLAN_IDS, widening the 2026-09-28 freeze to eight SKUs. Neither
+// carries a brand, so both surface in the QRON grid; give them their own brand if
+// that grid should stay AI-QR only.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
 export type PlanId =
@@ -18,7 +23,9 @@ export type PlanId =
   | "theater_3"
   | "dpp_readiness"
   | "strainchain_passport"
-  | "strainchain_farm";
+  | "strainchain_farm"
+  | "made_in_usa_claim_file"
+  | "made_in_usa_audit_bundle";
 
 export interface Plan {
   id: PlanId;
@@ -48,7 +55,11 @@ export const PLANS: Plan[] = [
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
-    features: ["5 generations", "Lookup verify only (no GPT-4V)", "Then Starter $29 or DPP $299"],
+    features: [
+      "5 generations",
+      "Lookup verify only (no GPT-4V)",
+      "Then Starter $29 or DPP $299",
+    ],
     cta: "Start with 5 free",
   },
   {
@@ -61,7 +72,12 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["100 generations (one-time)", "All free modes", "Holographic & Memory modes", "Designed for AuthiChain signed verification (in development)"],
+    features: [
+      "100 generations (one-time)",
+      "All free modes",
+      "Holographic & Memory modes",
+      "Designed for AuthiChain signed verification (in development)",
+    ],
     cta: "Buy Starter Pack",
   },
   {
@@ -94,7 +110,13 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["500 generations (one-time)", "All Pro modes", "Premium styles", "Priority generation queue", "Designed for AuthiChain signed verification (in development)"],
+    features: [
+      "500 generations (one-time)",
+      "All Pro modes",
+      "Premium styles",
+      "Priority generation queue",
+      "Designed for AuthiChain signed verification (in development)",
+    ],
     cta: "Buy Creator Pack",
     highlighted: true,
   },
@@ -110,7 +132,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: ["5,000 Industrial generations / mo", "Full DPP Data Integration", "StrainChain Genetic Mapping", "On our roadmap: supply-chain watchdog alerts", "On our roadmap: geo-fencing alerts for unexpected scan locations"],
+    features: [
+      "5,000 Industrial generations / mo",
+      "Full DPP Data Integration",
+      "StrainChain Genetic Mapping",
+      "On our roadmap: supply-chain watchdog alerts",
+      "On our roadmap: geo-fencing alerts for unexpected scan locations",
+    ],
     cta: "Initialize Theater 1",
   },
   {
@@ -125,7 +153,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: ["Unlimited Industrial Artifacts", "Custom AI Model Training", "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)", "Real-time Security Webhooks", "24/7 AuthiChain Core Support"],
+    features: [
+      "Unlimited Industrial Artifacts",
+      "Custom AI Model Training",
+      "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)",
+      "Real-time Security Webhooks",
+      "24/7 AuthiChain Core Support",
+    ],
     cta: "Contact for Theater 3",
     highlighted: true,
   },
@@ -139,21 +173,32 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299 credited toward AuthiChain Basic on conversion"],
+    features: [
+      "Written EU DPP readiness assessment",
+      "Self-serve merchant activation",
+      "50 workspace generations to publish first DPP",
+      "$299 credited toward AuthiChain Basic on conversion",
+    ],
     cta: "Start DPP Readiness Audit",
   },
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
     price: 49,
-    description: "One published genetics passport, built from your existing CoAs",
+    description:
+      "One published genetics passport, built from your existing CoAs",
     generations: 0,
     stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
     stripe_payment_link: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",
-    features: ["One passport, one cultivar", "Full cannabinoid and terpene panel from your certificates", "Every total recomputed from the source panel, not transcribed", "QR code and shareable link"],
+    features: [
+      "One passport, one cultivar",
+      "Full cannabinoid and terpene panel from your certificates",
+      "Every total recomputed from the source panel, not transcribed",
+      "QR code and shareable link",
+    ],
     cta: "Publish one passport",
   },
   {
@@ -168,8 +213,56 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
-    features: ["Unlimited cultivars and passports", "Auto-updates on every new CoA", "Lineage and batch history across the full library", "Discrepancies surfaced rather than smoothed over", "Export or withdraw your record at any time"],
+    features: [
+      "Unlimited cultivars and passports",
+      "Auto-updates on every new CoA",
+      "Lineage and batch history across the full library",
+      "Discrepancies surfaced rather than smoothed over",
+      "Export or withdraw your record at any time",
+    ],
     cta: "Start a Farm Plan",
+  },
+  {
+    id: "made_in_usa_claim_file",
+    name: "Made in USA Claim File — Per SKU",
+    price: 299,
+    description:
+      "Substantiation file for a Made in USA claim on one product SKU",
+    generations: 0,
+    stripe_price_id: "price_1UL0vVGqTruSqV8T5WYjrq6i",
+    stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
+    stripe_mode: "payment",
+    tier: "pro",
+    listed: true,
+    features: [
+      "Country-of-origin and supplier records for one SKU",
+      "Bill-of-materials attestations",
+      "Ed25519-signed AuthiChain attestation with a public verification receipt",
+      "Quantity adjustable at checkout up to 25 SKUs",
+      "Substantiation support, not legal advice",
+    ],
+    cta: "Build a claim file",
+  },
+  {
+    id: "made_in_usa_audit_bundle",
+    name: "Made in USA Audit Bundle",
+    price: 2500,
+    description:
+      "Custom supply-chain and legal-review engagement behind a Made in USA claim",
+    generations: 0,
+    stripe_price_id: "price_1UL15AGqTruSqV8TQHP3yNiR",
+    stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
+    stripe_mode: "payment",
+    tier: "enterprise",
+    listed: true,
+    features: [
+      "Supplier and component tracing to country of origin",
+      '"All or virtually all" analysis against the FTC Made in USA Labeling Rule',
+      "Reviewed substantiation memo",
+      "Signed claim files with public verification receipts for every SKU in scope",
+      "Base engagement covers up to 10 SKUs; larger scopes quoted separately",
+    ],
+    cta: "Start an audit engagement",
   },
 ];
 
@@ -180,10 +273,15 @@ export const PUBLIC_PLAN_IDS = [
   "creator",
   "dpp_readiness",
   "strainchain_passport",
+  "made_in_usa_claim_file",
+  "made_in_usa_audit_bundle",
 ] as const;
 
 export function isPurchasable(plan: Plan): boolean {
-  return plan.price === 0 || Boolean(plan.stripe_price_id || plan.stripe_payment_link);
+  return (
+    plan.price === 0 ||
+    Boolean(plan.stripe_price_id || plan.stripe_payment_link)
+  );
 }
 
 export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
@@ -206,7 +304,8 @@ export function gatedCheckoutUrl(id: PlanId): string {
 
 export function planPaymentLink(id: PlanId): string | undefined {
   const plan = planById(id);
-  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link)) return undefined;
+  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link))
+    return undefined;
   return gatedCheckoutUrl(id);
 }
 
@@ -220,12 +319,16 @@ export function planUsd(id: PlanId): number {
   return plan.price;
 }
 
-export function planByStripePriceId(priceId: string | null | undefined): Plan | undefined {
+export function planByStripePriceId(
+  priceId: string | null | undefined
+): Plan | undefined {
   if (!priceId) return undefined;
   return PLANS.find(p => p.stripe_price_id === priceId);
 }
 
-export function planByAmountCents(amountCents: number | null | undefined): Plan | undefined {
+export function planByAmountCents(
+  amountCents: number | null | undefined
+): Plan | undefined {
   if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
   const dollars = amountCents / 100;
   const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);
@@ -244,6 +347,8 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   dpp_readiness: 50,
   strainchain_passport: 0,
   strainchain_farm: 0,
+  made_in_usa_claim_file: 0,
+  made_in_usa_audit_bundle: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -258,4 +363,6 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   dpp_readiness: "pro",
   strainchain_passport: "pro",
   strainchain_farm: "pro",
+  made_in_usa_claim_file: "pro",
+  made_in_usa_audit_bundle: "enterprise",
 };

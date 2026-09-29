@@ -13,7 +13,9 @@ import { PUBLIC_PLAN_IDS, planByStripePriceId } from "../plans";
 describe("catalog freeze 2026-09-28", () => {
   it("first stranger SKU is starter $29", () => {
     expect(FIRST_STRANGER_SKU).toBe("starter");
-    expect(LIVE_PRICE_MAP.starter.priceId).toBe("price_1UIoEVGqTruSqV8T61lp48wB");
+    expect(LIVE_PRICE_MAP.starter.priceId).toBe(
+      "price_1UIoEVGqTruSqV8T61lp48wB"
+    );
     expect(LIVE_PRICE_MAP.starter.grant).toBe(100);
     expect(LIVE_PRICE_MAP.starter.mode).toBe("payment");
   });
@@ -26,6 +28,8 @@ describe("catalog freeze 2026-09-28", () => {
       "creator",
       "dpp_readiness",
       "strainchain_passport",
+      "made_in_usa_claim_file",
+      "made_in_usa_audit_bundle",
     ]);
     for (const id of PUBLIC_PLAN_IDS) expect(isPublicPlanId(id)).toBe(true);
     expect(isPublicPlanId("strainchain_farm")).toBe(false);
@@ -56,7 +60,9 @@ describe("catalog freeze 2026-09-28", () => {
   });
 
   it("public checkout hrefs stay on apex", () => {
-    expect(publicCheckoutHref("starter")).toBe("https://authichain.com/checkout/starter");
+    expect(publicCheckoutHref("starter")).toBe(
+      "https://authichain.com/checkout/starter"
+    );
     expect(publicCheckoutHref("free")).toBe("https://qron.space/generate");
   });
 
