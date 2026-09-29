@@ -159,6 +159,47 @@ test("/contact is a real page, not the homepage", async () => {
   assert.match(html, /<title>Contact AuthiChain<\/title>/);
 });
 
+test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
+  const hub = await get("/docs");
+  assert.equal(hub.status, 200);
+  const hubHtml = await hub.text();
+  assert.match(hubHtml, /AuthiChain Docs/);
+  assert.match(hubHtml, /not a GS1 Conformant Resolver/);
+  assert.doesNotMatch(hubHtml, /Bitcoin L1/);
+
+  for (const path of [
+    "/docs/gs1-digital-link",
+    "/docs/verification",
+    "/docs/dpp-architecture",
+    "/docs/examples",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+  }
+
+  const alias = await get("/docs/resolver");
+  assert.equal(alias.status, 301);
+  assert.equal(
+    new URL(alias.headers.get("location") ?? "", "https://authichain.com").pathname,
+    "/docs/gs1-digital-link"
+  );
+
+  const protocol = await get("/docs/protocol");
+  assert.equal(protocol.status, 301);
+  assert.equal(
+    new URL(protocol.headers.get("location") ?? "", "https://authichain.com").pathname,
+    "/protocol"
+  );
+
+  for (const path of ["/onboard", "/verify", "/pricing", "/checkout/dpp_readiness"]) {
+    const res = await get(path);
+    const body = await res.text();
+    assert.doesNotMatch(body, /AuthiChain Docs — verification infrastructure/, path);
+    assert.ok(res.status === 200 || res.status === 302 || res.status === 303, `${path} ${res.status}`);
+  }
+});
+
 test("/x402 is public HTML for the live agent-pay rail", async () => {
   for (const path of ["/x402", "/x402/", "/docs/x402"]) {
     const res = await get(path);
@@ -201,10 +242,12 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
   }
 });
 
-test("homepage and /dpp link to /x402", async () => {
+test("homepage and /dpp link to /docs and /x402", async () => {
   const home = await (await get("/")).text();
+  assert.match(home, /href="\/docs"/);
   assert.match(home, /href="\/x402"/);
   const dpp = await (await get("/dpp")).text();
+  assert.match(dpp, /href="\/docs"/);
   assert.match(dpp, /href="\/x402"/);
   assert.match(dpp, /name="email"/);
   assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
