@@ -128,6 +128,12 @@ export function planCheckoutCta(
   };
 }
 
+/** A $299 buyer with no reviews to read can see the written deliverable first. */
+function sampleAuditLink(origin: PricingOrigin): string {
+  const base = origin === "authichain" ? "" : "https://authichain.com";
+  return `<p class="section-sub" style="margin-top:12px"><a href="${base}/battery-passport/sample-audit">See a sample assessment</a></p>`;
+}
+
 /** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */
 const QRON_TITLED_PLANS = new Set(["starter", "creator", "theater_1", "theater_3"]);
 /** Plain-language Theater 1 button; the price matches the card. */
@@ -159,7 +165,7 @@ function cataloguePricingGrid(
   <div class="price-period">${esc(suffix || "trial")}</div>
   <p class="section-sub" style="margin-bottom:16px">${esc(plan.description)}</p>
   <ul class="price-features">${features}</ul>
-  ${attributedCheckoutCta(plan, cardCta, featured)}
+  ${attributedCheckoutCta(plan, cardCta, featured)}${plan.id === "dpp_readiness" ? sampleAuditLink(origin) : ""}
 </article>`;
     })
     .join("");

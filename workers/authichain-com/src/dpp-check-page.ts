@@ -103,7 +103,8 @@ function resultHtml(r: DppReadinessResult, price: number): string {
         ? "Expected"
         : "Not scheduled";
   const cta = r.inScope
-    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Get the written readiness plan — $${price}`, r.category.id)}</div>`
+    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Get the written readiness plan — $${price}`, r.category.id)}</div>
+    <p class="bp-note"><a href="/battery-passport/sample-audit">See what the written plan looks like</a> (a sample on a fictional e-bike battery).</p>`
     : "";
   return `<section class="estate-section dc-result" id="result" aria-live="polite">
   <div class="wrap">

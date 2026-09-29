@@ -10,6 +10,7 @@ export const ICP_SEO_SITEMAP_PATHS = [
   "/p/what-is-a-digital-product-passport",
   "/p/eu-digital-product-passport-batteries",
   "/battery-passport",
+  "/battery-passport/sample-audit",
   "/p/battery-passport-qr-code-requirements",
   "/p/battery-passport-due-diligence-requirement",
   "/p/eu-battery-regulation-due-diligence-report-deadline",

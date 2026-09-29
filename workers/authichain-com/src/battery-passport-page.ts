@@ -361,6 +361,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
       <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
       <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
+      <p class="bp-note">Not sure what you'd get? <a href="${BATTERY_PASSPORT_PATH}/sample-audit">Read a full sample assessment</a> worked through on a fictional e-bike pack.</p>
     </div>
   </header>
 
@@ -380,6 +381,7 @@ ${gapMapSection()}
       <h2>What you get</h2>
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
+      <p><a href="${BATTERY_PASSPORT_PATH}/sample-audit">See a sample written assessment</a>: figure check, Annex XIII gap table and an ordered action plan.</p>
       <p class="section-sub">Every record you publish from your AuthiChain workspace is signed and publicly verifiable, so a scan proves it came from you and hasn't been altered. It supports, and does not replace, the Art. 77 passport issued by the operator placing the battery on the EU market.</p>
     </div>
   </section>
@@ -406,6 +408,7 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
+        { href: `${BATTERY_PASSPORT_PATH}/sample-audit`, label: "Sample assessment" },
         { href: "/pricing", label: "Pricing" },
       ],
     },

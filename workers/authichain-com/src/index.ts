@@ -44,6 +44,10 @@ import {
   renderBatteryPassportPage,
 } from "./battery-passport-page.ts";
 import {
+  isSampleAuditPath,
+  renderSampleAuditPage,
+} from "./battery-sample-audit-page";
+import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,
   isDppCheckPath,
@@ -3080,7 +3084,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
-        <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20written%20packet">Request a written packet</a>
+        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a sample assessment</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
@@ -3528,6 +3532,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
     if (pricing) return pricing;
+    if (isSampleAuditPath(p)) {
+      return new Response(renderSampleAuditPage(), {
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
     if (isBatteryPassportPath(p)) {
       return new Response(renderBatteryPassportPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
