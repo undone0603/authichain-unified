@@ -44,6 +44,12 @@ import {
   renderBatteryPassportPage,
 } from "./battery-passport-page.ts";
 import {
+  isClaimFilePath,
+  isClaimFileThanksPath,
+  renderClaimFilePage,
+  renderClaimFileThanksPage,
+} from "./musa-claim-file-page";
+import {
   isSampleAuditPath,
   renderSampleAuditPage,
 } from "./battery-sample-audit-page";
@@ -3496,6 +3502,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/dpp-check', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/trumark', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/made-in-america', freq: 'weekly', pri: '0.85' },
+        { loc: 'https://authichain.com/made-in-usa-claim-file', freq: 'weekly', pri: '0.9' },
         ...micrositeSitemapUrls().map((loc) => ({ loc, freq: 'weekly', pri: '0.84' })),
         { loc: 'https://authichain.com/partners/brief', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/docs', freq: 'weekly', pri: '0.85' },
@@ -3532,6 +3539,16 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "authichain");
     if (pricing) return pricing;
+    if (isClaimFilePath(p) || isClaimFileThanksPath(p)) {
+      const thanks = isClaimFileThanksPath(p);
+      return new Response(thanks ? renderClaimFileThanksPage() : renderClaimFilePage(), {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          ...(thanks ? { 'Cache-Control': 'private, no-store' } : {}),
+        },
+      });
+    }
     if (isSampleAuditPath(p)) {
       return new Response(renderSampleAuditPage(), {
         headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },

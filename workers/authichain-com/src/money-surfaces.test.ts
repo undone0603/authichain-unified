@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  CLAIM_FILE_CHECKOUT,
   DPP_CHECKOUT,
   PASSPORT_CHECKOUT_PATH,
   isMadeInAmericaPath,
@@ -58,7 +59,7 @@ test("TruMark page uses live Passport and DPP checkout CTAs", () => {
   assert.match(html, /ZACHARY KIETZMAN/);
 });
 
-test("Made in America page uses live DPP checkout and partner-brief alias story", () => {
+test("Made in America page sells the claim file and keeps the partner-brief alias story", () => {
   const html = renderMadeInAmericaPage();
   assert.match(
     html,
@@ -70,15 +71,13 @@ test("Made in America page uses live DPP checkout and partner-brief alias story"
   );
   assert.match(html, /16 CFR Part 323/);
   assert.match(html, /EO 14392|Executive Order 14392/);
-  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), true);
+  assert.equal(html.includes(`action="${CLAIM_FILE_CHECKOUT}"`), true);
+  assert.equal(html.includes(`action="${DPP_CHECKOUT}"`), false);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(html, /href="\/made-in-usa-claim-file"/);
   assert.match(html, /href="\/partners\/brief"/);
   assert.ok(
-    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
-  );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
+    html.includes('href="https://authichain.com/checkout/musa_claim_file"')
   );
   assert.match(
     html,
