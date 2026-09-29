@@ -12,6 +12,7 @@
 //   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
 //   dcc   California cannabis licences (DCC public search API, keyless)
 //                                                          -> strainchain_passport
+//   ear   German battery register, highest active numbers   -> dpp_readiness, no email
 
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
@@ -571,14 +572,218 @@ export async function fetchDcc({ since, fetchImpl } = {}) {
   return dccLeads(rows, since);
 }
 
+// ---------- German battery register (stiftung ear) ----------
+
+// A JSF form, not an API: each step posts the whole form back with one
+// button pressed. German law (UWG section 7) needs prior consent even for
+// B2B marketing email, so these leads are marked no-email and their draft is
+// a call or letter note, never an email.
+export const EAR_URL =
+  "https://www.ear-system.de/ear-verzeichnis/battghersteller.jsf";
+
+function decodeEntities(s) {
+  return String(s ?? "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
+/** Every successful control of the page's form, minus its submit buttons. */
+export function jsfForm(html) {
+  const action = decodeEntities(
+    html.match(/<form[^>]*\baction="([^"]+)"/)?.[1] ?? ""
+  );
+  /** @type {[string, string][]} */
+  const fields = [];
+  for (const m of html.matchAll(/<input\b[^>]*>/g)) {
+    const tag = m[0];
+    const type = tag.match(/\btype="([^"]*)"/)?.[1] ?? "text";
+    const name = tag.match(/\bname="([^"]*)"/)?.[1];
+    if (!name || type === "submit" || type === "button") continue;
+    if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag))
+      continue;
+    fields.push([
+      name,
+      decodeEntities(tag.match(/\bvalue="([^"]*)"/)?.[1] ?? ""),
+    ]);
+  }
+  for (const m of html.matchAll(
+    /<select\b[^>]*\bname="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g
+  )) {
+    const sel = m[2].match(
+      /<option[^>]*\bselected\b[^>]*\bvalue="([^"]*)"|<option[^>]*\bvalue="([^"]*)"[^>]*\bselected\b/
+    );
+    fields.push([m[1], decodeEntities(sel?.[1] ?? sel?.[2] ?? "")]);
+  }
+  return { action, fields };
+}
+
+/** The name of the submit button whose label matches. */
+export function jsfButton(html, label) {
+  for (const m of html.matchAll(/<input\b[^>]*\btype="submit"[^>]*>/g)) {
+    const value = decodeEntities(m[0].match(/\bvalue="([^"]*)"/)?.[1] ?? "");
+    if (label instanceof RegExp ? label.test(value) : value === label) {
+      if (/\bdisabled\b/.test(m[0])) return null;
+      return m[0].match(/\bname="([^"]*)"/)?.[1] ?? null;
+    }
+  }
+  return null;
+}
+
+function cellText(html) {
+  return decodeEntities(html.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Rows of the results table as arrays of cell text. */
+export function earRows(html) {
+  const body = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
+  return [...body.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
+    .map(r =>
+      [...r[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => cellText(c[1]))
+    )
+    .filter(cells => cells.length >= 3);
+}
+
+// Producers reachable by a call or a letter in their own market: EU, EEA,
+// Switzerland and the UK, as the register spells them.
+const EAR_EUROPE =
+  /^(Deutschland|Österreich|Schweiz|Liechtenstein|Niederlande|Belgien|Luxemburg|Frankreich|Italien|Spanien|Portugal|Polen|Tschechien|Tschechische Republik|Slowakei|Ungarn|Dänemark|Schweden|Finnland|Norwegen|Island|Irland|Vereinigtes Königreich|Großbritannien|Estland|Lettland|Litauen|Slowenien|Kroatien|Rumänien|Bulgarien|Griechenland|Zypern|Malta)$/i;
+
+// A company form in the name; a bare personal name is a sole trader, and a
+// private person's name does not go into a public issue.
+const COMPANY_FORM =
+  /\b(GmbH|AG|SE|KG|OHG|UG|e\.?\s?K\.?|mbH|Ltd|Limited|LLC|Inc|Corp|B\.?V\.?|N\.?V\.?|AB|A\/S|ApS|AS|Oy|S\.?A\.?S?|S\.?r\.?l\.?|S\.?p\.?A\.?|S\.?L\.?U?|sp\.?\s?z\s?o\.?\s?o\.?|s\.?r\.?o\.?|Kft|plc|Co\.)(\b|$)/i;
+
+/**
+ * "Rep GmbH, street, city, Land für Producer Ltd, street, city, Land":
+ * the producer's name and country, and the representative's name.
+ */
+export function earParty(cell) {
+  const [rep, producer] = String(cell ?? "").split(/\s+für\s+/);
+  const parts = s => (s ?? "").split(",").map(p => p.trim());
+  const main = parts(producer ?? rep);
+  return {
+    org: main[0] ?? "",
+    land: main.length > 1 ? main[main.length - 1] : "",
+    via: producer ? parts(rep)[0] : "",
+  };
+}
+
+/**
+ * Cells: registration number, producer (with address), battery category,
+ * take-back scheme, market exit date. The register shows no registration
+ * date, so these are active registrants with the highest numbers, not
+ * provably new ones; the issue marker keeps each from repeating. Only
+ * European companies are kept, and the digest carries names, never
+ * addresses.
+ */
+export function earLeads(rows) {
+  const out = [];
+  for (const [reg, party, category, , exit] of rows) {
+    const number = reg.match(/\d{6,}/)?.[0];
+    const { org, land, via } = earParty(party);
+    if (!number || !org || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
+    if (!EAR_EUROPE.test(land) || !COMPANY_FORM.test(org)) continue;
+    out.push({
+      id: `ear:${number}`,
+      source: "ear",
+      org,
+      title: `Battery registrant ${number}${category ? `: ${category}` : ""}`,
+      detail: via ? `registered via ${via}` : "",
+      country: land,
+      url: EAR_URL.replace(/\.jsf$/, ""),
+      offer: "dpp_readiness",
+      channel: "no-email",
+    });
+  }
+  return out;
+}
+
+export async function fetchEar({ fetchImpl = fetch } = {}) {
+  let cookie = "";
+  const go = async (url, form) => {
+    const res = await fetchImpl(url, {
+      method: form ? "POST" : "GET",
+      headers: {
+        "User-Agent": UA,
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(form
+          ? { "Content-Type": "application/x-www-form-urlencoded" }
+          : {}),
+      },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const set = res.headers.get("set-cookie");
+    if (set) cookie = set.split(";")[0];
+    const text = await res.text();
+    if (!res.ok) throw new Error(`${res.status} ${text.slice(0, 120)}`);
+    return text;
+  };
+  const press = async (html, label, overrides = {}) => {
+    const button = jsfButton(html, label);
+    if (!button) return null;
+    const { action, fields } = jsfForm(html);
+    const form = fields.map(([k, v]) => [k, k in overrides ? overrides[k] : v]);
+    form.push([button, "x"]);
+    return go(new URL(action, EAR_URL).toString(), form);
+  };
+
+  let html = await go(EAR_URL);
+  const nameField = jsfForm(html).fields.find(([k]) =>
+    /herstellername$/.test(k)
+  )?.[0];
+  if (!nameField) throw new Error("search form not found");
+  html = await press(html, /^Hersteller/, { [nameField]: "*" });
+  if (!html) throw new Error("search button not found");
+  // Newest registrations carry the highest numbers: sort that column
+  // descending, then show 100 rows.
+  for (
+    let i = 0;
+    i < 2 &&
+    !/sortable-desc[^>]*value="Batt-Reg|value="Batt-Reg[^"]*"[^>]*sortable-desc/.test(
+      html
+    );
+    i++
+  ) {
+    html = (await press(html, /^Batt-Reg/)) ?? html;
+  }
+  html = (await press(html, "100")) ?? html;
+  const rows = earRows(html);
+  if (!rows.length) throw new Error("no rows in the register table");
+  // Most top numbers are marketplace sellers outside Europe; read a few more
+  // pages until there are enough European companies to fill the weekly cap.
+  for (let page = 2; page <= 5 && earLeads(rows).length < 40; page++) {
+    const next = await press(html, ">");
+    if (!next) break;
+    html = next;
+    rows.push(...earRows(html));
+  }
+  return earLeads(rows);
+}
+
 // ---------- assemble ----------
+
+// Sources that return a long list are capped after dedupe, so each week
+// surfaces the next unreported ones instead of the same top of the list.
+export const SOURCE_CAPS = { ear: 15 };
 
 export function dedupe(leads, seenIds = new Set()) {
   const out = [];
   const ids = new Set();
+  /** @type {Record<string, number>} */
+  const counts = {};
   for (const l of leads) {
     if (!l || !l.id || ids.has(l.id) || seenIds.has(l.id) || isExcluded(l))
       continue;
+    const cap = SOURCE_CAPS[l.source];
+    if (cap && (counts[l.source] ?? 0) >= cap) continue;
+    counts[l.source] = (counts[l.source] ?? 0) + 1;
     ids.add(l.id);
     out.push(l);
   }
@@ -593,6 +798,8 @@ export function opener(lead) {
       return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
+    case "ear":
+      return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about the battery passport their batteries need from February 2027; ${o.label} is the first step: ${o.url}`;
     case "dcc":
       return `Congratulations on the new California cultivation licence. If you breed or hold cultivars worth proving, ${o.label} gives each cultivar a verifiable provenance record: ${o.url}`;
     case "jobs":
@@ -608,6 +815,7 @@ const SOURCE_NAMES = {
   jobs: "Hiring signals",
   boards: "Company career boards",
   dcc: "California cannabis licences",
+  ear: "German battery registrants (no email)",
 };
 
 export function render(leads, status, weekOf) {
@@ -710,6 +918,7 @@ export async function collect({
     status.boards = `error: ${String(e.message).slice(0, 160)}`;
   }
   await run("dcc", () => fetchDcc({ since, fetchImpl }));
+  await run("ear", () => fetchEar({ fetchImpl }));
   return { leads, status };
 }
 
