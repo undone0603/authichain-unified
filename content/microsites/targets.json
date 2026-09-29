@@ -1,7 +1,6 @@
 {
   "indexnow": [
     "https://authichain.com/m",
-    "https://authichain.com/m/mendo",
     "https://authichain.com/m/trumark",
     "https://authichain.com/m/musa",
     "https://authichain.com/m/strainchain",
@@ -11,7 +10,6 @@
     "https://authichain.com/trumark",
     "https://authichain.com/made-in-america",
     "https://authichain.com/passport",
-    "https://authichain.com/genetics/mendo-love-farms",
     "https://qron.space/llms.txt",
     "https://qron.space/openapi.json",
     "https://strainchain.io/llms.txt",
@@ -20,7 +18,6 @@
     "https://govchain.us/openapi.json"
   ],
   "ghost": [
-    "https://authichain.com/m/mendo",
     "https://authichain.com/m/trumark",
     "https://authichain.com/m/musa",
     "https://authichain.com/m/strainchain",
@@ -29,7 +26,6 @@
     "https://authichain.com/trumark",
     "https://authichain.com/made-in-america",
     "https://authichain.com/passport",
-    "https://authichain.com/genetics/mendo-love-farms",
     "https://authichain.com/checkout/strainchain_passport"
   ],
   "checkout303": [

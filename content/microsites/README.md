@@ -21,18 +21,19 @@ Live money rails (probed 2026-09-20):
 
 After `authichain-com` deploys from main:
 
-| Pack                              | Canonical                             | Aliases                   |
-| --------------------------------- | ------------------------------------- | ------------------------- |
-| Mendo / RealTHCV / LT-63          | https://authichain.com/m/mendo        | `/m/realthcv`, `/m/lt-63` |
-| TruMark                           | https://authichain.com/m/trumark      | —                         |
-| Made in America                   | https://authichain.com/m/musa         | `/m/made-in-america`      |
-| StrainChain hub                   | https://authichain.com/m/strainchain  | —                         |
-| BAT-2026-001 / Insulin Vial 100IU | https://authichain.com/m/bat-2026-001 | `/m/insulin-vial`         |
-| Index                             | https://authichain.com/m              | —                         |
+| Pack                              | Canonical                             | Aliases              |
+| --------------------------------- | ------------------------------------- | -------------------- |
+| TruMark                           | https://authichain.com/m/trumark      | —                    |
+| Made in America                   | https://authichain.com/m/musa         | `/m/made-in-america` |
+| StrainChain hub                   | https://authichain.com/m/strainchain  | —                    |
+| BAT-2026-001 / Insulin Vial 100IU | https://authichain.com/m/bat-2026-001 | `/m/insulin-vial`    |
+| Index                             | https://authichain.com/m              | —                    |
 
-Existing product briefs stay at `/trumark`, `/made-in-america`, `/genetics/mendo-love-farms`, `/passport`.
+Existing product briefs stay at `/trumark`, `/made-in-america`, `/passport`.
 
-Host-based copies (`mendo.authichain.com`) are coded in `tryHandleMicrosite` but **not** added as wrangler routes in this PR — extra custom hostnames can fail a free-plan deploy, and `*.authichain.com` already 522/523. Attach a host route later only if a human confirms the zone accepts it. `/m/...` does not need that.
+The Mendo / RealTHCV pack was removed on 2026-09-26: the breeder declined, so their library no longer appears on any public page.
+
+Host-based copies (`trumark.authichain.com` and the rest) are coded in `tryHandleMicrosite` but **not** added as wrangler routes in this PR — extra custom hostnames can fail a free-plan deploy, and `*.authichain.com` already 522/523. Attach a host route later only if a human confirms the zone accepts it. `/m/...` does not need that.
 
 ## KV keys (optional, root worker)
 
@@ -45,8 +46,6 @@ Namespace **MICROSITES_KV** `a992900da1db4b998af1cdf4eccf550a` (title confirmed 
 
 | Key                          | File                                         |
 | ---------------------------- | -------------------------------------------- |
-| `mendo/index.html`           | `content/microsites/mendo/index.html`        |
-| `realthcv/index.html`        | same as mendo                                |
 | `trumark/index.html`         | `content/microsites/trumark/index.html`      |
 | `musa/index.html`            | `content/microsites/musa/index.html`         |
 | `made-in-america/index.html` | same as musa                                 |

@@ -22,6 +22,7 @@ import {
   farmIsUnlisted,
   getCultivar,
   getDossier,
+  isPublicFarm,
   toSlug,
 } from "@/lib/genetics";
 
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
         ok: false,
         error: "farm and cultivar are required",
         usage:
-          "/api/genetics/verify?farm=mendo-love-farms&cultivar=vt-26[&digest=sha256:...]",
+          "/api/genetics/verify?farm=<farm-slug>&cultivar=<cultivar-slug>[&digest=sha256:...]",
       },
       { status: 400 }
     );
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const dossier = getDossier(farm);
+  const dossier = isPublicFarm(farm) ? getDossier(farm) : null;
   if (!dossier) {
     return NextResponse.json(
       { ok: false, error: "unknown_farm", farm },

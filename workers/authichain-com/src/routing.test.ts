@@ -72,7 +72,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/x402"/);
   assert.match(html, /href="\/trumark"/);
   assert.match(html, /href="\/made-in-america"/);
-  assert.match(html, /href="\/m\/mendo"/);
+  assert.match(html, /href="\/passport"/);
+  assert.doesNotMatch(html, /\/m\/mendo|Mendo/);
   assert.match(html, /href="\/partners\/brief"/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
@@ -631,22 +632,15 @@ test("/api/telegram is still proxied to the app, not the Mini App", async () => 
   assert.equal(await res.text(), "app");
 });
 
-test("money-path microsites are live with checkout CTAs", async () => {
-  const mendo = await get("/m/mendo");
-  assert.equal(mendo.status, 200);
-  const mendoHtml = await mendo.text();
-  assert.match(
-    mendoHtml,
-    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
-  );
-  assert.doesNotMatch(
-    mendoHtml,
-    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
-  );
-  assert.match(mendoHtml, /Passport checkout — \$49/);
-  assert.match(mendoHtml, /LT-63/);
-  assert.doesNotMatch(mendoHtml, /calendly/i);
-  assert.doesNotMatch(mendoHtml, /book a call/i);
+test("retired Mendo microsite no longer serves the breeder's page", async () => {
+  // The breeder declined on 2026-09-21, so /m/mendo, its aliases and its
+  // hostnames must not render their library or campaign copy.
+  for (const path of ["/m/mendo", "/m/realthcv", "/m/lt-63"]) {
+    const res = await get(path);
+    assert.equal(res.status, 404, path);
+    const html = await res.text();
+    assert.doesNotMatch(html, /RealTHCV|Mendo Love Farms|LT-63/, path);
+  }
 
   const host = await worker.fetch(
     new Request("https://mendo.authichain.com/", {
@@ -654,8 +648,10 @@ test("money-path microsites are live with checkout CTAs", async () => {
     }),
     ENV
   );
-  assert.equal(host.status, 200);
-  assert.match(await host.text(), /RealTHCV/);
+  assert.doesNotMatch(await host.text(), /RealTHCV|LT-63/);
+
+  const genetics = await get("/genetics/mendo-love-farms");
+  assert.equal(genetics.status, 404);
 });
 
 test("TruMark and Made in America pages are live with checkout CTAs", async () => {
@@ -842,7 +838,7 @@ test("the sitemap no longer lists pages that do not exist", async () => {
   assert.ok(xml.includes("<loc>https://authichain.com/passport</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/made-in-america</loc>"));
-  assert.ok(xml.includes("<loc>https://authichain.com/m/mendo</loc>"));
+  assert.ok(!xml.includes("mendo"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/trumark</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/musa</loc>"));
   assert.ok(xml.includes("<loc>https://authichain.com/m/strainchain</loc>"));
