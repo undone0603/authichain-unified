@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { verifySubmitted } from "./protocol-verify.mjs";
+import { assessChainRead, expectedRecordHash, verifySubmitted } from "./protocol-verify.mjs";
 
 const fixtures = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -44,4 +44,33 @@ test("a tampered subject is invalid", () => {
 test("an id with no record is not a verdict", () => {
   assert.equal(verifySubmitted(null, null), null);
   assert.equal(verifySubmitted("AC-DEADBEEF", null), null);
+});
+
+test("the chain read is separate from the verdict", () => {
+  const fx = load("valid-anchored-polygon.json");
+  const hash = expectedRecordHash(fx.record);
+  const present = assessChainRead({
+    tx: { input: "0x" + hash },
+    receipt: { status: "0x1", blockNumber: "0x10" },
+    recordHash: hash,
+  });
+  assert.equal(present.onChain, true);
+  assert.equal(present.status, "tx_contains_record_hash");
+
+  const missing = assessChainRead({
+    tx: null,
+    receipt: null,
+    recordHash: hash,
+  });
+  assert.equal(missing.queried, true);
+  assert.equal(missing.onChain, false);
+  assert.equal(missing.status, "tx_missing");
+
+  const other = assessChainRead({
+    tx: { input: "0x" + "ab".repeat(32) },
+    receipt: { status: "0x1", blockNumber: "0x11" },
+    recordHash: hash,
+  });
+  assert.equal(other.onChain, false);
+  assert.equal(other.status, "hash_not_in_tx");
 });
