@@ -46,7 +46,7 @@ import {
 import {
   isSampleAuditPath,
   renderSampleAuditPage,
-} from "./battery-sample-audit-page.ts";
+} from "./battery-sample-audit-page";
 import {
   dppCheckCompleteEvent,
   dppCheckoutClickEvent,

@@ -19,7 +19,7 @@ import {
   estateFooter,
   estateNav,
   estateSkipLink,
-} from "../../_shared/estate-landing.ts";
+} from "../../_shared/estate-landing";
 import { planById } from "../../../src/lib/plans";
 import {
   scoreDppReadiness,
