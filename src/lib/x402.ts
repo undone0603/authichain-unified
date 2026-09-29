@@ -651,6 +651,37 @@ export const X402_REGISTRY_NOT_BOUND = {
 } as const;
 
 /**
+ * Whether discovery should advertise that a paid call gets an answer.
+ * forwardPaidVerify exists (#1247) but this stays false until a live paid
+ * POST on the public edge returns 200 with VERIFY_APP bound. Flip it in the
+ * same change that proves that. Health.ready still means "rail configured".
+ */
+export const X402_PAID_VERIFY_BOUND: boolean = false;
+
+export type X402PaidVerifyStatus = {
+  bound: boolean;
+  status: "bound" | "registry_not_bound";
+  detail: string;
+};
+
+export function x402PaidVerifyStatus(
+  bound: boolean = X402_PAID_VERIFY_BOUND
+): X402PaidVerifyStatus {
+  return bound
+    ? {
+        bound: true,
+        status: "bound",
+        detail: "Paid calls are answered from the seal registry.",
+      }
+    : {
+        bound: false,
+        status: "registry_not_bound",
+        detail:
+          "The payment rail is live, but no seal registry lookup is bound on the public paid paths yet. A paid call is refused with HTTP 503 registry_not_bound before settlement, so no payment is taken. The unpaid 402 challenge stays for discovery.",
+      };
+}
+
+/**
  * Cloudflare service binding to the Next app worker (`authichain-app`, see
  * wrangler.app.jsonc). Edge workers bind it as `VERIFY_APP`.
  */
@@ -780,6 +811,7 @@ export type X402FacilitatorStatus = {
 export type X402HealthBody = {
   ok: boolean;
   ready: boolean;
+  paidVerify: X402PaidVerifyStatus;
   status: "ready" | "not_configured" | "degraded";
   mode: "trustless" | "not_configured" | "dev";
   payTo: string | null;
@@ -860,10 +892,13 @@ export async function x402HealthReport(
   if (facilitator.configured && !facilitator.reachable) {
     warnings.push("Facilitator configured but unreachable.");
   }
+  const paidVerify = x402PaidVerifyStatus();
+  if (!paidVerify.bound) warnings.push(paidVerify.detail);
 
   return {
     ok: ready,
     ready,
+    paidVerify,
     status,
     mode: facilitator.configured ? "trustless" : "not_configured",
     payTo,
@@ -893,6 +928,7 @@ export type X402CatalogEndpoint = {
   priceUsd: number | null;
   priceAtomic: string | null;
   unpaidStatus?: number;
+  answersPaidCalls?: boolean;
 };
 
 export type X402CatalogBody = {
@@ -915,6 +951,7 @@ export type X402CatalogBody = {
   dailyCapUsd: number;
   status: X402HealthBody["status"];
   ready: boolean;
+  paidVerify: X402PaidVerifyStatus;
   mode: X402HealthBody["mode"];
   endpoints: X402CatalogEndpoint[];
   humanCheckout: {
@@ -944,14 +981,18 @@ export async function x402Catalog(
   env: X402HealthEnv = process.env
 ): Promise<X402CatalogBody> {
   const health = await x402HealthReport(env);
+  const bound = health.paidVerify.bound;
   const paid = (path: string, description: string): X402CatalogEndpoint => ({
     method: "POST",
     path,
     paid: true,
-    description,
+    description: bound
+      ? description
+      : `${description}. Not answering yet: a paid call is refused with 503 registry_not_bound before settlement; no payment is taken.`,
     priceUsd: health.pricePerCall.usd,
     priceAtomic: health.pricePerCall.atomic,
     unpaidStatus: 402,
+    answersPaidCalls: bound,
   });
   const free = (path: string, description: string): X402CatalogEndpoint => ({
     method: "GET",
@@ -982,6 +1023,7 @@ export async function x402Catalog(
     dailyCapUsd: health.dailyCapUsd,
     status: health.status,
     ready: health.ready,
+    paidVerify: health.paidVerify,
     mode: health.mode,
     endpoints: [
       free("/api/x402/health", "Public rail health (no secrets)"),
@@ -1081,7 +1123,14 @@ export async function x402OpenApiDocument(
     },
     responses: {
       "402": { description: "Payment required (x402)" },
-      "200": { description: "Paid verification result" },
+      ...(health.paidVerify.bound
+        ? { "200": { description: "Paid verification result" } }
+        : {
+            "503": {
+              description:
+                "registry_not_bound: a paid call is refused before settlement; no payment is taken",
+            },
+          }),
     },
   };
   return {
@@ -1089,8 +1138,9 @@ export async function x402OpenApiDocument(
     info: {
       title: "AuthiChain x402",
       version: "1.0.0",
-      description:
-        "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing.",
+      description: health.paidVerify.bound
+        ? "Agent verification on Base USDC. Unpaid POST returns HTTP 402. Human SKUs are Stripe Payment Links on /pricing."
+        : `Agent verification on Base USDC. Unpaid POST returns HTTP 402. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
     },
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {

@@ -1,8 +1,8 @@
 # Orchestrator for gov-ingest → gov-score → gov-proposals → gov-mint → gov-notify.
-# Keep this workflow disabled until item 5 (AuthiChainNFT bytecode on Base 8453).
-# Sibling enable order after getCode proof: ingest 304824543 → score 304825517
-# → proposals 304825758 → mint 304825951 (dry_run default true) → notify 304826125
-# → this engine 261329391. Scheduled mint/notify/score/proposals stay dry.
+# Enabled under launch mode (docs/OPERATING_CHARTER.md). Scheduled mint, score
+# and proposals stay dry, so no chain writes or model spend happen until item 5
+# (AuthiChainNFT bytecode on Base 8453) and a live dispatch. Scheduled notify
+# (owner Slack) is live only while launch mode is active.
 name: Government Lead-Gen Engine
 
 on:
@@ -67,8 +67,23 @@ jobs:
   # nothing current to work from.
   #
   # The stages below stay dry on the schedule deliberately: score spends model
-  # credits, proposals drafts outbound content, mint writes on-chain, notify
-  # sends mail. Each needs its own decision and its own manual dispatch.
+  # credits, proposals drafts outbound content, mint writes on-chain. Each needs
+  # its own decision and its own manual dispatch. Notify (owner Slack channel
+  # only) goes live on the schedule while launch mode is active.
+  launch:
+    runs-on: ubuntu-latest
+    outputs:
+      active: ${{ steps.launch.outputs.active }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/autonomy.json
+            scripts/autonomy/launch-mode.mjs
+          sparse-checkout-cone-mode: false
+      - id: launch
+        run: node scripts/autonomy/launch-mode.mjs
+
   ingest:
     needs: preflight
     uses: ./.github/workflows/gov-ingest.yml
@@ -98,9 +113,9 @@ jobs:
     secrets: inherit
 
   notify:
-    needs: [ingest, score, proposals]
+    needs: [launch, ingest, score, proposals]
     if: always()
     uses: ./.github/workflows/gov-notify.yml
     with:
-      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && (needs.launch.outputs.active == 'true' && 'false' || 'true') || inputs.dry_run }}
     secrets: inherit

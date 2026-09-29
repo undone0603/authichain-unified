@@ -55,6 +55,29 @@ To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 - Merging a PR that touches security, revenue, schema, or this charter.
 - Any claim of a customer, partner, certification or result that isn't verifiable.
 
+## Launch mode
+
+The owner decided on 2026-09-27 to loosen named gates until first revenue, then
+tighten back automatically. The switch is `launch_mode` in
+`.github/autonomy.json`; `scripts/autonomy/launch-mode.mjs` is the only reader.
+
+- **Expires on its own.** After `expires` every loop falls back to the gate it
+  had before. CI rejects a window longer than 90 days. To end it early, set
+  `enabled` to `false` and merge.
+- **What loosens while active:**
+  - `agentz-orchestration` runs live lead qualification and HubSpot sync on its
+    schedule (the AgentZ architect stays dry-run).
+  - The owner-LAN AgentZ ping and its webhook become warnings, not failures.
+  - `b2b-outreach` uses `launch_mode.cold_outreach_cap` instead of
+    `cold_outreach.max_new_prospects_per_day`, and an unverified segment sender
+    falls back to the verified `OUTREACH_FROM_EMAIL` instead of skipping.
+  - `gov-engine` is on; its Slack digest to the owner is live on schedule.
+- **What never loosens:** the send guard (verified or opt-in addresses only, MX
+  check, CAN-SPAM footer and address, opt-out), the deliverability breaker and
+  its latch, `OWNER_LIVE_SEND`, the truth rule, model-credit or gas spend
+  (`gov-score`, `gov-proposals`, `gov-mint` stay dry on schedule), prices,
+  secrets and DNS, and owner-only merges.
+
 ## Cold outreach
 
 The owner decided on 2026-09-23 to allow autonomous first-touch email. That
@@ -78,7 +101,16 @@ lifts the "leave cold outreach off" freeze recorded in
 4. **Existing guards stay in force.** `server/outreach/send-guard.ts` still applies:
    - only verified or opt-in addresses; no guessed addresses and no role inboxes
    - a CAN-SPAM footer and physical address, fail-closed
-   - an opt-out link
+   - an opt-out that gets recorded. Every live send, scheduled or manual,
+     first runs `scripts/outreach-optout-check.ts`; without a recordable
+     opt-out the run stays a dry run and `guardedSend` refuses the send
+     (`optout_not_recordable`). Recordable means one of: a signed one-click
+     link (`OUTREACH_UNSUBSCRIBE_SECRET`, verified live against the edge
+     router, which writes `guardrail_suppression_list`), an `UNSUBSCRIBE_URL`
+     page that records opt-outs, or `OUTREACH_ALLOW_MAILTO_OPTOUT=true` as the
+     owner's statement that the reply inbox is processed by hand. Replies that
+     reach `reply.authichain.com` and ask to stop are suppressed automatically
+     by the Resend inbound webhook (`/api/outreach/inbound`)
    - a check that the domain can receive mail (MX)
    - send-history dedupe
 5. **Truth.** No invented customers, certifications, results or urgency.
@@ -133,15 +165,21 @@ you comes with a list of decisions.
 
 ## Secrets and variables
 
-No new secrets are required. Each item below falls back to something that already exists.
+Only one new value is needed, and only for live cold email: the opt-out secret
+below. Every other item falls back to something that already exists.
 
-| Name                     | Kind   | Default when unset                              | Purpose                                                                 |
-| ------------------------ | ------ | ----------------------------------------------- | ----------------------------------------------------------------------- |
-| `STRIPE_READ_KEY`        | secret | `STRIPE_SECRET_KEY` (already set)               | Recommended: a restricted, read-only key for the dashboard and monitors |
-| `FOUNDER_EMAILS`         | secret | `founder_emails` in `.github/autonomy.json`     | Charges from these don't count as revenue or trigger alerts             |
-| `OWNER_EMAIL`            | secret | `owner_email` in `.github/autonomy.json`        | Where the digest goes                                                   |
-| `DASHBOARD_GITHUB_TOKEN` | secret | Unauthenticated, cached for 5 minutes           | Fresher loop status on the dashboard                                    |
-| `WINBACK_PROMO_CODE`     | env    | Not set, so win-back emails promise no discount | Set only once that promotion code exists in Stripe                      |
+| Name                            | Kind                                                                          | Default when unset                              | Purpose                                                                                                              |
+| ------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `STRIPE_READ_KEY`               | secret                                                                        | `STRIPE_SECRET_KEY` (already set)               | Recommended: a restricted, read-only key for the dashboard and monitors                                              |
+| `FOUNDER_EMAILS`                | secret                                                                        | `founder_emails` in `.github/autonomy.json`     | Charges from these don't count as revenue or trigger alerts                                                          |
+| `OWNER_EMAIL`                   | secret                                                                        | `owner_email` in `.github/autonomy.json`        | Where the digest goes                                                                                                |
+| `DASHBOARD_GITHUB_TOKEN`        | secret                                                                        | Unauthenticated, cached for 5 minutes           | Fresher loop status on the dashboard                                                                                 |
+| `WINBACK_PROMO_CODE`            | env                                                                           | Not set, so win-back emails promise no discount | Set only once that promotion code exists in Stripe                                                                   |
+| `OUTREACH_UNSUBSCRIBE_SECRET`   | secret, in GitHub **and** on the `authichain-edge-router` Worker (same value) | Not set, so live cold email stays in dry run    | Signs the one-click opt-out link in each email; the Worker verifies it and records the opt-out                       |
+| `OUTREACH_ALLOW_MAILTO_OPTOUT`  | repo variable                                                                 | Not set                                         | `true` only if someone processes "unsubscribe" replies by hand; lets live sends go out with a reply-only opt-out     |
+| `UNSUBSCRIBE_ORIGIN`            | repo variable                                                                 | `https://authichain.com`                        | Host for the opt-out link and the pre-send check                                                                     |
+| `RESEND_INBOUND_WEBHOOK_SECRET` | secret on the `authichain-edge-router` Worker                                 | Not set, so `/api/outreach/inbound` answers 503 | Signing secret (`whsec_…`) of the Resend `email.received` webhook; opt-out replies are then suppressed automatically |
+| `RESEND_INBOUND_API_KEY`        | secret on the `authichain-edge-router` Worker                                 | `RESEND_API_KEY`                                | Key of the Resend account that owns `reply.authichain.com`, used to read the reply                                   |
 
 ## Gemma (local model)
 

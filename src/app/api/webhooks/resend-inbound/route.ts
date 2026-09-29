@@ -2,10 +2,9 @@
  * Webhook endpoint for Resend inbound email routing.
  * Receives inbound emails to proposals@authichain.com and processes them.
  *
- * Setup: Create a route in Resend dashboard:
- * - Domain: authichain.com
- * - Route name: proposals@authichain.com
- * - Forward to: https://api.authichain.com/api/webhooks/resend-inbound (or your domain)
+ * Unsigned posts are refused. The edge copy in worker-app/resend-inbound.ts
+ * is the live path; this Node route uses the same Standard Webhooks check
+ * so a direct hit cannot insert a reply or flip a lead to replied.
  *
  * Audit (reply classifier path):
  * - Classification always runs for legitimate, non-duplicate inbound.
@@ -30,6 +29,7 @@ import {
   resolveReplyClassifierBackend,
 } from '@/lib/sentiment-classifier';
 import { matchReplyToProposal, normalizeEmail } from '@/lib/proposal-matcher';
+import { verifyWebhookSignature } from '@/lib/standard-webhooks';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface ResendInboundPayload {
@@ -45,23 +45,31 @@ interface ResendInboundPayload {
   bcc?: string;
 }
 
-/**
- * Parse email address from "Name <email@domain>" format
- */
 function parseEmailAddress(emailString: string): string {
   const match = emailString.match(/<([^>]{1,256})>/);
   return match ? match[1] : emailString;
 }
 
-/**
- * Extract sender name from "Name <email@domain>" format
- */
 function extractSenderName(emailString: string): string | null {
   const match = emailString.match(/^([^<]+)</);
   if (match && match[1]) {
     return match[1].trim();
   }
   return null;
+}
+
+function signatureHeaders(request: NextRequest) {
+  return {
+    id: request.headers.get('webhook-id') ?? request.headers.get('svix-id') ?? undefined,
+    timestamp:
+      request.headers.get('webhook-timestamp') ??
+      request.headers.get('svix-timestamp') ??
+      undefined,
+    signature:
+      request.headers.get('webhook-signature') ??
+      request.headers.get('svix-signature') ??
+      undefined,
+  };
 }
 
 /**
@@ -72,6 +80,8 @@ export async function GET() {
   const backend = resolveReplyClassifierBackend();
   return NextResponse.json({
     ok: true,
+    signatureRequired: true,
+    webhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
     classifier: backend,
     sideEffects: {
       hubspotWrite: false,
@@ -89,9 +99,26 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json()) as ResendInboundPayload;
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'RESEND_WEBHOOK_SECRET not configured' },
+        { status: 503 },
+      );
+    }
 
-    // Validate required fields
+    const rawBody = await request.text();
+    if (!verifyWebhookSignature(secret, signatureHeaders(request), rawBody)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    let payload: ResendInboundPayload;
+    try {
+      payload = JSON.parse(rawBody) as ResendInboundPayload;
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
     if (!payload.from || !payload.subject || !payload.messageId) {
       return NextResponse.json(
         { error: 'Missing required fields: from, subject, or messageId' },
@@ -103,13 +130,11 @@ export async function POST(request: NextRequest) {
     const senderName = extractSenderName(payload.from);
     const emailBody = payload.text || payload.html || '';
 
-    // Check if this is a legitimate reply (not auto-reply, bounce, etc.)
     if (!isProbablyLegitimateReply(payload.subject, emailBody)) {
       console.log('Skipping non-legitimate reply', { senderEmail, subjectLength: payload.subject.length });
       return NextResponse.json({ skipped: true, reason: 'Auto-reply or bounce detected' }, { status: 200 });
     }
 
-    // Check for duplicate (idempotency)
     const existing = await db.select().from(inboundReplies).where(eq(inboundReplies.messageId, payload.messageId)).limit(1);
 
     if (existing.length > 0) {
@@ -117,19 +142,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ skipped: true, reason: 'Duplicate message ID' }, { status: 200 });
     }
 
-    // Match reply to proposal
     const match = await matchReplyToProposal(senderEmail, payload.subject, payload.messageId, payload.inReplyTo);
 
-    // Classify sentiment (OpenAI → Ollama → heuristic → fail-closed neutral)
     const backend = resolveReplyClassifierBackend();
     const sentimentResult = await classifyReplyEmail(emailBody, payload.subject);
 
-    // Find or reference lead
     let leadId: number | null = null;
     if (match.leadId) {
       leadId = match.leadId;
     } else {
-      // Try to find lead by email
       const leadByEmail = await db
         .select()
         .from(leads)
@@ -140,7 +161,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert into inbound_replies
     const replyInsert = await db
       .insert(inboundReplies)
       .values({
@@ -177,7 +197,6 @@ export async function POST(request: NextRequest) {
     const reply = replyInsert[0];
     const action = inboundReplyAction(sentimentResult.sentiment, leadId);
 
-    // Update leads table if matched
     if (leadId) {
       await db
         .update(leads)
@@ -186,8 +205,6 @@ export async function POST(request: NextRequest) {
           sentiment: sentimentResult.sentiment,
           lastReplyAt: new Date(),
           objectionType: sentimentResult.objectionType || undefined,
-          // Atomic increment of the reply counter, COALESCE so a NULL seed
-          // starts at 0 rather than producing NULL.
           repliesReceived: sql`COALESCE(${leads.repliesReceived}, 0) + 1`,
           lastContactedAt: new Date(),
           updatedAt: new Date(),

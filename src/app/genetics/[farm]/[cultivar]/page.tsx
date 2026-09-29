@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   DECARB,
+  farmIsUnlisted,
   getCultivar,
   getDossier,
   listFarms,
@@ -33,6 +34,9 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { farm, cultivar } = await params;
+  if (farmIsUnlisted(farm)) {
+    return { title: "Not found", robots: { index: false, follow: false } };
+  }
   const view = getCultivar(farm, cultivar);
   const dossier = getDossier(farm);
   if (!view || !dossier) return { title: "Not found" };
@@ -85,6 +89,7 @@ export default async function CultivarDossier({
   params: Promise<Params>;
 }) {
   const { farm, cultivar } = await params;
+  if (farmIsUnlisted(farm)) notFound();
   const view = getCultivar(farm, cultivar);
   const dossier = getDossier(farm);
   if (!view || !dossier) notFound();

@@ -1,22 +1,17 @@
 /**
  * StrainChain genetics — cultivar dossier data layer.
  *
- * Source of record is `content/strainchain/<farm>/certificates.json`, a
- * reconciliation of a breeder's certificates of analysis. See
- * `content/strainchain/mendo-love-farms/reconciliation.md` for how that file
- * came to exist and what it does and does not establish.
+ * Source of record is `content/strainchain/<farm>/certificates.json`.
+ * Totals are derived at render, never transcribed.
  *
- * The central idea here: **totals are derived, never trusted.** Cannabis CoAs
- * report acidic and neutral cannabinoids separately (THCVA vs THCV), and the
- * headline "total THCV" is a decarboxylation-weighted sum the lab computes.
- * Transcribing that headline invites exactly the class of error found in the
- * first prototype pass — a published figure that no longer matches the panel
- * printed beneath it. So every total on a rendered page is recomputed from raw
- * mg/g here, and any certificate whose published total disagrees is surfaced as
- * a discrepancy rather than silently overwritten in either direction.
+ * Unlisted farms are omitted from listFarms(). getDossier() returns null
+ * for them unless the caller passes an explicit gate: GENETICS_UNLISTED_PREVIEW=1
+ * or a token that matches GENETICS_UNLISTED_TOKEN (at least 16 characters).
+ * Public routes must not pass that gate.
  */
 
-import raw from "../../content/strainchain/mendo-love-farms/certificates.json";
+import mendoRaw from "../../content/strainchain/mendo-love-farms/certificates.json";
+import gtrRaw from "../../content/strainchain/gtr-seeds/certificates.json";
 
 /** THC (314.46 g/mol) / THCA (358.47 g/mol). The standard decarb factor. */
 export const DECARB = 0.877;
@@ -35,10 +30,16 @@ export interface Cannabinoids {
   THCV?: number;
   THCA?: number;
   d9_THC?: number;
+  d8_THC?: number;
   CBGA?: number;
   CBG?: number;
   CBCA?: number;
   CBDVA?: number;
+  CBDA?: number;
+  CBD?: number;
+  CBN?: number;
+  CBC?: number;
+  CBDV?: number;
 }
 
 export interface Certificate {
@@ -61,7 +62,6 @@ export interface Certificate {
   arithmetic_check: ArithmeticCheck;
   breeder_claimed_ratio?: number;
   open_question?: string;
-  /** Repo-relative path of the canonical source PDF, when bytes are on file. */
   source_pdf?: string;
   source_pdf_sha256?: string;
   verified_against_pdf?: string;
@@ -72,7 +72,6 @@ export interface Cultivar {
   role: string;
   description?: string;
   coa_ids: string[];
-  /** null when no certificate exists for this cultivar yet. */
   peak_total_thcv_pct: number | null;
   awards?: {
     name: string;
@@ -97,23 +96,45 @@ export interface OpenQuestion {
   blocks: string;
 }
 
-/** A certificate with its totals recomputed from the raw panel. */
 export interface DerivedCertificate extends Certificate {
   derived: {
-    /** null when the panel was never captured, so nothing can be recomputed. */
     totalThcvPct: number | null;
     totalThcPct: number | null;
     ratio: number | null;
-    /** Set when a derived total disagrees with the published one. */
     mismatch: null | {
       field: "thcv" | "thc";
       published: number;
       derived: number;
-      /** Δ9-THC implied by the published total but absent from the panel. */
       impliedMissingPct?: number;
     };
   };
 }
+
+/** The testing lab named on every certificate in a farm file. */
+type Laboratory = {
+  name: string;
+  address: string;
+  /** null when the certificate does not publish it (GTR's PREE CoAs). */
+  license: string | null;
+  accreditation: string | null;
+  method: string;
+};
+
+type FarmFile = {
+  updated: string;
+  unlisted?: boolean;
+  provenance_warning: string;
+  laboratory: Laboratory;
+  party_of_record: {
+    name: string;
+    address: string;
+    cultivator_disclosure: string;
+  };
+  cultivars: unknown[];
+  certificates: unknown[];
+  lineage_edges: unknown[];
+  open_questions_for_breeder: unknown[];
+};
 
 function sum(...xs: (number | undefined)[]): number {
   return xs.reduce<number>((a, x) => a + (x ?? 0), 0);
@@ -126,8 +147,8 @@ function round(n: number, dp = 3): number {
 
 /**
  * Recomputes total THCV and total THC from the acidic/neutral pair.
- * Returns nulls when the panel is absent — an unverifiable certificate is
- * reported as unverifiable, never quietly promoted to verified.
+ * Returns null for a total when that pair is absent — never print 0.000%
+ * for a compound the panel did not measure.
  */
 export function derive(cert: Certificate): DerivedCertificate {
   const c = cert.cannabinoids_pct;
@@ -143,24 +164,28 @@ export function derive(cert: Certificate): DerivedCertificate {
     };
   }
 
-  const totalThcv = round(sum(c.THCV) + sum(c.THCVA) * DECARB);
-  const totalThc = round(sum(c.d9_THC) + sum(c.THCA) * DECARB);
+  const hasThcv = c.THCV != null || c.THCVA != null;
+  const hasThc = c.d9_THC != null || c.THCA != null;
+  const totalThcv = hasThcv ? round(sum(c.THCV) + sum(c.THCVA) * DECARB) : null;
+  const totalThc = hasThc ? round(sum(c.d9_THC) + sum(c.THCA) * DECARB) : null;
 
   const publishedThcv = cert.totals_pct.thcv ?? null;
   const publishedThc = cert.totals_pct.thc ?? null;
 
   let mismatch: DerivedCertificate["derived"]["mismatch"] = null;
   if (
+    hasThcv &&
     publishedThcv != null &&
+    totalThcv != null &&
     Math.abs(publishedThcv - totalThcv) > TOLERANCE_PCT
   ) {
     mismatch = { field: "thcv", published: publishedThcv, derived: totalThcv };
   } else if (
+    hasThc &&
     publishedThc != null &&
+    totalThc != null &&
     Math.abs(publishedThc - totalThc) > TOLERANCE_PCT
   ) {
-    // The common cause is a Δ9-THC row that never made it into the panel:
-    // the published total is right, the transcription is short a compound.
     mismatch = {
       field: "thc",
       published: publishedThc,
@@ -174,7 +199,10 @@ export function derive(cert: Certificate): DerivedCertificate {
     derived: {
       totalThcvPct: totalThcv,
       totalThcPct: totalThc,
-      ratio: totalThc > 0 ? round(totalThcv / totalThc, 2) : null,
+      ratio:
+        totalThcv != null && totalThc != null && totalThc > 0
+          ? round(totalThcv / totalThc, 2)
+          : null,
       mismatch,
     },
   };
@@ -187,8 +215,9 @@ export interface Dossier {
     address: string;
     cultivatorDisclosure: string;
   };
-  laboratory: typeof raw.laboratory;
+  laboratory: FarmFile["laboratory"];
   updated: string;
+  unlisted: boolean;
   provenanceWarning: string;
   cultivars: Cultivar[];
   certificates: DerivedCertificate[];
@@ -196,7 +225,6 @@ export interface Dossier {
   openQuestions: OpenQuestion[];
 }
 
-/** Turns a cultivar id into its URL segment: "VT-26" → "vt-26". */
 export function toSlug(cultivarId: string): string {
   return cultivarId
     .toLowerCase()
@@ -204,17 +232,65 @@ export function toSlug(cultivarId: string): string {
     .replace(/^-|-$/g, "");
 }
 
-const FARMS: Record<string, typeof raw> = {
-  "mendo-love-farms": raw as typeof raw,
+export const UNLISTED_PREVIEW_ENV = "GENETICS_UNLISTED_PREVIEW";
+export const UNLISTED_TOKEN_ENV = "GENETICS_UNLISTED_TOKEN";
+export const MIN_UNLISTED_TOKEN_LENGTH = 16;
+export const UNLISTED_CACHE_CONTROL = "private, no-store, max-age=0";
+export const UNLISTED_ROBOTS_TAG = "noindex, nofollow";
+
+export type UnlistedAccess = {
+  token?: string | null;
+  env?: Record<string, string | undefined>;
 };
 
-export function listFarms(): string[] {
-  return Object.keys(FARMS);
+function constantTimeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
 }
 
-export function getDossier(farmSlug: string): Dossier | null {
+function readEnv(access?: UnlistedAccess): Record<string, string | undefined> {
+  if (access?.env) return access.env;
+  if (typeof process !== "undefined" && process.env) return process.env;
+  return {};
+}
+
+/** True only for an explicit preview env or a long matching token. Default is deny. */
+export function unlistedAccessGranted(access?: UnlistedAccess): boolean {
+  const env = readEnv(access);
+  if (env[UNLISTED_PREVIEW_ENV] === "1") return true;
+  const expected = env[UNLISTED_TOKEN_ENV];
+  const presented = access?.token?.trim() ?? "";
+  if (!expected || expected.length < MIN_UNLISTED_TOKEN_LENGTH || !presented) {
+    return false;
+  }
+  return constantTimeEqual(presented, expected);
+}
+
+const FARMS: Record<string, FarmFile> = {
+  "mendo-love-farms": mendoRaw as FarmFile,
+  "gtr-seeds": gtrRaw as FarmFile,
+};
+
+/** Public index only. Unlisted private samples are omitted. */
+export function listFarms(): string[] {
+  return Object.keys(FARMS).filter(slug => !FARMS[slug].unlisted);
+}
+
+export function farmIsUnlisted(slug: string): boolean {
+  return Boolean(FARMS[slug]?.unlisted);
+}
+
+export function getDossier(
+  farmSlug: string,
+  access?: UnlistedAccess
+): Dossier | null {
   const data = FARMS[farmSlug];
   if (!data) return null;
+  if (data.unlisted && !unlistedAccessGranted(access)) return null;
   return {
     farm: {
       slug: farmSlug,
@@ -224,6 +300,7 @@ export function getDossier(farmSlug: string): Dossier | null {
     },
     laboratory: data.laboratory,
     updated: data.updated,
+    unlisted: Boolean(data.unlisted),
     provenanceWarning: data.provenance_warning,
     cultivars: data.cultivars as unknown as Cultivar[],
     certificates: (data.certificates as unknown as Certificate[]).map(derive),
@@ -236,17 +313,11 @@ export interface CultivarView {
   cultivar: Cultivar;
   slug: string;
   certificates: DerivedCertificate[];
-  /** Highest derived total THCV across this cultivar's certificates. */
   peakThcvPct: number | null;
-  /** Best THCV:THC ratio across this cultivar's certificates. */
   peakRatio: number | null;
-  /** Lineage edges where this cultivar is the child. */
   parentEdges: LineageEdge[];
-  /** Lineage edges where this cultivar is a parent. */
   childEdges: LineageEdge[];
-  /** Open questions naming this cultivar. */
   openQuestions: OpenQuestion[];
-  /** Rank by peak THCV across the whole farm, 1-indexed. */
   thcvRank: number;
   totalCultivars: number;
 }
@@ -258,9 +329,10 @@ function edgeParents(e: LineageEdge): string[] {
 
 export function getCultivar(
   farmSlug: string,
-  cultivarSlug: string
+  cultivarSlug: string,
+  access?: UnlistedAccess
 ): CultivarView | null {
-  const d = getDossier(farmSlug);
+  const d = getDossier(farmSlug, access);
   if (!d) return null;
   const cultivar = d.cultivars.find(c => toSlug(c.id) === cultivarSlug);
   if (!cultivar) return null;
@@ -276,9 +348,6 @@ export function getCultivar(
     .map(c => c.derived.ratio ?? c.ratio_thcv_thc ?? null)
     .filter((n): n is number => n != null);
 
-  // Rank across the farm on the same basis the dossier displays.
-  // A cultivar with no certificate has no measured peak and ranks last, rather
-  // than producing NaN in the comparator and an unstable order.
   const ranked = [...d.cultivars].sort(
     (a, b) => (b.peak_total_thcv_pct ?? -1) - (a.peak_total_thcv_pct ?? -1)
   );
@@ -301,9 +370,11 @@ export function getCultivar(
   };
 }
 
-/** Every certificate on the farm, oldest first — the family's chemistry over time. */
-export function timeline(farmSlug: string): DerivedCertificate[] {
-  const d = getDossier(farmSlug);
+export function timeline(
+  farmSlug: string,
+  access?: UnlistedAccess
+): DerivedCertificate[] {
+  const d = getDossier(farmSlug, access);
   if (!d) return [];
   return [...d.certificates].sort((a, b) =>
     a.collected.localeCompare(b.collected)

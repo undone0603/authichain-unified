@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   assessRecipient,
   canSend,
@@ -7,6 +7,7 @@ import {
   countsAsLiveSendAttempt,
   isRoleInboxEmail,
 } from "./send-guard";
+import { verifyUnsubscribeToken } from "./unsubscribe-link";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -194,6 +195,7 @@ describe("guardedSend", () => {
   it("sends a trusted partner role inbox when allowRoleInbox is set", async () => {
     process.env.RESEND_API_KEY = "re_test";
     process.env.MAILING_ADDRESS = "123 Main St, Detroit MI 48226";
+    process.env.OUTREACH_UNSUBSCRIBE_SECRET = "test-optout-secret";
     const fetchMock = vi.fn(
       async () =>
         ({
@@ -220,6 +222,7 @@ describe("guardedSend", () => {
     expect(r.assessment.isRoleInbox).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     delete process.env.MAILING_ADDRESS;
+    delete process.env.OUTREACH_UNSUBSCRIBE_SECRET;
   });
 
   it("accepts an address the counterparty published itself", async () => {
@@ -230,7 +233,12 @@ describe("guardedSend", () => {
   it("refuses government and military addresses whatever the source", () => {
     // A SAM.gov point-of-contact is published for questions about that
     // solicitation, not for marketing. The 2026-05-16 DEA/CBP sends are why.
-    for (const to of ["john.doe@gsa.gov", "tracking@dea.gov", "a.b@army.mil", "x@agency.gov.uk"]) {
+    for (const to of [
+      "john.doe@gsa.gov",
+      "tracking@dea.gov",
+      "a.b@army.mil",
+      "x@agency.gov.uk",
+    ]) {
       const a = assessRecipient(to, "published_contact");
       expect(a.status).toBe("reject");
       expect(a.reasons).toContain("government_or_military_address");
@@ -239,6 +247,11 @@ describe("guardedSend", () => {
 
   describe("outbound request shape", () => {
     const OLD = { ...process.env };
+    beforeEach(() => {
+      // A recordable opt-out, so these tests exercise the request shape.
+      // The opt-out tests below change it explicitly.
+      process.env.OUTREACH_UNSUBSCRIBE_SECRET = "test-optout-secret";
+    });
     afterEach(() => {
       process.env = { ...OLD };
     });
@@ -272,8 +285,10 @@ describe("guardedSend", () => {
       return { r, body };
     }
 
-    it("defaults the unsubscribe to a reply, not the dead /unsubscribe page", async () => {
+    it("uses a reply opt-out only when the inbox is processed by hand", async () => {
       delete process.env.UNSUBSCRIBE_URL;
+      delete process.env.OUTREACH_UNSUBSCRIBE_SECRET;
+      process.env.OUTREACH_ALLOW_MAILTO_OPTOUT = "true";
       process.env.RESEND_REPLY_TO = "Zach <zach@authichain.com>";
       const { body } = await captureSend();
       expect(body.reply_to).toBe("Zach <zach@authichain.com>");
@@ -285,11 +300,69 @@ describe("guardedSend", () => {
       expect(body.html).not.toContain("authichain.com/unsubscribe");
     });
 
+    it("refuses a mailto-only opt-out that nobody processes", async () => {
+      delete process.env.UNSUBSCRIBE_URL;
+      delete process.env.OUTREACH_UNSUBSCRIBE_SECRET;
+      delete process.env.OUTREACH_ALLOW_MAILTO_OPTOUT;
+      process.env.RESEND_API_KEY = "re_test";
+      process.env.MAILING_ADDRESS = "123 Main St, Detroit MI 48226";
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const dns = await import("node:dns");
+      vi.spyOn(dns.promises, "resolveMx").mockResolvedValue([
+        { exchange: "mx", priority: 1 },
+      ]);
+      const r = await guardedSend({
+        to: "jane.doe@acmelabs.com",
+        source: "published_contact",
+        subject: "s",
+        html: "<p>hi</p>",
+      });
+      expect(r.sent).toBe(false);
+      expect(r.reason).toBe("optout_not_recordable");
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("gives each recipient a signed one-click link when the secret is set", async () => {
+      delete process.env.UNSUBSCRIBE_URL;
+      process.env.OUTREACH_UNSUBSCRIBE_SECRET = "test-optout-secret";
+      const { r, body } = await captureSend();
+      expect(r.sent).toBe(true);
+      const header = body.headers["List-Unsubscribe"] as string;
+      expect(header).toMatch(
+        /^<https:\/\/authichain\.com\/api\/outreach\/unsubscribe\?e=jane\.doe%40acmelabs\.com&t=[0-9a-f]{32}>$/
+      );
+      expect(body.headers["List-Unsubscribe-Post"]).toBe(
+        "List-Unsubscribe=One-Click"
+      );
+      const link = header.slice(1, -1).replace(/&/g, "&amp;");
+      expect(body.html).toContain(link);
+      const t = new URL(header.slice(1, -1)).searchParams.get("t")!;
+      expect(
+        await verifyUnsubscribeToken(
+          "test-optout-secret",
+          "jane.doe@acmelabs.com",
+          t
+        )
+      ).toBe(true);
+    });
+
+    it("prefers the signed link over a static UNSUBSCRIBE_URL", async () => {
+      process.env.UNSUBSCRIBE_URL = "https://example.com/optout";
+      process.env.OUTREACH_UNSUBSCRIBE_SECRET = "test-optout-secret";
+      const { body } = await captureSend();
+      expect(body.headers["List-Unsubscribe"]).toContain(
+        "/api/outreach/unsubscribe?e="
+      );
+    });
+
     it("sets one-click List-Unsubscribe headers for a configured https page", async () => {
       const { body } = await captureSend({
         unsubscribeUrl: "https://example.com/u?e=1",
       });
-      expect(body.headers["List-Unsubscribe"]).toBe("<https://example.com/u?e=1>");
+      expect(body.headers["List-Unsubscribe"]).toBe(
+        "<https://example.com/u?e=1>"
+      );
       expect(body.headers["List-Unsubscribe-Post"]).toBe(
         "List-Unsubscribe=One-Click"
       );
@@ -390,20 +463,29 @@ describe("format checks run in linear time", () => {
     const evil = "!@!." + "!.".repeat(50_000);
     const start = performance.now();
     expect(assessRecipient(evil, "apollo_verified").validFormat).toBe(false);
-    expect(assessRecipient("a@" + "b.".repeat(50_000) + "!", "apollo_verified").validFormat).toBe(false);
+    expect(
+      assessRecipient("a@" + "b.".repeat(50_000) + "!", "apollo_verified")
+        .validFormat
+    ).toBe(false);
     expect(performance.now() - start).toBeLessThan(200);
   });
 
   it("still accepts ordinary and subdomain addresses", () => {
-    expect(assessRecipient("jane.doe@mail.acme.co.uk", "apollo_verified").validFormat).toBe(true);
+    expect(
+      assessRecipient("jane.doe@mail.acme.co.uk", "apollo_verified").validFormat
+    ).toBe(true);
     expect(assessRecipient("a@b", "apollo_verified").validFormat).toBe(false);
-    expect(assessRecipient("a@b..com", "apollo_verified").validFormat).toBe(false);
+    expect(assessRecipient("a@b..com", "apollo_verified").validFormat).toBe(
+      false
+    );
   });
 });
 
 describe("htmlToText", () => {
   it("decodes each entity once", async () => {
     const { htmlToText } = await import("./claims");
-    expect(htmlToText("<p>a &amp;lt;b&amp;gt; &lt;c&gt; &amp; d</p>")).toBe("a &lt;b&gt; <c> & d");
+    expect(htmlToText("<p>a &amp;lt;b&amp;gt; &lt;c&gt; &amp; d</p>")).toBe(
+      "a &lt;b&gt; <c> & d"
+    );
   });
 });

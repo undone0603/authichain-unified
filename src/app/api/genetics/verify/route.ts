@@ -16,7 +16,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { fingerprintCultivar } from "@/lib/fingerprint";
-import { getCultivar, getDossier, toSlug } from "@/lib/genetics";
+import {
+  UNLISTED_CACHE_CONTROL,
+  UNLISTED_ROBOTS_TAG,
+  farmIsUnlisted,
+  getCultivar,
+  getDossier,
+  toSlug,
+} from "@/lib/genetics";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +42,19 @@ export async function GET(req: NextRequest) {
           "/api/genetics/verify?farm=mendo-love-farms&cultivar=vt-26[&digest=sha256:...]",
       },
       { status: 400 }
+    );
+  }
+
+  if (farmIsUnlisted(farm)) {
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      {
+        status: 404,
+        headers: {
+          "cache-control": UNLISTED_CACHE_CONTROL,
+          "x-robots-tag": UNLISTED_ROBOTS_TAG,
+        },
+      }
     );
   }
 

@@ -20,7 +20,7 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-// ─── Checkout Session Creation ──────────────────────────────────────────────
+// ─── Checkout Session Creation ──────────────────────────────────────
 
 export interface CreateCheckoutParams {
   userId: number;
@@ -87,7 +87,7 @@ export async function createSubscriptionCheckout(
   return session.url!;
 }
 
-// ─── One-time Payment Checkout ──────────────────────────────────────────────
+// ─── One-time Payment Checkout ──────────────────────────────────────
 
 export interface CreatePaymentCheckoutParams {
   userId: number;
@@ -137,7 +137,7 @@ export async function createPaymentCheckout(
   return { url: session.url!, sessionId: session.id };
 }
 
-// ─── Customer Management ────────────────────────────────────────────────────
+// ─── Customer Management ────────────────────────────────────────
 
 export async function getOrCreateStripeCustomer(
   userId: number,
@@ -165,7 +165,7 @@ export async function getOrCreateStripeCustomer(
   return customer.id;
 }
 
-// ─── Subscription Management ────────────────────────────────────────────────
+// ─── Subscription Management ──────────────────────────────────────
 
 export async function getSubscriptionDetails(subscriptionId: string) {
   const stripe = getStripe();
@@ -185,7 +185,7 @@ export async function cancelSubscription(
   });
 }
 
-// ─── Payment History ────────────────────────────────────────────────────────
+// ─── Payment History ────────────────────────────────────────────
 
 export async function getCustomerPayments(customerId: string, limit = 20) {
   const stripe = getStripe();
@@ -222,7 +222,7 @@ export async function getCustomerInvoices(customerId: string, limit = 20) {
   }));
 }
 
-// ─── Webhook Processing ────────────────────────────────────────────────────
+// ─── Webhook Processing ────────────────────────────────────────
 
 export interface WebhookResult {
   eventType: string;
@@ -233,6 +233,19 @@ export interface WebhookResult {
   customerId?: string;
   email?: string;
   customerName?: string;
+}
+
+function invoiceSubscriptionId(invoice: {
+  subscription?: string | { id?: string } | null;
+  parent?: { subscription_details?: { subscription?: string | null } | null } | null;
+}): string | undefined {
+  const fromParent = invoice.parent?.subscription_details?.subscription;
+  if (typeof fromParent === "string" && fromParent.length > 0) return fromParent;
+  if (typeof invoice.subscription === "string") return invoice.subscription;
+  if (invoice.subscription && typeof invoice.subscription === "object") {
+    return invoice.subscription.id;
+  }
+  return undefined;
 }
 
 export async function processWebhookEvent(
@@ -281,10 +294,7 @@ export async function processWebhookEvent(
         typeof invoice.customer === "string"
           ? invoice.customer
           : invoice.customer?.id;
-      result.subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id;
+      result.subscriptionId = invoiceSubscriptionId(invoice);
       result.handled = true;
       break;
     }
@@ -295,10 +305,7 @@ export async function processWebhookEvent(
         typeof invoice.customer === "string"
           ? invoice.customer
           : invoice.customer?.id;
-      result.subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id;
+      result.subscriptionId = invoiceSubscriptionId(invoice);
       result.handled = true;
       break;
     }
@@ -310,7 +317,7 @@ export async function processWebhookEvent(
   return result;
 }
 
-// ─── Founder Payout via Stripe Connect ──────────────────────────────────────
+// ─── Founder Payout via Stripe Connect ────────────────────────────────────
 
 export interface PayoutConfig {
   stripeConnectAccountId: string;

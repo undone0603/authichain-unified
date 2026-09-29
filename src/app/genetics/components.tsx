@@ -90,8 +90,8 @@ export function PassportFooter({
   lab: {
     name: string;
     address: string;
-    license: string;
-    accreditation: string;
+    license: string | null;
+    accreditation: string | null;
   };
   issuer: { name: string; address: string; cultivatorDisclosure: string };
   updated: string;
@@ -116,7 +116,8 @@ export function PassportFooter({
         <p style={footP}>{lab.name}</p>
         <p style={footP}>{lab.address}</p>
         <p style={footP}>
-          {lab.license} · {lab.accreditation}
+          {lab.license ?? "License not published"} ·{" "}
+          {lab.accreditation ?? "Accreditation not published"}
         </p>
       </div>
       <div style={{ flex: "1 1 220px" }}>
