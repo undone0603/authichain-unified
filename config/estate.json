@@ -16,8 +16,8 @@
   "off_repo_workers": {
     "first-dollar-desk": {
       "disposition": "archive",
-      "archive": "docs/archive/cf-workers/first-dollar-desk.js",
-      "note": "Live money path: Stripe payment links, Base USDC ledger in KV first-dollar-ledger, /mcp and /api/agent/verify. Highest-priority source to restore."
+      "archive": "workers/first-dollar-desk/src/index.js",
+      "note": "Live money path: Stripe payment links, Base USDC ledger in KV first-dollar-ledger, /mcp and /api/agent/verify. Source recovered 2026-09-29 from the live Worker (byte-exact) into workers/first-dollar-desk with a matching wrangler.jsonc. The old archive path never existed. Not in the deploy-workers.yml matrix, so merging does not deploy it."
     },
     "authichain-agentz-webhook": {
       "disposition": "archive",

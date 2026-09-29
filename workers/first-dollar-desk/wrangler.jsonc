@@ -1,0 +1,88 @@
+// first-dollar-desk: recovered from the live Worker on 2026-09-29 (read-only).
+// SOURCE ONLY. Do not deploy from this file without Zac's OK.
+//
+// This config mirrors the live Worker exactly as read from the Cloudflare API
+// on 2026-09-29 (~17:05 ET). Account 4c1869b90f13f86940aa3747839bf420.
+//   Live version:     afe3a943-c01b-468f-b5ef-1a1a1f8b9210 (100%)
+//   Live deployment:  3997ca3c-f397-435f-b430-a6f0cf2f52f4, 2026-09-22 17:31 ET, via wrangler
+//   Entry module:     index.js (ES module; handlers: fetch, scheduled)
+//
+// src/index.js is the live bundle byte-for-byte (wrangler/esbuild output of an
+// original worker/src/index.js that is not in any repo). No secrets were found
+// in it; see the PR description for the scan.
+//
+// Not in deploy-workers.yml's matrix, and no Workers Builds trigger is attached
+// to this Worker, so merging this does not deploy it.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "first-dollar-desk",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": [],
+
+  // src/index.js is already the deployed module. no_bundle uploads it as-is, so
+  // `wrangler deploy --dry-run --outdir x` produces a file byte-identical to
+  // the live script (checked 2026-09-29, sha256 matches). Without this, wrangler
+  // re-bundles and adds ~80 lines of __name2() wrappers.
+  "no_bundle": true,
+
+  // Live: workers.dev ON, preview URLs ON. The code uses
+  // https://first-dollar-desk.undone-k.workers.dev as its canonical origin
+  // (og:url, sitemap, MCP icon, PUBLIC_MIRRORS). Do not flip to false without
+  // changing that first.
+  "workers_dev": true,
+  "preview_urls": true,
+
+  // Live: 20 zone routes, 0 custom domains.
+  "routes": [
+    { "pattern": "authichain.com/buy*", "zone_name": "authichain.com" },
+    { "pattern": "authichain.com/dollar*", "zone_name": "authichain.com" },
+    { "pattern": "authichain.com/first-dollar*", "zone_name": "authichain.com" },
+    { "pattern": "authichain.com/verify-credit*", "zone_name": "authichain.com" },
+
+    { "pattern": "authichain.govchain.us/buy*", "zone_name": "govchain.us" },
+    { "pattern": "authichain.govchain.us/dollar*", "zone_name": "govchain.us" },
+    { "pattern": "authichain.govchain.us/first-dollar*", "zone_name": "govchain.us" },
+    { "pattern": "authichain.govchain.us/verify-credit*", "zone_name": "govchain.us" },
+
+    { "pattern": "govchain.us/buy*", "zone_name": "govchain.us" },
+    { "pattern": "govchain.us/dollar*", "zone_name": "govchain.us" },
+    { "pattern": "govchain.us/first-dollar*", "zone_name": "govchain.us" },
+    { "pattern": "govchain.us/verify-credit*", "zone_name": "govchain.us" },
+
+    { "pattern": "qron.space/buy*", "zone_name": "qron.space" },
+    { "pattern": "qron.space/dollar*", "zone_name": "qron.space" },
+    { "pattern": "qron.space/first-dollar*", "zone_name": "qron.space" },
+    { "pattern": "qron.space/verify-credit*", "zone_name": "qron.space" },
+
+    { "pattern": "strainchain.io/buy*", "zone_name": "strainchain.io" },
+    { "pattern": "strainchain.io/dollar*", "zone_name": "strainchain.io" },
+    { "pattern": "strainchain.io/first-dollar*", "zone_name": "strainchain.io" },
+    { "pattern": "strainchain.io/verify-credit*", "zone_name": "strainchain.io" }
+  ],
+
+  // Live: no cron schedules. The script exports scheduled() but nothing
+  // triggers it. Adding a cron is a behaviour change; decide separately.
+  "triggers": { "crons": [] },
+
+  "kv_namespaces": [
+    // KV namespace title: first-dollar-ledger
+    { "binding": "LEDGER", "id": "5bc8e3720b124bdbb792a05a5e4fb5d5" }
+  ]
+
+  // Live: no plain-text vars. Everything else is a secret binding.
+  // Secret NAMES bound on the live Worker (values stay in Cloudflare; never
+  // put them in this file):
+  //   OPERATOR_EMAIL_DOMAINS
+  //   OWNER_EMAILS
+  //   OWNER_WALLETS
+  //   STRIPE_WEBHOOK_SECRET
+  //
+  // Optional names the code reads but that are NOT bound live today:
+  //   STRIPE_SECRET_KEY, STRIPE_LEDGER_PUSH_TOKEN, FIATDOCK_GATEWAY_SECRET,
+  //   FIATDOCK_SELLER_KEY, OPERATOR_EMAIL_DOMAIN
+  //
+  // Live: observability logs OFF, logpush off, no tail consumers, standard
+  // usage model, default placement. Left out here so a deploy would not change
+  // them. Turning observability on is recommended but is a separate change.
+}
