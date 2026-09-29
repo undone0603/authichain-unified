@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # Temporary: learn how the stiftung ear battery register can be read. Removed before merge.
 set -u
-for u in https://www.ear-system.de/ear-verzeichnis/battghersteller https://www.ear-system.de/ear-verzeichnis/ https://www.stiftung-ear.de/de/service/verzeichnisse; do
-  echo "=== $u"; curl -sSL -m 30 -A "Mozilla/5.0" -w '\nHTTP %{http_code} %{url_effective}\n' "$u" -o p.html; head -c 600 p.html; echo
-  grep -oE '(src|href)="[^"]+\.(js|json|csv|xml)[^"]*"' p.html | head -20
-done
-curl -sSL -m 30 -A "Mozilla/5.0" https://www.ear-system.de/ear-verzeichnis/battghersteller -o b.html
-for js in $(grep -oE 'src="[^"]+\.js"' b.html | cut -d'"' -f2); do
-  case $js in http*) U=$js;; /*) U=https://www.ear-system.de$js;; *) U=https://www.ear-system.de/ear-verzeichnis/$js;; esac
-  echo "--- $U"; curl -sSL -m 30 "$U" -o x.js; wc -c < x.js
-  grep -oE '"(/|https?://)[^"]*(api|rest|verzeichnis|search|export|csv)[^"]*"' x.js | sort -u | head -30
-done
+U=https://www.ear-system.de/ear-verzeichnis/battghersteller.jsf
+curl -sSL -m 40 -c j.txt -b j.txt -A "Mozilla/5.0" "$U" -o b.html
+echo "size $(wc -c < b.html)"
+echo "=== forms/inputs"; grep -oE '<(form|input|select|button|a)[^>]*(id|name)="[^"]*"[^>]*>' b.html | sed -E 's/value="[^"]{40,}"/value="…"/' | head -60
+echo "=== options"; grep -oE '<option[^>]*>[^<]*' b.html | head -40
+echo "=== table head"; grep -oE '<th[^>]*>.{0,120}' b.html | head -20
+echo "=== first rows"; grep -oE '<tr[^>]*>.{0,400}' b.html | sed -n 2,6p
+echo "=== text"; sed -e 's/<[^>]*>/ /g' b.html | tr -s ' \t' ' ' | grep -v '^ *$' | sed -n '1,400p' | grep -iE 'export|csv|excel|datum|registr|seit|treffer|ergebnis|WEEE|DE [0-9]' | head -40
