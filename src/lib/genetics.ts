@@ -290,7 +290,7 @@ const FARMS: Record<string, FarmFile> = {
  */
 const WITHDRAWN_FARMS = new Set<string>(["mendo-love-farms"]);
 
-/** Public index only. Unlisted private samples are omitted. */
+/** Fixture index. Unlisted private samples are omitted; withdrawn farms remain. */
 export function listFarms(): string[] {
   return Object.keys(FARMS).filter(slug => !FARMS[slug].unlisted);
 }

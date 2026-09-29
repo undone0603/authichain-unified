@@ -637,6 +637,7 @@ test("retired Mendo microsite no longer serves the breeder's page", async () => 
   // hostnames must not render their library or campaign copy.
   for (const path of ["/m/mendo", "/m/realthcv", "/m/lt-63"]) {
     const res = await get(path);
+    assert.equal(res.status, 404, path);
     const html = await res.text();
     assert.doesNotMatch(html, /RealTHCV|Mendo Love Farms|LT-63/, path);
   }

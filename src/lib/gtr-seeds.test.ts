@@ -87,7 +87,7 @@ describe("unlisted genetics stay private", () => {
     expect(view.certificates).toHaveLength(1);
   });
 
-  it("keeps the public Mendo dossier on the one-argument call", () => {
+  it("keeps the Mendo fixture loadable without a preview token", () => {
     const d = getDossier("mendo-love-farms");
     expect(d).not.toBeNull();
     expect(d!.unlisted).toBe(false);

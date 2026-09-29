@@ -1,37 +1,18 @@
 /**
  * Draft-branch wire: public /api/verify lookup depth through evaluate().
  * No trust_score. No simulated agents. No live mint claim.
- * Fixture rows are labeled source=fixture. Catalog rows are Mendo only.
- * GTR stays unlisted and is not a lookup key here.
+ * Fixture rows are labeled source=fixture.
+ * Withdrawn farms (Mendo) are not catalog keys. GTR stays unlisted.
  */
 import { evaluate, type TrustInput } from "../../../protocol/trust-kernel/evaluate.ts";
 
 export const POLYGON_CONTRACT =
   "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 
-export const MENDO_VT26_URL =
-  "https://strainchain.io/genetics/mendo-love-farms/vt-26";
-
 const CATALOG: Record<
   string,
   { objectId: string; serial: string; publicUrl: string }
-> = {
-  "vt-26": {
-    objectId: "vt-26",
-    serial: "260320S005-001",
-    publicUrl: MENDO_VT26_URL,
-  },
-  "260320s005-001": {
-    objectId: "vt-26",
-    serial: "260320S005-001",
-    publicUrl: MENDO_VT26_URL,
-  },
-  "mendo-love-farms/vt-26": {
-    objectId: "vt-26",
-    serial: "260320S005-001",
-    publicUrl: MENDO_VT26_URL,
-  },
-};
+> = {};
 
 function norm(id: string): string {
   return id.trim().toLowerCase().replace(/^\/+/, "");
