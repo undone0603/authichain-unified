@@ -50,10 +50,7 @@
     }
   ],
   "vars": {
-    "APP_ORIGIN": "https://app.authichain.com",
-    // Lets /api/affiliate/payout create Stripe Connect transfers. Turned on
-    // by the owner 2026-09-29; set to "false" to pause affiliate payouts.
-    "STRIPE_CONNECT_ENABLED": "true"
+    "APP_ORIGIN": "https://app.authichain.com"
   },
   "observability": {
     "enabled": true
