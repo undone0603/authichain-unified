@@ -24,7 +24,9 @@ describe("Made in USA claim file page", () => {
 
   it("sells the claim file through the gated checkout, never the DPP audit", () => {
     expect(plan.price).toBe(299);
-    expect(plan.listed).toBe(false);
+    // Listed since 2026-09-29: this page is no longer the only way to buy it,
+    // but it must still sell it through the gated checkout rather than the DPP.
+    expect(plan.listed).toBe(true);
     expect(html).toContain(
       'action="https://authichain.com/checkout/musa_claim_file"'
     );
@@ -37,7 +39,9 @@ describe("Made in USA claim file page", () => {
   it("offers the $2,500 audit bundle through its own Payment Link", () => {
     const bundle = planById("musa_audit_bundle")!;
     expect(bundle.price).toBe(2500);
-    expect(bundle.listed).toBe(false);
+    // Listed since 2026-09-29; this page still offers it via its Payment Link,
+    // which is what collects company, SKU count and tax ID for the invoice.
+    expect(bundle.listed).toBe(true);
     expect(html).toContain(`href="${bundle.stripe_payment_link}"`);
     expect(html).toContain("$2,500");
     expect(html).not.toMatch(/legal review|memo/i);
