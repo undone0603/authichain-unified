@@ -22,17 +22,24 @@ for p in "${PATHS[@]:-}"; do
     continue
   fi
 
-  if [[ "$p" == *$':\'* ]] || [[ "$p" == *:* ]]; then
-    echo "WINDOWS_PATH $p  (colon is illegal on NTFS)"
-    bad=1
-    continue
-  fi
+  # Colon and backslash are illegal NTFS filename characters. Match them with
+  # case so the patterns stay valid bash (a [[ == ]] glob with $'...' and a
+  # backslash character class is a syntax error, and the scan never runs).
+  case "$p" in
+    *:*|*\\*)
+      echo "WINDOWS_PATH $p  (colon or backslash is illegal on NTFS)"
+      bad=1
+      continue
+      ;;
+  esac
 
-  if [[ "$p" == *['\'"'<>|?*]* ]]; then
-    echo "WINDOWS_PATH $p  (contains <>:\"|?* )"
-    bad=1
-    continue
-  fi
+  case "$p" in
+    *'<'*|*'>'*|*'"'*|*'|'*|*'?'*|*'*'*)
+      echo "WINDOWS_PATH $p  (contains <>\"|?*)"
+      bad=1
+      continue
+      ;;
+  esac
 
   IFS=/ read -r -a parts <<<"$p"
   for part in "${parts[@]}"; do
