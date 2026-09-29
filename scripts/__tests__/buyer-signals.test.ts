@@ -6,6 +6,10 @@ import {
   collect,
   dccLeads,
   dedupe,
+  fetchAts,
+  parseAshby,
+  parseGreenhouse,
+  parseLever,
   ftcLeads,
   idsFromBody,
   opener,
@@ -138,6 +142,90 @@ describe("jobs", () => {
       ],
     });
     expect(arbeit[0]).toMatchObject({ org: "Forge", offer: "musa_claim_file" });
+  });
+});
+
+describe("company career boards", () => {
+  const passport = "Own our EU Battery Regulation 2023/1542 passport data";
+
+  it("reads Greenhouse, Lever and Ashby postings", () => {
+    expect(
+      parseGreenhouse(
+        {
+          jobs: [
+            {
+              title: "Compliance Lead",
+              absolute_url: "https://gh/1",
+              updated_at: "2026-09-25T10:00:00Z",
+              content: `&lt;p&gt;${passport}&lt;/p&gt;`,
+            },
+            { title: "Designer", absolute_url: "https://gh/2", content: "UI" },
+          ],
+        },
+        "VoltCo"
+      )
+    ).toMatchObject([
+      { org: "VoltCo", offer: "dpp_readiness", id: "jobs:https://gh/1" },
+    ]);
+    expect(
+      parseLever(
+        [
+          {
+            text: "Trade Counsel",
+            hostedUrl: "https://lv/1",
+            createdAt: Date.parse("2026-09-25"),
+            descriptionPlain: "Lead Made in USA claims review",
+          },
+        ],
+        "forge"
+      )[0]
+    ).toMatchObject({
+      org: "forge",
+      offer: "musa_claim_file",
+      date: "2026-09-25",
+    });
+    expect(
+      parseAshby(
+        {
+          jobs: [
+            {
+              title: "Sustainability PM",
+              jobUrl: "https://ab/1",
+              publishedAt: "2026-09-26T00:00:00Z",
+              descriptionPlain: "Ship our digital product passport",
+            },
+          ],
+        },
+        "loom"
+      )[0]
+    ).toMatchObject({ org: "loom", offer: "dpp_readiness" });
+  });
+
+  it("falls through to the next board and counts what resolved", async () => {
+    const fetchImpl = async (url: string) => {
+      const host = new URL(url).hostname;
+      if (host === "api.lever.co" && url.includes("/postings/known"))
+        return new Response(
+          JSON.stringify([
+            {
+              text: "Origin analyst",
+              hostedUrl: "https://lv/9",
+              createdAt: Date.parse("2026-09-27"),
+              descriptionPlain: "Own made in USA claims",
+            },
+          ])
+        );
+      if (host === "api.lever.co") return new Response("[]");
+      return new Response("not found", { status: 404 });
+    };
+    const out = await fetchAts({
+      since: SINCE,
+      fetchImpl: fetchImpl as typeof fetch,
+      seeds: ["known", "nobody"],
+    });
+    expect(out.map(l => l.url)).toEqual(["https://lv/9"]);
+    expect(out.resolved).toBe(1);
+    expect(out.seeds).toBe(2);
   });
 });
 
@@ -276,6 +364,9 @@ describe("collect", () => {
       if (host === "www.ftc.gov") return new Response("boom", { status: 503 });
       if (host === "remotive.com")
         return new Response(JSON.stringify({ jobs: [] }));
+      if (host === "api.lever.co") return new Response("[]");
+      if (host === "boards-api.greenhouse.io" || host === "api.ashbyhq.com")
+        return new Response("nf", { status: 404 });
       if (host === "as-dcc-pub-cann-w-p-002.azurewebsites.net")
         return new Response(JSON.stringify({ metadata: {}, data: [] }));
       return new Response(JSON.stringify({ data: [], links: {} }));
@@ -289,6 +380,7 @@ describe("collect", () => {
     expect(status.ftc).toMatch(/^error: 503/);
     expect(status.jobs).toBe("0 found");
     expect(status.dcc).toBe("0 found");
+    expect(status.boards).toMatch(/^0 found on 0 of \d+ company boards$/);
   });
 
   it("renders a drafts-only digest", () => {

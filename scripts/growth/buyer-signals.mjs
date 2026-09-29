@@ -9,6 +9,7 @@
 //   ted   EU tenders (TED Search API v3, keyless)          -> dpp_readiness
 //   ftc   FTC consumer-protection press releases (RSS)     -> musa_claim_file
 //   jobs  Remotive + Arbeitnow public job APIs (keyless)   -> dpp_readiness | musa_claim_file
+//   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
 //   dcc   California cannabis licences (DCC public search API, keyless)
 //                                                          -> strainchain_passport
 
@@ -333,6 +334,168 @@ export async function fetchJobs({ since, fetchImpl } = {}) {
   return fresh;
 }
 
+// ---------- company career boards (Greenhouse, Lever, Ashby) ----------
+
+// Makers that sell physical goods into the EU (batteries, e-bikes, apparel,
+// electronics) or make US-origin claims. Each slug is tried on Greenhouse,
+// then Lever, then Ashby; a slug on none of them is reported, not fatal.
+// Prune or add here; the weekly status line says how many boards resolved.
+export const ATS_SEEDS = [
+  // batteries, e-mobility, energy storage
+  "northvolt",
+  "lyten",
+  "sila",
+  "formenergy",
+  "redwoodmaterials",
+  "ascendelements",
+  "ourNextEnergy",
+  "ionblox",
+  "natron",
+  "fluenceenergy",
+  "cowboy",
+  "vanmoof",
+  "rad-power-bikes",
+  "specialized",
+  "voi",
+  "tier",
+  "lime",
+  "zeromotorcycles",
+  "ecoflow",
+  "anker",
+  "sonnen",
+  "1komma5",
+  "enpal",
+  "zolar",
+  // apparel, footwear, home goods
+  "allbirds",
+  "onrunning",
+  "everlane",
+  "rothys",
+  "bombas",
+  "vinted",
+  "zalando",
+  "gymshark",
+  "veja",
+  "patagonia",
+  "pangaia",
+  "ganni",
+  "mejuri",
+  "brooklinen",
+  "parachute",
+  "caraway",
+  "ourplace",
+  "yeti",
+  "stanley1913",
+  "hydroflask",
+  // electronics and devices
+  "fairphone",
+  "framework",
+  "nothing",
+  "teenageengineering",
+  "sonos",
+  "ouraring",
+];
+
+export function parseGreenhouse(data, company) {
+  return (data?.jobs ?? [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.title,
+          url: j.absolute_url,
+          date: j.updated_at,
+          text: stripHtml(j.content),
+        },
+        "Greenhouse"
+      )
+    )
+    .filter(Boolean);
+}
+
+export function parseLever(data, company) {
+  return (Array.isArray(data) ? data : [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.text,
+          url: j.hostedUrl,
+          date: j.createdAt ? new Date(j.createdAt).toISOString() : "",
+          text: `${j.descriptionPlain ?? ""} ${(j.lists ?? [])
+            .map(l => stripHtml(l.content))
+            .join(" ")}`,
+        },
+        "Lever"
+      )
+    )
+    .filter(Boolean);
+}
+
+export function parseAshby(data, company) {
+  return (data?.jobs ?? [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.title,
+          url: j.jobUrl,
+          date: j.publishedAt,
+          text: j.descriptionPlain ?? stripHtml(j.descriptionHtml),
+        },
+        "Ashby"
+      )
+    )
+    .filter(Boolean);
+}
+
+const ATS = [
+  {
+    url: s =>
+      `https://boards-api.greenhouse.io/v1/boards/${s}/jobs?content=true`,
+    parse: (d, c) => parseGreenhouse(d, c),
+    company: (d, s) => d?.meta?.company_name ?? s,
+  },
+  {
+    url: s => `https://api.lever.co/v0/postings/${s}?mode=json`,
+    parse: (d, c) => parseLever(d, c),
+    company: (_d, s) => s,
+  },
+  {
+    url: s => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
+    parse: (d, c) => parseAshby(d, c),
+    company: (_d, s) => s,
+  },
+];
+
+/**
+ * @param {{ since: Date, fetchImpl?: typeof fetch, seeds?: string[] }} opts
+ */
+export async function fetchAts({ since, fetchImpl, seeds = ATS_SEEDS }) {
+  /** @type {any[]} */
+  const leads = [];
+  let resolved = 0;
+  for (const slug of seeds) {
+    for (const ats of ATS) {
+      let d;
+      try {
+        d = await getJson(ats.url(encodeURIComponent(slug)), { fetchImpl });
+      } catch {
+        continue;
+      }
+      // Lever answers an unknown slug with an empty array, not a 404.
+      if (Array.isArray(d) && !d.length) continue;
+      resolved++;
+      leads.push(...ats.parse(d, ats.company(d, slug)));
+      break;
+    }
+  }
+  const fresh = leads.filter(
+    l => !l.date || Date.parse(l.date) >= since.getTime()
+  );
+  return Object.assign(fresh, { resolved, seeds: seeds.length });
+}
+
 // ---------- DCC ----------
 
 // The backend behind search.cannabis.ca.gov (its /config.js names CANNA_API).
@@ -443,6 +606,7 @@ const SOURCE_NAMES = {
   ted: "EU tenders",
   ftc: "Made in USA enforcement",
   jobs: "Hiring signals",
+  boards: "Company career boards",
   dcc: "California cannabis licences",
 };
 
@@ -538,6 +702,13 @@ export async function collect({
   await run("ted", () => fetchTed({ since, fetchImpl }));
   await run("ftc", () => fetchFtc({ since, fetchImpl }));
   await run("jobs", () => fetchJobs({ since, fetchImpl }));
+  try {
+    const ats = await fetchAts({ since, fetchImpl });
+    leads.push(...ats);
+    status.boards = `${ats.length} found on ${ats.resolved} of ${ats.seeds} company boards`;
+  } catch (e) {
+    status.boards = `error: ${String(e.message).slice(0, 160)}`;
+  }
   await run("dcc", () => fetchDcc({ since, fetchImpl }));
   return { leads, status };
 }
