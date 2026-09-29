@@ -158,8 +158,8 @@ importers:
         specifier: ^5.0.6
         version: 5.0.6
       '@types/google.maps':
-        specifier: ^3.65.5
-        version: 3.66.1
+        specifier: ^3.66.4
+        version: 3.66.4
       ai:
         specifier: ^7.0.116
         version: 7.0.116(zod@3.25.76)
@@ -6627,8 +6627,8 @@ packages:
   '@types/glob@7.2.0':
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
 
-  '@types/google.maps@3.66.1':
-    resolution: {integrity: sha512-UtnC1f4l6jSfw1WZD8nwP2XTLm5GKsL95Yk1a3etzFpKxJL4ZzO53k96IRipedIJGRLhV1z4lGlTTrP6FMyGww==}
+  '@types/google.maps@3.66.4':
+    resolution: {integrity: sha512-t01LM0VeIsUOZWno7ABUv4XL82RalnhRGaTzWykPUtQ+hHT39vsIekeU+roqEaibwebpYIjS7dslx51HwG95nw==}
 
   '@types/hast@3.0.5':
     resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
@@ -20655,7 +20655,7 @@ snapshots:
       '@types/minimatch': 6.0.0
       '@types/node': 26.5.1
 
-  '@types/google.maps@3.66.1': {}
+  '@types/google.maps@3.66.4': {}
 
   '@types/hast@3.0.5':
     dependencies:
