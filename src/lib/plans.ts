@@ -5,6 +5,11 @@
 // 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
 // starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
+// 2026-09-29: added made_in_usa_claim_file $299/SKU and made_in_usa_audit_bundle
+// $2,500/engagement (AuthiChain compliance line, live in Stripe). Both are listed
+// and in PUBLIC_PLAN_IDS, widening the 2026-09-28 freeze to eight SKUs. Neither
+// carries a brand, so both surface in the QRON grid; give them their own brand if
+// that grid should stay AI-QR only.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
 export type PlanId =
@@ -19,9 +24,8 @@ export type PlanId =
   | "dpp_readiness"
   | "strainchain_passport"
   | "strainchain_farm"
-  | "musa_claim_file"
-  | "musa_audit_bundle"
-  | "enterprise_compliance";
+  | "made_in_usa_claim_file"
+  | "made_in_usa_audit_bundle";
 
 export interface Plan {
   id: PlanId;
@@ -37,7 +41,7 @@ export interface Plan {
   features: string[];
   cta: string;
   highlighted?: boolean;
-  brand?: "qron" | "strainchain" | "musa";
+  brand?: "qron" | "strainchain";
   listed?: boolean;
 }
 
@@ -46,19 +50,17 @@ export const PLANS: Plan[] = [
     id: "free",
     name: "Free",
     price: 0,
-    description:
-      "5 account-based generations. Sign-in required. Lookup verify only.",
+    description: "5 signed generations. Lookup verify only. No card.",
     generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
     features: [
-      "5 generations per account",
-      "Sign-in required",
+      "5 generations",
       "Lookup verify only (no GPT-4V)",
       "Then Starter $29 or DPP $299",
     ],
-    cta: "Sign in for 5 credits",
+    cta: "Start with 5 free",
   },
   {
     id: "starter",
@@ -77,7 +79,6 @@ export const PLANS: Plan[] = [
       "Designed for AuthiChain signed verification (in development)",
     ],
     cta: "Buy Starter Pack",
-    listed: true,
   },
   {
     id: "qron_launch",
@@ -222,18 +223,11 @@ export const PLANS: Plan[] = [
     cta: "Start a Farm Plan",
   },
   {
-    // Created by Z in Stripe 2026-09-29 (prod_VLiM8xIrFVFa1M). Priced per SKU;
-    // the Payment Link allows 1–25 SKUs, the gated checkout sells one.
-    // Listed 2026-09-29: also on the pricing grid and in PUBLIC_PLAN_IDS, not
-    // only /made-in-usa-claim-file. Own "musa" brand since 2026-09-30 (Z's
-    // choice): the pricing page shows it in its own section, not under QRON.
-    id: "musa_claim_file",
-    brand: "musa",
-    name: "Made in USA Claim File",
+    id: "made_in_usa_claim_file",
+    name: "Made in USA Claim File — Per SKU",
     price: 299,
-    price_suffix: " per SKU",
     description:
-      "Substantiation support for one product's Made in USA claim. Not legal advice.",
+      "Substantiation file for a Made in USA claim on one product SKU",
     generations: 0,
     stripe_price_id: "price_1UL0vVGqTruSqV8T5WYjrq6i",
     stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
@@ -241,38 +235,34 @@ export const PLANS: Plan[] = [
     tier: "pro",
     listed: true,
     features: [
-      "Origin records for one SKU",
-      "Bill-of-materials origin attestations from your suppliers",
-      "A signed attestation anyone can verify",
+      "Country-of-origin and supplier records for one SKU",
+      "Bill-of-materials attestations",
+      "Ed25519-signed AuthiChain attestation with a public verification receipt",
+      "Quantity adjustable at checkout up to 25 SKUs",
       "Substantiation support, not legal advice",
     ],
-    cta: "Start my claim file",
+    cta: "Build a claim file",
   },
   {
-    // Created by Z in Stripe 2026-09-29. One engagement, base scope 10 SKUs;
-    // larger scopes are quoted. The Payment Link collects company name, SKU
-    // count, address and tax ID for the invoice; listed 2026-09-29, so the
-    // gated checkout and the pricing grid sell it too.
-    id: "musa_audit_bundle",
-    brand: "musa",
-    name: "Made in USA Claim File — Audit Bundle",
+    id: "made_in_usa_audit_bundle",
+    name: "Made in USA Audit Bundle",
     price: 2500,
-    price_suffix: " per engagement",
     description:
-      "Claim files for up to 10 SKUs in one engagement. Larger scopes quoted separately. Not legal advice.",
+      "Custom supply-chain and legal-review engagement behind a Made in USA claim",
     generations: 0,
     stripe_price_id: "price_1UL15AGqTruSqV8TQHP3yNiR",
     stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
     stripe_mode: "payment",
-    tier: "pro",
+    tier: "enterprise",
     listed: true,
     features: [
-      "Claim files for up to 10 SKUs",
-      "One engagement, invoiced to your company",
-      "Larger scopes quoted separately",
-      "Substantiation support, not legal advice",
+      "Supplier and component tracing to country of origin",
+      '"All or virtually all" analysis against the FTC Made in USA Labeling Rule',
+      "Reviewed substantiation memo",
+      "Signed claim files with public verification receipts for every SKU in scope",
+      "Base engagement covers up to 10 SKUs; larger scopes quoted separately",
     ],
-    cta: "Buy the audit bundle",
+    cta: "Start an audit engagement",
   },
 ];
 
@@ -283,8 +273,8 @@ export const PUBLIC_PLAN_IDS = [
   "creator",
   "dpp_readiness",
   "strainchain_passport",
-  "musa_claim_file",
-  "musa_audit_bundle",
+  "made_in_usa_claim_file",
+  "made_in_usa_audit_bundle",
 ] as const;
 
 export function isPurchasable(plan: Plan): boolean {
@@ -294,9 +284,7 @@ export function isPurchasable(plan: Plan): boolean {
   );
 }
 
-export function listedPlans(
-  brand: "qron" | "strainchain" | "musa" = "qron"
-): Plan[] {
+export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
   return PLANS.filter(
     p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
   );
@@ -359,9 +347,8 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   dpp_readiness: 50,
   strainchain_passport: 0,
   strainchain_farm: 0,
-  musa_claim_file: 0,
-  musa_audit_bundle: 0,
-  enterprise_compliance: 0,
+  made_in_usa_claim_file: 0,
+  made_in_usa_audit_bundle: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -376,20 +363,6 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   dpp_readiness: "pro",
   strainchain_passport: "pro",
   strainchain_farm: "pro",
-  musa_claim_file: "pro",
-  musa_audit_bundle: "pro",
-  enterprise_compliance: "enterprise",
+  made_in_usa_claim_file: "pro",
+  made_in_usa_audit_bundle: "enterprise",
 };
-
-/**
- * Entitlement for /dashboard/compliance (src/lib/compliance-access.ts): a
- * profile whose subscription_plan is this id and whose subscription_status is
- * active or trialing.
- *
- * Deliberately NOT in PLANS yet: it has no price. isPurchasable() treats a
- * price of 0 as free, so a placeholder entry would make the tier claimable
- * for nothing. To sell it, create the Stripe price, then add a PLANS entry
- * with the real price, stripe_price_id and stripe_mode: "subscription".
- * Until then planById() returns undefined and /checkout refuses it.
- */
-export const COMPLIANCE_PLAN_ID: PlanId = "enterprise_compliance";

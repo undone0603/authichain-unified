@@ -1,6 +1,6 @@
 /**
- * Public catalog freeze — 2026-09-28, widened 2026-09-29 to eight SKUs with
- * musa_claim_file ($299/SKU) and musa_audit_bundle ($2,500/engagement).
+ * Public catalog freeze — 2026-09-28, widened 2026-09-29 with the two
+ * Made in USA compliance SKUs ($299/SKU and $2,500/engagement).
  * Only these SKUs may appear on /pricing, /onboard, /generate, /checkout.
  * First stranger SKU is QRON Starter $29. Do not list $1 or Seal $99.
  *
@@ -67,14 +67,14 @@ export const LIVE_PRICE_MAP: Record<
     grant: 0,
     stripeLink: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
   },
-  musa_claim_file: {
+  made_in_usa_claim_file: {
     priceId: "price_1UL0vVGqTruSqV8T5WYjrq6i",
     productId: "prod_VLiM8xIrFVFa1M",
     mode: "payment",
     grant: 0,
     stripeLink: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
   },
-  musa_audit_bundle: {
+  made_in_usa_audit_bundle: {
     priceId: "price_1UL15AGqTruSqV8TQHP3yNiR",
     productId: "prod_VLiWxjx4pEDfmP",
     mode: "payment",
@@ -106,7 +106,9 @@ export function publicPlanOrNull(id: string): PlanId | null {
   return isPublicPlanId(id) ? id : null;
 }
 
-export function isUnlistedSmokePrice(priceId: string | null | undefined): boolean {
+export function isUnlistedSmokePrice(
+  priceId: string | null | undefined
+): boolean {
   return Boolean(priceId && UNLISTED_PRICE_SET.has(priceId));
 }
 
@@ -115,7 +117,7 @@ export function isUnlistedSmokePrice(priceId: string | null | undefined): boolea
  * still grant so a paid Farm session is not lost. Unlisted smoke = ignore.
  */
 export function grantForPriceId(
-  priceId: string | null | undefined,
+  priceId: string | null | undefined
 ): { planId: PlanId; grant: number } | null {
   if (!priceId || isUnlistedSmokePrice(priceId)) return null;
   const plan = planByStripePriceId(priceId);
