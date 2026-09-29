@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
-# Temporary: learn the DCA iServices licence API shape. Removed before merge.
+# Temporary: learn where DCC licence data can be read. Removed before merge.
 set -u
-B=https://iservices.dca.ca.gov/api/search/v1
-curl -sSL -m 30 https://iservices.dca.ca.gov/swagger/spec/search.json -o spec.json
-node -e '
-const s=JSON.parse(require("fs").readFileSync("spec.json","utf8"));
-for (const p of ["/licenseSearchService/getPublicLicenseSearch","/commonSearchService/publicLicDelta"]) {
-  const o=s.paths[p].post; console.log("===", p, JSON.stringify(o.requestBody).slice(0,1500));
-}
-console.log("=== components", JSON.stringify(s.components||s.definitions||{}).slice(0,4000));
-'
-for p in breezeDetailService/getAllBoards casDetailService/getAllBoards; do
-  printf '=== %s -> ' "$p"
-  curl -sS -m 30 -o r.out -w '%{http_code}\n' -H "APP_ID: $DCC_APP_ID" -H "APP_KEY: $DCC_APP_KEY" "$B/$p"
-  head -c 300 r.out; echo
-  echo "cannabis rows:"; grep -oiE '.{200}cannabis.{200}' r.out | head -5
+curl -sSL -m 30 https://search.cannabis.ca.gov/ -o s.html
+echo "=== html size $(wc -c < s.html)"
+grep -oE '(src|href)="[^"]+\.js[^"]*"' s.html | head -10
+for j in $(grep -oE 'src="[^"]+\.js[^"]*"' s.html | sed 's/src="//;s/"$//' | head -6); do
+  case "$j" in http*) u="$j";; /*) u="https://search.cannabis.ca.gov$j";; *) u="https://search.cannabis.ca.gov/$j";; esac
+  echo "=== js $u"
+  curl -sSL -m 30 "$u" -o b.js
+  grep -oE 'https?://[a-zA-Z0-9._/-]+' b.js | grep -viE 'w3\.org|reactjs|github|mozilla|googleapis|google|fb\.me|jquery|bootstrap' | sort -u | head -20
+  grep -oE '"/[a-zA-Z0-9_/-]*(licen|search|export|download)[a-zA-Z0-9_/?=&-]*"' b.js | sort -u | head -20
 done
-printf '=== licenseTypes -> '
-curl -sS -m 30 -o t.out -w '%{http_code}\n' -H "APP_ID: $DCC_APP_ID" -H "APP_KEY: $DCC_APP_KEY" "$B/breezeDetailService/getAllLicenseTypes"
-grep -oiE '.{200}(cannabis|cultivat).{200}' t.out | head -8
