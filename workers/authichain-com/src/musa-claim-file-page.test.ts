@@ -54,6 +54,15 @@ describe("Made in USA claim file page", () => {
     expect(html).not.toMatch(/mendo/i);
   });
 
+  it("cites real enforcement with sources and covers implied and qualified claims", () => {
+    expect(html).toContain('id="stakes"');
+    expect(html).toContain("$2 million");
+    expect(html).toContain("Banks v. R.C. Bigelow Inc.");
+    expect(html).toContain("Assembled in USA");
+    expect(html).toMatch(/flag/);
+    expect(html).not.toMatch(/Morgan Lewis|LawFlash/i);
+  });
+
   it("publishes JSON-LD with the live price", () => {
     const m = html.match(
       /<script type="application\/ld\+json">(.*?)<\/script>/s

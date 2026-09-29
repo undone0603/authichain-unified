@@ -87,9 +87,9 @@ const TESTS: Array<{ title: string; body: string }> = [
 
 const SEND: string[] = [
   "Your bill of materials for the SKU: every component, ingredient and piece of packaging that is part of the product",
-  "For each line, the supplier's origin statement if you have one, or a supplier contact so we can request it",
+  "For each line, the supplier's origin statement with its share of US content if you have one, or a supplier contact so we can request it",
   "Where final assembly and each significant processing step happen",
-  "The exact claim you print or plan to print, and where it appears (label, listing, ads)",
+  "The exact claim you print or plan to print, and where it appears (label, listing, ads, packaging, press). Include flags, maps and \"proudly American\" lines, not just the words Made in USA",
 ];
 
 const FAQ: Array<{ q: string; a: string }> = [
@@ -102,8 +102,16 @@ const FAQ: Array<{ q: string; a: string }> = [
     a: "No. It is substantiation support: an organised evidence file and a signed attestation. The FTC does not pre-approve origin claims and does not certify products. For a legal opinion, talk to your counsel, and give them the file.",
   },
   {
+    q: "I don't print \"Made in USA\", just a flag or \"Built in Ohio\". Does this apply to me?",
+    a: 'It can. A flag, a US map, "American-made", "Built in the USA" or a state name can all tell a shopper the product is made here, even without the words. What counts is the overall impression the label or listing gives. Send us every place the idea appears and the file covers the claim you actually make.',
+  },
+  {
     q: "What if one component is imported?",
-    a: 'Then an unqualified "Made in USA" claim may not hold, and the file will say so. A qualified claim such as "Made in USA with imported parts" can be truthful instead. The file names the line item so you can decide.',
+    a: 'Then an unqualified "Made in USA" claim may not hold, and the file will say so. A qualified claim such as "Made in USA with imported parts", or "Assembled in USA" when the last substantial transformation happens here, can be truthful instead. A qualified claim still has to be accurate, so the file names the line item and its share so you can word it right.',
+  },
+  {
+    q: "One of my products qualifies. Can I say the whole line is Made in USA?",
+    a: "Not safely. Each product has to meet the standard on its own, and two SKUs in the same line can have different suppliers. That is why each file covers one SKU. If you make a claim about a whole line or your brand, every product it covers needs a file.",
   },
   {
     q: "What does the signed attestation prove?",
@@ -243,6 +251,14 @@ export function renderClaimFilePage(): string {
       <p class="section-sub">For an unqualified "Made in USA" claim on a label, the FTC rule has three tests, and the product has to pass all of them.</p>
       <div class="estate-grid">${tests}</div>
       <p class="cf-note">Summary of 16 CFR Part 323, which covers product labels and the Made in USA claims in mail-order and online listings. Other claims, including qualified ones and advertising, follow the FTC's broader guidance. Not legal advice.</p>
+    </div>
+  </section>
+
+  <section class="estate-section" id="stakes">
+    <div class="wrap">
+      <h2>What a weak claim costs</h2>
+      <p class="section-sub">The FTC can seek civil penalties of more than $50,000 per violation of the Made in USA rule. In January 2024 a tractor maker paid $2 million over replacement-part labels. In April 2025 a California jury awarded $2.36 million to buyers of tea labeled "Manufactured in the USA 100%" that was made from imported leaves. Competitors can also challenge a claim at the National Advertising Division. In each case the question is the same: what evidence did you hold when you made the claim?</p>
+      <p class="cf-note">Sources: FTC press release on the Kubota penalty (Jan. 26, 2024); Banks v. R.C. Bigelow Inc., No. 2:20-cv-06208 (C.D. Cal.). Penalty amounts are adjusted for inflation each year.</p>
     </div>
   </section>
 
