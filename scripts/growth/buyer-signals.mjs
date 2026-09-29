@@ -448,6 +448,9 @@ async function gh(path, { method = "GET", token, body } = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/**
+ * @param {{ now?: Date, windowDays?: number, fetchImpl?: typeof fetch, env?: Record<string, string | undefined> }} [opts]
+ */
 export async function collect({
   now = new Date(),
   windowDays = 8,
@@ -455,7 +458,9 @@ export async function collect({
   env = process.env,
 } = {}) {
   const since = daysAgo(windowDays, now);
+  /** @type {Record<string, string>} */
   const status = {};
+  /** @type {any[]} */
   const leads = [];
   const run = async (key, fn) => {
     try {
