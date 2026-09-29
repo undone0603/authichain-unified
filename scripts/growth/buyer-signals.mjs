@@ -649,35 +649,53 @@ export function earRows(html) {
     .filter(cells => cells.length >= 3);
 }
 
-/** "Rep GmbH, street, city für Producer Ltd, street, city" -> names only. */
+// Producers reachable by a call or a letter in their own market: EU, EEA,
+// Switzerland and the UK, as the register spells them.
+const EAR_EUROPE =
+  /^(Deutschland|Österreich|Schweiz|Liechtenstein|Niederlande|Belgien|Luxemburg|Frankreich|Italien|Spanien|Portugal|Polen|Tschechien|Tschechische Republik|Slowakei|Ungarn|Dänemark|Schweden|Finnland|Norwegen|Island|Irland|Vereinigtes Königreich|Großbritannien|Estland|Lettland|Litauen|Slowenien|Kroatien|Rumänien|Bulgarien|Griechenland|Zypern|Malta)$/i;
+
+// A company form in the name; a bare personal name is a sole trader, and a
+// private person's name does not go into a public issue.
+const COMPANY_FORM =
+  /\b(GmbH|AG|SE|KG|OHG|UG|e\.?\s?K\.?|mbH|Ltd|Limited|LLC|Inc|Corp|B\.?V\.?|N\.?V\.?|AB|A\/S|ApS|AS|Oy|S\.?A\.?S?|S\.?r\.?l\.?|S\.?p\.?A\.?|S\.?L\.?U?|sp\.?\s?z\s?o\.?\s?o\.?|s\.?r\.?o\.?|Kft|plc|Co\.)(\b|$)/i;
+
+/**
+ * "Rep GmbH, street, city, Land für Producer Ltd, street, city, Land":
+ * the producer's name and country, and the representative's name.
+ */
 export function earParty(cell) {
   const [rep, producer] = String(cell ?? "").split(/\s+für\s+/);
-  const name = s => (s ?? "").split(",")[0].trim();
-  return producer
-    ? { org: name(producer), via: name(rep) }
-    : { org: name(rep), via: "" };
+  const parts = s => (s ?? "").split(",").map(p => p.trim());
+  const main = parts(producer ?? rep);
+  return {
+    org: main[0] ?? "",
+    land: main.length > 1 ? main[main.length - 1] : "",
+    via: producer ? parts(rep)[0] : "",
+  };
 }
 
 /**
  * Cells: registration number, producer (with address), battery category,
  * take-back scheme, market exit date. The register shows no registration
  * date, so these are active registrants with the highest numbers, not
- * provably new ones; the issue marker keeps each from repeating. Addresses
- * are dropped: the digest carries the company name only.
+ * provably new ones; the issue marker keeps each from repeating. Only
+ * European companies are kept, and the digest carries names, never
+ * addresses.
  */
 export function earLeads(rows) {
   const out = [];
   for (const [reg, party, category, , exit] of rows) {
     const number = reg.match(/\d{6,}/)?.[0];
-    const { org, via } = earParty(party);
+    const { org, land, via } = earParty(party);
     if (!number || !org || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
+    if (!EAR_EUROPE.test(land) || !COMPANY_FORM.test(org)) continue;
     out.push({
       id: `ear:${number}`,
       source: "ear",
       org,
       title: `Battery registrant ${number}${category ? `: ${category}` : ""}`,
       detail: via ? `registered via ${via}` : "",
-      country: "DEU",
+      country: land,
       url: EAR_URL.replace(/\.jsf$/, ""),
       offer: "dpp_readiness",
       channel: "no-email",
@@ -738,6 +756,14 @@ export async function fetchEar({ fetchImpl = fetch } = {}) {
   html = (await press(html, "100")) ?? html;
   const rows = earRows(html);
   if (!rows.length) throw new Error("no rows in the register table");
+  // Most top numbers are marketplace sellers outside Europe; read a few more
+  // pages until there are enough European companies to fill the weekly cap.
+  for (let page = 2; page <= 5 && earLeads(rows).length < 40; page++) {
+    const next = await press(html, ">");
+    if (!next) break;
+    html = next;
+    rows.push(...earRows(html));
+  }
   return earLeads(rows);
 }
 

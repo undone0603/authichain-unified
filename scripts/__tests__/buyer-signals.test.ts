@@ -336,10 +336,12 @@ describe("German battery register", () => {
     </form>
     <table><tbody>
       <tr><td>
-        99999872</td><td>ECOPV-EU GmbH, Frankfurter Str. 70, 65760 Eschborn, Deutschland f\u00fcr Volt Cells Co., 1 Road, Guangzhou, China</td>
+        99999872</td><td>ECOPV-EU GmbH, Frankfurter Str. 70, 65760 Eschborn, Deutschland f\u00fcr Volt Cells B.V., 1 Road, Utrecht, Niederlande</td>
         <td>Ger\u00e4tebatterien</td><td>Landbell</td><td></td></tr>
       <tr><td>99999691</td><td>Gone Ltd, Street 1, Shenzhen</td><td>Ger\u00e4tebatterien</td><td></td><td>23.08.2025</td></tr>
-      <tr><td>99994470</td><td>Miraja AB, Sn\u00e5rvindev\u00e4gen 109, Stockholm</td><td>Industriebatterien</td><td></td><td></td></tr>
+      <tr><td>99994470</td><td>Miraja AB, Sn\u00e5rvindev\u00e4gen 109, 16574 H\u00e4sselby, Schweden</td><td>Industriebatterien</td><td></td><td></td></tr>
+      <tr><td>99994300</td><td>Shenzhen Seller Co., Ltd., 5 Road, Shenzhen, China</td><td>Ger\u00e4tebatterien</td><td></td><td></td></tr>
+      <tr><td>99994200</td><td>Erika Mustermann, Hauptstr. 1, 10115 Berlin, Deutschland</td><td>Ger\u00e4tebatterien</td><td></td><td></td></tr>
     </tbody></table>`;
 
   it("posts the whole form back with one button", () => {
@@ -352,9 +354,10 @@ describe("German battery register", () => {
     expect(jsfButton(page, "<<")).toBeNull();
   });
 
-  it("keeps active registrants by company name only, never the address", () => {
+  it("keeps active European companies by name only, never the address", () => {
     const leads = earLeads(earRows(page));
-    expect(leads.map(l => l.org)).toEqual(["Volt Cells Co.", "Miraja AB"]);
+    expect(leads.map(l => l.org)).toEqual(["Volt Cells B.V.", "Miraja AB"]);
+    expect(leads[1].country).toBe("Schweden");
     expect(leads[0]).toMatchObject({
       id: "ear:99999872",
       title: "Battery registrant 99999872: Ger\u00e4tebatterien",
@@ -363,7 +366,7 @@ describe("German battery register", () => {
       channel: "no-email",
     });
     const md = render(leads, {}, "2026-09-29");
-    expect(md).not.toMatch(/Frankfurter|Road|109/);
+    expect(md).not.toMatch(/Frankfurter|Road|109|Mustermann/);
   });
 
   it("drafts a call or letter, never an email", () => {
@@ -374,11 +377,16 @@ describe("German battery register", () => {
   });
 
   it("splits representative and producer", () => {
-    expect(earParty("Rep GmbH, x f\u00fcr Maker Ltd, y")).toEqual({
+    expect(earParty("Rep GmbH, x f\u00fcr Maker Ltd, y, Irland")).toEqual({
       org: "Maker Ltd",
+      land: "Irland",
       via: "Rep GmbH",
     });
-    expect(earParty("Solo AG, x")).toEqual({ org: "Solo AG", via: "" });
+    expect(earParty("Solo AG, x, Schweiz")).toEqual({
+      org: "Solo AG",
+      land: "Schweiz",
+      via: "",
+    });
   });
 
   it("caps the register after dedupe so each week surfaces new names", () => {
