@@ -12,8 +12,6 @@
 //   dcc   California cannabis licences (DCA iServices)     -> strainchain_passport
 //         Needs DCC_APP_ID + DCC_APP_KEY; skipped without them.
 
-import { appendFileSync } from "node:fs";
-
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
 const UA = "authichain-buyer-signals/1.0 (+https://authichain.com)";
@@ -450,12 +448,6 @@ async function gh(path, { method = "GET", token, body } = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-function out(md) {
-  console.log(md);
-  if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
-}
-
 export async function collect({
   now = new Date(),
   windowDays = 8,
@@ -502,7 +494,8 @@ async function main() {
   }
   const leads = dedupe(raw, seen);
   const md = render(leads, status, weekOf);
-  out(`## Buyer signals${dry ? " (dry run)" : ""}\n\n${md}`);
+  // Printed to the job log only; the issue is the record.
+  console.log(`## Buyer signals${dry ? " (dry run)" : ""}\n\n${md}`);
 
   if (dry || !leads.length) return;
   await gh(`/repos/${repo}/labels`, {

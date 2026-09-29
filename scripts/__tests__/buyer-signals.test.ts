@@ -30,7 +30,7 @@ describe("offers", () => {
 
   it("never link a raw Payment Link", () => {
     for (const o of Object.values(OFFERS))
-      expect(o.url).not.toMatch(/buy\.stripe\.com/);
+      expect(new URL(o.url).hostname).not.toBe("buy.stripe.com");
   });
 });
 
@@ -198,10 +198,11 @@ describe("dedupe", () => {
 describe("collect", () => {
   it("reports each source's outcome and skips DCC without credentials", async () => {
     const fetchImpl = async (url: string) => {
-      if (url.includes("ted.europa.eu"))
+      const host = new URL(url).hostname;
+      if (host === "api.ted.europa.eu")
         return new Response(JSON.stringify({ notices: [] }));
-      if (url.includes("ftc.gov")) return new Response("boom", { status: 503 });
-      if (url.includes("remotive"))
+      if (host === "www.ftc.gov") return new Response("boom", { status: 503 });
+      if (host === "remotive.com")
         return new Response(JSON.stringify({ jobs: [] }));
       return new Response(JSON.stringify({ data: [], links: {} }));
     };
