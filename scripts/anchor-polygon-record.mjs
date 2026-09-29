@@ -28,14 +28,18 @@ if (!key) {
   process.exit(1);
 }
 
-const provider = new JsonRpcProvider(RPC, 137);
+const provider = new JsonRpcProvider(RPC, 137, { staticNetwork: true });
 const wallet = new Wallet(key, provider);
 const balance = await provider.getBalance(wallet.address);
+const latestNonce = await provider.getTransactionCount(wallet.address, "latest");
+const pendingNonce = await provider.getTransactionCount(wallet.address, "pending");
 console.log(JSON.stringify({
   address: wallet.address,
   balancePol: Number(balance) / 1e18,
   recordHash: hash,
   send: process.env.SEND === "true",
+  latestNonce,
+  pendingNonce,
 }));
 
 if (process.env.SEND !== "true") process.exit(0);
@@ -44,16 +48,41 @@ if (balance < MIN_POL) {
   process.exit(2);
 }
 
+const block = await provider.getBlock("latest");
+const base = block?.baseFeePerGas ?? 30_000_000_000n;
+const tip = 50_000_000_000n;
+let maxFee = base * 3n + tip;
+const gasLimit = 30_000n;
+const spendCap = 50_000_000_000_000_000n; // 0.05 POL
+if (maxFee * gasLimit > spendCap) {
+  console.error(JSON.stringify({
+    error: "base fee would cost more than 0.05 POL",
+    baseGwei: Number(base) / 1e9,
+  }));
+  process.exit(2);
+}
+
+// A stuck underpriced tx holds latestNonce. Replacing it is the same nonce.
+const nonce = latestNonce;
 const tx = await wallet.sendTransaction({
   to: wallet.address,
   data: "0x" + hash,
   value: 0n,
-  gasLimit: 30_000n,
-  maxFeePerGas: 200_000_000_000n,
-  maxPriorityFeePerGas: 30_000_000_000n,
+  nonce,
+  gasLimit,
+  maxFeePerGas: maxFee,
+  maxPriorityFeePerGas: tip,
 });
-console.log(JSON.stringify({ sent: tx.hash }));
-const receipt = await tx.wait();
+console.log(JSON.stringify({
+  sent: tx.hash,
+  nonce,
+  maxFeeGwei: Number(maxFee) / 1e9,
+  baseGwei: Number(base) / 1e9,
+}));
+const receipt = await Promise.race([
+  tx.wait(),
+  new Promise((_, reject) => setTimeout(() => reject(new Error("receipt timeout")), 90_000)),
+]);
 console.log(JSON.stringify({
   txHash: receipt.hash,
   status: receipt.status,
