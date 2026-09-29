@@ -1,0 +1,58 @@
+// authichain-agentz-webhook: recovered from the live Worker on 2026-09-29 (read-only).
+// SOURCE ONLY. Do not deploy from this file without Zac's OK.
+//
+// This config mirrors the live Worker exactly as read from the Cloudflare API
+// on 2026-09-29 (~17:05 ET). Account 4c1869b90f13f86940aa3747839bf420.
+//   Live version:     c4585635-5e3c-4abc-9e9d-5afc865aa84c (100%)
+//   Live deployment:  623ab98a-2005-494c-9eff-3d78313a1a92, 2026-09-08 11:11 ET, API upload
+//   Entry module:     index.js (ES module; handler: fetch)
+//
+// src/index.js is the live script byte-for-byte. No secrets were found in it;
+// see the PR description for the scan.
+//
+// Caller: .github/workflows/agentz-orchestration.yml POSTs to
+// $APP_URL/api/agentz/webhook with header x-agentz-secret.
+//
+// Not in deploy-workers.yml's matrix, and no Workers Builds trigger is attached
+// to this Worker, so merging this does not deploy it.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "authichain-agentz-webhook",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [],
+
+  // src/index.js is already the deployed module. no_bundle uploads it as-is, so
+  // `wrangler deploy --dry-run --outdir x` produces a file byte-identical to
+  // the live script (checked 2026-09-29, sha256 matches). Without this, wrangler
+  // re-bundles and adds ~80 lines of __name2() wrappers.
+  "no_bundle": true,
+
+  // Live: workers.dev OFF, preview URLs OFF.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // Live: 2 zone routes, 0 custom domains. Both hosts are also custom domains
+  // of authichain-com; these routes run in front of it for this path.
+  "routes": [
+    { "pattern": "authichain.com/api/agentz/webhook*", "zone_name": "authichain.com" },
+    { "pattern": "authichain.govchain.us/api/agentz/webhook*", "zone_name": "govchain.us" }
+  ],
+
+  // Live: no cron schedules.
+  "triggers": { "crons": [] },
+
+  "kv_namespaces": [
+    // KV namespace title: agentz_webhook
+    { "binding": "AGENTZ_KV", "id": "e7dad4ac796e4914b0999998705bb434" }
+  ]
+
+  // Live: no plain-text vars.
+  // Secret NAMES bound on the live Worker (values stay in Cloudflare; never
+  // put them in this file):
+  //   AGENTZ_WEBHOOK_SECRET
+  //
+  // Live: observability logs OFF, logpush off, no tail consumers, standard
+  // usage model, default placement. Left out here so a deploy would not change
+  // them.
+}
