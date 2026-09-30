@@ -17,6 +17,8 @@ import {
   parseLever,
   ftcLeads,
   cbpLeads,
+  cbpUsOrigin,
+  fetchCbp,
   cbpUrl,
   fedregLeads,
   fedregUrl,
@@ -190,6 +192,53 @@ describe("CBP origin rulings", () => {
   });
 });
 
+describe("CBP US-origin filter", () => {
+  it("keeps only rulings that find US origin", () => {
+    expect(
+      cbpUsOrigin({
+        text: "<p>The country of origin of the finished charger is the United States.</p>",
+      })
+    ).toBe(true);
+    expect(cbpUsOrigin({ text: "The country of origin is China." })).toBe(
+      false
+    );
+  });
+
+  it("reads each ruling's text and drops foreign-origin rulings", async () => {
+    const fetchImpl = async (url: string) => {
+      if (url.includes("/api/search"))
+        return new Response(
+          JSON.stringify({
+            rulings: [
+              {
+                rulingNumber: "H1",
+                subject: "Country of origin of a drill",
+                rulingDate: "2026-09-20",
+              },
+              {
+                rulingNumber: "N2",
+                subject: "Country of origin of a broom",
+                rulingDate: "2026-09-20",
+              },
+            ],
+          })
+        );
+      if (url.endsWith("/H1"))
+        return new Response(
+          JSON.stringify({ text: "the country of origin is the United States" })
+        );
+      return new Response(
+        JSON.stringify({ text: "the country of origin is China" })
+      );
+    };
+    const leads = await fetchCbp({
+      now: NOW,
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+    expect(leads.map((l: { id: string }) => l.id)).toEqual(["cbp:H1"]);
+  });
+});
+
 describe("news", () => {
   const xml = `<rss><channel>
     <item><title>Acme pilots a digital product passport for its jackets - Retail Weekly</title>
@@ -208,6 +257,16 @@ describe("news", () => {
       org: "Story in Retail Weekly",
       date: "2026-09-25",
     });
+  });
+
+  it("drops market-size releases and explainers", () => {
+    const noisy = `<rss><channel>
+      <item><title>Digital Product Passport Market to Reach US$ 9.09 Billion by 2035 - openPR.com</title>
+        <link>https://news.google.com/c</link><pubDate>Fri, 25 Sep 2026 09:00:00 GMT</pubDate></item>
+      <item><title>Digital Product Passport (DPP): What it is and how the EU system works - Regtechtimes</title>
+        <link>https://news.google.com/d</link><pubDate>Fri, 25 Sep 2026 09:00:00 GMT</pubDate></item>
+    </channel></rss>`;
+    expect(newsLeads(parseRss(noisy), "dpp_readiness", SINCE)).toEqual([]);
   });
 
   it("treats the same headline from two queries as one lead", () => {

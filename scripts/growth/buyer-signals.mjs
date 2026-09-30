@@ -128,16 +128,15 @@ async function getText(url, { fetchImpl = fetch } = {}) {
 // ---------- TED ----------
 
 // English plus the national-language names buyers actually write, since a
-// German or French tender rarely carries the English phrase.
+// German or French tender rarely carries the English phrase. "ecodesign" and
+// the regulation numbers are left out: they sit in the green-procurement
+// boilerplate of ice rinks and school furniture.
 export const TED_PHRASES = [
   "digital product passport",
   "product passport",
   "battery passport",
   "anti-counterfeiting",
   "product traceability",
-  "ecodesign",
-  "2024/1781",
-  "2023/1542",
   "Digitaler Produktpass",
   "Batteriepass",
   "passeport numérique",
@@ -274,9 +273,13 @@ export function newsUrl(q) {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:7d`)}&hl=en-US&gl=US&ceid=US:en`;
 }
 
+// Market-size releases and explainers name the topic but no buyer.
+export const NEWS_NOISE =
+  /market (size|share|to (reach|hit|grow)|report|forecast|analysis)|\bCAGR\b|what (it|is|are)\b|explained|a guide|how to|\?(\s*-|$)/i;
+
 export function newsLeads(items, offer, since) {
   return items
-    .filter(i => NEWS_TERMS[offer].test(i.title))
+    .filter(i => NEWS_TERMS[offer].test(i.title) && !NEWS_NOISE.test(i.title))
     .filter(i => {
       const t = Date.parse(i.date);
       return Number.isNaN(t) || t >= since.getTime();
@@ -364,20 +367,57 @@ export function cbpLeads(data, since) {
     }));
 }
 
+// Most origin rulings are for imports that stay foreign ("the country of
+// origin is China"). Only a ruling that finds US origin, or turns on work done
+// in the US, is someone building a US-origin claim.
+export const CBP_US_ORIGIN =
+  /(country of origin|origin) (is|will be|would be|of the [^.]{0,80} is) the United States|substantially transformed in the United States|U\.S\.-origin|product of the United States/i;
+
+export function cbpUsOrigin(ruling) {
+  const text =
+    typeof ruling === "string"
+      ? ruling
+      : String(ruling?.text ?? ruling?.rulingText ?? ruling?.body ?? "");
+  return CBP_US_ORIGIN.test(stripHtml(text));
+}
+
+const CBP_DETAIL_MAX = 25;
+
+/**
+ * @param {{ now?: Date, fetchImpl?: typeof fetch }} [opts]
+ */
 export async function fetchCbp({ now = new Date(), fetchImpl } = {}) {
   const since = daysAgo(CBP_WINDOW_DAYS, now);
-  const leads = [];
+  /** @type {Map<string, any>} */
+  const found = new Map();
   const errors = [];
   for (const term of CBP_TERMS) {
     try {
-      leads.push(
-        ...cbpLeads(await getJson(cbpUrl(term), { fetchImpl }), since)
-      );
+      for (const l of cbpLeads(
+        await getJson(cbpUrl(term), { fetchImpl }),
+        since
+      ))
+        found.set(l.id, l);
     } catch (e) {
       errors.push(`"${term}": ${e.message}`);
     }
   }
   if (errors.length === CBP_TERMS.length) throw new Error(errors[0]);
+  const leads = [];
+  let read = 0;
+  for (const l of [...found.values()].slice(0, CBP_DETAIL_MAX)) {
+    try {
+      const d = await getJson(
+        `https://rulings.cbp.gov/api/ruling/${encodeURIComponent(l.detail)}`,
+        { fetchImpl }
+      );
+      read++;
+      if (cbpUsOrigin(d)) leads.push(l);
+    } catch {
+      // one unreadable ruling is not fatal
+    }
+  }
+  if (found.size && !read) throw new Error("ruling text unavailable");
   return leads;
 }
 
