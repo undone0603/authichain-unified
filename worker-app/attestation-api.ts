@@ -46,8 +46,9 @@ function hasJws(body: unknown): boolean {
 
 async function verifyResponse(
   body: unknown,
-  publicJwk: Record<string, unknown>
-): Promise<{ status: 200 | 400 | 409; payload: Record<string, unknown> }> {
+  publicJwk: Record<string, unknown>,
+  env: AttestationRegistryEnv,
+): Promise<{ status: 200 | 400 | 409 | 503; payload: Record<string, unknown> }> {
   const input = (body ?? {}) as Record<string, unknown>;
   const jws = input.jws;
   if (typeof jws !== "string" || !jws.trim()) {
@@ -69,16 +70,30 @@ async function verifyResponse(
     };
   }
   const evaluation = evaluateAttestation(attestation);
+  const durable = await getCurrentAttestationStatus(env, attestation.attestation_id);
+  if (!durable.ok) {
+    return {
+      status: durable.status as 503,
+      payload: { valid: false, error: durable.error, signature: "valid" },
+    };
+  }
+  const durableStatus = durable.status?.claimStatus;
+  const valid = durableStatus && durableStatus !== "active"
+    ? false
+    : evaluation.valid;
+  const reasons = durableStatus && durableStatus !== "active"
+    ? [...evaluation.reasons, `durable_status_${durableStatus}`]
+    : evaluation.reasons;
   return {
     status: evaluation.valid ? 200 : 409,
     payload: {
-      valid: evaluation.valid,
+      valid,
       contract: "AuthiChain Attestation Contract",
       version: "0.1",
       decision: evaluation.decision,
       status: evaluation.status,
       expired: evaluation.expired,
-      reasons: evaluation.reasons,
+      reasons,
       signature: "valid",
       attestation,
     },
@@ -257,7 +272,7 @@ export function registerAttestationApi<
         NO_STORE
       );
     }
-    const { status, payload } = await verifyResponse(body, publicJwk);
+    const { status, payload } = await verifyResponse(body, publicJwk, c.env as AttestationRegistryEnv);
     return c.json(payload, status, NO_STORE);
   });
 
@@ -272,7 +287,8 @@ export function registerAttestationApi<
     }
     const { status, payload } = await verifyResponse(
       body,
-      resolved.key.publicJwk
+      resolved.key.publicJwk,
+      c.env as AttestationRegistryEnv,
     );
     return c.json(payload, status, NO_STORE);
   });
