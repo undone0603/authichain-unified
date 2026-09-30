@@ -442,6 +442,28 @@ test("/onboard is proxied to the app, not answered with a 404", async () => {
   }
 });
 
+test("/api/govchain/opportunities applies the search query", async () => {
+  const f = stubSupabase([ROW]);
+  try {
+    const res = await get("/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support");
+    assert.equal(res.status, 200);
+    assert.ok(
+      f.calls[0].includes("title.ilike.*Cyber%20support*"),
+      "q reaches PostgREST title search"
+    );
+    assert.ok(
+      f.calls[0].includes("agency.ilike.*Cyber%20support*"),
+      "q reaches PostgREST agency search"
+    );
+    assert.ok(
+      f.calls[0].includes("notice_id.ilike.*Cyber%20support*"),
+      "q reaches PostgREST notice search"
+    );
+  } finally {
+    f.restore();
+  }
+});
+
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {
   const f = stubSupabase([ROW]);
   try {

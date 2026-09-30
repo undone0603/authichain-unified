@@ -132,15 +132,20 @@ async function restGet(
  */
 export async function fetchOpportunities(
   env: SupabaseEnv,
-  opts: { minFit?: number; limit?: number } = {}
+  opts: { minFit?: number; limit?: number; q?: string } = {}
 ): Promise<GovOpportunity[]> {
   const minFit = Number.isFinite(opts.minFit) ? Number(opts.minFit) : 70;
   const limit = Math.min(Math.max(Number(opts.limit) || 12, 1), 100);
+  const q = typeof opts.q === "string" ? opts.q.trim() : "";
+  const search = q
+    ? `or=(title.ilike.*${encodeURIComponent(q)}*,agency.ilike.*${encodeURIComponent(q)}*,notice_id.ilike.*${encodeURIComponent(q)}*)`
+    : "";
   const today = new Date().toISOString().slice(0, 10);
   const query = [
     `select=${LIST_COLUMNS}`,
     `fit_score=gte.${minFit}`,
     `or=(deadline.gte.${today},deadline.is.null)`,
+    search,
     "order=deadline.asc.nullslast",
     `limit=${limit}`,
   ].join("&");
