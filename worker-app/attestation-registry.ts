@@ -121,21 +121,36 @@ export async function recordStatusEvent(
   const db = clientFor(env);
   if (!db) return { ok: false, status: 503, error: "attestation registry unavailable" };
 
+  const row = {
+    event_type: input.eventType,
+    attestation_id: input.attestationId,
+    issuer_id: input.issuerId,
+    reason_code: input.reasonCode || null,
+    subject_hash: input.subjectHash || null,
+    evidence_digest: input.evidenceDigest || null,
+    idempotency_key: input.idempotencyKey || null,
+    supersedes_attestation_id: input.supersedesAttestationId || null,
+  };
+  if (input.idempotencyKey) {
+    const { error: upsertError } = await db
+      .from("attestation_status_events")
+      .upsert(row, { onConflict: "issuer_id,idempotency_key", ignoreDuplicates: true });
+    if (upsertError) return { ok: false, status: 503, error: "attestation status write failed" };
+    const { data: existing, error: lookupError } = await db
+      .from("attestation_status_events")
+      .select("event_id")
+      .eq("issuer_id", input.issuerId)
+      .eq("idempotency_key", input.idempotencyKey)
+      .single();
+    if (lookupError || !existing) return { ok: false, status: 503, error: "attestation status write failed" };
+    return { ok: true, eventId: String((existing as { event_id: string }).event_id) };
+  }
+
   const { data, error } = await db
     .from("attestation_status_events")
-    .insert({
-      event_type: input.eventType,
-      attestation_id: input.attestationId,
-      issuer_id: input.issuerId,
-      reason_code: input.reasonCode || null,
-      subject_hash: input.subjectHash || null,
-      evidence_digest: input.evidenceDigest || null,
-      idempotency_key: input.idempotencyKey || null,
-      supersedes_attestation_id: input.supersedesAttestationId || null,
-    })
+    .insert(row)
     .select("event_id")
     .single();
-
   if (error || !data) return { ok: false, status: 503, error: "attestation status write failed" };
   return { ok: true, eventId: String((data as { event_id: string }).event_id) };
 }
