@@ -89,7 +89,11 @@ export async function createPlanCheckoutSession(opts: {
       : "";
   const source =
     typeof body.source === "string" ? body.source.trim().slice(0, 64) : "";
-  const brand = plan.brand ?? getBrandIdFromRequest(request);
+  // "musa" only groups the pricing page; it is not a checkout brand.
+  const brand =
+    plan.brand && plan.brand !== "musa"
+      ? plan.brand
+      : getBrandIdFromRequest(request);
   const origin =
     request.headers.get("origin") ||
     new URL(request.url).origin ||

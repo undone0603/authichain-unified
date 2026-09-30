@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listedPlans, planPaymentLink } from "@/lib/plans";
+import { listedPlans, planPaymentLink, type Plan } from "@/lib/plans";
 import {
   CheckoutModal,
   PricingTestHeadline,
@@ -121,6 +121,64 @@ export default function PricingPage() {
                   paymentLink={planPaymentLink(plan.id)}
                 />
               )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Made in USA: its own group, not QR art (Z's choice, 2026-09-30) */}
+      <section className="max-w-7xl mx-auto px-6 pb-24">
+        <h2 className="text-2xl font-black mb-2 uppercase tracking-tighter">
+          Made in USA <span className="gold-text">Claim Files</span>
+        </h2>
+        <p className="text-zinc-500 text-sm font-medium mb-8 max-w-2xl">
+          Substantiation support for &ldquo;Made in USA&rdquo; claims. Not legal
+          advice.{" "}
+          <Link
+            href="/made-in-usa-claim-file"
+            className="underline hover:text-white"
+          >
+            How a claim file works
+          </Link>
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {listedPlans("musa").map((plan: Plan) => (
+            <div
+              key={plan.id}
+              className="protocol-card p-8 flex flex-col border-zinc-900 bg-zinc-950/50"
+            >
+              <div className="mb-8">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                  {plan.name}
+                </h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-4xl font-black text-white">
+                    ${plan.price.toLocaleString("en-US")}
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                    {plan.price_suffix || " one-time"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter leading-relaxed">
+                  {plan.description}
+                </p>
+              </div>
+              <div className="flex-1 space-y-4 mb-10">
+                {plan.features.map((feature: string, i: number) => (
+                  <div key={i} className="flex gap-3">
+                    <Check className="w-4 h-4 shrink-0 text-zinc-700" />
+                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-tight">
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <CheckoutModal
+                planId={plan.id}
+                label={plan.name}
+                price={`$${plan.price.toLocaleString("en-US")}`}
+                paymentLink={planPaymentLink(plan.id)}
+              />
             </div>
           ))}
         </div>
