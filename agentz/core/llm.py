@@ -18,8 +18,15 @@ import httpx
 
 class LMStudioManager:
     """Manages model lifecycle using native LM Studio v1 REST API."""
-    def __init__(self, base_url="http://192.168.254.10:1234"):
-        self.base_url = base_url
+    def __init__(self, base_url: str | None = None):
+        self.base_url = base_url or os.environ.get("LM_STUDIO_BASE_URL", "http://127.0.0.1:1234")
+
+    def _headers(self) -> dict[str, str]:
+        token = os.environ.get("LM_STUDIO_API_TOKEN") or os.environ.get("LM_API_TOKEN")
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
 
     def load_model(self, model_identifier: str):
         """Loads a model via v1 API."""
@@ -28,7 +35,7 @@ class LMStudioManager:
         url = f"{self.base_url}/api/v1/models/load"
         try:
             with httpx.Client() as client:
-                response = client.post(url, json={"model": model_identifier}, timeout=30.0)
+                response = client.post(url, json={"model": model_identifier}, headers=self._headers(), timeout=120.0)
                 response.raise_for_status()
                 logger.info(f"Successfully loaded model: {model_identifier}")
         except Exception as e:
@@ -41,7 +48,7 @@ class LMStudioManager:
         url = f"{self.base_url}/api/v1/models/unload"
         try:
             with httpx.Client() as client:
-                response = client.post(url, json={"model": model_identifier}, timeout=30.0)
+                response = client.post(url, json={"model": model_identifier}, headers=self._headers(), timeout=120.0)
                 response.raise_for_status()
                 logger.info(f"Successfully unloaded model: {model_identifier}")
         except Exception as e:
