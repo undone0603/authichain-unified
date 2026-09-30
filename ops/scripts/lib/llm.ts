@@ -141,7 +141,7 @@ function makeLocalProvider(displayName: string, envKey: string, defaultModel: st
 
 const providers: Provider[] = [
   makeLocalProvider('gemma-4-e4b', 'LOCAL_MODEL_ID', 'google/gemma-4-e4b'),
-  makeLocalProvider('nemotron-3-nano-4b', 'LOCAL_MODEL_ID_FALLBACK', 'nvidia/nemotron-3-nano-4b'),
+  ...(process.env.LOCAL_MODEL_ID_FALLBACK ? [makeLocalProvider('local-fallback', 'LOCAL_MODEL_ID_FALLBACK', process.env.LOCAL_MODEL_ID_FALLBACK)] : []),
   makeGroqProvider('llama-3.3-70b-versatile'),
   makeGroqProvider('llama-3.1-8b-instant'),
   {
