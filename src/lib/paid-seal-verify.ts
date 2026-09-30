@@ -94,7 +94,7 @@ async function dailySpentAtomic(
   creds: SealLookupCredentials,
   payer: string,
   priceAtomic: bigint
-): Promise<bigint> {
+): Promise<bigint | null> {
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const query = [
     "automation_logs?select=id",
@@ -108,7 +108,9 @@ async function dailySpentAtomic(
     `${creds.url}/rest/v1/${query}`,
     creds.key
   );
-  if (!read.ok || !Array.isArray(read.body)) return 0n;
+  // A failed ledger read must never look like zero spend: zero would allow a
+  // caller to bypass the daily cap during an outage or RLS/config regression.
+  if (!read.ok || !Array.isArray(read.body)) return null;
   return BigInt(read.body.length) * priceAtomic;
 }
 
@@ -227,6 +229,13 @@ export async function resolvePaidSealVerify(input: {
     proof.payer,
     priceAtomic
   );
+  if (spent === null) {
+    return {
+      action: "answer",
+      status: 503,
+      body: { error: "spend_ledger_unavailable", settled: false },
+    };
+  }
   if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
     return {
       action: "answer",
