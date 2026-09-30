@@ -45,6 +45,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
@@ -1610,6 +1611,11 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+    // LOOP-03 top of funnel. GET only: a POST here is the anonymous-submit
+    // fallback and is counted as generate_submit_anon, not a fresh view.
+    if (c.req.method === "GET") {
+      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
+    }
     return renderGenerate(c);
   }
 
