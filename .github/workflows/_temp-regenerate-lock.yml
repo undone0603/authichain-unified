@@ -1,0 +1,28 @@
+name: Regenerate dependency lockfile (temporary)
+on:
+  push:
+    branches:
+      - deps/reconcile-pnpm-lock-2026-09-30
+permissions:
+  contents: write
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Commit lockfile
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then exit 0; fi
+          git config user.name "dependency-lock-generator"
+          git config user.email "actions@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(deps): regenerate pnpm lockfile"
+          git push
