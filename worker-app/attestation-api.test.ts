@@ -8,6 +8,8 @@ import { validateAttestation } from "../packages/verifier/src/index";
 
 function mockRegistry(): AttestationRegistry {
   const statuses = new Map<string, { attestationId: string; claimStatus: "active" | "revoked" | "expired" | "superseded"; effectiveAt: string; reasonCode?: string; issuerId: string; eventId: string }>();
+  const idempotency = new Map<string, string>();
+  let eventSequence = 0;
   return {
     getCurrentStatus: async (_env, attestationId) => ({ ok: true as const, status: statuses.get(attestationId) ?? null }),
     getIssuer: async (_env, issuerId) => ({
@@ -22,7 +24,13 @@ function mockRegistry(): AttestationRegistry {
       },
     }),
     recordStatusEvent: async (_env, input) => {
-      const eventId = "urn:authichain:event:v01:test-revocation";
+      const idempotencyKey = input.idempotencyKey;
+      if (idempotencyKey) {
+        const existing = idempotency.get(input.issuerId + ":" + idempotencyKey);
+        if (existing) return { ok: true as const, eventId: existing };
+      }
+      const eventId = "urn:authichain:event:v01:test-" + (++eventSequence);
+      if (idempotencyKey) idempotency.set(input.issuerId + ":" + idempotencyKey, eventId);
       statuses.set(input.attestationId, {
         attestationId: input.attestationId,
         claimStatus: input.eventType === "attestation.revoked" ? "revoked" : "active",
@@ -185,6 +193,38 @@ describe("registerAttestationApi", () => {
     });
   });
 
+  it("revoke is idempotent for the same issuer-scoped key", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret" }, body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = await signed.json() as { jws: string };
+    const path = "/api/v1/attestations/" + encodeURIComponent(SAMPLE.attestation_id) + "/revoke";
+    const headers = { "content-type": "application/json", authorization: "Bearer issuer-test-secret", "Idempotency-Key": "revoke-1" };
+    const first = await app.request(path, { method: "POST", headers, body: JSON.stringify({ jws, reason_code: "test_revoke" }) });
+    const second = await app.request(path, { method: "POST", headers, body: JSON.stringify({ jws, reason_code: "test_revoke" }) });
+    expect(first.status).toBe(200); expect(second.status).toBe(200);
+    expect((await first.json() as { event_id: string }).event_id).toBe((await second.json() as { event_id: string }).event_id);
+  });
+
+  it("supersedes an attestation with a differently identified replacement from the same issuer", async () => {
+    await bindKey(); process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono(); registerJwksRoute(app); registerAttestationApi(app, mockRegistry());
+    const sign = async (attestationId: string) => {
+      const res = await app.request("/api/v1/attestation", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret" }, body: JSON.stringify({ ...SAMPLE, attestation_id: attestationId }) });
+      expect(res.status).toBe(200); return (await res.json() as { jws: string }).jws;
+    };
+    const originalId = SAMPLE.attestation_id; const replacementId = "urn:authichain:attestation:v01:test-replacement";
+    const jws = await sign(originalId); const replacementJws = await sign(replacementId);
+    const res = await app.request("/api/v1/attestations/" + encodeURIComponent(originalId) + "/supersede", {
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret", "Idempotency-Key": "supersede-1" }, body: JSON.stringify({ jws, replacement_jws: replacementJws }),
+    });
+    expect(res.status).toBe(200); expect(await res.json()).toMatchObject({ attestation_id: originalId, claim_status: "superseded", supersedes_attestation_id: replacementId });
+  });
   it("GET /api/v1/attestation and aliases return the contract index", async () => {
     const app = new Hono();
     registerAttestationApi(app);
