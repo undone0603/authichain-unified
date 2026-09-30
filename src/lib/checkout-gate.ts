@@ -244,6 +244,7 @@ export function renderCheckoutChooserPage(params?: URLSearchParams | null): stri
   const plans = [
     ...listedPlans("qron"),
     ...listedPlans("strainchain"),
+    ...listedPlans("musa"),
   ].filter(
     p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode),
   );
@@ -314,7 +315,9 @@ export function buildGatedSessionBody(opts: {
   ).slice(0, 64);
   const refCode = readCookie(cookieHeader, "ref_code").slice(0, 64);
   const mode = plan.stripe_mode as "payment" | "subscription";
-  const brand = plan.brand ?? "authichain";
+  // "musa" only groups the pricing page; Made in USA checkouts stay AuthiChain.
+  const brand =
+    plan.brand && plan.brand !== "musa" ? plan.brand : "authichain";
 
   const body = new URLSearchParams();
   body.set("mode", mode);

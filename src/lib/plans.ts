@@ -36,7 +36,7 @@ export interface Plan {
   features: string[];
   cta: string;
   highlighted?: boolean;
-  brand?: "qron" | "strainchain";
+  brand?: "qron" | "strainchain" | "musa";
   listed?: boolean;
 }
 
@@ -177,9 +177,10 @@ export const PLANS: Plan[] = [
     // Created by Z in Stripe 2026-09-29 (prod_VLiM8xIrFVFa1M). Priced per SKU;
     // the Payment Link allows 1–25 SKUs, the gated checkout sells one.
     // Listed 2026-09-29: also on the pricing grid and in PUBLIC_PLAN_IDS, not
-    // only /made-in-usa-claim-file. Carries no brand, so listedPlans() files it
-    // under QRON; give it its own brand if that grid should stay AI-QR only.
+    // only /made-in-usa-claim-file. Own "musa" brand since 2026-09-30 (Z's
+    // choice): the pricing page shows it in its own section, not under QRON.
     id: "musa_claim_file",
+    brand: "musa",
     name: "Made in USA Claim File",
     price: 299,
     price_suffix: " per SKU",
@@ -199,6 +200,7 @@ export const PLANS: Plan[] = [
     // count, address and tax ID for the invoice; listed 2026-09-29, so the
     // gated checkout and the pricing grid sell it too.
     id: "musa_audit_bundle",
+    brand: "musa",
     name: "Made in USA Claim File — Audit Bundle",
     price: 2500,
     price_suffix: " per engagement",
@@ -229,7 +231,7 @@ export function isPurchasable(plan: Plan): boolean {
   return plan.price === 0 || Boolean(plan.stripe_price_id || plan.stripe_payment_link);
 }
 
-export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
+export function listedPlans(brand: "qron" | "strainchain" | "musa" = "qron"): Plan[] {
   return PLANS.filter(
     p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
   );
