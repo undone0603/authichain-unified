@@ -1947,6 +1947,31 @@ export default {
     }
 
     const p = url.pathname;
+    // The apex embeds live StrainChain stats from this endpoint; keep it local
+    // so the browser receives JSON rather than the marketing document.
+    if (p === '/api/strainchain/stats') {
+      if (!env?.SUPABASE_URL || !env?.SUPABASE_ANON_KEY) {
+        return Response.json({ error: 'supabase_not_configured' }, { status: 503, headers: { 'cache-control': 'no-store' } });
+      }
+      try {
+        const upstream = new URL('/rest/v1/product_events', env.SUPABASE_URL);
+        upstream.searchParams.set('select', 'event_type');
+        upstream.searchParams.set('limit', '1000');
+        const res = await fetch(upstream, {
+          headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + env.SUPABASE_ANON_KEY },
+        });
+        if (!res.ok) return Response.json({ error: 'supabase_unavailable' }, { status: 502, headers: { 'cache-control': 'no-store' } });
+        const rows = (await res.json()) as Array<{ event_type?: string }>;
+        const counts = rows.reduce<Record<string, number>>((acc, row) => {
+          const key = row.event_type ?? '';
+          if (key) acc[key] = (acc[key] ?? 0) + 1;
+          return acc;
+        }, {});
+        return Response.json({ lab_tests: counts.lab_test ?? 0, total_chain_events: rows.length, dispensary_receipts: counts.dispensary ?? counts.dispensary_receipt ?? 0 }, { headers: { 'cache-control': 'public, max-age=60, s-maxage=300' } });
+      } catch {
+        return Response.json({ error: 'supabase_unavailable' }, { status: 502, headers: { 'cache-control': 'no-store' } });
+      }
+    }
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
     if (p === '/og-image.svg') return assetResponse(OG_IMAGE_SVG);
     if (p === '/favicon.svg') return assetResponse(FAVICON_SVG);
