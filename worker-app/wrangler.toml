@@ -15,8 +15,8 @@ compatibility_flags = ["nodejs_compat"]
 # Optional x402: X402_FACILITATOR_URL + X402_PAY_TO. Unset is the $0 path —
 # GET /api/x402/health returns 200 ready when payTo + facilitator are bound.
 # Optional QRON_WORKER_URL for POST /api/generate (defaults to
-# https://qron-image-gen.undone-k.workers.dev). Optional
-# NEXT_PUBLIC_SUPABASE_ANON_KEY to resolve generate sessions.
+# https://qron-image-gen.undone-k.workers.dev). Generate credits need
+# SUPABASE_SERVICE_ROLE_KEY. SUPABASE_ANON_KEY is the paid seal read only.
 
 # NOTE: services/worker-app/wrangler.toml declares the same worker name and
 # KV/Hyperdrive/Durable Object bindings as this file (only the assets
@@ -368,10 +368,11 @@ new_sqlite_classes = ["RateLimiter"]
 # ]
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
-# (wrangler.app.jsonc), which owns the auth_seals lookup behind
-# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
-# without this binding they are refused 503 registry_not_bound before
-# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+# (wrangler.app.jsonc). Paid verify reads public auth_seals when SUPABASE_URL
+# and a key are set. This binding is the fallback only when that URL and both
+# keys are absent. Without either path the call is refused 503
+# registry_not_bound before settlement. wrangler deploy fails if
+# `authichain-app` is not deployed.
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
