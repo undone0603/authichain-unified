@@ -222,6 +222,7 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
   });
 
   async function appWithKey() {
+    process.env.CRON_SECRET = "issuer-test-secret";
     const { privateKey } = await generateKeyPair("EdDSA", {
       crv: "Ed25519",
       extractable: true,
@@ -233,7 +234,7 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "decision-kid";
     const app = new Hono();
     registerJwksRoute(app);
-    registerAttestationApi(app);
+    registerAttestationApi(app, mockRegistry());
     const sign = async (overrides: Record<string, unknown>) => {
       const res = await app.request("/api/v1/attestation", {
         method: "POST",
