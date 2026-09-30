@@ -10,6 +10,13 @@ import {
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
+import type { AttestationIssuer, AttestationStatusRecord } from "../protocol/attestation/trust-registry";
+
+type AttestationRegistry = {
+  getCurrentStatus: (env: AttestationRegistryEnv, attestationId: string) => ReturnType<typeof getCurrentAttestationStatus>;
+  getIssuer: (env: AttestationRegistryEnv, issuerId: string) => ReturnType<typeof getIssuer>;
+  recordStatusEvent: typeof recordStatusEvent;
+};
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -116,7 +123,11 @@ const ATTESTATION_INDEX = {
 export function registerAttestationApi<
   E extends AttestationEnv,
   V extends Record<string, unknown> = Record<string, never>,
->(app: Hono<{ Bindings: E; Variables: V }>): void {
+>(app: Hono<{ Bindings: E; Variables: V }>, registry: AttestationRegistry = {
+  getCurrentStatus: getCurrentAttestationStatus,
+  getIssuer,
+  recordStatusEvent,
+}): void {
   const rewrite = (
     c: { req: { url: string; raw: Request }; env: E },
     path: string
@@ -132,7 +143,7 @@ export function registerAttestationApi<
 
   app.get("/api/v1/attestations/:id/status", async c => {
     const attestationId = decodeURIComponent(c.req.param("id"));
-    const result = await getCurrentAttestationStatus(c.env as AttestationRegistryEnv, attestationId);
+    const result = await registry.getCurrentStatus(c.env as AttestationRegistryEnv, attestationId);
     if (!result.ok) return c.json({ error: result.error }, result.status, NO_STORE);
     return c.json({
       attestation_id: attestationId,
@@ -178,7 +189,7 @@ export function registerAttestationApi<
     }
 
     const issuerId = attestation.issuer.id;
-    const issuer = await getIssuer(c.env as AttestationRegistryEnv, issuerId);
+    const issuer = await registry.getIssuer(c.env as AttestationRegistryEnv, issuerId);
     if (!issuer.ok) return c.json({ error: issuer.error }, issuer.status, NO_STORE);
     if (issuer.issuer.status === "retired") {
       return c.json({ error: "issuer retired" }, 403, NO_STORE);
@@ -190,7 +201,7 @@ export function registerAttestationApi<
         ? attestation.evidence[0].digest
         : undefined;
 
-    const event = await recordStatusEvent(c.env as AttestationRegistryEnv, {
+    const event = await registry.recordStatusEvent(c.env as AttestationRegistryEnv, {
       eventType: "attestation.revoked",
       attestationId,
       issuerId,
