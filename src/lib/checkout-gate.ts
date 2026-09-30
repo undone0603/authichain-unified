@@ -160,13 +160,22 @@ export function isAllowedPostOrigin(request: Request): boolean {
 // ─── HTML ───────────────────────────────────────────────────────────────────
 
 function esc(value: unknown): string {
-  return String(value ?? "").replace(
-    /[&<>"']/g,
-    c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ] as string
-  );
+  return String(value ?? "").replace(/[&<>"']/g, c => {
+    switch (c) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return c;
+    }
+  });
 }
 
 function priceLabel(plan: Plan): string {
