@@ -1463,7 +1463,12 @@ function generateCreditLinksHtml(): string {
   );
 }
 
-function generateFormHtml(error?: string): string {
+function generateFormHtml(error?: string, paid = false, cancelled = false): string {
+  const statusBlock = paid
+    ? '<p role="alert" id="generate-paid">Payment received</p>\n'
+    : cancelled
+      ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
+      : '';
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
@@ -1476,6 +1481,7 @@ function generateFormHtml(error?: string): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
+      statusBlock +
       "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
@@ -1492,7 +1498,7 @@ function generateFormHtml(error?: string): string {
       ' · <a href="/pricing">All pricing</a></p>\n' +
       // Absolute: qron.space proxies this page, and qron.space/dashboard and
       // /login do not exist (404). Account links stay hidden until they do.
-      '<p><a href="https://authichain.com/onboard">Request a free pilot</a></p>\n' +
+      "" +
       "<script>\n" +
       "(function(){\n" +
       "var form=document.getElementById('generate-form');\n" +
@@ -1527,7 +1533,7 @@ function generateFormHtml(error?: string): string {
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
       "})\n" +
-      ".catch(function(){err.hidden=false;err.textContent='Network error. Queuing onboard instead.';form.submit();});\n" +
+      " .catch(function(){err.hidden=false;err.textContent='Network error. Buy the Starter pack to keep generating.';});\n" +
       "});\n" +
       "})();\n" +
       "</script>\n" +
@@ -1554,11 +1560,9 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/onboard", c.req.url);
-  dest.searchParams.set("vertical", "qron");
-  dest.searchParams.set("productName", "Living QR");
-  dest.searchParams.set("sku", prompt || "generate");
-  dest.searchParams.set("serial", targetUrl.slice(0, 40));
+  const dest = new URL("/checkout/starter", c.req.url);
+  dest.searchParams.set("targetUrl", targetUrl);
+  if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
 }
 
@@ -1566,7 +1570,12 @@ async function renderGenerate(c: Context): Promise<Response> {
   if (c.req.method === "POST") {
     return handleGeneratePost(c);
   }
-  return htmlResponse(c, generateFormHtml(), 200);
+  const url = new URL(c.req.url);
+  return htmlResponse(
+    c,
+    generateFormHtml(undefined, url.searchParams.get("paid") === "1", url.searchParams.get("cancelled") === "1"),
+    200
+  );
 }
 
 // --- Dispatcher --------------------------------------------------------------
