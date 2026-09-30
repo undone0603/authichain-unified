@@ -8,6 +8,7 @@ import {
   validateAttestation,
 } from "../packages/verifier/src/index";
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
+import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -122,6 +123,13 @@ export function registerAttestationApi<
   );
 
   app.post("/api/v1/attestation", async c => {
+    const auth = await authorizeIssuerRequest(
+      c.req.header("authorization"),
+      c.env as IssuerEnv,
+    );
+    if (!auth.ok) {
+      return c.json({ error: auth.error }, 401, NO_STORE);
+    }
     try {
       const body = await c.req.json();
       const attestation = validateAttestation(body);
