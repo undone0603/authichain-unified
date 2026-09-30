@@ -172,7 +172,8 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
-        "x402-smoke.yml": "manual"
+        "x402-smoke.yml": "manual",
+        "anchor-polygon-record.yml": "manual"
       }
     },
     "retired": {
