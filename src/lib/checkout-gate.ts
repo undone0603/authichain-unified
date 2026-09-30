@@ -16,6 +16,13 @@
  *   optional ?email=you@co.com&utm_*=…&visit_id=… prefill the form.
  */
 import { applyHostedCheckoutRecovery } from "./checkout-recovery";
+import {
+  checkoutViewEvent,
+  isDeclaredFor,
+  isGrowthSku,
+  type GrowthSku,
+} from "./growth/emit";
+import type { GrowthEvent } from "./growth/loops";
 import { CHECKOUT_REDIRECT_HEADERS, pickCheckoutEmail } from "./checkout-email";
 import {
   DPP_OFFER_KEY,
@@ -402,6 +409,24 @@ export async function createGatedCheckoutSession(opts: {
 
 export type GatedCheckoutEnv = { STRIPE_SECRET_KEY?: string };
 
+/**
+ * A growth-loop event observed on the checkout path. The gate only reports;
+ * the caller decides how to deliver it (in a Worker, via waitUntil) so no
+ * analytics hop is ever added to the latency of creating a Stripe session.
+ */
+export type CheckoutGateEvent = {
+  event: GrowthEvent;
+  sku: GrowthSku;
+  /** Raw email, present only once captured. The sink is responsible for hashing. */
+  email?: string;
+};
+
+export type GatedCheckoutDeps = {
+  fetchImpl?: typeof fetch;
+  /** Optional sink. Exceptions from it are swallowed — analytics never breaks checkout. */
+  onEvent?: (event: CheckoutGateEvent) => void;
+};
+
 async function readFormFields(request: Request): Promise<URLSearchParams> {
   const type = (request.headers.get("content-type") || "").toLowerCase();
   try {
@@ -430,7 +455,7 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
 export async function tryHandleGatedCheckout(
   request: Request,
   env: GatedCheckoutEnv,
-  deps: { fetchImpl?: typeof fetch } = {}
+  deps: GatedCheckoutDeps = {}
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isGatedCheckoutPath(url.pathname)) return null;
@@ -468,10 +493,24 @@ export async function tryHandleGatedCheckout(
     });
   }
 
+  // Report a loop event, if this plan belongs to a loop that declares it.
+  // Silent no-op otherwise: strainchain_farm and the unlisted smoke SKUs have
+  // no loop, and LOOP-02 captures email as dpp_check_email_captured instead.
+  const report = (event: GrowthEvent, email?: string): void => {
+    const sink = deps.onEvent;
+    if (!sink || !isGrowthSku(plan.id) || !isDeclaredFor(event, plan.id)) return;
+    try {
+      sink({ event, sku: plan.id, email });
+    } catch {
+      /* analytics must never break checkout */
+    }
+  };
+
   if (method === "GET" || method === "HEAD") {
     if (method === "HEAD") {
       return new Response(null, { status: 200, headers: HTML_HEADERS });
     }
+    if (isGrowthSku(plan.id)) report(checkoutViewEvent(plan.id));
     return htmlResponse(renderCheckoutConfirmPage({ plan, params: url.searchParams }));
   }
 
@@ -509,6 +548,8 @@ export async function tryHandleGatedCheckout(
       400
     );
   }
+  report("checkout_email_captured", email);
+
   const result = await createGatedCheckoutSession({
     plan,
     email,
@@ -527,6 +568,8 @@ export async function tryHandleGatedCheckout(
       result.status
     );
   }
+  report("checkout_session_started", email);
+
   return new Response(null, {
     status: 303,
     headers: { ...CHECKOUT_REDIRECT_HEADERS, Location: result.url },
