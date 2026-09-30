@@ -42,7 +42,7 @@ importers:
         version: 14.0.1
       '@lucia-auth/adapter-drizzle':
         specifier: ^1.1.0
-        version: 1.1.0(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9))(lucia@3.2.2)
+        version: 1.1.0(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9))(lucia@3.2.2)
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.30.0(zod@3.25.76)
@@ -188,8 +188,8 @@ importers:
         specifier: ^18.0.4
         version: 18.0.4
       drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
+        specifier: ^0.45.3
+        version: 0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.3.1)
@@ -511,8 +511,8 @@ importers:
         specifier: ^18.0.4
         version: 18.0.4
       drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
+        specifier: ^0.45.3
+        version: 0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       ethers:
         specifier: ^6.16.0
         version: 6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -627,8 +627,8 @@ importers:
         specifier: ^1.12.0
         version: 1.30.0(zod@3.25.76)
       drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
+        specifier: ^0.45.3
+        version: 0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       express:
         specifier: ^4.21.0
         version: 4.22.2
@@ -8298,8 +8298,8 @@ packages:
     resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
     hasBin: true
 
-  drizzle-orm@0.45.2:
-    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
+  drizzle-orm@0.45.3:
+    resolution: {integrity: sha512-CAloER21cDdcgZ1OmjrZX82EeRNsdP+y0onX/eyoYDaYzki/adrAa91lzM5jWh7zZPK4qUbw/6LGv9J+A+uizA==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -8307,6 +8307,7 @@ packages:
       '@libsql/client': '>=0.10.0'
       '@libsql/client-wasm': '>=0.10.0'
       '@neondatabase/serverless': '>=0.10.0'
+      '@netlify/db': '>=0.4.0'
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
@@ -8342,6 +8343,8 @@ packages:
       '@libsql/client-wasm':
         optional: true
       '@neondatabase/serverless':
+        optional: true
+      '@netlify/db':
         optional: true
       '@op-engineering/op-sqlite':
         optional: true
@@ -12884,8 +12887,8 @@ packages:
   webpack-sources@1.4.3:
     resolution: {integrity: sha512-lgTS3Xhv1lCOKo7SA5TjKXMjpSM4sBjNV5+q2bqesbSPs5FjGmU6jjtBSkX9b4qW87vDIsCIlUPOEhbZrMdjeQ==}
 
-  webpack-sources@3.5.3:
-    resolution: {integrity: sha512-F/zS5rEcCKxS6hrhxkLjOzblTsuv89rkuDyP+vToquds6KfPJ3fDqg9UNzbtJcA2AgXZOLMYLQqZpuyE5zDfxg==}
+  webpack-sources@3.6.0:
+    resolution: {integrity: sha512-EIMmPVvNI0CYXyRPp34F2Qk7W37/BZVZIofS6LAUnrNjCVahS+hO4mxwFJDjQjODTGZDtVzLYoN2+1dYkhk9qA==}
     engines: {node: '>=10.13.0'}
 
   webpack@5.110.3:
@@ -16263,9 +16266,9 @@ snapshots:
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.6.0
 
-  '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9))(lucia@3.2.2)':
+  '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9))(lucia@3.2.2)':
     dependencies:
-      drizzle-orm: 0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
+      drizzle-orm: 0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       lucia: 3.2.2
 
   '@lukeed/ms@2.0.2': {}
@@ -22954,7 +22957,7 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.13
 
-  drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9):
+  drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260926.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9):
     optionalDependencies:
       '@cloudflare/workers-types': 5.20260926.1
       '@types/pg': 8.23.1
@@ -28710,7 +28713,7 @@ snapshots:
       source-list-map: 2.0.1
       source-map: 0.6.1
 
-  webpack-sources@3.5.3: {}
+  webpack-sources@3.6.0: {}
 
   webpack@5.110.3(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26):
     dependencies:
@@ -28732,7 +28735,7 @@ snapshots:
       schema-utils: 4.5.0
       tapable: 2.3.3
       watchpack: 2.5.2
-      webpack-sources: 3.5.3
+      webpack-sources: 3.6.0
     transitivePeerDependencies:
       - '@minify-html/node'
       - '@napi-rs/image'
