@@ -12,6 +12,10 @@ compatibility_flags = ["nodejs_compat"]
 # the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
 # catch a `new_classes` regression in either file.
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [assets]
 directory = "../dist/site"
 binding = "ASSETS"

@@ -382,7 +382,7 @@ ${gapMapSection()}
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
       <p><a href="${BATTERY_PASSPORT_PATH}/sample-audit">See a sample written assessment</a>: figure check, Annex XIII gap table and an ordered action plan.</p>
-      <p class="section-sub">Every record you publish from your AuthiChain workspace is signed and publicly verifiable, so a scan proves it came from you and hasn't been altered. It supports, and does not replace, the Art. 77 passport issued by the operator placing the battery on the EU market.</p>
+      <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This assessment supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
     </div>
   </section>
 

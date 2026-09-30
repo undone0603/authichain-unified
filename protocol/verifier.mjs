@@ -2,7 +2,7 @@
  * Reference verifier for the AuthiChain Verification Specification v0.1.0.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) 2026 AuthiChain Inc.
+ * Copyright (c) 2026 Zachary Kietzman (AuthiChain)
  *
  * Zero dependencies (node: builtins only). Verified on Node 22; the APIs used
  * are available from Node 18. Runs offline. Nothing here contacts an

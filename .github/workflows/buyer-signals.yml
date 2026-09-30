@@ -41,7 +41,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          DCC_APP_ID: ${{ secrets.DCC_APP_ID }}
-          DCC_APP_KEY: ${{ secrets.DCC_APP_KEY }}
           BUYER_SIGNALS_DRY_RUN: ${{ (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)) && 'true' || 'false' }}
         run: node scripts/growth/buyer-signals.mjs
