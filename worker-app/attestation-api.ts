@@ -76,6 +76,18 @@ async function verifyResponse(
     };
   }
   const evaluation = evaluateAttestation(attestation);
+  const issuer = await registry.getIssuer(env, attestation.issuer.id);
+  if (!issuer.ok) {
+    return {
+      status: issuer.status as 503 | 400 | 409,
+      payload: { valid: false, error: issuer.error, signature: "valid" },
+    };
+  }
+  const now = Date.now();
+  const issuerActive =
+    issuer.issuer.status === "trusted" &&
+    Date.parse(issuer.issuer.validFrom) <= now &&
+    (!issuer.issuer.validUntil || Date.parse(issuer.issuer.validUntil) > now);
   const durable = await registry.getCurrentStatus(env, attestation.attestation_id);
   if (!durable.ok) {
     return {
@@ -84,12 +96,14 @@ async function verifyResponse(
     };
   }
   const durableStatus = durable.status?.claimStatus;
-  const valid = durableStatus && durableStatus !== "active"
+  const valid = !issuerActive || (durableStatus && durableStatus !== "active")
     ? false
     : evaluation.valid;
-  const reasons = durableStatus && durableStatus !== "active"
-    ? [...evaluation.reasons, `durable_status_${durableStatus}`]
-    : evaluation.reasons;
+  const reasons = [
+    ...evaluation.reasons,
+    ...(!issuerActive ? [`issuer_status_${issuer.issuer.status}`] : []),
+    ...(durableStatus && durableStatus !== "active" ? [`durable_status_${durableStatus}`] : []),
+  ];
   const effectiveStatus = durableStatus ?? evaluation.status;
   return {
     status: valid ? 200 : 409,
@@ -99,6 +113,8 @@ async function verifyResponse(
       version: "0.1",
       decision: evaluation.decision,
       status: effectiveStatus,
+      cryptographic_status: "valid",
+      issuer_status: issuer.issuer.status,
       expired: evaluation.expired,
       reasons,
       signature: "valid",
