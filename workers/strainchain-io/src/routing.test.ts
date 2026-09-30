@@ -517,3 +517,36 @@ test("trailing-slash stripping is linear, not quadratic", () => {
     "must not degrade on a long slash run"
   );
 });
+
+test("/api/strainchain/stats returns JSON for the landing page", async () => {
+  const real = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: Request | string | URL) => {
+    const url = input instanceof Request ? input.url : String(input);
+    calls.push(url);
+    return new Response(JSON.stringify([
+      { event_type: "lab_test" },
+      { event_type: "lab_test" },
+      { event_type: "dispensary_receipt" },
+      { event_type: "transfer" },
+    ]), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    const res = await get("/api/strainchain/stats", {
+      APP_ORIGIN: APP,
+      SUPABASE_URL: "https://project.supabase.co",
+      SUPABASE_ANON_KEY: "anon-test-key",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), "application/json");
+    assert.deepEqual(await res.json(), {
+      lab_tests: 2,
+      total_chain_events: 4,
+      dispensary_receipts: 1,
+    });
+    assert.equal(calls.length, 1);
+    assert.match(calls[0], /\/rest\/v1\/product_events/);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
