@@ -41,6 +41,8 @@ export interface AttestationStatusEvent {
   reasonCode?: string;
   subjectHash?: string;
   evidenceDigest?: string;
+  idempotencyKey?: string;
+  supersedesAttestationId?: string;
 }
 
 export function isIssuerTrustedAt(
