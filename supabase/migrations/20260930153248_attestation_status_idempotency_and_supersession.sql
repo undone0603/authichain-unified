@@ -3,8 +3,7 @@ alter table public.attestation_status_events
   add column if not exists supersedes_attestation_id text;
 
 create unique index if not exists attestation_status_events_issuer_idempotency_idx
-  on public.attestation_status_events (issuer_id, idempotency_key)
-  where idempotency_key is not null;
+  on public.attestation_status_events (issuer_id, idempotency_key);
 
 alter table public.attestation_status_events
   add constraint attestation_status_events_supersedes_not_self
