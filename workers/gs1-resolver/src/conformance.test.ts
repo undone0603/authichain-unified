@@ -167,11 +167,11 @@ const linksetSchemaOk = (ls: any) => {
   // The structural rules of gs1-linkset-schema.json.
   assert.ok(Array.isArray(ls.linkset));
   for (const entry of ls.linkset) {
-    assert.match(entry.anchor, /^https?:\/\/[a-zA-z0-9./]+/);
+    assert.match(entry.anchor, /^https?:\/\/[a-zA-Z0-9./]+/);
     for (const [k, v] of Object.entries(entry)) {
       if (k === "anchor" || k === "description" || k === "itemDescription")
         continue;
-      assert.match(k, /^https?:\/\/[a-zA-z0-9./]+$/, k);
+      assert.match(k, /^https?:\/\/[a-zA-Z0-9./]+$/, k);
       for (const lo of v as any[]) {
         assert.equal(typeof lo.href, "string");
         assert.equal(typeof lo.title, "string");
