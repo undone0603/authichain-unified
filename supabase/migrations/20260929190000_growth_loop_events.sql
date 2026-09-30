@@ -92,3 +92,62 @@ create index if not exists growth_loop_events_email_hash_idx
 
 alter table public.growth_loop_events enable row level security;
 -- No policies on purpose: only the service role may read or write.
+
+-- ── Anon-executable writer for the edge router ──────────────────────────────
+--
+-- worker-app (authichain-edge-router) holds only SUPABASE_ANON_KEY as a var;
+-- SUPABASE_SERVICE_ROLE_KEY is an optional secret that may not be bound. The
+-- table above is closed to anon, so a direct insert from the Worker would be
+-- silently rejected — the same failure mode that left white_label_clients at 0
+-- rows before 20260925180000. Same remedy as that migration: one SECURITY
+-- DEFINER function anon may EXECUTE, with the table itself staying shut.
+--
+-- Validation is repeated inside the function because anon can call it directly:
+-- the CHECK constraints are the backstop, but a clear errcode beats a
+-- constraint violation in the Worker's logs.
+
+create or replace function public.growth_record_event(
+  p_event text,
+  p_loop text,
+  p_sku text,
+  p_founder boolean default false,
+  p_email_hash text default null,
+  p_occurred_at timestamptz default now()
+)
+returns bigint
+language plpgsql
+volatile
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id bigint;
+begin
+  if p_email_hash is not null and p_email_hash !~ '^[0-9a-f]{64}$' then
+    raise exception 'email_hash_must_be_sha256_hex' using errcode = '22023';
+  end if;
+
+  -- Reject an address that was never hashed rather than storing PII.
+  if p_email_hash is not null and position('@' in p_email_hash) > 0 then
+    raise exception 'email_hash_must_not_be_raw_address' using errcode = '22023';
+  end if;
+
+  -- Never accept a future timestamp; a clock-skewed client would distort the
+  -- 14- and 30-day kill windows.
+  if p_occurred_at > now() + interval '5 minutes' then
+    raise exception 'occurred_at_in_future' using errcode = '22023';
+  end if;
+
+  insert into public.growth_loop_events (event, loop, sku, founder, email_hash, occurred_at)
+  values (p_event, p_loop, p_sku, coalesce(p_founder, false), p_email_hash, p_occurred_at)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+comment on function public.growth_record_event is
+  'Append one growth loop event. Callable by anon so the edge router can record without a service-role key. Validates hash format and rejects future timestamps.';
+
+revoke all on function public.growth_record_event(text, text, text, boolean, text, timestamptz) from public;
+grant execute on function public.growth_record_event(text, text, text, boolean, text, timestamptz) to anon, authenticated, service_role;

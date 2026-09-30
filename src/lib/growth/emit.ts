@@ -61,6 +61,37 @@ export function loopForEvent(event: GrowthEvent, sku: GrowthSku): GrowthLoopId |
   return match ? match.id : null;
 }
 
+const SKUS: readonly GrowthSku[] = ["starter", "dpp_readiness", "strainchain_passport"];
+
+/** Narrow a catalogue plan id to a sku that actually has a growth loop. */
+export function isGrowthSku(id: string): id is GrowthSku {
+  return (SKUS as readonly string[]).includes(id);
+}
+
+/**
+ * The checkout-view event differs per loop: LOOP-03 uses checkout_starter_view,
+ * LOOP-02 checkout_dpp_view, LOOP-01 checkout_passport_view.
+ */
+const CHECKOUT_VIEW_EVENT: Record<GrowthSku, GrowthEvent> = {
+  starter: "checkout_starter_view",
+  dpp_readiness: "checkout_dpp_view",
+  strainchain_passport: "checkout_passport_view",
+};
+
+export function checkoutViewEvent(sku: GrowthSku): GrowthEvent {
+  return CHECKOUT_VIEW_EVENT[sku];
+}
+
+/**
+ * True when this loop declares this event. Not every event exists for every
+ * sku — LOOP-02 captures email as dpp_check_email_captured, and only LOOP-03
+ * declares checkout_session_started — so call sites must ask before emitting
+ * rather than fire a payload the ingest route will reject.
+ */
+export function isDeclaredFor(event: GrowthEvent, sku: GrowthSku): boolean {
+  return loopForEvent(event, sku) !== null;
+}
+
 /** SHA-256 hex. Available in Workers, browsers and Node 18+. */
 export async function hashEmail(email: string): Promise<string> {
   const normalized = email.toLowerCase().trim();
