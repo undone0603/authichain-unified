@@ -26,6 +26,8 @@ describe("catalog freeze 2026-09-28", () => {
       "creator",
       "dpp_readiness",
       "strainchain_passport",
+      "musa_claim_file",
+      "musa_audit_bundle",
     ]);
     for (const id of PUBLIC_PLAN_IDS) expect(isPublicPlanId(id)).toBe(true);
     expect(isPublicPlanId("strainchain_farm")).toBe(false);
