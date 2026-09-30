@@ -225,15 +225,16 @@ describe("GET /api/stripe/webhook", () => {
 });
 
 describe("POST /api/webhooks/stripe", () => {
-  it("aliases to the canonical webhook handler", async () => {
+  it("returns 410 because the endpoint is retired", async () => {
     const res = await app.request("/api/webhooks/stripe", {
       method: "POST",
       body: "raw-stripe-payload",
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
-    expect(res.status).toBe(200);
-    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
-    expect(handleStripeWebhook).toHaveBeenCalled();
+    expect(res.status).toBe(410);
+    const body = await res.json();
+    expect(body.deprecated).toBe(true);
+    expect(body.error).toMatch(/\/api\/stripe\/webhook/);
   });
 });
 
