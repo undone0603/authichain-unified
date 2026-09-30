@@ -2164,7 +2164,7 @@ export default {
     if (
       // /onboard is linked from /generate ("Request a free pilot"); it used
       // to 404 here. Same app intake govchain.us and strainchain.io proxy.
-      /^\/(?:generate|api\/generate|onboard)(?:\/|$)/.test(url.pathname) ||
+      /^\/(?:generate(?:\/|$)|api\/generate(?:\/|$)|onboard(?:\/|$)|starmap(?:\/|$)|sky(?:\/|$)|api\/starmap(?:\/|$))/.test(url.pathname) ||
       isSeoPassportPath(url.pathname)
     ) {
       if (!env?.APP_ORIGIN) {
