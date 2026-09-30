@@ -5,7 +5,7 @@ import { Shield, Target, Zap, CheckCircle } from 'lucide-react';
 export const metadata: Metadata = {
     title: 'QRON Affiliate Program — Earn 20% Per Sale',
   description:
-    'Earn 20% recurring commission on every QRON sale you refer. Custom link, real-time dashboard, monthly payouts.',
+    'Earn 20% recurring commission on every sale you refer, including QRON packs and StrainChain passports. Custom link, real-time dashboard, monthly payouts.',
 };
 
 const TIERS = [

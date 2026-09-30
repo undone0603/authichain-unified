@@ -27,6 +27,10 @@ compatibility_flags = ["nodejs_compat"]
 # the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
 # catch a `new_classes` regression in either file.
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # Public auth_seals SELECT for paid POST /api/x402. Service role is a secret,
 # not a var. Deploy with --keep-vars so dashboard X402_PAY_TO stays put.
 [vars]

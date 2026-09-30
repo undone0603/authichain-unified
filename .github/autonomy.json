@@ -118,6 +118,7 @@
         "content-publish.yml": "on",
         "marketing-autonomous.yml": "on",
         "reddit-monitor.yml": "on",
+        "buyer-signals.yml": "on",
         "ghost-traffic.yml": "on",
         "b2b-outreach.yml": "on",
         "weekly-video.yml": "off"
@@ -171,7 +172,8 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
-        "x402-smoke.yml": "manual"
+        "x402-smoke.yml": "manual",
+        "anchor-polygon-record.yml": "manual"
       }
     },
     "retired": {

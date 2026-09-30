@@ -14,6 +14,7 @@ import {
   resolveSku,
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
+import { AFFILIATE_BASE_RATE } from "../../../../lib/affiliate-rate";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -346,7 +347,7 @@ export async function POST(req: NextRequest) {
 
             if (aff && aff.status === "active") {
               const gross = session.amount_total / 100;
-              const rate = Number(aff.commission_rate ?? 0.1);
+              const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
               const commission = Math.round(gross * rate * 100) / 100;
               if (commission > 0) {
                 await getSupabase()
@@ -445,7 +446,7 @@ export async function POST(req: NextRequest) {
                 .eq("affiliatecode", affiliateCode)
                 .maybeSingle();
               if (aff && aff.status === "active") {
-                const rate = Number(aff.commission_rate ?? 0.1);
+                const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
                 const commission =
                   Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
                 if (commission > 0) {
