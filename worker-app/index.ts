@@ -509,7 +509,7 @@ app.post("/api/funnel", async c => {
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+app.get("/api/stripe/webhook", c => {
   c.header("Cache-Control", "private, no-store");
   return c.json({
     ok: true,
@@ -543,7 +543,6 @@ async function stripeWebhookPost(c: {
   }
 }
 
-app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
 
 app.post("/api/dpp/activate", async c => {
