@@ -109,6 +109,7 @@
         "gov-notify.yml": "on",
         "gov-mint.yml": "on",
         "owner-digest.yml": "on",
+        "founder-business-pulse.yml": "on",
         "affiliate-payouts.yml": "off"
       }
     },
