@@ -21,8 +21,8 @@
     },
     "authichain-agentz-webhook": {
       "disposition": "archive",
-      "archive": "docs/archive/cf-workers/authichain-agentz-webhook.js",
-      "note": "Receives agentz-orchestration.yml events (x-agentz-secret) into KV with a 90-day TTL."
+      "archive": "workers/authichain-agentz-webhook/src/index.js",
+      "note": "Receives agentz-orchestration.yml events (x-agentz-secret) into KV with a 90-day TTL. Source recovered 2026-09-29 from the live Worker (byte-exact) into workers/authichain-agentz-webhook with a matching wrangler.jsonc. The old archive path never existed. Not in the deploy-workers.yml matrix, so merging does not deploy it."
     },
     "gmail-relay-z": {
       "disposition": "archive",
