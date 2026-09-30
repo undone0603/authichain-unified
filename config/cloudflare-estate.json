@@ -1,0 +1,61 @@
+{
+  "$schema": "./cloudflare-estate.schema.json",
+  "version": 1,
+  "authority": "GitHub source plus explicit Cloudflare exceptions",
+  "rule": "Every production Worker must have exactly one canonical source, one declared identity, and one authorized deployment path unless explicitly marked external or transitional.",
+  "workers": {
+    "authichain-revenue-worker": {
+      "status": "reconcile",
+      "canonical_path": "workers/authichain-revenue-worker",
+      "duplicate_sources": [
+        "api/worker.ts",
+        "services/api/worker.ts",
+        "api/wrangler.toml",
+        "services/api/wrangler.toml"
+      ],
+      "action": "consolidate"
+    },
+    "authichain-outreach-engine": {
+      "status": "reported-live-external",
+      "action": "import-after-route-consumer-secret-audit"
+    },
+    "outreach-queue": {
+      "status": "reported-live-external",
+      "action": "import-after-consumer-audit"
+    },
+    "qron-daily-ops": {
+      "status": "reported-live-external",
+      "action": "verify-live-then-retire-in-favor-of-owner-digest"
+    },
+    "qron-self-heal": {
+      "status": "reported-live-external",
+      "action": "consolidate-into-worker-app-live-systems-check"
+    },
+    "qron-ai-api": {
+      "status": "reported-live-external",
+      "action": "compare-with-qron-image-gen-before-retirement"
+    },
+    "qron-portfolio": {
+      "status": "reported-live-external",
+      "action": "verify-gallery-consumers-then-retire-if-unused"
+    },
+    "gmail-relay-z": {
+      "status": "reported-live-external",
+      "action": "consolidate-into-canonical-inbound-email-worker"
+    },
+    "qron-edge": {
+      "status": "reported-live-external",
+      "action": "import-after-route-consumer-audit"
+    },
+    "authichain-verify-worker": {
+      "status": "reported-live-external",
+      "risk": "critical",
+      "action": "reconcile-against-canonical-verification-path-before-change"
+    },
+    "authichain-consensus-engine": {
+      "status": "identity-collision",
+      "risk": "critical",
+      "action": "resolve-repo-vs-live-identity-before-change"
+    }
+  }
+}

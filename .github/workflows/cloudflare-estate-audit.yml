@@ -1,0 +1,33 @@
+name: Cloudflare estate audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "workers/**/wrangler.toml"
+      - "worker/**/wrangler.toml"
+      - "api/**"
+      - "services/**"
+      - "config/cloudflare-estate.json"
+      - "scripts/cloudflare/audit-estate.mjs"
+      - ".github/workflows/cloudflare-estate-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Audit Worker identities
+        run: node scripts/cloudflare/audit-estate.mjs
