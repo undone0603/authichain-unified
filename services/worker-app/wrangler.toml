@@ -101,10 +101,11 @@ new_sqlite_classes = ["RateLimiter"]
 # ]
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
-# (wrangler.app.jsonc), which owns the auth_seals lookup behind
-# POST /api/v1/agent-verify. Paid x402 / MCP verify calls are forwarded to it;
-# without this binding they are refused 503 registry_not_bound before
-# settlement. wrangler deploy fails if `authichain-app` is not deployed.
+# (wrangler.app.jsonc). Paid verify reads public auth_seals when SUPABASE_URL
+# and a key are set. This binding is the fallback only when that URL and both
+# keys are absent. Without either path the call is refused 503
+# registry_not_bound before settlement. wrangler deploy fails if
+# `authichain-app` is not deployed.
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
