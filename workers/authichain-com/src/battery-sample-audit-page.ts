@@ -169,7 +169,7 @@ export function buildSampleAudit(now: Date = new Date()): SampleAudit {
     },
     {
       title: "Stand up the public record behind the QR code",
-      body: "The workspace included with the audit prepares a signed, QR-linked record for the figures you hold today, ready for the operator's Art. 77 passport. A scan shows the record came from you and has not been altered.",
+      body: "The workspace included with the audit can hold the figures you have today for the operator's Art. 77 passport. A scan shows the record came from you and was not altered only when an Ed25519 signature and a mainnet anchor both check out. This sample is not that passport.",
     },
   ];
 
