@@ -1,13 +1,23 @@
-# Loop 1 (health): weekly real hosted-suite check of gs1-resolver against the
+# Loop 1 (health): real hosted-suite check of gs1-resolver against the
 # canary seal. Catches drift between our vendored GS1 toolkit and GS1's own
-# judge. Opens the shared `ops-alert` issue when red; closes it when green.
+# judge. On any failure (canary missing, suite unreachable, a real red/warn
+# result), exits non-zero with an ::error:: annotation and a step summary --
+# it does NOT open, comment on, or close any GitHub issue itself. `ops-pulse`
+# already watches every registered health-lane workflow's run status and
+# raises the shared `ops-alert` issue from there; this script writing to that
+# same issue would let an unrelated ops-pulse green run silently close a real
+# GS1 red, or a GS1 green run close an unrelated open alert -- so it doesn't.
 # On green, commits the date/result to docs/GS1_CONFORMANCE.md. Never claims
 # "GS1-Conformant" -- see docs/OPERATING_CHARTER.md.
+#
+# workflow_dispatch only for now, deliberately no `schedule:` trigger yet --
+# nobody has run this against the real ref.gs1.org page end to end (this
+# session could not install playwright-core's browser binaries to verify
+# locally). Dispatch it by hand once, compare the result against the suite's
+# own UI, then add a `schedule:` trigger in a follow-up change.
 name: GS1 conformance pulse
 
 on:
-  schedule:
-    - cron: "23 6 * * 1" # Monday 06:23 UTC -- GS1's spec changes rarely; weekly is proportionate
   workflow_dispatch:
 
 concurrency:
@@ -16,7 +26,6 @@ concurrency:
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
   pulse:
@@ -32,14 +41,15 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Install Playwright (chromium only)
-        run: npx playwright install --with-deps chromium
+      - name: Install dependencies (root only)
+        run: pnpm install --frozen-lockfile --filter .
+      - name: Install Playwright browser (chromium only, matches root's playwright-core)
+        run: pnpm exec playwright-core install --with-deps chromium
       - name: Run pulse
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: node scripts/autonomy/gs1-conformance-pulse.mjs
       - name: Commit conformance doc if changed
         run: |
