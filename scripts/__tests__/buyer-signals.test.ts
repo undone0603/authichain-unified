@@ -635,7 +635,7 @@ describe("collect", () => {
     expect(status.ftc).toMatch(/^error: 503/);
     expect(status.jobs).toBe("0 found");
     expect(status.fedreg).toBe("0 found");
-    expect(status.cbp).toBe("0 found");
+    expect(status.cbp).toBe("0 found with US origin, of 0 origin rulings read");
     expect(status.news).toBe("0 found");
     expect(status.dcc).toBe("0 found");
     expect(status.boards).toMatch(/^0 found on 0 of \d+ company boards$/);

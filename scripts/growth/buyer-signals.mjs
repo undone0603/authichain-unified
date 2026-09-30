@@ -275,7 +275,7 @@ export function newsUrl(q) {
 
 // Market-size releases and explainers name the topic but no buyer.
 export const NEWS_NOISE =
-  /market (size|share|to (reach|hit|grow)|report|forecast|analysis)|\bCAGR\b|what (it|is|are)\b|explained|a guide|how to|\?(\s*-|$)/i;
+  /market (size|share|to (reach|hit|grow)|report|forecast|analysis)|\bCAGR\b|what (it|is|are)\b|not made in|explained|a guide|how to|\?(\s*-|$)/i;
 
 export function newsLeads(items, offer, since) {
   return items
@@ -374,10 +374,17 @@ export const CBP_US_ORIGIN =
   /(country of origin|origin) (is|will be|would be|of the [^.]{0,80} is) the United States|substantially transformed in the United States|U\.S\.-origin|product of the United States/i;
 
 export function cbpUsOrigin(ruling) {
+  // The detail endpoint's field names are not documented, so fall back to
+  // the whole record rather than silently matching nothing.
   const text =
     typeof ruling === "string"
       ? ruling
-      : String(ruling?.text ?? ruling?.rulingText ?? ruling?.body ?? "");
+      : String(
+          ruling?.text ??
+            ruling?.rulingText ??
+            ruling?.body ??
+            JSON.stringify(ruling ?? "")
+        );
   return CBP_US_ORIGIN.test(stripHtml(text));
 }
 
@@ -418,7 +425,7 @@ export async function fetchCbp({ now = new Date(), fetchImpl } = {}) {
     }
   }
   if (found.size && !read) throw new Error("ruling text unavailable");
-  return leads;
+  return Object.assign(leads, { read });
 }
 
 // ---------- FTC orders in the Federal Register ----------
@@ -1157,7 +1164,13 @@ export async function collect({
   await run("ted", () => fetchTed({ since, fetchImpl }));
   await run("ftc", () => fetchFtc({ since, fetchImpl }));
   await run("fedreg", () => fetchFedreg({ now, fetchImpl }));
-  await run("cbp", () => fetchCbp({ now, fetchImpl }));
+  try {
+    const cbp = await fetchCbp({ now, fetchImpl });
+    leads.push(...cbp);
+    status.cbp = `${cbp.length} found with US origin, of ${cbp.read} origin rulings read`;
+  } catch (e) {
+    status.cbp = `error: ${String(e.message).slice(0, 160)}`;
+  }
   await run("news", () => fetchNews({ since, fetchImpl }));
   await run("jobs", () => fetchJobs({ since, fetchImpl }));
   try {
