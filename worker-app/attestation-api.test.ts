@@ -311,6 +311,10 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
       decision: "verified",
       status: "active",
       reasons: [],
+      cryptographic_status: "valid",
+      issuer_status: "trusted",
+      claim_status: "active",
+      overall_valid: true,
     });
   });
 
