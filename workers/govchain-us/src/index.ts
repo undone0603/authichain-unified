@@ -2300,6 +2300,31 @@ export default {
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
+    if (p === '/api/govchain/grants') {
+      if (!env?.VERIFY_APP) {
+        return jsonResponse({ error: 'app_not_bound' }, 503, 'no-store');
+      }
+      const upstreamUrl = new URL(
+        `${url.pathname}${url.search}`,
+        'https://authichain-app.internal',
+      );
+      const proxied = new Request(upstreamUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.method === 'GET' || request.method === 'HEAD' ? null : request.body,
+        redirect: 'manual',
+      });
+      proxied.headers.set('X-Forwarded-Host', url.host);
+      proxied.headers.set('X-Forwarded-Proto', 'https');
+      const res = await env.VERIFY_APP.fetch(proxied);
+      const headers = new Headers(res.headers);
+      headers.set('x-served-by', 'govchain-us-proxy');
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+      });
+    }
     if (p === '/api/govchain/opportunities') {
       if (!supabaseConfigured(env)) {
         return jsonResponse({ error: 'supabase_not_configured', opportunities: [] }, 503, 'no-store');
