@@ -54,7 +54,7 @@ async function verifyResponse(
   publicJwk: Record<string, unknown>,
   env: AttestationRegistryEnv,
   registry: AttestationRegistry,
-): Promise<{ status: 200 | 400 | 409 | 503; payload: Record<string, unknown> }> {
+): Promise<{ status: 200 | 400 | 404 | 409 | 503; payload: Record<string, unknown> }> {
   const input = (body ?? {}) as Record<string, unknown>;
   const jws = input.jws;
   if (typeof jws !== "string" || !jws.trim()) {
@@ -79,7 +79,7 @@ async function verifyResponse(
   const issuer = await registry.getIssuer(env, attestation.issuer.id);
   if (!issuer.ok) {
     return {
-      status: issuer.status as 503 | 400 | 409,
+      status: issuer.status,
       payload: { valid: false, error: issuer.error, signature: "valid" },
     };
   }
@@ -207,8 +207,13 @@ export function registerAttestationApi<
     const issuerId = attestation.issuer.id;
     const issuer = await registry.getIssuer(c.env as AttestationRegistryEnv, issuerId);
     if (!issuer.ok) return c.json({ error: issuer.error }, issuer.status, NO_STORE);
-    if (issuer.issuer.status === "retired") {
-      return c.json({ error: "issuer retired" }, 403, NO_STORE);
+    const issuerNow = Date.now();
+    const issuerActive =
+      issuer.issuer.status === "trusted" &&
+      Date.parse(issuer.issuer.validFrom) <= issuerNow &&
+      (!issuer.issuer.validUntil || Date.parse(issuer.issuer.validUntil) > issuerNow);
+    if (!issuerActive) {
+      return c.json({ error: "issuer is not currently trusted" }, 403, NO_STORE);
     }
 
     const subjectHash = `sha256:${await sha256Hex(JSON.stringify(attestation.subject))}`;
