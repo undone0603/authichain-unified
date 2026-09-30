@@ -936,3 +936,21 @@ test("every URL the sitemap claims actually resolves", async () => {
     );
   }
 });
+
+
+test("api-v1 endpoints use API_WORKER while unrelated /api paths keep APP_WORKER", async () => {
+  const seen: string[] = [];
+  const api = { fetch: async (r: Request) => { seen.push("api:" + new URL(r.url).pathname); return new Response("api", { status: 200 }); } };
+  const app = { fetch: async (r: Request) => { seen.push("app:" + new URL(r.url).pathname); return new Response("app", { status: 200 }); } };
+  const env = { API_WORKER: api, APP_WORKER: app } as unknown as Env;
+
+  const jwks = await worker.fetch(new Request("https://authichain.com/api/v1/.well-known/jwks.json"), env);
+  assert.equal(jwks.status, 200);
+  assert.equal(await jwks.text(), "api");
+
+  const leads = await worker.fetch(new Request("https://authichain.com/api/leads/capture", { method: "POST", body: "{}" }), env);
+  assert.equal(leads.status, 200);
+  assert.equal(await leads.text(), "app");
+
+  assert.deepEqual(seen, ["api:/api/v1/.well-known/jwks.json", "app:/api/leads/capture"]);
+});

@@ -10,6 +10,7 @@ import {
 import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
+import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
 import { docsCtaClickEvent, docsViewEvent } from "./docs-events";
@@ -3311,6 +3312,8 @@ interface Env {
   APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** authichain-api Worker: public /api/v1/* REST endpoints (api-v1-routes.ts). */
+  API_WORKER?: { fetch: (request: Request) => Promise<Response> };
   /** Test-only override. Live default is 4000ms. */
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
@@ -3651,6 +3654,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (x402) return x402;
     const mcp = await tryHandleMcp(request, env, env.VERIFY_APP);
     if (mcp) return mcp;
+    const apiV1 = await tryHandleApiV1(request, env);
+    if (apiV1) return apiV1;
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
