@@ -164,7 +164,6 @@ export async function emitGrowthEvent(input: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      keepalive: true,
     });
     if (!res.ok) return { ok: false, error: `ingest responded ${res.status}` };
     return { ok: true };
