@@ -1,1 +1,23 @@
+# Hooks run with a bare PATH and no shell profile, so a node managed by nvm or
+# fnm is absent when git is driven by an IDE, a GUI client, or another tool.
+# Bare `corepack` then exits 127 and the commit is rejected with no reason
+# given. Load nvm if it is here, then say what is wrong if it still is not.
+# husky runs this hook as `sh -e`, and errexit applies inside a sourced file too,
+# so sourcing the bash-targeted nvm.sh under dash aborts the hook partway through
+# it (code 3) before lint-staged ever runs -- and `|| true` cannot catch that,
+# because the abort happens inside nvm.sh, not on its return. Suspend errexit for
+# the source, then restore it.
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  set +e
+  . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1
+  set -e
+fi
+
+if ! command -v corepack >/dev/null 2>&1; then
+  echo "pre-commit: corepack is not on PATH, so lint-staged cannot run." >&2
+  echo "  node is probably version-managed and unavailable to this shell." >&2
+  echo "  Commit from a shell where 'node --version' works, or run 'nvm use'." >&2
+  exit 1
+fi
+
 corepack pnpm -w -s run lint-staged
