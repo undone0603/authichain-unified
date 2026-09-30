@@ -452,8 +452,8 @@ app.post("/api/generate", async c => {
 });
 
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
-// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
-// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+// Landing JS on /dpp POSTs here. The framework-agnostic funnel recorder is
+// mounted directly on this worker so the first loop stage cannot fall through to ASSETS.
 app.post("/api/funnel", async c => {
   try {
     hydrateProcessEnv(c.env);
@@ -509,7 +509,7 @@ app.post("/api/funnel", async c => {
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+app.get("/api/stripe/webhook", c => {
   c.header("Cache-Control", "private, no-store");
   return c.json({
     ok: true,
@@ -543,7 +543,6 @@ async function stripeWebhookPost(c: {
   }
 }
 
-app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
 
 app.post("/api/dpp/activate", async c => {
@@ -606,8 +605,8 @@ function edgeSupabase(env?: Env) {
   );
 }
 
-// Next src/app/api/dpp/publish and /verify are not on this worker; unregistered
-// /api/* falls through to ASSETS 404 and the loop never records dpp_published.
+// DPP publish/verify share the framework-agnostic logic in src/lib so the
+// apex checkout origin can complete the publish → verify loop on this worker.
 app.post("/api/dpp/publish", async c => {
   try {
     hydrateProcessEnv(c.env);
