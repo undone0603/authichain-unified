@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { reportGrowthEvent } from "./growth-record";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
@@ -430,6 +431,17 @@ app.post("/api/generate", async c => {
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
     });
+    // LOOP-03: a 401 here is a stranger who filled the form and was walled by
+    // the auth requirement. /generate promises "Five generations are free", so
+    // this count measures the size of that broken promise, not noise.
+    //
+    // free_gen_granted / free_gen_exhausted are deliberately NOT emitted here.
+    // They describe the 5-free ANONYMOUS tier, which does not exist yet; a 200
+    // is an authenticated paid generation and a 403 is paid credits exhausted.
+    // Labelling either as "free" would corrupt the funnel the kill criteria read.
+    if (result.status === 401) {
+      reportGrowthEvent(c, { event: "generate_submit_anon", sku: "starter" });
+    }
     c.header("Cache-Control", "private, no-store");
     return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
   } catch (err: any) {
