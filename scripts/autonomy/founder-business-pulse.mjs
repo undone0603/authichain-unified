@@ -31,7 +31,7 @@ if (manifest.mode !== "founder-only") {
 }
 
 for (const offer of manifest.offers || []) {
-  const idPattern = new RegExp('id: ["\\']' + offer.id + '["\\']');
+  const idPattern = new RegExp("id: [\\\"\\\']" + offer.id + "[\\\"\\\']");
   if (!idPattern.test(plans)) {
     console.error("::error::Offer missing from src/lib/plans.ts: " + offer.id);
     process.exit(1);
