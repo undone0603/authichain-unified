@@ -179,7 +179,7 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.3",
     "vitest": "^5.0.2",
-    "wrangler": "^4.125.0"
+    "wrangler": "^4.141.0"
   },
   "overrides": {
     "serialize-javascript": "7.0.3",
