@@ -2,8 +2,11 @@
  * gs1-resolver — GS1 Digital Link resolver for AuthiChain seals.
  *
  * Resolves on-pack Digital Link URIs (e.g. /01/09506000149301/21/SN123)
- * against the D1 seal registry, records the scan with coarse geo from
- * Cloudflare, and runs the clone state machine over scan history.
+ * against the D1 seal registry the way GS1's Conformant Resolver standard
+ * describes: a linkset on request, a 307 to the requested link type, and
+ * otherwise a 307 to the default link. For a registered item the default link
+ * is /verify/..., which records the scan with coarse geo from Cloudflare and
+ * runs the clone state machine over scan history.
  *
  * Honesty rules this worker follows:
  *   - An unknown identifier resolves to `not_found`. It is never upgraded to
@@ -16,10 +19,22 @@ import {
   parseGs1Path,
   lookupKey,
   hasResolvableId,
-  isResolverPath,
   toDigitalLink,
   type Gs1Fields,
 } from "./gs1";
+import {
+  parseDigitalLink,
+  levelPaths,
+  looksCompressed,
+  normalizeLinkType,
+  findLinks,
+  toLinkset,
+  wantsLinkset,
+  withQuery,
+  LINKSET_CONTEXT,
+  type DigitalLink,
+  type Level,
+} from "./dl";
 import {
   nextStatus,
   STATUS_COPY,
@@ -370,45 +385,436 @@ function passportHtml(payload: ReturnType<typeof passportPayload>): string {
 }
 
 /**
- * Resolver description document.
+ * Resolver description document (/.well-known/gs1resolver).
  *
- * Corrected 2026-09-11. This previously called itself a "GS1 Conformant
- * Resolver" and advertised supportedLinkType ["gs1:pip",
- * "gs1:certificationInfo", "gs1:epcis"] — three link types it cannot serve.
- * The worker implements none of Digital Link's resolution behaviour: no
- * linkType query handling, no linkset, no 307 redirect to a linked resource,
- * no Link header. It parses Digital Link paths and answers a verification
- * question about the identifier, which is a different service.
+ * History: until 2026-09-11 this called itself a "GS1 Conformant Resolver"
+ * and advertised link types nothing here could serve. It was then cut back to
+ * an honest "not conformant" note and an empty supportedLinkType. On
+ * 2026-09-30 the resolution behaviour was implemented (linksets, linkType
+ * redirects, default link, walk-up, compressed URIs), so the document now
+ * lists the link types that are really served, and nothing more.
  *
- * A machine reading a description file is entitled to act on it. Advertising
- * capabilities that do not exist is the same failure this product sells
- * against, so the document now describes what the worker actually does, and
- * says plainly that it is not conformant.
- *
- * docs/GS1_CONFORMANCE.md tracks what conformance would require.
+ * It makes no conformance claim. Whether this passes GS1's hosted test suite
+ * is a fact to be established by running it, not asserted here;
+ * docs/GS1_CONFORMANCE.md records the result. The field set follows GS1's
+ * Resolver Community Edition description file, because the schema at
+ * ref.gs1.org could not be fetched from the build environment.
  */
 function wellKnown(env: Env) {
   return {
-    name: "AuthiChain identifier verification service",
+    name: "AuthiChain GS1 Digital Link resolver",
     resolverRoot: env.RESOLVER_ORIGIN,
     supportedPrimaryKeys: ["01"],
-
-    // Empty on purpose: no linkType is resolvable here yet. An empty list is
-    // a true statement; the previous list was not.
-    supportedLinkType: [],
-
-    gs1ConformantResolver: false,
-    conformanceNote:
-      "Parses GS1 Digital Link URIs and returns a verification result for the identifier. Does not implement linkType resolution, linksets, or redirection to linked resources, and so is not a GS1-Conformant Resolver.",
-
-    // The two behaviours a caller most needs to distinguish.
-    endpoints: {
-      scan: "GET /01/{gtin}/21/{serial} or /cert/{certId} — records a scan and may advance seal status",
-      read: "GET /v1/passport/{certId} — returns the same payload, records nothing, never changes status",
+    supportedLinkType: [{ namespace: "https://gs1.org/voc/", prefix: "gs1:" }],
+    linkTypeDefaultCanBeAll: false,
+    supportsLanguageVariants: false,
+    supportsSemanticInterpretation: false,
+    validatesAIcombinations: false,
+    activeLinkTypes: {
+      en: {
+        "gs1:defaultLink": {
+          title: "Default link",
+          description:
+            "For a registered item, the AuthiChain verification result for that item. Following it records a scan. For a GTIN, a page saying which items are registered, which verifies none of them.",
+          url: "https://gs1.org/voc/defaultLink",
+        },
+        "gs1:certificationInfo": {
+          title: "Certification Information",
+          description:
+            "The AuthiChain passport for the item's certificate. Reading it records no scan.",
+          url: "https://gs1.org/voc/certificationInfo",
+        },
+      },
     },
-
-    documentation: `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/docs/resolver`,
   };
+}
+
+const DL_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-expose-headers": "Link, Location",
+  "cache-control": "no-store",
+  vary: "Accept",
+};
+
+function dlResponse(
+  request: Request,
+  status: number,
+  headers: Record<string, string>,
+  body: string | null
+): Response {
+  return new Response(request.method === "HEAD" ? null : body, {
+    status,
+    headers: { ...DL_HEADERS, ...headers },
+  });
+}
+
+function dlJson(
+  request: Request,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {}
+): Response {
+  return dlResponse(
+    request,
+    status,
+    { "content-type": "application/json; charset=utf-8", ...headers },
+    JSON.stringify(body, null, 2)
+  );
+}
+
+type ProductSummary = {
+  registeredItems: number;
+  brand: string | null;
+  productName: string | null;
+  issuer: string | null;
+};
+
+/** What the registry knows about a GTIN as a whole, across its seals. */
+async function loadProduct(
+  env: Env,
+  gtin: string
+): Promise<ProductSummary | null> {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS n, MAX(brand) AS brand, MAX(product_name) AS product_name,
+            MAX(issuer) AS issuer
+       FROM seals WHERE gtin = ?1`
+  )
+    .bind(gtin)
+    .first<{
+      n: number;
+      brand: string | null;
+      product_name: string | null;
+      issuer: string | null;
+    }>();
+  const n = Number(row?.n ?? 0);
+  if (!row || !(n > 0)) return null;
+  return {
+    registeredItems: n,
+    brand: row.brand,
+    productName: row.product_name,
+    issuer: row.issuer,
+  };
+}
+
+/**
+ * The linkset for a Digital Link and every level above it, most granular
+ * first. Also reports whether the requested serial is registered, because an
+ * unregistered serial must not walk up (see handleDigitalLink).
+ */
+async function loadLevels(
+  env: Env,
+  dl: DigitalLink,
+  origin: string
+): Promise<{ levels: Level[]; serialRegistered: boolean }> {
+  const levels: Level[] = [];
+  let serialRegistered = false;
+  for (const path of levelPaths(dl)) {
+    const anchor = `${origin}${path}`;
+    const tail = path.split("/").filter(Boolean);
+    const ai = tail.length > 2 ? tail[tail.length - 2] : "01";
+    let seal: SealRow | null = null;
+    if (ai === "21")
+      seal = await loadSeal(env, `gtin:${dl.gtin}:ser:${dl.serial}`);
+    else if (ai === "10")
+      seal = await loadSeal(env, `gtin:${dl.gtin}:lot:${dl.lot}`);
+    else if (ai === "01") seal = await loadSeal(env, `gtin:${dl.gtin}`);
+    if (ai === "21" && seal) serialRegistered = true;
+
+    const level: Level = { anchor, links: {} };
+    if (seal) {
+      level.description = seal.product_name || seal.brand || undefined;
+      level.links.defaultLink = [
+        {
+          href: `${origin}/verify${path}`,
+          title: "Verify this item with AuthiChain",
+        },
+      ];
+      if (seal.cert_id) {
+        level.links.certificationInfo = [
+          {
+            href: `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/passport/${encodeURIComponent(seal.cert_id)}`,
+            title: "AuthiChain passport",
+            type: "text/html",
+          },
+        ];
+      }
+    } else if (ai === "01") {
+      const product = await loadProduct(env, dl.gtin);
+      if (product) {
+        level.description = product.productName || product.brand || undefined;
+        level.links.defaultLink = [
+          {
+            href: `${origin}/verify${path}`,
+            title: "Product registered with AuthiChain",
+          },
+        ];
+      }
+    }
+    levels.push(level);
+  }
+  return { levels, serialRegistered };
+}
+
+/**
+ * GS1-Conformant resolution of a Digital Link URI.
+ *
+ * Nothing here records a scan. Resolution answers "where do links for this
+ * identifier go"; the scan is recorded by the /verify target a person lands
+ * on (the default link), and only for a GET there. So a HEAD, a linkset
+ * request, a crawler, or GS1's test suite probing the URI cannot advance a
+ * seal toward clone_suspected.
+ */
+async function handleDigitalLink(
+  request: Request,
+  env: Env,
+  url: URL
+): Promise<Response> {
+  const parsed = parseDigitalLink(url);
+  if (!parsed.ok) {
+    return dlJson(request, parsed.status, {
+      error: parsed.error,
+      detail: parsed.detail,
+      path: url.pathname,
+    });
+  }
+  const dl = parsed.dl;
+  const origin = url.origin;
+  const anchor = `${origin}${dl.path}`;
+
+  const link: string[] = [
+    `<${anchor}?linkType=linkset>; rel="linkset"; type="application/linkset+json"`,
+  ];
+  if (dl.uncompressedUri)
+    link.push(`<${dl.uncompressedUri}>; rel="owl:sameAs"`);
+
+  const { levels, serialRegistered } = await loadLevels(env, dl, origin);
+  const available = levels.some(l => Object.keys(l.links).length > 0);
+
+  // Honesty rule: an unregistered serial is not_found. Walking it up to the
+  // GTIN would land someone holding an unknown (possibly counterfeit) serial
+  // on a page for the genuine product. Lot and variant do walk up.
+  if ((dl.serial && !serialRegistered) || !available) {
+    const fields: Gs1Fields = {
+      gtin: dl.gtin,
+      lot: dl.lot,
+      serial: dl.serial,
+      variant: dl.variant,
+      rawPath: dl.path,
+    };
+    const payload = passportPayload(null, "not_found", fields, env, {
+      reason:
+        dl.serial && !serialRegistered ? "unknown_seal" : "unknown_identifier",
+      recorded: false,
+    });
+    return wantsJson(request, url)
+      ? dlJson(request, 404, payload)
+      : dlResponse(
+          request,
+          404,
+          { "content-type": "text/html; charset=utf-8" },
+          passportHtml(payload)
+        );
+  }
+
+  if (wantsLinkset(request, url)) {
+    link.push(
+      `<${LINKSET_CONTEXT}>; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"`
+    );
+    return dlResponse(
+      request,
+      200,
+      { "content-type": "application/linkset+json", link: link.join(", ") },
+      JSON.stringify(toLinkset(levels), null, 2)
+    );
+  }
+
+  const requested = url.searchParams.get("linkType");
+  const term =
+    requested === null ? "defaultLink" : normalizeLinkType(requested);
+  const links = term ? findLinks(levels, term) : null;
+  if (!links) {
+    return dlJson(
+      request,
+      404,
+      { error: "link_type_not_available", linkType: requested, path: dl.path },
+      { link: link.join(", ") }
+    );
+  }
+  if (links.length > 1) {
+    return dlJson(
+      request,
+      300,
+      { linkType: requested, links },
+      { link: link.join(", ") }
+    );
+  }
+  return dlResponse(
+    request,
+    307,
+    { location: withQuery(links[0].href, url.search), link: link.join(", ") },
+    null
+  );
+}
+
+/**
+ * The verification response for an identifier: the passport payload as HTML
+ * or JSON. This is the default link target, and the legacy /cert/{id} scan
+ * surface. A GET records the scan and may advance the seal's status; a HEAD
+ * reads without recording.
+ */
+async function handleVerify(
+  request: Request,
+  env: Env,
+  url: URL,
+  path: string
+): Promise<Response> {
+  const fields = parseGs1Path(path, url.search);
+  if (!hasResolvableId(fields)) {
+    return json({ error: "no_resolvable_identifier", path: url.pathname }, 400);
+  }
+
+  const seal = await loadSeal(env, lookupKey(fields));
+
+  if (!seal) {
+    // A GTIN on its own may still name a registered product.
+    if (fields.gtin && !fields.lot && !fields.serial && !fields.certId) {
+      const product = await loadProduct(env, fields.gtin);
+      if (product) return productResponse(request, url, env, fields, product);
+    }
+    const payload = passportPayload(null, "not_found", fields, env, {
+      reason: "unknown_seal",
+      recorded: false,
+    });
+    return wantsJson(request, url)
+      ? json(payload, 404)
+      : new Response(passportHtml(payload), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        });
+  }
+
+  if (request.method !== "GET") {
+    return json(
+      passportPayload(seal, seal.status as SealStatus, fields, env, {
+        reason: "read_only",
+        recorded: false,
+      })
+    );
+  }
+
+  const { transition, recorded, at, geo } = await registerScan(
+    env,
+    seal,
+    request
+  );
+  const isFirst = seal.scan_count === 0;
+  const payload = passportPayload(seal, transition.next, fields, env, {
+    reason: transition.reason,
+    recorded,
+    scanCount: seal.scan_count + (recorded ? 1 : 0),
+    firstCountry: isFirst && recorded ? geo.country : seal.first_country,
+    firstActivatedAt: isFirst && recorded ? at : seal.first_activated_at,
+  });
+
+  return wantsJson(request, url)
+    ? json(payload)
+    : new Response(passportHtml(payload), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+}
+
+const PRODUCT_COPY = {
+  label: "Product registered",
+  proves:
+    "Items carrying this GTIN have been registered with AuthiChain by the issuer named here.",
+  doesNot:
+    "It does not verify any single item. Scan the code on the item itself, which carries its serial number, to check that item.",
+};
+
+/** GTIN-level page: what is registered under the GTIN. Records nothing. */
+function productResponse(
+  request: Request,
+  url: URL,
+  env: Env,
+  fields: Gs1Fields,
+  product: ProductSummary
+): Response {
+  const body = {
+    status: "product_registered",
+    label: PRODUCT_COPY.label,
+    proves: PRODUCT_COPY.proves,
+    doesNotProve: PRODUCT_COPY.doesNot,
+    scanRecorded: false,
+    identifier: {
+      gtin: fields.gtin,
+      digitalLink: toDigitalLink(env.RESOLVER_ORIGIN, {
+        rawPath: "",
+        gtin: fields.gtin,
+      }),
+    },
+    product: {
+      brand: product.brand,
+      name: product.productName,
+      issuer: product.issuer,
+    },
+    registeredItems: product.registeredItems,
+  };
+  if (wantsJson(request, url)) return json(body);
+  const rows: Array<[string, string | number | null | undefined]> = [
+    ["GTIN", fields.gtin],
+    ["Brand", product.brand],
+    ["Product", product.productName],
+    ["Issuer", product.issuer],
+    ["Registered items", product.registeredItems],
+  ];
+  const html = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${esc(PRODUCT_COPY.label)} — AuthiChain</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; padding:2rem 1.25rem; font:16px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         background:#fafafa; color:#141414; }
+  main { max-width:34rem; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 .35rem; }
+  dl { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1rem; margin:1.25rem 0; }
+  dt { color:#666; font-size:.9rem; }
+  dd { margin:0; word-break:break-all; }
+  .claims { border:1px solid #e2e2e2; border-radius:.6rem; padding:1rem; background:#fff; margin:1.25rem 0; }
+  .claims p { margin:.4rem 0; font-size:.94rem; }
+  .claims strong { display:block; color:#444; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+  @media (prefers-color-scheme: dark) {
+    body { background:#101010; color:#f2f2f2; }
+    .claims { background:#1a1a1a; border-color:#2e2e2e; }
+    dt { color:#9a9a9a; }
+  }
+</style></head><body><main>
+  <h1>${esc(product.productName || product.brand || PRODUCT_COPY.label)}</h1>
+  <div class="claims">
+    <p><strong>What this shows</strong>${esc(PRODUCT_COPY.proves)}</p>
+    <p><strong>What it does not show</strong>${esc(PRODUCT_COPY.doesNot)}</p>
+  </div>
+  <dl>
+    ${rows
+      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`)
+      .join("\n    ")}
+  </dl>
+</main></body></html>`;
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 }
 
 export default {
@@ -420,8 +826,10 @@ export default {
         status: 204,
         headers: {
           "access-control-allow-origin": "*",
-          "access-control-allow-methods": "GET,POST,OPTIONS",
-          "access-control-allow-headers": "content-type,authorization",
+          "access-control-allow-methods": "GET,HEAD,POST,OPTIONS",
+          "access-control-allow-headers": "accept,content-type,authorization",
+          "access-control-expose-headers": "Link, Location",
+          "access-control-max-age": "86400",
         },
       });
     }
@@ -447,8 +855,8 @@ export default {
     // burst that drives active -> clone_suspected. A viewer refreshing a
     // passport must never be able to mark the seal as cloned.
     //
-    // The GS1 Digital Link paths below remain the scan surface and still
-    // advance state; this endpoint only reports it.
+    // The /verify and /cert scan surfaces below still advance state; this
+    // endpoint only reports it.
     if (url.pathname.startsWith("/v1/passport/")) {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return json({ error: "method_not_allowed" }, 405);
@@ -484,69 +892,39 @@ export default {
       return json({
         service: "gs1-resolver",
         usage: `${env.RESOLVER_ORIGIN}/01/{gtin}/21/{serial}`,
+        linkset: `${env.RESOLVER_ORIGIN}/01/{gtin}/21/{serial}?linkType=linkset`,
         wellKnown: `${env.RESOLVER_ORIGIN}/.well-known/gs1resolver`,
       });
     }
 
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return json({ error: "method_not_allowed" }, 405);
-    }
-
-    if (!isResolverPath(url.pathname)) {
-      return json(
-        { error: "not_a_digital_link_path", path: url.pathname },
-        404
-      );
-    }
-
-    const fields = parseGs1Path(url.pathname, url.search);
-    if (!hasResolvableId(fields)) {
-      return json(
-        { error: "no_resolvable_identifier", path: url.pathname },
-        400
-      );
-    }
-
-    const seal = await loadSeal(env, lookupKey(fields));
-
-    if (!seal) {
-      const payload = passportPayload(null, "not_found", fields, env, {
-        reason: "unknown_seal",
-        recorded: false,
+      return json({ error: "method_not_allowed" }, 405, {
+        allow: "GET, HEAD, OPTIONS",
       });
-      return wantsJson(request, url)
-        ? json(payload, 404)
-        : new Response(passportHtml(payload), {
-            status: 404,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "cache-control": "no-store",
-            },
-          });
     }
 
-    const { transition, recorded, at, geo } = await registerScan(
-      env,
-      seal,
-      request
-    );
-    const isFirst = seal.scan_count === 0;
-    const payload = passportPayload(seal, transition.next, fields, env, {
-      reason: transition.reason,
-      recorded,
-      scanCount: seal.scan_count + (recorded ? 1 : 0),
-      firstCountry: isFirst && recorded ? geo.country : seal.first_country,
-      firstActivatedAt: isFirst && recorded ? at : seal.first_activated_at,
-    });
+    // Default-link target: the verification result, which records the scan.
+    if (url.pathname.startsWith("/verify/")) {
+      return handleVerify(
+        request,
+        env,
+        url,
+        url.pathname.slice("/verify".length)
+      );
+    }
 
-    return wantsJson(request, url)
-      ? json(payload)
-      : new Response(passportHtml(payload), {
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-store",
-          },
-        });
+    // Certificate-id scan surface (not Digital Link): verifies directly.
+    const head = url.pathname.split("/").filter(Boolean)[0];
+    if (head === "cert" || head === "p" || head === "passport") {
+      return handleVerify(request, env, url, url.pathname);
+    }
+
+    // GS1 Digital Link: a numeric primary key path, or a compressed URI.
+    if ((head && /^\d{2,4}$/.test(head)) || looksCompressed(url.pathname)) {
+      return handleDigitalLink(request, env, url);
+    }
+
+    return json({ error: "not_a_digital_link_path", path: url.pathname }, 404);
   },
 };
 
@@ -572,6 +950,20 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
 
   const certId = typeof body.certId === "string" ? body.certId : null;
   if (!certId) return json({ error: "certId_required" }, 400);
+
+  // A seal whose GTIN, lot or serial is not valid Digital Link syntax could
+  // never be resolved (the resolver answers 400), so refuse it here.
+  if (typeof body.gtin === "string") {
+    let path = `/01/${encodeURIComponent(body.gtin)}`;
+    if (typeof body.lot === "string")
+      path += `/10/${encodeURIComponent(body.lot)}`;
+    if (typeof body.serial === "string")
+      path += `/21/${encodeURIComponent(body.serial)}`;
+    const check = parseDigitalLink(new URL(path, env.RESOLVER_ORIGIN));
+    if (!check.ok) {
+      return json({ error: "invalid_identifier", detail: check.detail }, 400);
+    }
+  }
 
   const fields = parseGs1Path(
     typeof body.gtin === "string" ? `/01/${body.gtin}` : `/cert/${certId}`,
