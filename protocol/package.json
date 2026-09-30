@@ -1,10 +1,10 @@
 {
   "name": "authichain-verify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Offline reference verifier for the AuthiChain Verification Specification v0.1.0. Zero dependencies, runs without contacting any AuthiChain server.",
   "type": "module",
   "license": "Apache-2.0",
-  "author": "AuthiChain Inc.",
+  "author": "Zachary Kietzman (AuthiChain)",
   "homepage": "https://github.com/undone0603/authichain-unified/tree/main/protocol#readme",
   "repository": {
     "type": "git",
@@ -45,6 +45,8 @@
     "verifier.d.ts",
     "bin/authichain-verify.mjs",
     "examples/record.json",
+    "examples/polygon-anchor-1.record.json",
+    "examples/polygon-anchor-1.anchor.json",
     "SPEC.md",
     "README.md",
     "LICENSE"

@@ -31,6 +31,8 @@ describe("sample battery readiness assessment", () => {
     );
     expect(html).not.toMatch(/mendo/i);
     expect(html).toContain("not legal advice");
+    expect(html).not.toContain("has not been altered.");
+    expect(html).toContain("This sample is not that passport.");
   });
 
   it("derives every figure from the gap map and the readiness score", () => {

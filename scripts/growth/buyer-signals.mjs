@@ -9,8 +9,10 @@
 //   ted   EU tenders (TED Search API v3, keyless)          -> dpp_readiness
 //   ftc   FTC consumer-protection press releases (RSS)     -> musa_claim_file
 //   jobs  Remotive + Arbeitnow public job APIs (keyless)   -> dpp_readiness | musa_claim_file
-//   dcc   California cannabis licences (DCA iServices)     -> strainchain_passport
-//         Needs DCC_APP_ID + DCC_APP_KEY; skipped without them.
+//   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
+//   dcc   California cannabis licences (DCC public search API, keyless)
+//                                                          -> strainchain_passport
+//   ear   German battery register, highest active numbers   -> dpp_readiness, no email
 
 export const LABEL = "buyer-signal";
 const MARKER = "<!-- buyer-signal-ids:";
@@ -333,26 +335,455 @@ export async function fetchJobs({ since, fetchImpl } = {}) {
   return fresh;
 }
 
-// ---------- DCC (credential-gated) ----------
+// ---------- company career boards (Greenhouse, Lever, Ashby) ----------
 
-export async function fetchDcc({ env = process.env } = {}) {
-  if (!env.DCC_APP_ID || !env.DCC_APP_KEY)
-    return {
-      skipped: "needs DCC_APP_ID and DCC_APP_KEY (free DCA iServices sign-up)",
-    };
-  // Endpoint and field names are wired once the iServices guide is confirmed
-  // against a live response; until then report instead of guessing.
-  return { skipped: "credentials present; licence endpoint not wired yet" };
+// Makers that sell physical goods into the EU (batteries, e-bikes, apparel,
+// electronics) or make US-origin claims. Each slug is tried on Greenhouse,
+// then Lever, then Ashby; a slug on none of them is reported, not fatal.
+// Prune or add here; the weekly status line says how many boards resolved.
+export const ATS_SEEDS = [
+  // batteries, e-mobility, energy storage
+  "northvolt",
+  "lyten",
+  "sila",
+  "formenergy",
+  "redwoodmaterials",
+  "ascendelements",
+  "ourNextEnergy",
+  "ionblox",
+  "natron",
+  "fluenceenergy",
+  "cowboy",
+  "vanmoof",
+  "rad-power-bikes",
+  "specialized",
+  "voi",
+  "tier",
+  "lime",
+  "zeromotorcycles",
+  "ecoflow",
+  "anker",
+  "sonnen",
+  "1komma5",
+  "enpal",
+  "zolar",
+  // apparel, footwear, home goods
+  "allbirds",
+  "onrunning",
+  "everlane",
+  "rothys",
+  "bombas",
+  "vinted",
+  "zalando",
+  "gymshark",
+  "veja",
+  "patagonia",
+  "pangaia",
+  "ganni",
+  "mejuri",
+  "brooklinen",
+  "parachute",
+  "caraway",
+  "ourplace",
+  "yeti",
+  "stanley1913",
+  "hydroflask",
+  // electronics and devices
+  "fairphone",
+  "framework",
+  "nothing",
+  "teenageengineering",
+  "sonos",
+  "ouraring",
+];
+
+export function parseGreenhouse(data, company) {
+  return (data?.jobs ?? [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.title,
+          url: j.absolute_url,
+          date: j.updated_at,
+          text: stripHtml(j.content),
+        },
+        "Greenhouse"
+      )
+    )
+    .filter(Boolean);
+}
+
+export function parseLever(data, company) {
+  return (Array.isArray(data) ? data : [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.text,
+          url: j.hostedUrl,
+          date: j.createdAt ? new Date(j.createdAt).toISOString() : "",
+          text: `${j.descriptionPlain ?? ""} ${(j.lists ?? [])
+            .map(l => stripHtml(l.content))
+            .join(" ")}`,
+        },
+        "Lever"
+      )
+    )
+    .filter(Boolean);
+}
+
+export function parseAshby(data, company) {
+  return (data?.jobs ?? [])
+    .map(j =>
+      jobLead(
+        {
+          company,
+          title: j.title,
+          url: j.jobUrl,
+          date: j.publishedAt,
+          text: j.descriptionPlain ?? stripHtml(j.descriptionHtml),
+        },
+        "Ashby"
+      )
+    )
+    .filter(Boolean);
+}
+
+const ATS = [
+  {
+    url: s =>
+      `https://boards-api.greenhouse.io/v1/boards/${s}/jobs?content=true`,
+    parse: (d, c) => parseGreenhouse(d, c),
+    company: (d, s) => d?.meta?.company_name ?? s,
+  },
+  {
+    url: s => `https://api.lever.co/v0/postings/${s}?mode=json`,
+    parse: (d, c) => parseLever(d, c),
+    company: (_d, s) => s,
+  },
+  {
+    url: s => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
+    parse: (d, c) => parseAshby(d, c),
+    company: (_d, s) => s,
+  },
+];
+
+/**
+ * @param {{ since: Date, fetchImpl?: typeof fetch, seeds?: string[] }} opts
+ */
+export async function fetchAts({ since, fetchImpl, seeds = ATS_SEEDS }) {
+  /** @type {any[]} */
+  const leads = [];
+  let resolved = 0;
+  for (const slug of seeds) {
+    for (const ats of ATS) {
+      let d;
+      try {
+        d = await getJson(ats.url(encodeURIComponent(slug)), { fetchImpl });
+      } catch {
+        continue;
+      }
+      // Lever answers an unknown slug with an empty array, not a 404.
+      if (Array.isArray(d) && !d.length) continue;
+      resolved++;
+      leads.push(...ats.parse(d, ats.company(d, slug)));
+      break;
+    }
+  }
+  const fresh = leads.filter(
+    l => !l.date || Date.parse(l.date) >= since.getTime()
+  );
+  return Object.assign(fresh, { resolved, seeds: seeds.length });
+}
+
+// ---------- DCC ----------
+
+// The backend behind search.cannabis.ca.gov (its /config.js names CANNA_API).
+// Keyless; the DCA iServices keys are not needed for it.
+export const DCC_API =
+  "https://as-dcc-pub-cann-w-p-002.azurewebsites.net/licenses/AdvancedSearch";
+const DCC_PAGE = 50;
+
+// Processors dry and trim other people's plants; they hold no cultivars.
+const DCC_SKIP_TYPES = /processor/i;
+
+/**
+ * One lead per business: a farm issued several licences in the window is one
+ * conversation. Only public registry fields go into the lead, because the
+ * digest is a public issue: no owner names, emails or phone numbers.
+ */
+export function dccLeads(rows, since) {
+  /** @type {Map<string, any>} */
+  const byOrg = new Map();
+  for (const r of rows ?? []) {
+    const issued = Date.parse(r.issueDate ?? "");
+    if (!issued || issued < since.getTime()) continue;
+    if (r.licenseStatus !== "Active") continue;
+    const type = String(r.licenseType ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!/^cultivation/i.test(type) || DCC_SKIP_TYPES.test(type)) continue;
+    const org = String(r.businessLegalName ?? "").trim();
+    if (!org) continue;
+    const key = org.toLowerCase();
+    const county =
+      r.premiseCounty && r.premiseCounty !== "Data Not Available"
+        ? `${r.premiseCounty} County`
+        : "";
+    const prev = byOrg.get(key);
+    if (prev) {
+      prev.licences.push(r.licenseNumber);
+      continue;
+    }
+    byOrg.set(key, {
+      id: `dcc:${r.licenseNumber}`,
+      source: "dcc",
+      org,
+      title: `New cultivation licence ${r.licenseNumber}: ${type.replace(/^Cultivation - /i, "")}`,
+      detail: county,
+      country: county,
+      date: new Date(issued).toISOString().slice(0, 10),
+      url: "https://search.cannabis.ca.gov/",
+      offer: "strainchain_passport",
+      licences: [r.licenseNumber],
+    });
+  }
+  return [...byOrg.values()];
+}
+
+export async function fetchDcc({ since, fetchImpl } = {}) {
+  /** @type {any[]} */
+  const rows = [];
+  for (let page = 1; page <= 4; page++) {
+    const q = new URLSearchParams({
+      licenseType: "Cultivation",
+      licenseStatus: "Active",
+      sortOrder: "issueDate desc",
+      pageSize: String(DCC_PAGE),
+      pageNumber: String(page),
+    });
+    const d = await getJson(`${DCC_API}?${q}`, { fetchImpl });
+    const data = d?.data ?? [];
+    rows.push(...data);
+    const oldest = Date.parse(data.at(-1)?.issueDate ?? "");
+    if (!d?.metadata?.hasNext || !oldest || oldest < since.getTime()) break;
+  }
+  return dccLeads(rows, since);
+}
+
+// ---------- German battery register (stiftung ear) ----------
+
+// A JSF form, not an API: each step posts the whole form back with one
+// button pressed. German law (UWG section 7) needs prior consent even for
+// B2B marketing email, so these leads are marked no-email and their draft is
+// a call or letter note, never an email.
+export const EAR_URL =
+  "https://www.ear-system.de/ear-verzeichnis/battghersteller.jsf";
+
+function decodeEntities(s) {
+  return String(s ?? "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
+/** Every successful control of the page's form, minus its submit buttons. */
+export function jsfForm(html) {
+  const action = decodeEntities(
+    html.match(/<form[^>]*\baction="([^"]+)"/)?.[1] ?? ""
+  );
+  /** @type {[string, string][]} */
+  const fields = [];
+  for (const m of html.matchAll(/<input\b[^>]*>/g)) {
+    const tag = m[0];
+    const type = tag.match(/\btype="([^"]*)"/)?.[1] ?? "text";
+    const name = tag.match(/\bname="([^"]*)"/)?.[1];
+    if (!name || type === "submit" || type === "button") continue;
+    if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag))
+      continue;
+    fields.push([
+      name,
+      decodeEntities(tag.match(/\bvalue="([^"]*)"/)?.[1] ?? ""),
+    ]);
+  }
+  for (const m of html.matchAll(
+    /<select\b[^>]*\bname="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g
+  )) {
+    const sel = m[2].match(
+      /<option[^>]*\bselected\b[^>]*\bvalue="([^"]*)"|<option[^>]*\bvalue="([^"]*)"[^>]*\bselected\b/
+    );
+    fields.push([m[1], decodeEntities(sel?.[1] ?? sel?.[2] ?? "")]);
+  }
+  return { action, fields };
+}
+
+/** The name of the submit button whose label matches. */
+export function jsfButton(html, label) {
+  for (const m of html.matchAll(/<input\b[^>]*\btype="submit"[^>]*>/g)) {
+    const value = decodeEntities(m[0].match(/\bvalue="([^"]*)"/)?.[1] ?? "");
+    if (label instanceof RegExp ? label.test(value) : value === label) {
+      if (/\bdisabled\b/.test(m[0])) return null;
+      return m[0].match(/\bname="([^"]*)"/)?.[1] ?? null;
+    }
+  }
+  return null;
+}
+
+function cellText(html) {
+  return decodeEntities(html.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Rows of the results table as arrays of cell text. */
+export function earRows(html) {
+  const body = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
+  return [...body.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)]
+    .map(r =>
+      [...r[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => cellText(c[1]))
+    )
+    .filter(cells => cells.length >= 3);
+}
+
+// Producers reachable by a call or a letter in their own market: EU, EEA,
+// Switzerland and the UK, as the register spells them.
+const EAR_EUROPE =
+  /^(Deutschland|Österreich|Schweiz|Liechtenstein|Niederlande|Belgien|Luxemburg|Frankreich|Italien|Spanien|Portugal|Polen|Tschechien|Tschechische Republik|Slowakei|Ungarn|Dänemark|Schweden|Finnland|Norwegen|Island|Irland|Vereinigtes Königreich|Großbritannien|Estland|Lettland|Litauen|Slowenien|Kroatien|Rumänien|Bulgarien|Griechenland|Zypern|Malta)$/i;
+
+// A company form in the name; a bare personal name is a sole trader, and a
+// private person's name does not go into a public issue.
+const COMPANY_FORM =
+  /\b(GmbH|AG|SE|KG|OHG|UG|e\.?\s?K\.?|mbH|Ltd|Limited|LLC|Inc|Corp|B\.?V\.?|N\.?V\.?|AB|A\/S|ApS|AS|Oy|S\.?A\.?S?|S\.?r\.?l\.?|S\.?p\.?A\.?|S\.?L\.?U?|sp\.?\s?z\s?o\.?\s?o\.?|s\.?r\.?o\.?|Kft|plc|Co\.)(\b|$)/i;
+
+/**
+ * "Rep GmbH, street, city, Land für Producer Ltd, street, city, Land":
+ * the producer's name and country, and the representative's name.
+ */
+export function earParty(cell) {
+  const [rep, producer] = String(cell ?? "").split(/\s+für\s+/);
+  const parts = s => (s ?? "").split(",").map(p => p.trim());
+  const main = parts(producer ?? rep);
+  return {
+    org: main[0] ?? "",
+    land: main.length > 1 ? main[main.length - 1] : "",
+    via: producer ? parts(rep)[0] : "",
+  };
+}
+
+/**
+ * Cells: registration number, producer (with address), battery category,
+ * take-back scheme, market exit date. The register shows no registration
+ * date, so these are active registrants with the highest numbers, not
+ * provably new ones; the issue marker keeps each from repeating. Only
+ * European companies are kept, and the digest carries names, never
+ * addresses.
+ */
+export function earLeads(rows) {
+  const out = [];
+  for (const [reg, party, category, , exit] of rows) {
+    const number = reg.match(/\d{6,}/)?.[0];
+    const { org, land, via } = earParty(party);
+    if (!number || !org || /\d{2}\.\d{2}\.\d{4}/.test(exit ?? "")) continue;
+    if (!EAR_EUROPE.test(land) || !COMPANY_FORM.test(org)) continue;
+    out.push({
+      id: `ear:${number}`,
+      source: "ear",
+      org,
+      title: `Battery registrant ${number}${category ? `: ${category}` : ""}`,
+      detail: via ? `registered via ${via}` : "",
+      country: land,
+      url: EAR_URL.replace(/\.jsf$/, ""),
+      offer: "dpp_readiness",
+      channel: "no-email",
+    });
+  }
+  return out;
+}
+
+export async function fetchEar({ fetchImpl = fetch } = {}) {
+  let cookie = "";
+  const go = async (url, form) => {
+    const res = await fetchImpl(url, {
+      method: form ? "POST" : "GET",
+      headers: {
+        "User-Agent": UA,
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(form
+          ? { "Content-Type": "application/x-www-form-urlencoded" }
+          : {}),
+      },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const set = res.headers.get("set-cookie");
+    if (set) cookie = set.split(";")[0];
+    const text = await res.text();
+    if (!res.ok) throw new Error(`${res.status} ${text.slice(0, 120)}`);
+    return text;
+  };
+  const press = async (html, label, overrides = {}) => {
+    const button = jsfButton(html, label);
+    if (!button) return null;
+    const { action, fields } = jsfForm(html);
+    const form = fields.map(([k, v]) => [k, k in overrides ? overrides[k] : v]);
+    form.push([button, "x"]);
+    return go(new URL(action, EAR_URL).toString(), form);
+  };
+
+  let html = await go(EAR_URL);
+  const nameField = jsfForm(html).fields.find(([k]) =>
+    /herstellername$/.test(k)
+  )?.[0];
+  if (!nameField) throw new Error("search form not found");
+  html = await press(html, /^Hersteller/, { [nameField]: "*" });
+  if (!html) throw new Error("search button not found");
+  // Newest registrations carry the highest numbers: sort that column
+  // descending, then show 100 rows.
+  for (
+    let i = 0;
+    i < 2 &&
+    !/sortable-desc[^>]*value="Batt-Reg|value="Batt-Reg[^"]*"[^>]*sortable-desc/.test(
+      html
+    );
+    i++
+  ) {
+    html = (await press(html, /^Batt-Reg/)) ?? html;
+  }
+  html = (await press(html, "100")) ?? html;
+  const rows = earRows(html);
+  if (!rows.length) throw new Error("no rows in the register table");
+  // Most top numbers are marketplace sellers outside Europe; read a few more
+  // pages until there are enough European companies to fill the weekly cap.
+  for (let page = 2; page <= 5 && earLeads(rows).length < 40; page++) {
+    const next = await press(html, ">");
+    if (!next) break;
+    html = next;
+    rows.push(...earRows(html));
+  }
+  return earLeads(rows);
 }
 
 // ---------- assemble ----------
 
+// Sources that return a long list are capped after dedupe, so each week
+// surfaces the next unreported ones instead of the same top of the list.
+export const SOURCE_CAPS = { ear: 15 };
+
 export function dedupe(leads, seenIds = new Set()) {
   const out = [];
   const ids = new Set();
+  /** @type {Record<string, number>} */
+  const counts = {};
   for (const l of leads) {
     if (!l || !l.id || ids.has(l.id) || seenIds.has(l.id) || isExcluded(l))
       continue;
+    const cap = SOURCE_CAPS[l.source];
+    if (cap && (counts[l.source] ?? 0) >= cap) continue;
+    counts[l.source] = (counts[l.source] ?? 0) + 1;
     ids.add(l.id);
     out.push(l);
   }
@@ -367,6 +798,10 @@ export function opener(lead) {
       return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
+    case "ear":
+      return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about the battery passport their batteries need from February 2027; ${o.label} is the first step: ${o.url}`;
+    case "dcc":
+      return `Congratulations on the new California cultivation licence. If you breed or hold cultivars worth proving, ${o.label} gives each cultivar a verifiable provenance record: ${o.url}`;
     case "jobs":
       return `Saw ${lead.org} is hiring for "${lead.title.replace(/^Hiring: /, "")}". While the seat is open, ${o.label} covers the first pass: ${o.url}`;
     default:
@@ -378,7 +813,9 @@ const SOURCE_NAMES = {
   ted: "EU tenders",
   ftc: "Made in USA enforcement",
   jobs: "Hiring signals",
+  boards: "Company career boards",
   dcc: "California cannabis licences",
+  ear: "German battery registrants (no email)",
 };
 
 export function render(leads, status, weekOf) {
@@ -449,13 +886,12 @@ async function gh(path, { method = "GET", token, body } = {}) {
 }
 
 /**
- * @param {{ now?: Date, windowDays?: number, fetchImpl?: typeof fetch, env?: Record<string, string | undefined> }} [opts]
+ * @param {{ now?: Date, windowDays?: number, fetchImpl?: typeof fetch }} [opts]
  */
 export async function collect({
   now = new Date(),
   windowDays = 8,
   fetchImpl,
-  env = process.env,
 } = {}) {
   const since = daysAgo(windowDays, now);
   /** @type {Record<string, string>} */
@@ -474,9 +910,15 @@ export async function collect({
   await run("ted", () => fetchTed({ since, fetchImpl }));
   await run("ftc", () => fetchFtc({ since, fetchImpl }));
   await run("jobs", () => fetchJobs({ since, fetchImpl }));
-  const dcc = await fetchDcc({ env });
-  status.dcc = dcc.skipped ? `skipped: ${dcc.skipped}` : `${dcc.length} found`;
-  if (Array.isArray(dcc)) leads.push(...dcc);
+  try {
+    const ats = await fetchAts({ since, fetchImpl });
+    leads.push(...ats);
+    status.boards = `${ats.length} found on ${ats.resolved} of ${ats.seeds} company boards`;
+  } catch (e) {
+    status.boards = `error: ${String(e.message).slice(0, 160)}`;
+  }
+  await run("dcc", () => fetchDcc({ since, fetchImpl }));
+  await run("ear", () => fetchEar({ fetchImpl }));
   return { leads, status };
 }
 
