@@ -26,3 +26,5 @@ jobs:
           git add pnpm-lock.yaml
           git commit -m "chore(deps): regenerate pnpm lockfile"
           git push
+
+# trigger lock generation
