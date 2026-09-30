@@ -37,6 +37,40 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_CONFIG: .gitleaks.toml
 
+  # Same job-level-if-cannot-see-matrix constraint documented below applies
+  # here too: this cannot live as a per-worker step inside `deploy`, because
+  # by the time a step runs, the job it's in must already have been allowed
+  # to start. A worker earns a place in AUTO_DEPLOY_WORKERS by having its own
+  # local test suite covering an external judge's checks (gs1-resolver's is
+  # workers/gs1-resolver/src/conformance.test.ts, mirroring GS1's hosted
+  # suite) — not just CI type/lint, which every worker already has.
+  detect-autodeploy:
+    name: Detect auto-deploy-eligible workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      workers: ${{ steps.filter.outputs.workers }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - name: Which allow-listed workers changed
+        id: filter
+        env:
+          AUTO_DEPLOY_WORKERS: '["gs1-resolver"]'
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "workers=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- workers/ | cut -d/ -f2 | sort -u)
+          workers=$(jq -nc --argjson allow "$AUTO_DEPLOY_WORKERS" --arg changed "$changed" \
+            '$allow - ($allow - (($changed | split("\n")) - [""]))')
+          echo "workers=${workers}" >> "$GITHUB_OUTPUT"
+          echo "auto-deploy eligible: ${workers}"
+
   # GitHub evaluates jobs.<id>.if BEFORE strategy expands, so a job-level
   # `if: matrix.worker != 'authichain-agentz'` fails the entire workflow graph
   # (Unrecognized named-value: 'matrix', 0 jobs, "This workflow graph cannot
@@ -45,7 +79,8 @@ jobs:
   deploy-matrix:
     name: Build worker matrix
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: [detect-autodeploy]
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || needs.detect-autodeploy.outputs.workers != '[]' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
