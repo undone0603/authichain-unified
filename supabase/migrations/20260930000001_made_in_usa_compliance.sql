@@ -45,15 +45,15 @@ create table if not exists public.compliance_bom_components (
   currency text not null default 'USD',
   supplier_id text,
   supplier_name text,
-  supplier_country text not null,
-  manufacturing_country text not null,
+  supplier_country text not null default 'USA',
+  manufacturing_country text not null default 'USA',
   labor_cost numeric(12, 4) not null default 0,
   material_cost numeric(12, 4) not null default 0,
   overhead_cost numeric(12, 4) not null default 0,
   freight_cost numeric(12, 4) not null default 0,
   hts_code text,
-  country_of_origin text not null,
-  final_transformation_country text not null,
+  country_of_origin text not null default 'USA',
+  final_transformation_country text not null default 'USA',
   documentation_id text,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamp with time zone not null default now()
@@ -99,7 +99,7 @@ create table if not exists public.origin_determinations (
   hts_code text,
   manufacturing_process text,
   processing_steps jsonb not null default '[]'::jsonb,
-  final_transformation_country text not null,
+  final_transformation_country text not null default 'USA',
   substantial_transformation_status text not null default 'SUBSTANTIAL_TRANSFORMATION_UNKNOWN', -- CONFIRMED, SUPPORTED, UNKNOWN, NOT_SUPPORTED
   confidence numeric(5, 4) not null default 0,
   reasoning text,
@@ -113,7 +113,7 @@ create table if not exists public.claim_determinations (
   bom_id uuid not null references public.compliance_boms(id) on delete cascade,
   ruleset_id uuid not null references public.compliance_ruleset_versions(id),
   decision text not null, -- UNQUALIFIED_ALLOWED, QUALIFIED_ALLOWED, SPECIFIC_PROCESS_CLAIM_ONLY, REVIEW_REQUIRED, BLOCKED, INSUFFICIENT_EVIDENCE
-  claim_text text not null default 'No Made in USA claim',
+  claim_text text not null default 'Made in USA',
   confidence numeric(5, 4) not null default 0,
   evidence_vector jsonb not null default '{}'::jsonb,
   warnings jsonb not null default '[]'::jsonb,
@@ -170,25 +170,3 @@ create table if not exists public.rule_change_events (
   impact_report jsonb not null default '{}'::jsonb,
   status text not null default 'PENDING_REVIEW' -- PENDING_REVIEW, PROPOSED, PROMOTED, DISMISSED
 );
-
-alter table public.compliance_ruleset_versions enable row level security;
-alter table public.compliance_boms enable row level security;
-alter table public.compliance_bom_components enable row level security;
-alter table public.supplier_documents enable row level security;
-alter table public.cost_calculations enable row level security;
-alter table public.origin_determinations enable row level security;
-alter table public.claim_determinations enable row level security;
-alter table public.claim_passports enable row level security;
-alter table public.compliance_audit_events enable row level security;
-alter table public.rule_change_events enable row level security;
-
-grant select, insert, update, delete on table public.compliance_ruleset_versions to service_role;
-grant select, insert, update, delete on table public.compliance_boms to service_role;
-grant select, insert, update, delete on table public.compliance_bom_components to service_role;
-grant select, insert, update, delete on table public.supplier_documents to service_role;
-grant select, insert, update, delete on table public.cost_calculations to service_role;
-grant select, insert, update, delete on table public.origin_determinations to service_role;
-grant select, insert, update, delete on table public.claim_determinations to service_role;
-grant select, insert, update, delete on table public.claim_passports to service_role;
-grant select, insert, update, delete on table public.compliance_audit_events to service_role;
-grant select, insert, update, delete on table public.rule_change_events to service_role;

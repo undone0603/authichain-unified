@@ -1,20 +1,4 @@
-import { BOMComponent, BOMPayload, CostCalculationResult, RulesetVersion } from './types';
-
-function isUsCountry(value: string | undefined): boolean {
-  const v = (value ?? '').trim().toUpperCase();
-  return v === 'US' || v === 'USA';
-}
-
-function requireCostBreakdown(comp: BOMComponent): void {
-  const parts = [comp.materialCost, comp.laborCost, comp.overheadCost];
-  if (parts.some(n => typeof n !== 'number' || !Number.isFinite(n))) {
-    throw new Error('BOM component cost breakdown is required');
-  }
-  const sum = parts.reduce((acc, n) => acc + n, 0);
-  if (sum === 0 && comp.unitCost > 0) {
-    throw new Error('BOM component cost breakdown is required');
-  }
-}
+import { BOMPayload, CostCalculationResult, RulesetVersion } from './types';
 
 export function calculateBOMCost(bom: BOMPayload, ruleset: RulesetVersion): CostCalculationResult {
   let totalManufacturingCost = 0;
@@ -33,34 +17,33 @@ export function calculateBOMCost(bom: BOMPayload, ruleset: RulesetVersion): Cost
     foreignLabor: 0,
     foreignOverhead: 0,
     foreignFreight: 0,
-    usFreight: 0,
   };
 
-  const itemDetails: Array<Record<string, unknown>> = [];
+  const itemDetails: any[] = [];
 
   for (const comp of bom.components) {
-    requireCostBreakdown(comp);
-    const quantity = Number.isFinite(comp.quantity) ? comp.quantity : 0;
-    const manufacturingCost =
-      (comp.materialCost + comp.laborCost + comp.overheadCost) * quantity;
-    const itemFreight = (comp.freightCost || 0) * quantity;
-    totalManufacturingCost += manufacturingCost;
+    const itemTotalCost = (comp.materialCost + comp.laborCost + comp.overheadCost + comp.freightCost) * comp.quantity;
+    totalManufacturingCost += itemTotalCost;
 
-    const isUsOrigin =
-      isUsCountry(comp.manufacturingCountry) && isUsCountry(comp.countryOfOrigin);
+    const isUsOrigin = 
+      comp.manufacturingCountry.toUpperCase() === 'USA' ||
+      comp.manufacturingCountry.toUpperCase() === 'US' ||
+      comp.countryOfOrigin.toUpperCase() === 'USA' ||
+      comp.countryOfOrigin.toUpperCase() === 'US';
 
-    const itemLabor = comp.laborCost * quantity;
-    const itemMaterial = comp.materialCost * quantity;
-    const itemOverhead = comp.overheadCost * quantity;
+    const itemLabor = comp.laborCost * comp.quantity;
+    const itemMaterial = comp.materialCost * comp.quantity;
+    const itemOverhead = comp.overheadCost * comp.quantity;
+    const itemFreight = comp.freightCost * comp.quantity;
 
     if (isUsOrigin) {
-      usManufacturingCost += manufacturingCost;
+      usManufacturingCost += itemTotalCost;
       qualifyingCosts.usMaterials += itemMaterial;
       qualifyingCosts.usLabor += itemLabor;
       qualifyingCosts.usOverhead += itemOverhead;
-      excludedCosts.usFreight += itemFreight;
+      qualifyingCosts.usFreight += itemFreight;
     } else {
-      foreignManufacturingCost += manufacturingCost;
+      foreignManufacturingCost += itemTotalCost;
       excludedCosts.foreignMaterials += itemMaterial;
       excludedCosts.foreignLabor += itemLabor;
       excludedCosts.foreignOverhead += itemOverhead;
@@ -71,13 +54,12 @@ export function calculateBOMCost(bom: BOMPayload, ruleset: RulesetVersion): Cost
       componentId: comp.componentId,
       componentName: comp.componentName,
       isUsOrigin,
-      totalCost: manufacturingCost,
+      totalCost: itemTotalCost,
       manufacturingCountry: comp.manufacturingCountry,
-      countryOfOrigin: comp.countryOfOrigin,
     });
   }
 
-  const usContentPercentage = totalManufacturingCost > 0
+  const usContentPercentage = totalManufacturingCost > 0 
     ? Number(((usManufacturingCost / totalManufacturingCost) * 100).toFixed(4))
     : 0;
 

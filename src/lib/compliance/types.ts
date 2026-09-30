@@ -14,8 +14,7 @@ export type PassportStatus =
   | 'EXPIRED'
   | 'SUPERSEDED'
   | 'SUSPENDED'
-  | 'REVIEW_REQUIRED'
-  | 'BLOCKED';
+  | 'REVIEW_REQUIRED';
 
 export type SignatureStatus =
   | 'SIGNATURE_PRESENT'
@@ -86,7 +85,6 @@ export interface SupplierDocumentPayload {
   extractedFields: Record<string, any>;
   ocrConfidence: number;
   signatureStatus: SignatureStatus;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'REVIEW_REQUIRED';
 }
 
 export interface CostCalculationResult {

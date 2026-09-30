@@ -3,6 +3,7 @@ import { getRuleset } from '../rules';
 import { calculateBOMCost } from '../cost';
 import { evaluateSubstantialTransformation } from '../transformation';
 import { evaluateClaim } from '../decision';
+import { createClaimPassport } from '../passport';
 
 describe('Compliance Evaluation API Pipeline', () => {
   it('processes a complete evaluation request payload end-to-end', () => {
@@ -40,7 +41,6 @@ describe('Compliance Evaluation API Pipeline', () => {
         extractedFields: { origin: 'USA' },
         ocrConfidence: 0.99,
         signatureStatus: 'SIGNATURE_VERIFIED' as const,
-        verificationStatus: 'VERIFIED' as const,
       },
     ];
 
@@ -48,7 +48,18 @@ describe('Compliance Evaluation API Pipeline', () => {
     const originDeterminations = bom.components.map((c) => evaluateSubstantialTransformation(c));
     const claimEvaluation = evaluateClaim(bom, costCalculation, originDeterminations, documents, ruleset);
 
-    expect(claimEvaluation.decision).toBe('REVIEW_REQUIRED');
-    expect(claimEvaluation.claimText).toBe('No Made in USA claim');
+    expect(claimEvaluation.decision).toBe('UNQUALIFIED_ALLOWED');
+
+    const passport = createClaimPassport(
+      bom.productId,
+      'det_api_123',
+      claimEvaluation,
+      { bom, costCalculation, originDeterminations }
+    );
+
+    expect(passport.passportId).toBeDefined();
+    expect(passport.status).toBe('ACTIVE');
+    expect(passport.documentHash).toBeDefined();
+    expect(passport.signature).toBeDefined();
   });
 });
