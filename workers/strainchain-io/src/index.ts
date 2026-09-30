@@ -1827,6 +1827,7 @@ const APP_PATHS = [
   /^\/genetics(?:\/|$)/,
   /^\/passport(?:\/|$)/,
   /^\/onboard(?:\/|$)/,
+  /^\/api\/strainchain\/stats$/,
 ];
 
 /**

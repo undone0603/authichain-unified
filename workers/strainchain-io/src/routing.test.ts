@@ -517,3 +517,39 @@ test("trailing-slash stripping is linear, not quadratic", () => {
     "must not degrade on a long slash run"
   );
 });
+
+test("/api/strainchain/stats proxies the canonical JSON handler", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response(JSON.stringify({
+      lab_tests: 2,
+      total_chain_events: 4,
+      dispensary_receipts: 1,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const res = await get("/api/strainchain/stats");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), "application/json");
+    assert.deepEqual(await res.json(), {
+      lab_tests: 2,
+      total_chain_events: 4,
+      dispensary_receipts: 1,
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).host, "app.example.com");
+    assert.equal(new URL(calls[0].url).pathname, "/api/strainchain/stats");
+    assert.equal(calls[0].headers.get("X-Forwarded-Host"), "strainchain.io");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
