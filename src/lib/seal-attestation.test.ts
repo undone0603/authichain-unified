@@ -1,13 +1,11 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { attestSeal } from "./seal-attestation";
 
 const fixture = JSON.parse(
   readFileSync(
-    new URL(
-      "../../protocol/conformance/fixtures/valid-anchored-polygon.json",
-      import.meta.url
-    ),
+    resolve(process.cwd(), "protocol/conformance/fixtures/valid-anchored-polygon.json"),
     "utf8"
   )
 ) as { record: Record<string, unknown>; anchor: Record<string, unknown> };
