@@ -134,7 +134,11 @@ class LimitProofLLM:
         self.providers = [
             ("groq", self._get_groq),
             ("local-lmstudio", self._get_lmstudio),
-            ("local-lmstudio-fallback", self._get_lmstudio_fallback),
+        ] + (
+            [("local-lmstudio-fallback", self._get_lmstudio_fallback)]
+            if os.environ.get("LOCAL_MODEL_ID_FALLBACK")
+            else []
+        ) + [
             ("local-ollama", self._get_ollama),
             ("gemini-2.0-flash", self._get_gemini),
             ("cerebras-llama3.1", self._get_cerebras),
