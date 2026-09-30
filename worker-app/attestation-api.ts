@@ -9,8 +9,14 @@ import {
 } from "../packages/verifier/src/index";
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
+import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 async function loadPrivateKey(env?: AttestationEnv) {
   const resolved = await resolveAttestationKey(env);
@@ -108,6 +114,85 @@ export function registerAttestationApi<
   app.get("/api/v1/attestation", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
   app.get("/api/attest", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
   app.get("/api/attestations", c => c.json(ATTESTATION_INDEX, 200, NO_STORE));
+
+  app.get("/api/v1/attestations/:id/status", async c => {
+    const attestationId = decodeURIComponent(c.req.param("id"));
+    const result = await getCurrentAttestationStatus(c.env as AttestationRegistryEnv, attestationId);
+    if (!result.ok) return c.json({ error: result.error }, result.status, NO_STORE);
+    return c.json({
+      attestation_id: attestationId,
+      claim_status: result.status?.claimStatus ?? "active",
+      status: result.status,
+      durable: true,
+    }, 200, NO_STORE);
+  });
+
+  app.post("/api/v1/attestations/:id/revoke", async c => {
+    const auth = await authorizeIssuerRequest(
+      c.req.header("authorization"),
+      c.env as IssuerEnv,
+    );
+    if (!auth.ok) return c.json({ error: auth.error }, 401, NO_STORE);
+
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    if (typeof body.jws !== "string" || !body.jws.trim()) {
+      return c.json({ error: "jws is required" }, 400, NO_STORE);
+    }
+    const reasonCode =
+      typeof body.reason_code === "string" ? body.reason_code.trim().slice(0, 120) : undefined;
+
+    let publicJwk: Record<string, unknown>;
+    try {
+      ({ publicJwk } = await loadPrivateKey(c.env));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "key unavailable" }, 503, NO_STORE);
+    }
+
+    let attestation;
+    try {
+      attestation = await inspectAttestationJws(body.jws.trim(), publicJwk);
+    } catch (error) {
+      return c.json({
+        error: error instanceof Error ? error.message : "invalid signature",
+      }, 400, NO_STORE);
+    }
+
+    const attestationId = decodeURIComponent(c.req.param("id"));
+    if (attestation.attestation_id !== attestationId) {
+      return c.json({ error: "attestation id does not match jws" }, 400, NO_STORE);
+    }
+
+    const issuerId = attestation.issuer.id;
+    const issuer = await getIssuer(c.env as AttestationRegistryEnv, issuerId);
+    if (!issuer.ok) return c.json({ error: issuer.error }, issuer.status, NO_STORE);
+    if (issuer.issuer.status === "retired") {
+      return c.json({ error: "issuer retired" }, 403, NO_STORE);
+    }
+
+    const subjectHash = `sha256:${await sha256Hex(JSON.stringify(attestation.subject))}`;
+    const evidenceDigest =
+      Array.isArray(attestation.evidence) && typeof attestation.evidence[0]?.digest === "string"
+        ? attestation.evidence[0].digest
+        : undefined;
+
+    const event = await recordStatusEvent(c.env as AttestationRegistryEnv, {
+      eventType: "attestation.revoked",
+      attestationId,
+      issuerId,
+      ...(reasonCode ? { reasonCode } : {}),
+      subjectHash,
+      ...(evidenceDigest ? { evidenceDigest } : {}),
+    });
+    if (!event.ok) return c.json({ error: event.error }, event.status, NO_STORE);
+
+    return c.json({
+      attestation_id: attestationId,
+      claim_status: "revoked",
+      event_id: event.eventId,
+      issuer_id: issuerId,
+      reason_code: reasonCode,
+    }, 200, NO_STORE);
+  });
 
   app.post("/api/attest", c => rewrite(c, "/api/v1/attestation"));
   app.put("/api/attest", c => rewrite(c, "/api/v1/attestation"));
