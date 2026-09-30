@@ -10,7 +10,7 @@ import {
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
-type AttestationRegistry = {
+export type AttestationRegistry = {
   getCurrentStatus: (env: AttestationRegistryEnv, attestationId: string) => ReturnType<typeof getCurrentAttestationStatus>;
   getIssuer: (env: AttestationRegistryEnv, issuerId: string) => ReturnType<typeof getIssuer>;
   recordStatusEvent: typeof recordStatusEvent;
