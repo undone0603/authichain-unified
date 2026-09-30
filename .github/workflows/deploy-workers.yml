@@ -307,9 +307,12 @@ jobs:
       # GS1_RESOLVER_ISSUE_SECRET). docs/OPERATING_CHARTER.md: secrets
       # rotation always waits for the owner; this step performs no rotation,
       # only a mechanical bind of an existing value, same as the Stripe/X402
-      # binds above. Until the owner sets that secret, POST /issue on
-      # gs1-resolver keeps returning 503 issuing_disabled -- resolving
-      # existing seals is unaffected either way.
+      # binds above. ISSUE_SECRET is currently set directly in the Cloudflare
+      # dashboard (rotated 2026-09-30) -- POST /issue works today against
+      # that value regardless of whether this step ever runs. Setting
+      # GS1_RESOLVER_ISSUE_SECRET here will OVERWRITE that dashboard value on
+      # the next deploy -- once set, rotate it with `gh secret set`, not in
+      # the dashboard, or the two will drift.
       - name: Bind ISSUE_SECRET on gs1-resolver
         if: |
           matrix.worker == 'gs1-resolver' &&
@@ -323,7 +326,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${ISSUE_SECRET:-}" ]; then
-            echo "skip ISSUE_SECRET (GitHub secret GS1_RESOLVER_ISSUE_SECRET not set -- /issue stays 503 issuing_disabled)"
+            echo "skip ISSUE_SECRET (GitHub secret GS1_RESOLVER_ISSUE_SECRET not set -- dashboard-set value stays in place)"
             exit 0
           fi
           printf '%s' "$ISSUE_SECRET" | npx wrangler secret put ISSUE_SECRET --name gs1-resolver
