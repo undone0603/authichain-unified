@@ -42,18 +42,42 @@ jobs:
   # (Unrecognized named-value: 'matrix', 0 jobs, "This workflow graph cannot
   # be shown."). Build the list here instead: $0 default omits agentz;
   # workflow_dispatch + deploy_agentz_containers=true appends it (Workers Paid).
+  #
+  # This job now also runs on a plain push (CLOUDFLARE_DEPLOY_ENABLED off,
+  # not workflow_dispatch) to narrow `workers` down to whichever
+  # AUTO_DEPLOY_ALLOWLIST worker(s) actually changed -- or to `[]` if none
+  # did, or if the diff step below hits any error (a shallow-clone edge
+  # case, a force-push, anything). An allow-listed worker earns its place by
+  # having its own local test suite covering an external judge's checks
+  # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
+  # mirroring GS1's hosted suite) -- not just CI type/lint, which every
+  # worker already has. `deploy` below consumes whatever this outputs
+  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED or workflow_dispatch),
+  # a narrowed one-or-few-worker list (auto-deploy), or an empty one (a
+  # plain push touching no allow-listed worker, or nothing to narrow) --
+  # so no per-step gating anywhere below this job needs to change, and no
+  # *other* worker's bind step can ever run on the auto-deploy path, because
+  # no other worker is ever in that path's matrix.
   deploy-matrix:
     name: Build worker matrix
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     timeout-minutes: 5
     outputs:
       workers: ${{ steps.build.outputs.workers }}
     steps:
-      - name: Select workers ($0 default; AgentZ opt-in)
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Select workers ($0 default; AgentZ opt-in; auto-deploy narrows on a plain push)
         id: build
         env:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
+          CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # Keep this list aligned with workers/* that should auto-deploy on
@@ -108,17 +132,36 @@ jobs:
           if [ "${DEPLOY_AGENTZ}" = "true" ]; then
             workers=$(jq -nc --argjson w "${workers}" '$w + ["authichain-agentz"]')
           fi
-          echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
-          if [ "${DEPLOY_AGENTZ}" = "true" ]; then
-            echo "deploy matrix (agentz opt-in): ${workers}"
-          else
-            echo "deploy matrix (\$0 default, agentz omitted): ${workers}"
+
+          if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+            if [ "${DEPLOY_AGENTZ}" = "true" ]; then
+              echo "deploy matrix (agentz opt-in): ${workers}"
+            else
+              echo "deploy matrix (\$0 default, agentz omitted): ${workers}"
+            fi
+            exit 0
           fi
+
+          # Auto-deploy path: CLOUDFLARE_DEPLOY_ENABLED is off and this
+          # isn't a workflow_dispatch, so only an explicitly allow-listed
+          # worker (see the job comment above and
+          # scripts/ci/select-autodeploy-workers.mjs, which owns the
+          # allowlist and is unit-tested) may deploy, and only if it
+          # actually changed in this push. That script never throws -- a
+          # shallow clone missing PUSH_BEFORE, a force-push, anything falls
+          # back to an empty matrix, "nothing auto-deploys this round",
+          # never a job failure that could be confused with a real deploy
+          # problem -- so no `|| true` / `2>/dev/null` fallback is needed
+          # here.
+          eligible=$(node scripts/ci/select-autodeploy-workers.mjs)
+          echo "workers=${eligible}" >> "${GITHUB_OUTPUT}"
+          echo "deploy matrix (auto-deploy, narrowed to changed allow-listed workers): ${eligible}"
 
   deploy:
     runs-on: ubuntu-latest
     needs: [secret-scan, deploy-matrix]
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     strategy:
       fail-fast: false
       matrix:
