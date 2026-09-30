@@ -90,6 +90,7 @@
         "branch-hygiene.yml": "on",
         "pipeline-tick.yml": "on",
         "genesis-cron.yml": "on",
+        "gs1-conformance-pulse.yml": "on",
         "trust-lab.yml": "on",
         "estate-drift.yml": "on"
       }
