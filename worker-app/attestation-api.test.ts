@@ -136,6 +136,55 @@ describe("registerAttestationApi", () => {
     expect(check.valid).toBe(true);
   });
 
+  it("durable revocation makes a previously valid JWS invalid", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(signed.status).toBe(200);
+    const { jws } = await signed.json() as { jws: string };
+
+    const before = await app.request("/api/v1/attestations/test/status");
+    expect(before.status).toBe(200);
+    expect((await before.json() as { claim_status: string }).claim_status).toBe("active");
+
+    const revoke = await app.request(
+      `/api/v1/attestations/${encodeURIComponent(SAMPLE.attestation_id)}/revoke`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+        },
+        body: JSON.stringify({ jws, reason_code: "test_revoke" }),
+      },
+    );
+    expect(revoke.status).toBe(200);
+    expect((await revoke.json() as { claim_status: string }).claim_status).toBe("revoked");
+
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(verify.status).toBe(409);
+    expect(await verify.json()).toMatchObject({
+      valid: false,
+      status: "revoked",
+      reasons: ["durable_status_revoked"],
+    });
+  });
+
   it("GET /api/v1/attestation and aliases return the contract index", async () => {
     const app = new Hono();
     registerAttestationApi(app);
