@@ -10,8 +10,6 @@ import {
 import { resolveAttestationKey, type AttestationEnv } from "./jwks";
 import { authorizeIssuerRequest, type IssuerEnv } from "./issuer";
 import { getCurrentAttestationStatus, getIssuer, recordStatusEvent, type AttestationRegistryEnv } from "./attestation-registry";
-import type { AttestationIssuer, AttestationStatusRecord } from "../protocol/attestation/trust-registry";
-
 type AttestationRegistry = {
   getCurrentStatus: (env: AttestationRegistryEnv, attestationId: string) => ReturnType<typeof getCurrentAttestationStatus>;
   getIssuer: (env: AttestationRegistryEnv, issuerId: string) => ReturnType<typeof getIssuer>;
@@ -55,6 +53,7 @@ async function verifyResponse(
   body: unknown,
   publicJwk: Record<string, unknown>,
   env: AttestationRegistryEnv,
+  registry: AttestationRegistry,
 ): Promise<{ status: 200 | 400 | 409 | 503; payload: Record<string, unknown> }> {
   const input = (body ?? {}) as Record<string, unknown>;
   const jws = input.jws;
@@ -77,7 +76,7 @@ async function verifyResponse(
     };
   }
   const evaluation = evaluateAttestation(attestation);
-  const durable = await getCurrentAttestationStatus(env, attestation.attestation_id);
+  const durable = await registry.getCurrentStatus(env, attestation.attestation_id);
   if (!durable.ok) {
     return {
       status: durable.status as 503,
@@ -91,14 +90,15 @@ async function verifyResponse(
   const reasons = durableStatus && durableStatus !== "active"
     ? [...evaluation.reasons, `durable_status_${durableStatus}`]
     : evaluation.reasons;
+  const effectiveStatus = durableStatus ?? evaluation.status;
   return {
-    status: evaluation.valid ? 200 : 409,
+    status: valid ? 200 : 409,
     payload: {
       valid,
       contract: "AuthiChain Attestation Contract",
       version: "0.1",
       decision: evaluation.decision,
-      status: evaluation.status,
+      status: effectiveStatus,
       expired: evaluation.expired,
       reasons,
       signature: "valid",
@@ -283,7 +283,7 @@ export function registerAttestationApi<
         NO_STORE
       );
     }
-    const { status, payload } = await verifyResponse(body, publicJwk, c.env as AttestationRegistryEnv);
+    const { status, payload } = await verifyResponse(body, publicJwk, c.env as AttestationRegistryEnv, registry);
     return c.json(payload, status, NO_STORE);
   });
 
@@ -300,6 +300,7 @@ export function registerAttestationApi<
       body,
       resolved.key.publicJwk,
       c.env as AttestationRegistryEnv,
+      registry,
     );
     return c.json(payload, status, NO_STORE);
   });
