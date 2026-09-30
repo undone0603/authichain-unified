@@ -2,9 +2,39 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { Hono } from "hono";
 import { exportPKCS8, generateKeyPair } from "jose";
-import { registerAttestationApi } from "./attestation-api";
+import { registerAttestationApi, type AttestationRegistry } from "./attestation-api";
 import { registerJwksRoute } from "./jwks";
 import { validateAttestation } from "../packages/verifier/src/index";
+
+function mockRegistry(): AttestationRegistry {
+  const statuses = new Map<string, { attestationId: string; claimStatus: "active" | "revoked" | "expired" | "superseded"; effectiveAt: string; reasonCode?: string; issuerId: string; eventId: string }>();
+  return {
+    getCurrentStatus: async (_env, attestationId) => ({ ok: true as const, status: statuses.get(attestationId) ?? null }),
+    getIssuer: async (_env, issuerId) => ({
+      ok: true as const,
+      issuer: {
+        issuerId,
+        organization: "AuthiChain",
+        issuerType: "service" as const,
+        jwksUri: "https://authichain.com/protocol/jwks.json",
+        status: "trusted" as const,
+        validFrom: "2026-01-01T00:00:00Z",
+      },
+    }),
+    recordStatusEvent: async (_env, input) => {
+      const eventId = "urn:authichain:event:v01:test-revocation";
+      statuses.set(input.attestationId, {
+        attestationId: input.attestationId,
+        claimStatus: input.eventType === "attestation.revoked" ? "revoked" : "active",
+        effectiveAt: new Date().toISOString(),
+        ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
+        issuerId: input.issuerId,
+        eventId,
+      });
+      return { ok: true as const, eventId };
+    },
+  };
+}
 
 const SAMPLE = {
   version: "0.1",
@@ -47,8 +77,9 @@ describe("registerAttestationApi", () => {
 
   it("POST signing requires issuer authorization", async () => {
     await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
     const app = new Hono();
-    registerAttestationApi(app);
+    registerAttestationApi(app, mockRegistry());
     const res = await app.request("/api/v1/attestation", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -77,9 +108,10 @@ describe("registerAttestationApi", () => {
 
   it("POST signs a valid attestation and PUT verifies it", async () => {
     await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
     const app = new Hono();
     registerJwksRoute(app);
-    registerAttestationApi(app);
+    registerAttestationApi(app, mockRegistry());
 
     const signed = await app.request("/api/v1/attestation", {
       method: "POST",
