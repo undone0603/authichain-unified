@@ -29,6 +29,7 @@ describe("registerAttestationApi", () => {
     delete process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
     delete process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
     delete process.env.AUTHICHAIN_ATTESTATION_PUBLIC_JWK;
+    delete process.env.CRON_SECRET;
   });
 
   async function bindKey() {
@@ -43,6 +44,36 @@ describe("registerAttestationApi", () => {
     ).toString("base64");
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "attest-api-kid";
   }
+
+  it("POST signing requires issuer authorization", async () => {
+    await bindKey();
+    const app = new Hono();
+    registerAttestationApi(app);
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "missing bearer token" });
+  });
+
+  it("POST signing accepts the existing CRON_SECRET issuer credential", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerAttestationApi(app);
+    const res = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json() as { jws: string }).jws).toBeTruthy();
+  });
 
   it("POST signs a valid attestation and PUT verifies it", async () => {
     await bindKey();
