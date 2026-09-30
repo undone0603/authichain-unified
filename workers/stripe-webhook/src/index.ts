@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { grantForPrice } from "./grant-map";
+import { grantForPrice, isFounderEmail, loopForPlan } from "./grant-map";
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
@@ -48,6 +48,70 @@ async function supabaseUpdate(
     },
     body: JSON.stringify(data),
   });
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value.toLowerCase().trim());
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Record the loop purchase event (LOOP-03 contract,
+ * docs/growth/2026-09-28-first-dollar-loops.md). This is the only event that
+ * proves revenue, and every kill criterion counts NON-founder purchases only,
+ * so the founder flag is set here rather than inferred later.
+ *
+ * Only a SHA-256 digest of the email is sent. Never throws: a missed analytics
+ * write must not cause Stripe to retry a webhook that already granted credits.
+ */
+async function recordPurchaseEvent(
+  env: Env,
+  plan: string,
+  email: string | null | undefined
+): Promise<void> {
+  const identity = loopForPlan(plan);
+  if (!identity) return; // creator, qron_launch, strainchain_farm have no loop.
+  try {
+    const body: Record<string, unknown> = {
+      p_event: identity.purchaseEvent,
+      p_loop: identity.loop,
+      p_sku: plan,
+      p_founder: isFounderEmail(email),
+      p_occurred_at: new Date().toISOString(),
+    };
+    if (email) body.p_email_hash = await sha256Hex(email);
+
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/growth_record_event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error(
+        JSON.stringify({
+          evt: "growth_event_failed",
+          event: identity.purchaseEvent,
+          status: res.status,
+          detail: await res.text(),
+        })
+      );
+    }
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        evt: "growth_event_error",
+        event: identity.purchaseEvent,
+        detail: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
 }
 
 function priceIdFromSession(session: Stripe.Checkout.Session): string | null {
@@ -135,6 +199,9 @@ export default {
           );
         }
       }
+
+      // After the grant, so a failed analytics write can never cost credits.
+      await recordPurchaseEvent(env, plan, email);
     }
 
     if (
