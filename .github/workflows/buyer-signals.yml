@@ -1,5 +1,6 @@
 # Weekly, read-only lead finder (Loop 3, growth). Pulls public buying signals
-# (EU tenders, FTC Made in USA actions, hiring posts, CA cannabis licences),
+# (EU tenders, FTC Made in USA actions and orders, CBP origin rulings, news,
+# hiring posts, CA cannabis licences, German battery registrants),
 # maps each to a live offer, and opens ONE issue labelled `buyer-signal` with
 # the leads and a draft opener per lead. It sends nothing: every outreach still
 # waits for the owner's go. See scripts/growth/buyer-signals.mjs.
