@@ -69,7 +69,7 @@ async function sha256Hex(value: string): Promise<string> {
  */
 async function recordPurchaseEvent(
   env: Env,
-  plan: string,
+  plan: string | null | undefined,
   email: string | null | undefined
 ): Promise<void> {
   const identity = loopForPlan(plan);
@@ -201,7 +201,12 @@ export default {
       }
 
       // After the grant, so a failed analytics write can never cost credits.
-      await recordPurchaseEvent(env, plan, email);
+      //
+      // Pass grant?.plan, NOT the `plan` above: that falls back to "starter"
+      // when the price is unmapped, which is harmless for the profiles upsert
+      // but would record a false purchase_starter_succeeded — the single metric
+      // the first-dollar kill decision reads. An unmapped price gets no event.
+      await recordPurchaseEvent(env, grant?.plan ?? null, email);
     }
 
     if (
