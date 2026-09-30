@@ -16,6 +16,12 @@ import {
   parseGreenhouse,
   parseLever,
   ftcLeads,
+  cbpLeads,
+  cbpUrl,
+  fedregLeads,
+  fedregUrl,
+  newsLeads,
+  newsUrl,
   idsFromBody,
   opener,
   parseArbeitnow,
@@ -105,6 +111,109 @@ describe("FTC", () => {
       date: "2026-09-24",
     });
     expect(leads[0].detail).toBe("Seven warning letters");
+  });
+});
+
+describe("Federal Register", () => {
+  it("names the ordered company and pitches its competitors", () => {
+    const url = new URL(fedregUrl(SINCE));
+    expect(url.searchParams.get("conditions[agencies][]")).toBe(
+      "federal-trade-commission"
+    );
+    expect(url.searchParams.get("conditions[publication_date][gte]")).toBe(
+      "2026-09-21"
+    );
+    const leads = fedregLeads({
+      results: [
+        {
+          document_number: "2026-19001",
+          title: "Acme Tools, Inc.; Analysis To Aid Public Comment",
+          publication_date: "2026-09-25",
+          html_url: "https://www.federalregister.gov/d/2026-19001",
+          abstract: "Consent agreement over Made in USA claims.",
+        },
+        {
+          document_number: "2026-19002",
+          title: "Data Broker LLC; Analysis To Aid Public Comment",
+          publication_date: "2026-09-25",
+          html_url: "https://www.federalregister.gov/d/2026-19002",
+          abstract: "Privacy.",
+        },
+      ],
+    });
+    expect(leads).toHaveLength(1);
+    expect(leads[0]).toMatchObject({
+      id: "fedreg:2026-19001",
+      org: "Competitors of Acme Tools, Inc.",
+      offer: "musa_claim_file",
+    });
+    expect(opener(leads[0])).toContain("every brand in that category");
+  });
+});
+
+describe("CBP origin rulings", () => {
+  it("keeps recent origin rulings and links each one", () => {
+    expect(
+      new URL(cbpUrl("substantial transformation")).searchParams.get("term")
+    ).toBe("substantial transformation");
+    const leads = cbpLeads(
+      {
+        rulings: [
+          {
+            rulingNumber: "H345678",
+            subject:
+              "Country of origin of a cordless drill; substantial transformation",
+            rulingDate: "2026-09-10T00:00:00",
+          },
+          {
+            rulingNumber: "N345000",
+            subject: "The tariff classification of a steel bracket",
+            rulingDate: "2026-09-10T00:00:00",
+          },
+          {
+            rulingNumber: "H300000",
+            subject: "Country of origin of gloves",
+            rulingDate: "2025-01-01T00:00:00",
+          },
+        ],
+      },
+      new Date("2026-08-15T00:00:00Z")
+    );
+    expect(leads).toHaveLength(1);
+    expect(leads[0]).toMatchObject({
+      id: "cbp:H345678",
+      url: "https://rulings.cbp.gov/ruling/H345678",
+      offer: "musa_claim_file",
+      date: "2026-09-10",
+    });
+    expect(opener(leads[0])).toContain("all or virtually all");
+  });
+});
+
+describe("news", () => {
+  const xml = `<rss><channel>
+    <item><title>Acme pilots a digital product passport for its jackets - Retail Weekly</title>
+      <link>https://news.google.com/a</link><pubDate>Fri, 25 Sep 2026 09:00:00 GMT</pubDate></item>
+    <item><title>Retail sales rise in September - Retail Weekly</title>
+      <link>https://news.google.com/b</link><pubDate>Fri, 25 Sep 2026 09:00:00 GMT</pubDate></item>
+  </channel></rss>`;
+
+  it("keeps only headlines that name the regulation, and splits off the outlet", () => {
+    expect(newsUrl('"battery passport"')).toContain("when%3A7d");
+    const leads = newsLeads(parseRss(xml), "dpp_readiness", SINCE);
+    expect(leads).toHaveLength(1);
+    expect(leads[0]).toMatchObject({
+      source: "news",
+      title: "Acme pilots a digital product passport for its jackets",
+      org: "Story in Retail Weekly",
+      date: "2026-09-25",
+    });
+  });
+
+  it("treats the same headline from two queries as one lead", () => {
+    const a = newsLeads(parseRss(xml), "dpp_readiness", SINCE);
+    const b = newsLeads(parseRss(xml), "dpp_readiness", SINCE);
+    expect(dedupe([...a, ...b])).toHaveLength(1);
   });
 });
 
@@ -466,6 +575,9 @@ describe("collect", () => {
     expect(status.ted).toBe("0 found");
     expect(status.ftc).toMatch(/^error: 503/);
     expect(status.jobs).toBe("0 found");
+    expect(status.fedreg).toBe("0 found");
+    expect(status.cbp).toBe("0 found");
+    expect(status.news).toBe("0 found");
     expect(status.dcc).toBe("0 found");
     expect(status.boards).toMatch(/^0 found on 0 of \d+ company boards$/);
   });

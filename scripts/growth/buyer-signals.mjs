@@ -8,6 +8,9 @@
 // Sources:
 //   ted   EU tenders (TED Search API v3, keyless)          -> dpp_readiness
 //   ftc   FTC consumer-protection press releases (RSS)     -> musa_claim_file
+//   fedreg FTC orders in the Federal Register (keyless)     -> musa_claim_file, pitch competitors
+//   cbp   CBP origin rulings (CROSS, keyless)              -> musa_claim_file
+//   news  Google News search feeds, headline must match    -> any offer
 //   jobs  Remotive + Arbeitnow public job APIs (keyless)   -> dpp_readiness | musa_claim_file
 //   boards Greenhouse / Lever / Ashby boards of seeded makers -> same mapping as jobs
 //   dcc   California cannabis licences (DCC public search API, keyless)
@@ -124,12 +127,23 @@ async function getText(url, { fetchImpl = fetch } = {}) {
 
 // ---------- TED ----------
 
+// English plus the national-language names buyers actually write, since a
+// German or French tender rarely carries the English phrase.
 export const TED_PHRASES = [
   "digital product passport",
   "product passport",
   "battery passport",
   "anti-counterfeiting",
   "product traceability",
+  "ecodesign",
+  "2024/1781",
+  "2023/1542",
+  "Digitaler Produktpass",
+  "Batteriepass",
+  "passeport numérique",
+  "passaporto digitale",
+  "pasaporte digital",
+  "digitaal productpaspoort",
 ];
 
 export function tedQuery(since) {
@@ -234,6 +248,190 @@ export function ftcLeads(items, since) {
 
 export async function fetchFtc({ since, fetchImpl } = {}) {
   return ftcLeads(parseRss(await getText(FTC_FEED, { fetchImpl })), since);
+}
+
+// ---------- news ----------
+
+// Google News search feeds, one per query, last 7 days. A story is a lead
+// only when its headline itself names the regulation or the claim, so a
+// passing mention in a long article does not count.
+export const NEWS_SEARCHES = [
+  { q: '"digital product passport"', offer: "dpp_readiness" },
+  { q: '"battery passport"', offer: "dpp_readiness" },
+  { q: "ESPR ecodesign regulation", offer: "dpp_readiness" },
+  { q: '"made in usa" claims', offer: "musa_claim_file" },
+  { q: '"made in usa" lawsuit', offer: "musa_claim_file" },
+  { q: '"cannabis genetics" breeder', offer: "strainchain_passport" },
+];
+
+export const NEWS_TERMS = {
+  dpp_readiness: DPP_TERMS,
+  musa_claim_file: MUSA_TERMS,
+  strainchain_passport: /genetic|breed|cultivar|strain/i,
+};
+
+export function newsUrl(q) {
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:7d`)}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+export function newsLeads(items, offer, since) {
+  return items
+    .filter(i => NEWS_TERMS[offer].test(i.title))
+    .filter(i => {
+      const t = Date.parse(i.date);
+      return Number.isNaN(t) || t >= since.getTime();
+    })
+    .map(i => {
+      // Google News titles end in " - Publisher".
+      const cut = i.title.lastIndexOf(" - ");
+      const headline = cut > 0 ? i.title.slice(0, cut) : i.title;
+      const outlet = cut > 0 ? i.title.slice(cut + 3) : "";
+      return {
+        source: "news",
+        id: `news:${headline.toLowerCase().replace(/\W+/g, " ").trim()}`,
+        org: outlet ? `Story in ${outlet}` : "News story",
+        title: headline,
+        date: Number.isNaN(Date.parse(i.date))
+          ? ""
+          : new Date(i.date).toISOString().slice(0, 10),
+        url: i.link,
+        offer,
+        detail: "",
+      };
+    });
+}
+
+export async function fetchNews({ since, fetchImpl } = {}) {
+  const leads = [];
+  const errors = [];
+  for (const { q, offer } of NEWS_SEARCHES) {
+    try {
+      const xml = await getText(newsUrl(q), { fetchImpl });
+      leads.push(...newsLeads(parseRss(xml), offer, since));
+    } catch (e) {
+      errors.push(`"${q}": ${e.message}`);
+    }
+  }
+  if (errors.length === NEWS_SEARCHES.length) throw new Error(errors[0]);
+  return leads;
+}
+
+// ---------- CBP origin rulings ----------
+
+// Companies that ask Customs whether their product is substantially
+// transformed in the US are working on an origin claim. The customs answer is
+// not the FTC's "all or virtually all" test for a consumer "Made in USA"
+// claim, which is exactly the gap the claim file covers. Rulings publish
+// weeks after they are dated, so this source looks back further.
+export const CBP_TERMS = ["substantial transformation", "made in the USA"];
+export const CBP_WINDOW_DAYS = 45;
+
+export function cbpUrl(term) {
+  const q = new URLSearchParams({
+    term,
+    collection: "ALL",
+    commodityGrouping: "ALL",
+    sortBy: "DATE_DESC",
+    pageSize: "30",
+    page: "1",
+  });
+  return `https://rulings.cbp.gov/api/search?${q}`;
+}
+
+export function cbpLeads(data, since) {
+  const rows = data?.rulings ?? data?.results ?? [];
+  return rows
+    .map(r => {
+      const num = String(r.rulingNumber ?? r.id ?? "").trim();
+      const date = String(r.rulingDate ?? r.date ?? "").slice(0, 10);
+      return { num, date, subject: stripHtml(r.subject ?? "") };
+    })
+    .filter(
+      r =>
+        r.num &&
+        /origin|transformation|U\.?S\.?-?(made|origin)/i.test(r.subject)
+    )
+    .filter(r => !r.date || Date.parse(r.date) >= since.getTime())
+    .map(r => ({
+      source: "cbp",
+      id: `cbp:${r.num}`,
+      org: "Requester named in the ruling letter",
+      title: `CBP origin ruling ${r.num}: ${r.subject.slice(0, 160)}`,
+      date: r.date,
+      url: `https://rulings.cbp.gov/ruling/${encodeURIComponent(r.num)}`,
+      offer: "musa_claim_file",
+      detail: r.num,
+    }));
+}
+
+export async function fetchCbp({ now = new Date(), fetchImpl } = {}) {
+  const since = daysAgo(CBP_WINDOW_DAYS, now);
+  const leads = [];
+  const errors = [];
+  for (const term of CBP_TERMS) {
+    try {
+      leads.push(
+        ...cbpLeads(await getJson(cbpUrl(term), { fetchImpl }), since)
+      );
+    } catch (e) {
+      errors.push(`"${term}": ${e.message}`);
+    }
+  }
+  if (errors.length === CBP_TERMS.length) throw new Error(errors[0]);
+  return leads;
+}
+
+// ---------- FTC orders in the Federal Register ----------
+
+// Proposed consent orders name the company ("Acme Inc.; Analysis To Aid
+// Public Comment"). The named company is already under order, so the lead is
+// its competitors in the same category, not the company itself.
+export const FEDREG_WINDOW_DAYS = 30;
+
+export function fedregUrl(since) {
+  const q = new URLSearchParams();
+  q.append("conditions[agencies][]", "federal-trade-commission");
+  q.append("conditions[term]", '"made in usa" OR "made in the usa"');
+  q.append(
+    "conditions[publication_date][gte]",
+    since.toISOString().slice(0, 10)
+  );
+  q.append("order", "newest");
+  q.append("per_page", "20");
+  for (const f of [
+    "document_number",
+    "title",
+    "publication_date",
+    "html_url",
+    "abstract",
+  ])
+    q.append("fields[]", f);
+  return `https://www.federalregister.gov/api/v1/documents.json?${q}`;
+}
+
+export function fedregLeads(data) {
+  return (data?.results ?? [])
+    .filter(d => MUSA_TERMS.test(`${d.title} ${d.abstract ?? ""}`))
+    .map(d => {
+      const named = String(d.title ?? "")
+        .split(";")[0]
+        .trim();
+      return {
+        source: "fedreg",
+        id: `fedreg:${d.document_number}`,
+        org: named ? `Competitors of ${named}` : "FTC order",
+        title: d.title,
+        date: String(d.publication_date ?? ""),
+        url: d.html_url,
+        offer: "musa_claim_file",
+        detail: stripHtml(d.abstract ?? "").slice(0, 280),
+      };
+    });
+}
+
+export async function fetchFedreg({ now = new Date(), fetchImpl } = {}) {
+  const since = daysAgo(FEDREG_WINDOW_DAYS, now);
+  return fedregLeads(await getJson(fedregUrl(since), { fetchImpl }));
 }
 
 // ---------- jobs ----------
@@ -771,7 +969,7 @@ export async function fetchEar({ fetchImpl = fetch } = {}) {
 
 // Sources that return a long list are capped after dedupe, so each week
 // surfaces the next unreported ones instead of the same top of the list.
-export const SOURCE_CAPS = { ear: 15 };
+export const SOURCE_CAPS = { ear: 15, news: 12, cbp: 10 };
 
 export function dedupe(leads, seenIds = new Set()) {
   const out = [];
@@ -798,6 +996,12 @@ export function opener(lead) {
       return `Bid decision, not a pitch: does ${o.label.split(",")[0]} work fit this tender${lead.deadline ? ` before ${lead.deadline}` : ""}? Notice: ${lead.url}`;
     case "ftc":
       return `After "${lead.title}", brands in the same category are checking their own origin claims. One SKU's claim file is ${o.label}: ${o.url}`;
+    case "fedreg":
+      return `The FTC's order in "${lead.title.split(";")[0]}" puts every brand in that category on notice. One SKU's origin claim file is ${o.label}: ${o.url}`;
+    case "cbp":
+      return `A Customs origin ruling settles the tariff question, but a "Made in USA" claim to consumers is judged by the FTC's "all or virtually all" standard. ${o.label} documents that claim: ${o.url}`;
+    case "news":
+      return `Saw "${lead.title}". If this touches your products, ${o.label} is a fast first step: ${o.url}`;
     case "ear":
       return `No email: German law needs prior consent even for B2B email. Call or write to ${lead.org} about the battery passport their batteries need from February 2027; ${o.label} is the first step: ${o.url}`;
     case "dcc":
@@ -812,6 +1016,9 @@ export function opener(lead) {
 const SOURCE_NAMES = {
   ted: "EU tenders",
   ftc: "Made in USA enforcement",
+  fedreg: "FTC orders in the Federal Register (pitch competitors)",
+  cbp: "CBP origin rulings",
+  news: "News (last 7 days)",
   jobs: "Hiring signals",
   boards: "Company career boards",
   dcc: "California cannabis licences",
@@ -909,6 +1116,9 @@ export async function collect({
   };
   await run("ted", () => fetchTed({ since, fetchImpl }));
   await run("ftc", () => fetchFtc({ since, fetchImpl }));
+  await run("fedreg", () => fetchFedreg({ now, fetchImpl }));
+  await run("cbp", () => fetchCbp({ now, fetchImpl }));
+  await run("news", () => fetchNews({ since, fetchImpl }));
   await run("jobs", () => fetchJobs({ since, fetchImpl }));
   try {
     const ats = await fetchAts({ since, fetchImpl });
