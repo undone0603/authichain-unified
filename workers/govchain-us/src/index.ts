@@ -2308,6 +2308,7 @@ export default {
         const opportunities = await fetchOpportunities(env, {
           minFit: Number(url.searchParams.get('min_fit') ?? 70),
           limit: Number(url.searchParams.get('limit') ?? 12),
+          q: url.searchParams.get('q') ?? undefined,
         });
         return jsonResponse({ opportunities });
       } catch {
