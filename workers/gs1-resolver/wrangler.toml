@@ -19,9 +19,12 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 PASSPORT_ORIGIN = "https://authichain.com"
 RESOLVER_ORIGIN = "https://id.authichain.com"
 
-# After first deploy, attach custom domain id.authichain.com in the dashboard.
-# Secrets:
-#   npx wrangler secret put ISSUE_SECRET
+# Custom domain id.authichain.com is attached in the Cloudflare dashboard
+# (done as of 2026-09-30).
+# Secret: the owner sets `gh secret set GS1_RESOLVER_ISSUE_SECRET` once;
+# deploy-workers.yml's "Bind ISSUE_SECRET on gs1-resolver" step then binds it
+# on every deploy. Until set, POST /issue returns 503 issuing_disabled --
+# resolving existing seals is unaffected.
 
 [env.staging]
 name = "gs1-resolver-staging"
