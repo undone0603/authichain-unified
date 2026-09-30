@@ -39,9 +39,11 @@ const PRICE_USD =
 
 async function dailySpentAtomic(
   payer: string,
-  priceAtomic: bigint
-): Promise<bigint> {
-  const supabase = await createClient();
+  priceAtomic: bigint,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<bigint | null> {
+  const supabase = createAdminClient(supabaseUrl, serviceKey);
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await supabase
     .from("automation_logs")
@@ -49,7 +51,7 @@ async function dailySpentAtomic(
     .eq("workflow_name", "x402_spend")
     .eq("payload", payer)
     .gt("created_at", windowStart);
-  if (error) return 0n; // fail-open on ledger read; rate limit still applies
+  if (error) return null;
   return BigInt(count || 0) * priceAtomic;
 }
 
@@ -110,24 +112,32 @@ export async function POST(request: Request) {
   }
   const { sealId } = parsed;
 
-  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
-  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(proof.payer, priceAtomic);
-  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
-    return NextResponse.json(
-      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
-      { status: 402 }
-    );
-  }
-
   // A row in auth_seals is not an attestation. verified is true only when
   // protocol/verifier.mjs returns verdict "verified" (Ed25519 + mainnet anchor).
+  // The paid ledger also requires the service role: if we cannot read it,
+  // fail closed before settlement rather than treating the spend as zero.
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) {
     return NextResponse.json({ ...X402_REGISTRY_NOT_BOUND }, { status: 503 });
   }
   const admin = createAdminClient(supabaseUrl, serviceKey);
+
+  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
+  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
+  const spent = await dailySpentAtomic(proof.payer, priceAtomic, supabaseUrl, serviceKey);
+  if (spent === null) {
+    return NextResponse.json(
+      { error: "spend_ledger_unavailable", settled: false },
+      { status: 503 }
+    );
+  }
+  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
+    return NextResponse.json(
+      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
+      { status: 402 }
+    );
+  }
   const { data: seal, error: sealError } = await admin
     .from("auth_seals")
     .select("*")
@@ -157,9 +167,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // 6. Record the spend (one row == one priced call).
-  const supabase = await createClient();
-  await supabase.from("automation_logs").insert({
+  // 6. Record the spend (one row == one priced call). Use the same privileged
+  // client as the cap read so RLS cannot silently drop the ledger entry.
+  await admin.from("automation_logs").insert({
     workflow_name: "x402_spend",
     trigger_type: "event",
     status: "success",
