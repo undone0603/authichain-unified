@@ -157,7 +157,7 @@ function esc(value: unknown): string {
   return String(value ?? "").replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
         c
       ] as string
   );
