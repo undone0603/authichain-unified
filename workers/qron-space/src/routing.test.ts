@@ -433,3 +433,41 @@ test("the 404 escapes the path, so a hostile URL cannot inject markup", async ()
     "path must be escaped"
   );
 });
+
+
+test("Nightstamp pages and APIs are proxied to the app worker", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response("nightstamp", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const paths = [
+      ["/starmap", "GET"],
+      ["/sky/nightstamp-123", "GET"],
+      ["/api/starmap/generate", "POST"],
+      ["/api/starmap/checkout", "POST"],
+      ["/api/starmap/image/nightstamp-123", "GET"],
+      ["/api/starmap/marketing", "POST"],
+    ] as const;
+    for (const [pathname, method] of paths) {
+      calls.length = 0;
+      const res = await worker.fetch(
+        new Request("https://qron.space" + pathname, { method }),
+        { APP_ORIGIN: "https://app.example.com" }
+      );
+      assert.equal(res.status, 200, pathname);
+      assert.equal(res.headers.get("x-served-by"), "qron-space-proxy", pathname);
+      assert.equal(calls.length, 1, pathname);
+      assert.equal(new URL(calls[0].url).pathname, pathname);
+      assert.equal(calls[0].method, method);
+    }
+  } finally {
+    globalThis.fetch = real;
+  }
+});
