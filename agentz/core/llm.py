@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 import logging
 import time
+import ipaddress
+from urllib.parse import urlparse
 from typing import Any, List, Optional, Union, Dict
 from langchain_openai import ChatOpenAI
 from agentz.core.credentials import get
@@ -21,13 +23,29 @@ class LMStudioManager:
     def __init__(self, base_url="http://192.168.254.10:1234"):
         self.base_url = base_url
 
+    def _local_management_headers(self) -> dict[str, str]:
+        """Send the LM Studio token only to localhost/RFC1918 endpoints."""
+        token = (
+            os.environ.get("LM_STUDIO_API_TOKEN")
+            or os.environ.get("LM_API_TOKEN")
+            or os.environ.get("LM_STUDIO_API_KEY")
+        )
+        if not token:
+            return {}
+        try:
+            host = (urlparse(self.base_url).hostname or "").lower()
+            private = host in {"localhost", "127.0.0.1", "::1"} or ipaddress.ip_address(host).is_private
+        except ValueError:
+            private = False
+        return {"Authorization": f"Bearer {token}"} if private else {}
+
     def load_model(self, model_identifier: str):
         """Loads a model via v1 API."""
         if model_identifier == "local-model":
-            model_identifier = os.environ.get("LOCAL_MODEL_ID", "gemma2:2b")
+            model_identifier = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b")
         url = f"{self.base_url}/api/v1/models/load"
         try:
-            with httpx.Client() as client:
+            with httpx.Client(headers=self._local_management_headers()) as client:
                 response = client.post(url, json={"model": model_identifier}, timeout=30.0)
                 response.raise_for_status()
                 logger.info(f"Successfully loaded model: {model_identifier}")
@@ -37,10 +55,10 @@ class LMStudioManager:
     def unload_model(self, model_identifier: str):
         """Unloads a model via v1 API."""
         if model_identifier == "local-model":
-            model_identifier = os.environ.get("LOCAL_MODEL_ID", "gemma2:2b")
+            model_identifier = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b")
         url = f"{self.base_url}/api/v1/models/unload"
         try:
-            with httpx.Client() as client:
+            with httpx.Client(headers=self._local_management_headers()) as client:
                 response = client.post(url, json={"model": model_identifier}, timeout=30.0)
                 response.raise_for_status()
                 logger.info(f"Successfully unloaded model: {model_identifier}")
@@ -211,16 +229,21 @@ class LimitProofLLM:
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(
-            model=os.environ.get("LOCAL_MODEL_ID", "gemma2:2b"),
-            temperature=self.temperature, api_key="not-needed",
+            model=os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b"),
+            temperature=self.temperature,
+            api_key=os.environ.get("LM_STUDIO_API_TOKEN") or os.environ.get("LM_API_TOKEN") or "not-needed",
             base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_lmstudio_fallback(self):
+        fallback = os.environ.get("LOCAL_MODEL_ID_FALLBACK")
+        if not fallback:
+            raise RuntimeError("LOCAL_MODEL_ID_FALLBACK not configured; use Groq/free-cloud fallback")
         llm = ChatOpenAI(
-            model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
-            temperature=self.temperature, api_key="not-needed",
+            model=fallback,
+            temperature=self.temperature,
+            api_key=os.environ.get("LM_STUDIO_API_TOKEN") or os.environ.get("LM_API_TOKEN") or "not-needed",
             base_url=self._local_base_url(), max_retries=0, timeout=self._local_timeout()
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
