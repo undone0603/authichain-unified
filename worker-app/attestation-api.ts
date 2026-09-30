@@ -131,6 +131,8 @@ const ATTESTATION_INDEX = {
     POST: "sign a v0.1 attestation",
     PUT: "verify a compact JWS",
     "POST /verify": "verify a compact JWS",
+    "POST /attestations/:id/revoke": "durably revoke an attestation",
+    "POST /attestations/:id/supersede": "durably supersede an attestation with a replacement JWS",
   },
   jwks: "/.well-known/jwks.json",
   canonical: "/api/v1/attestation",
@@ -182,6 +184,8 @@ export function registerAttestationApi<
     }
     const reasonCode =
       typeof body.reason_code === "string" ? body.reason_code.trim().slice(0, 120) : undefined;
+    const idempotencyKey = c.req.header("Idempotency-Key")?.trim().slice(0, 200) ||
+      (typeof body.idempotency_key === "string" ? body.idempotency_key.trim().slice(0, 200) : undefined);
 
     let publicJwk: Record<string, unknown>;
     try {
@@ -229,6 +233,7 @@ export function registerAttestationApi<
       ...(reasonCode ? { reasonCode } : {}),
       subjectHash,
       ...(evidenceDigest ? { evidenceDigest } : {}),
+      ...(idempotencyKey ? { idempotencyKey } : {}),
     });
     if (!event.ok) return c.json({ error: event.error }, event.status, NO_STORE);
 
@@ -253,6 +258,75 @@ export function registerAttestationApi<
   app.post("/api/v1/attestations/verify", c =>
     rewrite(c, "/api/v1/attestation/verify")
   );
+
+  app.post("/api/v1/attestations/:id/supersede", async c => {
+    const auth = await authorizeIssuerRequest(c.req.header("authorization"), c.env as IssuerEnv);
+    if (!auth.ok) return c.json({ error: auth.error }, 401, NO_STORE);
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    if (typeof body.jws !== "string" || !body.jws.trim()) {
+      return c.json({ error: "jws is required" }, 400, NO_STORE);
+    }
+    if (typeof body.replacement_jws !== "string" || !body.replacement_jws.trim()) {
+      return c.json({ error: "replacement_jws is required" }, 400, NO_STORE);
+    }
+    const attestationId = decodeURIComponent(c.req.param("id"));
+    let publicJwk: Record<string, unknown>;
+    try {
+      ({ publicJwk } = await loadPrivateKey(c.env));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "key unavailable" }, 503, NO_STORE);
+    }
+    let original;
+    let replacement;
+    try {
+      original = await inspectAttestationJws(body.jws.trim(), publicJwk);
+      replacement = await inspectAttestationJws(body.replacement_jws.trim(), publicJwk);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "invalid signature" }, 400, NO_STORE);
+    }
+    if (original.attestation_id !== attestationId) {
+      return c.json({ error: "attestation id does not match jws" }, 400, NO_STORE);
+    }
+    if (original.issuer.id !== replacement.issuer.id) {
+      return c.json({ error: "replacement issuer does not match original issuer" }, 400, NO_STORE);
+    }
+    if (original.attestation_id === replacement.attestation_id) {
+      return c.json({ error: "replacement attestation must differ" }, 400, NO_STORE);
+    }
+    const issuerId = original.issuer.id;
+    const issuer = await registry.getIssuer(c.env as AttestationRegistryEnv, issuerId);
+    if (!issuer.ok) return c.json({ error: issuer.error }, issuer.status, NO_STORE);
+    const issuerNow = Date.now();
+    const issuerActive = issuer.issuer.status === "trusted" &&
+      Date.parse(issuer.issuer.validFrom) <= issuerNow &&
+      (!issuer.issuer.validUntil || Date.parse(issuer.issuer.validUntil) > issuerNow);
+    if (!issuerActive) return c.json({ error: "issuer is not currently trusted" }, 403, NO_STORE);
+    const reasonCode = typeof body.reason_code === "string" ? body.reason_code.trim().slice(0, 120) : undefined;
+    const idempotencyKey = c.req.header("Idempotency-Key")?.trim().slice(0, 200) ||
+      (typeof body.idempotency_key === "string" ? body.idempotency_key.trim().slice(0, 200) : undefined);
+    const subjectHash = `sha256:${await sha256Hex(JSON.stringify(original.subject))}`;
+    const evidenceDigest = Array.isArray(original.evidence) && typeof original.evidence[0]?.digest === "string"
+      ? original.evidence[0].digest : undefined;
+    const event = await registry.recordStatusEvent(c.env as AttestationRegistryEnv, {
+      eventType: "attestation.superseded",
+      attestationId,
+      issuerId,
+      ...(reasonCode ? { reasonCode } : {}),
+      subjectHash,
+      ...(evidenceDigest ? { evidenceDigest } : {}),
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+      supersedesAttestationId: replacement.attestation_id,
+    });
+    if (!event.ok) return c.json({ error: event.error }, event.status, NO_STORE);
+    return c.json({
+      attestation_id: attestationId,
+      claim_status: "superseded",
+      supersedes_attestation_id: replacement.attestation_id,
+      event_id: event.eventId,
+      issuer_id: issuerId,
+      reason_code: reasonCode,
+    }, 200, NO_STORE);
+  });
 
   app.post("/api/v1/attestation", async c => {
     const auth = await authorizeIssuerRequest(
