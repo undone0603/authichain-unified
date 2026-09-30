@@ -10576,5 +10576,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-ban-on-destroying-unsold-clothes-and-shoes-records",
+    "keyword": "eu ban on destroying unsold clothes and shoes records",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Ban On Destroying Unsold Clothes And Shoes | AuthiChain",
+    "metaDescription": "Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and.",
+    "h1": "EU Ban On Destroying Unsold Clothes And Shoes Records",
+    "bodyHtml": "<p>Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and they must disclose the volumes they discard; medium-sized companies follow on 19 July 2030.</p><h2>Why AuthiChain</h2><ul><li>A signed, timestamped record per batch of unsold goods: what it was, how many units, and the decision taken, in a form an auditor can check without asking you</li><li>Anchoring commits the hash of each record to a public ledger, so the date of a disposal decision is checkable rather than asserted</li><li>Records are W3C Verifiable Credentials verified offline with the Apache-2.0 reference verifier, so an authority needs no account with us</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Who has to comply with the destruction ban?</h3><p>The ESPR applies the ban to large companies from 19 July 2026 and to medium-sized companies from 19 July 2030. Small and micro enterprises are outside it. Check your size class against the regulation text.</p><h3>Does a signed record prove the goods were not destroyed?</h3><p>No. A signature proves who made a statement and when, and an anchor proves the hash existed at a point in time. Neither proves the physical outcome; the record is evidence you attach to your own disclosure.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Ban On Destroying Unsold Clothes And Shoes Records",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and they must disclose the volumes they discard; medium-sized companies follow on 19 July 2030.",
+          "url": "https://authichain.com/p/eu-ban-on-destroying-unsold-clothes-and-shoes-records"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Ban On Destroying Unsold Clothes And Shoes Records",
+              "item": "https://authichain.com/p/eu-ban-on-destroying-unsold-clothes-and-shoes-records"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Who has to comply with the destruction ban?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The ESPR applies the ban to large companies from 19 July 2026 and to medium-sized companies from 19 July 2030. Small and micro enterprises are outside it. Check your size class against the regulation text."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record prove the goods were not destroyed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. A signature proves who made a statement and when, and an anchor proves the hash existed at a point in time. Neither proves the physical outcome; the record is evidence you attach to your own disclosure."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-dpp-independent-service-provider-backup-copy",
+    "keyword": "espr dpp independent service provider backup copy",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR DPP Independent Service Provider Backup | AuthiChain",
+    "metaDescription": "ESPR Article 10 requires the data in a digital product passport to be available through an independent third-party service provider, so a passport stays.",
+    "h1": "ESPR DPP Independent Service Provider Backup Copy",
+    "bodyHtml": "<p>ESPR Article 10 requires the data in a digital product passport to be available through an independent third-party service provider, so a passport stays reachable if the manufacturer stops operating.</p><h2>Why AuthiChain</h2><ul><li>Records are self-contained W3C Verifiable Credentials: any copy, held anywhere, verifies against the issuer key with no call back to us</li><li>Item records resolve from a GS1 Digital Link URL that stays the same when the item changes hands, and the spec requires unauthenticated access</li><li>The specification and verifier are Apache-2.0 with a patent grant, so a second provider can implement the same format and hold a mirror</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does the independent provider requirement mean in practice?</h3><p>A copy of the passport data is held by a party independent of the economic operator, so the data remains accessible for the period the delegated act sets. Confirm the exact wording in Regulation (EU) 2024/1781 and the delegated act for your product group.</p><h3>Does a signed record replace the backup provider?</h3><p>No. Signatures let anyone verify a copy; they do not host it. You still need an independent party to keep a current copy available.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR DPP Independent Service Provider Backup Copy",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR Article 10 requires the data in a digital product passport to be available through an independent third-party service provider, so a passport stays reachable if the manufacturer stops operating.",
+          "url": "https://authichain.com/p/espr-dpp-independent-service-provider-backup-copy"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR DPP Independent Service Provider Backup Copy",
+              "item": "https://authichain.com/p/espr-dpp-independent-service-provider-backup-copy"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does the independent provider requirement mean in practice?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A copy of the passport data is held by a party independent of the economic operator, so the data remains accessible for the period the delegated act sets. Confirm the exact wording in Regulation (EU) 2024/1781 and the delegated act for your product group."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record replace the backup provider?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Signatures let anyone verify a copy; they do not host it. You still need an independent party to keep a current copy available."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "testnet-anchor-vs-mainnet-anchor-blockchain-proof",
+    "keyword": "testnet anchor vs mainnet anchor blockchain proof",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Testnet Anchor Vs Mainnet Anchor Blockchain | AuthiChain",
+    "metaDescription": "A testnet anchor is not proof: testnet tokens have no value, testnets get reset, and anyone can write to them, so a record anchored there shows only that a.",
+    "h1": "Testnet Anchor Vs Mainnet Anchor Blockchain Proof",
+    "bodyHtml": "<p>A testnet anchor is not proof: testnet tokens have no value, testnets get reset, and anyone can write to them, so a record anchored there shows only that a transaction once existed on a network built for experiments.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain spec requires a verifier to treat a testnet anchor as unanchored unless the caller explicitly opts in</li><li>Chains are named in CAIP-2 form such as polygon:137, so the network is unambiguous and cannot be assumed</li><li>A malformed transaction hash is rejected rather than displayed; an EVM hash must be 64 hex characters</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>How can I check which network an anchor is on?</h3><p>Read the chain field of the anchor. In the reference verifier, run it on the record and anchor: a testnet anchor returns valid-unanchored unless you set ALLOW_TESTNET=1. Then look up the transaction hash on a block explorer for that network.</p><h3>Does a mainnet anchor prove a product is genuine?</h3><p>No. It proves a hash was committed at a point in time. It does not prove the physical item exists or matches the record.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Testnet Anchor Vs Mainnet Anchor Blockchain Proof",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A testnet anchor is not proof: testnet tokens have no value, testnets get reset, and anyone can write to them, so a record anchored there shows only that a transaction once existed on a network built for experiments.",
+          "url": "https://authichain.com/p/testnet-anchor-vs-mainnet-anchor-blockchain-proof"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Testnet Anchor Vs Mainnet Anchor Blockchain Proof",
+              "item": "https://authichain.com/p/testnet-anchor-vs-mainnet-anchor-blockchain-proof"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How can I check which network an anchor is on?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Read the chain field of the anchor. In the reference verifier, run it on the record and anchor: a testnet anchor returns valid-unanchored unless you set ALLOW_TESTNET=1. Then look up the transaction hash on a block explorer for that network."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a mainnet anchor prove a product is genuine?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It proves a hash was committed at a point in time. It does not prove the physical item exists or matches the record."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-signed-false-claim-what-verification-proves",
+    "keyword": "verifiable credential signed false claim what verification proves",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Signed False Claim What | AuthiChain",
+    "metaDescription": "A valid signature on a verifiable credential proves who made the statement and that it has not changed since; it does not prove the statement is true, and a.",
+    "h1": "Verifiable Credential Signed False Claim What Verification Proves",
+    "bodyHtml": "<p>A valid signature on a verifiable credential proves who made the statement and that it has not changed since; it does not prove the statement is true, and a conforming verifier will correctly report a signed falsehood as verified.</p><h2>Why AuthiChain</h2><ul><li>The AuthiChain verifier returns one of three verdicts, verified, valid-unanchored or invalid: a verdict, not a score</li><li>Trust in the content comes from who the issuer is, which the reader judges from the issuer DID and outside knowledge of that party</li><li>Anchoring adds a checkable time: the record hash existed no later than the anchor</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does verified mean in the AuthiChain verifier?</h3><p>The Ed25519 signature is valid over the JCS-canonicalised record, an anchor is present with a matching hash, and the anchor is on a mainnet chain. It says nothing about whether the issuer told the truth.</p><h3>Can a signed record be revoked?</h3><p>Not yet. The spec defines no revocation in v0.1, so a record signed by a compromised key stays cryptographically valid. Revocation via credentialStatus is planned for v0.2.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Signed False Claim What Verification Proves",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A valid signature on a verifiable credential proves who made the statement and that it has not changed since; it does not prove the statement is true, and a conforming verifier will correctly report a signed falsehood as verified.",
+          "url": "https://authichain.com/p/verifiable-credential-signed-false-claim-what-verification-proves"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Signed False Claim What Verification Proves",
+              "item": "https://authichain.com/p/verifiable-credential-signed-false-claim-what-verification-proves"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does verified mean in the AuthiChain verifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The Ed25519 signature is valid over the JCS-canonicalised record, an anchor is present with a matching hash, and the anchor is on a mainnet chain. It says nothing about whether the issuer told the truth."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a signed record be revoked?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. The spec defines no revocation in v0.1, so a record signed by a compromised key stays cryptographically valid. Revocation via credentialStatus is planned for v0.2."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
