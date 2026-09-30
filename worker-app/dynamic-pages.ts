@@ -45,6 +45,7 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
+import { reportGrowthEvent } from "./growth-record";
 import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
@@ -1619,7 +1620,7 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
-    return renderGenerate(c);
+    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.\n    if (c.req.method === "GET") {\n      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });\n    }\n    return renderGenerate(c);
   }
 
   // Stubs: /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>.
