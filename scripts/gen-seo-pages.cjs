@@ -37,10 +37,17 @@ const LIVE_MONEY = {
   strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
   strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
   strainchainFarmPay: 'https://authichain.com/checkout/strainchain_farm',
+  // Public sample of the $299 assessment (#1340); shown before checkout on
+  // battery pages so a buyer sees what they get before paying.
+  batterySampleAudit: 'https://authichain.com/battery-passport/sample-audit',
 };
 
 function isDppKeyword(keyword) {
   return /digital product passport|\bdpp\b|batter(?:y|ies)|textiles/i.test(keyword);
+}
+
+function isBatteryKeyword(keyword) {
+  return /batter(?:y|ies)|\blmt\b|e-bike|e-scooter/i.test(keyword);
 }
 
 function isCannabisKeyword(keyword) {
@@ -78,6 +85,7 @@ function moneyCtaHtml(brandKey, keyword, brand) {
   let secondaryLabel = null;
   const cannabis = isCannabisKeyword(keyword);
   const dpp = isDppKeyword(keyword);
+  const battery = isBatteryKeyword(keyword);
   const musa = isMusaKeyword(keyword);
   const trumark = isTrumarkKeyword(keyword);
   if (trumark) {
@@ -130,9 +138,14 @@ function moneyCtaHtml(brandKey, keyword, brand) {
       dpp && primaryHref === LIVE_MONEY.authichainDppCheckout
         ? `<p>Not sure what applies to you? <a href="${LIVE_MONEY.authichainDppCheck}">Take the free DPP readiness check</a> first.</p>`
         : '';
+    const batterySample =
+      battery && primaryHref === LIVE_MONEY.authichainDppCheckout
+        ? `<p>Want to see the deliverable first? <a href="${LIVE_MONEY.batterySampleAudit}">Read a sample $299 battery assessment</a>.</p>`
+        : '';
     return (
       `<h2>Get started</h2>` +
       freeCheck +
+      batterySample +
       checkoutEmailFormHtml(primaryHref, primaryLabel) +
       pay +
       farm +
