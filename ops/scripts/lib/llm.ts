@@ -119,7 +119,12 @@ function makeLocalProvider(displayName: string, envKey: string, defaultModel: st
         : messages;
       const res = await fetch(`${localModelBase()}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.LM_STUDIO_API_TOKEN || process.env.LM_API_TOKEN
+            ? { Authorization: `Bearer ${process.env.LM_STUDIO_API_TOKEN || process.env.LM_API_TOKEN}` }
+            : {}),
+        },
         body: JSON.stringify({
           model: process.env[envKey] || defaultModel,
           messages: msgs,
