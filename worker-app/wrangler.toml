@@ -131,9 +131,6 @@ zone_name = "authichain.com"
 pattern = "authichain.com/api/stripe/webhook"
 zone_name = "authichain.com"
 
-[[routes]]
-pattern = "authichain.com/api/webhooks/stripe"
-zone_name = "authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/attest"
