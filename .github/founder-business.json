@@ -6,20 +6,87 @@
   "mode": "founder-only",
   "promise": "Acquire demand, convert through self-serve checkout, fulfill digitally, retain, and surface only exceptions to the founder.",
   "offers": [
-    {"id":"qron_launch","role":"entry_recurring","checkout":"/checkout/qron_launch","price_usd":19,"cadence":"monthly"},
-    {"id":"starter","role":"entry_one_time","checkout":"/checkout/starter","price_usd":29,"cadence":"one_time"},
-    {"id":"strainchain_passport","role":"vertical_one_time","checkout":"/checkout/strainchain_passport","price_usd":49,"cadence":"one_time"},
-    {"id":"dpp_readiness","role":"high_intent_service","checkout":"/checkout/dpp_readiness","price_usd":299,"cadence":"one_time"},
-    {"id":"musa_claim_file","role":"regulatory_claim_support","checkout":"/checkout/musa_claim_file","price_usd":299,"cadence":"one_time"},
-    {"id":"musa_audit_bundle","role":"higher_value_service","checkout":"/checkout/musa_audit_bundle","price_usd":2500,"cadence":"one_time"}
+    {
+      "id": "qron_launch",
+      "role": "entry_recurring",
+      "checkout": "/checkout/qron_launch",
+      "price_usd": 19,
+      "cadence": "monthly"
+    },
+    {
+      "id": "starter",
+      "role": "entry_one_time",
+      "checkout": "/checkout/starter",
+      "price_usd": 29,
+      "cadence": "one_time"
+    },
+    {
+      "id": "strainchain_passport",
+      "role": "vertical_one_time",
+      "checkout": "/checkout/strainchain_passport",
+      "price_usd": 49,
+      "cadence": "one_time"
+    },
+    {
+      "id": "dpp_readiness",
+      "role": "high_intent_service",
+      "checkout": "/checkout/dpp_readiness",
+      "price_usd": 299,
+      "cadence": "one_time"
+    },
+    {
+      "id": "musa_claim_file",
+      "role": "regulatory_claim_support",
+      "checkout": "/checkout/musa_claim_file",
+      "price_usd": 299,
+      "cadence": "one_time"
+    },
+    {
+      "id": "musa_audit_bundle",
+      "role": "higher_value_service",
+      "checkout": "/checkout/musa_audit_bundle",
+      "price_usd": 2500,
+      "cadence": "one_time"
+    }
   ],
   "loops": {
-    "acquire": ["seo","owned_content","buyer_signals","community_listening","gated_cold_outreach","government_opportunity_ingest"],
-    "convert": ["warm_lead_qualification","checkout","abandoned_checkout_recovery","proposal_delivery"],
-    "fulfill": ["paid_session_provisioning","digital_evidence_packet","verification_path"],
-    "retain": ["subscription_health","dunning","customer_health","winback"],
-    "operate": ["checkout_watchdog","production_health","schema_drift","estate_drift","ops_pulse"],
-    "improve": ["ci_repair_draft_pr","content_suggestions","alert_triage"]
+    "acquire": [
+      "seo",
+      "owned_content",
+      "buyer_signals",
+      "community_listening",
+      "gated_cold_outreach",
+      "government_opportunity_ingest"
+    ],
+    "convert": [
+      "warm_lead_qualification",
+      "checkout",
+      "abandoned_checkout_recovery",
+      "proposal_delivery"
+    ],
+    "fulfill": [
+      "paid_session_provisioning",
+      "digital_evidence_packet",
+      "verification_path"
+    ],
+    "retain": [
+      "subscription_health",
+      "dunning",
+      "customer_health",
+      "winback"
+    ],
+    "operate": [
+      "checkout_watchdog",
+      "production_health",
+      "schema_drift",
+      "estate_drift",
+      "ops_pulse"
+    ],
+    "improve": [
+      "ci_repair_draft_pr",
+      "content_suggestions",
+      "alert_triage"
+    ]
   },
   "founder_only_gates": [
     "pricing_or_new_sku_changes",
