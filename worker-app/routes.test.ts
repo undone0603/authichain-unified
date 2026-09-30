@@ -856,3 +856,27 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
     }
   });
 });
+
+
+describe("GET /api/generate requires the service role", () => {
+  const keys = ["SUPABASE_URL","SUPABASE_ANON_KEY","NEXT_PUBLIC_SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"] as const;
+  const saved: Partial<Record<(typeof keys)[number], string | undefined>> = {};
+  beforeEach(() => {
+    for (const key of keys) saved[key] = process.env[key];
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "anon-test";
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+  afterEach(() => {
+    for (const key of keys) saved[key] === undefined ? delete process.env[key] : process.env[key] = saved[key]!;
+  });
+  it("does not report auth from the anon key", async () => {
+    const res = await app.request("/api/generate");
+    expect((await res.json()).auth).toBe(false);
+  });
+  it("stays 401 for a bearer token when credit checks cannot run", async () => {
+    const res = await app.request("/api/generate", { method:"POST", headers:{"content-type":"application/json",authorization:"Bearer eyJhbGciOiJub3Q"}, body:JSON.stringify({targetUrl:"https://example.com",prompt:"neon"}) });
+    expect(res.status).toBe(401);
+  });
+});
