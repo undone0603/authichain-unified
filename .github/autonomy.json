@@ -107,7 +107,8 @@
         "gov-proposals.yml": "on",
         "gov-notify.yml": "on",
         "gov-mint.yml": "on",
-        "owner-digest.yml": "on"
+        "owner-digest.yml": "on",
+        "affiliate-payouts.yml": "off"
       }
     },
     "growth": {
