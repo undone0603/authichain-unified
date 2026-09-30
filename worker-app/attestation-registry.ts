@@ -114,6 +114,8 @@ export async function recordStatusEvent(
     reasonCode?: string;
     subjectHash?: string;
     evidenceDigest?: string;
+    idempotencyKey?: string;
+    supersedesAttestationId?: string;
   },
 ): Promise<{ ok: true; eventId: string } | { ok: false; status: number; error: string }> {
   const db = clientFor(env);
@@ -128,6 +130,8 @@ export async function recordStatusEvent(
       reason_code: input.reasonCode || null,
       subject_hash: input.subjectHash || null,
       evidence_digest: input.evidenceDigest || null,
+      idempotency_key: input.idempotencyKey || null,
+      supersedes_attestation_id: input.supersedesAttestationId || null,
     })
     .select("event_id")
     .single();
