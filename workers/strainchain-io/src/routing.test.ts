@@ -519,14 +519,14 @@ test("trailing-slash stripping is linear, not quadratic", () => {
 });
 
 test("/api/strainchain/stats proxies the canonical JSON handler", async () => {
-  const f = stubFetch();
-  const originalFetch = globalThis.fetch;
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
   globalThis.fetch = (async (
     input: Request | string | URL,
     init?: RequestInit
   ) => {
     const req = input instanceof Request ? input : new Request(input, init);
-    f.calls.push(req);
+    calls.push(req);
     return new Response(JSON.stringify({
       lab_tests: 2,
       total_chain_events: 4,
@@ -545,11 +545,11 @@ test("/api/strainchain/stats proxies the canonical JSON handler", async () => {
       total_chain_events: 4,
       dispensary_receipts: 1,
     });
-    assert.equal(f.calls.length, 1);
-    assert.equal(new URL(f.calls[0].url).host, "app.example.com");
-    assert.equal(new URL(f.calls[0].url).pathname, "/api/strainchain/stats");
-    assert.equal(f.calls[0].headers.get("X-Forwarded-Host"), "strainchain.io");
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).host, "app.example.com");
+    assert.equal(new URL(calls[0].url).pathname, "/api/strainchain/stats");
+    assert.equal(calls[0].headers.get("X-Forwarded-Host"), "strainchain.io");
   } finally {
-    globalThis.fetch = originalFetch;
+    globalThis.fetch = real;
   }
 });
