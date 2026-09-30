@@ -5,15 +5,15 @@
   "rule": "Every production Worker must have exactly one canonical source, one declared identity, and one authorized deployment path unless explicitly marked external or transitional.",
   "workers": {
     "authichain-revenue-worker": {
-      "status": "reconcile",
-      "canonical_path": "workers/authichain-revenue-worker",
+      "status": "active-canonical-candidate",
+      "canonical_path": "api",
       "duplicate_sources": [
         "api/worker.ts",
-        "services/api/worker.ts",
-        "api/wrangler.toml",
-        "services/api/wrangler.toml"
+        "api/wrangler.toml"
       ],
-      "action": "consolidate"
+      "action": "consolidate",
+      "deployment_workflow": ".github/workflows/deploy-edge-worker.yml",
+      "next_action": "remove duplicate api definition only after production route/consumer verification"
     },
     "authichain-outreach-engine": {
       "status": "reported-live-external",
