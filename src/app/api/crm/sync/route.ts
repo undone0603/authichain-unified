@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin as admin } from "@/lib/supabase-admin";
+import { isCronAuthorized } from "../../../../lib/cron-auth";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * CRM SYNC HANDLER (HubSpot)
@@ -14,44 +15,57 @@ const HUBSPOT_API_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, first_name, last_name, company_name, job_title, lead_score } = await req.json();
+    const {
+      email,
+      first_name,
+      last_name,
+      company_name,
+      job_title,
+      lead_score,
+    } = await req.json();
 
     if (!HUBSPOT_API_KEY) {
-      console.warn('[CRM-Sync] HUBSPOT_ACCESS_TOKEN missing');
-      return NextResponse.json({ error: 'CRM not configured' }, { status: 503 });
+      console.warn("[CRM-Sync] HUBSPOT_ACCESS_TOKEN missing");
+      return NextResponse.json(
+        { error: "CRM not configured" },
+        { status: 503 }
+      );
     }
 
-    console.log('[CRM-Sync] Syncing lead to HubSpot');
+    console.log("[CRM-Sync] Syncing lead to HubSpot");
 
     // 1. Prepare HubSpot CRM Payload
     const payload = {
       properties: {
         email: email,
-        firstname: first_name || 'Protocol',
-        lastname: last_name || 'Lead',
-        company: company_name || 'Unknown Enterprise',
-        jobtitle: job_title || '',
-        hs_lead_status: lead_score > 70 ? 'OPEN' : 'NEW',
-        lead_score: lead_score.toString()
-      }
+        firstname: first_name || "Protocol",
+        lastname: last_name || "Lead",
+        company: company_name || "Unknown Enterprise",
+        jobtitle: job_title || "",
+        hs_lead_status: lead_score > 70 ? "OPEN" : "NEW",
+        lead_score: lead_score.toString(),
+      },
     };
 
     // 2. Execute Sync
     const res = await fetch(HUBSPOT_API_URL, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${HUBSPOT_API_KEY}`
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${HUBSPOT_API_KEY}`,
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const errText = await res.text();
       // If contact exists (409), we could handle an update, but for now we log it.
       if (res.status === 409) {
-          console.log('[CRM-Sync] Contact already exists in HubSpot');
-          return NextResponse.json({ success: true, message: 'Contact already exists' });
+        console.log("[CRM-Sync] Contact already exists in HubSpot");
+        return NextResponse.json({
+          success: true,
+          message: "Contact already exists",
+        });
       }
       throw new Error(`HubSpot API Error: ${res.status} - ${errText}`);
     }
@@ -59,28 +73,30 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
 
     // 3. Log Success to Supabase
-    await admin.from('automation_logs').insert({
-      workflow_name: 'hubspot_sync',
-      trigger_type: 'event',
-      status: 'success',
-      payload: JSON.stringify({ email, contact_id: data.id })
+    await admin.from("automation_logs").insert({
+      workflow_name: "hubspot_sync",
+      trigger_type: "event",
+      status: "success",
+      payload: JSON.stringify({ email, contact_id: data.id }),
     });
 
     return NextResponse.json({ success: true, contact_id: data.id });
-
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[CRM-Sync] Critical Failure:', err);
-    await admin.from('automation_logs').insert({
-      workflow_name: 'hubspot_sync',
-      trigger_type: 'event',
-      status: 'failure',
+    console.error("[CRM-Sync] Critical Failure:", err);
+    await admin.from("automation_logs").insert({
+      workflow_name: "hubspot_sync",
+      trigger_type: "event",
+      status: "failure",
       error_message: msg,
     });
-    return NextResponse.json({
-      error: 'HubSpot synchronization failed',
-      detail: msg
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "HubSpot synchronization failed",
+        detail: msg,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -88,13 +104,12 @@ export async function POST(req: NextRequest) {
  * GET handler for Vercel Cron invocation
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
+  if (!isCronAuthorized(req)) {
+    return new Response("Unauthorized", { status: 401 });
   }
 
   // Trigger batch CRM cleanup or sync
-  console.log('[CRM-Sync] Vercel Cron: Initiating batch sync cycle...');
-  
-  return NextResponse.json({ status: 'Batch cycle initiated' });
+  console.log("[CRM-Sync] Vercel Cron: Initiating batch sync cycle...");
+
+  return NextResponse.json({ status: "Batch cycle initiated" });
 }
