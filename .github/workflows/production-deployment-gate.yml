@@ -52,13 +52,11 @@ jobs:
           git diff --name-status HEAD^ HEAD || true
 
   authorization:
-    name: Explicit production authorization
+    name: Gate complete — deploy job requires approval
     needs: [secret-scan, impact-classification]
     runs-on: ubuntu-latest
-    environment:
-      name: production-cloudflare
     steps:
       - name: Authorization checkpoint
         run: |
-          echo "Approved production deployment: ${{ inputs.deployment_name }}"
-          echo "Approval is enforced by the production-cloudflare environment."
+          echo "Pre-deployment gate passed for: ${{ inputs.deployment_name }}"
+          echo "The caller deploy job is the single protected production authorization point."
