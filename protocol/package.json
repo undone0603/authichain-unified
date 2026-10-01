@@ -54,6 +54,7 @@
   "sideEffects": false,
   "scripts": {
     "conformance": "node conformance/run.mjs --strict -- node verifier.mjs",
-    "prepublishOnly": "node conformance/run.mjs --strict -- node verifier.mjs"
+    "prepublishOnly": "node conformance/run.mjs --strict -- node verifier.mjs",
+    "test:asset-passports": "node --test asset-passport/validate.test.mjs"
   }
 }
