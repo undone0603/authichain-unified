@@ -1,3 +1,6 @@
+// @vitest-environment node
+// Reads protocol fixtures from disk via import.meta.url, which is only a
+// file: URL under the node environment (the suite default is jsdom).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { attestSeal } from "./seal-attestation";
