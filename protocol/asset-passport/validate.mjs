@@ -89,7 +89,7 @@ export function validateAssetPassport(passport) {
       }
       for (const evidenceId of inspection?.evidenceIds ?? []) {
         if (!evidenceIds.has(evidenceId)) {
-          reasons.push(\`inspection_missing_evidence:\${inspection?.id ?? "unknown"}:\${evidenceId}\`);
+          reasons.push(("inspection_missing_evidence:" + (inspection?.id ?? "unknown") + ":" + evidenceId));
         }
       }
     }
