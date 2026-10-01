@@ -49,7 +49,9 @@
     "examples/polygon-anchor-1.anchor.json",
     "SPEC.md",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "asset-passport/**",
+    "examples/precious-metals/**"
   ],
   "sideEffects": false,
   "scripts": {
