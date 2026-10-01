@@ -5,15 +5,78 @@
   "rule": "Every production Worker must have exactly one canonical source, one declared identity, and one authorized deployment path unless explicitly marked external or transitional.",
   "workers": {
     "authichain-revenue-worker": {
-      "status": "reconcile",
-      "canonical_path": "workers/authichain-revenue-worker",
+      "status": "duplicate-transitional",
+      "canonical_path": "api",
       "duplicate_sources": [
         "api/worker.ts",
         "services/api/worker.ts",
         "api/wrangler.toml",
         "services/api/wrangler.toml"
       ],
-      "action": "consolidate"
+      "action": "consolidate",
+      "source_of_truth_candidate": "api",
+      "deployment_workflow": ".github/workflows/deploy-edge-worker.yml"
+    },
+    "ai-classification": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/ai-classification",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/ai-classification",
+        "workers/ai-classification"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "analytics": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/analytics",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/analytics",
+        "workers/analytics"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "auth": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/auth",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/auth",
+        "workers/auth"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "blockchain": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/blockchain",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/blockchain",
+        "workers/blockchain"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "stripe-webhook": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/stripe-webhook",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/stripe-webhook",
+        "workers/stripe-webhook"
+      ],
+      "action": "compare-and-consolidate-after-route-consumer-secret-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "authichain-edge-router": {
+      "status": "duplicate-transitional",
+      "canonical_path": "worker-app",
+      "duplicate_sources": [
+        "worker-app/wrangler.toml",
+        "services/worker-app/wrangler.toml"
+      ],
+      "action": "compare-bindings-routes-and-deployment-consumers-before-consolidation",
+      "risk": "critical",
+      "repository_evidence": "Both configs declare authichain-edge-router and document the duplicate. They differ in assets/alias/routes/vars, so this cannot be treated as a byte-identical mirror."
     },
     "authichain-outreach-engine": {
       "status": "reported-live-external",
@@ -45,17 +108,27 @@
     },
     "qron-edge": {
       "status": "reported-live-external",
-      "action": "import-after-route-consumer-audit"
+      "action": "import-after-route-consumer-audit",
+      "repository_evidence": "config/estate.json marks unknown; repo deploys qron-edge-fleet under apps/qron-platform."
     },
     "authichain-verify-worker": {
       "status": "reported-live-external",
       "risk": "critical",
-      "action": "reconcile-against-canonical-verification-path-before-change"
+      "action": "reconcile-against-canonical-verification-path-before-change",
+      "repository_evidence": "Repo-managed worker and deploy matrix; CAPABILITIES external claim conflicts with repository evidence."
     },
     "authichain-consensus-engine": {
       "status": "identity-collision",
       "risk": "critical",
-      "action": "resolve-repo-vs-live-identity-before-change"
+      "action": "resolve-repo-vs-live-identity-before-change",
+      "repository_evidence": "config/estate.json marks retire; CAPABILITIES also reports live external; verify Cloudflare state before retirement."
     }
+  },
+  "snapshot": {
+    "taken": "2026-09-26",
+    "workers": 66,
+    "d1": 7,
+    "kv": 20,
+    "r2": 10
   }
 }
