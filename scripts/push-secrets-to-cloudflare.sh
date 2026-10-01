@@ -10,11 +10,37 @@
 #     bash scripts/push-secrets-to-cloudflare.sh
 #   # or use CLOUDFLARE_API_TOKEN for Wrangler authentication:
 #   CLOUDFLARE_API_TOKEN=... bash scripts/push-secrets-to-cloudflare.sh
+#   ENV_FILE=/secure/edge-secrets.env \
+#     bash scripts/push-secrets-to-cloudflare.sh --edge-webhooks-only
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${ENV_FILE:-${REPO_ROOT}/.env}"
+EDGE_WEBHOOKS_ONLY=0
+if [[ "${1:-}" == "--edge-webhooks-only" && "$#" -eq 1 ]]; then
+  EDGE_WEBHOOKS_ONLY=1
+elif [[ "$#" -ne 0 ]]; then
+  echo "ERROR: unsupported arguments."
+  exit 2
+fi
+
+if (( EDGE_WEBHOOKS_ONLY )); then
+  if [[ -z "${ENV_FILE:-}" ]]; then
+    echo "ERROR: set ENV_FILE to a dedicated edge-secret file."
+    exit 1
+  fi
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "ERROR: dedicated edge-secret file not found."
+    exit 1
+  fi
+  file_mode="$(stat -c '%a' -- "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE")"
+  if (( (8#$file_mode & 077) != 0 )); then
+    echo "ERROR: dedicated edge-secret file must not be accessible by group or others; run chmod 600 on it."
+    exit 1
+  fi
+else
+  ENV_FILE="${ENV_FILE:-${REPO_ROOT}/.env}"
+fi
 
 # Workers that need the full secret set applied.
 # Live Stripe Dashboard → https://authichain.com/api/stripe/webhook is
@@ -66,8 +92,22 @@ if [[ -f "$ENV_FILE" ]]; then
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
     if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
       k="${BASH_REMATCH[1]}" ; v="${BASH_REMATCH[2]}"
+      if (( EDGE_WEBHOOKS_ONLY )) &&
+        [[ "$k" != "AGENTZ_WEBHOOK_SECRET" &&
+          "$k" != "STRIPE_WEBHOOK_AUTHICHAIN_SECRET" &&
+          "$k" != "CLOUDFLARE_API_TOKEN" ]]; then
+        echo "ERROR: dedicated edge-secret file contains an unapproved variable name."
+        exit 1
+      fi
+      if [[ -n "${VARS[$k]+present}" ]]; then
+        echo "ERROR: secret file contains a duplicate variable name."
+        exit 1
+      fi
       v="${v%\"}" ; v="${v#\"}" ; v="${v%\'}" ; v="${v#\'}"
       VARS["$k"]="$v"
+    elif (( EDGE_WEBHOOKS_ONLY )); then
+      echo "ERROR: dedicated edge-secret file contains an unrecognized line."
+      exit 1
     fi
   done < "$ENV_FILE"
 fi
@@ -86,7 +126,11 @@ if [[ -z "${CLOUDFLARE_API_TOKEN:-}" && -n "${VARS[CLOUDFLARE_API_TOKEN]:-}" ]];
 fi
 
 configured=0
-for key in "${WANTED_KEYS[@]}" "${EDGE_ONLY_KEYS[@]}"; do
+CHECK_KEYS=("${WANTED_KEYS[@]}" "${EDGE_ONLY_KEYS[@]}")
+if (( EDGE_WEBHOOKS_ONLY )); then
+  CHECK_KEYS=("${EDGE_ONLY_KEYS[@]}")
+fi
+for key in "${CHECK_KEYS[@]}"; do
   if [[ -n "$(get_value "$key")" ]]; then
     configured=1
     break
@@ -95,6 +139,15 @@ done
 if (( configured == 0 )); then
   echo "ERROR: no Worker secrets found in the environment or $ENV_FILE."
   exit 1
+fi
+
+if (( EDGE_WEBHOOKS_ONLY )); then
+  for key in "${EDGE_ONLY_KEYS[@]}"; do
+    if [[ -z "${VARS[$key]:-}" ]]; then
+      echo "ERROR: dedicated edge-secret file must set both edge webhook secrets."
+      exit 1
+    fi
+  done
 fi
 
 ok=0; skip=0; fail=0
@@ -114,21 +167,31 @@ push_secret() {
   fi
 }
 
-for worker in "${CORE_WORKERS[@]}"; do
-  echo ""
-  echo "=== $worker ==="
-  for key in "${WANTED_KEYS[@]}"; do
-    val="$(get_value "$key")"
-    push_secret "$worker" "$key" "$val"
+if (( EDGE_WEBHOOKS_ONLY )); then
+  echo "=== authichain-edge-router (edge webhook secrets only) ==="
+  for key in "${EDGE_ONLY_KEYS[@]}"; do
+    push_secret "authichain-edge-router" "$key" "${VARS[$key]}"
   done
-done
+else
+  for worker in "${CORE_WORKERS[@]}"; do
+    echo ""
+    echo "=== $worker ==="
+    for key in "${WANTED_KEYS[@]}"; do
+      val="$(get_value "$key")"
+      push_secret "$worker" "$key" "$val"
+    done
+  done
 
-echo ""
-echo "=== authichain-edge-router (edge-only) ==="
-for key in "${EDGE_ONLY_KEYS[@]}"; do
-  val="$(get_value "$key")"
-  push_secret "authichain-edge-router" "$key" "$val"
-done
+  echo ""
+  echo "=== authichain-edge-router (edge-only) ==="
+  for key in "${EDGE_ONLY_KEYS[@]}"; do
+    val="$(get_value "$key")"
+    push_secret "authichain-edge-router" "$key" "$val"
+  done
+fi
 
 echo ""
 echo "Done — ok: $ok | skipped: $skip | failed: $fail"
+if (( fail > 0 )); then
+  exit 1
+fi
