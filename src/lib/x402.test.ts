@@ -640,7 +640,10 @@ describe("x402ScanFanout", () => {
     expect(doc.version).toBe(1);
     expect(doc.resources).toEqual(["https://authichain.com/api/x402"]);
     expect(JSON.stringify(doc)).not.toContain("/api/checkout");
-    expect(JSON.stringify(doc)).not.toContain("authichain.com");
+    // "Not the catalog": exactly the two x402scan fields. (This line used to
+    // assert the document never mentions authichain.com, which contradicts
+    // the resources assertion above and could never pass.)
+    expect(Object.keys(doc).sort()).toEqual(["resources", "version"]);
   });
 });
 
