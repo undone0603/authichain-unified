@@ -18,30 +18,10 @@ export interface SeoPage {
   jsonLd: Record<string, unknown>;
 }
 
-/**
- * Protected seed `what-is-a-digital-product-passport` still ships costume
- * copy in pages.json ($49/mo, Bitcoin L1, govchain.us/pricing). The Friday
- * generator preserves that seed by slug, so rewrite it here instead of
- * touching the 819KB catalogue.
- */
-function applyDppExplainerLiveMoney(page: SeoPage): SeoPage {
-  if (page.slug !== "what-is-a-digital-product-passport") return page;
-  const bodyHtml = page.bodyHtml
-    .replace(
-      /anchored to Bitcoin L1/g,
-      "Ed25519-signed and anchored on Polygon"
-    )
-    .replace(/Plans start at \$49\/mo\./g, "EU DPP Readiness is $299 one-time.")
-    .replace(
-      /https:\/\/authichain\.govchain\.us\/pricing/g,
-      "https://authichain.com/pricing"
-    );
-  return { ...page, bodyHtml };
-}
-
-const ALL: SeoPage[] = (pagesData as unknown as SeoPage[]).map(
-  applyDppExplainerLiveMoney
-);
+// pages.json is also read directly by worker-app/dynamic-pages.ts,
+// workers/_shared/seo-hub-routes.ts and the authichain-com sitemap, so copy is
+// fixed in the data itself, not rewritten here. seo-pages.test.ts guards it.
+const ALL: SeoPage[] = pagesData as unknown as SeoPage[];
 
 export function listSeoPages(): SeoPage[] {
   return ALL;

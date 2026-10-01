@@ -40,7 +40,7 @@ export default function WhiteLabelPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/dashboard" className="bg-blue-600 hover:bg-blue-500 text-white px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
-              Become a Reseller ($299/mo)
+              Become a Reseller
             </Link>
             <Link href="/docs" className="btn-outline-gold border-zinc-800 text-zinc-300 px-12 py-5 font-black uppercase tracking-widest text-xs">
               View API Docs

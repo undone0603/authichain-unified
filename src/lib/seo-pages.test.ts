@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from "./seo-pages";
+import { planById } from "./plans";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
@@ -266,6 +267,28 @@ describe("generated SEO money-path CTAs", () => {
     const qron = getSeoPageBySlug("ai-qr-code-art-generator");
     expect(qron?.bodyHtml).toContain('href="https://qron.space/pricing"');
     expect(qron?.bodyHtml).not.toContain("/api/checkout/");
+  });
+
+  it("no page advertises a price or chain that is not real", () => {
+    // $49/mo was never an AuthiChain SKU and nothing anchors to Bitcoin L1.
+    // Workers serve pages.json verbatim, so this guards the data itself.
+    for (const p of listSeoPages()) {
+      const blob = JSON.stringify(p);
+      expect(blob, p.slug).not.toMatch(/\$49\s*\/\s*mo/i);
+      expect(blob, p.slug).not.toContain("Bitcoin L1");
+    }
+  });
+
+  it("every stated DPP Readiness price matches src/lib/plans.ts", () => {
+    const price = planById("dpp_readiness")?.price;
+    expect(price).toBeGreaterThan(0);
+    for (const p of listSeoPages()) {
+      for (const m of p.bodyHtml.matchAll(
+        /EU DPP Readiness is \$(\d+) one-time/g
+      )) {
+        expect(Number(m[1]), p.slug).toBe(price);
+      }
+    }
   });
 
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
