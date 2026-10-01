@@ -18,37 +18,41 @@ function didFor(publicKey) {
 }
 const passport = {
   schema: "authichain.high-value-asset-passport/v0.1",
-  assetClass: "precious_metal_bar", issuer: "Valcambi SA",
+  assetClass: "precious_metal_bar",
+  issuer: "Valcambi SA",
   identity: { scheme: "issuer_serial", objectId: "urn:authichain:issuer:valcambi:serial:REDACTED-PILOT-SERIAL", issuerNamespace: "urn:authichain:issuer:valcambi", serial: "REDACTED-PILOT-SERIAL" },
   claims: [{ id: "claim-metal", field: "metal", value: "platinum", issuer: "Valcambi SA", evidenceIds: ["assay"] }],
   evidence: [{ id: "assay", type: "assay_certificate", issuer: "Valcambi SA", capturedAt: "2026-10-01T00:00:00Z" }],
-  inspections: [], lifecycle: [], status: "unknown",
+  inspections: [],
+  lifecycle: [],
+  status: "unknown",
 };
 
-test("maps a passport into the existing VC/provenance record contract", () => {
+test("maps issuer-serial passport into existing VC/provenance contract", () => {
+  const { publicKey } = generateKeyPairSync("ed25519");
+  const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
+  assert.ok(record.type.includes("ProvenanceRecord"));
+  assert.ok(record.type.includes("HighValueAssetPassport"));
+  assert.equal(record.credentialSubject.id, passport.identity.objectId);
+  assert.deepEqual(record.credentialSubject.claims[0].evidenceIds, ["assay"]);
+  assert.equal(record.proof.proofValue, "");
+});
 
-    const { publicKey } = generateKeyPairSync("ed25519");
-    const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
-    assert.ok(record.type.includes("ProvenanceRecord"));
-    assert.ok(record.type.includes("HighValueAssetPassport"));
-    assert.equal(record.credentialSubject.id, passport.identity.objectId);
-    assert.deepEqual(record.credentialSubject.claims[0].evidenceIds, ["assay"]);
-    assert.equal(record.proof.proofValue, "");
-  });
+test("maps GS1 identity to Digital Link subject id", () => {
+  const { publicKey } = generateKeyPairSync("ed25519");
+  const record = passportToRecordPayload({ ...passport, identity: { scheme: "gs1", objectId: "ignored", gtin: "09506000134352", serial: "SERIAL 123" } }, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
+  assert.equal(record.credentialSubject.id, "https://id.gs1.org/01/09506000134352/21/SERIAL%20123");
+});
 
-    const { publicKey } = generateKeyPairSync("ed25519");
-    const record = passportToRecordPayload({ ...passport, identity: { scheme: "gs1", objectId: "ignored", gtin: "09506000134352", serial: "SERIAL 123" } }, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
-    assert.equal(record.credentialSubject.id, "https://id.gs1.org/01/09506000134352/21/SERIAL%20123");
-  });
+test("round-trips through the existing verifier after signing", () => {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-01-01T00:00:00Z" });
+  record.proof.proofValue = "z" + base58Encode(edSign(null, signingBytes(record), privateKey));
+  const result = verifyRecord(record, null, { now: "2026-10-01T00:00:00Z" });
+  assert.equal(result.verdict, "valid-unanchored");
+  assert.equal(result.checks.signature, true);
+});
 
-    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
-    const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-01-01T00:00:00Z" });
-    record.proof.proofValue = "z" + base58Encode(edSign(null, signingBytes(record), privateKey));
-    const result = verifyRecord(record, null, { now: "2026-10-01T00:00:00Z" });
-    assert.equal(result.verdict, "valid-unanchored");
-    assert.equal(result.checks.signature, true);
-  });
-
-    assert.throws(() => passportToRecordPayload(passport, { issuerDid: "Valcambi SA", validFrom: "2026-10-01T00:00:00Z" }), /did:key/);
-  });
+test("rejects a non-did:key issuer", () => {
+  assert.throws(() => passportToRecordPayload(passport, { issuerDid: "Valcambi SA", validFrom: "2026-10-01T00:00:00Z" }), /did:key/);
 });
