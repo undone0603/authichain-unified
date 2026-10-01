@@ -14,7 +14,7 @@ import {
   resolveSku,
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
-import { AFFILIATE_BASE_RATE } from "../../../../lib/affiliate-rate";
+import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -391,35 +391,14 @@ export async function POST(req: NextRequest) {
           typeof session.amount_total === "number" &&
           session.amount_total > 0
         ) {
-          try {
-            const { data: aff } = await getSupabase()
-              .from("affiliates")
-              .select(
-                "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
-              )
-              .eq("affiliatecode", affiliateCode)
-              .maybeSingle();
-
-            if (aff && aff.status === "active") {
-              const gross = session.amount_total / 100;
-              const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-              const commission = Math.round(gross * rate * 100) / 100;
-              if (commission > 0) {
-                await getSupabase()
-                  .from("affiliates")
-                  .update({
-                    pending_payout:
-                      Number(aff.pending_payout ?? 0) + commission,
-                    total_referrals: Number(aff.total_referrals ?? 0) + 1,
-                    total_conversions: Number(aff.total_conversions ?? 0) + 1,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", aff.id)
-                  .eq("pending_payout", aff.pending_payout ?? 0);
-              }
-            }
-          } catch (e) {
-            console.error("[webhook] affiliate accrual failed:", e);
+          const accrual = await accrueAffiliateCommission(getSupabase(), {
+            affiliateCode,
+            amountCents: session.amount_total,
+            conversion: true,
+            eventId: event.id,
+          });
+          if (!accrual.credited) {
+            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
           }
         }
 
@@ -491,34 +470,18 @@ export async function POST(req: NextRequest) {
           subscriptionId &&
           invoice.amount_paid > 0
         ) {
-          try {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId);
-            const affiliateCode = sub.metadata?.affiliate_code;
-            if (affiliateCode) {
-              const { data: aff } = await getSupabase()
-                .from("affiliates")
-                .select("id, pending_payout, commission_rate, status")
-                .eq("affiliatecode", affiliateCode)
-                .maybeSingle();
-              if (aff && aff.status === "active") {
-                const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-                const commission =
-                  Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
-                if (commission > 0) {
-                  await getSupabase()
-                    .from("affiliates")
-                    .update({
-                      pending_payout:
-                        Number(aff.pending_payout ?? 0) + commission,
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq("id", aff.id)
-                    .eq("pending_payout", aff.pending_payout ?? 0);
-                }
-              }
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const affiliateCode = sub.metadata?.affiliate_code;
+          if (affiliateCode) {
+            const accrual = await accrueAffiliateCommission(getSupabase(), {
+              affiliateCode,
+              amountCents: invoice.amount_paid,
+              conversion: false,
+              eventId: event.id,
+            });
+            if (!accrual.credited) {
+              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
             }
-          } catch (e) {
-            console.error("[webhook] recurring affiliate accrual failed:", e);
           }
         }
 

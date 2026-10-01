@@ -1,11 +1,17 @@
-import { AFFILIATE_BASE_RATE } from "./affiliate-rate";
-
 /**
  * Minimal slice of the Supabase client this module uses, so callers on the
  * edge Worker (server/webhooks/stripe.ts) and tests can pass their own.
  */
 export type AffiliateAccrualClient = {
-  from: (table: "affiliates") => any;
+  rpc: (
+    fn: "accrue_affiliate_commission",
+    args: {
+      p_event_id: string;
+      p_affiliate_code: string;
+      p_amount_cents: number;
+      p_conversion: boolean;
+    }
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 };
 
 export type AffiliateAccrualResult =
@@ -22,54 +28,41 @@ export type AffiliateAccrualResult =
  */
 export async function accrueAffiliateCommission(
   supabase: AffiliateAccrualClient | null,
-  opts: { affiliateCode: string; amountCents: number; conversion: boolean }
+  opts: {
+    affiliateCode: string;
+    amountCents: number;
+    conversion: boolean;
+    eventId: string;
+  }
 ): Promise<AffiliateAccrualResult> {
-  const { affiliateCode, amountCents, conversion } = opts;
+  const { affiliateCode, amountCents, conversion, eventId } = opts;
   if (!supabase) return { credited: false, reason: "no_supabase" };
   if (!affiliateCode) return { credited: false, reason: "no_code" };
+  if (!eventId) return { credited: false, reason: "no_event_id" };
   if (!(amountCents > 0)) return { credited: false, reason: "zero_amount" };
 
   try {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const { data: aff, error } = await supabase
-        .from("affiliates")
-        .select(
-          "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
-        )
-        .eq("affiliatecode", affiliateCode)
-        .maybeSingle();
-      if (error) return { credited: false, reason: `lookup: ${error.message}` };
-      if (!aff) return { credited: false, reason: "unknown_code" };
-      if (aff.status !== "active") return { credited: false, reason: "inactive" };
-
-      const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-      const commission = Math.round((amountCents / 100) * rate * 100) / 100;
-      if (!(commission > 0))
-        return { credited: false, reason: "zero_commission" };
-
-      const update: Record<string, unknown> = {
-        pending_payout: Number(aff.pending_payout ?? 0) + commission,
-        updated_at: new Date().toISOString(),
-      };
-      if (conversion) {
-        update.total_referrals = Number(aff.total_referrals ?? 0) + 1;
-        update.total_conversions = Number(aff.total_conversions ?? 0) + 1;
-      }
-
-      const { data: updated, error: updateError } = await supabase
-        .from("affiliates")
-        .update(update)
-        .eq("id", aff.id)
-        .eq("pending_payout", aff.pending_payout ?? 0)
-        .select("id");
-      if (updateError) {
-        return { credited: false, reason: `update: ${updateError.message}` };
-      }
-      if (updated?.length) {
-        return { credited: true, affiliateId: String(aff.id), commission };
-      }
+    const { data, error } = await supabase.rpc("accrue_affiliate_commission", {
+      p_event_id: eventId,
+      p_affiliate_code: affiliateCode,
+      p_amount_cents: amountCents,
+      p_conversion: conversion,
+    });
+    if (error) return { credited: false, reason: `rpc: ${error.message}` };
+    const result = data as {
+      credited?: boolean;
+      affiliate_id?: string;
+      commission?: number;
+      reason?: string;
+    } | null;
+    if (!result?.credited) {
+      return { credited: false, reason: result?.reason || "unknown_result" };
     }
-    return { credited: false, reason: "concurrent_update" };
+    return {
+      credited: true,
+      affiliateId: String(result.affiliate_id),
+      commission: Number(result.commission),
+    };
   } catch (e) {
     return {
       credited: false,

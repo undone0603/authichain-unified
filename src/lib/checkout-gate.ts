@@ -17,6 +17,10 @@
  */
 import { applyHostedCheckoutRecovery } from "./checkout-recovery";
 import {
+  claimCheckoutAttempt,
+  recordCheckoutSession,
+} from "./checkout-protection";
+import {
   checkoutViewEvent,
   isDeclaredFor,
   isGrowthSku,
@@ -391,6 +395,9 @@ export async function createGatedCheckoutSession(opts: {
   fields: URLSearchParams;
   stripeSecretKey: string;
   cookieHeader?: string;
+  request: Request;
+  claimCheckout?: typeof claimCheckoutAttempt;
+  recordSession?: typeof recordCheckoutSession;
   fetchImpl?: typeof fetch;
 }): Promise<GatedSessionResult> {
   const key = (opts.stripeSecretKey || "").trim();
@@ -402,6 +409,19 @@ export async function createGatedCheckoutSession(opts: {
   const idempotencyKey = /^[\w-]{36}$/.test(submittedKey)
     ? submittedKey
     : crypto.randomUUID();
+  const claim = await (opts.claimCheckout ?? claimCheckoutAttempt)({
+    checkoutKey: idempotencyKey,
+    email: opts.email,
+    planId: opts.plan.id,
+    request: opts.request,
+  });
+  if (!claim.allowed) {
+    return {
+      ok: false,
+      status: claim.reason.includes("already") ? 409 : 503,
+      error: claim.reason,
+    };
+  }
   let res: Response;
   try {
     res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -435,6 +455,17 @@ export async function createGatedCheckoutSession(opts: {
       detail: data.error?.message || `stripe ${res.status}`,
     };
   }
+  const recorded = await (opts.recordSession ?? recordCheckoutSession)(
+    idempotencyKey,
+    data.url
+  );
+  if (!recorded) {
+    return {
+      ok: false,
+      status: 502,
+      error: "Checkout session could not be safely recorded",
+    };
+  }
   return { ok: true, url: data.url };
 }
 
@@ -456,6 +487,8 @@ export type CheckoutGateEvent = {
 
 export type GatedCheckoutDeps = {
   fetchImpl?: typeof fetch;
+  claimCheckout?: typeof claimCheckoutAttempt;
+  recordSession?: typeof recordCheckoutSession;
   /** Optional sink. Exceptions from it are swallowed — analytics never breaks checkout. */
   onEvent?: (event: CheckoutGateEvent) => void;
 };
@@ -595,6 +628,9 @@ export async function tryHandleGatedCheckout(
     fields,
     stripeSecretKey: env.STRIPE_SECRET_KEY || "",
     cookieHeader: request.headers.get("cookie") || "",
+    request,
+    claimCheckout: deps.claimCheckout,
+    recordSession: deps.recordSession,
     fetchImpl: deps.fetchImpl,
   });
   if (!result.ok) {
