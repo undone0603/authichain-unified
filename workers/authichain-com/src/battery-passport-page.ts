@@ -383,6 +383,7 @@ ${gapMapSection()}
       <ul class="bp-list">${deliverables}</ul>
       <p><a href="${BATTERY_PASSPORT_PATH}/sample-audit">See a sample written assessment</a>: figure check, Annex XIII gap table and an ordered action plan.</p>
       <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This assessment supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
+      <p class="section-sub">The only published demonstration record has both of those checks. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a> and the <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">Polygon transaction</a>.</p>
     </div>
   </section>
 
