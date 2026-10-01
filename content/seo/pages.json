@@ -11023,5 +11023,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "industrial-battery-2-kwh-passport-18-february-2027",
+    "keyword": "industrial battery 2 kwh passport 18 february 2027",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Industrial Battery 2 Kwh Passport 18 February | AuthiChain",
+    "metaDescription": "Under Regulation (EU) 2023/1542, Article 77, from 18 February 2027 each electric vehicle battery, light means of transport battery and industrial battery.",
+    "h1": "Industrial Battery 2 Kwh Passport 18 February 2027",
+    "bodyHtml": "<p>Under Regulation (EU) 2023/1542, Article 77, from 18 February 2027 each electric vehicle battery, light means of transport battery and industrial battery with a capacity above 2 kWh placed on the EU market needs a battery passport reachable through a QR code on the unit.</p><h2>Why AuthiChain</h2><ul><li>One record per battery unit, signed with Ed25519 as a W3C Verifiable Credential, so each serial number carries its own checkable statement</li><li>Records resolve from a GS1 Digital Link URL that the spec requires to be served without authentication</li><li>The Apache-2.0 reference verifier checks a record offline, so a buyer, importer or inspector needs no account with us</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see the deliverable first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read a sample $299 battery assessment</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which batteries need a passport on 18 February 2027?</h3><p>Electric vehicle batteries, light means of transport batteries and industrial batteries above 2 kWh. Portable batteries and SLI batteries are outside the passport requirement. Confirm scope against Article 77 and the Commission implementing acts.</p><h3>Does a signed record satisfy Article 77 by itself?</h3><p>No. Article 77 prescribes data content and access rules. A signed record shows who issued the data and that it has not changed since; you still need to populate the required fields and keep the passport available.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Industrial Battery 2 Kwh Passport 18 February 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Under Regulation (EU) 2023/1542, Article 77, from 18 February 2027 each electric vehicle battery, light means of transport battery and industrial battery with a capacity above 2 kWh placed on the EU market needs a battery passport reachable through a QR code on the unit.",
+          "url": "https://authichain.com/p/industrial-battery-2-kwh-passport-18-february-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Industrial Battery 2 Kwh Passport 18 February 2027",
+              "item": "https://authichain.com/p/industrial-battery-2-kwh-passport-18-february-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which batteries need a passport on 18 February 2027?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Electric vehicle batteries, light means of transport batteries and industrial batteries above 2 kWh. Portable batteries and SLI batteries are outside the passport requirement. Confirm scope against Article 77 and the Commission implementing acts."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy Article 77 by itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Article 77 prescribes data content and access rules. A signed record shows who issued the data and that it has not changed since; you still need to populate the required fields and keep the passport available."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ed25519-vs-ecdsa-p-256-verifiable-credential-signatures",
+    "keyword": "ed25519 vs ecdsa p-256 verifiable credential signatures",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Ed25519 Vs Ecdsa P-256 Verifiable Credential | AuthiChain",
+    "metaDescription": "Ed25519 (RFC 8032, FIPS 186-5) is a deterministic signature scheme with 32-byte public keys that embed directly in a did:key identifier, which is why.",
+    "h1": "Ed25519 Vs Ecdsa P-256 Verifiable Credential Signatures",
+    "bodyHtml": "<p>Ed25519 (RFC 8032, FIPS 186-5) is a deterministic signature scheme with 32-byte public keys that embed directly in a did:key identifier, which is why AuthiChain records can be verified offline without resolving anything; ECDSA P-256 is the common alternative where hardware or policy requires it.</p><h2>Why AuthiChain</h2><ul><li>Ed25519 signatures need no per-signature random number, which removes a class of implementation bugs that ECDSA carries</li><li>A did:key issuer identifier contains the public key itself, so verification steps 1 to 4 in the spec need no network access</li><li>The reference verifier has zero dependencies and uses the Ed25519 support built into Node</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is Ed25519 quantum-resistant?</h3><p>No. Like ECDSA it falls to Shor's algorithm on a sufficiently large quantum computer. The record format is not tied to one scheme forever, but v0.1 specifies Ed25519 only.</p><h3>When would I choose P-256 instead?</h3><p>When your key store, HSM or procurement policy supports only NIST curves. Check what your hardware signs natively before choosing; the choice changes which verifiers can read your records.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Ed25519 Vs Ecdsa P-256 Verifiable Credential Signatures",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Ed25519 (RFC 8032, FIPS 186-5) is a deterministic signature scheme with 32-byte public keys that embed directly in a did:key identifier, which is why AuthiChain records can be verified offline without resolving anything; ECDSA P-256 is the common alternative where hardware or policy requires it.",
+          "url": "https://authichain.com/p/ed25519-vs-ecdsa-p-256-verifiable-credential-signatures"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Ed25519 Vs Ecdsa P-256 Verifiable Credential Signatures",
+              "item": "https://authichain.com/p/ed25519-vs-ecdsa-p-256-verifiable-credential-signatures"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is Ed25519 quantum-resistant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Like ECDSA it falls to Shor's algorithm on a sufficiently large quantum computer. The record format is not tied to one scheme forever, but v0.1 specifies Ed25519 only."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When would I choose P-256 instead?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When your key store, HSM or procurement policy supports only NIST curves. Check what your hardware signs natively before choosing; the choice changes which verifiers can read your records."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verify-product-authenticity-offline-without-internet-or-account",
+    "keyword": "verify product authenticity offline without internet or account",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verify Product Authenticity Offline Without | AuthiChain",
+    "metaDescription": "AuthiChain records verify offline: the signature, validity dates and record hash are checked locally with one command and no account, because the issuer's.",
+    "h1": "Verify Product Authenticity Offline Without Internet Or Account",
+    "bodyHtml": "<p>AuthiChain records verify offline: the signature, validity dates and record hash are checked locally with one command and no account, because the issuer's public key is embedded in its did:key identifier.</p><h2>Why AuthiChain</h2><ul><li>Run npx authichain-verify record.json; it prints a verdict of verified, valid-unanchored or invalid and exits non-zero on invalid</li><li>We cannot meter, revoke or observe a check run on your machine, because it never contacts us</li><li>Confirming that an anchor transaction exists on-chain is the one step that needs a network, and the verifier reports that difference instead of hiding it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does an offline check not tell me?</h3><p>It does not confirm the anchor transaction exists on the chain, and it cannot tell you whether the issuer's statement is true. Look up the transaction hash on a block explorer for the first; judge the issuer for the second.</p><h3>Which environment does the verifier need?</h3><p>Node 18 or later. The package is ESM only and has no dependencies.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verify Product Authenticity Offline Without Internet Or Account",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "AuthiChain records verify offline: the signature, validity dates and record hash are checked locally with one command and no account, because the issuer's public key is embedded in its did:key identifier.",
+          "url": "https://authichain.com/p/verify-product-authenticity-offline-without-internet-or-account"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verify Product Authenticity Offline Without Internet Or Account",
+              "item": "https://authichain.com/p/verify-product-authenticity-offline-without-internet-or-account"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does an offline check not tell me?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It does not confirm the anchor transaction exists on the chain, and it cannot tell you whether the issuer's statement is true. Look up the transaction hash on a block explorer for the first; judge the issuer for the second."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which environment does the verifier need?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Node 18 or later. The package is ESM only and has no dependencies."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "open-source-digital-product-passport-specification-vendor-lock-in",
+    "keyword": "open source digital product passport specification vendor lock-in",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Open Source Digital Product Passport | AuthiChain",
+    "metaDescription": "A digital product passport format avoids vendor lock-in when its specification, license and verifier are public: AuthiChain publishes all three under.",
+    "h1": "Open Source Digital Product Passport Specification Vendor Lock-In",
+    "bodyHtml": "<p>A digital product passport format avoids vendor lock-in when its specification, license and verifier are public: AuthiChain publishes all three under Apache-2.0, including a patent grant, so a competitor or your own team can implement it.</p><h2>Why AuthiChain</h2><ul><li>The specification (SPEC.md) defines record structure, anchoring and the verification procedure in full</li><li>The reference verifier is zero-dependency and there is a 28-fixture adversarial conformance suite, validated against deliberately broken implementations so it demonstrably can fail</li><li>Registry resolution rules require stable URLs and unauthenticated reads, so records stay reachable without a login</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does the Apache-2.0 patent grant change for a buyer?</h3><p>It gives implementers a license to the contributors' patent claims in the covered work, which is what legal teams usually need before building on a specification. Have counsel read the license text for your case.</p><h3>How do I test another implementation against the spec?</h3><p>Run the conformance suite from the repository with npm run conformance. An implementation conforms if it implements section 5 completely and returns only the three verdicts.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Open Source Digital Product Passport Specification Vendor Lock-In",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A digital product passport format avoids vendor lock-in when its specification, license and verifier are public: AuthiChain publishes all three under Apache-2.0, including a patent grant, so a competitor or your own team can implement it.",
+          "url": "https://authichain.com/p/open-source-digital-product-passport-specification-vendor-lock-in"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Open Source Digital Product Passport Specification Vendor Lock-In",
+              "item": "https://authichain.com/p/open-source-digital-product-passport-specification-vendor-lock-in"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does the Apache-2.0 patent grant change for a buyer?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It gives implementers a license to the contributors' patent claims in the covered work, which is what legal teams usually need before building on a specification. Have counsel read the license text for your case."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I test another implementation against the spec?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Run the conformance suite from the repository with npm run conformance. An implementation conforms if it implements section 5 completely and returns only the three verdicts."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-conformance-test-suite-for-verifiers",
+    "keyword": "verifiable credential conformance test suite for verifiers",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Conformance Test Suite | AuthiChain",
+    "metaDescription": "A conformance suite for a verifier is a set of fixtures where the correct answer is known, including records that must be rejected; the AuthiChain suite has.",
+    "h1": "Verifiable Credential Conformance Test Suite For Verifiers",
+    "bodyHtml": "<p>A conformance suite for a verifier is a set of fixtures where the correct answer is known, including records that must be rejected; the AuthiChain suite has 28 adversarial fixtures and runs with npm run conformance.</p><h2>Why AuthiChain</h2><ul><li>The suite is checked against deliberately broken implementations, so a passing result means the fixtures can detect failure</li><li>Fixtures cover the spec rules directly, such as malformed transaction hashes, testnet anchors and hash mismatches</li><li>Conformance is defined as implementing section 5 completely and returning only verified, valid-unanchored or invalid</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I run the suite against my own verifier?</h3><p>Yes. The spec, reference verifier and fixtures are public under Apache-2.0, so you can point the suite at any implementation and read the failures.</p><h3>Does passing the suite make a verifier certified?</h3><p>No. There is no certification scheme. Passing shows the implementation behaves as the fixtures expect, nothing more.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Conformance Test Suite For Verifiers",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A conformance suite for a verifier is a set of fixtures where the correct answer is known, including records that must be rejected; the AuthiChain suite has 28 adversarial fixtures and runs with npm run conformance.",
+          "url": "https://authichain.com/p/verifiable-credential-conformance-test-suite-for-verifiers"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Conformance Test Suite For Verifiers",
+              "item": "https://authichain.com/p/verifiable-credential-conformance-test-suite-for-verifiers"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I run the suite against my own verifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The spec, reference verifier and fixtures are public under Apache-2.0, so you can point the suite at any implementation and read the failures."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does passing the suite make a verifier certified?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. There is no certification scheme. Passing shows the implementation behaves as the fixtures expect, nothing more."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
