@@ -49,8 +49,8 @@ test files exist but only 4 ran in CI. One that never ran
 
 ## Owner actions (cannot be done from a session)
 
-1. **Rotate the Supabase service_role key** for project `nhdnkzhtadfkkluiulhs`, then update every consumer: Vercel, Workers secrets and GitHub secrets. Removing it from HEAD does not un-leak it, because git history is public.
-2. **Rotate the Resend key** that starts `re_Lc5G`, and update n8n and the Workers secrets.
+1. **Rotate the Supabase service_role key** for the production project (QRON-v2), then update every consumer: Vercel, Workers secrets and GitHub secrets. Removing it from HEAD does not un-leak it, because git history is public.
+2. **Rotate the Resend key** that was in `agentz/workflows/registry.yaml`, and update n8n and the Workers secrets.
 3. After both rotations, add their historical gitleaks fingerprints to `.gitleaksignore`, each with a "rotated YYYY-MM-DD" note. Until then, a red weekly full-history scan is the correct signal.
 4. Set `TELEGRAM_WEBHOOK_SECRET` in the app, then run `node scripts/register-telegram-webhook.js`. The bot refuses every update until this is done.
 5. Merge **PR #1424** once this lands; its only red checks were the prettier failure fixed here. Then move `cloudflare-estate-audit.yml` from the `ship` lane to `health`.
