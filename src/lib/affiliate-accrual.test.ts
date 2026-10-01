@@ -3,7 +3,9 @@ import { accrueAffiliateCommission } from "./affiliate-accrual";
 
 function fakeClient(
   row: Record<string, unknown> | null,
-  updatedRows = [{ id: "a1" }]
+  updatedRows:
+    | Array<{ id: string }>
+    | ((attempt: number) => Array<{ id: string }>) = [{ id: "a1" }]
 ) {
   const update = vi.fn();
   const client = {
@@ -16,7 +18,13 @@ function fakeClient(
         return {
           eq: () => ({
             eq: () => ({
-              select: async () => ({ data: updatedRows, error: null }),
+              select: async () => ({
+                data:
+                  typeof updatedRows === "function"
+                    ? updatedRows(update.mock.calls.length)
+                    : updatedRows,
+                error: null,
+              }),
             }),
           }),
         };
@@ -92,6 +100,19 @@ describe("accrueAffiliateCommission", () => {
       conversion: true,
     });
     expect(r).toEqual({ credited: false, reason: "concurrent_update" });
+  });
+
+  it("recovers from transient concurrent balance updates", async () => {
+    const { client, update } = fakeClient(active, attempt =>
+      attempt < 3 ? [] : [{ id: "a1" }]
+    );
+    const result = await accrueAffiliateCommission(client, {
+      affiliateCode: "CUP20",
+      amountCents: 4900,
+      conversion: true,
+    });
+    expect(result).toEqual({ credited: true, affiliateId: "a1", commission: 9.8 });
+    expect(update).toHaveBeenCalledTimes(3);
   });
 
   it("never throws", async () => {

@@ -158,6 +158,51 @@ function getSupabase(): AdminSupabase {
   return _supabase;
 }
 
+async function claimStripeEvent(
+  supabase: AdminSupabase,
+  event: Stripe.Event
+): Promise<"claimed" | "duplicate" | "in_progress"> {
+  const { error: insertError } = await supabase.from("stripe_events").insert({
+    event_id: event.id,
+    event_type: event.type,
+    processed_at: new Date().toISOString(),
+    status: "processing",
+  });
+  if (!insertError) return "claimed";
+  if (insertError.code !== "23505") throw insertError;
+
+  const { data: existing, error: readError } = await supabase
+    .from("stripe_events")
+    .select("status, processed_at")
+    .eq("event_id", event.id)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!existing || existing.status === "success" || !existing.status) {
+    return "duplicate";
+  }
+
+  const processedAt = existing.processed_at
+    ? new Date(existing.processed_at).getTime()
+    : 0;
+  const staleProcessing =
+    existing.status === "processing" &&
+    (!Number.isFinite(processedAt) || Date.now() - processedAt > 5 * 60_000);
+  if (existing.status !== "error" && !staleProcessing) return "in_progress";
+
+  let reclaim = supabase
+    .from("stripe_events")
+    .update({ status: "processing", processed_at: new Date().toISOString(), error: null })
+    .eq("event_id", event.id)
+    .eq("status", existing.status);
+  if (existing.processed_at) {
+    reclaim = reclaim.eq("processed_at", existing.processed_at);
+  }
+  const { data: reclaimed, error: reclaimError } = await reclaim
+    .select("event_id");
+  if (reclaimError) throw reclaimError;
+  return reclaimed?.length ? "claimed" : "in_progress";
+}
+
 export async function POST(req: NextRequest) {
   // Single canonical endpoint for the whole (single-account) ecosystem. Accept
   // either signing secret so consolidation doesn't depend on which secret the
@@ -192,19 +237,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Idempotency: Stripe retries deliveries. Skip events we've already recorded
-  // so commission accrual and other side effects run at most once per event.
+  // Atomically claim the event using stripe_events.event_id's primary key.
+  // Never fail open here: concurrent delivery must not run financial side effects twice.
   try {
-    const { data: seen } = await getSupabase()
-      .from("stripe_events")
-      .select("event_id")
-      .eq("event_id", event.id)
-      .maybeSingle();
-    if (seen) {
+    const claim = await claimStripeEvent(getSupabase(), event);
+    if (claim === "duplicate") {
       return NextResponse.json({ received: true, duplicate: true });
     }
-  } catch {
-    // Dedup check unavailable — fall through and process (at-least-once).
+    if (claim === "in_progress") {
+      return NextResponse.json(
+        { error: "Webhook event is already being processed" },
+        { status: 500 }
+      );
+    }
+  } catch (err) {
+    console.error("[webhook] Stripe event claim failed:", err);
+    return NextResponse.json(
+      { error: "Could not claim Stripe event" },
+      { status: 500 }
+    );
   }
 
   try {
@@ -643,19 +694,32 @@ export async function POST(req: NextRequest) {
         console.log(`Unhandled Stripe event: ${event.type}`);
     }
 
-    // Log all events
-    await getSupabase()
+    const { error: completeError } = await getSupabase()
       .from("stripe_events")
-      .insert({
-        event_id: event.id,
-        event_type: event.type,
+      .update({
+        status: "success",
         processed_at: new Date().toISOString(),
       })
-      .select();
+      .eq("event_id", event.id);
+    if (completeError) throw completeError;
 
     return NextResponse.json({ received: true, type: event.type });
   } catch (err) {
     console.error("Webhook processing error:", err);
+    await getSupabase()
+      .from("stripe_events")
+      .update({
+        status: "error",
+        processed_at: new Date().toISOString(),
+        error: getErrorMessage(err).slice(0, 1000),
+      })
+      .eq("event_id", event.id)
+      .then(({ error }: { error: unknown }) => {
+        if (error) console.error("[webhook] Failed to mark event error:", error);
+      })
+      .catch(markError =>
+        console.error("[webhook] Failed to mark event error:", markError)
+      );
     return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

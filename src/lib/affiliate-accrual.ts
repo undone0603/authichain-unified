@@ -17,9 +17,8 @@ export type AffiliateAccrualResult =
  *
  * `conversion: true` is the first sale (checkout), which also bumps the
  * referral and conversion counters; renewals pass false. The update is
- * conditional on the pending_payout value that was read, so two concurrent
- * credits cannot silently overwrite each other (the loser is reported, not
- * retried). Never throws: a failed credit must not fail the webhook.
+ * conditional on the pending_payout value that was read. Concurrent balance
+ * changes are re-read and retried a bounded number of times.
  */
 export async function accrueAffiliateCommission(
   supabase: AffiliateAccrualClient | null,
@@ -31,44 +30,46 @@ export async function accrueAffiliateCommission(
   if (!(amountCents > 0)) return { credited: false, reason: "zero_amount" };
 
   try {
-    const { data: aff, error } = await supabase
-      .from("affiliates")
-      .select(
-        "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
-      )
-      .eq("affiliatecode", affiliateCode)
-      .maybeSingle();
-    if (error) return { credited: false, reason: `lookup: ${error.message}` };
-    if (!aff) return { credited: false, reason: "unknown_code" };
-    if (aff.status !== "active") return { credited: false, reason: "inactive" };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: aff, error } = await supabase
+        .from("affiliates")
+        .select(
+          "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
+        )
+        .eq("affiliatecode", affiliateCode)
+        .maybeSingle();
+      if (error) return { credited: false, reason: `lookup: ${error.message}` };
+      if (!aff) return { credited: false, reason: "unknown_code" };
+      if (aff.status !== "active") return { credited: false, reason: "inactive" };
 
-    const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-    const commission = Math.round((amountCents / 100) * rate * 100) / 100;
-    if (!(commission > 0))
-      return { credited: false, reason: "zero_commission" };
+      const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
+      const commission = Math.round((amountCents / 100) * rate * 100) / 100;
+      if (!(commission > 0))
+        return { credited: false, reason: "zero_commission" };
 
-    const update: Record<string, unknown> = {
-      pending_payout: Number(aff.pending_payout ?? 0) + commission,
-      updated_at: new Date().toISOString(),
-    };
-    if (conversion) {
-      update.total_referrals = Number(aff.total_referrals ?? 0) + 1;
-      update.total_conversions = Number(aff.total_conversions ?? 0) + 1;
-    }
+      const update: Record<string, unknown> = {
+        pending_payout: Number(aff.pending_payout ?? 0) + commission,
+        updated_at: new Date().toISOString(),
+      };
+      if (conversion) {
+        update.total_referrals = Number(aff.total_referrals ?? 0) + 1;
+        update.total_conversions = Number(aff.total_conversions ?? 0) + 1;
+      }
 
-    const { data: updated, error: updateError } = await supabase
-      .from("affiliates")
-      .update(update)
-      .eq("id", aff.id)
-      .eq("pending_payout", aff.pending_payout ?? 0)
-      .select("id");
-    if (updateError) {
-      return { credited: false, reason: `update: ${updateError.message}` };
+      const { data: updated, error: updateError } = await supabase
+        .from("affiliates")
+        .update(update)
+        .eq("id", aff.id)
+        .eq("pending_payout", aff.pending_payout ?? 0)
+        .select("id");
+      if (updateError) {
+        return { credited: false, reason: `update: ${updateError.message}` };
+      }
+      if (updated?.length) {
+        return { credited: true, affiliateId: String(aff.id), commission };
+      }
     }
-    if (!updated || updated.length === 0) {
-      return { credited: false, reason: "concurrent_update" };
-    }
-    return { credited: true, affiliateId: String(aff.id), commission };
+    return { credited: false, reason: "concurrent_update" };
   } catch (e) {
     return {
       credited: false,

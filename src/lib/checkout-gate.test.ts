@@ -172,6 +172,7 @@ describe("tryHandleGatedCheckout — POST", () => {
         email: "grower@farm.com",
         utm_source: "mail",
         visit_id: "v_1",
+        checkout_key: "12345678-1234-4234-8234-123456789abc",
       }),
       { STRIPE_SECRET_KEY: "sk_test_x" },
       { fetchImpl }
@@ -195,6 +196,9 @@ describe("tryHandleGatedCheckout — POST", () => {
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
+    expect((fetchImpl.mock.calls[0]![1] as RequestInit).headers).toMatchObject({
+      "Idempotency-Key": "12345678-1234-4234-8234-123456789abc",
+    });
   });
 
   it("DPP POST carries the DPP offer metadata", () => {

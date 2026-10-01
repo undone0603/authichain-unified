@@ -207,6 +207,10 @@ export function renderCheckoutConfirmPage(opts: {
   const { plan } = opts;
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
+  const submittedCheckoutKey = params.get("checkout_key") || "";
+  const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
+    ? submittedCheckoutKey
+    : crypto.randomUUID();
   const hidden = CHECKOUT_CARRY_KEYS.map(key => {
     const v = (params.get(key) || "").trim().slice(0, 256);
     return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
@@ -222,7 +226,7 @@ ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-${hidden}<button type="submit">Continue to secure Stripe checkout</button>
+${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><button type="submit">Continue to secure Stripe checkout</button>
 <p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
 </form>
 <div class="links"><a href="/checkout">All plans</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a></div>`
@@ -383,14 +387,29 @@ export async function createGatedCheckoutSession(opts: {
   if (!key) return { ok: false, status: 500, error: "Stripe is not configured" };
   const body = buildGatedSessionBody(opts);
   const doFetch = opts.fetchImpl ?? fetch;
-  const res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
+  const submittedKey = opts.fields.get("checkout_key") || "";
+  const idempotencyKey = /^[\w-]{36}$/.test(submittedKey)
+    ? submittedKey
+    : crypto.randomUUID();
+  let res: Response;
+  try {
+    res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": idempotencyKey,
     },
-    body,
-  });
+      body,
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 502,
+      error: "Stripe checkout timed out or could not be reached",
+    };
+  }
   let data: { url?: string; error?: { message?: string } } = {};
   try {
     data = (await res.json()) as typeof data;
