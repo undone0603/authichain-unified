@@ -1,8 +1,66 @@
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import react from "@vitejs/plugin-react";
+import { configDefaults, defineConfig } from "vitest/config";
 
 const templateRoot = path.resolve(import.meta.dirname);
+
+const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)["']node:test["']/;
+const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
+const SKIP_DIRS = new Set([
+  "node_modules",
+  "dist",
+  ".git",
+  "coverage",
+  ".turbo",
+  ".next",
+]);
+
+// Setting `test.exclude` replaces Vitest's defaults, so they are spread back
+// in below. node:test files stay with their workspace runners.
+function nodeTestFiles(root: string): string[] {
+  const found: string[] = [];
+  const scan = [
+    "api",
+    "apps",
+    "client",
+    "packages",
+    "protocol",
+    "scripts",
+    "server",
+    "shared",
+    "src",
+    "worker-app",
+    "workers",
+  ];
+  const walk = (dir: string) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const ent of entries) {
+      if (SKIP_DIRS.has(ent.name)) continue;
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (!TEST_FILE.test(ent.name)) continue;
+      let text = "";
+      try {
+        text = readFileSync(abs, "utf8");
+      } catch {
+        continue;
+      }
+      if (!NODE_TEST_IMPORT.test(text)) continue;
+      found.push(path.relative(root, abs).split(path.sep).join("/"));
+    }
+  };
+  for (const rel of scan) walk(path.join(root, rel));
+  return found;
+}
 
 export default defineConfig({
   root: templateRoot,
@@ -101,7 +159,11 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
-    exclude: ["apps/agent-browser/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "apps/agent-browser/**",
+      ...nodeTestFiles(templateRoot),
+    ],
     include: [
       "api/**/*.test.ts",
       "server/**/*.test.ts",
