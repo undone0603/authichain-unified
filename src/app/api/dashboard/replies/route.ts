@@ -1,7 +1,8 @@
 /**
  * API routes for inbound replies dashboard
  * GET: fetch paginated replies with filters
- * PATCH: update reply sentiment/status (sales team only)
+ * PATCH: update reply sentiment/status
+ * Both are owner-only (requireAdminRequest): replies carry lead emails.
  */
 
 import { db } from '@/db';
@@ -10,6 +11,7 @@ import { inboundReplies, leads } from '@/db/schema';
 // below), not standalone drizzle-orm exports — don't import them as symbols.
 import { eq, and, desc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminRequest } from '../../../../lib/require-admin-request';
 
 /**
  * GET /api/dashboard/replies
@@ -17,6 +19,9 @@ import { NextRequest, NextResponse } from 'next/server';
  * Query params: sentiment, status, page, limit
  */
 export async function GET(request: NextRequest) {
+  const denied = await requireAdminRequest(request);
+  if (denied) return denied;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const sentiment = searchParams.get('sentiment');
@@ -84,6 +89,9 @@ export async function GET(request: NextRequest) {
  * Body: { id, status?, manualSentiment? }
  */
 export async function PATCH(request: NextRequest) {
+  const denied = await requireAdminRequest(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { id, status, manualSentiment } = body;

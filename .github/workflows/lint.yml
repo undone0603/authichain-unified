@@ -43,5 +43,17 @@ jobs:
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
 
+      # Root-package script tests are outside `turbo test --filter=!.`, so they
+      # only run when listed here.
+      - name: Check CI repair classifier, typecheck ratchet and estate drift
+        run: >-
+          pnpm exec vitest run
+          scripts/__tests__/ci-repair-classify.test.ts
+          scripts/__tests__/typecheck-ratchet.test.ts
+          scripts/__tests__/estate-drift.test.ts
+
+      - name: Check node:test script suites
+        run: node --test scripts/autonomy/*.test.mjs scripts/ci/*.test.mjs
+
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs

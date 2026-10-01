@@ -1183,7 +1183,7 @@ export function QronHome() {
               Browse Full Demo Gallery →
             </a>
             <p className="text-xs mt-3" style={{ color: '#6b6b6b' }}>
-              20+ iconic brands · Order yours from $49 · Delivered in ~5 min
+              20+ iconic brands · Delivered in ~5 min · Plans below
             </p>
           </div>
         </section>

@@ -110,6 +110,8 @@ maison-elite-ai-dropship/
 
 # Debug/lint output artifacts
 eslint_errors.txt
+.eslint-report.json
+eslint-target.json
 *.errors.txt
 test-output.txt
 

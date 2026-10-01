@@ -40,7 +40,7 @@ export default function SandboxPage() {
           <div className="sticky top-24 space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Initialize Integration</h2>
-              <p className="text-sm text-zinc-400">Skip the sales call. Speak directly with AgentZ to review API documentation, request the Zappar integration specs, or initialize a $199 Single-Project Pilot immediately.</p>
+              <p className="text-sm text-zinc-400">Skip the sales call. Speak directly with AgentZ to review API documentation, request the Zappar integration specs, or start from the plans on the pricing page.</p>
             </div>
             <AgenticCloser />
             <div className="text-center"><p className="text-xs text-zinc-600 font-mono">Powered by AuthiChain Autonomous Logic</p></div>
