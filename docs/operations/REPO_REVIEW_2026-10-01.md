@@ -58,7 +58,7 @@ test files exist but only 4 ran in CI. One that never ran
 ## Deferred (money, contact or design decisions)
 
 - **PR #1426** (affiliate payouts on): this moves money, so it is the owner's decision.
-- ~~**Metered agent billing never bills.**~~ **Fixed in #1456**, behind `STRIPE_AGENT_METER_EVENT` (off until you create the Stripe Meter). The same PR found that the three metered MCP tools returned fixed verdicts ("Status: SECURED.", "Status: COMPLIANT.") for any input. They now answer from `auth_seals` and `verifyDpp`, and only a real answer is metered.
+- **Metered agent billing never bills.** `src/lib/industrial/billing.ts` calls `subscriptionItems.createUsageRecord`, which current stripe-node no longer has. The error is caught and logged. The fix is `billing.meterEvents`, which needs a Stripe meter configured first. #1456 is not merged.
 - ~~**The compliance dashboard paywall is client-side.**~~ **Done in #1450.**
   - What it found: there was no `/dashboard/compliance` route and no `enterprise_compliance` plan, and nothing ever set the cookie the gate read.
   - What it builds: a real tier. Entitlement is checked server-side from `profiles` (`src/lib/compliance-access.ts`, `src/lib/compliance-dal.ts`), and the dashboard shows the account's DPP portfolio from live data.
