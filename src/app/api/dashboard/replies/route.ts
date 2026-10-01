@@ -5,13 +5,13 @@
  * Both are owner-only (requireAdminRequest): replies carry lead emails.
  */
 
-import { db } from "@/db";
-import { inboundReplies, leads } from "@/db/schema";
+import { db } from '@/db';
+import { inboundReplies, leads } from '@/db/schema';
 // `limit`/`offset` are query-builder methods (used as `.limit()`/`.offset()`
 // below), not standalone drizzle-orm exports — don't import them as symbols.
-import { eq, and, desc } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdminRequest } from "../../../../lib/require-admin-request";
+import { eq, and, desc } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminRequest } from '../../../../lib/require-admin-request';
 
 /**
  * GET /api/dashboard/replies
@@ -24,22 +24,19 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
-    const sentiment = searchParams.get("sentiment");
-    const status = searchParams.get("status");
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const pageLimit = Math.min(
-      100,
-      parseInt(searchParams.get("limit") || "20")
-    );
+    const sentiment = searchParams.get('sentiment');
+    const status = searchParams.get('status');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const pageLimit = Math.min(100, parseInt(searchParams.get('limit') || '20'));
 
     // Build where clause
     const conditions = [];
 
-    if (sentiment && sentiment !== "all") {
+    if (sentiment && sentiment !== 'all') {
       conditions.push(eq(inboundReplies.sentiment, sentiment));
     }
 
-    if (status && status !== "all") {
+    if (status && status !== 'all') {
       conditions.push(eq(inboundReplies.status, status));
     }
 
@@ -72,16 +69,16 @@ export async function GET(request: NextRequest) {
         page,
         limit: pageLimit,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
-    console.error("Error fetching replies:", error);
+    console.error('Error fetching replies:', error);
     return NextResponse.json(
       {
-        error: "Failed to fetch replies",
+        error: 'Failed to fetch replies',
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -100,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     const { id, status, manualSentiment } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Missing reply ID" }, { status: 400 });
+      return NextResponse.json({ error: 'Missing reply ID' }, { status: 400 });
     }
 
     // Prepare update object
@@ -127,11 +124,11 @@ export async function PATCH(request: NextRequest) {
       .returning();
 
     if (result.length === 0) {
-      return NextResponse.json({ error: "Reply not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Reply not found' }, { status: 404 });
     }
 
     // If status changed to "contacted" or sentiment overridden, also update leads table
-    if (status === "contacted" || manualSentiment) {
+    if (status === 'contacted' || manualSentiment) {
       const reply = result[0];
       if (reply.leadId) {
         await db
@@ -150,16 +147,16 @@ export async function PATCH(request: NextRequest) {
         success: true,
         reply: result[0],
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
-    console.error("Error updating reply:", error);
+    console.error('Error updating reply:', error);
     return NextResponse.json(
       {
-        error: "Failed to update reply",
+        error: 'Failed to update reply',
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

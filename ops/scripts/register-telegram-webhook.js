@@ -1,9 +1,8 @@
-import { config } from "dotenv";
+import { config } from 'dotenv';
 config();
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const NEXT_PUBLIC_APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://qron.space";
+const NEXT_PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
 const WEBHOOK_URL = `${NEXT_PUBLIC_APP_URL}/api/telegram`;
 // Telegram echoes this in X-Telegram-Bot-Api-Secret-Token; /api/telegram
 // refuses every update without it (src/lib/telegram-webhook-auth.ts).
@@ -13,52 +12,40 @@ async function registerWebhook() {
   console.log(`🤖 Initializing Telegram Bot Webhook Registration...`);
 
   if (!TELEGRAM_BOT_TOKEN) {
-    console.error("❌ ERROR: TELEGRAM_BOT_TOKEN is not set in your .env file.");
-    console.error(
-      "Please obtain a token from @BotFather on Telegram and set it before running this script."
-    );
+    console.error('❌ ERROR: TELEGRAM_BOT_TOKEN is not set in your .env file.');
+    console.error('Please obtain a token from @BotFather on Telegram and set it before running this script.');
     process.exit(1);
   }
 
   if (!TELEGRAM_WEBHOOK_SECRET) {
-    console.error(
-      "❌ ERROR: TELEGRAM_WEBHOOK_SECRET is not set. Use the same value the app has."
-    );
+    console.error('❌ ERROR: TELEGRAM_WEBHOOK_SECRET is not set. Use the same value the app has.');
     process.exit(1);
   }
 
   console.log(`🔗 Target Webhook URL: ${WEBHOOK_URL}`);
 
   try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: WEBHOOK_URL,
-          secret_token: TELEGRAM_WEBHOOK_SECRET,
-        }),
-      }
-    );
+    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: WEBHOOK_URL,
+        secret_token: TELEGRAM_WEBHOOK_SECRET,
+      }),
+    });
 
     const data = await response.json();
 
     if (data.ok) {
-      console.log("✅ SUCCESS: Telegram Webhook registered successfully!");
-      console.log(
-        `The bot is now active and routing messages to your production endpoint.`
-      );
+      console.log('✅ SUCCESS: Telegram Webhook registered successfully!');
+      console.log(`The bot is now active and routing messages to your production endpoint.`);
     } else {
-      console.error("❌ API ERROR:", data.description);
+      console.error('❌ API ERROR:', data.description);
     }
   } catch (error) {
-    console.error(
-      "💥 NETWORK ERROR:",
-      error instanceof Error ? error.message : String(error)
-    );
+    console.error('💥 NETWORK ERROR:', error instanceof Error ? error.message : String(error));
   }
 }
 
