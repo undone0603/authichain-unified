@@ -132,10 +132,16 @@ A conforming verifier, given a record and optionally an anchor, MUST:
 5. If an anchor is supplied: recompute `SHA-256` of the canonical bytes and
    compare to `recordHash`. Reject on mismatch.
 6. Apply §4.1 to the anchor's chain and transaction identifier.
+7. When a deployment supports durable lifecycle status, resolve the current
+   issuer/attestation status and treat revoked, superseded, or otherwise
+   non-active records as **invalid for current verification**. Durable status
+   lookup is fail-closed: if the deployment contract requires live status and
+   that status cannot be read, verification MUST NOT be reported as current.
 
 Steps 1–4 require no network access. Confirming the transaction exists on-chain
-(step 6's optional extension) does, and a verifier SHOULD report the difference
-rather than conflating "signature valid" with "anchor confirmed".
+(step 6's optional extension) and resolving durable lifecycle state (step 7)
+require network access. A verifier SHOULD report these as distinct checks rather
+than conflating "signature valid" with "anchor confirmed" or "currently active."
 
 ### 5.1 Verdicts
 
@@ -143,9 +149,9 @@ A verifier MUST return exactly one of:
 
 | Verdict | Meaning |
 |---|---|
-| `verified` | Signature valid; anchor present, well formed, on a mainnet chain, hash matches |
-| `valid-unanchored` | Signature valid; no anchor supplied |
-| `invalid` | Any required check failed |
+| `verified` | Signature valid; anchor present, well formed, on a mainnet chain, hash matches, and any required durable status check is active |
+| `valid-unanchored` | Signature valid; no anchor supplied and no required durable status failure |
+| `invalid` | Any required check failed, including a required durable status lookup failure or a revoked/superseded record |
 
 There is deliberately no partial-credit verdict and no numeric score in this
 layer. A score is a product feature; a verdict is what a verifier owes you.
@@ -169,13 +175,15 @@ it has no dependencies and can be run against any record by anyone.
 
 ## 8. Security considerations
 
-- **Key compromise.** This specification does not define revocation. A record
-  signed by a compromised key remains cryptographically valid. Revocation is
-  planned for v0.2 via `credentialStatus`.
+- **Key compromise.** Durable lifecycle status is now part of the deployed
+  verification architecture. A record signed by a compromised key remains
+  cryptographically valid, but the issuer/attestation status layer can mark
+  the record revoked or superseded for current verification. Implementations
+  MUST NOT silently treat durable revocation as absent.
 - **Garbage in.** A signature proves who asserted something, never that the
   assertion is true. An issuer can sign a false statement, and this layer will
-  correctly report it as `verified`. Anything defending against that lives above
-  this specification, not in it.
+  correctly report it as cryptographically valid. Anything defending against
+  that lives above this specification, not in it.
 - **Anchor ≠ existence.** An anchor proves a hash was committed at a point in
   time. It does not prove the physical item exists or matches the record.
 
@@ -188,4 +196,3 @@ gateways. It is **not** membership in any external “quantum financial system,�
 and a verifier MUST NOT contact a purported QFS host to reach a §5 verdict.
 Production signatures remain Ed25519 until `digest.pqcStatus` is `bound` with
 NIST FIPS 204 ML-DSA-65.
-
