@@ -56,10 +56,10 @@ export function validateAssetPassport(passport) {
       if (!evidence?.type) reasons.push("evidence_missing:type");
       if (!evidence?.issuer) reasons.push("evidence_missing:issuer");
       if (!evidence?.capturedAt || !ISO_INSTANT.test(evidence.capturedAt)) {
-        reasons.push(\`evidence_invalid:capturedAt:\${evidence?.id ?? "unknown"}\`);
+        reasons.push(("evidence_invalid:capturedAt:" + (evidence?.id ?? "unknown")));
       }
       if (evidence?.sha256 !== undefined && !HEX64.test(evidence.sha256)) {
-        reasons.push(\`evidence_invalid:sha256:\${evidence?.id ?? "unknown"}\`);
+        reasons.push(("evidence_invalid:sha256:" + (evidence?.id ?? "unknown")));
       }
     }
   }
@@ -67,11 +67,11 @@ export function validateAssetPassport(passport) {
   if (Array.isArray(passport.claims)) {
     for (const claim of passport.claims) {
       if (!claim?.id) reasons.push("claim_missing:id");
-      if (!claim?.field) reasons.push(\`claim_missing:field:\${claim?.id ?? "unknown"}\`);
-      if (!claim?.issuer) reasons.push(\`claim_missing:issuer:\${claim?.id ?? "unknown"}\`);
+      if (!claim?.field) reasons.push(("claim_missing:field:" + (claim?.id ?? "unknown")));
+      if (!claim?.issuer) reasons.push(("claim_missing:issuer:" + (claim?.id ?? "unknown")));
       for (const evidenceId of claim?.evidenceIds ?? []) {
         if (!evidenceIds.has(evidenceId)) {
-          reasons.push(\`claim_missing_evidence:\${claim?.id ?? "unknown"}:\${evidenceId}\`);
+          reasons.push(("claim_missing_evidence:" + (claim?.id ?? "unknown") + ":" + evidenceId));
         }
       }
     }
@@ -80,12 +80,12 @@ export function validateAssetPassport(passport) {
   if (Array.isArray(passport.inspections)) {
     for (const inspection of passport.inspections) {
       if (!inspection?.id) reasons.push("inspection_missing:id");
-      if (!inspection?.inspector) reasons.push(\`inspection_missing:inspector:\${inspection?.id ?? "unknown"}\`);
+      if (!inspection?.inspector) reasons.push(("inspection_missing:inspector:" + (inspection?.id ?? "unknown")));
       if (!inspection?.inspectedAt || !ISO_INSTANT.test(inspection.inspectedAt)) {
-        reasons.push(\`inspection_invalid:inspectedAt:\${inspection?.id ?? "unknown"}\`);
+        reasons.push(("inspection_invalid:inspectedAt:" + (inspection?.id ?? "unknown")));
       }
       if (!Array.isArray(inspection?.methods) || inspection.methods.length === 0) {
-        reasons.push(\`inspection_missing:methods:\${inspection?.id ?? "unknown"}\`);
+        reasons.push(("inspection_missing:methods:" + (inspection?.id ?? "unknown")));
       }
       for (const evidenceId of inspection?.evidenceIds ?? []) {
         if (!evidenceIds.has(evidenceId)) {
