@@ -1,0 +1,72 @@
+{
+  "schema": "authichain.high-value-asset-passport/v0.1",
+  "assetClass": "precious_metal_bar",
+  "issuer": "Valcambi SA",
+  "identity": {
+    "scheme": "issuer_serial",
+    "objectId": "urn:authichain:issuer:valcambi:serial:REDACTED-PILOT-SERIAL",
+    "issuerNamespace": "urn:authichain:issuer:valcambi",
+    "serial": "REDACTED-PILOT-SERIAL",
+    "certificateId": "REDACTED-PILOT-CERTIFICATE"
+  },
+  "claims": [
+    {
+      "id": "claim-metal",
+      "field": "metal",
+      "value": "platinum",
+      "issuer": "Valcambi SA",
+      "evidenceIds": [
+        "assay"
+      ]
+    },
+    {
+      "id": "claim-fineness",
+      "field": "fineness",
+      "value": 999.5,
+      "unit": "parts_per_thousand",
+      "issuer": "Valcambi SA",
+      "evidenceIds": [
+        "assay"
+      ]
+    },
+    {
+      "id": "claim-weight",
+      "field": "nominal_weight",
+      "value": 2.5,
+      "unit": "g",
+      "issuer": "Valcambi SA",
+      "evidenceIds": [
+        "assay"
+      ]
+    },
+    {
+      "id": "claim-packaging",
+      "field": "packaging",
+      "value": "sealed_assay",
+      "issuer": "Valcambi SA",
+      "evidenceIds": [
+        "assay"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "assay",
+      "type": "assay_certificate",
+      "issuer": "Valcambi SA",
+      "capturedAt": "2026-10-01T00:00:00Z",
+      "metadata": {
+        "source": "pilot_photo",
+        "status": "issuer_claim_not_independently_verified"
+      }
+    }
+  ],
+  "inspections": [],
+  "lifecycle": [],
+  "status": "unknown",
+  "verificationPolicy": {
+    "requireTrustedIssuer": true,
+    "requireEvidenceForClaims": true,
+    "requirePhysicalInspection": false
+  }
+}
