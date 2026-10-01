@@ -191,14 +191,18 @@ async function claimStripeEvent(
 
   let reclaim = supabase
     .from("stripe_events")
-    .update({ status: "processing", processed_at: new Date().toISOString(), error: null })
+    .update({
+      status: "processing",
+      processed_at: new Date().toISOString(),
+      error: null,
+    })
     .eq("event_id", event.id)
     .eq("status", existing.status);
   if (existing.processed_at) {
     reclaim = reclaim.eq("processed_at", existing.processed_at);
   }
-  const { data: reclaimed, error: reclaimError } = await reclaim
-    .select("event_id");
+  const { data: reclaimed, error: reclaimError } =
+    await reclaim.select("event_id");
   if (reclaimError) throw reclaimError;
   return reclaimed?.length ? "claimed" : "in_progress";
 }
@@ -706,20 +710,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, type: event.type });
   } catch (err) {
     console.error("Webhook processing error:", err);
-    await getSupabase()
-      .from("stripe_events")
-      .update({
-        status: "error",
-        processed_at: new Date().toISOString(),
-        error: getErrorMessage(err).slice(0, 1000),
-      })
-      .eq("event_id", event.id)
-      .then(({ error }: { error: unknown }) => {
-        if (error) console.error("[webhook] Failed to mark event error:", error);
-      })
-      .catch(markError =>
-        console.error("[webhook] Failed to mark event error:", markError)
-      );
+    try {
+      const { error: markError } = await getSupabase()
+        .from("stripe_events")
+        .update({
+          status: "error",
+          processed_at: new Date().toISOString(),
+          error: getErrorMessage(err).slice(0, 1000),
+        })
+        .eq("event_id", event.id);
+      if (markError) {
+        console.error("[webhook] Failed to mark event error:", markError);
+      }
+    } catch (markError) {
+      console.error("[webhook] Failed to mark event error:", markError);
+    }
     return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

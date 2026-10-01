@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { gatedCheckoutUrl, PLANS } from "@/lib/plans";
+import { gatedCheckoutUrl, PLANS } from "../../../lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +56,9 @@ export async function POST(request: Request) {
     (typeof body.affiliateCode === "string" ? body.affiliateCode : "") ||
     readAffiliateCookie(request);
   const prospectId =
-    typeof body.prospectId === "string" ? body.prospectId.trim().slice(0, 128) : "";
+    typeof body.prospectId === "string"
+      ? body.prospectId.trim().slice(0, 128)
+      : "";
   const source =
     typeof body.source === "string" ? body.source.trim().slice(0, 64) : "";
 

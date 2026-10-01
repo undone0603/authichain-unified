@@ -216,7 +216,9 @@ export function renderCheckoutConfirmPage(opts: {
     return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
   }).join("");
   const action = `/checkout/${plan.id}`;
-  const err = opts.error ? `<div class="err" role="alert">${esc(opts.error)}</div>` : "";
+  const err = opts.error
+    ? `<div class="err" role="alert">${esc(opts.error)}</div>`
+    : "";
   return pageShell(
     `Confirm ${plan.name} — AuthiChain checkout`,
     `<h1>${esc(plan.name)}</h1>
@@ -233,7 +235,9 @@ ${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><b
   );
 }
 
-export function renderCheckoutChooserPage(params?: URLSearchParams | null): string {
+export function renderCheckoutChooserPage(
+  params?: URLSearchParams | null
+): string {
   const carry = new URLSearchParams();
   if (params) {
     const email = pickCheckoutEmail(params.get("email"));
@@ -250,7 +254,7 @@ export function renderCheckoutChooserPage(params?: URLSearchParams | null): stri
     ...listedPlans("strainchain"),
     ...listedPlans("musa"),
   ].filter(
-    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode),
+    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode)
   );
   const items = plans
     .map(
@@ -305,7 +309,8 @@ export function buildGatedSessionBody(opts: {
 }): URLSearchParams {
   const { plan, email, fields } = opts;
   const origin = opts.successOrigin || CHECKOUT_SUCCESS_ORIGIN;
-  const f = (k: string, max = 128) => (fields.get(k) || "").trim().slice(0, max);
+  const f = (k: string, max = 128) =>
+    (fields.get(k) || "").trim().slice(0, max);
   const isDpp = plan.id === "dpp_readiness";
   const visitId =
     f("visit_id") || f("prospect_id") || newVisitId(isDpp ? "dpp" : "chk");
@@ -320,8 +325,7 @@ export function buildGatedSessionBody(opts: {
   const refCode = readCookie(cookieHeader, "ref_code").slice(0, 64);
   const mode = plan.stripe_mode as "payment" | "subscription";
   // "musa" only groups the pricing page; Made in USA checkouts stay AuthiChain.
-  const brand =
-    plan.brand && plan.brand !== "musa" ? plan.brand : "authichain";
+  const brand = plan.brand && plan.brand !== "musa" ? plan.brand : "authichain";
 
   const body = new URLSearchParams();
   body.set("mode", mode);
@@ -357,7 +361,13 @@ export function buildGatedSessionBody(opts: {
     checkout_gate: "confirm_post",
   };
   if (isDpp) meta.offer = DPP_OFFER_KEY;
-  for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+  for (const k of [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+  ]) {
     const v = f(k, k === "utm_source" || k === "utm_medium" ? 64 : 128);
     if (v) meta[k] = v;
   }
@@ -384,7 +394,8 @@ export async function createGatedCheckoutSession(opts: {
   fetchImpl?: typeof fetch;
 }): Promise<GatedSessionResult> {
   const key = (opts.stripeSecretKey || "").trim();
-  if (!key) return { ok: false, status: 500, error: "Stripe is not configured" };
+  if (!key)
+    return { ok: false, status: 500, error: "Stripe is not configured" };
   const body = buildGatedSessionBody(opts);
   const doFetch = opts.fetchImpl ?? fetch;
   const submittedKey = opts.fields.get("checkout_key") || "";
@@ -394,12 +405,12 @@ export async function createGatedCheckoutSession(opts: {
   let res: Response;
   try {
     res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Idempotency-Key": idempotencyKey,
-    },
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Idempotency-Key": idempotencyKey,
+      },
       body,
       signal: AbortSignal.timeout(15_000),
     });
@@ -520,7 +531,8 @@ export async function tryHandleGatedCheckout(
   // no loop, and LOOP-02 captures email as dpp_check_email_captured instead.
   const report = (event: GrowthEvent, email?: string): void => {
     const sink = deps.onEvent;
-    if (!sink || !isGrowthSku(plan.id) || !isDeclaredFor(event, plan.id)) return;
+    if (!sink || !isGrowthSku(plan.id) || !isDeclaredFor(event, plan.id))
+      return;
     try {
       sink({ event, sku: plan.id, email });
     } catch {
@@ -533,7 +545,9 @@ export async function tryHandleGatedCheckout(
       return new Response(null, { status: 200, headers: HTML_HEADERS });
     }
     if (isGrowthSku(plan.id)) report(checkoutViewEvent(plan.id));
-    return htmlResponse(renderCheckoutConfirmPage({ plan, params: url.searchParams }));
+    return htmlResponse(
+      renderCheckoutConfirmPage({ plan, params: url.searchParams })
+    );
   }
 
   if (method !== "POST") {
@@ -557,7 +571,10 @@ export async function tryHandleGatedCheckout(
   }
   if ((fields.get("website") || "").trim()) {
     // Honeypot filled — silently show the page again, no Stripe call.
-    return htmlResponse(renderCheckoutConfirmPage({ plan, params: fields }), 400);
+    return htmlResponse(
+      renderCheckoutConfirmPage({ plan, params: fields }),
+      400
+    );
   }
   const email = pickCheckoutEmail(fields.get("email"));
   if (!email) {
@@ -585,7 +602,8 @@ export async function tryHandleGatedCheckout(
       renderCheckoutConfirmPage({
         plan,
         params: fields,
-        error: "Stripe checkout could not start. Please try again in a minute or use /contact.",
+        error:
+          "Stripe checkout could not start. Please try again in a minute or use /contact.",
       }),
       result.status
     );
