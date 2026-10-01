@@ -1156,7 +1156,7 @@ function AgentOrchestrationStudio({ products, setProducts, setSelectedQronId }) 
 
           <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[11px] pr-2">
             {logs.length === 0 ? (
-              <p className="text-slate-600 italic">Click "Trigger Agent Orchestration Flow" to begin agent logs...</p>
+              <p className="text-slate-600 italic">Click &quot;Trigger Agent Orchestration Flow&quot; to begin agent logs...</p>
             ) : (
               logs.map(log => (
                 <div key={log.id} className="flex items-start space-x-2">

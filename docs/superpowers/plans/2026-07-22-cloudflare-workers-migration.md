@@ -34,12 +34,31 @@ yet ticked because the implementation predates this audit):
 | Task 7 (Rate limiter Durable Object)  | ✅ DONE          | `worker-app/rate-limiter.ts`; DO binding + SQLite migration in `worker-app/wrangler.toml`; middleware wired                                                                                                                                                                         |
 | Task 8 (Cron Triggers)                | ✅ DONE          | `worker-app/scheduled.ts` dispatcher; crons defined in `wrangler.toml` (commented until Vercel decommissioned)                                                                                                                                                                      |
 | Task 2b (DB call-site migration)      | ✅ DONE (bridge) | Added `initDbFromHyperdrive(env)` to `server/db.ts`; called in first `app.use("*")` middleware in `worker-app/index.ts` — all 70+ helper-function call sites now use Hyperdrive-backed pool. Full parameter-threading refactor deferred (optional perf improvement, not a blocker). |
-| Task 9 (Deploy to workers.dev)        | 🔲 PENDING       | Requires `wrangler deploy` from `worker-app/`                                                                                                                                                                                                                                       |
-| Task 10 (Free-tier traffic audit)     | 🔲 PENDING       | Requires Vercel Analytics + `activity_log` query; do before Task 11                                                                                                                                                                                                                 |
-| Task 11 (Parity checklist)            | 🔲 PENDING       | DNS cutover not started; gate on Tasks 2b, 9, 10                                                                                                                                                                                                                                    |
+| Task 9 (Deploy to workers.dev)        | 🔲 PENDING       | Requires `wrangler login` + `cd worker-app && npx wrangler deploy`; worker name = `authichain-edge-router`                                                                                                                                                                          |
+| Task 10 (Free-tier traffic audit)     | 🔲 PENDING       | Query `activity_log` for 30-day request volume; compare against Cloudflare free-tier limits (100k req/day Workers, 100k reads/day KV, 100k req/day DO)                                                                                                                              |
+| Task 11 (Parity checklist)            | 🔲 PENDING       | Script written: `worker-app/scripts/parity-check.sh`; run with `WORKERS_URL=https://authichain-edge-router.<subdomain>.workers.dev bash worker-app/scripts/parity-check.sh` after Task 9                                                                                           |
 
-**Next action:** Task 2b (6 sub-clusters, ~114 files) to wire `ctx.db` into all
-tRPC sub-routers, then Tasks 9 → 10 → 11.
+**Next action (requires Cloudflare credentials):**
+1. `wrangler login`
+2. `bash worker-app/scripts/capacity-check.sh` — confirm GO before committing to cutover
+3. `cd worker-app && npx wrangler build` — confirm zero build errors
+4. `npx wrangler deploy` — publishes `authichain-edge-router` to `*.workers.dev`
+5. Set required secrets: `npx wrangler secret put STRIPE_SECRET_KEY` (and STRIPE_WEBHOOK_SECRET, HUBSPOT_SERVICE_KEY, GEMINI_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, PINECONE_API_KEY, JWT_SECRET, INTERNAL_SECRET)
+6. `WORKERS_URL=https://authichain-edge-router.<subdomain>.workers.dev bash worker-app/scripts/parity-check.sh`
+7. Fix any FAIL rows, then proceed to Task 12 (DNS cutover).
+
+**Scaffolded workers (DO NOT deploy before DNS cutover):**
+9 workers have a `.skip-deploy` marker file that causes CI to skip their deployment:
+`authichain-autopilot`, `authichain-chain-data`, `authichain-gateway`, `authichain-license-issuer`,
+`authichain-qron-provenance`, `authichain-scan-validate`, `authichain-telegram`, `authichain-verify-worker`,
+`authichain-bridge`.
+To promote a worker to DEPLOYED: set its required secrets, then `rm workers/<name>/.skip-deploy`.
+
+**`workers/authichain-bridge` — separate JWT/RapidAPI bridge (not part of this migration):**
+This worker has its own Hono app with `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`RAPIDAPI_KEY` bindings. It is currently SCAFFOLDED (never deployed). It is NOT served by
+`authichain-edge-router` and its DNS cutover is independent. Do not confuse it with the marketing
+`worker/index.ts` (deployed as `authichain`) or the main app `worker-app/` (`authichain-edge-router`).
 
 ---
 

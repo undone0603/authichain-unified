@@ -7,7 +7,7 @@
 // Allows autonomous closing even if the native SDK fails to install.
 let docusign: any;
 try {
-  // @ts-ignore - package installed separately
+  // @ts-expect-error - package installed separately, no bundled types
   docusign = await import("docusign-esign");
 } catch (_e) {
   console.warn(

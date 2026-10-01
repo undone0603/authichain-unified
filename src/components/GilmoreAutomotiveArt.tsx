@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Car, Sparkles, Image as CheckCircle, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function GilmoreAutomotiveArt() {
   const [carModel, setCarModel] = useState("Duesenberg Model J");
@@ -137,9 +138,11 @@ export default function GilmoreAutomotiveArt() {
           </div>
 
           <div className="relative aspect-square rounded-xl overflow-hidden bg-white mb-4 group">
-            <img
+            <Image
               src={result.imageUrl}
               alt="Automotive Art"
+              width={800}
+              height={800}
               className="w-full h-full object-contain p-4"
             />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6 text-center">
@@ -156,9 +159,9 @@ export default function GilmoreAutomotiveArt() {
               AI Artifact Narrative
             </p>
             <p className="text-[11px] text-zinc-400 italic leading-relaxed">
-              "This {year} {carModel} capture at the Gilmore Car Museum fuses
+              &quot;This {year} {carModel} capture at the Gilmore Car Museum fuses
               heritage engineering with autonomous AI style, creating a
-              cryptographically-sealed digital twin of automotive history."
+              cryptographically-sealed digital twin of automotive history.&quot;
             </p>
           </div>
         </div>

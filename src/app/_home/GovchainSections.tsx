@@ -78,7 +78,7 @@ export function GovchainSections() {
           <RevealOnScroll className="rounded-md border border-blue-500/20 bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-8">
             <div className="font-bold text-base mb-3.5 text-[#eef1f8]">Public verification</div>
             <div className="text-[#a9b4cc] text-sm leading-relaxed">
-              Anyone with a document ID or scan code can confirm the sealed version matches what's on
+              Anyone with a document ID or scan code can confirm the sealed version matches what&apos;s on
               file — no login required.
             </div>
           </RevealOnScroll>

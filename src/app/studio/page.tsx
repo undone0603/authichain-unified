@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sparkles,
   Download,
@@ -187,9 +188,11 @@ export default function StudioPage() {
 
             {result ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-6">
-                <img
+                <Image
                   src={result}
                   alt="Generated QRON"
+                  width={800}
+                  height={800}
                   className="max-w-full rounded-xl border border-white/20"
                 />
                 <a

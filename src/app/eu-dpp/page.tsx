@@ -203,7 +203,7 @@ export default function EuDppPage() {
         <div className="protocol-card p-10">
           <p className="text-zinc-300 text-base leading-relaxed mb-6">
             The EU Digital Product Passport (DPP) is a machine-readable data record — accessible via QR code — that
-            carries a product's environmental footprint, material composition, repair instructions, and supply chain
+            carries a product&apos;s environmental footprint, material composition, repair instructions, and supply chain
             provenance. Required under EU Regulation 2024/1789 (Ecodesign for Sustainable Products), it applies to
             every physical good sold in the EU market starting with batteries in February 2027, with full scope by 2030.
           </p>
@@ -427,7 +427,7 @@ export default function EuDppPage() {
       {/* CLOSING CTA */}
       <section className="border-t border-zinc-900 px-6 py-24 text-center">
         <h2 className="mx-auto max-w-2xl text-3xl md:text-4xl font-black uppercase tracking-tighter mb-4">
-          Don't Miss the July 19 Deadline
+          Don&apos;t Miss the July 19 Deadline
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-sm text-zinc-500 leading-relaxed">
           Setup takes less than one business day. Brands that register early get priority review from our EU compliance

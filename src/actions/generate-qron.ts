@@ -1,6 +1,6 @@
 "use server";
 
-// @ts-ignore - package installed separately
+// @ts-expect-error - package installed separately, no bundled types
 import { HfInference } from "@huggingface/inference";
 
 // Resolve the HF token under any of the names used across the codebase / deploy

@@ -42,7 +42,6 @@ function getSupabase(env: Env): SupabaseClient {
 // Set AI_CATALOG_JSON in Cloudflare if you want to override the default.
 function getAiCatalog(env: Env): JsonValue {
   try {
-    // @ts-ignore – optional env, not declared in Env interface
     const raw = (env as any).AI_CATALOG_JSON;
     if (raw) return JSON.parse(raw);
   } catch (_) {
@@ -67,7 +66,6 @@ function getAiCatalog(env: Env): JsonValue {
 
 // llms.txt is also controlled via env for easy mutation.
 function getLlmsTxt(env: Env): string {
-  // @ts-ignore – optional env, not declared in Env interface
   const raw = (env as any).LLMS_TXT;
   if (raw) return raw;
 

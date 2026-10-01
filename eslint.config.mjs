@@ -89,10 +89,17 @@ const eslintConfig = defineConfig([
     'contracts/**',
     'content/**',
     'docs/archive/**',
+    // Technical reference docs have their own minimal toolchain and are not
+    // part of the deployable Next/server surface.
+    'docs/technical-reference/**',
     'knowledge/**',
     'libs/**',
     'mcp/**',
+    // Operational scripts use CommonJS require() and anonymous exports by
+    // convention — they are one-off admin tools, not application code.
+    'ops/**',
     'packages/**',
+    'postcss.config.mjs',
     'protocol/**',
     'scripts/**',
     'worker/**',

@@ -18,6 +18,16 @@ type Env = {
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  // Secrets — set via `wrangler secret put <NAME>` before going live.
+  // Optional: routes that depend on these degrade gracefully when absent
+  // (webhooks pass through, contact form skips SMTP and returns success).
+  INSTANTLY_WEBHOOK_SECRET?: string;
+  DOCUSIGN_WEBHOOK_SECRET?: string;
+  SMTP_HOST?: string;
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
+  SMTP_PORT?: string;
+  CONTACT_EMAIL?: string;
 };
 
 type Variables = {
@@ -189,7 +199,7 @@ app.post("/api/paddle/webhook", async c => {
 
 // ─── Instantly.ai Webhook ───────────────────────────────────────────────────
 app.post("/api/webhooks/instantly", async c => {
-  const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
+  const secret = c.env.INSTANTLY_WEBHOOK_SECRET;
   if (secret) {
     const provided = c.req.header("x-webhook-secret");
     if (!provided || !timingSafeEqualStrings(provided, secret)) {
@@ -211,7 +221,7 @@ app.post("/api/webhooks/instantly", async c => {
 
 // ─── DocuSign Webhook ───────────────────────────────────────────────────────
 app.post("/api/webhooks/docusign", async c => {
-  const secret = process.env.DOCUSIGN_WEBHOOK_SECRET;
+  const secret = c.env.DOCUSIGN_WEBHOOK_SECRET;
   if (secret) {
     const provided = c.req.header("x-docusign-secret");
     if (!provided || !timingSafeEqualStrings(provided, secret)) {
@@ -353,10 +363,10 @@ app.post("/api/contact", async c => {
       ? escapeContactHtml(subject)
       : `Contact form: ${safeName}`;
 
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const toEmail = process.env.CONTACT_EMAIL || "hello@authichain.com";
+    const smtpHost = c.env.SMTP_HOST;
+    const smtpUser = c.env.SMTP_USER;
+    const smtpPass = c.env.SMTP_PASS;
+    const toEmail = c.env.CONTACT_EMAIL || "hello@authichain.com";
 
     if (smtpHost && smtpUser && smtpPass) {
       // nodemailer needs Node net/tls; loaded lazily so requests that never
@@ -365,7 +375,7 @@ app.post("/api/contact", async c => {
       const nodemailer = (await import("nodemailer")).default;
       const transporter = nodemailer.createTransport({
         host: smtpHost,
-        port: Number(process.env.SMTP_PORT || 587),
+        port: Number(c.env.SMTP_PORT || 587),
         secure: false,
         auth: { user: smtpUser, pass: smtpPass },
       });
@@ -1110,6 +1120,7 @@ app.get("*", async c => {
 });
 
 export { RateLimiter } from "./rate-limiter";
-export { scheduled } from "./scheduled";
+import { scheduled } from "./scheduled";
+export { scheduled };
 
 export default { fetch: app.fetch, scheduled };

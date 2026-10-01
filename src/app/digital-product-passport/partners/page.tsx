@@ -32,7 +32,7 @@ export default function StrainChainPartners() {
         </h1>
 
         <p className="max-w-2xl text-zinc-400 text-lg font-medium mb-16 leading-relaxed">
-            StrainChain is not built in isolation. We partner with the world's leading commercial printers, certification bodies, and trade associations to ensure our cryptographic standards integrate seamlessly into existing global supply chains.
+            StrainChain is not built in isolation. We partner with the world&apos;s leading commercial printers, certification bodies, and trade associations to ensure our cryptographic standards integrate seamlessly into existing global supply chains.
         </p>
 
         <div className="grid md:grid-cols-2 gap-8">

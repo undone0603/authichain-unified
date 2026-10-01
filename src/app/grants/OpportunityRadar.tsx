@@ -105,7 +105,7 @@ export function OpportunityRadar() {
 
       {!loading && errored && (
         <p className="text-center py-16 text-zinc-500 text-sm">
-          Couldn't load the live radar right now — try again shortly.
+          Couldn&apos;t load the live radar right now — try again shortly.
         </p>
       )}
 

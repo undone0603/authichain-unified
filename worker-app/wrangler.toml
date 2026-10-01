@@ -45,6 +45,23 @@ class_name = "RateLimiter"
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+# Set each with: npx wrangler secret put <NAME>
+# These were previously accessed via process.env (Node-only); they now bind
+# through Cloudflare's secret store so they work in the Workers runtime.
+#
+# Required for webhook auth (routes degrade to unverified if absent):
+#   npx wrangler secret put INSTANTLY_WEBHOOK_SECRET
+#   npx wrangler secret put DOCUSIGN_WEBHOOK_SECRET
+#
+# Required for /api/contact SMTP sending (route returns success without SMTP
+# if absent — emails are silently dropped):
+#   npx wrangler secret put SMTP_HOST
+#   npx wrangler secret put SMTP_USER
+#   npx wrangler secret put SMTP_PASS
+#   npx wrangler secret put SMTP_PORT        # optional, defaults to 587
+#   npx wrangler secret put CONTACT_EMAIL    # optional, defaults to hello@authichain.com
+
 # ─── Cron Triggers ────────────────────────────────────────────────────────────
 # The scheduled() handler in index.ts is wired and ready. Triggers are split
 # into two groups by an explicit enablement DECISION (see below). BOTH groups

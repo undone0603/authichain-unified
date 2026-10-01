@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Sparkles,
   Download,
@@ -25,7 +26,6 @@ import { User } from '@supabase/supabase-js';
 import { MODES, FalaiPreset, QRONModeConfig } from '@/lib/types';
 import { PLANS } from '@/lib/plans';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 
 import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
@@ -1085,7 +1085,7 @@ export function QronHome() {
                 </div>
                 <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                  Generators create &quot;Living Portals&quot;—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
                 </p>
                 <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
                   <span className="text-zinc-500">Contract:</span>
@@ -1572,7 +1572,8 @@ export function QronHome() {
                    className="rounded-xl overflow-hidden border border-zinc-800 hover:border-yellow-600 transition-colors block"
                    style={{ background: '#0a0a0a', textDecoration: 'none' }}>
                   <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#050505' }}>
-                    <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt={title}
+                    <Image src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt={title}
+                      width={320} height={180}
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ width: 40, height: 40, background: 'rgba(220,38,38,0.9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -243,7 +243,7 @@ async function handleStripeWebhook(req: Request, env: Env): Promise<Response> {
 // ---------------------------------------------------------------------------
 // Main fetch handler
 // ---------------------------------------------------------------------------
-export default {
+const workerHandler = {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
@@ -290,3 +290,5 @@ export default {
     }
   },
 };
+
+export default workerHandler;

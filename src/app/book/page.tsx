@@ -58,9 +58,9 @@ function BookForm() {
     return (
       <div className="text-center py-16">
         <div className="text-5xl mb-6">✅</div>
-        <h2 className="text-3xl font-black mb-4">You're on the calendar.</h2>
+        <h2 className="text-3xl font-black mb-4">You&apos;re on the calendar.</h2>
         <p className="text-zinc-400 max-w-md mx-auto">
-          We'll reach out within a few hours to confirm a time. In the meantime,
+          We&apos;ll reach out within a few hours to confirm a time. In the meantime,
           explore the demo at <a href="https://app.authichain.com/demo" className="text-yellow-500 underline">app.authichain.com/demo</a>.
         </p>
       </div>
@@ -169,7 +169,7 @@ export default function BookPage() {
           20-Minute Discovery Call
         </div>
         <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tight">
-          Let's talk about<br />
+          Let&apos;s talk about<br />
           <span className="text-yellow-500">your use case.</span>
         </h1>
         <p className="text-zinc-400 max-w-xl mx-auto">

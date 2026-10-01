@@ -17,6 +17,16 @@ export const authRouter = router({
 
     if (ctx.setCookieHeader) {
       ctx.setCookieHeader(clearValue);
+    } else if (ctx.res && typeof (ctx.res as { clearCookie?: unknown }).clearCookie === "function") {
+      // Express high-level API — used in tests and the Node/Express adapter.
+      const isSecure = ctx.secure ?? ctx.req?.protocol === "https";
+      (ctx.res as { clearCookie: (name: string, opts: Record<string, unknown>) => void }).clearCookie(COOKIE_NAME, {
+        maxAge: -1,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isSecure,
+        path: "/",
+      });
     } else if (ctx.res) {
       ctx.res.setHeader("Set-Cookie", clearValue);
     }

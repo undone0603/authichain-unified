@@ -20,6 +20,7 @@ vi.mock("../server/webhooks/docusign", () => ({
 
 vi.mock("../server/db", () => ({
   getHyperdriveDb: vi.fn().mockReturnValue({}),
+  initDbFromHyperdrive: vi.fn(),
 }));
 
 vi.mock("../server/_core/sdk", () => ({
