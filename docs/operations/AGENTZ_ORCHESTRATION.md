@@ -22,6 +22,7 @@ Do **not** invent `OPENCLAW_GATEWAY_URL`. Do **not** deploy
 | `sync-mi-leads` | HubSpot CSV sync. **Skipped** on dry-run (script does not honor `DRY_RUN`). |
 | `funnel-report` | Read-only. |
 | `/api/agentz/webhook` | Logging heartbeat on `APP_URL` (default `https://authichain.com`). |
+| `bind-stripe-webhook-secrets.yml` | Manual-only secret bind for the AgentZ + Stripe webhooks on `authichain-edge-router`; follows with AgentZ architect dry-run and no-event authentication probes. No event, payment, or outbound message is submitted. |
 | Genesis cron `GET /api/automation/cron` | **Unchanged.** Outbound stays `skipped_public_loop_freeze`. |
 | AgentZ registry CLI (`run --all --mode auto`) | Still refused. This workflow does not run outreach handlers. |
 | `content-publish` | Still frozen. |
@@ -73,7 +74,16 @@ or any AgentZ email handler.
 
 ## Remaining owner secrets (names only)
 
-Already used by this workflow (must exist for qualify + webhook):
+For the manual edge-webhook bind workflow:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `AGENTZ_WEBHOOK_SECRET`
+- `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
+- `STRIPE_WEBHOOK_SECRET` (optional fallback)
+- One of `OPENCLAW_API_KEY`, `AGENTZ_API_KEY`, or `AGENT_SECRET` for the dry-run check
+
+Already used by the scheduled orchestration workflow (must exist for qualify + webhook):
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
