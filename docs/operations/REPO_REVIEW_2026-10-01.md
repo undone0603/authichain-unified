@@ -59,7 +59,13 @@ test files exist but only 4 ran in CI. One that never ran
 
 - **PR #1426** (affiliate payouts on): this moves money, so it is the owner's decision.
 - **Metered agent billing never bills.** `src/lib/industrial/billing.ts` calls `subscriptionItems.createUsageRecord`, which current stripe-node no longer has. The error is caught and logged. The fix is `billing.meterEvents`, which needs a Stripe meter configured first.
-- **The compliance dashboard paywall is client-side.** `src/proxy.ts:48-50` trusts an `org_plan_tier` cookie the client can set. It needs a server-side plan lookup.
+- ~~**The compliance dashboard paywall is client-side.**~~ **Done in the follow-up PR (branch `ccr-e068c356-cm1kon-compliance`).**
+  - What it found: there was no `/dashboard/compliance` route and no `enterprise_compliance` plan, and nothing ever set the cookie the gate read.
+  - What it builds: a real tier. Entitlement is checked server-side from `profiles` (`src/lib/compliance-access.ts`, `src/lib/compliance-dal.ts`), and the dashboard shows the account's DPP portfolio from live data.
+  - The tier stays unpriced and unsellable until you add a `PLANS` entry with a real Stripe price.
+- **`/enterprise/checkout`** sells "$500 / month" (StrainChain Enterprise Anchor Partner, not in `plans.ts`) and posts to `/api/checkout/enterprise`, which does not exist.
+- **`/api/subscription`** returns hardcoded fixture plans and subscriptions ("sub_001", 2025 dates).
+- **The QRON dashboard (`src/app/dashboard/page.tsx`)** shows a hardcoded "300+" edge nodes and "99.97%" uptime. These are typed-in figures, which the operating charter counts as defects.
 - **Nightstamp SKUs are not in `plans.ts`.** That covers $9/$29/$49 in `src/app/api/starmap/checkout/route.ts` and the $39/$79 print add-ons. Adding them is a pricing decision.
 - **Made-in-USA "View Details" link.** `src/app/brand/qron/made-in-usa/page.tsx` links to `/brand/qron/product/<id>`, which has no route. The artwork route is a different entity, so this needs a product page or the link removed.
 - **Cross-host links.** `/x402`, `/onboard`, `/generate`, `/protocol` and `/made-in-usa-claim-file` resolve only on hosts whose Worker serves them. Routing intent belongs to the owner.
