@@ -36,11 +36,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
-      - name: Attempt safe prettier write (source only)
+      - name: Attempt safe prettier write (lint:ci targets only)
         id: fix
         run: |
           set -euo pipefail
-          pnpm exec prettier --write "src/**/*.{ts,tsx}" "scripts/**/*.{ts,mjs}"
+          # Keep in sync with the prettier --check targets of `lint:ci` in
+          # package.json. Formatting anything wider (e.g. all of src/) yields a
+          # multi-thousand-file diff the classifier must refuse.
+          pnpm exec prettier --write .github package.json postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts
           if git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No deterministic format changes. Escalating — not merging."
@@ -52,13 +55,17 @@ jobs:
         if: steps.fix.outputs.changed == 'true'
         run: |
           set -euo pipefail
-          FILES="$(git diff --name-only | tr '\n' ' ')"
-          PATCH="$(git diff)"
-          export FILES PATCH
+          # Pass the diff through files, not env vars: a large patch overflows
+          # the kernel's per-string env limit (E2BIG, "Argument list too long").
+          git diff --name-only > "$RUNNER_TEMP/repair-files.txt"
+          git diff > "$RUNNER_TEMP/repair.patch"
           node --input-type=module <<'EOF'
+          import { readFileSync } from 'node:fs';
           import { classifyRepair } from './scripts/lib/ci-repair-classify.mjs';
-          const files = process.env.FILES.trim().split(/\s+/).filter(Boolean);
-          const r = classifyRepair({ files, patch: process.env.PATCH, jobName: 'Lint' });
+          const tmp = process.env.RUNNER_TEMP;
+          const files = readFileSync(`${tmp}/repair-files.txt`, 'utf8').split('\n').filter(Boolean);
+          const patch = readFileSync(`${tmp}/repair.patch`, 'utf8');
+          const r = classifyRepair({ files, patch, jobName: 'Lint' });
           console.log(JSON.stringify(r));
           if (!r.safe) process.exit(2);
           EOF
@@ -73,7 +80,7 @@ jobs:
           git checkout -b "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src scripts
+          git add -u -- .github package.json postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts
           git commit -m "chore(ci): deterministic prettier repair (draft, no auto-merge)"
           git push -u origin "$branch"
           gh pr create --draft --base main --head "$branch" \

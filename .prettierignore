@@ -57,4 +57,5 @@ workers/govchain-us/src/index.ts
 # the two files above. Skip until the images move out of source.
 workers/passport-demo/src/index.js
 
-# Founder control-plane manifest is canonical JSON and intentionally hand-formatted.\n.github/founder-business.json
+# Founder control-plane manifest is canonical JSON and intentionally hand-formatted.
+.github/founder-business.json
