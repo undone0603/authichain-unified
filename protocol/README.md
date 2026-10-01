@@ -31,3 +31,15 @@ That reports `verified`: the signature checks and the anchor carries the record'
 ## Licensing
 
 This component is licensed under the **Apache License 2.0**.
+
+## High-value asset passports
+
+The reference module at `asset-passport/` models physical assets without creating a new vertical trust protocol. It separates identity, issuer claims, evidence, physical inspection and lifecycle events. The first fixture is a redacted precious-metal bar example under `examples/precious-metals/`.
+
+Run its structural checks with:
+
+```bash
+npm run test:asset-passports
+```
+
+The fixture is intentionally not an authenticity determination; it demonstrates how a real physical object can be represented while preserving AuthiChain's trust boundary.
