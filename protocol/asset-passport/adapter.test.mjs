@@ -25,8 +25,8 @@ const passport = {
   inspections: [], lifecycle: [], status: "unknown",
 };
 
-test("passportToRecordPayload", async () => {
-  await test("maps a passport into the existing VC/provenance record contract", () => {
+test("maps a passport into the existing VC/provenance record contract", () => {
+
     const { publicKey } = generateKeyPairSync("ed25519");
     const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
     assert.ok(record.type.includes("ProvenanceRecord"));
@@ -35,12 +35,12 @@ test("passportToRecordPayload", async () => {
     assert.deepEqual(record.credentialSubject.claims[0].evidenceIds, ["assay"]);
     assert.equal(record.proof.proofValue, "");
   });
-  await test("maps GS1 identity to a Digital Link subject id", () => {
+
     const { publicKey } = generateKeyPairSync("ed25519");
     const record = passportToRecordPayload({ ...passport, identity: { scheme: "gs1", objectId: "ignored", gtin: "09506000134352", serial: "SERIAL 123" } }, { issuerDid: didFor(publicKey), validFrom: "2026-10-01T00:00:00Z" });
     assert.equal(record.credentialSubject.id, "https://id.gs1.org/01/09506000134352/21/SERIAL%20123");
   });
-  await test("round-trips through the existing verifier after signing", () => {
+
     const { publicKey, privateKey } = generateKeyPairSync("ed25519");
     const record = passportToRecordPayload(passport, { issuerDid: didFor(publicKey), validFrom: "2026-01-01T00:00:00Z" });
     record.proof.proofValue = "z" + base58Encode(edSign(null, signingBytes(record), privateKey));
@@ -48,7 +48,7 @@ test("passportToRecordPayload", async () => {
     assert.equal(result.verdict, "valid-unanchored");
     assert.equal(result.checks.signature, true);
   });
-  await test("does not accept a non-did:key issuer", () => {
+
     assert.throws(() => passportToRecordPayload(passport, { issuerDid: "Valcambi SA", validFrom: "2026-10-01T00:00:00Z" }), /did:key/);
   });
 });
