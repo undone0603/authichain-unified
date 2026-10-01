@@ -14,7 +14,10 @@
       "id": "claim-metal",
       "field": "metal",
       "value": "platinum",
-      "issuer": "Valcambi SA"
+      "issuer": "Valcambi SA",
+      "evidenceIds": [
+        "assay"
+      ]
     },
     {
       "id": "claim-fineness",
@@ -22,7 +25,9 @@
       "value": 999.5,
       "unit": "parts_per_thousand",
       "issuer": "Valcambi SA",
-      "evidenceIds": ["assay"]
+      "evidenceIds": [
+        "assay"
+      ]
     },
     {
       "id": "claim-weight",
@@ -30,14 +35,18 @@
       "value": 2.5,
       "unit": "g",
       "issuer": "Valcambi SA",
-      "evidenceIds": ["assay"]
+      "evidenceIds": [
+        "assay"
+      ]
     },
     {
       "id": "claim-packaging",
       "field": "packaging",
       "value": "sealed_assay",
       "issuer": "Valcambi SA",
-      "evidenceIds": ["assay"]
+      "evidenceIds": [
+        "assay"
+      ]
     }
   ],
   "evidence": [
