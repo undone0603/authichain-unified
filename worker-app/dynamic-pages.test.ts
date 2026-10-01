@@ -657,7 +657,8 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).not.toContain("Those 5 are signed");
   });
 
-  it("303s a valid URL to /onboard", async () => {
+  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
+  it("303s a valid URL to the starter checkout", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -669,9 +670,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-    const location = res.headers.get("location") || "";
-    expect(location).toContain("/onboard");
-    expect(location).toContain("vertical=qron");
+    const location = new URL(
+      res.headers.get("location") || "",
+      "https://example.test"
+    );
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("targetUrl")).toBe(
+      "https://example.com/sku"
+    );
+    expect(location.searchParams.get("prompt")).toBe("neon");
   });
 });
 
