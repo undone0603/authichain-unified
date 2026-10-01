@@ -20,8 +20,8 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _admin: SupabaseClient<any> | null = null;
-function getAdmin(): SupabaseClient<any> {
+let _admin: SupabaseClient | null = null;
+function getAdmin(): SupabaseClient {
   if (!_admin) {
     _admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
