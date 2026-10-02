@@ -4,6 +4,8 @@ import Stripe from 'stripe';
 type Bindings = {
   STRIPE_SECRET_KEY: string;
   ANTHROPIC_API_KEY: string;
+  SUCCESS_URL: string;
+  CANCEL_URL: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -25,8 +27,8 @@ app.post('/api/sales/inbound', async (c) => {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: 'SUCCESS_URL_PLACEHOLDER',
-      cancel_url: 'CANCEL_URL_PLACEHOLDER',
+      success_url: c.env.SUCCESS_URL,
+      cancel_url: c.env.CANCEL_URL,
     });
 
     const systemPrompt = `Lead Name: ${name}. Intent: ${intent}. Link: ${session.url}`;
