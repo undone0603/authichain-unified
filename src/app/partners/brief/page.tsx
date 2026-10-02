@@ -73,7 +73,6 @@ export default function PartnerBriefPage() {
                 <div className="grid grid-cols-2 gap-6">
                     {[
                         { title: 'Ed25519 Signing', desc: 'Immutable security' },
-                        { title: 'Polygon Anchoring', desc: 'Public transparency' },
                         { title: 'Story Mode', desc: 'Consumer engagement' },
                         { title: 'Watchdog AI', desc: 'Real-time monitoring' }
                     ].map(feat => (

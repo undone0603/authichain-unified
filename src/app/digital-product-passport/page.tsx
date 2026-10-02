@@ -466,7 +466,7 @@ export default function DPPPage() {
             {
               icon: BarChart3,
               title: "Unique Identity",
-              desc: "Serialized identifiers for every unit, linked to an immutable blockchain record.",
+              desc: "Serialized identifiers for every unit.",
             },
             {
               icon: Leaf,
@@ -486,7 +486,7 @@ export default function DPPPage() {
             {
               icon: Truck,
               title: "Supply Chain",
-              desc: "Auditable chain of custody from source to shelf, anchored on the Polygon network.",
+              desc: "Auditable chain of custody from source to shelf.",
             },
             {
               icon: Leaf,
