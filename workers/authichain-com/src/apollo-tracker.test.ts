@@ -34,7 +34,7 @@ for (const path of PATHS) {
       ENV
     );
     const html = await res.text();
-    assert.ok(!html.includes("assets.apollo.io"), path);
+    assert.doesNotMatch(html, /assets\.apollo\.io/, path);
     assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"), path);
     assert.ok(!html.includes("trackingFunctions"), path);
     assert.ok(

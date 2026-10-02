@@ -107,12 +107,12 @@ test("the apex still renders the homepage", async () => {
   // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.
   assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"));
   assert.ok(!html.includes("tracker.iife.js"));
-  assert.ok(!html.includes("assets.apollo.io"));
+  assert.doesNotMatch(html, /assets\.apollo\.io/);
   assert.ok(
     !(res.headers.get("content-security-policy") ?? "").includes("apollo")
   );
   // The homepage Made in America card rewrite (same wrapper) still applies.
-  assert.ok(html.includes("https://authichain.com/checkout/musa_claim_file"));
+  assert.match(html, /https:\/\/authichain\.com\/checkout\/musa_claim_file/);
   const faqStart = html.indexOf('"@type":"FAQPage"');
   assert.ok(faqStart > 0, "homepage JSON-LD should include FAQPage");
   const faqSlice = html.slice(faqStart, faqStart + 4000);
