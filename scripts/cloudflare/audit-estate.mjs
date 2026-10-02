@@ -41,7 +41,8 @@ for (const [name, paths] of [...names.entries()].sort()) {
 }
 
 for (const [name, entry] of Object.entries(ledger.workers)) {
-  if (entry.status === "reconcile" && entry.canonical_path) {
+  // A reconcile target must gain its config; an active entry must keep it.
+  if ((entry.status === "reconcile" || entry.status === "active") && entry.canonical_path) {
     const path = resolve(root, entry.canonical_path, "wrangler.toml");
     if (!existsSync(path)) {
       console.error("::error::Reconciliation target missing Wrangler config: " + entry.canonical_path);
