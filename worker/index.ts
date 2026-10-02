@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import Stripe from "stripe";
 import { computePayout, executeStripeTransfer } from "./services/payout";
@@ -99,8 +99,61 @@ function cssVars(brand: keyof typeof BRANDS) {
   }`;
 }
 
+// ---------------------------------------------------------------------------
+// Microsite KV router: serves subdomain brand sites from KV.
+// e.g. luxury.authichain.com → KV key: luxury/index.html
+// Pages are published by agentz/core/microsites.py. KV is fine for static
+// HTML/CSS/JS under 25 MiB per value.
+// Registered FIRST (right after CORS): a slug with a KV entry must win over
+// app.get("/") and every other route, or <slug>.authichain.com/ renders the
+// root page instead of the microsite. Hosts or paths without a KV entry fall
+// through unchanged. See worker/index.test.ts.
+// ---------------------------------------------------------------------------
+export const micrositeRouter: MiddlewareHandler<{
+  Bindings: Bindings;
+}> = async (c, next) => {
+  const url = new URL(c.req.url);
+  const hostname = url.hostname;
+
+  const isApexOrWild =
+    hostname === "authichain.com" ||
+    hostname === "www.authichain.com" ||
+    hostname.endsWith(".workers.dev");
+
+  if (
+    !isApexOrWild &&
+    hostname.endsWith(".authichain.com") &&
+    c.env.MICROSITES_KV
+  ) {
+    const subdomain = hostname.split(".")[0];
+    let path = url.pathname;
+    if (path === "/") path = "/index.html";
+    const kvKey = `${subdomain}${path}`;
+
+    const body = await c.env.MICROSITES_KV.get(kvKey, "stream");
+    if (body) {
+      const headers = new Headers();
+      if (kvKey.endsWith(".html"))
+        headers.set("Content-Type", "text/html; charset=UTF-8");
+      else if (kvKey.endsWith(".css")) headers.set("Content-Type", "text/css");
+      else if (kvKey.endsWith(".js"))
+        headers.set("Content-Type", "application/javascript");
+      else if (kvKey.endsWith(".svg"))
+        headers.set("Content-Type", "image/svg+xml");
+      else if (kvKey.endsWith(".json"))
+        headers.set("Content-Type", "application/json");
+      headers.set("Cache-Control", "public, max-age=300");
+      headers.set("x-served-by", "authichain-microsite-router");
+      return new Response(body, { headers });
+    }
+  }
+
+  await next();
+};
+
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
+app.use("*", micrositeRouter);
 
 app.get("/", c => {
   return c.html("<h1>AuthiChain</h1>");
@@ -337,52 +390,6 @@ app.post("/webhook/stripe", async c => {
   }
 
   return c.json({ ok: true });
-});
-
-// ---------------------------------------------------------------------------
-// Microsite KV router — serves subdomain brand sites from KV
-// e.g. luxury.authichain.com → KV key: luxury/index.html
-// R2 was previously used but is not enabled on this Cloudflare account.
-// KV is fine for static HTML/CSS/JS under 25 MiB per value.
-// ---------------------------------------------------------------------------
-app.use("*", async (c, next) => {
-  const url = new URL(c.req.url);
-  const hostname = url.hostname;
-
-  const isApexOrWild =
-    hostname === "authichain.com" ||
-    hostname === "www.authichain.com" ||
-    hostname.endsWith(".workers.dev");
-
-  if (
-    !isApexOrWild &&
-    hostname.endsWith(".authichain.com") &&
-    c.env.MICROSITES_KV
-  ) {
-    const subdomain = hostname.split(".")[0];
-    let path = url.pathname;
-    if (path === "/") path = "/index.html";
-    const kvKey = `${subdomain}${path}`;
-
-    const body = await c.env.MICROSITES_KV.get(kvKey, "stream");
-    if (body) {
-      const headers = new Headers();
-      if (kvKey.endsWith(".html"))
-        headers.set("Content-Type", "text/html; charset=UTF-8");
-      else if (kvKey.endsWith(".css")) headers.set("Content-Type", "text/css");
-      else if (kvKey.endsWith(".js"))
-        headers.set("Content-Type", "application/javascript");
-      else if (kvKey.endsWith(".svg"))
-        headers.set("Content-Type", "image/svg+xml");
-      else if (kvKey.endsWith(".json"))
-        headers.set("Content-Type", "application/json");
-      headers.set("Cache-Control", "public, max-age=300");
-      headers.set("x-served-by", "authichain-microsite-router");
-      return new Response(body, { headers });
-    }
-  }
-
-  await next();
 });
 
 // ---------------------------------------------------------------------------

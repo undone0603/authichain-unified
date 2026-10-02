@@ -229,7 +229,7 @@ ${estateFeatures(
   [
     {
       title: "Signed seals",
-      body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable from /anchor and the certificate registry.",
+      body: "Ed25519-signed records, anchored on Polygon mainnet (first record: tx 0x2491…10b7), checkable offline with the open verifier at /protocol.",
     },
     {
       title: "5-agent consensus",

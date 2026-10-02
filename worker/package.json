@@ -9,7 +9,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.13.1",
+    "hono": "^4.13.7",
     "stripe": "^22.6.2"
   },
   "devDependencies": {
