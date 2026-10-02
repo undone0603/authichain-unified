@@ -1,6 +1,6 @@
 {
   "name": "authichain-verify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Offline reference verifier for the AuthiChain Verification Specification v0.1.0. Zero dependencies, runs without contacting any AuthiChain server.",
   "type": "module",
   "license": "Apache-2.0",
