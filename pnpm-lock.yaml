@@ -36,7 +36,7 @@ importers:
         version: 2.4.57(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@hono/trpc-server':
         specifier: ^0.4.2
-        version: 0.4.2(@trpc/server@11.18.0(typescript@5.9.3))(hono@4.13.5)
+        version: 0.4.2(@trpc/server@11.18.0(typescript@5.9.3))(hono@4.13.12)
       '@hubspot/api-client':
         specifier: ^14.0.1
         version: 14.0.1
@@ -206,8 +206,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0
       hono:
-        specifier: ^4.13.3
-        version: 4.13.5
+        specifier: ^4.13.7
+        version: 4.13.12
       input-otp:
         specifier: ^1.5.0
         version: 1.5.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -680,8 +680,8 @@ importers:
   worker:
     dependencies:
       hono:
-        specifier: ^4.13.1
-        version: 4.13.5
+        specifier: ^4.13.7
+        version: 4.13.12
       stripe:
         specifier: ^22.6.2
         version: 22.6.2(@types/node@26.5.1)
@@ -721,8 +721,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.3
       hono:
-        specifier: ^4.12.31
-        version: 4.13.7
+        specifier: ^4.13.7
+        version: 4.13.12
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260926.1
@@ -773,8 +773,8 @@ importers:
   workers/authichain-openclaw:
     dependencies:
       hono:
-        specifier: ^4.12.31
-        version: 4.13.5
+        specifier: ^4.13.7
+        version: 4.13.12
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260926.1
@@ -8480,8 +8480,8 @@ packages:
     resolution: {integrity: sha512-L1l8TNvomm6UVW5B253AGxQagSQr+vGwhMlrrfRS2qmhx46AMpMVJKQYLvWYbysTMY8VoicOvzHzoHMbyzB+4A==}
     engines: {node: '>=10.13.0'}
 
-  enhanced-resolve@5.25.1:
-    resolution: {integrity: sha512-nGXts5znJzmWPu+mIE9izCOzdg63oJca2mDzGWWTth7sr4aCToKcoyFVBQwN75Ij5Pf6p510EwkTqViTRzDV+w==}
+  enhanced-resolve@5.26.0:
+    resolution: {integrity: sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==}
     engines: {node: '>=10.13.0'}
 
   enquirer@2.4.1:
@@ -9282,8 +9282,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.13.5:
-    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
+  hono@4.13.12:
+    resolution: {integrity: sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==}
     engines: {node: '>=16.9.0'}
 
   hono@4.13.7:
@@ -15846,10 +15846,10 @@ snapshots:
     dependencies:
       hono: 4.13.7
 
-  '@hono/trpc-server@0.4.2(@trpc/server@11.18.0(typescript@5.9.3))(hono@4.13.5)':
+  '@hono/trpc-server@0.4.2(@trpc/server@11.18.0(typescript@5.9.3))(hono@4.13.12)':
     dependencies:
       '@trpc/server': 11.18.0(typescript@5.9.3)
-      hono: 4.13.5
+      hono: 4.13.12
 
   '@hubspot/api-client@14.0.1':
     dependencies:
@@ -23049,7 +23049,7 @@ snapshots:
       graceful-fs: 4.2.11
       tapable: 2.3.3
 
-  enhanced-resolve@5.25.1:
+  enhanced-resolve@5.26.0:
     dependencies:
       graceful-fs: 4.2.11
       tapable: 2.3.3
@@ -24362,7 +24362,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.13.5: {}
+  hono@4.13.12: {}
 
   hono@4.13.7: {}
 
@@ -26310,7 +26310,7 @@ snapshots:
   porto@0.2.35(6c1a4d0250507cd4b94bd7a85206562b):
     dependencies:
       '@wagmi/core': 2.22.1(@tanstack/query-core@5.104.0)(@types/react@19.3.0)(immer@11.1.18)(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.56.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      hono: 4.13.7
+      hono: 4.13.12
       idb-keyval: 6.3.0
       mipd: 0.0.7(typescript@5.9.3)
       ox: 0.9.17(typescript@5.9.3)(zod@4.6.5)
@@ -26330,7 +26330,7 @@ snapshots:
   porto@0.2.35(@tanstack/react-query@5.81.5(react@18.3.1))(@types/react@18.3.31)(@wagmi/core@2.22.1(@tanstack/query-core@5.104.0)(@types/react@18.3.31)(immer@11.1.18)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.56.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(immer@11.1.18)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.56.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(wagmi@2.19.5(@tanstack/query-core@5.104.0)(@tanstack/react-query@5.81.5(react@18.3.1))(@types/react@18.3.31)(aws4fetch@1.0.20)(bufferutil@4.1.0)(empty-redis-stub@file:stubs/empty-redis)(fastestsmallesttextencoderdecoder@1.0.22)(immer@11.1.18)(preact-render-to-string@6.5.11(preact@10.24.3))(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.56.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(zod@3.25.76)):
     dependencies:
       '@wagmi/core': 2.22.1(@tanstack/query-core@5.104.0)(@types/react@18.3.31)(immer@11.1.18)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.56.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      hono: 4.13.7
+      hono: 4.13.12
       idb-keyval: 6.3.0
       mipd: 0.0.7(typescript@5.9.3)
       ox: 0.9.17(typescript@5.9.3)(zod@4.6.5)
@@ -28703,7 +28703,7 @@ snapshots:
       acorn: 8.18.0
       browserslist: 4.29.1
       chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.25.1
+      enhanced-resolve: 5.26.0
       es-module-lexer: 2.3.2
       events: 3.3.0
       graceful-fs: 4.2.11

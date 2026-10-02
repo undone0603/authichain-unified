@@ -49,13 +49,16 @@ def run(ctx: ExecutionContext) -> str:
                 # 2. Deploy Microsite
                 if ctx.mode == Mode.DRY_RUN:
                     site_url = f"https://{lead.get('slug', 'demo')}.authichain.com"
-                    ctx.step(f"Deploy personalized Vercel microsite for {name} (Dry-run)")
+                    ctx.step(f"Publish personalized Cloudflare microsite for {name} (Dry-run)")
                 else:
-                    site_url_res = ctx.step(
-                        f"Deploy personalized Vercel microsite for {name}",
+                    site_url = ctx.step(
+                        f"Publish personalized Cloudflare microsite for {name}",
                         action=lambda l=lead: asyncio.run(deploy_sales_microsite(l))
                     )
-                    site_url = site_url_res if site_url_res else f"https://{lead.get('slug', 'demo')}.authichain.com"
+                    if not site_url:
+                        # Never email a link that is not live.
+                        ctx.step(f"Microsite not published for {name}; skipping outreach for this lead.")
+                        continue
                 
                 # 3. Deep Research & Personalization
                 research = {}
