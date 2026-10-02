@@ -16,13 +16,7 @@ export const DEFAULT_FOUNDER_EMAILS = [
   "authichain@gmail.com",
 ] as const;
 
-export const FROZEN_DISPATCH = [
-  "b2b-outreach",
-  "outreach-trigger",
-  "dpp-outreach-trigger",
-  "pipeline-tick",
-  "gov-mint",
-] as const;
+export const FROZEN_DISPATCH = ["gov-mint"] as const;
 
 export const FARM_HEAD_PATH = "/api/checkout/plan/strainchain_farm";
 export const DEFAULT_ORIGIN = "https://authichain.com";
@@ -141,6 +135,16 @@ export function classifyRevenue(
     }
   }
 
+  const firstSale = snapshot.charges.find(
+    charge => charge.paid && charge.amount > 0
+  );
+  if (firstSale) {
+    return {
+      qualifying: true,
+      reason: `first sale ${firstSale.id}`,
+    };
+  }
+
   const strangerPaid = snapshot.charges.some(
     charge => charge.paid && isStrangerEmail(charge.email, founderEmails)
   );
@@ -160,7 +164,7 @@ export function classifyRevenue(
   if (blockedPayout) {
     return {
       qualifying: false,
-      reason: `payout ${blockedPayout} has no non-founder paid charge`,
+      reason: `payout ${blockedPayout} has no paid sale`,
     };
   }
   if (sawAnonymous) {
@@ -171,7 +175,7 @@ export function classifyRevenue(
   }
   return {
     qualifying: false,
-    reason: "no non-founder subscription or payout",
+    reason: "no first sale, non-founder subscription, or payout",
   };
 }
 
