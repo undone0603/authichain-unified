@@ -136,7 +136,10 @@ export function classifyRevenue(
   }
 
   const firstSale = snapshot.charges.find(
-    charge => charge.paid && charge.amount > 0
+    charge =>
+      charge.paid &&
+      charge.amount > 0 &&
+      isStrangerEmail(charge.email, founderEmails)
   );
   if (firstSale) {
     return {
