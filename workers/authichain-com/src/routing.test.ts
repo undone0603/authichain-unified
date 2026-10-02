@@ -1072,10 +1072,25 @@ test("api-v1 endpoints use API_WORKER while unrelated /api paths keep APP_WORKER
 
 test("/protocol links the anchored demonstration record and the MCP tool", async () => {
   const html = await (await get("/protocol")).text();
-  assert.match(
-    html,
-    /polygonscan\.com\/tx\/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7/
+  // Parse links and compare exactly (CodeQL flags URL-shaped regexes).
+  const links = [...html.matchAll(/href="([^"]+)"/g)].map(
+    m => new URL(m[1], "https://authichain.com")
   );
-  assert.match(html, /\/api\/verify\?id=polygon-anchor-1/);
+  assert.ok(
+    links.some(
+      u =>
+        u.hostname === "polygonscan.com" &&
+        u.pathname ===
+          "/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"
+    )
+  );
+  assert.ok(
+    links.some(
+      u =>
+        u.hostname === "authichain.com" &&
+        u.pathname === "/api/verify" &&
+        u.searchParams.get("id") === "polygon-anchor-1"
+    )
+  );
   assert.match(html, /verify_record/);
 });
