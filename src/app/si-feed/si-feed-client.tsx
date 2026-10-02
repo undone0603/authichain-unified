@@ -788,16 +788,23 @@ export default function SiFeedClient() {
           <div className="si-glossary-heading">
             <div>
               <div className="si-label">THE AUTHICHAIN FIELD GUIDE</div>
-              <h2 id="si-glossary-title">Decode the signal. Meet the characters.</h2>
+              <h2 id="si-glossary-title">
+                Decode the signal. Meet the characters.
+              </h2>
               <p>
                 A pocket glossary for the authentic agentic economy—with fewer
                 acronyms left alone in a dark server room.
               </p>
             </div>
-            <span className="si-glossary-stamp">SI LANGUAGE · HUMAN TRANSLATION</span>
+            <span className="si-glossary-stamp">
+              SI LANGUAGE · HUMAN TRANSLATION
+            </span>
           </div>
 
-          <div className="si-glossary-story" aria-label="A tiny AuthiChain story">
+          <div
+            className="si-glossary-story"
+            aria-label="A tiny AuthiChain story"
+          >
             <div className="si-story-beat">
               <span className="si-story-glyph">▣</span>
               <span className="si-story-term">PRODUCT</span>
@@ -829,7 +836,7 @@ export default function SiFeedClient() {
             </div>
             <p className="si-story-punchline">
               Meanwhile, $QRON is waiting at the Polygon station. Different
- token, different train.
+              token, different train.
             </p>
           </div>
 
@@ -898,8 +905,8 @@ export default function SiFeedClient() {
             ))}
           </div>
           <p className="si-glossary-credit">
-            AuthiChain language, decoded by @undone0603. Verify the facts;
-            enjoy the puns.
+            AuthiChain language, decoded by @undone0603. Verify the facts; enjoy
+            the puns.
           </p>
         </section>
 
