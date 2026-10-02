@@ -170,3 +170,31 @@ create table if not exists public.rule_change_events (
   impact_report jsonb not null default '{}'::jsonb,
   status text not null default 'PENDING_REVIEW' -- PENDING_REVIEW, PROPOSED, PROMOTED, DISMISSED
 );
+
+do $$
+declare
+  table_name text;
+  compliance_tables text[] := array[
+    'compliance_ruleset_versions',
+    'compliance_boms',
+    'compliance_bom_components',
+    'supplier_documents',
+    'cost_calculations',
+    'origin_determinations',
+    'claim_determinations',
+    'claim_passports',
+    'compliance_audit_events',
+    'rule_change_events'
+  ];
+begin
+  foreach table_name in array compliance_tables loop
+    execute format('alter table public.%I enable row level security', table_name);
+    execute format('revoke all privileges on table public.%I from public, anon, authenticated', table_name);
+    execute format('grant all privileges on table public.%I to service_role', table_name);
+    execute format('drop policy if exists compliance_service_role_only on public.%I', table_name);
+    execute format(
+      'create policy compliance_service_role_only on public.%I for all using (auth.jwt() ->> ''role'' = ''service_role'') with check (auth.jwt() ->> ''role'' = ''service_role'')',
+      table_name
+    );
+  end loop;
+end $$;

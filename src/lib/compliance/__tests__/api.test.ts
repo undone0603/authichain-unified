@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { afterAll, beforeAll, describe, it, expect } from 'vitest';
+import { generateKeyPairSync } from 'crypto';
 import { getRuleset } from '../rules';
 import { calculateBOMCost } from '../cost';
 import { evaluateSubstantialTransformation } from '../transformation';
@@ -6,6 +7,23 @@ import { evaluateClaim } from '../decision';
 import { createClaimPassport } from '../passport';
 
 describe('Compliance Evaluation API Pipeline', () => {
+  const previousSigningKey = process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY;
+  const { privateKey } = generateKeyPairSync('ed25519');
+
+  beforeAll(() => {
+    process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY = privateKey
+      .export({ type: 'pkcs8', format: 'pem' })
+      .toString();
+  });
+
+  afterAll(() => {
+    if (previousSigningKey === undefined) {
+      delete process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY;
+    } else {
+      process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY = previousSigningKey;
+    }
+  });
+
   it('processes a complete evaluation request payload end-to-end', () => {
     const ruleset = getRuleset('FEDERAL_FTC');
     const bom = {
@@ -41,6 +59,7 @@ describe('Compliance Evaluation API Pipeline', () => {
         extractedFields: { origin: 'USA' },
         ocrConfidence: 0.99,
         signatureStatus: 'SIGNATURE_VERIFIED' as const,
+        verificationStatus: 'VERIFIED' as const,
       },
     ];
 

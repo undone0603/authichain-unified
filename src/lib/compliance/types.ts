@@ -85,6 +85,7 @@ export interface SupplierDocumentPayload {
   extractedFields: Record<string, any>;
   ocrConfidence: number;
   signatureStatus: SignatureStatus;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'REVIEW_REQUIRED';
 }
 
 export interface CostCalculationResult {

@@ -10,11 +10,17 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { productId, jurisdiction = 'FEDERAL_FTC', bom, documents = [] } = body;
+    const { productId, jurisdiction = 'FEDERAL_FTC', bom } = body;
 
     if (!productId || !bom || !bom.components) {
       return NextResponse.json(
         { error: 'Missing required fields: productId, bom.components' },
+        { status: 400 }
+      );
+    }
+    if (body.documents !== undefined) {
+      return NextResponse.json(
+        { error: 'Client-supplied supplier documents are not trusted; submit evidence through the verified supplier-document workflow.' },
         { status: 400 }
       );
     }
@@ -30,8 +36,11 @@ export async function POST(req: NextRequest) {
       bom,
       costCalculation,
       originDeterminations,
-      documents,
+      [],
       ruleset
+    );
+    claimEvaluation.warnings.push(
+      'This endpoint has no trusted supplier-document source configured; claims remain subject to evidence review.'
     );
 
     const evidenceManifest = {

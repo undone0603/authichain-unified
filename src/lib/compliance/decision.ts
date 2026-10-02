@@ -19,12 +19,12 @@ export function evaluateClaim(
   let reviewRequired = true;
   let decision: ClaimDecision = 'REVIEW_REQUIRED';
 
-  // 1. Check for missing documents or unverified signatures
-  const hasUnverifiedDocs = documents.some(
-    (d) => d.signatureStatus === 'SIGNATURE_INVALID' || d.signatureStatus === 'SIGNATURE_NOT_DETECTED'
+  // 1. Require verified evidence for every supplier represented in the BOM.
+  const hasInvalidDocs = documents.some(
+    (d) => d.signatureStatus === 'SIGNATURE_INVALID' || d.verificationStatus === 'REJECTED'
   );
-  if (hasUnverifiedDocs) {
-    warnings.push('One or more supplier documents have invalid or missing signatures. Failing closed.');
+  if (hasInvalidDocs) {
+    warnings.push('One or more supplier documents failed verification. Failing closed.');
     return {
       decision: 'BLOCKED',
       claimText: 'Made in USA',
@@ -45,13 +45,65 @@ export function evaluateClaim(
     };
   }
 
+  const supplierIds = new Set(
+    bom.components.flatMap((component) => component.supplierId?.trim() || [])
+  );
+  const verifiedSupplierIds = new Set(
+    documents
+      .filter(
+        (document) =>
+          document.signatureStatus === 'SIGNATURE_VERIFIED' &&
+          document.verificationStatus === 'VERIFIED'
+      )
+      .map((document) => document.supplierId.trim())
+  );
+  const verifiedDocuments = documents.filter(
+    (document) =>
+      document.signatureStatus === 'SIGNATURE_VERIFIED' &&
+      document.verificationStatus === 'VERIFIED'
+  );
+  const suppliersWithoutVerifiedDocuments = [...supplierIds].filter(
+    (supplierId) => !verifiedSupplierIds.has(supplierId)
+  );
+  const hasComponentsWithoutSupplier = bom.components.some(
+    (component) => !component.supplierId?.trim()
+  );
+
+  if (
+    supplierIds.size === 0 ||
+    suppliersWithoutVerifiedDocuments.length > 0 ||
+    hasComponentsWithoutSupplier
+  ) {
+    warnings.push(
+      'Verified, signed supplier documentation is required for every BOM component. Failing closed to REVIEW_REQUIRED.'
+    );
+    return {
+      decision: 'REVIEW_REQUIRED',
+      claimText: 'Made in USA',
+      confidence: 0.2,
+      evidenceVector: {
+        documentConfidence: 0,
+        ocrConfidence: 0,
+        signatureConfidence: 0,
+        supplierConfidence: 0,
+        originConfidence: 0,
+        costConfidence: 0,
+        htsConfidence: 0,
+        transformationConfidence: 0,
+        ruleConfidence: 1,
+      },
+      warnings,
+      reviewRequired: true,
+    };
+  }
+
   // 2. Check cost threshold against ruleset parameters
   const threshold = ruleset.parameters.unqualifiedThresholdPercent;
   const usContent = cost.usContentPercentage;
 
   // Confidence calculations
-  const avgOcrConfidence = documents.length > 0
-    ? documents.reduce((acc, d) => acc + d.ocrConfidence, 0) / documents.length
+  const avgOcrConfidence = verifiedDocuments.length > 0
+    ? verifiedDocuments.reduce((acc, d) => acc + d.ocrConfidence, 0) / verifiedDocuments.length
     : 0.8;
 
   const avgOriginConfidence = origins.length > 0
@@ -59,7 +111,7 @@ export function evaluateClaim(
     : 0.5;
 
   const evidenceVector = {
-    documentConfidence: documents.length > 0 ? 0.9 : 0.4,
+    documentConfidence: verifiedDocuments.length > 0 ? 0.9 : 0.4,
     ocrConfidence: avgOcrConfidence,
     signatureConfidence: 0.95,
     supplierConfidence: 0.85,
@@ -86,12 +138,45 @@ export function evaluateClaim(
   );
 
   // Fail-closed checks on unknown substantial transformation
-  const hasUnknownTransformation = origins.some(
-    (o) => o.transformationStatus === 'SUBSTANTIAL_TRANSFORMATION_UNKNOWN'
+  const hasUnsupportedTransformation =
+    ruleset.parameters.requireSubstantialTransformation &&
+    origins.some((o) => o.transformationStatus === 'SUBSTANTIAL_TRANSFORMATION_NOT_SUPPORTED');
+  if (hasUnsupportedTransformation) {
+    warnings.push('Substantial transformation is not supported for one or more components. Failing closed.');
+    return {
+      decision: 'BLOCKED',
+      claimText: 'Made in USA',
+      confidence: overallConfidence,
+      evidenceVector,
+      warnings,
+      reviewRequired: true,
+    };
+  }
+
+  const componentsWithoutOriginDeterminations = bom.components.filter(
+    (component) => !origins.some((origin) => origin.componentId === component.componentId)
   );
+  if (
+    ruleset.parameters.requireSubstantialTransformation &&
+    componentsWithoutOriginDeterminations.length > 0
+  ) {
+    warnings.push('Origin determination is missing for one or more BOM components. Failing closed to REVIEW_REQUIRED.');
+    return {
+      decision: 'REVIEW_REQUIRED',
+      claimText: 'Made in USA',
+      confidence: overallConfidence,
+      evidenceVector,
+      warnings,
+      reviewRequired: true,
+    };
+  }
+
+  const hasUnknownTransformation =
+    ruleset.parameters.requireSubstantialTransformation &&
+    origins.some((o) => o.transformationStatus === 'SUBSTANTIAL_TRANSFORMATION_UNKNOWN');
 
   if (hasUnknownTransformation) {
-    warnings.push('Substantial transformation status is unknown or unsupported for one or more components. Failing closed to REVIEW_REQUIRED.');
+    warnings.push('Substantial transformation status is unknown for one or more components. Failing closed to REVIEW_REQUIRED.');
     return {
       decision: 'REVIEW_REQUIRED',
       claimText: 'Made in USA',
