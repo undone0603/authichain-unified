@@ -26,6 +26,11 @@ import {
 import type { X402Env } from "./x402-routes";
 import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
 import {
+  readAnchorOnChain,
+  verifySubmitted,
+} from "../../authichain-verify-worker/src/protocol-verify.mjs";
+import { publishedRecord } from "../../authichain-verify-worker/src/published-record.mjs";
+import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
   parseDppReadinessInput,
@@ -79,6 +84,28 @@ const TOOLS = [
     },
   },
   {
+    name: "verify_record",
+    description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier, then read its Polygon anchor transaction. Pass id "${"polygon-anchor-1"}" for the published demonstration record, anchored on Polygon mainnet in tx 0x2491…10b7, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          description: 'Published record id. Only "polygon-anchor-1" exists.',
+        },
+        record: {
+          type: "object",
+          description: "A signed AuthiChain provenance record (JSON).",
+        },
+        anchor: {
+          type: "object",
+          description:
+            'Anchor JSON: { recordHash, chain: "polygon:137", txHash }. Optional.',
+        },
+      },
+    },
+  },
+  {
     name: "dpp_readiness_check",
     description:
       "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
@@ -110,6 +137,62 @@ const TOOLS = [
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
+
+/** The published demonstration record, anchored on Polygon mainnet. */
+export const ANCHOR_EXAMPLE_ID = "polygon-anchor-1";
+export const ANCHOR_EXAMPLE_TX =
+  "0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7";
+
+/**
+ * Free verify_record: the same reference verifier and Polygon read as
+ * GET /api/verify on authichain-verify-worker, run in-process. A Worker's
+ * fetch to its own zone does not reliably reach another Worker's route, so
+ * this imports the modules instead of calling the URL.
+ */
+export async function verifyRecordTool(
+  args: Record<string, unknown>,
+  opts: { rpcUrl?: string; fetchImpl?: typeof fetch } = {}
+): Promise<Record<string, unknown> | { error: string }> {
+  const rawId = typeof args.id === "string" ? args.id.trim() : "";
+  const published = publishedRecord(rawId);
+  if (rawId && !published) {
+    return {
+      error: `Unknown id. The only published record is "${ANCHOR_EXAMPLE_ID}". To check your own, pass record (and anchor) as JSON.`,
+    };
+  }
+  const record = published ? published.record : args.record;
+  const anchor = published ? published.anchor : (args.anchor ?? null);
+  const protocol = verifySubmitted(record, anchor);
+  if (!protocol) {
+    return {
+      error: `Pass id "${ANCHOR_EXAMPLE_ID}", or record as a JSON object.`,
+    };
+  }
+  // Same rule as the verify worker: a configured RPC is for Polygon only.
+  const chainName = String((anchor as { chain?: unknown } | null)?.chain ?? "");
+  const polygon = chainName === "polygon:137" || chainName === "eip155:137";
+  const chain = await readAnchorOnChain(record, anchor, {
+    rpcUrl: polygon ? opts.rpcUrl : undefined,
+    fetchImpl: opts.fetchImpl,
+  });
+  return {
+    verdict: protocol.verdict,
+    reasons: protocol.reasons,
+    checks: protocol.checks,
+    anchorOnChain: chain.onChain,
+    anchorChainStatus: chain.status,
+    anchorBlock: chain.block ?? null,
+    anchorTransaction:
+      anchor && typeof anchor === "object" && "txHash" in anchor
+        ? ((anchor as { txHash?: unknown }).txHash ?? null)
+        : null,
+    source: published ? "published_example" : "submitted",
+    demonstration: Boolean(published),
+    limits:
+      "Checks the Ed25519 signature and that the anchor transaction carries the record hash. It does not inspect a physical product.",
+    verifier: "https://authichain.com/protocol",
+  };
+}
 
 function normalizePath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
@@ -412,6 +495,16 @@ async function handleRpc(
         ],
       });
     }
+    if (name === "verify_record") {
+      const result = await verifyRecordTool(params.arguments ?? {}, {
+        rpcUrl: (env as { POLYGON_RPC_URL?: string } | undefined)
+          ?.POLYGON_RPC_URL,
+      });
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...("error" in result ? { isError: true } : {}),
+      });
+    }
     if (name === "dpp_readiness_check") {
       const args = params.arguments ?? {};
       const input = parseDppReadinessInput(k => args[k]);
@@ -443,7 +536,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), verify_record (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,

@@ -22,7 +22,10 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string, env: Env = ENV) {
-  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), env);
+  return worker.fetch(
+    new Request(`https://authichain.govchain.us${path}`),
+    env
+  );
 }
 
 test("an unknown path is a 404, not the homepage at 200", async () => {
@@ -49,7 +52,10 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.equal(html.includes('href="/api/checkout'), false);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
+  );
   assert.match(html, /name="robots" content="noindex"/);
 });
 
@@ -60,7 +66,10 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -90,7 +99,10 @@ test("the apex still renders the homepage", async () => {
   // Held pending decision: the $29 banner stays as it is.
   assert.match(html, /The first checkout is the \$29 signed pack\./);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(html, /The authentic agentic economy/);
   assert.ok(html.includes("6ab2b3b358b37e000c06b0fa"));
   assert.ok(html.includes("tracker.iife.js"));
@@ -140,7 +152,10 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.doesNotMatch(html, /28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
@@ -182,22 +197,36 @@ test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
   const alias = await get("/docs/resolver");
   assert.equal(alias.status, 301);
   assert.equal(
-    new URL(alias.headers.get("location") ?? "", "https://authichain.com").pathname,
+    new URL(alias.headers.get("location") ?? "", "https://authichain.com")
+      .pathname,
     "/docs/gs1-digital-link"
   );
 
   const protocol = await get("/docs/protocol");
   assert.equal(protocol.status, 301);
   assert.equal(
-    new URL(protocol.headers.get("location") ?? "", "https://authichain.com").pathname,
+    new URL(protocol.headers.get("location") ?? "", "https://authichain.com")
+      .pathname,
     "/protocol"
   );
 
-  for (const path of ["/onboard", "/verify", "/pricing", "/checkout/dpp_readiness"]) {
+  for (const path of [
+    "/onboard",
+    "/verify",
+    "/pricing",
+    "/checkout/dpp_readiness",
+  ]) {
     const res = await get(path);
     const body = await res.text();
-    assert.doesNotMatch(body, /AuthiChain Docs — verification infrastructure/, path);
-    assert.ok(res.status === 200 || res.status === 302 || res.status === 303, `${path} ${res.status}`);
+    assert.doesNotMatch(
+      body,
+      /AuthiChain Docs — verification infrastructure/,
+      path
+    );
+    assert.ok(
+      res.status === 200 || res.status === 302 || res.status === 303,
+      `${path} ${res.status}`
+    );
   }
 });
 
@@ -213,9 +242,14 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     assert.ok(html.includes(X402_PUBLISHED_PAY_TO), path);
     assert.match(html, /0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/);
     assert.match(html, /\$0\.05/);
-    const urls = (html.match(/https:\/\/[^\s"'<>]+/g) ?? []).map(u => new URL(u));
+    const urls = (html.match(/https:\/\/[^\s"'<>]+/g) ?? []).map(
+      u => new URL(u)
+    );
     for (const p of ["/api/x402/health", "/api/x402/catalog"]) {
-      assert.ok(urls.some(u => u.hostname === "authichain.com" && u.pathname === p), `${path} ${p}`);
+      assert.ok(
+        urls.some(u => u.hostname === "authichain.com" && u.pathname === p),
+        `${path} ${p}`
+      );
     }
     assert.match(html, /curl -sS https:\/\/authichain\.com\/api\/x402\/health/);
     assert.match(
@@ -252,7 +286,10 @@ test("homepage and /dpp link to /docs and /x402", async () => {
   assert.match(dpp, /href="\/x402"/);
   assert.match(dpp, /href="\/battery-passport"/);
   assert.match(dpp, /name="email"/);
-  assert.match(dpp, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    dpp,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(dpp, /id="dpp-cancelled-banner"/);
 });
 
@@ -273,7 +310,10 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
       html,
       /Agents can pay\. They still need to know if it is real\./
     );
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+    );
     assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /href="\/x402"/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
@@ -287,7 +327,13 @@ test("/authentic-agentic-economy is a real positioning page", async () => {
 });
 
 test("every comparison page renders, including the restored pilot pages", async () => {
-  for (const slug of ["scantrust", "circularise", "vechain", "everledger", "strainsecure"]) {
+  for (const slug of [
+    "scantrust",
+    "circularise",
+    "vechain",
+    "everledger",
+    "strainsecure",
+  ]) {
     const res = await get(`/vs/${slug}`);
     assert.equal(res.status, 200, `/vs/${slug} should render`);
     const html = await res.text();
@@ -301,16 +347,35 @@ test("every comparison page renders, including the restored pilot pages", async 
   assert.doesNotMatch(scantrust, /can be altered or lost|hides pricing/);
   for (const slug of ["everledger", "strainsecure"]) {
     const html = await (await get(`/vs/${slug}`)).text();
-    assert.ok(html.includes(`href="/onboard?ref=vs-${slug}"`), `/vs/${slug} asks for a pilot`);
-    assert.ok(html.includes('href="/verify"'), `/vs/${slug} links the verifier`);
-    if (dppPay) assert.ok(!html.includes(dppPay), `/vs/${slug} must not carry the DPP checkout`);
-    assert.doesNotMatch(html, /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i);
+    assert.ok(
+      html.includes(`href="/onboard?ref=vs-${slug}"`),
+      `/vs/${slug} asks for a pilot`
+    );
+    assert.ok(
+      html.includes('href="/verify"'),
+      `/vs/${slug} links the verifier`
+    );
+    if (dppPay)
+      assert.ok(
+        !html.includes(dppPay),
+        `/vs/${slug} must not carry the DPP checkout`
+      );
+    assert.doesNotMatch(
+      html,
+      /Start Free Trial|\bcertified\b|METRC (?:sync|integration) (?:is )?live/i
+    );
   }
 });
 
 test("the /vs index lists every comparison", async () => {
   const html = await (await get("/vs")).text();
-  for (const name of ["Scantrust", "Circularise", "VeChain", "Everledger", "StrainSecure"]) {
+  for (const name of [
+    "Scantrust",
+    "Circularise",
+    "VeChain",
+    "Everledger",
+    "StrainSecure",
+  ]) {
     assert.match(html, new RegExp(name));
   }
 });
@@ -344,7 +409,10 @@ test("DPP landing collects email before protocol checkout", async () => {
   const html = await (await get("/digital-product-passport")).text();
   const dppPay = planPaymentLink("dpp_readiness") ?? "";
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.match(html, /id="dpp-cancelled-banner"/);
   assert.match(html, /params.get\('visit_id'\)/);
   assert.doesNotMatch(html, /href="\/protocol\/checkout\/dpp"/);
@@ -363,7 +431,10 @@ test("DPP landing collects email before protocol checkout", async () => {
 test("/dapp redirects to /dashboard (estate CTA)", async () => {
   const res = await get("/dapp");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/dashboard");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/dashboard"
+  );
 });
 
 test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
@@ -391,17 +462,23 @@ test("GET /.well-known/402index-verify.txt is the 402 Index hash and nothing els
   );
   assert.equal(text.length, 64);
   const head = await worker.fetch(
-    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
-      method: "HEAD",
-    }),
+    new Request(
+      "https://authichain.govchain.us/.well-known/402index-verify.txt",
+      {
+        method: "HEAD",
+      }
+    ),
     ENV
   );
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
   const posted = await worker.fetch(
-    new Request("https://authichain.govchain.us/.well-known/402index-verify.txt", {
-      method: "POST",
-    }),
+    new Request(
+      "https://authichain.govchain.us/.well-known/402index-verify.txt",
+      {
+        method: "POST",
+      }
+    ),
     ENV
   );
   assert.equal(posted.status, 404);
@@ -571,13 +648,19 @@ test("GET /api/checkout/* (with or without email) bounces to the confirm page, n
 test("/demo sends buyers to /pricing, not the legacy SPA /subscriptions catalogue", async () => {
   const res = await get("/demo");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/pricing");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/pricing"
+  );
 });
 
 test("/demo/strainchain lands on the TruMark money surface", async () => {
   const res = await get("/demo/strainchain");
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "https://authichain.govchain.us/trumark");
+  assert.equal(
+    res.headers.get("location"),
+    "https://authichain.govchain.us/trumark"
+  );
 });
 
 test("/gov-gift and /apex-packet send APEX to the GovChain packet", async () => {
@@ -615,10 +698,7 @@ test("/telegram and /miniapp serve the Passport Mini App", async () => {
       html,
       /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
     );
-    assert.doesNotMatch(
-      html,
-      /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
-    );
+    assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /Publish Passport — \$49/);
     assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
     assert.doesNotMatch(html, /calendly/i);
@@ -668,7 +748,10 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     trumarkHtml,
     /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
-  assert.match(trumarkHtml, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(
+    trumarkHtml,
+    /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+  );
   assert.doesNotMatch(trumarkHtml, /href="\/api\/checkout/);
   assert.doesNotMatch(trumarkHtml, /calendly/i);
   assert.doesNotMatch(trumarkHtml, /schedule a (call|demo)/i);
@@ -677,7 +760,11 @@ test("TruMark and Made in America pages are live with checkout CTAs", async () =
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/musa_claim_file"/, path);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/musa_claim_file"/,
+      path
+    );
     assert.doesNotMatch(html, /href="\/api\/checkout/, path);
     assert.doesNotMatch(html, /calendly/i);
     assert.doesNotMatch(html, /schedule a (call|demo)/i);
@@ -773,10 +860,14 @@ test("stale APP_WORKER checkout anchors become catalogue Payment Links", async (
     assert.ok(html.includes(`href="${dpp}"`), path);
     assert.ok(html.includes(`href="${passport}"`), path);
     assert.equal(html.includes('href="/api/checkout/dpp"'), false, path);
-    const linkHosts = [...html.matchAll(/(?:href|action)="(https?:\/\/[^"]+)"/g)].map(
-      m => new URL(m[1].replace(/&amp;/g, "&")).hostname
+    const linkHosts = [
+      ...html.matchAll(/(?:href|action)="(https?:\/\/[^"]+)"/g),
+    ].map(m => new URL(m[1].replace(/&amp;/g, "&")).hostname);
+    assert.equal(
+      linkHosts.some(h => h === "buy.stripe.com"),
+      false,
+      path
     );
-    assert.equal(linkHosts.some(h => h === "buy.stripe.com"), false, path);
     assert.ok(html.includes('action="/api/checkout/dpp"'), path);
   }
 });
@@ -893,7 +984,10 @@ test("EU DPP manufacturer article is a public page with live checkout CTA", asyn
       html,
       /Why AuthiChain is built for the next generation of product trust/
     );
-    assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+    assert.match(
+      html,
+      /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
+    );
     assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
     assert.match(html, /Start DPP checkout/);
     assert.doesNotMatch(html, /AuthiChain Inc/i);
@@ -937,20 +1031,51 @@ test("every URL the sitemap claims actually resolves", async () => {
   }
 });
 
-
 test("api-v1 endpoints use API_WORKER while unrelated /api paths keep APP_WORKER", async () => {
   const seen: string[] = [];
-  const api = { fetch: async (r: Request) => { seen.push("api:" + new URL(r.url).pathname); return new Response("api", { status: 200 }); } };
-  const app = { fetch: async (r: Request) => { seen.push("app:" + new URL(r.url).pathname); return new Response("app", { status: 200 }); } };
+  const api = {
+    fetch: async (r: Request) => {
+      seen.push("api:" + new URL(r.url).pathname);
+      return new Response("api", { status: 200 });
+    },
+  };
+  const app = {
+    fetch: async (r: Request) => {
+      seen.push("app:" + new URL(r.url).pathname);
+      return new Response("app", { status: 200 });
+    },
+  };
   const env = { API_WORKER: api, APP_WORKER: app } as unknown as Env;
 
-  const jwks = await worker.fetch(new Request("https://authichain.com/api/v1/.well-known/jwks.json"), env);
+  const jwks = await worker.fetch(
+    new Request("https://authichain.com/api/v1/.well-known/jwks.json"),
+    env
+  );
   assert.equal(jwks.status, 200);
   assert.equal(await jwks.text(), "api");
 
-  const leads = await worker.fetch(new Request("https://authichain.com/api/leads/capture", { method: "POST", body: "{}" }), env);
+  const leads = await worker.fetch(
+    new Request("https://authichain.com/api/leads/capture", {
+      method: "POST",
+      body: "{}",
+    }),
+    env
+  );
   assert.equal(leads.status, 200);
   assert.equal(await leads.text(), "app");
 
-  assert.deepEqual(seen, ["api:/api/v1/.well-known/jwks.json", "app:/api/leads/capture"]);
+  assert.deepEqual(seen, [
+    "api:/api/v1/.well-known/jwks.json",
+    "app:/api/leads/capture",
+  ]);
+});
+
+test("/protocol links the anchored demonstration record and the MCP tool", async () => {
+  const html = await (await get("/protocol")).text();
+  assert.match(
+    html,
+    /polygonscan\.com\/tx\/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7/
+  );
+  assert.match(html, /\/api\/verify\?id=polygon-anchor-1/);
+  assert.match(html, /verify_record/);
 });

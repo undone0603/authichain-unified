@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
-import { isMcpPath, tryHandleMcp } from "./mcp-routes";
+import {
+  ANCHOR_EXAMPLE_TX,
+  isMcpPath,
+  tryHandleMcp,
+  verifyRecordTool,
+} from "./mcp-routes";
+import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
+import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
 
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
@@ -311,7 +318,9 @@ describe("mcp discovery", () => {
       const body = (await res!.json()) as {
         result: { content: Array<{ text: string }> };
       };
-      const data = JSON.parse(body.result.content[0].text) as { verified: boolean };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean;
+      };
       expect(data.verified).toBe(false);
       expect(calls).toEqual([]);
     } finally {
@@ -512,5 +521,101 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
       }
     );
     expect(res?.status).toBe(400);
+  });
+});
+
+describe("mcp verify_record (free, open verifier + Polygon read)", () => {
+  const hash = anchorJson.recordHash.replace(/^sha256:/, "");
+  function rpcStub(input: string, status = "0x1"): typeof fetch {
+    return (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const { method } = JSON.parse(String(init?.body)) as { method: string };
+      const result =
+        method === "eth_getTransactionByHash"
+          ? { hash: ANCHOR_EXAMPLE_TX, input }
+          : { status, blockNumber: "0x5a4b714" };
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    }) as typeof fetch;
+  }
+
+  it("is listed as a free tool", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      })
+    );
+    const body = (await res!.json()) as {
+      result: { tools: Array<{ name: string; description: string }> };
+    };
+    const tool = body.result.tools.find(t => t.name === "verify_record");
+    expect(tool).toBeDefined();
+    expect(tool!.description).toMatch(/^Free\./);
+    expect(tool!.description).toMatch(/polygon-anchor-1/);
+  });
+
+  it("verifies the published record and confirms the hash is in the Polygon tx", async () => {
+    const result = await verifyRecordTool(
+      { id: "polygon-anchor-1" },
+      { fetchImpl: rpcStub("0x" + hash) }
+    );
+    expect(result).toMatchObject({
+      verdict: "verified",
+      anchorOnChain: true,
+      anchorChainStatus: "tx_contains_record_hash",
+      anchorBlock: "0x5a4b714",
+      anchorTransaction: ANCHOR_EXAMPLE_TX,
+      source: "published_example",
+      demonstration: true,
+    });
+  });
+
+  it("reports the anchor as not on chain when the tx lacks the hash", async () => {
+    const result = await verifyRecordTool(
+      { id: "polygon-anchor-1" },
+      { fetchImpl: rpcStub("0xdeadbeef") }
+    );
+    expect(result).toMatchObject({
+      anchorOnChain: false,
+      anchorChainStatus: "hash_not_in_tx",
+    });
+  });
+
+  it("a submitted record with no anchor is valid-unanchored and makes no RPC call", async () => {
+    let called = false;
+    const result = await verifyRecordTool(
+      { record: recordJson },
+      {
+        fetchImpl: (async () => {
+          called = true;
+          throw new Error("no rpc expected");
+        }) as typeof fetch,
+      }
+    );
+    expect(result).toMatchObject({
+      verdict: "valid-unanchored",
+      anchorOnChain: false,
+      source: "submitted",
+      demonstration: false,
+    });
+    expect(called).toBe(false);
+  });
+
+  it("an unknown id is an error, not a fake verdict", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: { name: "verify_record", arguments: { id: "AC-1234ABCD" } },
+        }),
+      })
+    );
+    const body = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toMatch(/only published record/);
   });
 });

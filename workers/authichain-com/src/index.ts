@@ -2972,6 +2972,16 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
+  <h2>One record, anchored on Polygon mainnet</h2>
+  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
+    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
+    It is a demonstration, not a product.</p>
+  <ul>
+    <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
+    <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
+    <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
+  </ul>
+
   <h2>Two rules we learned the hard way</h2>
   <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
   <ul>
