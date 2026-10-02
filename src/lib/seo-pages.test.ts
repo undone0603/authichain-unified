@@ -318,6 +318,22 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("RES-14: no page claims on-chain, immutable or anchored records in the present tense", () => {
+    // Spec/verifier behaviour ("if anchored", testnet rejection, the three
+    // verdicts) and optional framing ("one way", "optional") stay allowed.
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(/immutab|cannot be altered|immutable ledger|blockchain records?\b/i);
+      expect(text, p.slug).not.toMatch(
+        /\bon-chain (record|records|event|events|proof|verification|proof-of-custody)\b|\b(data|provenance|claims|transfer|history) on-chain\b|anchored on-chain/i
+      );
+      expect(text, p.slug).not.toMatch(
+        /signs and anchors|issues and anchors|anchored today|hashed and anchored|hashed to (a public ledger|an anchor)|are anchored and|can be anchored|anchored per (batch|part)|data anchored|already anchored|anchoring already address|anchoring wraps/i
+      );
+      expect(p.metaDescription, p.slug).not.toMatch(/Readiness is\.$/);
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
