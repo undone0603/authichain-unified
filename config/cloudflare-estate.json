@@ -6,14 +6,12 @@
   "workers": {
     "authichain-revenue-worker": {
       "status": "reconcile",
-      "canonical_path": "workers/authichain-revenue-worker",
+      "canonical_path": "api",
       "duplicate_sources": [
-        "api/worker.ts",
         "services/api/worker.ts",
-        "api/wrangler.toml",
         "services/api/wrangler.toml"
       ],
-      "action": "consolidate"
+      "action": "retire-services-api-copy (no workflow deploys it); move api/ under workers/ only in the same change as deploy-edge-worker.yml"
     },
     "authichain-outreach-engine": {
       "status": "reported-live-external",
