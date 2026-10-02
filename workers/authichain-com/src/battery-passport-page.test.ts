@@ -31,7 +31,9 @@ describe("battery passport offer page", () => {
 
   it("sells the existing $299 plan through the email-gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(html).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
     expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain('type="email" required');
@@ -108,7 +110,9 @@ describe("battery passport offer page", () => {
     expect(html).toContain(
       "A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out."
     );
-    expect(html).toContain('href="https://authichain.com/api/verify?id=polygon-anchor-1"');
+    expect(html).toContain(
+      'href="https://authichain.com/api/verify?id=polygon-anchor-1"'
+    );
     expect(html).toContain(
       'href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"'
     );
@@ -117,5 +121,52 @@ describe("battery passport offer page", () => {
       /gets your first passport published|publish your first passport/i
     );
     expect(html).toContain("gets you ready for your first passport");
+  });
+});
+
+describe("battery passport CTAs (AE-20261002-CFD-05)", () => {
+  const html = renderBatteryPassportPage(new Date("2026-09-23T12:00:00Z"));
+
+  it("makes the scoping-call lead form the primary CTA", () => {
+    const hero = html.slice(
+      html.indexOf('id="hero"'),
+      html.indexOf('id="checklist"')
+    );
+    const primary = hero.indexOf(
+      '<a class="btn btn-primary" href="#scope-pilot">Request a scoping call</a>'
+    );
+    const checkout = hero.indexOf('<form class="checkout-email-form"');
+    expect(primary).toBeGreaterThan(-1);
+    expect(checkout).toBeGreaterThan(primary);
+    expect(html).toContain('href="#scope-pilot"');
+    expect(html).toContain('id="scope-pilot"');
+  });
+
+  it("keeps the $299 checkout as the secondary CTA with unchanged behaviour", () => {
+    const forms =
+      html.match(/<form class="checkout-email-form"[\s\S]*?<\/form>/g) ?? [];
+    expect(forms).toHaveLength(2);
+    for (const f of forms) {
+      expect(f).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness" method="post"'
+      );
+      expect(f).toContain('name="email" type="email" required');
+      expect(f).toContain('name="utm_campaign" value="battery-passport"');
+      expect(f).toContain('<button class="btn btn-secondary" type="submit">');
+    }
+  });
+
+  it("drops the self-serve copy and keeps the Basic credit line", () => {
+    expect(html).not.toContain("No. Checkout is self-serve");
+    expect(html).not.toContain(
+      "self-serve activation of your AuthiChain workspace"
+    );
+    expect(html).toContain("credited toward AuthiChain Basic");
+    expect(html).toContain(
+      "who in your supply chain holds it) and 50 workspace generations to prepare your QR-linked passport data"
+    );
+    expect(html).toContain(
+      "Questions go to the contact page and get a written answer."
+    );
   });
 });
