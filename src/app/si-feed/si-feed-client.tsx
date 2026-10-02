@@ -126,6 +126,11 @@ export default function SiFeedClient() {
               .filter(consent => consent.share_public)
               .map(consent => consent.source)
           );
+          setConsentMessage(null);
+        } else {
+          setConsentMessage(
+            "Sharing controls are unavailable; public sharing remains off."
+          );
         }
       }
       setError(null);
@@ -174,12 +179,20 @@ export default function SiFeedClient() {
     const stream = new EventSource("/api/si/events/stream");
     const onSignal = (raw: Event) => {
       try {
-        const event = JSON.parse((raw as MessageEvent<string>).data) as SiFeedEvent;
+        const event = JSON.parse(
+          (raw as MessageEvent<string>).data
+        ) as SiFeedEvent;
         setFeed(current => {
-          if (!current || current.events.some(existing => existing.id === event.id)) {
+          if (
+            !current ||
+            current.events.some(existing => existing.id === event.id)
+          ) {
             return current;
           }
-          return { ...current, events: [event, ...current.events].slice(0, 100) };
+          return {
+            ...current,
+            events: [event, ...current.events].slice(0, 100),
+          };
         });
       } catch {
         void loadFeed(true);
@@ -678,8 +691,8 @@ export default function SiFeedClient() {
                 </a>
               ))}
               <div className="si-spotlight-foot">
-                Explore only. These servers are not connected to this feed.
-                No clicks or topic choices are tracked.
+                Explore only. These servers are not connected to this feed. No
+                clicks or topic choices are tracked.
               </div>
             </section>
 
@@ -693,9 +706,9 @@ export default function SiFeedClient() {
                 Yours to share.
               </h2>
               <p>
-                E2E, B2E, and C2E exchange—in either direction, including barter
-                data—stays off until everyone involved gives explicit, scoped
-                permission. Consent must be revocable.
+                Public sharing here covers only sanitized SI Feed signals. Other
+                E2E, B2E, C2E, or barter-data exchange is not controlled by this
+                setting and requires its own explicit permissions.
               </p>
               <div className="si-consent-flow">
                 <span>E2E</span>
@@ -703,11 +716,16 @@ export default function SiFeedClient() {
                 <span>B2E</span>
                 <ArrowRight size={12} />
                 <span>C2E</span>
-                <span className="si-consent-badge">OPT-IN ONLY</span>
+                <span className="si-consent-badge">FEED ONLY</span>
+              </div>
+              <div className="si-consent-foot">
+                Your choice affects this feed only. It is revocable at any time.
               </div>
               {feed?.is_owner ? (
                 <div className="si-consent-controls">
-                  <p>Choose which sanitized signal sources may appear publicly:</p>
+                  <p>
+                    Choose which sanitized signal sources may appear publicly:
+                  </p>
                   {[
                     ["agentz", "AgentZ"],
                     ["automation", "Automation"],

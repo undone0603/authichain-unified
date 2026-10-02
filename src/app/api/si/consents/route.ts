@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../lib/require-admin';
-import { getSupabaseAdmin } from '../../../../lib/supabase-admin';
-import { isSiFeedSource, type SiFeedSource } from '../../../../lib/si-feed';
-import { createClient } from '../../../../utils/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "../../../../lib/require-admin";
+import { getSupabaseAdmin } from "../../../../lib/supabase-admin";
+import { isSiFeedSource, type SiFeedSource } from "../../../../lib/si-feed";
+import { createClient } from "../../../../utils/supabase/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 async function ownerId() {
   const result = await requireAdmin(await createClient());
@@ -17,17 +17,20 @@ export async function GET() {
     if (userId instanceof NextResponse) return userId;
 
     const { data, error } = await getSupabaseAdmin()
-      .from('si_feed_consents')
-      .select('source, share_public, granted_at, revoked_at')
-      .eq('user_id', userId);
+      .from("si_feed_consents")
+      .select("source, share_public, granted_at, revoked_at")
+      .eq("user_id", userId);
     if (error) throw error;
 
     return NextResponse.json(
       { consents: data ?? [] },
-      { headers: { 'Cache-Control': 'private, no-store' } }
+      { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch {
-    return NextResponse.json({ error: 'Unable to load SI Feed permissions' }, { status: 503 });
+    return NextResponse.json(
+      { error: "Unable to load SI Feed permissions" },
+      { status: 503 }
+    );
   }
 }
 
@@ -40,45 +43,60 @@ export async function PATCH(request: NextRequest) {
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
     if (
       !body ||
-      typeof body !== 'object' ||
-      !('source' in body) ||
+      typeof body !== "object" ||
+      !("source" in body) ||
       !isSiFeedSource(body.source as string) ||
-      !('share_public' in body) ||
-      typeof body.share_public !== 'boolean'
+      !("share_public" in body) ||
+      typeof body.share_public !== "boolean"
     ) {
       return NextResponse.json(
-        { error: 'source and boolean share_public are required' },
+        { error: "source and boolean share_public are required" },
         { status: 400 }
       );
     }
 
     const now = new Date().toISOString();
+    let grantedAt = body.share_public ? now : null;
+    if (!body.share_public) {
+      const { data: previous, error: lookupError } = await getSupabaseAdmin()
+        .from("si_feed_consents")
+        .select("granted_at")
+        .eq("user_id", userId)
+        .eq("source", body.source)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
+      grantedAt = previous?.granted_at ?? null;
+    }
+
     const { data, error } = await getSupabaseAdmin()
-      .from('si_feed_consents')
+      .from("si_feed_consents")
       .upsert(
         {
           user_id: userId,
           source: body.source as SiFeedSource,
           share_public: body.share_public,
-          granted_at: body.share_public ? now : null,
+          granted_at: grantedAt,
           revoked_at: body.share_public ? null : now,
           updated_at: now,
         },
-        { onConflict: 'user_id,source' }
+        { onConflict: "user_id,source" }
       )
-      .select('source, share_public, granted_at, revoked_at')
+      .select("source, share_public, granted_at, revoked_at")
       .single();
     if (error) throw error;
 
     return NextResponse.json(
       { consent: data },
-      { headers: { 'Cache-Control': 'private, no-store' } }
+      { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch {
-    return NextResponse.json({ error: 'Unable to update SI Feed permission' }, { status: 503 });
+    return NextResponse.json(
+      { error: "Unable to update SI Feed permission" },
+      { status: 503 }
+    );
   }
 }

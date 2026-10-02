@@ -90,7 +90,9 @@ describe("/api/si/feed", () => {
       agent: "AgentZ",
     });
     expect(JSON.stringify(body)).not.toContain("sensitive detail");
-    expect(JSON.stringify(body)).not.toContain("private");
+    expect(JSON.stringify(body)).not.toContain("token");
+    expect(body.events[0]).not.toHaveProperty("payload");
+    expect(body.events[0]).not.toHaveProperty("error_message");
   });
 
   it("filters by source, severity, and entity", async () => {
@@ -149,9 +151,9 @@ describe("/api/si/feed", () => {
     const response = await get();
     const body = await response.json();
 
-    expect(body.events.map((event: { source: string }) => event.source)).toEqual([
-      "agentz",
-    ]);
+    expect(
+      body.events.map((event: { source: string }) => event.source)
+    ).toEqual(["agentz"]);
   });
 
   it("rejects malformed pagination cursors", async () => {
