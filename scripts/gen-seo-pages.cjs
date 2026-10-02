@@ -205,7 +205,7 @@ function ensureMoneyCta(page) {
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF', cmmc: 'CMMC', mcp: 'MCP' };
+const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF', cmmc: 'CMMC', mcp: 'MCP', fips: 'FIPS', rfc: 'RFC' };
 const titleCase = (s) =>
   s.split(/\b/).map((w) => {
     const lw = w.toLowerCase();
@@ -256,7 +256,7 @@ const DATA = [
       lead: 'The ESPR lets each product group set the granularity of its digital product passport (model, batch or individual item), so the level your passport must sit at is decided by the delegated act for your product, not by a single rule.',
       bullets: ['A record can carry a GS1 Digital Link URL with a GTIN alone for model level, GTIN plus lot for batch level, or GTIN plus serial for item level', 'Each record is a signed W3C Verifiable Credential, so the same format and verifier work at every level', 'The spec requires a stable URL per item that does not change when the item changes hands, which is what item-level passports need'],
       faqs: [{ q: 'Which granularity applies to my product?', a: 'It depends on the delegated act for your product group. Read the act once it is published; until then, a record format that supports all three levels avoids a rebuild.' }, { q: 'Does a finer level make a record more trustworthy?', a: 'No. Granularity says how precisely a record identifies goods. Trust still comes from who signed it and, where present, from the anchor.' }] },
-    { keyword: 'ed25519 fips 186-5 rfc 8032 signature compliance', brand: 'authichain', schemaType: 'Service',
+    { keyword: 'ed25519 fips 186-5 rfc 8032 signature', brand: 'authichain', schemaType: 'Service',
       lead: 'Ed25519 is specified in RFC 8032 and approved as EdDSA in FIPS 186-5; AuthiChain records are signed with it, which is a statement about the algorithm and not a certification of any product.',
       bullets: ['The reference verifier uses Ed25519 verification over JCS-canonicalised record bytes, so you can read exactly what is signed', 'Using an approved algorithm is different from using a FIPS 140-validated module; AuthiChain does not claim module validation', 'Ed25519 is an elliptic-curve scheme and is not post-quantum secure, as with all such signatures'],
       faqs: [{ q: 'Is AuthiChain FIPS validated?', a: 'No. The signature algorithm is the one FIPS 186-5 approves. No cryptographic module validation is claimed.' }, { q: 'Can I check the signature without trusting AuthiChain?', a: 'Yes. The verifier is Apache-2.0 with no dependencies and runs offline; any RFC 8032 implementation can check the same signature over the same canonical bytes.' }] },
@@ -284,7 +284,7 @@ function buildEntry(d) {
     `<h2>Why ${esc(b.name)}</h2>` +
     `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
     `<h2>How it works</h2>` +
-    `<p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. ${esc(b.price)}</p>` +
+    `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
     `<h2>FAQ</h2>` +
     d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
