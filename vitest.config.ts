@@ -97,12 +97,13 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "genetics") + "$1",
       },
-      // Next webhook route deps (src/app/api/stripe/webhook/route.ts). None of
-      // these basenames exist under client/src/lib, so no client test can be
+      // Next webhook route deps (src/app/api/stripe/webhook/route.ts), plus
+      // founder-alerts (src/lib/dreamdash/notify-draft.ts). None of these
+      // basenames exist under client/src/lib, so no client test can be
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
       },
       {

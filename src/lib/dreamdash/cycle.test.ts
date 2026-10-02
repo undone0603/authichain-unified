@@ -146,8 +146,11 @@ describe("close-order ranking", () => {
       value: 10000,
       lastTouch: "2026-09-21T00:00:00.000Z",
     });
-    expect(closePriority(signed)).toBeGreaterThan(closePriority(raw));
-    expect(closeOrder([raw, signed], 2).map((l) => l.id)).toEqual(["a", "b"]);
+    // A day after the raw lead's last touch: neither lead is stale yet, so
+    // only the stage bonus separates them.
+    const now = Date.parse("2026-09-22T00:00:00.000Z");
+    expect(closePriority(signed, now)).toBeGreaterThan(closePriority(raw, now));
+    expect(closeOrder([raw, signed], 2, now).map((l) => l.id)).toEqual(["a", "b"]);
   });
 
   it("adds draft+18 and stale+14 to the close score", () => {
@@ -160,7 +163,8 @@ describe("close-order ranking", () => {
       lastTouch: "2026-09-01T00:00:00.000Z",
       company: "Stale Draft",
     });
-    expect(closePriority(staleDraft)).toBe(40 + 18 + 14);
+    const now = Date.parse("2026-09-22T00:00:00.000Z");
+    expect(closePriority(staleDraft, now)).toBe(40 + 18 + 14);
   });
 });
 

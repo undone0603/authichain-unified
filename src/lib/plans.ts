@@ -20,7 +20,8 @@ export type PlanId =
   | "strainchain_passport"
   | "strainchain_farm"
   | "musa_claim_file"
-  | "musa_audit_bundle";
+  | "musa_audit_bundle"
+  | "enterprise_compliance";
 
 export interface Plan {
   id: PlanId;
@@ -291,6 +292,7 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   strainchain_farm: 0,
   musa_claim_file: 0,
   musa_audit_bundle: 0,
+  enterprise_compliance: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -307,4 +309,18 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   strainchain_farm: "pro",
   musa_claim_file: "pro",
   musa_audit_bundle: "pro",
+  enterprise_compliance: "enterprise",
 };
+
+/**
+ * Entitlement for /dashboard/compliance (src/lib/compliance-access.ts): a
+ * profile whose subscription_plan is this id and whose subscription_status is
+ * active or trialing.
+ *
+ * Deliberately NOT in PLANS yet: it has no price. isPurchasable() treats a
+ * price of 0 as free, so a placeholder entry would make the tier claimable
+ * for nothing. To sell it, create the Stripe price, then add a PLANS entry
+ * with the real price, stripe_price_id and stripe_mode: "subscription".
+ * Until then planById() returns undefined and /checkout refuses it.
+ */
+export const COMPLIANCE_PLAN_ID: PlanId = "enterprise_compliance";

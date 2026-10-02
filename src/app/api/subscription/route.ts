@@ -1,74 +1,73 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "../../../utils/supabase/server";
+import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+import { findProfileForUser } from "../../../lib/profile-lookup";
+import {
+  GATED_CHECKOUT_ORIGIN,
+  listedPlans,
+  planPaymentLink,
+} from "../../../lib/plans";
 
-const plans = [
-  { id: 'plan_starter', name: 'Starter', price: 0, interval: 'month', features: ['10 QR codes', 'Basic analytics', 'PNG export', 'Community support'], max_qr_codes: 10 },
-  { id: 'plan_pro', name: 'Pro', price: 29, interval: 'month', features: ['500 QR codes', 'Advanced analytics', 'All export formats', 'AI art styling', 'Priority support'], max_qr_codes: 500 },
-  { id: 'plan_business', name: 'Business', price: 79, interval: 'month', features: ['Unlimited QR codes', 'Full analytics', 'API access', 'Custom branding', 'Team management', 'Dedicated support'], max_qr_codes: -1 },
-  { id: 'plan_enterprise', name: 'Enterprise', price: 299, interval: 'month', features: ['Unlimited QR codes', 'Full analytics', 'API access', 'White-label', 'SLA', 'Custom integrations', 'Dedicated CSM'], max_qr_codes: -1 }
-];
+/**
+ * The caller's subscription, and the plans on sale.
+ *
+ * This route used to return two fixture subscriptions to anyone (filterable by
+ * any user_id), a plan list ($29 / $79 / $299) that is not in plans.ts, and a
+ * POST that "created" an active subscription without charging. It now reads
+ * the real entitlement record (profiles, maintained by the Stripe webhook)
+ * for the signed-in user, and lists plans from src/lib/plans.ts.
+ */
 
-const subscriptions = [
-  { id: 'sub_001', user_id: 'usr_001', plan: 'plan_pro', status: 'active', current_period_end: '2025-02-15T00:00:00Z', qr_codes_used: 127, qr_codes_limit: 500 },
-  { id: 'sub_002', user_id: 'usr_002', plan: 'plan_business', status: 'active', current_period_end: '2025-02-20T00:00:00Z', qr_codes_used: 1843, qr_codes_limit: -1 }
-];
+const ENTITLED_STATUSES = new Set(["active", "trialing"]);
+
+type SubscriptionProfile = {
+  subscription_plan: string | null;
+  subscription_status: string | null;
+};
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-  const user_id = searchParams.get('user_id');
-
-  if (type === 'plans') {
-    return NextResponse.json({ success: true, plans, platform: 'QRON' });
+  if (request.nextUrl.searchParams.get("type") === "plans") {
+    return NextResponse.json({
+      plans: listedPlans().map(plan => ({
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        price_suffix: plan.price_suffix ?? null,
+        description: plan.description,
+        features: plan.features,
+        checkout_url: planPaymentLink(plan.id) ?? null,
+      })),
+    });
   }
 
-  let filtered = subscriptions;
-  if (user_id) filtered = filtered.filter(s => s.user_id === user_id);
-
-  return NextResponse.json({
-    success: true,
-    endpoint: '/api/subscription',
-    subscriptions: filtered,
-    total: filtered.length,
-    active: filtered.filter(s => s.status === 'active').length,
-    platform: 'QRON'
-  });
-}
-
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const { user_id, plan_id } = body;
-
-  if (!user_id || !plan_id) {
-    return NextResponse.json({ error: 'user_id and plan_id are required' }, { status: 400 });
+  const session = await createClient();
+  const { data } = (await session.auth?.getUser()) ?? { data: { user: null } };
+  const user = data?.user;
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const plan = plans.find(p => p.id === plan_id);
-  if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
-
-  return NextResponse.json({
-    success: true,
-    subscription: {
-      id: `sub_${Date.now()}`,
-      user_id, plan_id,
-      plan_name: plan.name,
-      status: 'active',
-      amount: plan.price,
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      qr_codes_limit: plan.max_qr_codes,
-      platform: 'QRON'
+  const profile = await findProfileForUser<SubscriptionProfile>(
+    getSupabaseAdmin(),
+    user,
+    "subscription_plan, subscription_status"
+  );
+  const status = profile?.subscription_status ?? null;
+  return NextResponse.json(
+    {
+      plan: profile?.subscription_plan ?? null,
+      status,
+      entitled: ENTITLED_STATUSES.has(status ?? ""),
     },
-    platform: 'QRON'
-  });
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+export function POST() {
+  return NextResponse.json(
+    {
+      error: `Subscriptions are created by checkout, not this API. Use ${GATED_CHECKOUT_ORIGIN}/checkout/<plan_id> (plans in src/lib/plans.ts).`,
     },
-  });
+    { status: 410 }
+  );
 }

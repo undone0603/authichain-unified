@@ -58,8 +58,14 @@ test files exist but only 4 ran in CI. One that never ran
 ## Deferred (money, contact or design decisions)
 
 - **PR #1426** (affiliate payouts on): this moves money, so it is the owner's decision.
-- **Metered agent billing never bills.** `src/lib/industrial/billing.ts` calls `subscriptionItems.createUsageRecord`, which current stripe-node no longer has. The error is caught and logged. The fix is `billing.meterEvents`, which needs a Stripe meter configured first.
-- **The compliance dashboard paywall is client-side.** `src/proxy.ts:48-50` trusts an `org_plan_tier` cookie the client can set. It needs a server-side plan lookup.
+- **Metered agent billing never bills.** `src/lib/industrial/billing.ts` calls `subscriptionItems.createUsageRecord`, which current stripe-node no longer has. The error is caught and logged. The fix is `billing.meterEvents`, which needs a Stripe meter configured first. #1456 is not merged.
+- ~~**The compliance dashboard paywall is client-side.**~~ **Done in #1450.**
+  - What it found: there was no `/dashboard/compliance` route and no `enterprise_compliance` plan, and nothing ever set the cookie the gate read.
+  - What it builds: a real tier. Entitlement is checked server-side from `profiles` (`src/lib/compliance-access.ts`, `src/lib/compliance-dal.ts`), and the dashboard shows the account's DPP portfolio from live data.
+  - The tier stays unpriced and unsellable until you add a `PLANS` entry with a real Stripe price.
+- ~~**`/enterprise/checkout`** sold "$500 / month" and posted to a missing API.~~ **Fixed:** it sells the real StrainChain Farm Plan from `plans.ts`, offers the anchor partnership as custom (`/contact`), and lists unbuilt features as roadmap. This follows the pricing decision in `docs/strategy/strainchain-genetics-passport.md` §3.
+- ~~**`/api/subscription`** returned fixtures.~~ **Fixed:** it returns the signed-in user's entitlement from `profiles` (401 when signed out) and plans from `plans.ts`. POST returns 410.
+- ~~**The QRON dashboard** showed typed-in "300+" edge nodes and "99.97%" uptime.~~ **Fixed:** the Workers count now comes from the dated estate snapshot. Uptime is shown as a goal, "not measured yet", because nothing measures it.
 - **Nightstamp SKUs are not in `plans.ts`.** That covers $9/$29/$49 in `src/app/api/starmap/checkout/route.ts` and the $39/$79 print add-ons. Adding them is a pricing decision.
 - **Made-in-USA "View Details" link.** `src/app/brand/qron/made-in-usa/page.tsx` links to `/brand/qron/product/<id>`, which has no route. The artwork route is a different entity, so this needs a product page or the link removed.
 - **Cross-host links.** `/x402`, `/onboard`, `/generate`, `/protocol` and `/made-in-usa-claim-file` resolve only on hosts whose Worker serves them. Routing intent belongs to the owner.
@@ -67,6 +73,17 @@ test files exist but only 4 ran in CI. One that never ran
 - **Smaller items:**
   - `ops/scripts/gen-seo-pages.cjs` is an inert stale copy; it writes under `ops/`.
   - The `any` in `src/lib/affiliate-accrual.ts` is left alone to avoid conflicting with PR #1426.
+
+## Follow-up PRs (same day)
+
+| PR    | What                                                                                                                                                                                                                                                                                          |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #1450 | Real Enterprise Compliance tier with a server-side gate                                                                                                                                                                                                                                       |
+| #1455 | The root Vitest suite runs in CI. It surfaced 11 failing files, including three real bugs: `/generate` served the SPA shell (#1389 commented its handler out with literal `\n`), the retired Stripe alias returned 404 instead of 410, and fallback outreach emails contained a literal `\n`. |
+| #1456 | Agent metering via `billing.meterEvents`, behind a flag; the MCP tools answer from real records                                                                                                                                                                                               |
+| #1457 | `/api/subscription`, `/enterprise/checkout` and the dashboard tiles now show real data, or a labelled goal                                                                                                                                                                                    |
+
+Still open from this pass: `apps/qron-platform/src/app/api/mcp/route.ts` is an older copy of the MCP route with the same fixed verdicts. No workflow here deploys it, so deleting or porting it is your call.
 
 ## authichain-ai-business-manager
 
