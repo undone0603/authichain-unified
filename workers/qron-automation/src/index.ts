@@ -22,7 +22,10 @@ export default {
     }
 
     // Webhook: Lead capture from portfolio contact forms
-    if (url.pathname === '/webhook/lead' && request.method === 'POST') {
+    // The only public route is the zone route qron.space/autoflow/*, which keeps the
+    // /autoflow prefix. Accept that exact path too (workers.dev is off). Only this
+    // one path is aliased, so /autoflow/run/* and /autoflow/dashboard stay unmatched.
+    if ((url.pathname === '/webhook/lead' || url.pathname === '/autoflow/webhook/lead') && request.method === 'POST') {
       try {
         const data: any = await request.json();
         const leadInfo = {
