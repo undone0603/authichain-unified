@@ -116,10 +116,27 @@ describe('Made-in-USA Compliance Engine', () => {
     expect(cost.usContentPercentage).toBeCloseTo(90.9091, 2);
   });
 
-  it('evaluates substantial transformation successfully', () => {
+  it('does not treat an HTS code and a US final-transformation declaration as supported substantial transformation', () => {
     const determination = evaluateSubstantialTransformation(usComponent);
-    expect(determination.transformationStatus).toBe('SUBSTANTIAL_TRANSFORMATION_SUPPORTED');
-    expect(determination.confidence).toBeGreaterThan(0.8);
+    expect(determination.transformationStatus).toBe('SUBSTANTIAL_TRANSFORMATION_UNKNOWN');
+  });
+
+  it('does not count a foreign-manufactured part as US cost because countryOfOrigin says USA', () => {
+    const ruleset = getRuleset('FEDERAL_FTC');
+    const relabeled: BOMComponent = {
+      ...foreignComponent,
+      countryOfOrigin: 'USA',
+    };
+    const cost = calculateBOMCost(
+      { productId: 'prod_relabel', version: 'v1.0', components: [relabeled] },
+      ruleset
+    );
+    expect(cost.usManufacturingCost).toBe(0);
+    expect(cost.foreignManufacturingCost).toBe(10);
+  });
+
+  it('rejects an unknown jurisdiction instead of defaulting to FTC', () => {
+    expect(() => getRuleset('MARS')).toThrow(/unknown compliance jurisdiction/i);
   });
 
   it('fails closed to BLOCKED when signature is invalid', () => {
@@ -134,7 +151,42 @@ describe('Made-in-USA Compliance Engine', () => {
     const evaluation = evaluateClaim(bom, cost, origins, [invalidSignatureDocument], ruleset);
 
     expect(evaluation.decision).toBe('BLOCKED');
+    expect(evaluation.claimText).toBe('No Made in USA claim');
     expect(evaluation.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('does not grant an unqualified claim from a mixed BOM near a 90% cost cutoff', () => {
+    const ruleset = getRuleset('FEDERAL_FTC');
+    const bom: BOMPayload = {
+      productId: 'prod_mixed_unqualified',
+      version: 'v1.0',
+      components: [usComponent, foreignComponent],
+    };
+    const cost = calculateBOMCost(bom, ruleset);
+    const origins = [
+      {
+        ...evaluateSubstantialTransformation(usComponent),
+        transformationStatus: 'SUBSTANTIAL_TRANSFORMATION_SUPPORTED' as const,
+      },
+      {
+        ...evaluateSubstantialTransformation(foreignComponent),
+        transformationStatus: 'SUBSTANTIAL_TRANSFORMATION_SUPPORTED' as const,
+      },
+    ];
+    const foreignDoc: SupplierDocumentPayload = {
+      ...validDocument,
+      supplierId: 'sup_2',
+      documentHash: 'sha256:foreign-doc',
+    };
+    const evaluation = evaluateClaim(
+      bom,
+      cost,
+      origins,
+      [validDocument, foreignDoc],
+      ruleset
+    );
+    expect(evaluation.decision).not.toBe('UNQUALIFIED_ALLOWED');
+    expect(evaluation.claimText).toBe('No Made in USA claim');
   });
 
   it('requires verified evidence for every component supplier', () => {
@@ -177,7 +229,21 @@ describe('Made-in-USA Compliance Engine', () => {
     expect(evaluateClaim(bom, cost, [], [validDocument], ruleset).decision).toBe('REVIEW_REQUIRED');
   });
 
-  it('generates unqualified Made in USA claim for 100% domestic product with valid documents', () => {
+  it('keeps a 100% US BOM in review when substantial transformation is only client-declared', () => {
+    const ruleset = getRuleset('FEDERAL_FTC');
+    const bom: BOMPayload = {
+      productId: 'prod_test_4_review',
+      version: 'v1.0',
+      components: [usComponent],
+    };
+    const cost = calculateBOMCost(bom, ruleset);
+    const origins = [evaluateSubstantialTransformation(usComponent)];
+    const evaluation = evaluateClaim(bom, cost, origins, [validDocument], ruleset);
+    expect(evaluation.decision).toBe('REVIEW_REQUIRED');
+    expect(evaluation.claimText).toBe('No Made in USA claim');
+  });
+
+  it('generates unqualified Made in USA claim for 100% domestic product with verified documents and supported transformation', () => {
     const ruleset = getRuleset('FEDERAL_FTC');
     const bom: BOMPayload = {
       productId: 'prod_test_4',
@@ -185,11 +251,17 @@ describe('Made-in-USA Compliance Engine', () => {
       components: [usComponent],
     };
     const cost = calculateBOMCost(bom, ruleset);
-    const origins = [evaluateSubstantialTransformation(usComponent)];
+    const origins = [
+      {
+        ...evaluateSubstantialTransformation(usComponent),
+        transformationStatus: 'SUBSTANTIAL_TRANSFORMATION_SUPPORTED' as const,
+      },
+    ];
     const evaluation = evaluateClaim(bom, cost, origins, [validDocument], ruleset);
 
     expect(evaluation.decision).toBe('UNQUALIFIED_ALLOWED');
     expect(evaluation.reviewRequired).toBe(false);
+    expect(evaluation.claimText).toBe('Made in USA');
 
     const passport = createClaimPassport('prod_test_4', 'det_123', evaluation, { bom, cost });
     expect(passport.status).toBe('ACTIVE');
@@ -214,5 +286,26 @@ describe('Made-in-USA Compliance Engine', () => {
         Buffer.from(signature, 'base64url')
       )
     ).toBe(true);
+  });
+
+  it('records BLOCKED on the passport instead of REVIEW_REQUIRED', () => {
+    const ruleset = getRuleset('FEDERAL_FTC');
+    const bom: BOMPayload = { productId: 'prod_blocked_passport', version: 'v1.0', components: [usComponent] };
+    const cost = calculateBOMCost(bom, ruleset);
+    const evaluation = evaluateClaim(
+      bom,
+      cost,
+      [
+        {
+          ...evaluateSubstantialTransformation(usComponent),
+          transformationStatus: 'SUBSTANTIAL_TRANSFORMATION_NOT_SUPPORTED',
+        },
+      ],
+      [validDocument],
+      ruleset
+    );
+    expect(evaluation.decision).toBe('BLOCKED');
+    const passport = createClaimPassport('prod_blocked_passport', 'det_blocked', evaluation, { bom, cost });
+    expect(passport.status).toBe('BLOCKED');
   });
 });

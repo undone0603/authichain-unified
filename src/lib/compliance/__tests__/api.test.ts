@@ -1,29 +1,10 @@
-import { afterAll, beforeAll, describe, it, expect } from 'vitest';
-import { generateKeyPairSync } from 'crypto';
+import { describe, it, expect } from 'vitest';
 import { getRuleset } from '../rules';
 import { calculateBOMCost } from '../cost';
 import { evaluateSubstantialTransformation } from '../transformation';
 import { evaluateClaim } from '../decision';
-import { createClaimPassport } from '../passport';
 
 describe('Compliance Evaluation API Pipeline', () => {
-  const previousSigningKey = process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY;
-  const { privateKey } = generateKeyPairSync('ed25519');
-
-  beforeAll(() => {
-    process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY = privateKey
-      .export({ type: 'pkcs8', format: 'pem' })
-      .toString();
-  });
-
-  afterAll(() => {
-    if (previousSigningKey === undefined) {
-      delete process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY;
-    } else {
-      process.env.AUTHICHAIN_COMPLIANCE_SIGNING_PRIVATE_KEY = previousSigningKey;
-    }
-  });
-
   it('processes a complete evaluation request payload end-to-end', () => {
     const ruleset = getRuleset('FEDERAL_FTC');
     const bom = {
@@ -67,18 +48,7 @@ describe('Compliance Evaluation API Pipeline', () => {
     const originDeterminations = bom.components.map((c) => evaluateSubstantialTransformation(c));
     const claimEvaluation = evaluateClaim(bom, costCalculation, originDeterminations, documents, ruleset);
 
-    expect(claimEvaluation.decision).toBe('UNQUALIFIED_ALLOWED');
-
-    const passport = createClaimPassport(
-      bom.productId,
-      'det_api_123',
-      claimEvaluation,
-      { bom, costCalculation, originDeterminations }
-    );
-
-    expect(passport.passportId).toBeDefined();
-    expect(passport.status).toBe('ACTIVE');
-    expect(passport.documentHash).toBeDefined();
-    expect(passport.signature).toBeDefined();
+    expect(claimEvaluation.decision).toBe('REVIEW_REQUIRED');
+    expect(claimEvaluation.claimText).toBe('No Made in USA claim');
   });
 });

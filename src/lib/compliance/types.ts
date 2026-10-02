@@ -14,7 +14,8 @@ export type PassportStatus =
   | 'EXPIRED'
   | 'SUPERSEDED'
   | 'SUSPENDED'
-  | 'REVIEW_REQUIRED';
+  | 'REVIEW_REQUIRED'
+  | 'BLOCKED';
 
 export type SignatureStatus =
   | 'SIGNATURE_PRESENT'

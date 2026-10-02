@@ -10,8 +10,8 @@ export const CANONICAL_RULESETS: RulesetVersion[] = [
     effectiveFrom: '2021-08-13T00:00:00Z',
     ruleType: 'ALL_OR_VIRTUALLY_ALL',
     parameters: {
-      unqualifiedThresholdPercent: 90.0, // FTC "all or virtually all" standard demands very high domestic content
-      historicalReferenceThresholdPercent: 75.0, // Historical reference only; not current FTC standard
+      unqualifiedThresholdPercent: 90.0, // metadata only; not an FTC legal test
+      historicalReferenceThresholdPercent: 75.0, // Historical reference only; not a permission threshold
       requireFinalAssemblyInUs: true,
       requireSubstantialTransformation: true,
     },
@@ -60,12 +60,19 @@ export const CANONICAL_RULESETS: RulesetVersion[] = [
   },
 ];
 
+export class UnknownComplianceRulesetError extends Error {
+  constructor(public readonly requested: string) {
+    super(`Unknown compliance jurisdiction: ${requested}`);
+    this.name = "UnknownComplianceRulesetError";
+  }
+}
+
 export function getRuleset(idOrJurisdiction: string): RulesetVersion {
   const found = CANONICAL_RULESETS.find(
     (r) => r.id === idOrJurisdiction || r.jurisdiction === idOrJurisdiction
   );
   if (!found) {
-    return CANONICAL_RULESETS[0]; // Default to FTC 16 CFR Part 323
+    throw new UnknownComplianceRulesetError(idOrJurisdiction);
   }
   return found;
 }

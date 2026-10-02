@@ -2,6 +2,7 @@ import {
   createHash,
   createPrivateKey,
   createPublicKey,
+  randomUUID,
   sign,
   verify as verifySignature,
 } from "crypto";
@@ -141,10 +142,13 @@ export function createClaimPassport(
   evidenceManifest: any,
   client?: string
 ): ClaimPassport {
-  const passportId = `miusa_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
-  const status: PassportStatus = evaluation.reviewRequired
-    ? "REVIEW_REQUIRED"
-    : "ACTIVE";
+  const passportId = `miusa_${randomUUID()}`;
+  const status: PassportStatus =
+    evaluation.decision === "BLOCKED"
+      ? "BLOCKED"
+      : evaluation.reviewRequired
+        ? "REVIEW_REQUIRED"
+        : "ACTIVE";
   const passportData: ClaimPassportData = {
     passportId,
     productId,

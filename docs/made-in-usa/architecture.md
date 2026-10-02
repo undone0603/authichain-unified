@@ -20,7 +20,7 @@ BOM Payload + Supplier Documents
    (Document Hash + Manifest Hash + Signature)
               │
               ▼
-   Verifiable Passport / API / QR Verification
+   Determination API (no passport until a trusted document workflow exists)
 ```
 
 ## Core Modules
@@ -29,4 +29,4 @@ BOM Payload + Supplier Documents
 - `src/lib/compliance/transformation.ts`: Substantial transformation evaluation.
 - `src/lib/compliance/decision.ts`: Fail-closed claim determination logic.
 - `src/lib/compliance/passport.ts`: Cryptographic hashing and passport issuance.
-- `src/app/api/v1/compliance/evaluate/route.ts`: Evaluation API endpoint.
+- `src/app/api/v1/compliance/evaluate/route.ts`: Determination-only API. It rejects client-supplied documents and does not mint claim passports. Passport issuance stays in `createClaimPassport` for a future trusted-evidence writer.

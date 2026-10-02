@@ -45,15 +45,15 @@ create table if not exists public.compliance_bom_components (
   currency text not null default 'USD',
   supplier_id text,
   supplier_name text,
-  supplier_country text not null default 'USA',
-  manufacturing_country text not null default 'USA',
+  supplier_country text not null,
+  manufacturing_country text not null,
   labor_cost numeric(12, 4) not null default 0,
   material_cost numeric(12, 4) not null default 0,
   overhead_cost numeric(12, 4) not null default 0,
   freight_cost numeric(12, 4) not null default 0,
   hts_code text,
-  country_of_origin text not null default 'USA',
-  final_transformation_country text not null default 'USA',
+  country_of_origin text not null,
+  final_transformation_country text not null,
   documentation_id text,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamp with time zone not null default now()
@@ -99,7 +99,7 @@ create table if not exists public.origin_determinations (
   hts_code text,
   manufacturing_process text,
   processing_steps jsonb not null default '[]'::jsonb,
-  final_transformation_country text not null default 'USA',
+  final_transformation_country text not null,
   substantial_transformation_status text not null default 'SUBSTANTIAL_TRANSFORMATION_UNKNOWN', -- CONFIRMED, SUPPORTED, UNKNOWN, NOT_SUPPORTED
   confidence numeric(5, 4) not null default 0,
   reasoning text,
@@ -113,7 +113,7 @@ create table if not exists public.claim_determinations (
   bom_id uuid not null references public.compliance_boms(id) on delete cascade,
   ruleset_id uuid not null references public.compliance_ruleset_versions(id),
   decision text not null, -- UNQUALIFIED_ALLOWED, QUALIFIED_ALLOWED, SPECIFIC_PROCESS_CLAIM_ONLY, REVIEW_REQUIRED, BLOCKED, INSUFFICIENT_EVIDENCE
-  claim_text text not null default 'Made in USA',
+  claim_text text not null default 'No Made in USA claim',
   confidence numeric(5, 4) not null default 0,
   evidence_vector jsonb not null default '{}'::jsonb,
   warnings jsonb not null default '[]'::jsonb,
@@ -171,30 +171,24 @@ create table if not exists public.rule_change_events (
   status text not null default 'PENDING_REVIEW' -- PENDING_REVIEW, PROPOSED, PROMOTED, DISMISSED
 );
 
-do $$
-declare
-  table_name text;
-  compliance_tables text[] := array[
-    'compliance_ruleset_versions',
-    'compliance_boms',
-    'compliance_bom_components',
-    'supplier_documents',
-    'cost_calculations',
-    'origin_determinations',
-    'claim_determinations',
-    'claim_passports',
-    'compliance_audit_events',
-    'rule_change_events'
-  ];
-begin
-  foreach table_name in array compliance_tables loop
-    execute format('alter table public.%I enable row level security', table_name);
-    execute format('revoke all privileges on table public.%I from public, anon, authenticated', table_name);
-    execute format('grant all privileges on table public.%I to service_role', table_name);
-    execute format('drop policy if exists compliance_service_role_only on public.%I', table_name);
-    execute format(
-      'create policy compliance_service_role_only on public.%I for all using (auth.jwt() ->> ''role'' = ''service_role'') with check (auth.jwt() ->> ''role'' = ''service_role'')',
-      table_name
-    );
-  end loop;
-end $$;
+alter table public.compliance_ruleset_versions enable row level security;
+alter table public.compliance_boms enable row level security;
+alter table public.compliance_bom_components enable row level security;
+alter table public.supplier_documents enable row level security;
+alter table public.cost_calculations enable row level security;
+alter table public.origin_determinations enable row level security;
+alter table public.claim_determinations enable row level security;
+alter table public.claim_passports enable row level security;
+alter table public.compliance_audit_events enable row level security;
+alter table public.rule_change_events enable row level security;
+
+grant select, insert, update, delete on table public.compliance_ruleset_versions to service_role;
+grant select, insert, update, delete on table public.compliance_boms to service_role;
+grant select, insert, update, delete on table public.compliance_bom_components to service_role;
+grant select, insert, update, delete on table public.supplier_documents to service_role;
+grant select, insert, update, delete on table public.cost_calculations to service_role;
+grant select, insert, update, delete on table public.origin_determinations to service_role;
+grant select, insert, update, delete on table public.claim_determinations to service_role;
+grant select, insert, update, delete on table public.claim_passports to service_role;
+grant select, insert, update, delete on table public.compliance_audit_events to service_role;
+grant select, insert, update, delete on table public.rule_change_events to service_role;
