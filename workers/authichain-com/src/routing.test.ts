@@ -398,6 +398,22 @@ test("/thanks and /success serve the DPP thanks page", async () => {
   }
 });
 
+/** Absolute URLs in a page, parsed, so tests compare hosts exactly. */
+function urlsIn(html: string): URL[] {
+  const out: URL[] = [];
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>()]+/g)) {
+    try {
+      out.push(new URL(m[0]));
+    } catch {
+      // not a URL
+    }
+  }
+  return out;
+}
+
+const ANCHOR_TX =
+  "0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7";
+
 test("anchor is an in-browser fingerprint that claims no anchoring", async () => {
   const res = await get("/anchor");
   assert.equal(res.status, 200);
@@ -405,7 +421,7 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
   assert.ok(!html.includes("app.authichain.com/login"));
   // The demo gateway stored nothing and wrote nothing on-chain; the page must
   // not call it or claim a certificate was anchored.
-  assert.doesNotMatch(html, /api\.authichain\.com/);
+  assert.ok(!urlsIn(html).some(u => u.hostname === "api.authichain.com"));
   assert.ok(
     !/Certificate Anchored|Anchoring to blockchain|permanent and publicly verifiable/.test(
       html
@@ -416,9 +432,10 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
     /does not store anything, issue a certificate, or write to a blockchain/
   );
   // The real Polygon anchor is cited, not hidden.
-  assert.match(
-    html,
-    /polygonscan\.com\/tx\/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7/
+  assert.ok(
+    urlsIn(html).some(
+      u => u.hostname === "polygonscan.com" && u.pathname === `/tx/${ANCHOR_TX}`
+    )
   );
   assert.match(html, /Self-serve anchoring from this page is not live yet/);
 });
@@ -427,7 +444,7 @@ test("a demo certificate id says it is not on record, without fetching the demo 
   const html = await (await get("/cert/AC-1234ABCD")).text();
   assert.match(html, /not on record/);
   assert.match(html, /noindex/);
-  assert.doesNotMatch(html, /api\.authichain\.com/);
+  assert.ok(!urlsIn(html).some(u => u.hostname === "api.authichain.com"));
 });
 
 test("DPP landing collects email before protocol checkout", async () => {
