@@ -324,6 +324,10 @@ async function sendEmail(env: any, { to, subject, body }: any) {
       console.log(`Email error: RELAY service binding not configured (${subject})`);
       return false;
     }
+    if (!env.RELAY_SHARED_SECRET) {
+      console.log(`Email error: RELAY_SHARED_SECRET not set (${subject})`);
+      return false;
+    }
     const resp = await env.RELAY.fetch('https://resend-relay/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Relay-Key': env.RELAY_SHARED_SECRET },
