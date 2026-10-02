@@ -108,7 +108,7 @@ const PROTECTED_SEED_SLUGS = new Set([
 ]);
 
 const PROTECTED_SEED_MARKERS: Record<string, string> = {
-  "blockchain-product-authentication": "Built for every vertical",
+  "blockchain-product-authentication": "the manufacturer holds the keys, not us",
   "cannabis-blockchain-provenance": "What you get",
   "what-is-a-digital-product-passport": "What a DPP contains",
 };
@@ -128,7 +128,8 @@ describe("generated SEO money-path CTAs", () => {
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
       expect(how).toBeGreaterThan(-1);
       expect(cta).toBeGreaterThan(how);
-      expect(faq).toBeGreaterThan(cta);
+      // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
+      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
     }
   });
 

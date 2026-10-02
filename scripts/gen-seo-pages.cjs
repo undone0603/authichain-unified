@@ -286,8 +286,7 @@ function buildEntry(d) {
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
-    `<h2>FAQ</h2>` +
-    d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
+    (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -307,19 +306,22 @@ function buildEntry(d) {
           { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
         ],
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: d.faqs.map((f) => ({
-          '@type': 'Question',
-          name: f.q,
-          acceptedAnswer: { '@type': 'Answer', text: f.a },
-        })),
-      },
+      ...(d.faqs.length
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: d.faqs.map((f) => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+              })),
+            },
+          ]
+        : []),
     ],
   };
-  // noindex: true keeps a page reachable at /p/<slug> but out of the sitemap
-  // index. The field is carried in pages.json so a renderer can also emit
-  // <meta name="robots" content="noindex">.
+  // noindex: true keeps a page reachable at /p/<slug> but out of
+  // sitemap-slugs.json; worker-app/dynamic-pages.ts emits robots noindex for it.
   return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd, ...(d.noindex ? { noindex: true } : {}) };
 }
 const PROTECTED_SEED_SLUGS = new Set([

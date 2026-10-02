@@ -16,7 +16,7 @@ export interface SeoPage {
   h1: string;
   bodyHtml: string;
   jsonLd: Record<string, unknown>;
-  /** Kept out of sitemap-slugs.json; a renderer should emit robots noindex. */
+  /** Kept out of sitemap-slugs.json; /p/<slug> is served with robots noindex. */
   noindex?: boolean;
 }
 

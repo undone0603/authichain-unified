@@ -8,11 +8,11 @@
  */
 module.exports = [
   { keyword: 'eu digital product passport textiles', brand: 'authichain', schemaType: 'Service',
-    lead: 'Issue registry-ready EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored and exportable to the EU registry.',
+    lead: 'Issue EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored.',
     bullets: ['Fiber and recycled-content declarations', 'Care, durability, and repairability data', 'EPCIS 2.0 + JSON-LD registry export'],
     faqs: [{ q: 'When do textiles need a DPP?', a: 'Textiles are a priority category, with delegated regulations expected from 2028.' }, { q: 'How is the passport delivered?', a: 'Via a unique QR/NFC identifier per garment linking to the anchored passport.' }] },
   { keyword: 'eu digital product passport batteries', brand: 'authichain', schemaType: 'Service',
-    lead: 'Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain.',
+    lead: 'Generate EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain.',
     bullets: ['Carbon footprint and material composition', 'State-of-health and recycled-content tracking', 'Ready for the Feb 2027 battery mandate'],
     faqs: [{ q: 'When is the battery passport mandatory?', a: 'From 18 February 2027 for every EV battery, every light means of transport (LMT) battery such as e-bike and e-scooter packs, and every industrial battery over 2 kWh placed on the EU market.' }, { q: 'What data is required?', a: 'Carbon footprint, material composition, state-of-health, and recycled content, among others.' }] },
   { keyword: 'eu digital product passport electronics', brand: 'authichain', schemaType: 'Service',
@@ -28,7 +28,7 @@ module.exports = [
     bullets: ['Embodied-carbon and scope 1–3 data', 'Recycled content and grade certification', 'Auditable at batch level'],
     faqs: [{ q: 'Why steel first?', a: 'Iron and steel are high-impact priority categories for carbon and circularity reporting.' }, { q: 'Can I attach mill certificates?', a: 'Yes — mill test certificates can be hashed and anchored per batch.' }] },
   { keyword: 'eu digital product passport tyres', brand: 'authichain', schemaType: 'Service',
-    lead: 'Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored and exportable to the EU registry.',
+    lead: 'Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored.',
     bullets: ['Material composition and recycled content', 'Performance and rolling-resistance data', 'Retread and end-of-life tracking'],
     faqs: [{ q: 'Are tyres in DPP scope?', a: 'Tyres are among the priority product categories under the ESPR.' }, { q: 'Can I track retreads?', a: 'Yes — lifecycle events including retreading can be appended to the passport.' }] },
   { keyword: 'dscsa unit level traceability 2026', brand: 'authichain', schemaType: 'Service',
