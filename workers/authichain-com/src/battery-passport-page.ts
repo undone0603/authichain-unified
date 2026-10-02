@@ -27,7 +27,11 @@ import {
   type AnnexRow,
   type Placing,
 } from "./battery-gap-map";
-import { LEAD_FORM_CSS, batteryLeadFormSection } from "./battery-lead-form";
+import {
+  LEAD_FORM_CSS,
+  LEAD_FORM_ID,
+  batteryLeadFormSection,
+} from "./battery-lead-form";
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
 export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
@@ -62,6 +66,10 @@ export function daysUntilDeadline(now: Date = new Date()): number {
   return Math.max(0, Math.ceil((end - now.getTime()) / 86_400_000));
 }
 
+/**
+ * $299 audit checkout (secondary CTA since AE-20261002-CFD-05). Behaviour is
+ * unchanged: same action, method, fields and UTM tags; only the button style.
+ */
 function checkoutForm(id: string, label: string): string {
   const hidden = Object.entries(BATTERY_UTM)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`)
@@ -72,7 +80,7 @@ function checkoutForm(id: string, label: string): string {
   </label>
   ${hidden}
   <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and your readiness assessment. Not a newsletter.</p>
-  <button class="btn btn-primary" type="submit">${esc(label)}</button>
+  <button class="btn btn-secondary" type="submit">${esc(label)}</button>
 </form>`;
 }
 
@@ -116,7 +124,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The $299 is credited toward AuthiChain Basic if you continue.",
+    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it) and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The $299 is credited toward AuthiChain Basic if you continue.",
   },
   {
     q: "Is this legal advice or a certification?",
@@ -124,7 +132,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Do I have to book a call?",
-    a: "No. Checkout is self-serve. Questions go to the contact page and get a written answer.",
+    a: "Questions go to the contact page and get a written answer.",
   },
 ];
 
@@ -354,7 +362,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       { href: "/pricing", label: "Pricing" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "#get-started", label: `Get ready — $${price}` }
+    { href: `#${LEAD_FORM_ID}`, label: "Scope a pilot" }
   )}
 <main id="main">
   <header class="estate-hero hero" id="hero">
@@ -363,7 +371,10 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <p class="bp-countdown"><strong>${days}</strong> <span>days until 18 February 2027</span></p>
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
       <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
-      <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
+      <div class="estate-actions hero-cta">
+        <a class="btn btn-primary" href="#${LEAD_FORM_ID}">Request a scoping call</a>
+        ${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}
+      </div>
       <p class="bp-note">Not sure what you'd get? <a href="${BATTERY_PASSPORT_PATH}/sample-audit">Read a full sample assessment</a> worked through on a fictional e-bike pack.</p>
     </div>
   </header>
