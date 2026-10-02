@@ -84,3 +84,27 @@ test("ALTER-only migrations are not affected", () => {
 test("repository migrations pass with the committed baseline", () => {
   assert.deepEqual(run().errors, []);
 });
+
+test("exemption without a same-line reason fails, and the next line is not the reason", () => {
+  const sql = `-- supabase-grants-exempt: public.direct_only
+    -- reached only via DATABASE_URL
+    create table public.direct_only (id int);`;
+  const { errors } = checkMigrationSql(sql, "m.sql");
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /needs a table and a reason on the same line/);
+  assert.match(errors[1], /public\.direct_only without an explicit GRANT/);
+});
+
+test("reasonless exemption fails even when the table has grants", () => {
+  const sql = `-- supabase-grants-exempt: public.t1
+    create table public.t1 (id int);
+    grant select, insert, update, delete on table public.t1 to service_role;`;
+  const { errors } = checkMigrationSql(sql);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /needs a table and a reason/);
+});
+
+test("exemption with no table name fails", () => {
+  const { errors } = checkMigrationSql("-- supabase-grants-exempt:\nselect 1;");
+  assert.equal(errors.length, 1);
+});
