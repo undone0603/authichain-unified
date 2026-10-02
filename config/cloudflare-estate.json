@@ -8,7 +8,8 @@
       "status": "active",
       "canonical_path": "api",
       "deployment_workflow": ".github/workflows/deploy-edge-worker.yml",
-      "consolidated": "2026-10-02: removed the services/api/worker.ts + wrangler.toml duplicate (an older copy without Stripe webhook signature verification). api/ is the deployed source and carries the tests."
+      "consolidated": "2026-10-02: removed the services/api/worker.ts + wrangler.toml duplicate (an older copy without Stripe webhook signature verification). api/ is the deployed source and carries the tests.",
+      "note": "Move api/ under workers/ only in the same change as deploy-edge-worker.yml (carried over from #1471)."
     },
     "ai-classification": {
       "status": "duplicate-transitional",
