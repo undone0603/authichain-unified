@@ -305,7 +305,7 @@ async function sendEmail(env: any, { to, subject, body }: any) {
   try {
     const resp = await fetch('https://resend-relay.undone-k.workers.dev/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Relay-Key': env.RELAY_SHARED_SECRET },
       body: JSON.stringify({
         to: to,
         subject: subject,
