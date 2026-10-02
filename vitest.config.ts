@@ -173,6 +173,7 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.spec.ts",
       "worker-app/**/*.test.ts",
+      "worker/**/*.test.ts",
       "scripts/**/*.test.ts",
       "client/**/*.test.ts",
       "client/**/*.test.tsx",
