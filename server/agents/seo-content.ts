@@ -28,15 +28,15 @@ export const BRAND_SEO: Record<string, BrandSeoConfig> = {
     brand: 'AuthiChain',
     domain: 'authichain.com',
     facts:
-      'AI + blockchain product authentication. 5-agent AI consensus, ' +
-      'W3C Verifiable Credentials, sub-2-second verification, EU DPP compliant. Verticals: ' +
+      'AI + blockchain product authentication. ' +
+      'Verticals: ' +
       'luxury, pharma (DSCSA), electronics, agriculture, art, cannabis. From $49/mo.',
   },
   strainchain: {
     brand: 'StrainChain',
     domain: 'strainchain.io',
     facts:
-      'Consumer-facing blockchain provenance for cannabis. Integrates with METRC and BioTrack, ' +
+      'Consumer-facing blockchain provenance for cannabis. ' +
       'QR scan shows verified chain of custody. For ' +
       'dispensaries and MSOs. From $199/mo.',
   },
@@ -45,8 +45,7 @@ export const BRAND_SEO: Record<string, BrandSeoConfig> = {
     domain: 'govchain.us',
     facts:
       'Government document verification. Hashes for permits, ' +
-      'certificates and RFP awards. 2-second QR verification, no central ' +
-      'authority. SBIR/SVIP eligible.',
+      'certificates and RFP awards.',
   },
   qron: {
     brand: 'QRON',

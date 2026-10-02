@@ -23,7 +23,6 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  Lock,
   Activity,
   CheckCircle,
   Database,
@@ -238,16 +237,6 @@ export default function DPPPage() {
                       2. State Hash Compute
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 opacity-60">
-                    <Lock
-                      className={`w-4 h-4 ${simStep >= 3 ? "text-gold" : "text-zinc-700"}`}
-                    />
-                    <span
-                      className={`text-[10px] font-black uppercase ${simStep >= 3 ? "text-white" : "text-zinc-800"}`}
-                    >
-                      3. Polygon Anchor
-                    </span>
-                  </div>
                 </div>
 
                 <div className="md:col-span-2 bg-black rounded-2xl p-6 font-mono text-[10px] leading-loose border border-zinc-900">
@@ -260,11 +249,6 @@ export default function DPPPage() {
                   {simStep >= 2 && (
                     <p className="text-zinc-400">
                       &gt; GENERATING STATE HASH: 0x7a2d...8c9d
-                    </p>
-                  )}
-                  {simStep >= 3 && (
-                    <p className="text-gold">
-                      &gt; ANCHORING SUCCESSFUL: BLOCK #4,102,884
                     </p>
                   )}
                   {simStep === 4 && (
