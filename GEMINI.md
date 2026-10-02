@@ -24,7 +24,7 @@ This document defines the architectural and operational standards for the AgentZ
 - **Growth Agent** (`agentz/core/growth.py`): Coordinates QRON rewards and Community Verification nudges.
 - **Blockchain Agent** (`agentz/core/blockchain.py`): Real-world Polygon anchoring via `web3.py`.
 - **HubSpot Agent** (`agentz/core/hubspot.py`): Hot lead identification and contact resolution.
-- **Microsite Agent** (`agentz/core/microsites.py`): Uploads microsite HTML to Cloudflare R2. The code still links domain aliases through the Vercel API, which conflicts with the Cloudflare-only deploy rule below. Leave that path unused until the owner decides; anything touching Vercel waits for the owner under the charter.
+- **Microsite Agent** (`agentz/core/microsites.py`): Publishes personalized sales pages that the root Worker's microsite router serves at `<slug>.authichain.com`. #1466 moves this to a single Cloudflare KV write (`MICROSITES_KV`) and removes the old R2 and Vercel calls. Until #1466 merges, leave the Vercel path unused: anything touching Vercel waits for the owner under the charter.
 - **Compliance Agent** (`agentz/core/compliance.py`): Monitors EU DPP regulatory mandates and flags ledger gaps.
 - **Billing Agent** (`agentz/core/billing.py`): Manages Stripe Metered Billing for Headless Trust API usage.
 - **Redemption Agent** (`agentz/core/redemption.py`): Handles QRON burning for merchant discounts (Layer 2 Siphon).

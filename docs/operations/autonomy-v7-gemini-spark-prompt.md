@@ -94,10 +94,12 @@ enforces or measures, or something a pillar needs that it does not declare.
    and x402.
    Target: every paid event leads to provisioning, is reconciled hourly, and
    a mismatch opens one `ops-alert`. TOTALS ARE DERIVED, NEVER TRANSCRIBED.
-   Known lead to verify: `offers[].price_usd` duplicates prices, and
-   `founder-business-pulse.mjs` checks only that each offer ID exists in
-   `plans.ts`, not that the price matches. That makes it a possible second
-   price catalogue. Report it; changing prices is founder-gated.
+   Resolved lead to confirm: `offers[].price_usd` repeats prices from
+   `plans.ts`. Since #1462, `founder-business-pulse.mjs` imports the real
+   `PLANS` and fails on any id, price or cadence drift
+   (`founder-business-pulse.test.mjs`). Confirm the pulse still runs on its
+   schedule and stays green. Report only a regression; changing prices is
+   founder-gated.
 
 3. BOUNDED AUTONOMY / ZERO-TRUST AGENTS.
    Declared: `founder_only_gates` and the charter's "always waits" list.
@@ -111,9 +113,11 @@ enforces or measures, or something a pillar needs that it does not declare.
    no declared scope. For each founder-only gate, name the mechanism that
    actually enforces it, or record "unenforced". Prefer reversible actions;
    list the irreversible ones explicitly.
-   Known lead to verify: `agentz/core/microsites.py` still links domain
-   aliases through the Vercel API, although Cloudflare is the only deploy
-   target and Vercel is founder-gated. Report it; do not change it.
+   Lead to verify: `agentz/core/microsites.py` used to link domain aliases
+   through the Vercel API, although Cloudflare is the only deploy target.
+   #1466 moves it to a single Cloudflare KV write (`MICROSITES_KV`). If
+   #1466 has merged, confirm no Vercel call remains in `agentz/`. If not,
+   report it as open. Do not change it yourself.
 
 4. HUMAN-ON-THE-LOOP AND GRACEFUL ESCALATION.
    Declared: `founder-business.json` `exception_policy` ("A failed
@@ -162,9 +166,12 @@ containing:
 - a metric-source table: each `success_metrics` entry, where it is computed
   live, or "not computed"
 - the conflict list (docs, manifests or code that disagree with 1-6 above),
-  including the two known leads in pillars 2 and 3
+  including the leads in pillars 2 and 3: say whether each is still open,
+  fixed (cite the PR), or regressed
 - the status of the revenue-loop smoke gate (`DPP-SMOKE-E2E`)
-- the output of `node scripts/cloudflare/audit-estate.mjs` (read-only)
+- the output of `node scripts/cloudflare/audit-estate.mjs` (read-only). On
+  2026-10-01 it failed on `authichain-revenue-worker`. #1467 (or the
+  owner's #1424) consolidates that Worker on `api/`, so say which has merged
 - a risk-ranked backlog
 Open it as one draft PR, then stop and wait for the owner's go.
 
