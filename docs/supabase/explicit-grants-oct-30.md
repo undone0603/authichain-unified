@@ -58,7 +58,28 @@ Tests: `node --test scripts/ci/check-supabase-grants.test.mjs` (run by the Lint 
 
 The baseline lists the migrations that existed on 2026-10-02; all of their tables already exist on
 QRON-v2 and keep their grants. Never add a new migration to the baseline. A table that is genuinely
-direct-connection only can opt out with `-- supabase-grants-exempt: public.<t> <reason>`.
+direct-connection only can opt out with `-- supabase-grants-exempt: public.<t> <reason>`. The reason is required and must be on the same line; an exemption without one fails the check.
+
+## Custom roles (`authichain_app`)
+
+QRON-v2 has a custom role, `authichain_app`. It has its own entry in the `postgres` role's default
+privileges for `public` (tables and sequences), seen in a read-only `pg_default_acl` check on 2026-10-02.
+
+**Not stated in docs.** As of 2026-10-02, the Supabase docs, discussion #45329 and the changelog do not
+say what the Oct 30 rollout does to default privileges held by custom roles. Checked:
+[discussion #45329](https://github.com/orgs/supabase/discussions/45329),
+[changelog entry](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically),
+[Securing your API](https://supabase.com/docs/guides/api/securing-your-api) (search_docs), and
+[supabase/cli#5524](https://github.com/supabase/cli/pull/5524).
+
+What _is_ documented: the opt-in SQL that Supabase publishes revokes default privileges only
+`from anon, authenticated, service_role` (`alter default privileges for role postgres in schema public ...`),
+and the FAQ says the change "touches default privileges in the `public` schema". `authichain_app` is
+not a Data API role, so PostgREST access is not decided by it either way.
+
+Inference (unverified, medium confidence): the `authichain_app` default grant is likely left in place.
+Do not rely on it. A new table that `authichain_app` must reach should carry its own explicit
+`grant ... to authichain_app` in the migration. Re-check `pg_default_acl` (read-only) after 2026-10-30.
 
 ## Not done here
 
