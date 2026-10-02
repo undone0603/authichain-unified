@@ -623,6 +623,23 @@ export default function SiFeedClient() {
               </div>
             </section>
 
+            <section className="si-side-card si-offer">
+              <div className="si-card-kicker">
+                <ShieldCheck size={14} /> AUTHICHAIN OFFERING
+              </div>
+              <h2>Make trust visible on every product.</h2>
+              <p>
+                Start with five signed QR generations on the free plan, or talk
+                with us about a product-trust pilot.
+              </p>
+              <div className="si-offer-actions">
+                <Link href="/pricing">
+                  Start free <ArrowRight size={13} />
+                </Link>
+                <Link href="/contact">Discuss a pilot</Link>
+              </div>
+            </section>
+
             <section className="si-side-card si-spotlight">
               <div className="si-card-kicker">
                 <ShoppingBag size={14} /> AGENTIC COMMERCE
