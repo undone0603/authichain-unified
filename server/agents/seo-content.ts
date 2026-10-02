@@ -28,7 +28,7 @@ export const BRAND_SEO: Record<string, BrandSeoConfig> = {
     brand: 'AuthiChain',
     domain: 'authichain.com',
     facts:
-      'AI + blockchain product authentication. 5-agent AI consensus, Bitcoin L1 anchoring, ' +
+      'AI + blockchain product authentication. 5-agent AI consensus, ' +
       'W3C Verifiable Credentials, sub-2-second verification, EU DPP compliant. Verticals: ' +
       'luxury, pharma (DSCSA), electronics, agriculture, art, cannabis. From $49/mo.',
   },
@@ -37,23 +37,23 @@ export const BRAND_SEO: Record<string, BrandSeoConfig> = {
     domain: 'strainchain.io',
     facts:
       'Consumer-facing blockchain provenance for cannabis. Integrates with METRC and BioTrack, ' +
-      'lab certs anchored to Bitcoin Ordinals, QR scan shows verified chain of custody. For ' +
+      'QR scan shows verified chain of custody. For ' +
       'dispensaries and MSOs. From $199/mo.',
   },
   govchain: {
     brand: 'GovChain',
     domain: 'govchain.us',
     facts:
-      'On-chain government document verification. Bitcoin-anchored hashes for permits, ' +
-      'certificates and RFP awards. 2-second QR verification, works offline, no central ' +
+      'Government document verification. Hashes for permits, ' +
+      'certificates and RFP awards. 2-second QR verification, no central ' +
       'authority. SBIR/SVIP eligible.',
   },
   qron: {
     brand: 'QRON',
     domain: 'qron.space',
     facts:
-      'AI "living QR art" generator. ControlNet-generated scannable art QR codes, Ed25519-signed ' +
-      'and Polygon-anchored, editable redirects (no reprinting), built-in scan analytics. ' +
+      'AI "living QR art" generator. ControlNet-generated scannable art QR codes, Ed25519-signed, ' +
+      'editable redirects (no reprinting), built-in scan analytics. ' +
       'From $5 one-off to $99/mo.',
   },
 };
