@@ -198,8 +198,8 @@ jobs:
           UNCHECKED=0
           for domain in $DOMAINS; do
             TOTAL=$((TOTAL + 1))
-            run_check "$domain"
-            rc=$?
+            rc=0
+            run_check "$domain" || rc=$?
             if [ "$rc" -eq 2 ]; then
               UNCHECKED=$((UNCHECKED + 1))
             fi
