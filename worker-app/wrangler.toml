@@ -18,14 +18,9 @@ compatibility_flags = ["nodejs_compat"]
 # https://qron-image-gen.undone-k.workers.dev). Generate credits need
 # SUPABASE_SERVICE_ROLE_KEY. SUPABASE_ANON_KEY is the paid seal read only.
 
-# NOTE: services/worker-app/wrangler.toml declares the same worker name and
-# KV/Hyperdrive/Durable Object bindings as this file (only the assets
-# directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
-# [[durable_objects.bindings]] and [[migrations]] blocks below in sync with
-# that file — a divergence here previously caused the RateLimiter Durable
-# Object migration to use new_classes in one file and new_sqlite_classes in
-# the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
-# catch a `new_classes` regression in either file.
+# Durable Object migrations must use new_sqlite_classes (free plan).
+# scripts/check-wrangler-durable-objects.mjs (run in CI) catches a
+# `new_classes` regression here.
 
 [observability]
 enabled = true
