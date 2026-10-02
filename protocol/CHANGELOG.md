@@ -1,8 +1,8 @@
 # Changelog — authichain-verify
 
-## Unreleased
+## 0.1.2 — unreleased (draft, not published)
 
-Documentation only. No version bump in this change; the release that ships it is a separate PR. Verifier logic, CLI, types and example records are unchanged.
+Documentation-only release. Verifier logic, CLI, types and example records are unchanged. Verifier logic, CLI, types and example records are unchanged.
 
 Claims corrected so every named standard is either what the code does or is labelled as planned:
 
