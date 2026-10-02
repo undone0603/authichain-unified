@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Enterprise | QRON Protocol',
   description:
-    'Government-grade cryptographic QR art and product authentication for enterprise. Multi-region edge delivery with immutable supply chain provenance.',
+    'Government-grade cryptographic QR art and product authentication for enterprise. Multi-region edge delivery with supply chain provenance.',
   openGraph: {
     title: 'QRON for Enterprise — Industrial Scale Authentication',
     description:

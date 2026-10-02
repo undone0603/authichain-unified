@@ -32,7 +32,7 @@ export default function SandboxPage() {
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
               <LinkIcon className="w-6 h-6 text-zinc-400 mb-2" />
               <h4 className="text-white font-bold mb-1">On-Chain Data</h4>
-              <p className="text-sm text-zinc-500">Anchored to Polygon. Immutable material verification.</p>
+              <p className="text-sm text-zinc-500">Certificate contract live on Polygon; product certification through verify is in development.</p>
             </div>
           </div>
         </div>

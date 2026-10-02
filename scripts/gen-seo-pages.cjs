@@ -277,7 +277,12 @@ function buildEntry(d) {
   const url = `https://${b.origin || b.domain}/p/${slug}`;
   const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
-  const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+  // d.meta (optional) pins the meta description to the lead's first sentence
+  // without the price suffix. Used where a claims removal (RES-13) shortened
+  // a lead and the template would otherwise pull a new $ clause into meta.
+  const metaDescription = d.meta
+    ? clampMeta(d.meta, 158)
+    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
@@ -286,8 +291,7 @@ function buildEntry(d) {
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
-    `<h2>FAQ</h2>` +
-    d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
+    (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -307,17 +311,23 @@ function buildEntry(d) {
           { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
         ],
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: d.faqs.map((f) => ({
-          '@type': 'Question',
-          name: f.q,
-          acceptedAnswer: { '@type': 'Answer', text: f.a },
-        })),
-      },
+      ...(d.faqs.length
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: d.faqs.map((f) => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+              })),
+            },
+          ]
+        : []),
     ],
   };
-  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd };
+  // noindex: true keeps a page reachable at /p/<slug> but out of
+  // sitemap-slugs.json; worker-app/dynamic-pages.ts emits robots noindex for it.
+  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd, ...(d.noindex ? { noindex: true } : {}) };
 }
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
@@ -386,7 +396,7 @@ fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 // Landing workers must not import the full catalogue; they list /p/<slug> in
 // their sitemaps from this small per-domain index instead.
 const byDomain = {};
-for (const p of merged) (byDomain[p.domain] ||= []).push(p.slug);
+for (const p of merged) if (!p.noindex) (byDomain[p.domain] ||= []).push(p.slug);
 for (const d of Object.keys(byDomain)) byDomain[d].sort();
 fs.writeFileSync(SLUGS_OUT, JSON.stringify(byDomain, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
