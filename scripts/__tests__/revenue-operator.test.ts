@@ -99,6 +99,23 @@ describe("classifyRevenue", () => {
     expect(verdict.reason).toContain("sub_farm");
   });
 
+  it("counts a trialing stranger subscription", () => {
+    const verdict = classifyRevenue(
+      snap({
+        subscriptions: [
+          {
+            id: "sub_trial",
+            status: "trialing",
+            customerEmail: "ops@example.com",
+          },
+        ],
+      }),
+      founders
+    );
+    expect(verdict.qualifying).toBe(true);
+    expect(verdict.reason).toContain("sub_trial");
+  });
+
   it("counts past_due stranger subs and ignores cancelled ones", () => {
     expect(
       classifyRevenue(
@@ -383,6 +400,8 @@ describe("freeze gates", () => {
   it("refuses frozen workflow dispatch", () => {
     expect(mayDispatch("outreach-trigger.yml").allowed).toBe(false);
     expect(mayDispatch("b2b-outreach").allowed).toBe(false);
+    expect(mayDispatch("dpp-outreach-trigger").allowed).toBe(false);
+    expect(mayDispatch("pipeline-tick").allowed).toBe(false);
     expect(mayDispatch("gov-mint").allowed).toBe(false);
     expect(mayDispatch("deploy-authichain-com.yml").allowed).toBe(true);
   });
