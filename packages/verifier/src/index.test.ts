@@ -1,3 +1,6 @@
+// @vitest-environment node
+// jose signs Uint8Arrays from Node's realm; under the suite's default jsdom
+// environment they fail its `instanceof Uint8Array` check.
 import { describe, expect, it } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
 import {
@@ -29,14 +32,15 @@ async function signVariant(
   variant: Record<string, unknown>,
   keyId = "proof-test-kid"
 ) {
-  const { privateKey } = await generateKeyPair("Ed25519");
+  const { privateKey, publicKey } = await generateKeyPair("Ed25519");
   const jws = await signAttestation(
     structuredClone(variant) as typeof fixture,
     privateKey,
     keyId
   );
-  const publicJwk = await exportJWK(privateKey);
-  delete (publicJwk as Record<string, unknown>).d;
+  // jose 6 private keys are non-extractable by default; public keys always
+  // export, and carry no `d` to strip.
+  const publicJwk = await exportJWK(publicKey);
   publicJwk.kid = keyId;
   return { jws, publicJwk };
 }

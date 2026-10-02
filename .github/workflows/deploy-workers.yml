@@ -28,14 +28,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_CONFIG: .gitleaks.toml
+      - name: Scan the tree being deployed
+        run: |
+          # security-scan.yml still reads full git history. This job only
+          # refuses to ship a tree that contains a secret. Removed keys in
+          # old commits were failing this scan and skipping every deploy.
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          tar --no-same-owner -xzf gitleaks.tgz gitleaks
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
   # GitHub evaluates jobs.<id>.if BEFORE strategy expands, so a job-level
   # `if: matrix.worker != 'authichain-agentz'` fails the entire workflow graph

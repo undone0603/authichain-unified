@@ -545,6 +545,19 @@ async function stripeWebhookPost(c: {
 
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
 
+// Retired alias (#1406). Answer 410 rather than falling through to ASSETS'
+// 404, so a Stripe endpoint still pointed here reads as retired, not missing.
+app.post("/api/webhooks/stripe", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json(
+    {
+      error: "Retired. Stripe webhooks go to /api/stripe/webhook.",
+      deprecated: true,
+    },
+    410
+  );
+});
+
 app.post("/api/dpp/activate", async c => {
   try {
     hydrateProcessEnv(c.env);

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "../../../../../server/config/stripe";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "../../../../utils/supabase/server";
+import { findProfileForUser } from "../../../../lib/profile-lookup";
 import { safeReturnUrl } from "../../../../lib/safe-return-path";
+import { getSupabaseAdmin } from "../../../../lib/supabase-admin";
 
 /**
  * Open the Stripe billing portal for the signed-in customer.
@@ -11,35 +12,33 @@ import { safeReturnUrl } from "../../../../lib/safe-return-path";
  * the request body: the portal can cancel plans, change cards and show
  * invoices, so it must only ever open for the account owner. The return URL is
  * pinned to our own origin.
+ *
+ * The Stripe customer id is read from profiles, which the live webhook
+ * maintains (provisioning.ts). The legacy subscriptions table was only written
+ * by the retired /api/webhooks/stripe handler, so no new customer was in it.
  */
 export async function POST(req: NextRequest) {
   const session = await createSessionClient();
   const { data } = (await session.auth?.getUser()) ?? { data: { user: null } };
-  const email = data?.user?.email;
-  if (!email) {
+  const user = data?.user;
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const supabase = createServiceClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
 
   try {
     const { brand, return_url } = await req.json().catch(() => ({}));
 
-    const { data: subscription } = await supabase
-      .from("subscriptions")
-      .select("stripe_customer_id")
-      .eq("email", email)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const profile = await findProfileForUser<{
+      stripe_customer_id: string | null;
+    }>(
+      getSupabaseAdmin(),
+      { id: user.id, email: user.email },
+      "stripe_customer_id"
+    );
 
-    if (!subscription?.stripe_customer_id) {
+    if (!profile?.stripe_customer_id) {
       return NextResponse.json(
-        { error: "No active subscription found for this account" },
+        { error: "No billing account found for this account" },
         { status: 404 }
       );
     }
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
     )}`;
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
+      customer: profile.stripe_customer_id,
       return_url: safeReturnUrl(base_url, return_url, fallback),
     });
 

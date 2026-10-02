@@ -43,14 +43,12 @@ jobs:
       - name: Check autonomy manifest, reconciler, breaker and pulse
         run: pnpm exec vitest run scripts/__tests__/autonomy.test.ts
 
-      # Root-package script tests are outside `turbo test --filter=!.`, so they
-      # only run when listed here.
-      - name: Check CI repair classifier, typecheck ratchet and estate drift
-        run: >-
-          pnpm exec vitest run
-          scripts/__tests__/ci-repair-classify.test.ts
-          scripts/__tests__/typecheck-ratchet.test.ts
-          scripts/__tests__/estate-drift.test.ts
+      # The root package's suites (src, server, worker-app, packages, scripts,
+      # client, workers) are outside `turbo test --filter=!.`, so no other job
+      # runs them. node:test files are excluded by vitest.config.ts and run on
+      # their workspace runners.
+      - name: Root Vitest suite
+        run: pnpm exec vitest run
 
       - name: Check node:test script suites
         run: node --test scripts/autonomy/*.test.mjs scripts/ci/*.test.mjs

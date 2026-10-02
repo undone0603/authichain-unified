@@ -1620,7 +1620,11 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
-    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.\n    if (c.req.method === "GET") {\n      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });\n    }\n    return renderGenerate(c);
+    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.
+    if (c.req.method === "GET") {
+      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
+    }
+    return renderGenerate(c);
   }
 
   // Stubs: /status, /grants, /gallery, /reveal/<id>, /brand/qron/artwork/<id>.

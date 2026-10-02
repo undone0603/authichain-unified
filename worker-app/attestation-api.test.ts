@@ -123,7 +123,10 @@ describe("registerAttestationApi", () => {
 
     const signed = await app.request("/api/v1/attestation", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
       body: JSON.stringify(SAMPLE),
     });
     expect(signed.status).toBe(200);
@@ -278,7 +281,10 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     const sign = async (overrides: Record<string, unknown>) => {
       const res = await app.request("/api/v1/attestation", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer issuer-test-secret",
+        },
         body: JSON.stringify({ ...SAMPLE, ...overrides }),
       });
       expect(res.status).toBe(200);
