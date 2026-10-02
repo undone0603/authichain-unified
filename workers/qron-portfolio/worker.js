@@ -215,7 +215,7 @@ h2 .a{color:var(--primary)}
 
 <section class="cb" id="contact">
   <h2 style="margin-bottom:24px">Ready to <span class="a">Stand Out</span>?</h2>
-  <p style="color:var(--text-dim);font-size:18px;margin-bottom:48px;max-width:500px;margin-left:auto;margin-right:auto">Get your first custom QRON art QR code in under 24 hours. 100% scannable guaranteed.</p>
+  <p style="color:var(--text-dim);font-size:18px;margin-bottom:48px;max-width:500px;margin-left:auto;margin-right:auto">Get your first custom QRON art QR code. 100% scannable guaranteed.</p>
   <form id="leadForm" style="max-width:480px;margin:0 auto 48px;text-align:left">
     <input type="text" name="name" placeholder="Your Name" required style="width:100%;padding:14px;margin-bottom:12px;background:#111;border:1px solid var(--border);border-radius:4px;color:#fff;font-family:var(--body);font-size:14px">
     <input type="email" name="email" placeholder="Email Address" required style="width:100%;padding:14px;margin-bottom:12px;background:#111;border:1px solid var(--border);border-radius:4px;color:#fff;font-family:var(--body);font-size:14px">

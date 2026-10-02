@@ -1,8 +1,11 @@
 # qron-portfolio: containment bundle (PM-92)
 
-`worker.js` is the deployed version `a0335a2c` (`content/v2`, Oct 2 2026) byte for byte,
-except one footer link that drops the leaked `?key=authichain2026`
-(see `/workspace/reports/p1-disable/key-scan/qron-portfolio-bundle.diff`).
+`worker.js` derives from the deployed version `a0335a2c` (`content/v2`, Oct 2 2026). Changes since then:
+- the leaked `?key=authichain2026` removed from the footer link (#1522; see `/workspace/reports/p1-disable/key-scan/qron-portfolio-bundle.diff`);
+- form URL :246 and reply line :247 (#1524 e15c3c73);
+- " in under 24 hours" removed from :218 (#1524, PM-101).
+
+Never roll back to a0335a2c (re-exposes key).
 
 qron-portfolio stays an **off-repo Worker** in `config/estate.json` (disposition `archive`).
 On purpose, there's no wrangler config here, so the estate inventory and `deploy-workers.yml`
@@ -24,11 +27,13 @@ Rollback: `npx wrangler rollback 8781d807-0e4a-44ff-9fb4-751a79bb81c8 --name qro
 
 ## CFD-103 (PM-94): contact form → `qron.space/autoflow/webhook/lead`
 
-Stacked on the reviewed #1522 bundle above (22,988 B, `4d69eaa8…4fdc`). It changes only two lines:
+Stacked on the reviewed #1522 bundle above (22,988 B, `4d69eaa8…4fdc`). It changes only three lines:
 - line 246, the form's `fetch()` URL, from `qron-automation.undone-k.workers.dev/webhook/lead`
   (workers.dev is off, so leads are lost) to the zone route `https://qron.space/autoflow/webhook/lead`;
 - line 247 (PM-99, deletion-only), where the success text "Received! We will reply within 2 hours with your free
-  sample." becomes "Received! We will reply." (37 bytes removed, 0 added).
+  sample." becomes "Received! We will reply." (37 bytes removed, 0 added);
+- line 218 (PM-101, deletion-only), where " in under 24 hours" is removed: "Get your first custom QRON art QR code.
+  100% scannable guaranteed." (18 bytes removed, 0 added).
 
 **Order matters.** Upload this ONLY after the qron-automation handler from the companion PR
 (accepts `/autoflow/webhook/lead`) is the live 100% version. Before that, qron.space/autoflow/webhook/lead
@@ -38,7 +43,7 @@ and the lead would still be lost.
 ```sh
 npx wrangler versions upload worker.js --name qron-portfolio \
   --compatibility-date 2024-01-01 --no-bundle --message "PM-94 PM-99 CFD-103 form -> qron.space/autoflow"
-# check: version module == 22,934 B, sha256 386338c5415856a027eb7e1e86c95447111f757eb9c459ea3ac51cd68c49dc88,
+# check: version module == 22,916 B, sha256 d96fa8aab8eb12baacbacbb3bbc0e4eeaee46d195073c4e45049c21d3a40739e,
 #        no bindings, compat 2024-01-01
 npx wrangler versions deploy <version-id>@100 --name qron-portfolio -y
 ```
