@@ -62,8 +62,11 @@ describe("AuthiChain Attestation Contract v0.1", () => {
 
   it("rejects an altered signature", async () => {
     const parts = validJws.split(".");
-    parts[2] =
-      parts[2].slice(0, -1) + (parts[2].endsWith("A") ? "B" : "A");
+    // Flip a bit in the decoded bytes; editing the last base64url character
+    // can leave the signature unchanged (it carries only 2 bits).
+    const sig = Buffer.from(parts[2], "base64url");
+    sig[0] ^= 0x01;
+    parts[2] = sig.toString("base64url");
     await expect(
       verifyAttestationJws(parts.join("."), jwks.keys[0])
     ).rejects.toThrow();
