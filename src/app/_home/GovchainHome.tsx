@@ -48,7 +48,7 @@ export function GovchainHome() {
         {
           icon: <Landmark className="h-6 w-6" />,
           title: 'Compliance Built In',
-          desc: 'Every action is recorded to an immutable ledger, giving you an audit trail for contracting-officer scrutiny.',
+          desc: 'Every action is recorded, giving you an audit trail for contracting-officer scrutiny.',
         },
       ]}
       closingLine="Pursue Smarter. Prove Everything."

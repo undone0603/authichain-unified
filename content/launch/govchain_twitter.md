@@ -1,7 +1,7 @@
 ---
 platform: twitter
 account: govchain
-status: ready
+status: retired - do not post
 ---
 
 ## Thread 1 — GovChain Launch (5 tweets)
