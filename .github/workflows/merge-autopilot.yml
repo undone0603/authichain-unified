@@ -73,4 +73,8 @@ jobs:
           AUTOPILOT_TOKEN_KIND: ${{ secrets.MERGE_AUTOPILOT_TOKEN != '' && 'pat' || 'default' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
-        run: node scripts/autonomy/merge-autopilot.mjs
+        # The script prints the summary to stdout; only this shell step writes
+        # the job summary file.
+        run: |
+          set -o pipefail
+          node scripts/autonomy/merge-autopilot.mjs | tee -a "$GITHUB_STEP_SUMMARY"

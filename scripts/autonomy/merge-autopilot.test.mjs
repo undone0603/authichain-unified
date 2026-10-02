@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { decide, loadConfig } from "./merge-autopilot.mjs";
+import { cell, decide, loadConfig } from "./merge-autopilot.mjs";
 
 const cfg = loadConfig({
   owner: "undone0603",
@@ -144,5 +144,11 @@ describe("merge autopilot config", () => {
     const c = loadConfig(m);
     assert.ok(c.trustedAuthors.includes(m.owner.toLowerCase()));
     assert.equal(c.mergeMethod, "squash");
+  });
+});
+
+describe("merge autopilot summary", () => {
+  it("keeps API text inside one table cell", () => {
+    assert.equal(cell("a|b\nc"), "a\\|b c");
   });
 });

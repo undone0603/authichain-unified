@@ -21,6 +21,7 @@
 //
 // Env: GITHUB_TOKEN, GITHUB_REPOSITORY, AUTOPILOT_TOKEN_KIND (pat|default),
 //      DRY_RUN=1 to log decisions without acting.
+// Output: the run summary (markdown) on stdout, progress on stderr.
 //
 // Token: with the default Actions token, GitHub does not start workflows for
 // the commits it creates. A merge would not trigger the push-to-main deploys,
@@ -28,23 +29,29 @@
 // autopilot never updates branches (behind PRs wait) and says so in the
 // summary. Give it a PAT as MERGE_AUTOPILOT_TOKEN for the full loop.
 
-import { appendFileSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const GREEN = new Set(["success", "neutral", "skipped"]);
+
+// Fixed here, not read from the manifest: every value that reaches a GitHub
+// API URL or request body is a constant or comes from GitHub itself.
+export const BASE_BRANCH = "main";
+export const MERGE_METHOD = "squash";
+export const CONFLICT_LABEL = "merge-conflict";
 
 /** Pure. Read and default the manifest block. */
 export function loadConfig(manifest) {
   const c = manifest.merge_autopilot ?? {};
   return {
     enabled: c.enabled === true,
-    baseBranch: c.base_branch ?? "main",
+    baseBranch: BASE_BRANCH,
     trustedAuthors: (c.trusted_authors ?? [manifest.owner]).map(a =>
       String(a).toLowerCase()
     ),
     holdLabels: c.hold_labels ?? ["hold", "do-not-merge"],
-    conflictLabel: c.conflict_label ?? "merge-conflict",
-    mergeMethod: c.merge_method ?? "squash",
+    conflictLabel: CONFLICT_LABEL,
+    mergeMethod: MERGE_METHOD,
     ignoreChecks: c.ignore_checks ?? ["Merge autopilot"],
   };
 }
@@ -156,7 +163,7 @@ async function main() {
     );
 
   const prs = await gh(
-    `/repos/${repo}/pulls?state=open&base=${cfg.baseBranch}&per_page=100`,
+    `/repos/${repo}/pulls?state=open&base=${BASE_BRANCH}&per_page=100`,
     { token }
   );
   lines.push("| PR | Action | Why |", "| --- | --- | --- |");
@@ -170,7 +177,7 @@ async function main() {
       const [checks, status, cmp] = await Promise.all([
         gh(`/repos/${repo}/commits/${sha}/check-runs?per_page=100`, { token }),
         gh(`/repos/${repo}/commits/${sha}/status`, { token }),
-        gh(`/repos/${repo}/compare/${cfg.baseBranch}...${sha}`, { token }),
+        gh(`/repos/${repo}/compare/${BASE_BRANCH}...${sha}`, { token }),
       ]);
       decision = decide(pr, checks.check_runs, status, cmp.behind_by, cfg, {
         canUpdate,
@@ -185,17 +192,17 @@ async function main() {
         await gh(`/repos/${repo}/issues/${n}/labels`, {
           method: "POST",
           token,
-          body: { labels: [cfg.conflictLabel] },
+          body: { labels: [CONFLICT_LABEL] },
         });
       if (
         !dry &&
         decision.action !== "conflict" &&
         labels.includes(cfg.conflictLabel)
       )
-        await gh(
-          `/repos/${repo}/issues/${n}/labels/${encodeURIComponent(cfg.conflictLabel)}`,
-          { method: "DELETE", token }
-        );
+        await gh(`/repos/${repo}/issues/${n}/labels/${CONFLICT_LABEL}`, {
+          method: "DELETE",
+          token,
+        });
 
       if (!dry && decision.action === "update")
         await gh(`/repos/${repo}/pulls/${n}/update-branch`, {
@@ -207,7 +214,7 @@ async function main() {
         await gh(`/repos/${repo}/pulls/${n}/merge`, {
           method: "PUT",
           token,
-          body: { merge_method: cfg.mergeMethod, sha },
+          body: { merge_method: MERGE_METHOD, sha },
         });
     } catch (err) {
       // One PR failing (a race with a new push, a 405 from a branch rule)
@@ -215,19 +222,24 @@ async function main() {
       decision = { action: "error", reason: String(err.message).slice(0, 200) };
     }
     lines.push(
-      `| #${n} | ${dry ? "(dry) " : ""}${decision.action} | ${decision.reason} |`
+      `| #${n} | ${dry ? "(dry) " : ""}${decision.action} | ${cell(decision.reason)} |`
     );
-    console.log(`#${n}: ${decision.action} - ${decision.reason}`);
+    console.error(`#${n}: ${decision.action} - ${decision.reason}`);
   }
   if (prs.length === 0) lines.push("| - | - | no open PRs |");
   finish(lines);
 }
 
+/** Pure. Keep API text (check names, error bodies) inside one table cell. */
+export const cell = text =>
+  String(text)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\|/g, "\\|");
+
+// The summary goes to stdout only; the workflow appends it to the job
+// summary. Per-PR progress lines go to stderr.
 function finish(lines) {
-  const text = lines.join("\n") + "\n";
-  if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
-  else console.log(text);
+  process.stdout.write(lines.join("\n") + "\n");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
