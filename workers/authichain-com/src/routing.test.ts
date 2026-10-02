@@ -107,7 +107,7 @@ test("the apex still renders the homepage", async () => {
   // AE-20261002-CFD-09: no Apollo visitor tracker anywhere on authichain.com.
   assert.ok(!html.includes("6ab2b3b358b37e000c06b0fa"));
   assert.ok(!html.includes("tracker.iife.js"));
-  assert.doesNotMatch(html, /assets\.apollo\.io/);
+  assert.ok(!html.toLowerCase().includes("apollo"));
   assert.ok(
     !(res.headers.get("content-security-policy") ?? "").includes("apollo")
   );
