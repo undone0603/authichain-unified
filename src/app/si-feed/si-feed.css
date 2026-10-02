@@ -8,7 +8,11 @@
   --si-white: #fff;
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 77% 13%, rgba(213, 250, 117, 0.19), transparent 31rem),
+    radial-gradient(
+      ellipse at 77% 13%,
+      rgba(213, 250, 117, 0.19),
+      transparent 31rem
+    ),
     var(--si-paper);
   color: var(--si-ink);
   font-family: var(--font-geist-sans), Arial, sans-serif;
@@ -100,7 +104,10 @@
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .si-share:hover {
@@ -257,7 +264,9 @@
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 25px;
   background: linear-gradient(145deg, #255c46, #18392e);
-  box-shadow: 0 19px 54px rgba(28, 83, 56, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.17);
+  box-shadow:
+    0 19px 54px rgba(28, 83, 56, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.17);
   color: #dcff9c;
   transform: rotate(-8deg);
 }
@@ -492,12 +501,164 @@
   cursor: wait;
 }
 
+.si-view-switch {
+  display: inline-flex;
+  gap: 3px;
+  margin: 13px 0 10px;
+  padding: 3px;
+  border: 1px solid #dde6de;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.si-view-switch button {
+  min-height: 31px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #75847a;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.si-view-switch button.is-active {
+  background: #e8f0e6;
+  color: #345c40;
+}
+
+.si-view-switch button > span {
+  min-width: 17px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: rgba(105, 135, 112, 0.1);
+  color: inherit;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  text-align: center;
+}
+
+.si-story-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.si-story {
+  overflow: hidden;
+  border: 1px solid #d9e4da;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.si-story-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 15px 17px 13px;
+  border-bottom: 1px solid #e5ece5;
+  background:
+    radial-gradient(
+      ellipse at 8% 0%,
+      rgba(213, 250, 117, 0.14),
+      transparent 18rem
+    ),
+    #fbfdf9;
+}
+
+.si-story-kicker {
+  color: #7a9280;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.si-story-head h3 {
+  margin: 6px 0 0;
+  color: #25392c;
+  font-size: 15px;
+  font-weight: 720;
+  letter-spacing: -0.04em;
+}
+
+.si-story-count {
+  padding: 5px 7px;
+  border: 1px solid #dce6db;
+  border-radius: 4px;
+  color: #748479;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.si-story-chapters {
+  padding: 2px 17px;
+}
+
+.si-story-chapter {
+  display: grid;
+  grid-template-columns: 27px 1fr;
+  gap: 11px;
+  padding: 13px 0;
+  border-bottom: 1px solid #e9eee9;
+}
+
+.si-story-chapter:last-child {
+  border-bottom: 0;
+}
+
+.si-story-number {
+  padding-top: 2px;
+  color: #9aab9d;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+}
+
+.si-story-chapter h4 {
+  margin: 0 0 4px;
+  color: #3d6848;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.si-story-chapter p {
+  margin: 0;
+  color: #68766d;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.si-story-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 17px;
+  border-top: 1px solid #e7eee7;
+  background: #f6faf5;
+  color: #789080;
+  font-size: 8px;
+}
+
 .si-spin {
   animation: si-rotate 800ms linear infinite;
 }
 
 @keyframes si-rotate {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .si-event-list {
@@ -851,10 +1012,22 @@
   background: #eef1ec;
 }
 
-.si-connector-icon.violet { color: #716393; background: #f0edf7; }
-.si-connector-icon.orange { color: #a2704a; background: #f8f0e9; }
-.si-connector-icon.green { color: #548069; background: #ecf3eb; }
-.si-connector-icon.blue { color: #5e7d9b; background: #edf2f6; }
+.si-connector-icon.violet {
+  color: #716393;
+  background: #f0edf7;
+}
+.si-connector-icon.orange {
+  color: #a2704a;
+  background: #f8f0e9;
+}
+.si-connector-icon.green {
+  color: #548069;
+  background: #ecf3eb;
+}
+.si-connector-icon.blue {
+  color: #5e7d9b;
+  background: #edf2f6;
+}
 
 .si-connector-name {
   flex: 1;
@@ -887,6 +1060,63 @@
   line-height: 1.5;
 }
 
+.si-consent {
+  padding: 19px 21px 16px;
+}
+
+.si-consent h2 {
+  margin: 15px 0 8px;
+  color: #263c2f;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.13;
+}
+
+.si-consent > p {
+  margin: 0;
+  color: #758279;
+  font-size: 10px;
+  line-height: 1.75;
+}
+
+.si-consent-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  color: #819087;
+}
+
+.si-consent-flow > span:not(.si-consent-badge) {
+  padding: 4px 5px;
+  border: 1px solid #dce8da;
+  border-radius: 3px;
+  background: #f2f7ef;
+  color: #53735d;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.si-consent-badge {
+  margin-left: auto;
+  color: #718476;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.si-consent-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e7eee6;
+  color: #8a968d;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
 .si-share-card {
   position: relative;
   min-height: 235px;
@@ -907,7 +1137,9 @@
   bottom: -90px;
   border: 1px solid rgba(213, 250, 117, 0.15);
   border-radius: 50%;
-  box-shadow: 0 0 0 22px rgba(213, 250, 117, 0.035), 0 0 0 47px rgba(213, 250, 117, 0.025);
+  box-shadow:
+    0 0 0 22px rgba(213, 250, 117, 0.035),
+    0 0 0 47px rgba(213, 250, 117, 0.025);
 }
 
 .si-share-card-content {

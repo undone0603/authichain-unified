@@ -1,12 +1,15 @@
-import Link from 'next/link';
-import { BRAND_IDS, BRANDS, type BrandId } from '@shared/brands';
-import { LIGHT_ACCENT } from '@/lib/estate-accents';
+import Link from "next/link";
+import { BRAND_IDS, BRANDS, type BrandId } from "@shared/brands";
+import { LIGHT_ACCENT } from "@/lib/estate-accents";
 
 const HEADER_CTA: Record<BrandId, { href: string; label: string }> = {
-  authichain: { href: 'https://authichain.com/checkout/dpp_readiness', label: 'Start DPP checkout' },
-  qron: { href: '/generate', label: 'Generate' },
-  strainchain: { href: '/onboard', label: 'Onboard' },
-  govchain: { href: '/onboard', label: 'Onboard' },
+  authichain: {
+    href: "https://authichain.com/checkout/dpp_readiness",
+    label: "Start DPP checkout",
+  },
+  qron: { href: "/generate", label: "Generate" },
+  strainchain: { href: "/onboard", label: "Onboard" },
+  govchain: { href: "/onboard", label: "Onboard" },
 };
 
 /**
@@ -34,10 +37,10 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
     <header
       className="fixed inset-x-0 top-0 z-50 h-16"
       style={{
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #e2e8f0',
+        background: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #e2e8f0",
       }}
     >
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -52,9 +55,7 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
           >
             {brand.displayName.charAt(0)}
           </span>
-          <span
-            className="text-sm font-semibold tracking-tight text-slate-950"
-          >
+          <span className="text-sm font-semibold tracking-tight text-slate-950">
             {brand.displayName}
           </span>
         </Link>
@@ -64,21 +65,25 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
           className="hidden md:flex items-center gap-0.5"
           aria-label="Ecosystem"
         >
-          {BRAND_IDS.map((id) => {
+          {BRAND_IDS.map(id => {
             const b = BRANDS[id];
             const isActive = id === brandId;
             return (
               <a
                 key={id}
-                href={isActive ? '/' : `https://${b.domain}`}
-                target={isActive ? undefined : '_blank'}
-                rel={isActive ? undefined : 'noopener noreferrer'}
+                href={isActive ? "/" : `https://${b.domain}`}
+                target={isActive ? undefined : "_blank"}
+                rel={isActive ? undefined : "noopener noreferrer"}
                 className={
                   isActive
-                    ? 'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider'
-                    : 'rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-900'
+                    ? "rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider"
+                    : "rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-900"
                 }
-                style={isActive ? { color: b.accentHex, background: `${b.accentHex}14` } : undefined}
+                style={
+                  isActive
+                    ? { color: b.accentHex, background: `${b.accentHex}14` }
+                    : undefined
+                }
               >
                 {b.displayName}
               </a>
@@ -88,8 +93,14 @@ export function ProtocolHeader({ brandId }: ProtocolHeaderProps) {
 
         {/* CTAs */}
         <div className="flex shrink-0 items-center gap-2">
-          {brandId === 'authichain' && (
+          {brandId === "authichain" && (
             <>
+              <Link
+                href="/si-feed"
+                className="hidden lg:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"
+              >
+                SI Feed
+              </Link>
               <Link
                 href="/trumark"
                 className="hidden lg:inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-950"

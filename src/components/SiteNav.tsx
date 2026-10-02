@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
-import { ProtocolHeader } from './ProtocolHeader';
-import { resolveBrand } from '@shared/brands';
+import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+import { ProtocolHeader } from "./ProtocolHeader";
+import { resolveBrand } from "@shared/brands";
 
 /**
  * SiteNav
@@ -13,13 +13,14 @@ import { resolveBrand } from '@shared/brands';
 
 // Prefixes that have their own navigation (dashboard sidebar, auth forms, etc.)
 const HIDDEN_PREFIXES = [
-  '/dashboard',
-  '/auth',
-  '/login',
-  '/signup',
-  '/register',
-  '/api',
-  '/admin',
+  "/dashboard",
+  "/auth",
+  "/login",
+  "/signup",
+  "/register",
+  "/si-feed",
+  "/api",
+  "/admin",
 ];
 
 export function SiteNav() {
@@ -27,14 +28,12 @@ export function SiteNav() {
 
   // Determine brand from current hostname
   const brandId = useMemo(() => {
-    if (typeof window === 'undefined') return 'authichain' as const;
+    if (typeof window === "undefined") return "authichain" as const;
     return resolveBrand(window.location.hostname);
   }, []);
 
   // Skip rendering on app/auth pages
-  const isHidden = HIDDEN_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix)
-  );
+  const isHidden = HIDDEN_PREFIXES.some(prefix => pathname.startsWith(prefix));
 
   if (isHidden) return null;
 

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/require-admin';
-import { createClient } from '@/utils/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "../../../../lib/require-admin";
+import { createClient } from "../../../../utils/supabase/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 type AutomationLog = {
   id: string;
@@ -13,26 +13,41 @@ type AutomationLog = {
 };
 
 function normalize(row: AutomationLog) {
-  const isAgentZ = row.workflow_name.startsWith('agentz_');
-  const failed = ['failure', 'failed', 'error', 'critical'].includes(row.status.toLowerCase());
+  const isAgentZ = row.workflow_name.toLowerCase().startsWith("agentz_");
+  const status = row.status.toLowerCase();
+  const failed = ["failure", "failed", "error", "critical"].includes(status);
+  const completed = ["success", "succeeded", "complete", "completed"].includes(
+    status
+  );
+  const outcome = failed
+    ? "run_failed"
+    : completed
+      ? "run_completed"
+      : "run_updated";
 
   return {
     id: row.id,
     timestamp: row.created_at,
-    source: isAgentZ ? 'agentz' : 'automation',
+    source: isAgentZ ? "agentz" : "automation",
     transport:
-      row.trigger_type === 'webhook'
-        ? 'webhook'
-        : row.trigger_type === 'cron'
-          ? 'schedule'
-          : 'event-log',
-    type: `automation.${failed ? 'run_failed' : 'run_completed'}`,
-    severity: failed ? 'warning' : 'info',
+      row.trigger_type === "webhook"
+        ? "webhook"
+        : row.trigger_type === "cron"
+          ? "schedule"
+          : "event-log",
+    type: `automation.${outcome}`,
+    severity: failed ? "warning" : "info",
     entity: row.workflow_name,
-    summary: `${row.workflow_name.replace(/[_-]/g, ' ')} ${failed ? 'reported a failure' : 'completed'}`,
+    summary: `${row.workflow_name.replace(/[_-]/g, " ")} ${
+      failed
+        ? "reported a failure"
+        : completed
+          ? "completed"
+          : `updated · ${row.status}`
+    }`,
     data: { status: row.status },
     status: row.status,
-    agent: isAgentZ ? 'AgentZ' : null,
+    agent: isAgentZ ? "AgentZ" : null,
   };
 }
 
@@ -43,29 +58,42 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
 
     const params = request.nextUrl.searchParams;
-    const since = params.get('since');
+    const since = params.get("since");
     if (since && !Number.isFinite(Date.parse(since))) {
-      return NextResponse.json({ error: 'since must be a valid ISO timestamp' }, { status: 400 });
+      return NextResponse.json(
+        { error: "since must be a valid ISO timestamp" },
+        { status: 400 }
+      );
     }
 
     const { data, error } = await supabase
-      .from('automation_logs')
-      .select('id, workflow_name, trigger_type, status, created_at')
-      .gte('created_at', since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false })
+      .from("automation_logs")
+      .select("id, workflow_name, trigger_type, status, created_at")
+      .gte(
+        "created_at",
+        since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      )
+      .order("created_at", { ascending: false })
       .limit(500);
 
     if (error) throw error;
 
-    const source = params.get('source');
-    const agent = params.get('agent');
-    const severity = params.get('severity');
-    const entity = params.get('entity')?.trim().toLowerCase();
+    const source = params.get("source");
+    const agent = params.get("agent");
+    const severity = params.get("severity");
+    const entity = params.get("entity")?.trim().toLowerCase();
     const events = ((data ?? []) as AutomationLog[])
       .map(normalize)
-      .filter(event => !source || source === 'all' || event.source === source)
-      .filter(event => !agent || agent === 'all' || event.agent?.toLowerCase() === agent.toLowerCase())
-      .filter(event => !severity || severity === 'all' || event.severity === severity)
+      .filter(event => !source || source === "all" || event.source === source)
+      .filter(
+        event =>
+          !agent ||
+          agent === "all" ||
+          event.agent?.toLowerCase() === agent.toLowerCase()
+      )
+      .filter(
+        event => !severity || severity === "all" || event.severity === severity
+      )
       .filter(event => !entity || event.entity.toLowerCase().includes(entity))
       .slice(0, 100);
 
@@ -74,11 +102,14 @@ export async function GET(request: NextRequest) {
         events,
         generated_at: new Date().toISOString(),
         refresh_after_seconds: 30,
-        sources: ['agentz', 'automation'],
+        sources: ["agentz", "automation"],
       },
-      { headers: { 'Cache-Control': 'private, no-store' } }
+      { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch {
-    return NextResponse.json({ error: 'Unable to load the SI Feed' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to load the SI Feed" },
+      { status: 500 }
+    );
   }
 }
