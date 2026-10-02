@@ -8,7 +8,7 @@
  */
 module.exports = [
   { keyword: 'blockchain qr code for cannabis', brand: 'strainchain', schemaType: 'Product',
-    lead: 'Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey from seed to sale.',
+    lead: 'Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.',
     bullets: ['METRC and BioTrack sync — no duplicate data entry', 'Lab certificates linked to a signed record', 'State auditors check chain of custody by scan'],
     faqs: [{ q: 'Does it replace METRC?', a: 'No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.' }, { q: 'What does the consumer see?', a: 'A scan opens verified lab results, strain provenance, and an immutable chain of custody.' }] },
   { keyword: 'blockchain qr code for luxury', brand: 'authichain', schemaType: 'Product',
@@ -24,7 +24,7 @@ module.exports = [
     bullets: ['Component-level provenance for BOM integrity', 'Warranty and firmware attestation tied to each serial', 'EU DPP-ready material and repairability data'],
     faqs: [{ q: 'Can it cover components, not just finished goods?', a: 'Yes — provenance can be issued at component, module, and finished-product level.' }, { q: 'Does it help with EU DPP?', a: 'Electronics fall under upcoming EU DPP scope; AuthiChain exports the required data out of the box.' }] },
   { keyword: 'blockchain qr code for food', brand: 'authichain', schemaType: 'Product',
-    lead: 'Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped.',
+    lead: 'Give shoppers and food-safety auditors a scannable history of where a food product was grown, processed, and shipped.', meta: 'Give shoppers and food-safety auditors a scannable history of where a food product was grown, processed, and shipped.',
     bullets: ['Farm-to-shelf traceability in a single scan', 'Rapid, unit-level recall targeting', 'Cold-chain and certification data attached per lot'],
     faqs: [{ q: 'Does it support recalls?', a: 'Yes — you can trace and isolate affected lots.' }, { q: 'What data can I attach?', a: 'Origin, processing steps, certifications, cold-chain readings, and lab results.' }] },
   { keyword: 'blockchain qr code for automotive', brand: 'authichain', schemaType: 'Product',
@@ -76,7 +76,7 @@ module.exports = [
     bullets: ['Bottle-level authenticity and provenance', 'Tamper-evident seal tied to on-chain record', 'Estate and vintage verification for collectors'],
     faqs: [{ q: 'Does it protect resale value?', a: 'Yes — verifiable provenance underpins collector and auction value.' }, { q: 'What if the seal is broken?', a: 'A broken seal invalidates verification, exposing tampering or refilling.' }] },
   { keyword: 'anti-counterfeit spirits', brand: 'authichain', schemaType: 'Product',
-    lead: 'Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures.',
+    lead: 'Protect premium spirits from refilling and counterfeiting with bottle authentication and tamper-evident closures.', meta: 'Protect premium spirits from refilling and counterfeiting with bottle authentication and tamper-evident closures.',
     bullets: ['Anti-refill tamper-evident verification', 'Distillery and batch provenance on-chain', 'Consumer engagement through verified stories'],
     faqs: [{ q: 'Can it detect refilled bottles?', a: 'Tamper-evident closures tied to on-chain records reveal refilling attempts.' }, { q: 'Does it work internationally?', a: 'Verification is global and works from any smartphone.' }] },
   { keyword: 'anti-counterfeit pharmaceutical', brand: 'authichain', schemaType: 'Product',

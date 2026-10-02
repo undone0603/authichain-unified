@@ -132,9 +132,9 @@
     "brand": "QRON",
     "domain": "qron.space",
     "title": "AI QR Code Art Generator | QRON",
-    "metaDescription": "QRON generates scannable AI QR art with ControlNet. Ed25519-signed, Polygon-anchored, editable redirects (no reprinting), built-in scan analytics. From $5.",
+    "metaDescription": "QRON generates scannable AI QR art with ControlNet. Ed25519-signed, editable redirects (no reprinting), built-in scan analytics. From $5.",
     "h1": "Generate Scannable AI QR Art People Actually Scan",
-    "bodyHtml": "<p>QRON turns a plain QR code into a living brand asset — AI-generated art that stays fully scannable. Each code is Ed25519-signed and anchored to Polygon, so brands can verify authenticity at scan time.</p><h2>Why QRON</h2><ul><li>ControlNet-generated art across styles, with L4 error correction for reliable scans</li><li>Editable redirects — change the destination anytime, zero reprinting</li><li>Built-in scan analytics: device, location, and time</li></ul><p>Start from a $5 one-off generation or scale to a $99/mo studio plan with unlimited generations and analytics.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
+    "bodyHtml": "<p>QRON turns a plain QR code into a living brand asset — AI-generated art that stays fully scannable. Each code is Ed25519-signed, so brands can verify authenticity at scan time.</p><h2>Why QRON</h2><ul><li>ControlNet-generated art across styles, with L4 error correction for reliable scans</li><li>Editable redirects — change the destination anytime, zero reprinting</li><li>Built-in scan analytics: device, location, and time</li></ul><p>Start from a $5 one-off generation or scale to a $99/mo studio plan with unlimited generations and analytics.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -143,7 +143,7 @@
         "@type": "Brand",
         "name": "QRON"
       },
-      "description": "AI living QR art generator: ControlNet art, Ed25519-signed, Polygon-anchored, editable redirects.",
+      "description": "AI living QR art generator: ControlNet art, Ed25519-signed, editable redirects.",
       "url": "https://qron.space/ai-qr-code-art-generator"
     }
   },
@@ -250,14 +250,14 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "AI Counterfeit Detection | AuthiChain",
-    "metaDescription": "Check products against signed, blockchain-anchored records. Verification starts from a single QR scan.",
+    "metaDescription": "Check products against signed records. Verification starts from a single QR scan.",
     "h1": "AI-Powered Counterfeit Detection",
     "bodyHtml": "<p>Certificate contract live on Polygon; product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "AuthiChain — AI Counterfeit Detection",
-      "description": "Signed records with blockchain anchoring for counterfeit checks.",
+      "description": "Signed records for counterfeit checks.",
       "url": "https://authichain.com/p/counterfeit-detection-with-ai",
       "brand": {
         "@type": "Brand",
@@ -278,7 +278,7 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "StrainChain — Cannabis COA Verification",
-      "description": "Blockchain-anchored verification of cannabis lab certificates and chain of custody.",
+      "description": "Verification of cannabis lab certificates and chain of custody.",
       "url": "https://strainchain.io/cannabis-coa-verification-blockchain",
       "brand": {
         "@type": "Brand",
@@ -398,14 +398,14 @@
     "brand": "QRON",
     "domain": "qron.space",
     "title": "Living QR Code Art Generator | QRON",
-    "metaDescription": "Generate scannable QR art with AI. ControlNet-generated, Ed25519-signed and Polygon-anchored, with editable redirects and scan analytics.",
+    "metaDescription": "Generate scannable QR art with AI. ControlNet-generated, Ed25519-signed, with editable redirects and scan analytics.",
     "h1": "AI Living QR Code Art Generator",
-    "bodyHtml": "<p>QRON generates “living QR art” — scannable QR codes rendered as artwork with ControlNet. Each code is Ed25519-signed and anchored to Polygon, so it is verifiable, and its destination can be edited without reprinting.</p><h2>What you get</h2><ul><li>AI-generated scannable art QR codes.</li><li>Ed25519 signatures and Polygon anchoring.</li><li>Editable redirects — change the destination without a reprint.</li><li>Built-in scan analytics.</li></ul><p>From $5 one-off to $99/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
+    "bodyHtml": "<p>QRON generates “living QR art” — scannable QR codes rendered as artwork with ControlNet. Each code is Ed25519-signed, so it is verifiable, and its destination can be edited without reprinting.</p><h2>What you get</h2><ul><li>AI-generated scannable art QR codes.</li><li>Ed25519 signatures.</li><li>Editable redirects — change the destination without a reprint.</li><li>Built-in scan analytics.</li></ul><p>From $5 one-off to $99/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "QRON — Living QR Code Art Generator",
-      "description": "AI-generated, signed and anchored scannable QR art with editable redirects.",
+      "description": "AI-generated, signed scannable QR art with editable redirects.",
       "url": "https://qron.space/living-qr-code-art-generator",
       "brand": {
         "@type": "Brand",
@@ -419,14 +419,14 @@
     "brand": "QRON",
     "domain": "qron.space",
     "title": "Editable QR Codes — No Reprint | QRON",
-    "metaDescription": "Change where a QR code points without reprinting it. QRON codes are AI-generated art, Ed25519-signed, Polygon-anchored, with scan analytics.",
+    "metaDescription": "Change where a QR code points without reprinting it. QRON codes are AI-generated art, Ed25519-signed, with scan analytics.",
     "h1": "Editable QR Codes You Never Have to Reprint",
-    "bodyHtml": "<p>QRON QR codes use editable redirects, so you can change a code’s destination at any time without reprinting packaging or signage. Each code is AI-generated scannable art, Ed25519-signed and anchored to Polygon.</p><h2>Why editable redirects</h2><ul><li>Update the destination without a reprint.</li><li>Signed and Polygon-anchored for verifiability.</li><li>Built-in scan analytics.</li></ul><p>From $5 one-off to $99/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
+    "bodyHtml": "<p>QRON QR codes use editable redirects, so you can change a code’s destination at any time without reprinting packaging or signage. Each code is AI-generated scannable art, Ed25519-signed.</p><h2>Why editable redirects</h2><ul><li>Update the destination without a reprint.</li><li>Signed for verifiability.</li><li>Built-in scan analytics.</li></ul><p>From $5 one-off to $99/mo.</p><h2>Get started</h2><p><a href=\"https://qron.space/pricing\">View QRON pricing</a>. QRON packs from $29 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "QRON — Editable QR Codes",
-      "description": "AI-generated QR art with editable redirects, signing and Polygon anchoring.",
+      "description": "AI-generated QR art with editable redirects.",
       "url": "https://qron.space/editable-qr-code-no-reprint",
       "brand": {
         "@type": "Brand",
@@ -5430,7 +5430,7 @@
     "title": "DSCSA EPCIS Interoperable Data Exchange | AuthiChain",
     "metaDescription": "DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not.",
     "h1": "DSCSA EPCIS Interoperable Data Exchange Requirement",
-    "bodyHtml": "<p>DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.</p><h2>Why AuthiChain</h2><ul><li>AuthiChain hashes and anchors the EPCIS event record itself, so a partner can confirm the file it received matches what was issued, not just that a file arrived</li><li>Ed25519 signing runs on the event data your existing EPCIS repository already emits — protocol/SPEC.md aligns with EPCIS 2.0 as the record source, not a replacement schema</li><li>A verifier checks the record offline; a dispenser deciding whether to quarantine a shipment does not need an AuthiChain account to confirm what they received is genuine</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does DSCSA require blockchain?</h3><p>No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one.</p><h3>What happens if a dispenser can’t verify a shipment’s data?</h3><p>DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper.</p>",
+    "bodyHtml": "<p>DSCSA requires wholesale distributors and manufacturers to exchange serialized Transaction Information and Transaction Statements as EPCIS 2.0 events, not PDFs or spreadsheets, and trading partners are increasingly quarantining shipments that arrive without a valid file — a data-interoperability problem the compliance deadline alone does not solve.</p><h2>Why AuthiChain</h2><ul><li>Ed25519 signing runs on the event data your existing EPCIS repository already emits — protocol/SPEC.md aligns with EPCIS 2.0 as the record source, not a replacement schema</li><li>A verifier checks the record offline; a dispenser deciding whether to quarantine a shipment does not need an AuthiChain account to confirm what they received is genuine</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does DSCSA require blockchain?</h3><p>No. DSCSA requires electronic, interoperable data exchange between trading partners using the EPCIS standard. Anchoring the event hash on-chain is an optional tamper-evidence layer on top of a compliant EPCIS file, not a substitute for one.</p><h3>What happens if a dispenser can’t verify a shipment’s data?</h3><p>DSCSA lets a dispenser quarantine and investigate suspect product rather than accept it. A signed, independently checkable record narrows that investigation instead of requiring a phone call to the shipper.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5558,7 +5558,7 @@
     "title": "CMMC 2.0 Supply Chain Subcontractor Flow Down | GovChain",
     "metaDescription": "DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day.",
     "h1": "CMMC 2.0 Supply Chain Subcontractor Flow Down Requirement",
-    "bodyHtml": "<p>DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day program review, but Phase 1 self-assessment and the prime contractor’s duty to flow certification requirements down to subcontractors remain in effect.</p><h2>Why GovChain</h2><ul><li>A prime confirming a subcontractor’s CMMC self-assessment level needs a record it can check without taking the subcontractor’s word for it — the same offline-verification problem GovChain’s protocol solves for any signed claim</li><li>Flow-down obligations do not pause when a phase is suspended: a prime still has to know which CMMC level applies to which subcontractor and what data they are cleared to receive</li><li>A signed, anchored record of a subcontractor’s attested level is checkable by an auditor months later, without depending on whichever internal spreadsheet tracked it at the time</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. No enterprise contract — public-sector pricing.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is CMMC 2.0 paused for all contractors?</h3><p>No. DoD suspended Phase 2 — the move to mandatory third-party (C3PAO) certification for Level 2 contracts — pending a program review announced in July 2026. Phase 1 self-assessment requirements, in effect since November 2025, were not suspended.</p><h3>Do subcontractors still need to meet CMMC requirements during the pause?</h3><p>Flow-down still applies: a prime contractor remains responsible for ensuring subcontractors meet the CMMC level appropriate to the federal contract information or controlled unclassified information they handle, under whichever phase requirement is currently in effect.</p>",
+    "bodyHtml": "<p>DoD suspended CMMC 2.0 Phase 2 — the step that would have made third-party C3PAO certification a condition of contract award — in July 2026 pending a 60-day program review, but Phase 1 self-assessment and the prime contractor’s duty to flow certification requirements down to subcontractors remain in effect.</p><h2>Why GovChain</h2><ul><li>A prime confirming a subcontractor’s CMMC self-assessment level needs a record it can check without taking the subcontractor’s word for it</li><li>Flow-down obligations do not pause when a phase is suspended: a prime still has to know which CMMC level applies to which subcontractor and what data they are cleared to receive</li><li>A signed, anchored record of a subcontractor’s attested level is checkable by an auditor months later, without depending on whichever internal spreadsheet tracked it at the time</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. No enterprise contract — public-sector pricing.</p><h2>Get started</h2><p><a href=\"https://govchain.us/onboard\">Request GovChain access</a>. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is CMMC 2.0 paused for all contractors?</h3><p>No. DoD suspended Phase 2 — the move to mandatory third-party (C3PAO) certification for Level 2 contracts — pending a program review announced in July 2026. Phase 1 self-assessment requirements, in effect since November 2025, were not suspended.</p><h3>Do subcontractors still need to meet CMMC requirements during the pause?</h3><p>Flow-down still applies: a prime contractor remains responsible for ensuring subcontractors meet the CMMC level appropriate to the federal contract information or controlled unclassified information they handle, under whichever phase requirement is currently in effect.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5940,9 +5940,9 @@
     "brand": "StrainChain",
     "domain": "strainchain.io",
     "title": "Blockchain QR Code For Cannabis | StrainChain",
-    "metaDescription": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey.",
+    "metaDescription": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.",
     "h1": "Blockchain QR Code For Cannabis",
-    "bodyHtml": "<p>Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey from seed to sale.</p><h2>Why StrainChain</h2><ul><li>METRC and BioTrack sync — no duplicate data entry</li><li>Lab certificates linked to a signed record</li><li>State auditors check chain of custody by scan</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does it replace METRC?</h3><p>No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.</p><h3>What does the consumer see?</h3><p>A scan opens verified lab results, strain provenance, and an immutable chain of custody.</p>",
+    "bodyHtml": "<p>Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.</p><h2>Why StrainChain</h2><ul><li>METRC and BioTrack sync — no duplicate data entry</li><li>Lab certificates linked to a signed record</li><li>State auditors check chain of custody by scan</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does it replace METRC?</h3><p>No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.</p><h3>What does the consumer see?</h3><p>A scan opens verified lab results, strain provenance, and an immutable chain of custody.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5953,7 +5953,7 @@
             "@type": "Brand",
             "name": "StrainChain"
           },
-          "description": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey from seed to sale.",
+          "description": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.",
           "url": "https://strainchain.io/p/blockchain-qr-code-for-cannabis"
         },
         {
@@ -6184,9 +6184,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Blockchain QR Code For Food | AuthiChain",
-    "metaDescription": "Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped. AuthiChain — EU.",
+    "metaDescription": "Give shoppers and food-safety auditors a scannable history of where a food product was grown, processed, and shipped.",
     "h1": "Blockchain QR Code For Food",
-    "bodyHtml": "<p>Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped.</p><h2>Why AuthiChain</h2><ul><li>Farm-to-shelf traceability in a single scan</li><li>Rapid, unit-level recall targeting</li><li>Cold-chain and certification data attached per lot</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does it support recalls?</h3><p>Yes — you can trace and isolate affected lots.</p><h3>What data can I attach?</h3><p>Origin, processing steps, certifications, cold-chain readings, and lab results.</p>",
+    "bodyHtml": "<p>Give shoppers and food-safety auditors a scannable history of where a food product was grown, processed, and shipped.</p><h2>Why AuthiChain</h2><ul><li>Farm-to-shelf traceability in a single scan</li><li>Rapid, unit-level recall targeting</li><li>Cold-chain and certification data attached per lot</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does it support recalls?</h3><p>Yes — you can trace and isolate affected lots.</p><h3>What data can I attach?</h3><p>Origin, processing steps, certifications, cold-chain readings, and lab results.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6197,7 +6197,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped.",
+          "description": "Give shoppers and food-safety auditors a scannable history of where a food product was grown, processed, and shipped.",
           "url": "https://authichain.com/p/blockchain-qr-code-for-food"
         },
         {
@@ -6997,9 +6997,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Anti-Counterfeit Spirits | AuthiChain",
-    "metaDescription": "Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures. AuthiChain — EU DPP.",
+    "metaDescription": "Protect premium spirits from refilling and counterfeiting with bottle authentication and tamper-evident closures.",
     "h1": "Anti-Counterfeit Spirits",
-    "bodyHtml": "<p>Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures.</p><h2>Why AuthiChain</h2><ul><li>Anti-refill tamper-evident verification</li><li>Distillery and batch provenance on-chain</li><li>Consumer engagement through verified stories</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can it detect refilled bottles?</h3><p>Tamper-evident closures tied to on-chain records reveal refilling attempts.</p><h3>Does it work internationally?</h3><p>Verification is global and works from any smartphone.</p>",
+    "bodyHtml": "<p>Protect premium spirits from refilling and counterfeiting with bottle authentication and tamper-evident closures.</p><h2>Why AuthiChain</h2><ul><li>Anti-refill tamper-evident verification</li><li>Distillery and batch provenance on-chain</li><li>Consumer engagement through verified stories</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can it detect refilled bottles?</h3><p>Tamper-evident closures tied to on-chain records reveal refilling attempts.</p><h3>Does it work internationally?</h3><p>Verification is global and works from any smartphone.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7010,7 +7010,7 @@
             "@type": "Brand",
             "name": "AuthiChain"
           },
-          "description": "Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures.",
+          "description": "Protect premium spirits from refilling and counterfeiting with bottle authentication and tamper-evident closures.",
           "url": "https://authichain.com/p/anti-counterfeit-spirits"
         },
         {
@@ -7864,9 +7864,9 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "EPCIS 2.0 Blockchain Anchoring | AuthiChain",
-    "metaDescription": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record.",
+    "metaDescription": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.",
     "h1": "EPCIS 2.0 Blockchain Anchoring",
-    "bodyHtml": "<p>EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record has not been altered after the fact.</p><h2>Why AuthiChain</h2><ul><li>A verifier rejects a malformed or testnet anchor instead of displaying it as proof</li><li>EPCIS events export into a W3C Verifiable Credential without a schema rewrite</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do we need to change our EPCIS implementation?</h3><p>No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours.</p><h3>What does anchoring add over EPCIS alone?</h3><p>EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.</p>",
+    "bodyHtml": "<p>EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.</p><h2>Why AuthiChain</h2><ul><li>A verifier rejects a malformed or testnet anchor instead of displaying it as proof</li><li>EPCIS events export into a W3C Verifiable Credential without a schema rewrite</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do we need to change our EPCIS implementation?</h3><p>No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours.</p><h3>What does anchoring add over EPCIS alone?</h3><p>EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -7878,7 +7878,7 @@
             "name": "AuthiChain",
             "url": "https://authichain.com"
           },
-          "description": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record has not been altered after the fact.",
+          "description": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require.",
           "url": "https://authichain.com/p/epcis-2-0-blockchain-anchoring"
         },
         {
