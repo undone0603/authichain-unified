@@ -277,7 +277,12 @@ function buildEntry(d) {
   const url = `https://${b.origin || b.domain}/p/${slug}`;
   const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
-  const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+  // d.meta (optional) pins the meta description to the lead's first sentence
+  // without the price suffix. Used where a claims removal (RES-13) shortened
+  // a lead and the template would otherwise pull a new $ clause into meta.
+  const metaDescription = d.meta
+    ? clampMeta(d.meta, 158)
+    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +

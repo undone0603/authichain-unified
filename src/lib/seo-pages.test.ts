@@ -308,6 +308,16 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("RES-13: no page claims Polygon or blockchain anchoring in the present tense", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(
+        /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
+      );
+      expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
