@@ -2,32 +2,16 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { Hono } from "hono";
 import { exportPKCS8, generateKeyPair } from "jose";
-import {
-  registerAttestationApi,
-  type AttestationRegistry,
-} from "./attestation-api";
+import { registerAttestationApi, type AttestationRegistry } from "./attestation-api";
 import { registerJwksRoute } from "./jwks";
 import { validateAttestation } from "../packages/verifier/src/index";
 
 function mockRegistry(): AttestationRegistry {
-  const statuses = new Map<
-    string,
-    {
-      attestationId: string;
-      claimStatus: "active" | "revoked" | "expired" | "superseded";
-      effectiveAt: string;
-      reasonCode?: string;
-      issuerId: string;
-      eventId: string;
-    }
-  >();
+  const statuses = new Map<string, { attestationId: string; claimStatus: "active" | "revoked" | "expired" | "superseded"; effectiveAt: string; reasonCode?: string; issuerId: string; eventId: string }>();
   const idempotency = new Map<string, string>();
   let eventSequence = 0;
   return {
-    getCurrentStatus: async (_env, attestationId) => ({
-      ok: true as const,
-      status: statuses.get(attestationId) ?? null,
-    }),
+    getCurrentStatus: async (_env, attestationId) => ({ ok: true as const, status: statuses.get(attestationId) ?? null }),
     getIssuer: async (_env, issuerId) => ({
       ok: true as const,
       issuer: {
@@ -45,13 +29,11 @@ function mockRegistry(): AttestationRegistry {
         const existing = idempotency.get(input.issuerId + ":" + idempotencyKey);
         if (existing) return { ok: true as const, eventId: existing };
       }
-      const eventId = "urn:authichain:event:v01:test-" + ++eventSequence;
-      if (idempotencyKey)
-        idempotency.set(input.issuerId + ":" + idempotencyKey, eventId);
+      const eventId = "urn:authichain:event:v01:test-" + (++eventSequence);
+      if (idempotencyKey) idempotency.set(input.issuerId + ":" + idempotencyKey, eventId);
       statuses.set(input.attestationId, {
         attestationId: input.attestationId,
-        claimStatus:
-          input.eventType === "attestation.revoked" ? "revoked" : "active",
+        claimStatus: input.eventType === "attestation.revoked" ? "revoked" : "active",
         effectiveAt: new Date().toISOString(),
         ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
         issuerId: input.issuerId,
@@ -129,7 +111,7 @@ describe("registerAttestationApi", () => {
       body: JSON.stringify(SAMPLE),
     });
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { jws: string }).jws).toBeTruthy();
+    expect((await res.json() as { jws: string }).jws).toBeTruthy();
   });
 
   it("POST signs a valid attestation and PUT verifies it", async () => {
@@ -181,13 +163,11 @@ describe("registerAttestationApi", () => {
       body: JSON.stringify(SAMPLE),
     });
     expect(signed.status).toBe(200);
-    const { jws } = (await signed.json()) as { jws: string };
+    const { jws } = await signed.json() as { jws: string };
 
     const before = await app.request("/api/v1/attestations/test/status");
     expect(before.status).toBe(200);
-    expect(
-      ((await before.json()) as { claim_status: string }).claim_status
-    ).toBe("active");
+    expect((await before.json() as { claim_status: string }).claim_status).toBe("active");
 
     const revoke = await app.request(
       `/api/v1/attestations/${encodeURIComponent(SAMPLE.attestation_id)}/revoke`,
@@ -198,12 +178,10 @@ describe("registerAttestationApi", () => {
           authorization: "Bearer issuer-test-secret",
         },
         body: JSON.stringify({ jws, reason_code: "test_revoke" }),
-      }
+      },
     );
     expect(revoke.status).toBe(200);
-    expect(
-      ((await revoke.json()) as { claim_status: string }).claim_status
-    ).toBe("revoked");
+    expect((await revoke.json() as { claim_status: string }).claim_status).toBe("revoked");
 
     const verify = await app.request("/api/v1/attestation/verify", {
       method: "POST",
@@ -225,80 +203,30 @@ describe("registerAttestationApi", () => {
     registerJwksRoute(app);
     registerAttestationApi(app, mockRegistry());
     const signed = await app.request("/api/v1/attestation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: "Bearer issuer-test-secret",
-      },
-      body: JSON.stringify(SAMPLE),
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret" }, body: JSON.stringify(SAMPLE),
     });
-    const { jws } = (await signed.json()) as { jws: string };
-    const path =
-      "/api/v1/attestations/" +
-      encodeURIComponent(SAMPLE.attestation_id) +
-      "/revoke";
-    const headers = {
-      "content-type": "application/json",
-      authorization: "Bearer issuer-test-secret",
-      "Idempotency-Key": "revoke-1",
-    };
-    const first = await app.request(path, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ jws, reason_code: "test_revoke" }),
-    });
-    const second = await app.request(path, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ jws, reason_code: "test_revoke" }),
-    });
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(((await first.json()) as { event_id: string }).event_id).toBe(
-      ((await second.json()) as { event_id: string }).event_id
-    );
+    const { jws } = await signed.json() as { jws: string };
+    const path = "/api/v1/attestations/" + encodeURIComponent(SAMPLE.attestation_id) + "/revoke";
+    const headers = { "content-type": "application/json", authorization: "Bearer issuer-test-secret", "Idempotency-Key": "revoke-1" };
+    const first = await app.request(path, { method: "POST", headers, body: JSON.stringify({ jws, reason_code: "test_revoke" }) });
+    const second = await app.request(path, { method: "POST", headers, body: JSON.stringify({ jws, reason_code: "test_revoke" }) });
+    expect(first.status).toBe(200); expect(second.status).toBe(200);
+    expect((await first.json() as { event_id: string }).event_id).toBe((await second.json() as { event_id: string }).event_id);
   });
 
   it("supersedes an attestation with a differently identified replacement from the same issuer", async () => {
-    await bindKey();
-    process.env.CRON_SECRET = "issuer-test-secret";
-    const app = new Hono();
-    registerJwksRoute(app);
-    registerAttestationApi(app, mockRegistry());
+    await bindKey(); process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono(); registerJwksRoute(app); registerAttestationApi(app, mockRegistry());
     const sign = async (attestationId: string) => {
-      const res = await app.request("/api/v1/attestation", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: "Bearer issuer-test-secret",
-        },
-        body: JSON.stringify({ ...SAMPLE, attestation_id: attestationId }),
-      });
-      expect(res.status).toBe(200);
-      return ((await res.json()) as { jws: string }).jws;
+      const res = await app.request("/api/v1/attestation", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret" }, body: JSON.stringify({ ...SAMPLE, attestation_id: attestationId }) });
+      expect(res.status).toBe(200); return (await res.json() as { jws: string }).jws;
     };
-    const originalId = SAMPLE.attestation_id;
-    const replacementId = "urn:authichain:attestation:v01:test-replacement";
-    const jws = await sign(originalId);
-    const replacementJws = await sign(replacementId);
-    const res = await app.request(
-      "/api/v1/attestations/" + encodeURIComponent(originalId) + "/supersede",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: "Bearer issuer-test-secret",
-          "Idempotency-Key": "supersede-1",
-        },
-        body: JSON.stringify({ jws, replacement_jws: replacementJws }),
-      }
-    );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
-      attestation_id: originalId,
-      claim_status: "superseded",
-      supersedes_attestation_id: replacementId,
+    const originalId = SAMPLE.attestation_id; const replacementId = "urn:authichain:attestation:v01:test-replacement";
+    const jws = await sign(originalId); const replacementJws = await sign(replacementId);
+    const res = await app.request("/api/v1/attestations/" + encodeURIComponent(originalId) + "/supersede", {
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer issuer-test-secret", "Idempotency-Key": "supersede-1" }, body: JSON.stringify({ jws, replacement_jws: replacementJws }),
     });
+    expect(res.status).toBe(200); expect(await res.json()).toMatchObject({ attestation_id: originalId, claim_status: "superseded", supersedes_attestation_id: replacementId });
   });
   it("GET /api/v1/attestation and aliases return the contract index", async () => {
     const app = new Hono();
@@ -444,12 +372,7 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
   it("a tampered signature is 400, not a decision", async () => {
     const { sign, verify } = await appWithKey();
     const [h, p, sig] = (await sign({})).split(".");
-    // Flip a character in the middle. The last base64url characters of a
-    // 64-byte signature carry padding bits, so changing them can decode to
-    // the same bytes and the "tampered" signature still verifies.
-    const i = Math.floor(sig.length / 2);
-    const flipped =
-      sig.slice(0, i) + (sig[i] === "A" ? "B" : "A") + sig.slice(i + 1);
+    const flipped = sig.slice(0, -2) + (sig.endsWith("A") ? "BB" : "AA");
     const r = await verify([h, p, flipped].join("."));
     expect(r.status).toBe(400);
     expect(r.body.valid).toBe(false);
