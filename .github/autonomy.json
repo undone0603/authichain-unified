@@ -46,6 +46,7 @@
       "managed": true,
       "workflows": {
         "ci.yml": "on",
+        "protocol-conformance.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
         "typecheck-ratchet.yml": "on",
