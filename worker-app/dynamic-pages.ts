@@ -140,6 +140,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     description: page.metaDescription,
     canonicalPath: canonical,
     extraHead:
+      (page.noindex ? '<meta name="robots" content="noindex">\n' : "") +
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
       "</script>\n" +
@@ -305,6 +306,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const seoPage = getSeoPageBySlug(serial);
     if (seoPage) {
+      if (seoPage.noindex) c.header("X-Robots-Tag", "noindex");
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
