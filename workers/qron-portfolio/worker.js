@@ -243,7 +243,7 @@ document.getElementById('leadForm').addEventListener('submit',async function(e){
   btn.textContent='Sending...';btn.disabled=true;
   try{
     const d={name:this.name.value,email:this.email.value,company:this.company.value,style:this.style.value,message:this.message.value,source:'portfolio'};
-    const r=await fetch('https://qron-automation.undone-k.workers.dev/webhook/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    const r=await fetch('https://qron.space/autoflow/webhook/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
     if(r.ok){msg.style.display='block';msg.style.color='#00ff88';msg.textContent='Received! We will reply within 2 hours with your free sample.';this.reset();}
     else throw new Error('fail');
   }catch(e){msg.style.display='block';msg.style.color='var(--primary)';msg.textContent='Thanks! Email us at authichain@gmail.com and we will get right back to you.';}
