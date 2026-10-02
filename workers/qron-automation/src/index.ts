@@ -139,8 +139,6 @@ const MONITORED_URLS: { name: string; url: string; binding?: string; upStatuses?
   { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/', binding: 'QRON_PORTFOLIO' },
   { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/', binding: 'AUTHICHAIN_API' },
   { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/', binding: 'AUTHICHAIN_DASHBOARD', upStatuses: [401] },
-  { name: 'StrainChain', url: 'https://strainchain.undone-k.workers.dev/' },
-  { name: 'QRON SEO Engine', url: 'https://qron-seo-engine.undone-k.workers.dev/' },
   { name: 'QRON Gallery', url: 'https://qron.space' },
 ];
 
