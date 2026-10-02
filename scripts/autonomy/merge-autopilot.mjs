@@ -234,7 +234,7 @@ async function main() {
 export const cell = text =>
   String(text)
     .replace(/[\r\n]+/g, " ")
-    .replace(/\|/g, "\\|");
+    .replace(/[\\|]/g, ch => `\\${ch}`);
 
 // The summary goes to stdout only; the workflow appends it to the job
 // summary. Per-PR progress lines go to stderr.

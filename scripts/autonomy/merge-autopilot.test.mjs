@@ -150,5 +150,6 @@ describe("merge autopilot config", () => {
 describe("merge autopilot summary", () => {
   it("keeps API text inside one table cell", () => {
     assert.equal(cell("a|b\nc"), "a\\|b c");
+    assert.equal(cell("x\\|y"), "x\\\\\\|y");
   });
 });
