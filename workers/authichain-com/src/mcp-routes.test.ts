@@ -31,7 +31,7 @@ describe("mcp discovery", () => {
     );
   });
 
-  it("GET discovery points at Payment Links and unpaid POST x402, not GET checkout", async () => {
+  it("GET discovery says verify is free and lists no prices or Payment Links", async () => {
     for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
       const res = await tryHandleMcp(req(path));
       expect(res, path).not.toBeNull();
@@ -40,28 +40,26 @@ describe("mcp discovery", () => {
         protocol: string;
         pay: { x402: string };
         pricing: {
-          humanCheckout: {
-            passportPaymentLink?: string;
-            dppPaymentLink?: string;
-            farmPaymentLink?: string;
-          };
+          verify: { price: string; mcpTool: string };
+          paidPlans: { status: string };
+          humanCheckout?: unknown;
         };
       };
       expect(body.protocol).toBe("mcp");
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
-      expect(body.pricing.humanCheckout.dppPaymentLink).toBe(
-        planPaymentLink("dpp_readiness")
-      );
-      expect(body.pricing.humanCheckout.passportPaymentLink).toBe(
-        planPaymentLink("strainchain_passport")
-      );
-      expect(body.pricing.humanCheckout.farmPaymentLink).toBe(
-        planPaymentLink("strainchain_farm")
-      );
-      expect(
-        new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
-      ).toBe("authichain.com");
-      expect(JSON.stringify(body)).not.toContain("/api/checkout");
+      expect(body.pricing.verify.price).toBe("free");
+      expect(body.pricing.verify.mcpTool).toBe("verify_record");
+      expect(body.pricing.paidPlans.status).toBe("on_hold");
+      expect(body.pricing.humanCheckout).toBeUndefined();
+      const text = JSON.stringify(body);
+      expect(text).not.toContain("$0.05");
+      expect(text).not.toContain("PaymentLink");
+      expect(text).not.toContain("USDC");
+      for (const plan of ["dpp_readiness", "strainchain_passport", "strainchain_farm"] as const) {
+        const link = planPaymentLink(plan);
+        if (link) expect(text).not.toContain(link);
+      }
+      expect(text).not.toContain("/api/checkout");
     }
   });
 
@@ -96,19 +94,29 @@ describe("mcp discovery", () => {
     const priced = (await call!.json()) as {
       result: { content: Array<{ text: string }> };
     };
-    expect(priced.result.content[0].text).toContain(
-      "POST /api/v1/agent-verify"
+    const pricing = JSON.parse(priced.result.content[0].text) as {
+      verify: { price: string; mcpTool: string; http: string };
+      paidPlans: { status: string };
+    };
+    expect(pricing.verify.price).toBe("free");
+    expect(pricing.verify.mcpTool).toBe("verify_record");
+    expect(pricing.verify.http).toBe(
+      "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(priced.result.content[0].text).toContain(
-      planPaymentLink("strainchain_passport")
-    );
-    expect(priced.result.content[0].text).toContain(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(pricing.paidPlans.status).toBe("on_hold");
+    expect(priced.result.content[0].text).not.toContain("$0.05");
+    expect(priced.result.content[0].text).not.toContain("USDC");
+    for (const plan of ["dpp_readiness", "strainchain_passport", "strainchain_farm"] as const) {
+      const link = planPaymentLink(plan);
+      if (link) expect(priced.result.content[0].text).not.toContain(link);
+    }
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
+
+    const tools = (listed.result.tools as Array<{ name: string; description?: string }>);
+    for (const t of tools) {
+      expect(t.description ?? "", t.name).not.toContain("$0.05");
+    }
+    expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(/^Free\./);
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {

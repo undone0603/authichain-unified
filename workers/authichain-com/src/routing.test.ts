@@ -508,7 +508,7 @@ test("/llms.txt points agents at Payment Links and unpaid POST x402", async () =
   }
 });
 
-test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
+test("/mcp and /api/mcp discovery says verify is free, with no Payment Links or x402 price", async () => {
   for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
@@ -516,36 +516,24 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       protocol: string;
       pay: { x402: string };
       pricing: {
-        humanCheckout: {
-          passportPaymentLink?: string;
-          dppPaymentLink?: string;
-          farmPaymentLink?: string;
-        };
+        verify: { price: string; mcpTool: string };
+        paidPlans: { status: string };
+        humanCheckout?: unknown;
       };
     };
     assert.equal(body.protocol, "mcp", path);
     assert.equal(body.pay.x402, "POST https://authichain.com/api/x402", path);
-    assert.equal(
-      body.pricing.humanCheckout.dppPaymentLink,
-      planPaymentLink("dpp_readiness"),
-      path
-    );
-    assert.equal(
-      body.pricing.humanCheckout.passportPaymentLink,
-      planPaymentLink("strainchain_passport"),
-      path
-    );
-    assert.equal(
-      body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname,
-      "authichain.com",
-      path
-    );
-    assert.equal(JSON.stringify(body).includes("/api/checkout"), false, path);
+    assert.equal(body.pricing.verify.price, "free", path);
+    assert.equal(body.pricing.verify.mcpTool, "verify_record", path);
+    assert.equal(body.pricing.paidPlans.status, "on_hold", path);
+    assert.equal(body.pricing.humanCheckout, undefined, path);
+    const text = JSON.stringify(body);
+    assert.equal(text.includes("$0.05"), false, path);
+    for (const plan of ["dpp_readiness", "strainchain_passport", "strainchain_farm"] as const) {
+      const link = planPaymentLink(plan);
+      if (link) assert.equal(text.includes(link), false, `${path} ${plan}`);
+    }
+    assert.equal(text.includes("/api/checkout"), false, path);
   }
 });
 

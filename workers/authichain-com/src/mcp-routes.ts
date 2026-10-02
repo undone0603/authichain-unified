@@ -2,8 +2,9 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * GET is free discovery (Payment Links + unpaid POST /api/x402).
- * tools/call verify is the same unpaid 402 as /api/x402 — not a fake
+ * Verification is free (verify_record, GET /api/verify). Prices are on hold,
+ * so get_pricing and GET discovery list no Payment Links and no x402 price.
+ * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
  * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
@@ -48,14 +49,14 @@ const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Live AuthiChain prices: StrainChain Passport, Farm, and EU DPP Payment Links for humans; unpaid POST /api/x402 ($0.05 USDC on Base) for agents.",
+      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "verify",
     description: x402PaidVerifyStatus().bound
-      ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
-      : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
+      ? "Legacy x402 seal verify. Unpaid tools/call returns HTTP 402. For free verification use verify_record."
+      : "Legacy x402 seal verify, not answering. Unpaid tools/call returns HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -69,9 +70,7 @@ const TOOLS = [
     name: "query_provenance",
     description:
       "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. " +
-      (x402PaidVerifyStatus().bound
-        ? "Paid verify is tools/call verify ($0.05 USDC on Base)."
-        : "Paid tools/call verify ($0.05 USDC on Base) is not answering yet: it refuses before settlement."),
+      "For free signature and anchor verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -242,39 +241,37 @@ function livePayTo(env?: X402Env): string {
   );
 }
 
-export function mcpPricingDiscovery(env?: X402Env) {
+/**
+ * get_pricing and GET discovery. Verification is free; paid plans are on
+ * hold, so this lists no Payment Links and no per-call price. Text only:
+ * the legacy x402 `verify` path below is unchanged.
+ */
+export function mcpPricingDiscovery(_env?: X402Env) {
+  const legacy = x402PaidVerifyStatus();
   return {
-    agentRail: {
-      endpoint: "POST /api/v1/agent-verify",
-      alias: "POST /api/x402",
-      protocol: "x402",
-      network: "base",
-      chainId: "8453",
-      asset: BASE_USDC_ASSET,
-      publishedPayTo: livePayTo(env),
-      pricePerCall: `$${x402PriceUsd()} USDC`,
-      catalog: "https://authichain.com/api/x402/catalog",
-      wellKnown: "https://authichain.com/.well-known/x402.json",
-      mcp: "https://authichain.com/mcp",
-      docs: "https://authichain.com/x402",
-      note: x402PaidVerifyStatus().bound
-        ? "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT."
-        : "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
-      paidVerify: x402PaidVerifyStatus(),
+    verify: {
+      price: "free",
+      mcpTool: "verify_record",
+      http: "GET https://authichain.com/api/verify?id=polygon-anchor-1",
+      offline: "npx authichain-verify <record.json> [anchor.json]",
+      docs: "https://authichain.com/protocol",
     },
-    humanCheckout: {
-      rail: "stripe",
-      source: "src/lib/plans.ts",
-      passportUsd: planUsd("strainchain_passport"),
-      dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
-      passportPaymentLink: planPaymentLink("strainchain_passport"),
-      dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
-      emailCapture: {
-        passport: "https://authichain.com/passport",
-        dpp: "https://authichain.com/dpp",
-      },
+    freeTools: [
+      "verify_record",
+      "query_provenance",
+      "dpp_readiness_check",
+      "get_pricing",
+    ],
+    paidPlans: {
+      status: "on_hold",
+      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+    },
+    legacySealVerify: {
+      tool: "verify",
+      status: legacy.status,
+      note: legacy.bound
+        ? "Legacy x402 seal verify. For free verification use verify_record."
+        : "Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     },
   };
 }
@@ -536,7 +533,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), verify_record (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use verify_record (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
         },
       ],
       isError: true,
