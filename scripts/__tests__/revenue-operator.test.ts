@@ -27,7 +27,7 @@ describe("classifyRevenue", () => {
     expect(classifyRevenue(snap({}), founders).qualifying).toBe(false);
   });
 
-  it("counts a paid first sale even when the payer is a founder", () => {
+  it("does not count the founder $10 charge as a first sale", () => {
     const verdict = classifyRevenue(
       snap({
         charges: [
@@ -41,8 +41,25 @@ describe("classifyRevenue", () => {
       }),
       founders
     );
+    expect(verdict.qualifying).toBe(false);
+  });
+
+  it("counts a paid stranger charge as a first sale", () => {
+    const verdict = classifyRevenue(
+      snap({
+        charges: [
+          {
+            id: "ch_farm",
+            amount: 14900,
+            paid: true,
+            email: "ops@example.com",
+          },
+        ],
+      }),
+      founders
+    );
     expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("ch_10");
+    expect(verdict.reason).toContain("ch_farm");
   });
 
   it("does not count a founder-only subscription as a first sale", () => {
@@ -183,15 +200,14 @@ describe("classifyRevenue", () => {
     expect(ok.qualifying).toBe(true);
   });
 
-  it("counts a paid charge with no email as a first sale", () => {
+  it("does not treat a paid charge with no email as a stranger first sale", () => {
     const verdict = classifyRevenue(
       snap({
         charges: [{ id: "ch_blank", amount: 14900, paid: true, email: null }],
       }),
       founders
     );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("ch_blank");
+    expect(verdict.qualifying).toBe(false);
   });
 
   it("does not unlock a payout with an unpaid stranger charge", () => {

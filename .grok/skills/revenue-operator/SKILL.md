@@ -8,7 +8,7 @@ description: >-
 
 # Revenue operator
 
-Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. A paid livemode charge is a first sale and qualifies. Founder addresses live in `DEFAULT_FOUNDER_EMAILS` in that file. Founder-only _subscriptions_ still do not qualify.
+Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. A paid livemode charge qualifies only when its email is not a founder address. Founder addresses live in `DEFAULT_FOUNDER_EMAILS`. The founder $10 charge and founder-only subscriptions do not qualify. A non-founder subscription in `active`, `trialing`, or `past_due` does.
 
 ## Cycle
 
@@ -21,4 +21,4 @@ Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. A paid livemo
 
 CLI: `pnpm exec tsx scripts/revenue-operator.ts decide --snapshot=path.json --skip-rails`
 
-Do not invent a charge. A first paid sale already in livemode is enough.
+Do not invent a charge. A non-founder paid sale or subscription already in livemode is enough. Otherwise the next action is `send_one`.
