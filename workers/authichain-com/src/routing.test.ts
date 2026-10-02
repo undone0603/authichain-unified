@@ -405,7 +405,7 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
   assert.ok(!html.includes("app.authichain.com/login"));
   // The demo gateway stored nothing and wrote nothing on-chain; the page must
   // not call it or claim a certificate was anchored.
-  assert.ok(!html.includes("api.authichain.com"));
+  assert.doesNotMatch(html, /api\.authichain\.com/);
   assert.ok(
     !/Certificate Anchored|Anchoring to blockchain|permanent and publicly verifiable/.test(
       html
@@ -421,7 +421,7 @@ test("a demo certificate id says it is not on record, without fetching the demo 
   const html = await (await get("/cert/AC-1234ABCD")).text();
   assert.match(html, /not on record/);
   assert.match(html, /noindex/);
-  assert.ok(!html.includes("api.authichain.com"));
+  assert.doesNotMatch(html, /api\.authichain\.com/);
 });
 
 test("DPP landing collects email before protocol checkout", async () => {
