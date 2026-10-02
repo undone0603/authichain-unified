@@ -317,7 +317,10 @@ function buildEntry(d) {
       },
     ],
   };
-  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd };
+  // noindex: true keeps a page reachable at /p/<slug> but out of the sitemap
+  // index. The field is carried in pages.json so a renderer can also emit
+  // <meta name="robots" content="noindex">.
+  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd, ...(d.noindex ? { noindex: true } : {}) };
 }
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
@@ -386,7 +389,7 @@ fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 // Landing workers must not import the full catalogue; they list /p/<slug> in
 // their sitemaps from this small per-domain index instead.
 const byDomain = {};
-for (const p of merged) (byDomain[p.domain] ||= []).push(p.slug);
+for (const p of merged) if (!p.noindex) (byDomain[p.domain] ||= []).push(p.slug);
 for (const d of Object.keys(byDomain)) byDomain[d].sort();
 fs.writeFileSync(SLUGS_OUT, JSON.stringify(byDomain, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
