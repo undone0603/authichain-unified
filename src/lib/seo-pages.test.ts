@@ -75,7 +75,7 @@ describe("seo-pages loader", () => {
 });
 
 const GENERATED_HOW_IT_WORKS =
-  "Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence";
+  "Issue a unique identifier per unit and link it to a signed record";
 
 // Mirrors scripts/gen-seo-pages.cjs PROTECTED_SEED_SLUGS — hand-authored pages
 // that must not be rewritten when the generator runs.

@@ -5,7 +5,6 @@ This directory contains the open-source reference implementation of the AuthiCha
 - Spec: [`SPEC.md`](SPEC.md)
 - Offline verifier: `node verifier.mjs record.json`
 - npm package: [`authichain-verify`](https://www.npmjs.com/package/authichain-verify) — see [Install](#install)
-- QFS-ready ISO 20022 carriage: [`qfs/`](qfs/) — `pacs.008` envelope, dual digest, ML-DSA-65 slot reserved. Not a bank rail.
 
 ## Install
 
@@ -26,7 +25,7 @@ That reports `verified`: the signature checks and the anchor carries the record'
 - CLI: `authichain-verify <record.json> [anchor.json]` prints `{ verdict, reasons, checks }` as JSON. It exits 0 for `verified` / `valid-unanchored`, 1 for `invalid` and 2 for usage errors. Set `ALLOW_TESTNET=1` to accept testnet anchors.
 - Library: `verifyRecord(record, anchor?, { allowTestnet?, now? })`, plus `canonicalize`, `signingBytes`, `sha256Hex`, `base58Decode` and `publicKeyFromDidKey`. Types ship in `verifier.d.ts`.
 - Zero dependencies, Node ≥ 18, ESM only.
-- The package contains only `verifier.mjs`, its types, the CLI, the example records, `SPEC.md`, this README and `LICENSE`. The conformance suite stays in the repo: `npm run conformance`.
+- The package contains only `verifier.mjs`, its types, the CLI, the example records, `SPEC.md`, this README, `CHANGELOG.md` and `LICENSE`. The conformance suite stays in the repo: `npm run conformance`.
 
 ## Licensing
 
