@@ -4,20 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 const state = vi.hoisted(() => ({
   isAdmin: true,
   rows: [] as Record<string, unknown>[],
+  consents: [] as Record<string, unknown>[],
 }));
 
 vi.mock("../../../../utils/supabase/server", () => ({
-  createClient: async () => ({
-    from: () => {
-      const query = {
-        select: () => query,
-        gte: () => query,
-        order: () => query,
-        limit: async () => ({ data: state.rows, error: null }),
-      };
-      return query;
-    },
-  }),
+  createClient: async () => ({}),
 }));
 
 vi.mock("../../../../lib/require-admin", () => ({
@@ -25,6 +16,28 @@ vi.mock("../../../../lib/require-admin", () => ({
     state.isAdmin
       ? { user: { id: "owner" } }
       : NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+}));
+
+vi.mock("../../../../lib/supabase-admin", () => ({
+  getSupabaseAdmin: () => ({
+    from: (table: string) => {
+      const result = {
+        data: table === "si_feed_consents" ? state.consents : state.rows,
+        error: null,
+      };
+      const query = {
+        select: () => query,
+        gte: () => query,
+        order: () => query,
+        limit: async () => result,
+        or: () => query,
+        eq: () => query,
+        then: (resolve: (value: typeof result) => unknown) =>
+          Promise.resolve(result).then(resolve),
+      };
+      return query;
+    },
+  }),
 }));
 
 import { GET } from "./route";
@@ -36,17 +49,21 @@ describe("/api/si/feed", () => {
   beforeEach(() => {
     state.isAdmin = true;
     state.rows = [];
+    state.consents = [];
   });
 
-  it("requires the owner session before returning operational activity", async () => {
+  it("returns no private activity without owner access or explicit sharing consent", async () => {
     state.isAdmin = false;
 
     const response = await get();
+    const body = await response.json();
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
+    expect(body.events).toEqual([]);
+    expect(body.visibility).toBe("consented-public");
   });
 
-  it("normalizes automation logs without exposing raw log payloads", async () => {
+  it("normalizes owner automation logs without exposing raw log payloads", async () => {
     state.rows = [
       {
         id: "event-1",
@@ -107,5 +124,37 @@ describe("/api/si/feed", () => {
     const response = await get("?since=not-a-date");
 
     expect(response.status).toBe(400);
+  });
+
+  it("only exposes explicitly consented sources to visitors", async () => {
+    state.isAdmin = false;
+    state.consents = [{ source: "agentz" }];
+    state.rows = [
+      {
+        id: "event-agent",
+        workflow_name: "agentz_nightly",
+        trigger_type: "cron",
+        status: "success",
+        created_at: "2026-10-02T10:00:00.000Z",
+      },
+      {
+        id: "event-private",
+        workflow_name: "weekly_report",
+        trigger_type: "cron",
+        status: "success",
+        created_at: "2026-10-02T09:00:00.000Z",
+      },
+    ];
+
+    const response = await get();
+    const body = await response.json();
+
+    expect(body.events.map((event: { source: string }) => event.source)).toEqual([
+      "agentz",
+    ]);
+  });
+
+  it("rejects malformed pagination cursors", async () => {
+    expect((await get("?cursor=not-a-cursor")).status).toBe(400);
   });
 });

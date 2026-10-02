@@ -1117,6 +1117,121 @@
   line-height: 1.5;
 }
 
+.si-consent-controls {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid #e7eee6;
+}
+
+.si-consent-controls > p {
+  margin: 0 0 8px;
+  color: #718078;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.si-consent-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  color: #34463b;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.si-consent-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #47755a;
+}
+
+.si-spotlight {
+  padding: 19px 21px 16px;
+}
+
+.si-spotlight h2 {
+  margin: 14px 0 7px;
+  color: #263c2f;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+.si-spotlight > p {
+  margin: 0;
+  color: #758279;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.si-spotlight-select {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+  color: #536359;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.si-spotlight-select select {
+  width: 100%;
+  min-height: 35px;
+  padding: 0 9px;
+  border: 1px solid #dce8da;
+  border-radius: 5px;
+  background: #fbfdf9;
+  color: #31463a;
+  font: inherit;
+}
+
+.si-spotlight-item {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+  padding: 12px;
+  border: 1px solid #e3ece1;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fbfdf9, #f4f8f2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.si-spotlight-item:hover {
+  border-color: #bdcfbd;
+}
+
+.si-spotlight-label {
+  color: #708477;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.si-spotlight-item strong {
+  color: #2c4535;
+  font-size: 12px;
+}
+
+.si-spotlight-item > span:not(.si-spotlight-label):not(.si-spotlight-link) {
+  color: #748278;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.si-spotlight-link {
+  color: #4d7459;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.si-spotlight-foot {
+  margin-top: 10px;
+  color: #87938b;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
 .si-share-card {
   position: relative;
   min-height: 235px;

@@ -76,7 +76,9 @@ export async function GET(request: NextRequest) {
       .select('id, workflow_name, trigger_type, status, created_at')
       .gte(
         'created_at',
-        since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        since
+          ? new Date(since).toISOString()
+          : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
       )
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
@@ -118,6 +120,7 @@ export async function GET(request: NextRequest) {
         refresh_after_seconds: 30,
         sources: isOwner ? SI_FEED_SOURCES : visibleSources,
         visibility: isOwner ? 'private' : 'consented-public',
+        is_owner: isOwner,
       },
       { headers: { 'Cache-Control': 'private, no-store' } }
     );

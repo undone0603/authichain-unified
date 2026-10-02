@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Rss,
   Share2,
+  ShoppingBag,
   ShieldCheck,
   Sparkles,
   Workflow,
@@ -36,6 +37,7 @@ type FeedResponse = {
   generated_at: string;
   refresh_after_seconds: number;
   sources: string[];
+  is_owner?: boolean;
 };
 
 const connectors = [
@@ -43,6 +45,27 @@ const connectors = [
   { name: "Cloudflare", icon: Cloud, state: "Next up", tone: "orange" },
   { name: "Supabase", icon: Layers3, state: "Next up", tone: "green" },
   { name: "CLI + CI", icon: Code2, state: "Next up", tone: "blue" },
+];
+
+const mcpSpotlights = [
+  {
+    topic: "commerce",
+    name: "Stripe Agent Toolkit",
+    detail: "Payment and checkout capabilities for agents.",
+    href: "https://docs.stripe.com/agents",
+  },
+  {
+    topic: "trust",
+    name: "GitHub MCP Server",
+    detail: "Repository context and developer workflows.",
+    href: "https://github.com/github/github-mcp-server",
+  },
+  {
+    topic: "developer",
+    name: "Supabase MCP Server",
+    detail: "Database and project capabilities from Supabase.",
+    href: "https://github.com/supabase-community/supabase-mcp",
+  },
 ];
 
 function relativeTime(value: string) {
@@ -69,6 +92,11 @@ export default function SiFeedClient() {
   const [entity, setEntity] = useState("");
   const [viewMode, setViewMode] = useState<"signals" | "story">("signals");
   const [copied, setCopied] = useState(false);
+  const [consentBusy, setConsentBusy] = useState<string | null>(null);
+  const [consentMessage, setConsentMessage] = useState<string | null>(null);
+  const [consentedSources, setConsentedSources] = useState<string[]>([]);
+  const [spotlightTopic, setSpotlightTopic] = useState("");
+  const [liveConnected, setLiveConnected] = useState(false);
 
   const loadFeed = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true);
@@ -83,7 +111,23 @@ export default function SiFeedClient() {
         return;
       }
       if (!response.ok) throw new Error("The feed is temporarily unavailable.");
-      setFeed((await response.json()) as FeedResponse);
+      const result = (await response.json()) as FeedResponse;
+      setFeed(result);
+      if (result.is_owner) {
+        const consentResponse = await fetch("/api/si/consents", {
+          cache: "no-store",
+        });
+        if (consentResponse.ok) {
+          const consentBody = (await consentResponse.json()) as {
+            consents: Array<{ source: string; share_public: boolean }>;
+          };
+          setConsentedSources(
+            consentBody.consents
+              .filter(consent => consent.share_public)
+              .map(consent => consent.source)
+          );
+        }
+      }
       setError(null);
     } catch (cause) {
       setError(
@@ -97,12 +141,59 @@ export default function SiFeedClient() {
     }
   }, []);
 
+  const updateConsent = async (sourceName: string, sharePublic: boolean) => {
+    setConsentBusy(sourceName);
+    setConsentMessage(null);
+    try {
+      const response = await fetch("/api/si/consents", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: sourceName, share_public: sharePublic }),
+      });
+      if (!response.ok) throw new Error();
+      setConsentedSources(current =>
+        sharePublic
+          ? [...new Set([...current, sourceName])]
+          : current.filter(item => item !== sourceName)
+      );
+      setConsentMessage(
+        sharePublic
+          ? `${sourceName} feed sharing enabled.`
+          : `${sourceName} feed sharing revoked.`
+      );
+    } catch {
+      setConsentMessage("Permission could not be updated. Please try again.");
+    } finally {
+      setConsentBusy(null);
+    }
+  };
+
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadFeed(), 0);
     const timer = window.setInterval(() => void loadFeed(true), 30_000);
+    const stream = new EventSource("/api/si/events/stream");
+    const onSignal = (raw: Event) => {
+      try {
+        const event = JSON.parse((raw as MessageEvent<string>).data) as SiFeedEvent;
+        setFeed(current => {
+          if (!current || current.events.some(existing => existing.id === event.id)) {
+            return current;
+          }
+          return { ...current, events: [event, ...current.events].slice(0, 100) };
+        });
+      } catch {
+        void loadFeed(true);
+      }
+    };
+    for (const eventName of ["github", "ci", "deployment", "agentz"]) {
+      stream.addEventListener(eventName, onSignal);
+    }
+    stream.onopen = () => setLiveConnected(true);
+    stream.onerror = () => setLiveConnected(false);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(timer);
+      stream.close();
     };
   }, [loadFeed]);
 
@@ -118,6 +209,10 @@ export default function SiFeedClient() {
   }, [entity, feed, severity, source]);
 
   const stories = useMemo(() => buildStories(events), [events]);
+  const selectedSpotlights = useMemo(
+    () => mcpSpotlights.filter(spotlight => spotlight.topic === spotlightTopic),
+    [spotlightTopic]
+  );
 
   const shareFeed = async () => {
     const url = window.location.href;
@@ -243,7 +338,11 @@ export default function SiFeedClient() {
               </div>
               <div className={`si-stream-state ${error ? "is-idle" : ""}`}>
                 <span className="si-stream-dot" />
-                {error ? "OWNER VIEW" : "AUTO-REFRESH · 30S"}
+                {error
+                  ? "FEED PAUSED"
+                  : liveConnected
+                    ? "LIVE SIGNALS"
+                    : "AUTO-REFRESH · 30S"}
               </div>
             </div>
 
@@ -524,6 +623,49 @@ export default function SiFeedClient() {
               </div>
             </section>
 
+            <section className="si-side-card si-spotlight">
+              <div className="si-card-kicker">
+                <ShoppingBag size={14} /> AGENTIC COMMERCE
+              </div>
+              <h2>Useful tools, in the open.</h2>
+              <p>
+                Choose a topic to see a relevant MCP server. This choice stays
+                in this page session; it is not saved or shared.
+              </p>
+              <label className="si-spotlight-select">
+                <span>Show tools for</span>
+                <select
+                  value={spotlightTopic}
+                  onChange={event => setSpotlightTopic(event.target.value)}
+                >
+                  <option value="">Choose a topic</option>
+                  <option value="commerce">Agentic commerce</option>
+                  <option value="trust">Trust &amp; identity</option>
+                  <option value="developer">Developer tools</option>
+                </select>
+              </label>
+              {selectedSpotlights.map(spotlight => (
+                <a
+                  className="si-spotlight-item"
+                  href={spotlight.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  key={spotlight.name}
+                >
+                  <span className="si-spotlight-label">
+                    AUTHICHAIN PICK · NOT A PAID PLACEMENT
+                  </span>
+                  <strong>{spotlight.name}</strong>
+                  <span>{spotlight.detail}</span>
+                  <span className="si-spotlight-link">Explore server →</span>
+                </a>
+              ))}
+              <div className="si-spotlight-foot">
+                Explore only. These servers are not connected to this feed.
+                No clicks or topic choices are tracked.
+              </div>
+            </section>
+
             <section className="si-side-card si-consent">
               <div className="si-card-kicker">
                 <LockKeyhole size={14} /> PERMISSION, NOT ASSUMPTION
@@ -546,9 +688,38 @@ export default function SiFeedClient() {
                 <span>C2E</span>
                 <span className="si-consent-badge">OPT-IN ONLY</span>
               </div>
-              <div className="si-consent-foot">
-                This is a product rule, not a live data-exchange control.
-              </div>
+              {feed?.is_owner ? (
+                <div className="si-consent-controls">
+                  <p>Choose which sanitized signal sources may appear publicly:</p>
+                  {[
+                    ["agentz", "AgentZ"],
+                    ["automation", "Automation"],
+                    ["github", "GitHub"],
+                  ].map(([sourceName, label]) => (
+                    <label className="si-consent-toggle" key={sourceName}>
+                      <span>{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={consentedSources.includes(sourceName)}
+                        disabled={consentBusy !== null}
+                        onChange={event =>
+                          void updateConsent(sourceName, event.target.checked)
+                        }
+                        aria-label={`Allow public sharing of ${label} signals`}
+                      />
+                    </label>
+                  ))}
+                  {consentMessage && (
+                    <p className="si-consent-foot" role="status">
+                      {consentMessage}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="si-consent-foot">
+                  Public sharing is opt-in, source-specific, and revocable.
+                </div>
+              )}
             </section>
 
             <section className="si-share-card">
