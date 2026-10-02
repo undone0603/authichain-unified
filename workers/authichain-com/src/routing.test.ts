@@ -415,6 +415,12 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
     html,
     /does not store anything, issue a certificate, or write to a blockchain/
   );
+  // The real Polygon anchor is cited, not hidden.
+  assert.match(
+    html,
+    /polygonscan\.com\/tx\/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7/
+  );
+  assert.match(html, /Self-serve anchoring from this page is not live yet/);
 });
 
 test("a demo certificate id says it is not on record, without fetching the demo gateway", async () => {

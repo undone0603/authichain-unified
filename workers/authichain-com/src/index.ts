@@ -2615,7 +2615,7 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Product Fingerprint — AuthiChain</title>
-<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. On-chain anchoring of signed records is in development.">
+<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are anchored on Polygon mainnet and checkable with the open verifier.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="Product Fingerprint — AuthiChain">
@@ -2699,8 +2699,9 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      Not stored and not anchored. Signed provenance records that anyone can check offline, with an on-chain anchor, are described in the
-      <a href="/protocol">open verification protocol</a>. Anchoring is in development.
+      This fingerprint is not stored and not anchored. Signed AuthiChain records are anchored on Polygon mainnet: see the
+      <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
+      <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>

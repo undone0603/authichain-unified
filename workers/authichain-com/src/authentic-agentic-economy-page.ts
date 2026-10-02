@@ -229,7 +229,7 @@ ${estateFeatures(
   [
     {
       title: "Signed seals",
-      body: "Ed25519-signed records with an open, offline verifier at /protocol. On-chain anchoring on Polygon is in development.",
+      body: "Ed25519-signed records, anchored on Polygon mainnet (first record: tx 0x2491…10b7), checkable offline with the open verifier at /protocol.",
     },
     {
       title: "5-agent consensus",
