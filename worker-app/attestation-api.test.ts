@@ -372,7 +372,13 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
   it("a tampered signature is 400, not a decision", async () => {
     const { sign, verify } = await appWithKey();
     const [h, p, sig] = (await sign({})).split(".");
-    const flipped = sig.slice(0, -2) + (sig.endsWith("A") ? "BB" : "AA");
+    // Flip a bit in the decoded bytes. Editing the base64url text can be a
+    // no-op: the final character carries only 2 bits of the 64-byte
+    // signature, so "...BA" -> "...BB" decodes to the same signature (about
+    // 1 in 16 Ed25519 signatures end that way) and this test flaked.
+    const bytes = Buffer.from(sig, "base64url");
+    bytes[0] ^= 0x01;
+    const flipped = bytes.toString("base64url");
     const r = await verify([h, p, flipped].join("."));
     expect(r.status).toBe(400);
     expect(r.body.valid).toBe(false);
