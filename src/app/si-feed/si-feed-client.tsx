@@ -784,6 +784,125 @@ export default function SiFeedClient() {
           </aside>
         </section>
 
+        <section className="si-glossary" aria-labelledby="si-glossary-title">
+          <div className="si-glossary-heading">
+            <div>
+              <div className="si-label">THE AUTHICHAIN FIELD GUIDE</div>
+              <h2 id="si-glossary-title">Decode the signal. Meet the characters.</h2>
+              <p>
+                A pocket glossary for the authentic agentic economy—with fewer
+                acronyms left alone in a dark server room.
+              </p>
+            </div>
+            <span className="si-glossary-stamp">SI LANGUAGE · HUMAN TRANSLATION</span>
+          </div>
+
+          <div className="si-glossary-story" aria-label="A tiny AuthiChain story">
+            <div className="si-story-beat">
+              <span className="si-story-glyph">▣</span>
+              <span className="si-story-term">PRODUCT</span>
+              <span className="si-story-caption">arrives with a Seal</span>
+            </div>
+            <ArrowRight className="si-story-arrow" size={15} />
+            <div className="si-story-beat">
+              <span className="si-story-glyph">⌁</span>
+              <span className="si-story-term">PROVENANCE</span>
+              <span className="si-story-caption">provides its alibi</span>
+            </div>
+            <ArrowRight className="si-story-arrow" size={15} />
+            <div className="si-story-beat">
+              <span className="si-story-glyph">◎</span>
+              <span className="si-story-term">AGENT</span>
+              <span className="si-story-caption">checks before checkout</span>
+            </div>
+            <ArrowRight className="si-story-arrow" size={15} />
+            <div className="si-story-beat">
+              <span className="si-story-glyph">$</span>
+              <span className="si-story-term">x402</span>
+              <span className="si-story-caption">settles in Base USDC</span>
+            </div>
+            <ArrowRight className="si-story-arrow" size={15} />
+            <div className="si-story-beat">
+              <span className="si-story-glyph">✳</span>
+              <span className="si-story-term">STORYMODE</span>
+              <span className="si-story-caption">writes the recap</span>
+            </div>
+            <p className="si-story-punchline">
+              Meanwhile, $QRON is waiting at the Polygon station. Different
+ token, different train.
+            </p>
+          </div>
+
+          <div className="si-glossary-grid">
+            {[
+              {
+                term: "SI Feed",
+                label: "SIGNAL INTELLIGENCE",
+                description:
+                  "One readable stream of system events. Think company RSS, with its shoes on the right feet.",
+              },
+              {
+                term: "Signal",
+                label: "THE BREADCRUMB",
+                description:
+                  "A normalized event: what happened, where, and when. A clue—not the whole case file.",
+              },
+              {
+                term: "Seal",
+                label: "THE PRODUCT'S ID",
+                description:
+                  "A cryptographically signed authenticity record a person or agent can verify. The tiny bouncer for a big claim.",
+              },
+              {
+                term: "Provenance",
+                label: "THE PAPER TRAIL",
+                description:
+                  "Evidence about origin and journey. In other words: where it came from, not just where it says it came from.",
+              },
+              {
+                term: "MCP",
+                label: "THE TOOL ADAPTER",
+                description:
+                  "A standard way for AI clients to discover and use tools. The menu is not the meal; connecting a server is a separate step.",
+              },
+              {
+                term: "AgentZ",
+                label: "THE CONDUCTOR",
+                description:
+                  "AuthiChain's workflow orchestrator. It can observe and act; the underlying event and audit records remain the ledger.",
+              },
+              {
+                term: "x402",
+                label: "THE AGENT TOLLBOOTH",
+                description:
+                  "The live agent payment path: $0.05 USDC per verification call on Base. Pay, then retry—the API keeps the receipt.",
+              },
+              {
+                term: "$QRON",
+                label: "A DIFFERENT RAIL",
+                description:
+                  "The Polygon token is deployed, but it is not the x402 payment asset. It cannot pay the Base-USDC toll by wearing a fake mustache.",
+              },
+              {
+                term: "StoryMode",
+                label: "THE RECAP WRITER",
+                description:
+                  "Related feed events are grouped into Origin, Journey, and Utility chapters. A local summary—not an oracle, and not an AI claim.",
+              },
+            ].map(({ term, label, description }) => (
+              <article className="si-glossary-card" key={term}>
+                <span>{label}</span>
+                <h3>{term}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+          <p className="si-glossary-credit">
+            AuthiChain language, decoded by @undone0603. Verify the facts;
+            enjoy the puns.
+          </p>
+        </section>
+
         <footer className="si-footer">
           <Link href="/" className="si-footer-brand">
             <span className="si-mark">
