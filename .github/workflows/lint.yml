@@ -66,3 +66,8 @@ jobs:
 
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
+
+      # test/ is Hardhat's node:test directory. The build fetches solc 0.8.19
+      # from binaries.soliditylang.org.
+      - name: Contract tests (Hardhat)
+        run: pnpm test:contracts
