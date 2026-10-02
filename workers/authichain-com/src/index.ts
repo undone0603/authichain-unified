@@ -65,7 +65,7 @@ import {
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
-import { withApolloTracker } from "./apollo-tracker.ts";
+import { withHtmlEgress } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -3706,6 +3706,6 @@ async function handleAuthichainCom(request: Request, env: Env) {
 
 export default {
   async fetch(request: Request, env: Env) {
-    return withApolloTracker(request, await handleAuthichainCom(request, env));
+    return withHtmlEgress(request, await handleAuthichainCom(request, env));
   },
 };
