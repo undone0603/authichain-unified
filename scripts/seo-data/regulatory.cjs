@@ -12,7 +12,7 @@ module.exports = [
     bullets: ['Fiber and recycled-content declarations', 'Care, durability, and repairability data', 'EPCIS 2.0 + JSON-LD registry export'],
     faqs: [{ q: 'When do textiles need a DPP?', a: 'Textiles are a priority category, with delegated regulations expected from 2028.' }, { q: 'How is the passport delivered?', a: 'Via a unique QR/NFC identifier per garment linking to the passport.' }] },
   { keyword: 'eu digital product passport batteries', brand: 'authichain', schemaType: 'Service',
-    lead: 'Generate EU Battery Passports with carbon footprint, state-of-health, and material recovery data.', meta: 'Generate EU Battery Passports with carbon footprint, state-of-health, and material recovery data. AuthiChain — EU DPP Readiness is $299.',
+    lead: 'Generate EU Battery Passports with carbon footprint, state-of-health, and material recovery data.',
     bullets: ['Carbon footprint and material composition', 'State-of-health and recycled-content tracking', 'Ready for the Feb 2027 battery mandate'],
     faqs: [{ q: 'When is the battery passport mandatory?', a: 'From 18 February 2027 for every EV battery, every light means of transport (LMT) battery such as e-bike and e-scooter packs, and every industrial battery over 2 kWh placed on the EU market.' }, { q: 'What data is required?', a: 'Carbon footprint, material composition, state-of-health, and recycled content, among others.' }] },
   { keyword: 'eu digital product passport electronics', brand: 'authichain', schemaType: 'Service',
