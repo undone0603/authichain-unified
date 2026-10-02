@@ -6,3 +6,22 @@ workers_dev = false
 
 [triggers]
 crons = ["*/30 * * * *"]
+
+# Service bindings: same-account Workers can't fetch each other's *.workers.dev
+# URLs (error 1042). RELAY carries the alert email to resend-relay /emails;
+# the rest are uptime targets checked from runUptimeCheck.
+[[services]]
+binding = "RELAY"
+service = "resend-relay"
+
+[[services]]
+binding = "QRON_PORTFOLIO"
+service = "qron-portfolio"
+
+[[services]]
+binding = "AUTHICHAIN_API"
+service = "authichain-api"
+
+[[services]]
+binding = "AUTHICHAIN_DASHBOARD"
+service = "authichain-dashboard"

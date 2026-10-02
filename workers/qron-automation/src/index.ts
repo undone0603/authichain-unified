@@ -129,10 +129,16 @@ export default {
 };
 
 // ============ UPTIME MONITOR ============
-const MONITORED_URLS = [
-  { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/' },
-  { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/' },
-  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/' },
+// Same-account *.workers.dev hosts can't be fetched from a Worker (error 1042),
+// so Workers on this account are checked through a service binding (`binding`,
+// see wrangler.toml). `url` is still the label and the request URL; with a
+// binding it never leaves the account. `upStatuses` lists extra statuses that
+// mean "running" (the dashboard answers an unauthenticated GET / with its 401
+// login page).
+const MONITORED_URLS: { name: string; url: string; binding?: string; upStatuses?: number[] }[] = [
+  { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/', binding: 'QRON_PORTFOLIO' },
+  { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/', binding: 'AUTHICHAIN_API' },
+  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/', binding: 'AUTHICHAIN_DASHBOARD', upStatuses: [401] },
   { name: 'StrainChain', url: 'https://strainchain.undone-k.workers.dev/' },
   { name: 'QRON SEO Engine', url: 'https://qron-seo-engine.undone-k.workers.dev/' },
   { name: 'QRON Gallery', url: 'https://qron.space' },
@@ -145,14 +151,22 @@ async function runUptimeCheck(env: any) {
   for (const site of MONITORED_URLS) {
     const start = Date.now();
     try {
-      const resp = await fetch(site.url, {
+      const init: RequestInit = {
         method: 'GET',
         headers: { 'User-Agent': 'QRON-Uptime-Monitor/1.0' },
         redirect: 'follow'
-      });
+      };
+      let resp: Response;
+      if (site.binding) {
+        const svc = env && env[site.binding];
+        if (!svc) throw new Error(`service binding ${site.binding} not configured`);
+        resp = await svc.fetch(site.url, init);
+      } else {
+        resp = await fetch(site.url, init);
+      }
       const latency = Date.now() - start;
       const status = resp.status;
-      const ok = status >= 200 && status < 400;
+      const ok = (status >= 200 && status < 400) || (site.upStatuses ?? []).includes(status);
 
       results.push({ name: site.name, url: site.url, status, latency: `${latency}ms`, ok });
 
@@ -303,7 +317,14 @@ Automated by QRON Automation Worker
 // ============ EMAIL VIA MAILCHANNELS (FREE ON CF) ============
 async function sendEmail(env: any, { to, subject, body }: any) {
   try {
-    const resp = await fetch('https://resend-relay.undone-k.workers.dev/emails', {
+    // resend-relay is reached through the RELAY service binding (wrangler.toml),
+    // not its workers.dev URL: that URL is off and is blocked (1042) from
+    // same-account Workers anyway. The hostname below is never resolved.
+    if (!env || !env.RELAY) {
+      console.log(`Email error: RELAY service binding not configured (${subject})`);
+      return false;
+    }
+    const resp = await env.RELAY.fetch('https://resend-relay/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Relay-Key': env.RELAY_SHARED_SECRET },
       body: JSON.stringify({
