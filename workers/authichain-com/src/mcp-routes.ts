@@ -10,7 +10,6 @@
  * Do not import authentic-economy here — that pulls supabase-js into the
  * landing worker. plans.ts + x402.ts are already on this worker.
  */
-import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -335,7 +334,7 @@ function queryProvenance(assetIdRaw: unknown) {
     jwks: "https://authichain.com/.well-known/jwks.json",
     paidVerify: "POST /mcp tools/call verify",
     compliance:
-      "EU DPP Readiness is a $299 Stripe SKU. It is not a status on this lookup.",
+      "EU DPP readiness is not a status on this lookup. Use dpp_readiness_check (free).",
   };
 }
 
@@ -516,10 +515,8 @@ async function handleRpc(
           isError: true,
         });
       }
-      const result = scoreDppReadiness(input, {
-        auditPrice: planUsd("dpp_readiness"),
-        auditUrl: planPaymentLink("dpp_readiness"),
-      });
+      // Paid plans are on hold (see mcpPricingDiscovery): no audit pitch here.
+      const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
           {

@@ -55,7 +55,11 @@ describe("mcp discovery", () => {
       expect(text).not.toContain("$0.05");
       expect(text).not.toContain("PaymentLink");
       expect(text).not.toContain("USDC");
-      for (const plan of ["dpp_readiness", "strainchain_passport", "strainchain_farm"] as const) {
+      for (const plan of [
+        "dpp_readiness",
+        "strainchain_passport",
+        "strainchain_farm",
+      ] as const) {
         const link = planPaymentLink(plan);
         if (link) expect(text).not.toContain(link);
       }
@@ -106,17 +110,26 @@ describe("mcp discovery", () => {
     expect(pricing.paidPlans.status).toBe("on_hold");
     expect(priced.result.content[0].text).not.toContain("$0.05");
     expect(priced.result.content[0].text).not.toContain("USDC");
-    for (const plan of ["dpp_readiness", "strainchain_passport", "strainchain_farm"] as const) {
+    for (const plan of [
+      "dpp_readiness",
+      "strainchain_passport",
+      "strainchain_farm",
+    ] as const) {
       const link = planPaymentLink(plan);
       if (link) expect(priced.result.content[0].text).not.toContain(link);
     }
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
 
-    const tools = (listed.result.tools as Array<{ name: string; description?: string }>);
+    const tools = listed.result.tools as Array<{
+      name: string;
+      description?: string;
+    }>;
     for (const t of tools) {
       expect(t.description ?? "", t.name).not.toContain("$0.05");
     }
-    expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(/^Free\./);
+    expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
+      /^Free\./
+    );
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -147,7 +160,9 @@ describe("mcp discovery", () => {
     expect(result.score).toBe(40);
     expect(result.category.date).toBe("2027-02-18");
     expect(result.web).toBe("https://authichain.com/dpp-check");
-    expect(result.nextStep).toContain(planPaymentLink("dpp_readiness"));
+    // Paid plans are on hold: the MCP result names no audit, price or link.
+    expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
+    expect(result.nextStep).not.toMatch(/\$\d|audit/i);
 
     const bad = (await (await call({}))!.json()) as {
       result: { isError?: boolean };
@@ -366,7 +381,8 @@ describe("mcp discovery", () => {
     expect(data.verified).toBe(false);
     expect(text).not.toContain("EU DPP Ready");
     expect(text).not.toContain("Polygon / Base");
-    expect(data.compliance).toContain("$299");
+    expect(data.compliance).not.toMatch(/\$\d/);
+    expect(data.compliance).toContain("dpp_readiness_check");
   });
 
   it("query_provenance marks the desk seed as a sample, not an attestation", async () => {
