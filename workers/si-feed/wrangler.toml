@@ -1,0 +1,34 @@
+name = "authichain-si-feed"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Created 2026-10-02. Do not commit INGEST_TOKEN.
+[[d1_databases]]
+binding = "SI_DB"
+database_name = "authichain-si"
+database_id = "53609a9e-168e-45a6-b566-d9a2444d5641"
+migrations_dir = "migrations"
+
+# More specific than authichain.com/* on authichain-com. Cloudflare picks the longest match.
+[[routes]]
+pattern = "authichain.com/api/si/*"
+zone_name = "authichain.com"
+
+[[queues.producers]]
+binding = "SI_STORY_QUEUE"
+queue = "si-story"
+
+[[queues.consumers]]
+queue = "si-story"
+max_batch_size = 10
+max_retries = 5
+dead_letter_queue = "si-story-dlq"
+
+[vars]
+STORY_LLM_ENABLED = "false"
+PUBLIC_KINDS = "observed,derived"
+
+[observability]
+enabled = true
