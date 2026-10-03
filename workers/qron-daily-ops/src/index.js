@@ -190,7 +190,7 @@ async function runOps(env) {
   const {subject, body} = buildReport(endpoints, stripe, supabase, kv, insights);
 
   // Send via Gmail relay (primary)
-  const sent = await fetch(GMAIL, {
+  await fetch(GMAIL, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       from:'AuthiChain Ops <ops@qron.space>',

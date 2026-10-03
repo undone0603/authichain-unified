@@ -24,11 +24,6 @@
       "archive": "docs/archive/cf-workers/qron-self-heal.js",
       "note": "See OFFREPO_WORKERS.md. Superseded in spirit by ops-pulse."
     },
-    "qron-daily-ops": {
-      "disposition": "archive",
-      "archive": "docs/archive/cf-workers/qron-daily-ops.js",
-      "note": "See OFFREPO_WORKERS.md. Superseded in spirit by owner-digest. Named in SECURITY-REMEDIATION-CRITICAL.md."
-    },
     "qron-portfolio": {
       "disposition": "archive",
       "archive": "docs/archive/cf-workers/qron-portfolio.js",

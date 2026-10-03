@@ -53,9 +53,13 @@ Deno.serve(async (req: Request) => {
   const prod = PRODUCTS[product];
   if (!prod) return J({ error: 'Unknown product: ' + product, available: Object.keys(PRODUCTS) }, 400);
 
-  const origin = req.headers.get('origin') ?? 'https://qron.space';
-  const base = origin.includes('authichain.com') ? 'https://authichain.com'
-             : origin.includes('strainchain.io')  ? 'https://strainchain.io'
+  // Match the Origin host exactly (or a subdomain of it); a substring check
+  // would accept hosts like authichain.com.attacker.example.
+  let originHost = '';
+  try { originHost = new URL(req.headers.get('origin') ?? '').hostname.toLowerCase(); } catch { originHost = ''; }
+  const isHost = (h: string) => originHost === h || originHost.endsWith('.' + h);
+  const base = isHost('authichain.com') ? 'https://authichain.com'
+             : isHost('strainchain.io')  ? 'https://strainchain.io'
              : 'https://qron.space';
 
   const ok_url = success_url ?? (base + '/success?session_id={CHECKOUT_SESSION_ID}');
