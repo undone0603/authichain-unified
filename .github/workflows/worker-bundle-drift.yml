@@ -7,6 +7,7 @@ name: Worker bundle drift (govchain-us, qron-space)
 # also compares against the version serving 100% of traffic (read-only GETs),
 # which catches an older Workers Build finishing last and overwriting a newer
 # one (Oct 3: d12e1342's govchain-us build replaced 5ee5f4c7's).
+# Scope: only govchain-us and qron-space are built and checked, not every Worker.
 
 on:
   pull_request:
@@ -40,6 +41,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  WRANGLER_SEND_METRICS: "false"
 
 jobs:
   expected:
