@@ -6,16 +6,19 @@ Live money: 0 stranger customers. One founder $10 charge is not a sale.
 Do not list First Dollar $1 or AuthiChain Seal $99/mo.
 Apex CTAs only: `/generate`, `/checkout/{plan}`, `/dpp-check`, `/verify`, `/onboard`. Never a `*.vercel.app` URL.
 
-## Current readiness blocker — 2026-10-03
+## Current readiness — 2026-10-03
 
-LOOP-03 is instrumented for `/generate` views, anonymous submissions, and
-checkout views/session starts, but it is **not launch-ready**: `POST /api/generate`
-requires an authenticated user and returns 401 for an anonymous visitor.
-`worker-app/index.ts` deliberately does not emit `free_gen_granted` or
-`free_gen_exhausted` because the promised anonymous five-generation tier does
-not exist. Do not describe the current flow as “five free” or use the LOOP-03
-kill threshold until either that tier is implemented and verified or the offer
-and its copy are revised to match the existing sign-in/credit flow.
+LOOP-03 uses account-based credits: `POST /api/generate` requires an
+authenticated user, and an unauthenticated submission is routed to Starter
+checkout. There is no anonymous five-generation allowance. Public copy and the
+plan catalogue must describe sign-in/account credits rather than promise
+anonymous free use. `free_gen_granted` and `free_gen_exhausted` remain reserved
+for a future anonymous tier and are not part of the current measurement
+contract.
+
+The kill window starts only after `/generate` views, unauthenticated attempts,
+checkout events, Stripe expirations, and successfully fulfilled Starter
+purchases all record to `growth_loop_events` and the path is verified.
 
 ## Priority
 
@@ -31,16 +34,16 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Page: `qron.space/generate` (proxied to AuthiChain app)
 
-- **Headline:** Generate a Living QR. Five are free.
-- **Subhead:** Enter a product URL and an optional style prompt. Each free generation is lookup-verify only. Signed AuthiChain verification is in development.
+- **Headline:** Generate a Living QR with account credits.
+- **Subhead:** Enter a product URL and an optional style prompt. Sign-in is required. Starter Pack adds 100 generations for $29, one-time. Signed AuthiChain verification is in development.
 - **Proof (citeable only):** Ed25519 JWKS at `https://authichain.com/.well-known/jwks.json`. Polygon certificate contract `0x4da4D2675e52374639C9c954f4f653887A9972BE`. No customer logos.
 - **Primary CTA:** Queue Living QR
 - **Secondary CTA:** Buy Starter Pack — $29 → `https://authichain.com/checkout/starter`
 - **Tertiary:** Start Launch $19/mo → `https://authichain.com/checkout/qron_launch`
 
-### Paywall at 5/5 free
+### Starter Pack offer
 
-- **Headline:** Those 5 are signed. The next 100 are $29.
+- **Headline:** Need more generations?
 - **Subhead:** Starter Pack — 100 AI QR generations that never expire. No subscription.
 - **CTA:** Buy Starter Pack $29 → `/checkout/starter`
 - **Secondary:** or Launch at $19/mo → `/checkout/qron_launch`
@@ -59,8 +62,8 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Meta
 
-- Title: `Living QR generator | QRON — 5 free, then $29`
-- Description: `Generate scannable AI QR art. Five free lookup-only generations, then a $29 Starter Pack of 100 that never expire.`
+- Title: `Living QR generator | QRON — account credits and $29 Starter Pack`
+- Description: `Generate scannable AI QR art with account credits. Starter Pack includes 100 generations for $29, one-time.`
 
 ### JSON-LD
 
@@ -83,11 +86,11 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 | | |
 |---|---|
-| Trigger | Anonymous hit on `/generate` |
-| Mechanism | 5 free → hard paywall → email-gated `/checkout/starter` → Stripe |
-| CVR | estimate 2–6% submit → paid (no stranger baseline yet) |
-| Events | `generate_view`, `generate_submit_anon`, `free_gen_granted`, `free_gen_exhausted`, `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` |
-| Kill | 14 days after events exist: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view` |
+| Trigger | Visitor hits `/generate`; generation requires a signed-in account with credits |
+| Mechanism | Account credits → email-gated `/checkout/starter` → Stripe; unauthenticated attempts route to Starter checkout |
+| CVR | Baseline not established: `generate_view` → `checkout_session_started` → fulfilled paid purchase |
+| Events | `generate_view`, `generate_submit_anon` (unauthenticated attempt), `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` (paid and fulfilled) |
+| Kill | 14 days after end-to-end event wiring is deployed and verified: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view` |
 
 ### Lifecycle email (recovery only)
 

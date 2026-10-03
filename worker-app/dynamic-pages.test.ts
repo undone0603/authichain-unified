@@ -611,7 +611,9 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain("Sign in to use account credits.");
+    expect(body).toContain("100 generations for $29, one-time");
+    expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
     expect(body).not.toContain("/dashboard");
@@ -651,13 +653,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("5 free, then 100 for $29");
+    expect(body).toContain("Sign in to use account credits.");
+    expect(body).not.toContain("Five generations are free");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
     expect(body).not.toContain("Those 5 are signed");
   });
 
-  it("303s a valid URL to /onboard", async () => {
+  it("sends an unauthenticated generation attempt to the Starter checkout", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -670,8 +673,9 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(res.status).toBe(303);
     const location = res.headers.get("location") || "";
-    expect(location).toContain("/onboard");
-    expect(location).toContain("vertical=qron");
+    expect(location).toContain("/checkout/starter");
+    expect(location).toContain("targetUrl=https%3A%2F%2Fexample.com%2Fsku");
+    expect(location).toContain("prompt=neon");
   });
 });
 
