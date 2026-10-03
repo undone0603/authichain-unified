@@ -83,7 +83,7 @@ const TOOLS = [
   },
   {
     name: "verify_record",
-    description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier, then read its Polygon anchor transaction. Pass id "${"polygon-anchor-1"}" for the published demonstration record, anchored on Polygon mainnet in tx 0x2491…10b7, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+    description: `Free. Check a signed provenance record with the open reference verifier: the Ed25519 signature against the did:key inside the record (it does not check who the issuer is) and, if you pass an anchor, whether that Polygon transaction carries the record hash (see anchorOnChain; "verified" alone does not mean the transaction exists). Pass id "polygon-anchor-1" for AuthiChain's one published demonstration record (Polygon mainnet tx 0x2491…10b7). It does not inspect a physical product.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -93,7 +93,7 @@ const TOOLS = [
         },
         record: {
           type: "object",
-          description: "A signed AuthiChain provenance record (JSON).",
+          description: "A signed provenance record (JSON).",
         },
         anchor: {
           type: "object",
