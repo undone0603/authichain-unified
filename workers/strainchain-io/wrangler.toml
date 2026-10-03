@@ -30,3 +30,8 @@ enabled = true
 [[services]]
 binding = "VERIFY_APP"
 service = "authichain-app"
+
+# Self-hosted Plus Jakarta Sans (CFD-194). Serves /fonts/*.woff2 + /fonts/plus-jakarta-sans.css
+# from this Worker's own static assets; every other path still runs the Worker.
+[assets]
+directory = "../_shared/font-assets"
