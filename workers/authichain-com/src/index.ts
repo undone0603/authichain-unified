@@ -23,6 +23,7 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
+import { launchWeek1Section } from "./launch-week-1";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -2524,6 +2525,7 @@ const HTML = `<!DOCTYPE html>
       { href: "/onboard", label: "Onboard", primary: false },
     ],
   })}
+  ${launchWeek1Section()}
   ${estateTrust([
     { value: "Ed25519", label: "Signed seals" },
     { value: "Polygon", label: "Contract deployed" },
