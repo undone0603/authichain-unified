@@ -85,7 +85,7 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
     expect(res!.status).toBe(200);
     const html = await res!.text();
     expect(html).toContain('href="/checkout/dpp_readiness"');
-    expect(html).toContain('href="/checkout/starter"');
+    expect(html).not.toContain('href="/checkout/starter"');
     expect(html).not.toContain("strainchain_farm");
     expect(html).not.toContain("Farm Plan");
     expect(html).toContain("noindex");

@@ -16,13 +16,13 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes the live $29/$99/$299 catalogue, not a legacy SKU", () => {
+  it("exposes the live $99/$299 catalogue, not the archived Starter Pack", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
-    expect(byId.starter.price).toBe(29);
+    expect(byId.starter).toBeUndefined();
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
-    expect(packs.some(p => p.price === 49 && p.id === "starter")).toBe(false);
+    expect(packs.some(p => p.id === "starter")).toBe(false);
   });
 });
 

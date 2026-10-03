@@ -636,7 +636,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain("5 free, then 500 for $99, no subscription.");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
     expect(body).not.toContain("/dashboard");
@@ -657,13 +657,12 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("fetch('/api/generate'");
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
-    expect(body).toContain("$29");
-    expect(body).toContain("$99");
+        expect(body).toContain("$99");
     expect(body).toContain("$299");
     // Top-ups are the live Starter/Creator packs; the retired credit bundles
     // ($9.99/$39.99/$99.99) had links on no live Stripe account.
     expect(body).toContain(
-      'href="https://authichain.com/checkout/starter"'
+      'href="https://authichain.com/checkout/creator"'
     );
     expect(body).toContain(
       'href="https://authichain.com/checkout/creator"'
@@ -676,14 +675,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("5 free, then 100 for $29");
+    expect(body).toContain("5 free, then 500 for $99");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
     expect(body).not.toContain("Those 5 are signed");
   });
 
-  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
-  it("303s a valid URL to the starter checkout", async () => {
+  // The no-JS submit goes to the creator checkout (the generate wall, #1388).
+  it("303s a valid URL to the creator checkout", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -699,7 +698,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
       res.headers.get("location") || "",
       "https://example.test"
     );
-    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.pathname).toBe("/checkout/creator");
     expect(location.searchParams.get("targetUrl")).toBe(
       "https://example.com/sku"
     );

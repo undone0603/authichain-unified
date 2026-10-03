@@ -208,6 +208,9 @@ describe("GET /api/generate", () => {
     expect(body.methods).toContain("POST");
     expect(body.auth).toBe(false);
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
+      false
+    );
+    expect(body.packs.some((p: { price: number }) => p.price === 99)).toBe(
       true
     );
   });
