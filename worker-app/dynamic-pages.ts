@@ -932,11 +932,6 @@ function onboardPayNowHtml(): string {
     }) +
     "\n" +
     catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "StrainChain Farm Plan — $149/mo",
-    }) +
-    "\n" +
-    catalogPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "EU DPP Readiness Audit — $299",
     }) +
@@ -970,7 +965,7 @@ function onboardFormHtml(error?: string, host = ""): string {
   return htmlDocument({
     title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / DPP $299 / Basic $199.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +

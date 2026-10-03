@@ -210,11 +210,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
       planPaymentLink("strainchain_passport"),
       path
     );
-    assert.equal(
-      body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
+    assert.equal(body.pricing.humanCheckout.farmPaymentLink, undefined, path);
     assert.equal(
       body.pricing.humanCheckout.starterPaymentLink,
       planPaymentLink("starter"),

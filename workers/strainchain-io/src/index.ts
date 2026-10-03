@@ -15,12 +15,10 @@ import {
   estatePricingGrid,
   tryHandleEstatePricing,
 } from "../../_shared/estate-pricing.ts";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 
 /** Recurring StrainChain path. Replaced the dead StrainChain Basic link on 2026-09-23. */
-const FARM_PLAN_LINK = planPaymentLink("strainchain_farm") ?? "/pricing";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import {
   isSeoPassportPath,
@@ -2031,7 +2029,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Cannabis supply chain",
   title: "Genetics passports for every cultivar.",
-  lede: "Publish a genetics passport for one cultivar from your existing CoAs for $49, or cover every cultivar with the Farm Plan at $149/mo. On our roadmap: seed-to-shelf tracking and METRC compliance reporting.",
+  lede: "Publish a genetics passport for one cultivar from your existing CoAs for $49. On our roadmap: seed-to-shelf tracking and METRC compliance reporting.",
   emailCheckout: {
     action: "https://authichain.com/checkout/strainchain_passport",
     label: "Buy a StrainChain Passport — $49",
@@ -2139,9 +2137,8 @@ ${estateFeatures(
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
-    <p class="section-sub">Publish one cultivar for $49, or start the $149/mo Farm Plan on the published Payment Link. Onboard stays the demo intake.</p>
+    <p class="section-sub">Publish one cultivar for $49. Onboard stays the demo intake.</p>
     <div class="estate-actions">
-      <a class="btn btn-primary" href="${FARM_PLAN_LINK}" target="_blank" rel="noopener">Farm Plan $149/mo</a>
       <a class="btn btn-outline" href="/pricing">View pricing</a>
       <a class="btn btn-outline" href="/onboard">Request demo</a>
     </div>
@@ -2150,17 +2147,12 @@ ${estateFeatures(
 
 ${estateCtaBand({
   title: "Publish one cultivar passport",
-  lede: "Enter a work email so Stripe can recover the cart. Farm Plan is the $149/mo Payment Link. Onboard stays the demo intake.",
+  lede: "Enter a work email so Stripe can recover the cart. Onboard stays the demo intake.",
   emailCheckout: {
     action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
   },
   actions: [
-    {
-      href: FARM_PLAN_LINK,
-      label: "Farm Plan $149/mo",
-      primary: false,
-    },
     { href: "/onboard", label: "Request demo", primary: false },
   ],
 })}
