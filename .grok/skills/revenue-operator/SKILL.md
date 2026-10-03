@@ -8,17 +8,17 @@ description: >-
 
 # Revenue operator
 
-Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. Founder addresses live in `DEFAULT_FOUNDER_EMAILS` in that file. The $10 self-test does not qualify.
+Money truth is `classifyRevenue` in `scripts/revenue-operator.ts`. A paid livemode charge qualifies only when its email is not a founder address. Founder addresses live in `DEFAULT_FOUNDER_EMAILS`. The founder $10 charge and founder-only subscriptions do not qualify. A non-founder subscription in `active`, `trialing`, or `past_due` does.
 
 ## Cycle
 
 1. `checkFarmRails` — Payment Link GET 200, Farm HEAD 204. Do not GET `/api/checkout/dpp` without `?email=`.
 2. `classifyRevenue` on livemode subscriptions, payouts, and charges.
-3. `decideOperatorAction`. `wait_buyer` means stop.
+3. `decideOperatorAction`. `wait_buyer` is a gate: unlock outreach or take `send_one`. It is not done.
 4. Send only when the action is `send_one`. That requires `classifySend` (verified-inbox skill). HubSpot / Airtable / Apollo rows go through `scripts/revenue-crm.ts` first (crm-named-humans skill). They are not cash.
-5. `mayDispatch` and `mayDisableOutreachApproval` stay closed on frozen workflows and `REQUIRE_OUTREACH_APPROVAL=false`. Do not run AgentZ `--mode auto`.
+5. `mayDispatch` allows `b2b-outreach`, `outreach-trigger`, `dpp-outreach-trigger`, and `pipeline-tick`. `gov-mint` stays frozen. `REQUIRE_OUTREACH_APPROVAL=false` stays closed. Do not run AgentZ `--mode auto`.
 6. Do not add `$QRON` to x402 `accepts[]` or run a live buyback.
 
 CLI: `pnpm exec tsx scripts/revenue-operator.ts decide --snapshot=path.json --skip-rails`
 
-If the action is not `qualifying` or `send_one`, stop. Do not invent a charge.
+Do not invent a charge. A non-founder paid sale or subscription already in livemode is enough. Otherwise the next action is `send_one`.
