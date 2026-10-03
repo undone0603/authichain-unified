@@ -65,7 +65,7 @@ import {
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
-import { withApolloTracker } from "./apollo-tracker.ts";
+import { withHtmlEgress } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -2615,7 +2615,7 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Product Fingerprint — AuthiChain</title>
-<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are anchored on Polygon mainnet and checkable with the open verifier.">
+<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are checkable with the open verifier.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="Product Fingerprint — AuthiChain">
@@ -2699,7 +2699,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. Signed AuthiChain records are anchored on Polygon mainnet: see the
+      This fingerprint is not stored and not anchored. Certificate contract live on Polygon; product certification through verify is in development. See the
       <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
       <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
     </div>
@@ -3579,6 +3579,6 @@ async function handleAuthichainCom(request: Request, env: Env) {
 
 export default {
   async fetch(request: Request, env: Env) {
-    return withApolloTracker(request, await handleAuthichainCom(request, env));
+    return withHtmlEgress(request, await handleAuthichainCom(request, env));
   },
 };

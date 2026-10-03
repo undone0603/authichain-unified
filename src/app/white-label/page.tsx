@@ -13,7 +13,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'White-Label SDK | AuthiChain Protocol for Print Shops',
-  description: 'Embed the AuthiChain verification protocol directly into your label printing workflow. Turn static packaging into scannable, blockchain-anchored digital assets.',
+  description: 'Embed the AuthiChain verification protocol directly into your label printing workflow. Turn static packaging into scannable digital assets.',
 };
 
 export default function WhiteLabelPage() {
@@ -35,7 +35,7 @@ export default function WhiteLabelPage() {
           </h1>
           
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-12 leading-relaxed">
-            Upgrade your print shop offerings overnight. Integrate the AuthiChain White-Label SDK to generate AI-powered, blockchain-anchored QR codes for your clients directly from your existing dashboard.
+            Upgrade your print shop offerings overnight. Integrate the AuthiChain White-Label SDK to generate AI-powered QR codes for your clients directly from your existing dashboard.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -71,7 +71,7 @@ export default function WhiteLabelPage() {
             {
               icon: ShieldCheck,
               title: 'Compliance Built-In',
-              desc: 'Ed25519 signatures and Polygon anchors give your clients audit-ready proof for FTC MUSA, EU DPP, and ISO traceability claims.'
+              desc: 'Ed25519 signatures give your clients audit-ready proof for FTC MUSA, EU DPP, and ISO traceability claims.'
             },
             {
               icon: Zap,

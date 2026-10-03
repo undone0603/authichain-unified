@@ -53,5 +53,10 @@ jobs:
       - name: Check node:test script suites
         run: node --test scripts/autonomy/*.test.mjs scripts/ci/*.test.mjs
 
+      # node:test suites outside scripts/autonomy and scripts/ci that no other
+      # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
+      - name: Check other node:test suites
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts
+
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs

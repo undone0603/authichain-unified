@@ -258,6 +258,31 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(getHyperdriveDb).not.toHaveBeenCalled();
   });
 
+  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
+    const res = await app.request(
+      "/p/quantum-financial-system-real-or-myth",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(body).toContain('<meta name="robots" content="noindex">');
+  });
+
+  it("leaves indexable SEO hubs without a robots noindex", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(body).not.toContain('name="robots"');
+  });
+
   it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
     const res = await app.request(
       "/p/cannabis-blockchain-provenance",

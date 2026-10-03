@@ -238,7 +238,7 @@ const DATA = [
   ...[
     { keyword: 'eu ban on destroying unsold clothes and shoes records', brand: 'authichain', schemaType: 'Service',
       lead: 'Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and they must disclose the volumes they discard; medium-sized companies follow on 19 July 2030.',
-      bullets: ['A signed, timestamped record per batch of unsold goods: what it was, how many units, and the decision taken, in a form an auditor can check without asking you', 'Anchoring commits the hash of each record to a public ledger, so the date of a disposal decision is checkable rather than asserted', 'Records are W3C Verifiable Credentials verified offline with the Apache-2.0 reference verifier, so an authority needs no account with us'],
+      bullets: ['A signed, timestamped record per batch of unsold goods: what it was, how many units, and the decision taken, in a form an auditor can check without asking you', 'Anchoring commits the hash of each record to a public ledger, so the date of a disposal decision is checkable rather than asserted'],
       faqs: [{ q: 'Who has to comply with the destruction ban?', a: 'The ESPR applies the ban to large companies from 19 July 2026 and to medium-sized companies from 19 July 2030. Small and micro enterprises are outside it. Check your size class against the regulation text.' }, { q: 'Does a signed record prove the goods were not destroyed?', a: 'No. A signature proves who made a statement and when, and an anchor proves the hash existed at a point in time. Neither proves the physical outcome; the record is evidence you attach to your own disclosure.' }] },
     { keyword: 'espr dpp independent service provider backup copy', brand: 'authichain', schemaType: 'Service',
       lead: 'ESPR Article 10 requires the data in a digital product passport to be available through an independent third-party service provider, so a passport stays reachable if the manufacturer stops operating.',
@@ -277,7 +277,12 @@ function buildEntry(d) {
   const url = `https://${b.origin || b.domain}/p/${slug}`;
   const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
-  const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+  // d.meta (optional) pins the meta description to the lead's first sentence
+  // without the price suffix. Used where a claims removal (RES-13) shortened
+  // a lead and the template would otherwise pull a new $ clause into meta.
+  const metaDescription = d.meta
+    ? clampMeta(d.meta, 158)
+    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
@@ -286,8 +291,7 @@ function buildEntry(d) {
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
-    `<h2>FAQ</h2>` +
-    d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
+    (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -307,17 +311,23 @@ function buildEntry(d) {
           { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
         ],
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: d.faqs.map((f) => ({
-          '@type': 'Question',
-          name: f.q,
-          acceptedAnswer: { '@type': 'Answer', text: f.a },
-        })),
-      },
+      ...(d.faqs.length
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: d.faqs.map((f) => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+              })),
+            },
+          ]
+        : []),
     ],
   };
-  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd };
+  // noindex: true keeps a page reachable at /p/<slug> but out of
+  // sitemap-slugs.json; worker-app/dynamic-pages.ts emits robots noindex for it.
+  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd, ...(d.noindex ? { noindex: true } : {}) };
 }
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
@@ -386,7 +396,7 @@ fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 // Landing workers must not import the full catalogue; they list /p/<slug> in
 // their sitemaps from this small per-domain index instead.
 const byDomain = {};
-for (const p of merged) (byDomain[p.domain] ||= []).push(p.slug);
+for (const p of merged) if (!p.noindex) (byDomain[p.domain] ||= []).push(p.slug);
 for (const d of Object.keys(byDomain)) byDomain[d].sort();
 fs.writeFileSync(SLUGS_OUT, JSON.stringify(byDomain, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
