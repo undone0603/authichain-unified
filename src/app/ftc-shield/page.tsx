@@ -46,7 +46,7 @@ export default function FtcShieldPage() {
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-12 leading-relaxed">
             The FTC&apos;s Made in USA Labeling Rule (16 CFR Part 323) turns on whether
             &ldquo;all or virtually all&rdquo; of a product is US-origin — and the largest order in
-            its April 2026 sweep was $625,000. Turn your packaging into blockchain-anchored
+            its April 2026 sweep was $625,000. Turn your packaging into
             origin evidence, so the substantiation exists before anyone asks for it.
           </p>
 
@@ -89,8 +89,8 @@ export default function FtcShieldPage() {
           {[
             { 
               icon: ShieldCheck, 
-              title: 'Immutable Evidence', 
-              desc: 'Log your US-based manufacturing stages. Data is hashed and anchored to Polygon, making it tamper-proof against any audit.' 
+              title: 'Evidence', 
+              desc: 'Log your US-based manufacturing stages.' 
             },
             { 
               icon: FileText, 

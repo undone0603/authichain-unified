@@ -124,7 +124,6 @@
     "product-authentication-for-medical-devices",
     "products-excluded-from-eu-digital-product-passport-requirement",
     "qr-code-phishing-product-packaging-security",
-    "quantum-financial-system-real-or-myth",
     "right-to-repair-spare-parts-verification",
     "scantrust-alternative-with-a-public-verifier",
     "scip-database-digital-product-passport-substances-of-concern",
@@ -181,7 +180,6 @@
     "government-rfp-award-verification-blockchain",
     "offline-permit-certificate-qr-verification",
     "product-authentication-for-government-supply-chain",
-    "sbir-svip-blockchain-document-verification",
     "supply-chain-traceability-aerospace",
     "supply-chain-traceability-defense"
   ],

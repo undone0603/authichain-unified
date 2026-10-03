@@ -23,7 +23,7 @@ export default function EnterprisePage() {
           
           <p className="max-w-3xl mx-auto text-zinc-500 text-lg md:text-xl font-medium mb-12 leading-relaxed uppercase tracking-tighter">
             Government-grade cryptographic security, multi-region edge delivery, and 
-            immutable supply chain provenance for the world&apos;s most demanding brands.
+            supply chain provenance for the world&apos;s most demanding brands.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
