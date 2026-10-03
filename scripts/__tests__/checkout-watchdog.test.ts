@@ -180,11 +180,11 @@ describe("checkout watchdog: Stripe", () => {
         amount: { dpp_readiness: 19900 },
       })
     );
-    expect(findings.map(f => [f.kind, f.planId, f.fixable])).toEqual([
-      ["price_inactive", "creator", true],
+    expect(findings.map(f => [f.kind, f.planId, f.fixable]).sort()).toEqual([
       ["payment_link_inactive", "creator", true],
+      ["price_inactive", "creator", true],
       ["price_mismatch", "dpp_readiness", false],
-    ]);
+    ].sort());
   });
 
   it("only trusts live keys", () => {
