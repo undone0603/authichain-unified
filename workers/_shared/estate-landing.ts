@@ -76,7 +76,10 @@ export const ESTATE_BRANDS: Record<EstateBrandId, EstateBrand> = {
   },
 };
 
-export const ESTATE_FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">`;
+// Self-hosted Plus Jakarta Sans (CFD-194): served from each Worker's own static
+// assets (`[assets] directory = "../_shared/font-assets"`), no Google Fonts request.
+// See workers/_shared/font-assets/fonts/FONTS-LICENSE.md.
+export const ESTATE_FONTS_LINK = `<link rel="stylesheet" href="/fonts/plus-jakarta-sans.css">`;
 
 export interface EstateLink {
   href: string;

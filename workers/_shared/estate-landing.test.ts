@@ -1,8 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   ESTATE_BASE_CSS,
   ESTATE_BRANDS,
+  ESTATE_FONTS_LINK,
   ESTATE_INDEXNOW_KEY,
   ESTATE_INDEXNOW_PATH,
   estateCtaBand,
@@ -160,4 +164,62 @@ test("IndexNow key file is exact-path plain text with a short cache", async () =
     null,
     "non-GET is left to the worker"
   );
+});
+
+// CFD-194: Plus Jakarta Sans is self-hosted from each Worker's static assets.
+const SHARED_DIR = fileURLToPath(new URL(".", import.meta.url));
+const FONT_DIR = join(SHARED_DIR, "font-assets", "fonts");
+const GOOGLE_FONT_HOSTS = /fonts\.(googleapis|gstatic)\.com/;
+const FONT_WORKERS = ["authichain-com", "govchain-us", "qron-space", "strainchain-io"];
+
+test("estate font link is same-origin, not Google Fonts", () => {
+  assert.doesNotMatch(ESTATE_FONTS_LINK, GOOGLE_FONT_HOSTS);
+  assert.match(ESTATE_FONTS_LINK, /href="\/fonts\/plus-jakarta-sans\.css"/);
+});
+
+test("self-hosted @font-face rules use swap and point at shipped woff2 files", () => {
+  const css = readFileSync(join(FONT_DIR, "plus-jakarta-sans.css"), "utf8");
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ""), GOOGLE_FONT_HOSTS);
+  const rules = css.match(/@font-face\{[^}]*\}/g) ?? [];
+  assert.equal(rules.length, 20);
+  const seen = new Set<string>();
+  for (const rule of rules) {
+    assert.match(rule, /font-family:'Plus Jakarta Sans'/);
+    assert.match(rule, /font-display:swap/);
+    const weight = rule.match(/font-style:(normal|italic);font-weight:(\d+)/);
+    assert.ok(weight, rule);
+    seen.add(`${weight[1]} ${weight[2]}`);
+    const file = rule.match(/url\(\/fonts\/([a-z0-9-]+\.woff2)\)/)?.[1];
+    assert.ok(file, rule);
+    const bytes = readFileSync(join(FONT_DIR, file));
+    assert.equal(bytes.subarray(0, 4).toString("latin1"), "wOF2", file);
+  }
+  assert.deepEqual([...seen].sort(), [
+    "italic 400",
+    "normal 400",
+    "normal 500",
+    "normal 600",
+    "normal 700",
+  ]);
+  assert.ok(existsSync(join(FONT_DIR, "FONTS-LICENSE.md")));
+});
+
+test("font-serving Workers ship the font assets and no Google Fonts references", () => {
+  const scan = (dir: string): string[] =>
+    readdirSync(dir).flatMap((name) => {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) return scan(path);
+      return /\.(ts|js|mjs|html)$/.test(name) ? [path] : [];
+    });
+  for (const worker of FONT_WORKERS) {
+    const toml = readFileSync(join(SHARED_DIR, "..", worker, "wrangler.toml"), "utf8");
+    assert.match(toml, /\[assets\]\s*\ndirectory = "\.\.\/_shared\/font-assets"/, worker);
+    for (const file of scan(join(SHARED_DIR, "..", worker, "src"))) {
+      assert.doesNotMatch(readFileSync(file, "utf8"), GOOGLE_FONT_HOSTS, file);
+    }
+  }
+  for (const name of readdirSync(SHARED_DIR).filter((n) => /^estate-.*\.ts$/.test(n))) {
+    if (name.endsWith(".test.ts")) continue;
+    assert.doesNotMatch(readFileSync(join(SHARED_DIR, name), "utf8"), GOOGLE_FONT_HOSTS, name);
+  }
 });

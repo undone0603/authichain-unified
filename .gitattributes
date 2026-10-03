@@ -26,3 +26,6 @@ package-lock.json -text linguist-generated=true
 *.pdf binary
 *.woff binary
 *.woff2 binary
+
+# Self-hosted web fonts (CFD-194) are binary; never normalize them.
+*.woff2          binary
