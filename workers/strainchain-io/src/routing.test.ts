@@ -124,7 +124,7 @@ test("query strings survive the hop", async () => {
   }
 });
 
-test("the apex offers Passport checkout and the Farm Plan Payment Link", async () => {
+test("the apex offers Passport checkout and no Farm Plan link (PM-222)", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
@@ -140,9 +140,8 @@ test("the apex offers Passport checkout and the Farm Plan Payment Link", async (
   assert.ok(
     html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
-  );
+  assert.equal(html.includes("checkout/strainchain_farm"), false);
+  assert.doesNotMatch(html, /\$149/);
   assert.doesNotMatch(html, /9B6cN59br5xcaCuazy1Nu1o/);
   assert.match(html, /Passport checkout — \$49/);
   assert.doesNotMatch(html, /calendly/i);
@@ -394,7 +393,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
   }
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+test("GET /api/x402/catalog is 200 with Passport+DPP Payment Links, no Farm", async () => {
   const f = stubFetch();
   try {
     const res = await get("/api/x402/catalog");
@@ -410,10 +409,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       };
     };
     assert.equal(body.catalog, "/api/x402/catalog");
-    assert.equal(
-      new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "authichain.com"
-    );
+    assert.equal(body.humanCheckout.farmPaymentLink, undefined);
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
       "authichain.com"
@@ -440,10 +436,8 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     assert.equal(f.calls.length, 0, "/pricing must not be proxied");
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
-    assert.ok(
-      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
-    );
-    assert.match(html, /\$149/);
+    assert.equal(html.includes("checkout/strainchain_farm"), false);
+    assert.doesNotMatch(html, /\$149/);
     assert.doesNotMatch(html, /StrainChain Basic/);
   } finally {
     f.restore();

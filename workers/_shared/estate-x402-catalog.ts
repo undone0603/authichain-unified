@@ -4,7 +4,7 @@
  *
  * Same class of payload authichain.com already serves: unpaid x402 price +
  * payTo from health, plus humanCheckout Payment Links from plans.ts
- * (Passport, DPP, Farm; QRON also Starter + Creator). Do not invent Stripe
+ * (Passport, DPP; QRON also Starter + Creator). Do not invent Stripe
  * URLs. Do not add GET /api/checkout. Do not publish a facilitator URL.
  */
 import { planPaymentLink, planUsd } from "../../src/lib/plans.ts";
@@ -22,10 +22,8 @@ export type SisterHumanCheckout = {
   rail: "stripe";
   passportUsd: number;
   dppUsd: number;
-  farmUsd: number;
   passportPaymentLink?: string;
   dppPaymentLink?: string;
-  farmPaymentLink?: string;
   starterUsd?: number;
   creatorUsd?: number;
   starterPaymentLink?: string;
@@ -78,10 +76,8 @@ function humanCheckout(
     rail: "stripe",
     passportUsd: planUsd("strainchain_passport"),
     dppUsd: planUsd("dpp_readiness"),
-    farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: planPaymentLink("strainchain_passport"),
     dppPaymentLink: planPaymentLink("dpp_readiness"),
-    farmPaymentLink: planPaymentLink("strainchain_farm"),
     source: "src/lib/plans.ts",
   };
   if (brand === "qron") {

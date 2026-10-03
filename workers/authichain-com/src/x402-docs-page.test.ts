@@ -96,7 +96,7 @@ describe("x402 public docs page", () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('action="https://authichain.com/checkout/strainchain_passport"');
-    expect(html).toContain('action="https://authichain.com/checkout/strainchain_farm"');
+    expect(html).not.toContain("checkout/strainchain_farm");
     expect(html).not.toMatch(/href=["']\/api\/checkout/);
     expect(html).not.toMatch(/href=["']\/protocol\/checkout/);
     expect(html).not.toContain("GET /api/checkout");
@@ -108,12 +108,12 @@ describe("x402 public docs page", () => {
     expect(farm).toBeTruthy();
     expect(dpp).toBeTruthy();
     expect(httpsUrl(passport!).hostname).toBe("authichain.com");
-    expect(httpsUrl(farm!).hostname).toBe("authichain.com");
     expect(httpsUrl(dpp!).hostname).toBe("authichain.com");
     expect(html).toContain(`href="${passport}"`);
-    expect(html).toContain(`href="${farm}"`);
+    expect(html).not.toContain(`href="${farm}"`);
     expect(html).toContain(`href="${dpp}"`);
-    expect(html).toContain(`Pay $${planUsd("strainchain_farm")} on Stripe`);
-    expect(html).toContain("StrainChain Farm");
+    // Farm $149/mo is off buyer copy (PM-222).
+    expect(html).not.toContain(`Pay $${planUsd("strainchain_farm")} on Stripe`);
+    expect(html).not.toContain("StrainChain Farm");
   });
 });

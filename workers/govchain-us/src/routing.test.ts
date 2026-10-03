@@ -255,7 +255,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
   assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+test("GET /api/x402/catalog is 200 with Passport+DPP Payment Links, no Farm", async () => {
   const res = await get("/api/x402/catalog");
   assert.equal(res.status, 200);
   const body = (await res.json()) as {
@@ -268,10 +268,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     };
   };
   assert.equal(body.catalog, "/api/x402/catalog");
-  assert.equal(
-    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "authichain.com"
-  );
+  assert.equal(body.humanCheckout.farmPaymentLink, undefined);
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
     "authichain.com"

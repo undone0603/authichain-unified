@@ -213,21 +213,14 @@ export default async function CultivarDossier({
 
       <div className="note note-teal">
         <strong style={{ color: "var(--ink)" }}>
-          Publish this cultivar — Passport $49, or Farm Plan $149/mo.
+          Publish this cultivar — Passport $49.
         </strong>{" "}
-        One published passport per cultivar, built from your existing CoAs; the
-        Farm Plan keeps every cultivar current on each new certificate.{" "}
+        One published passport per cultivar, built from your existing CoAs.{" "}
         <a
           href="https://authichain.com/checkout/strainchain_passport"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
           Publish one passport →
-        </a>{" "}
-        <a
-          href="https://authichain.com/checkout/strainchain_farm"
-          style={{ color: "var(--teal)", fontWeight: 600 }}
-        >
-          Start a Farm Plan →
         </a>
       </div>
 

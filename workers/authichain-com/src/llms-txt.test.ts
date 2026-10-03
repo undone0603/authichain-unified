@@ -25,7 +25,8 @@ describe("llms.txt", () => {
     expect(text).toContain("e-bike / LMT");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).toContain(planPaymentLink("strainchain_passport"));
-    expect(text).toContain(planPaymentLink("strainchain_farm"));
+    expect(text).not.toContain(planPaymentLink("strainchain_farm"));
+    expect(text).not.toContain("Farm Plan");
     expect(text).not.toContain("GET /api/checkout");
     expect(text.toLowerCase()).not.toContain("facilitator.payai");
   });

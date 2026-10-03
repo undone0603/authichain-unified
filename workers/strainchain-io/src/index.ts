@@ -2128,7 +2128,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
-    <p class="section-sub">Passport and Farm Plan prices come from the published catalogue with live Stripe checkout.</p>
+    <p class="section-sub">Passport prices come from the published catalogue with live Stripe checkout.</p>
     ${estatePricingGrid("strainchain")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2183,7 +2183,7 @@ ${estateFooter(
       ],
     },
   ],
-  "Powered by AuthiChain · Farm Plan is the live recurring Payment Link",
+  "Powered by AuthiChain",
 )}
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });

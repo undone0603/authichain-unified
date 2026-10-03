@@ -31,9 +31,12 @@ describe("genetics routes", () => {
     assert.ok(
       html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
-    assert.ok(
-      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+    // Farm Plan $149/mo is off buyer copy (PM-222).
+    assert.equal(
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"'),
+      false
     );
+    assert.doesNotMatch(html, /\$149/);
   });
 
   it("serves Mendo farm library with derived peaks and LT-63 gap", async () => {

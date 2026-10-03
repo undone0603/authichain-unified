@@ -60,7 +60,8 @@ test("every listed card renders its wording from the plan catalogue", () => {
     assertCardWording(qronHtml, p);
   }
   for (const p of listedPlans("strainchain")) {
-    assertCardWording(strainHtml, p);
+    // Farm $149/mo is off buyer copy (PM-222); plans.ts still lists it.
+    if (p.id !== "strainchain_farm") assertCardWording(strainHtml, p);
     assert.equal(authHtml.includes(escHtml(p.cta)), false, `${p.id} stays off AuthiChain`);
   }
 });
@@ -265,7 +266,7 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
   );
 });
 
-test("strainchain /pricing HTML cites passport and farm prices", () => {
+test("strainchain /pricing HTML cites the passport price and no Farm (PM-222)", () => {
   const html = renderEstatePricingPage("strainchain");
   const passport = listedPlans("strainchain").find(
     p => p.id === "strainchain_passport"
@@ -275,15 +276,17 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   assert.equal(hasDeadLink(html), false);
   assert.doesNotMatch(html, /\$199/);
   assert.doesNotMatch(html, /StrainChain Basic/);
-  for (const id of ["strainchain_passport", "strainchain_farm"] as const) {
+  for (const id of ["strainchain_passport"] as const) {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
     assert.ok(html.includes(escHtml(plan(id).cta)), `${id} cta`);
   }
+  assert.doesNotMatch(html, /\$149/);
+  assert.doesNotMatch(html, /Farm/);
   assert.match(
     html,
     /https:\/\/authichain\.com\/checkout\/strainchain_passport/
   );
-  assert.match(
+  assert.doesNotMatch(
     html,
     /https:\/\/authichain\.com\/checkout\/strainchain_farm/
   );
@@ -372,7 +375,8 @@ test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () 
     p => p.id === "strainchain_farm"
   );
   assert.ok(farm?.stripe_payment_link);
-  assert.ok(html.includes(planPaymentLink(farm!.id)!));
+  // Farm $149/mo is off buyer copy (PM-222).
+  assert.equal(html.includes(planPaymentLink(farm!.id)!), false);
   assert.equal(hasDeadLink(html), false);
 });
 
