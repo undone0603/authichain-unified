@@ -636,7 +636,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     const body = await res.text();
     expect(body).toContain("min-height:44px");
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
-    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain("5 free, then 500 for $99, no subscription.");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
     expect(body).not.toContain("/dashboard");
