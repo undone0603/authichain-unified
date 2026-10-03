@@ -162,10 +162,6 @@ const SEO = {
   themeColor: '#4F46E5',
   faqs: [
     {
-      q: 'How does AuthiChain verify a product?',
-      a: 'Issue a cryptographically signed seal, bind it to the physical item, then verify from any camera against the on-chain record.',
-    },
-    {
       q: 'How much does AuthiChain cost?',
       a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
@@ -2341,7 +2337,6 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract, live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Our goal: tamper-evident seals with a signed certificate anyone can verify." },
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
