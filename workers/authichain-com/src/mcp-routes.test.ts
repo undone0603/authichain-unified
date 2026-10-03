@@ -1,7 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
+import {
+  publicKeyFromDidKey,
+  sha256Hex,
+  signingBytes,
+} from "../../../protocol/verifier.mjs";
 import {
   ANCHOR_EXAMPLE_TX,
+  ANCHOR_WALLET,
+  CERT_CONTRACT,
+  DEMONSTRATION_RECORD_HASH,
+  DEMONSTRATION_SIGNER_DID,
+  PRODUCTION_ISSUER_DID,
+  PRODUCTION_ISSUER_KID,
   isMcpPath,
   tryHandleMcp,
   verifyRecordTool,
@@ -550,15 +562,67 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
 
 describe("mcp verify_record (free, open verifier + Polygon read)", () => {
   const hash = anchorJson.recordHash.replace(/^sha256:/, "");
-  function rpcStub(input: string, status = "0x1"): typeof fetch {
+  function rpcStub(
+    input: string,
+    status = "0x1",
+    from = ANCHOR_WALLET,
+    to = ANCHOR_WALLET
+  ): typeof fetch {
     return (async (_url: RequestInfo | URL, init?: RequestInit) => {
       const { method } = JSON.parse(String(init?.body)) as { method: string };
       const result =
         method === "eth_getTransactionByHash"
-          ? { hash: ANCHOR_EXAMPLE_TX, input }
+          ? { hash: ANCHOR_EXAMPLE_TX, input, from, to }
           : { status, blockNumber: "0x5a4b714" };
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
     }) as typeof fetch;
+  }
+  /** Tx not found (Research's RES-42 forged-record repro). */
+  const txMissing = (async () =>
+    new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: null })
+    )) as typeof fetch;
+
+  /** A record signed by a fresh random Ed25519 key (not allowlisted). */
+  function forgedRecord() {
+    const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    const b58 = (b: Buffer) => {
+      let n = BigInt("0x" + (b.toString("hex") || "0"));
+      let out = "";
+      while (n > 0n) {
+        out = B58[Number(n % 58n)] + out;
+        n /= 58n;
+      }
+      for (const x of b) {
+        if (x !== 0) break;
+        out = "1" + out;
+      }
+      return out;
+    };
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+    const raw = publicKey.export({ format: "der", type: "spki" }).subarray(12);
+    const did =
+      "did:key:z" + b58(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+    const record: Record<string, any> = {
+      "@context": [
+        "https://www.w3.org/ns/credentials/v2",
+        "https://authichain.com/protocol/v1",
+      ],
+      type: ["VerifiableCredential", "ProvenanceRecord"],
+      issuer: did,
+      validFrom: "2026-10-01T00:00:00Z",
+      credentialSubject: { id: "https://example.test/not-authichain" },
+      proof: {
+        type: "Ed25519Signature2020",
+        created: "2026-10-01T00:00:00Z",
+        verificationMethod: did + "#" + did.slice(8),
+        proofPurpose: "assertionMethod",
+      },
+    };
+    record.proof.proofValue =
+      "z" + b58(sign(null, signingBytes(record), privateKey));
+    const recordHash = sha256Hex(signingBytes(record));
+    return { record, recordHash, did };
   }
 
   it("is listed as a free tool", async () => {
@@ -584,6 +648,15 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     );
     expect(result).toMatchObject({
       verdict: "verified",
+      protocolVerdict: "verified",
+      reasons: [],
+      signer: {
+        did: DEMONSTRATION_SIGNER_DID,
+        allowlisted: true,
+        role: "demonstration",
+        kid: null,
+        productionIssuer: false,
+      },
       anchorOnChain: true,
       anchorChainStatus: "tx_contains_record_hash",
       anchorBlock: "0x5a4b714",
@@ -593,14 +666,127 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     });
   });
 
-  it("reports the anchor as not on chain when the tx lacks the hash", async () => {
+  it("allowlisted key + a tx that does not carry the hash is not verified", async () => {
     const result = await verifyRecordTool(
       { id: "polygon-anchor-1" },
       { fetchImpl: rpcStub("0xdeadbeef") }
     );
     expect(result).toMatchObject({
+      verdict: "unverified",
+      protocolVerdict: "verified",
+      reasons: ["anchor_not_on_chain:hash_not_in_tx"],
       anchorOnChain: false,
       anchorChainStatus: "hash_not_in_tx",
+    });
+  });
+
+  it.each([
+    ["the cert contract", CERT_CONTRACT],
+    ["the anchor wallet", ANCHOR_WALLET],
+  ])(
+    "third-party wallet anchoring the correct hash to %s is not verified",
+    async (_label, to) => {
+      const thirdParty = "0x1111111111111111111111111111111111111111";
+      const result = await verifyRecordTool(
+        { record: recordJson, anchor: anchorJson },
+        { fetchImpl: rpcStub("0x" + hash, "0x1", thirdParty, to) }
+      );
+      expect(result).toMatchObject({
+        verdict: "unverified",
+        reasons: ["anchor_tx_not_from_anchor_wallet"],
+        anchorOnChain: true,
+      });
+    }
+  );
+
+  it("anchor-wallet tx to an unrelated address is not verified", async () => {
+    const result = await verifyRecordTool(
+      { record: recordJson, anchor: anchorJson },
+      {
+        fetchImpl: rpcStub(
+          "0x" + hash,
+          "0x1",
+          ANCHOR_WALLET,
+          "0x3333333333333333333333333333333333333333"
+        ),
+      }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["anchor_tx_not_to_anchor_address"],
+    });
+  });
+
+  it("demo key is pinned to the published record's hash", () => {
+    expect(DEMONSTRATION_RECORD_HASH).toBe(hash);
+    expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
+  });
+
+  it("production issuer did:key matches JWKS kid lue84w… (RFC 7638)", () => {
+    const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(PRODUCTION_ISSUER_KID);
+  });
+
+  it("RES-42 repro: random key + made-up tx is not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: "0x" + "cd".repeat(32),
+    };
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: txMissing }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      protocolVerdict: "verified",
+      reasons: ["signer_not_allowlisted", "anchor_not_on_chain:tx_missing"],
+      signer: { allowlisted: false, role: null },
+      anchorOnChain: false,
+    });
+  });
+
+  it("random key + a real, unrelated AuthiChain tx is not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: ANCHOR_EXAMPLE_TX,
+    };
+    // The real demo tx: on chain, from the anchor wallet, but it carries the
+    // demo record's hash, not this one.
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: rpcStub("0x" + hash) }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["signer_not_allowlisted", "anchor_not_on_chain:hash_not_in_tx"],
+      anchorOnChain: false,
+    });
+  });
+
+  it("random key + its own hash-carrying tx is still not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const attacker = "0x2222222222222222222222222222222222222222";
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: "0x" + "ef".repeat(32),
+    };
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: rpcStub("0x" + recordHash, "0x1", attacker, ANCHOR_WALLET) }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["signer_not_allowlisted", "anchor_tx_not_from_anchor_wallet"],
     });
   });
 
