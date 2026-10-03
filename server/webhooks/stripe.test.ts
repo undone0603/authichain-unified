@@ -496,7 +496,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         amount_total: 2900,
         customer: "cus_pack",
         customer_details: { email: "buyer@example.com" },
-        metadata: { plan: "starter", brand: "authichain" },
+        metadata: { brand: "authichain" },
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
@@ -577,6 +577,22 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         p_idempotency_key: firstKey,
       })
     );
+  });
+
+  it("does not classify recurring subscriptions as Starter checkouts by amount", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_starter_subscription", {
+        id: "cs_starter_subscription",
+        mode: "subscription",
+        customer_email: "buyer@example.com",
+        amount_total: 2900,
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(growthRecordRpc).not.toHaveBeenCalled();
   });
 
   it("fulfills checkout.session.async_payment_succeeded for delayed wallets", async () => {
@@ -724,9 +740,10 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.expired", "evt_expired_001", {
         id: "cs_expired_001",
+        mode: "payment",
         customer_email: "lost@example.com",
         metadata: { user_id: "30", plan: "starter", customer_name: "Alex" },
-        amount_total: 4900,
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
@@ -756,9 +773,10 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.expired", "evt_expired_nodb", {
         id: "cs_expired_nodb",
+        mode: "payment",
         customer_email: "lost2@example.com",
         metadata: { plan: "starter" },
-        amount_total: 4900,
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");

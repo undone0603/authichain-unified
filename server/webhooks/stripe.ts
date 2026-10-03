@@ -32,7 +32,7 @@ import {
   recordStripeWebhookDelivery,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
-import { planByStripePriceId } from "../../src/lib/plans";
+import { planByAmountCents, planByStripePriceId } from "../../src/lib/plans";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 
 function maskEmail(email: string): string {
@@ -243,10 +243,17 @@ async function fulfillCatalogCreditsIfPaid(
 }
 
 function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
-  return (
-    session.metadata?.plan === "starter" ||
-    planByStripePriceId(checkoutLinePriceId(session))?.id === "starter"
-  );
+  if (session.mode !== "payment" || isRecurringCheckoutSession(session)) {
+    return false;
+  }
+
+  const linePrice = planByStripePriceId(checkoutLinePriceId(session));
+  if (linePrice) return linePrice.id === "starter";
+
+  const amountPlan = planByAmountCents(session.amount_total);
+  if (amountPlan) return amountPlan.id === "starter";
+
+  return session.metadata?.plan === "starter";
 }
 
 async function recordStarterGrowthEvent(
