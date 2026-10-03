@@ -1,0 +1,30 @@
+{
+  "_comment": "Expected Workers Builds bundle per worker. index.js sha256 from `wrangler@<wrangler> deploy --dry-run` run in workers/<name>. A PR that changes a bundle on purpose updates the hash here in the same PR (`node scripts/ci/check-worker-bundles.mjs` prints the new one). `watch` mirrors the Cloudflare Workers Builds trigger path_includes; the check fails if the bundle pulls in a file no pattern covers. Read by scripts/ci/check-worker-bundles.mjs.",
+  "wrangler": "4.147.0",
+  "workers": {
+    "govchain-us": {
+      "sha256": "aa92272c1b2dc9ceedf61e5f5659f613c16c92710be039ff35ec94ae77801130",
+      "bytes": 274665,
+      "watch": [
+        "workers/govchain-us/*",
+        "workers/_shared/*",
+        "src/lib/plans.ts",
+        "src/lib/x402.ts",
+        "src/lib/checkout-email.ts",
+        "scripts/lib/evm-chains.ts"
+      ]
+    },
+    "qron-space": {
+      "sha256": "0ec4b5ce7f689ce89903da45da3719f2391b6758fd78eee620045faa81923490",
+      "bytes": 256569,
+      "watch": [
+        "workers/qron-space/*",
+        "workers/_shared/*",
+        "src/lib/plans.ts",
+        "src/lib/x402.ts",
+        "src/lib/checkout-email.ts",
+        "scripts/lib/evm-chains.ts"
+      ]
+    }
+  }
+}

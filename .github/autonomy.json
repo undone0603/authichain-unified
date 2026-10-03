@@ -87,6 +87,7 @@
       "workflows": {
         "ops-pulse.yml": "on",
         "cloudflare-production-health.yml": "on",
+        "worker-bundle-drift.yml": "on",
         "production-smoke-gate.yml": "on",
         "checkout-watchdog.yml": "on",
         "schema-drift.yml": "on",

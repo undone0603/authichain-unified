@@ -1,0 +1,88 @@
+name: Worker bundle drift (govchain-us, qron-space)
+
+# PM-197. Report-only: not a required check and not wired into any deploy.
+# Builds each Worker the way Cloudflare Workers Builds does (pinned wrangler,
+# `wrangler deploy --dry-run`, no credentials) and compares index.js sha256 to
+# scripts/ci/worker-bundle-hashes.json. After a push to main, and every 6h, it
+# also compares against the version serving 100% of traffic (read-only GETs),
+# which catches an older Workers Build finishing last and overwriting a newer
+# one (Oct 3: d12e1342's govchain-us build replaced 5ee5f4c7's).
+# Scope: only govchain-us and qron-space are built and checked, not every Worker.
+
+on:
+  pull_request:
+    paths:
+      - "workers/govchain-us/**"
+      - "workers/qron-space/**"
+      - "workers/_shared/**"
+      - "src/lib/plans.ts"
+      - "src/lib/x402.ts"
+      - "src/lib/checkout-email.ts"
+      - "scripts/lib/evm-chains.ts"
+      - "scripts/ci/check-worker-bundles.mjs"
+      - "scripts/ci/worker-bundle-hashes.json"
+      - ".github/workflows/worker-bundle-drift.yml"
+  push:
+    branches: [main]
+    paths:
+      - "workers/govchain-us/**"
+      - "workers/qron-space/**"
+      - "workers/_shared/**"
+      - "src/lib/plans.ts"
+      - "src/lib/x402.ts"
+      - "src/lib/checkout-email.ts"
+      - "scripts/lib/evm-chains.ts"
+      - "scripts/ci/check-worker-bundles.mjs"
+      - "scripts/ci/worker-bundle-hashes.json"
+      - ".github/workflows/worker-bundle-drift.yml"
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  expected:
+    name: Bundle matches recorded hash
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: worker-bundle-drift-expected-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build and compare to scripts/ci/worker-bundle-hashes.json
+        run: node scripts/ci/check-worker-bundles.mjs
+
+  live:
+    name: Live version matches main build
+    if: github.repository == 'undone0603/authichain-unified' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      # A newer push to main supersedes the check for the older one.
+      group: worker-bundle-drift-live
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Wait for Workers Builds to finish (push only)
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: Compare live index.js to this build (read-only GETs)
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ci/check-worker-bundles.mjs --live --no-expected
