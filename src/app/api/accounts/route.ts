@@ -3,10 +3,17 @@ import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-function slugFromEmail(email: string, userId: string) {
+const ACCOUNT_COLUMNS = 'id, name, slug, brand, plan, status'
+
+function slugFromEmail(email: string, userId: string, attempt = 0) {
   const local = email.split('@')[0] ?? 'acct'
   const base = local.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24)
-  return `${base || 'acct'}-${userId.slice(0, 6)}`
+  const suffix = attempt === 0 ? userId.slice(0, 6) : userId.replace(/-/g, '').slice(0, 12)
+  return `${base || 'acct'}-${suffix}`
+}
+
+function isUniqueViolation(error: { code?: string } | null) {
+  return error?.code === '23505'
 }
 
 async function mintKey() {
@@ -25,7 +32,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('accounts')
-    .select('id, name, slug, brand, plan, status, stripe_customer_id, created_at')
+    .select(`${ACCOUNT_COLUMNS}, stripe_customer_id, created_at`)
     .eq('owner_user_id', user.id)
     .maybeSingle()
 
@@ -42,28 +49,47 @@ export async function POST(request: Request) {
   const brand = ['authichain', 'qron', 'govchain', 'strainchain'].includes(body.brand ?? '')
     ? body.brand!
     : 'authichain'
+  const name = (body.name ?? user.email.split('@')[0]).slice(0, 80)
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('accounts')
-    .select('id, name, slug, brand, plan, status')
+    .select(ACCOUNT_COLUMNS)
     .eq('owner_user_id', user.id)
     .maybeSingle()
 
+  if (existingError) return NextResponse.json({ error: 'Failed to load account' }, { status: 500 })
   if (existing) return NextResponse.json({ account: existing, created: false })
 
-  const name = (body.name ?? user.email.split('@')[0]).slice(0, 80)
-  const { data: account, error } = await supabase
-    .from('accounts')
-    .insert({
-      name,
-      slug: slugFromEmail(user.email, user.id),
-      brand,
-      owner_user_id: user.id,
-      plan: 'free',
-      status: 'active',
-    })
-    .select('id, name, slug, brand, plan, status')
-    .single()
+  let account = null
+  let error: { code?: string } | null = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const inserted = await supabase
+      .from('accounts')
+      .insert({
+        name,
+        slug: slugFromEmail(user.email, user.id, attempt),
+        brand,
+        owner_user_id: user.id,
+        plan: 'free',
+        status: 'active',
+      })
+      .select(ACCOUNT_COLUMNS)
+      .single()
+    account = inserted.data
+    error = inserted.error
+    if (!error) break
+    if (!isUniqueViolation(error)) break
+  }
+
+  if (isUniqueViolation(error)) {
+    const { data: won, error: rereadError } = await supabase
+      .from('accounts')
+      .select(ACCOUNT_COLUMNS)
+      .eq('owner_user_id', user.id)
+      .maybeSingle()
+    if (rereadError || !won) return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
+    return NextResponse.json({ account: won, created: false })
+  }
 
   if (error || !account) {
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
@@ -82,7 +108,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     account,
     apiKey: keyError ? null : apiKey,
-    keyError: keyError ? 'Account created. Key mint failed; retry POST /api/keys.' : null,
+    keyError: keyError ? 'Account created. Key mint failed; retry POST /api/accounts.' : null,
     created: true,
   })
 }
