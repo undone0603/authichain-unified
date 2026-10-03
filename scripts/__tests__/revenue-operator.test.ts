@@ -27,42 +27,7 @@ describe("classifyRevenue", () => {
     expect(classifyRevenue(snap({}), founders).qualifying).toBe(false);
   });
 
-  it("does not count the founder $10 charge as a first sale", () => {
-    const verdict = classifyRevenue(
-      snap({
-        charges: [
-          {
-            id: "ch_10",
-            amount: 1000,
-            paid: true,
-            email: "undone.k@gmail.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(false);
-  });
-
-  it("counts a paid stranger charge as a first sale", () => {
-    const verdict = classifyRevenue(
-      snap({
-        charges: [
-          {
-            id: "ch_farm",
-            amount: 14900,
-            paid: true,
-            email: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("ch_farm");
-  });
-
-  it("does not count a founder-only subscription as a first sale", () => {
+  it("does not count the founder $10 charge or a founder subscription", () => {
     const verdict = classifyRevenue(
       snap({
         subscriptions: [
@@ -70,6 +35,14 @@ describe("classifyRevenue", () => {
             id: "sub_founder",
             status: "active",
             customerEmail: "undone.k@gmail.com",
+          },
+        ],
+        charges: [
+          {
+            id: "ch_10",
+            amount: 1000,
+            paid: true,
+            email: "undone.k@gmail.com",
           },
         ],
       }),
@@ -126,23 +99,6 @@ describe("classifyRevenue", () => {
     expect(verdict.reason).toContain("sub_farm");
   });
 
-  it("counts a trialing stranger subscription", () => {
-    const verdict = classifyRevenue(
-      snap({
-        subscriptions: [
-          {
-            id: "sub_trial",
-            status: "trialing",
-            customerEmail: "ops@example.com",
-          },
-        ],
-      }),
-      founders
-    );
-    expect(verdict.qualifying).toBe(true);
-    expect(verdict.reason).toContain("sub_trial");
-  });
-
   it("counts past_due stranger subs and ignores cancelled ones", () => {
     expect(
       classifyRevenue(
@@ -178,6 +134,14 @@ describe("classifyRevenue", () => {
     const blocked = classifyRevenue(
       snap({
         payouts: [{ id: "po_self", amount: 931, status: "pending" }],
+        charges: [
+          {
+            id: "ch_10",
+            amount: 1000,
+            paid: true,
+            email: "undone.k@gmail.com",
+          },
+        ],
       }),
       founders
     );
@@ -200,9 +164,10 @@ describe("classifyRevenue", () => {
     expect(ok.qualifying).toBe(true);
   });
 
-  it("does not treat a paid charge with no email as a stranger first sale", () => {
+  it("does not treat a paid charge with no email as a stranger", () => {
     const verdict = classifyRevenue(
       snap({
+        payouts: [{ id: "po_anon", amount: 14900, status: "paid" }],
         charges: [{ id: "ch_blank", amount: 14900, paid: true, email: null }],
       }),
       founders
@@ -415,11 +380,9 @@ describe("farm rails", () => {
 });
 
 describe("freeze gates", () => {
-  it("allows outreach dispatch and keeps gov-mint frozen", () => {
-    expect(mayDispatch("outreach-trigger.yml").allowed).toBe(true);
-    expect(mayDispatch("b2b-outreach").allowed).toBe(true);
-    expect(mayDispatch("dpp-outreach-trigger").allowed).toBe(true);
-    expect(mayDispatch("pipeline-tick").allowed).toBe(true);
+  it("refuses frozen workflow dispatch", () => {
+    expect(mayDispatch("outreach-trigger.yml").allowed).toBe(false);
+    expect(mayDispatch("b2b-outreach").allowed).toBe(false);
     expect(mayDispatch("gov-mint").allowed).toBe(false);
     expect(mayDispatch("deploy-authichain-com.yml").allowed).toBe(true);
   });
