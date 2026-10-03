@@ -56,10 +56,14 @@ def run(ctx: ExecutionContext) -> str:
         try:
             # 3. Deploy Personalized Microsite
             site_url = ctx.step(
-                f"Deploy Vercel & R2 assets for {name}",
+                f"Publish Cloudflare microsite for {name}",
                 action=lambda l=deal: asyncio.run(deploy_sales_microsite(l))
             )
-            
+            if not site_url and ctx.mode != Mode.DRY_RUN:
+                # Never draft outreach that points at a page that is not live.
+                ctx.step(f"   -> Microsite not published for {name}; skipping this deal.")
+                continue
+
             # 4. Generate StoryMode (Queued)
             ctx.step(
                 f"Provision StoryMode for {name}",
