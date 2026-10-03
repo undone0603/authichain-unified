@@ -56,7 +56,11 @@ overrides:
   'minimatch@>=10.0.0 <10.2.3': 10.2.3
   # GHSA: Next.js — several advisories on the 16.x line (cache-poisoning /
   # middleware-bypass family), latest supersedes all earlier ceilings.
-  'next@>=15.6.0-canary.0 <16.2.11': 16.2.11
+  # Raised 16.2.11 -> 16.3.6 (2026-10-01): GHSA-p293-qw3h-jr36 and
+  # GHSA-2xp9-vwfh-vxw4 (unauthenticated RCE, fixed 16.3.3) and
+  # GHSA-vcvr-r3jv-pc5j (next/og RCE, fixed 16.3.6). 16.3.6 is the version
+  # the root app runs.
+  'next@>=15.6.0-canary.0 <16.3.6': 16.3.6
   # GHSA: path-to-regexp ReDoS.
   'path-to-regexp@>=8.0.0 <8.4.0': 8.4.0
   # GHSA: picomatch ReDoS, 2.x line.
