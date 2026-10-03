@@ -1,9 +1,6 @@
 name: Deploy to Cloudflare
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -27,11 +24,19 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_CONFIG: .gitleaks.toml
 
+  production-gate:
+    uses: ./.github/workflows/production-deployment-gate.yml
+    with:
+      deployment_name: deploy-cloudflare
+    secrets: inherit
+
   deploy:
     name: Deploy to Cloudflare
     runs-on: ubuntu-latest
-    needs: secret-scan
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: [secret-scan, production-gate]
+    environment:
+      name: production-cloudflare
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 20
     steps:
       - name: Checkout repository

@@ -1,21 +1,24 @@
 name: Deploy verifier-web (verify.authichain.com)
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "apps/verifier-web/**"
-      - "packages/verifier/**"
-      - ".github/workflows/deploy-verifier-web.yml"
 permissions:
   contents: read
 concurrency:
   group: deploy-verifier-web
   cancel-in-progress: false
 jobs:
+  production-gate:
+    uses: ./.github/workflows/production-deployment-gate.yml
+    with:
+      deployment_name: deploy-verifier-web
+    secrets: inherit
+
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: production-gate
+    environment:
+      name: production-cloudflare
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

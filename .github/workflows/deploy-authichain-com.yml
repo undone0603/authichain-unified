@@ -1,19 +1,21 @@
 name: Deploy authichain-com
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "workers/authichain-com/**"
-      - "content/microsites/**"
-      - "scripts/sync-microsite-packs.mjs"
-      - ".github/workflows/deploy-authichain-com.yml"
 permissions:
   contents: read
 jobs:
+  production-gate:
+    uses: ./.github/workflows/production-deployment-gate.yml
+    with:
+      deployment_name: deploy-authichain-com
+    secrets: inherit
+
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: production-gate
+    environment:
+      name: production-cloudflare
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
