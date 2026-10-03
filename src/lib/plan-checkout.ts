@@ -8,6 +8,7 @@ import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
+import { normalizeStripeSecretKey, STRIPE_NOT_CONFIGURED_ERROR } from "./stripe-secret";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
 export type PlanCheckoutErr = {
@@ -97,8 +98,8 @@ export async function createPlanCheckoutSession(opts: {
       : getBrandIdFromRequest(request);
   const origin = checkoutReturnOrigin(request);
 
-  if (!stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
+  if (!normalizeStripeSecretKey(stripeSecretKey)) {
+    return { ok: false, status: 500, error: STRIPE_NOT_CONFIGURED_ERROR };
   }
 
   try {

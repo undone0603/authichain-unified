@@ -15,6 +15,7 @@ import {
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
 import { AFFILIATE_BASE_RATE } from "../../../../lib/affiliate-rate";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -140,7 +141,7 @@ async function creditReferral(
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = getStripeSecretKey();
     if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
     _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
   }
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
     process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET,
   ].filter((s): s is string => !!s);
 
-  if (!process.env.STRIPE_SECRET_KEY || secrets.length === 0) {
+  if (!getStripeSecretKey() || secrets.length === 0) {
     return NextResponse.json(
       { error: "Stripe not configured" },
       { status: 500 }

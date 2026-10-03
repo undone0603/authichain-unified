@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { gatedCheckoutUrl, listedPlans } from "@/lib/plans";
+import { getStripeSecretKey } from "../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ function getErrorMessage(error: unknown): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const stripeKey = getStripeSecretKey();
     if (!stripeKey)
       return NextResponse.json(
         { error: "Stripe not configured" },

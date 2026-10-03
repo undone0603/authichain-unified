@@ -4,6 +4,7 @@
  */
 
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import { normalizeStripeSecretKey, STRIPE_NOT_CONFIGURED_ERROR } from "./stripe-secret";
 
 export type DppActivateInput = {
   session_id?: string;
@@ -56,8 +57,8 @@ export async function activateDppMerchant(opts: {
     };
   }
 
-  if (!opts.stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
+  if (!normalizeStripeSecretKey(opts.stripeSecretKey)) {
+    return { ok: false, status: 500, error: STRIPE_NOT_CONFIGURED_ERROR };
   }
   if (!opts.supabase) {
     return { ok: false, status: 500, error: "Database not configured" };

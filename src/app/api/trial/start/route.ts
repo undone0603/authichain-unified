@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { logAutomation } from "@/lib/automation";
+import { getStripeSecretKey, stripeNotConfiguredResponse } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,9 +23,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   try {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const stripeSecretKey = getStripeSecretKey();
+    if (!stripeSecretKey) {
+      return stripeNotConfiguredResponse();
+    }
     const trialPriceId = process.env.STRIPE_TRIAL_PRICE_ID;
-    if (!stripeSecretKey || !trialPriceId) {
+    if (!trialPriceId) {
       return NextResponse.json(
         { error: "Free trial is not configured", code: "TRIAL_NOT_CONFIGURED" },
         { status: 503 }

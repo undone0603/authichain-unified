@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { activateDppMerchant } from "@/lib/dpp-activate";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const result = await activateDppMerchant({
       body,
-      stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+      stripeSecretKey: getStripeSecretKey() || "",
       supabase: await getServiceSupabase(),
     });
     if (!result.ok) {

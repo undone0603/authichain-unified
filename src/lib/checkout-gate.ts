@@ -35,6 +35,7 @@ import {
   type Plan,
   type PlanId,
 } from "./plans";
+import { normalizeStripeSecretKey, STRIPE_NOT_CONFIGURED_ERROR } from "./stripe-secret";
 
 export { GATED_CHECKOUT_ORIGIN, gatedCheckoutUrl };
 
@@ -415,8 +416,8 @@ export async function createGatedCheckoutSession(opts: {
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 }): Promise<GatedSessionResult> {
-  const key = (opts.stripeSecretKey || "").trim();
-  if (!key) return { ok: false, status: 500, error: "Stripe is not configured" };
+  const key = normalizeStripeSecretKey(opts.stripeSecretKey);
+  if (!key) return { ok: false, status: 500, error: STRIPE_NOT_CONFIGURED_ERROR };
   const body = buildGatedSessionBody(opts);
   const doFetch = opts.fetchImpl ?? fetch;
   const res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
