@@ -6,6 +6,17 @@ Live money: 0 stranger customers. One founder $10 charge is not a sale.
 Do not list First Dollar $1 or AuthiChain Seal $99/mo.
 Apex CTAs only: `/generate`, `/checkout/{plan}`, `/dpp-check`, `/verify`, `/onboard`. Never a `*.vercel.app` URL.
 
+## Current readiness blocker — 2026-10-03
+
+LOOP-03 is instrumented for `/generate` views, anonymous submissions, and
+checkout views/session starts, but it is **not launch-ready**: `POST /api/generate`
+requires an authenticated user and returns 401 for an anonymous visitor.
+`worker-app/index.ts` deliberately does not emit `free_gen_granted` or
+`free_gen_exhausted` because the promised anonymous five-generation tier does
+not exist. Do not describe the current flow as “five free” or use the LOOP-03
+kill threshold until either that tier is implemented and verified or the offer
+and its copy are revised to match the existing sign-in/credit flow.
+
 ## Priority
 
 1. LOOP-03 QRON generate → Starter $29 (first stranger dollar).
