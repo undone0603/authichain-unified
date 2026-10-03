@@ -220,7 +220,6 @@ ${estateHero({
 })}
 ${estateTrust([
   { value: "Ed25519", label: "Signed seals" },
-  { value: "Polygon", label: "On-chain anchor" },
   { value: "$0.05", label: "x402 per verify" },
 ])}
 ${estateFeatures(
@@ -229,7 +228,7 @@ ${estateFeatures(
   [
     {
       title: "Signed seals",
-      body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable from /anchor and the certificate registry.",
+      body: "Ed25519-signed records, checkable offline with the open verifier at /protocol.",
     },
     {
       title: "5-agent consensus",

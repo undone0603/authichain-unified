@@ -16,6 +16,8 @@ export interface SeoPage {
   h1: string;
   bodyHtml: string;
   jsonLd: Record<string, unknown>;
+  /** Kept out of sitemap-slugs.json; /p/<slug> is served with robots noindex. */
+  noindex?: boolean;
 }
 
 // pages.json is also read directly by worker-app/dynamic-pages.ts,

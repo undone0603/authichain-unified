@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'AuthiChain vs Scantrust — Product Authentication Compared',
     description:
-      'Blockchain-anchored authentication with transparent pricing and sub-day onboarding vs Scantrust. Full feature comparison.',
+      'Authentication with transparent pricing and sub-day onboarding vs Scantrust. Full feature comparison.',
     url: 'https://authichain.com/vs/scantrust',
     images: ['/og?title=AuthiChain%20vs%20Scantrust&brand=authichain'],
   },

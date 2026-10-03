@@ -6,6 +6,29 @@
 //       sequential sends with 100ms sleeps — saves ~5s wall time per batch.
 
 const CORS = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
+// /emails and /batch are server-to-server only: no browser CORS headers.
+const NO_CORS = {'Content-Type':'application/json'};
+const SEND_PATHS = ['/emails', '/batch'];
+
+// Requires X-Relay-Key == env.RELAY_SHARED_SECRET (constant-time compare of
+// SHA-256 digests). Fails closed with 500 if the secret is not configured.
+async function relayAuthError(req, env) {
+  const secret = env.RELAY_SHARED_SECRET;
+  if (!secret) {
+    return Response.json({error:'relay auth not configured'},{status:500,headers:NO_CORS});
+  }
+  const given = req.headers.get('X-Relay-Key');
+  if (!given) return Response.json({error:'unauthorized'},{status:401,headers:NO_CORS});
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(given)),
+    crypto.subtle.digest('SHA-256', enc.encode(secret))
+  ]);
+  if (!crypto.subtle.timingSafeEqual(a, b)) {
+    return Response.json({error:'unauthorized'},{status:401,headers:NO_CORS});
+  }
+  return null;
+}
 
 export default {
   async fetch(req, env) {
@@ -15,20 +38,25 @@ export default {
     }
 
     const path = new URL(req.url).pathname;
-    if (req.method === 'OPTIONS') return new Response(null,{status:204,headers:CORS});
+    if (req.method === 'OPTIONS') return new Response(null,{status:204,headers:SEND_PATHS.includes(path) ? {} : CORS});
 
     if (path === '/health') return Response.json({
       ok: true, service: 'resend-relay', version: '1.2',
       from_domain: 'authichain.com',
-      auth: 'SPF+DKIM+DMARC', limit: '3000/day'
+      auth: 'SPF+DKIM+DMARC'
     },{headers:CORS});
+
+    if (SEND_PATHS.includes(path) && req.method === 'POST') {
+      const authErr = await relayAuthError(req, env);
+      if (authErr) return authErr;
+    }
 
     if (path === '/emails' && req.method === 'POST') {
       let body = {}; try { body = await req.json(); } catch {}
       const { to, subject, text, html, from, reply_to } = body;
 
       if (!to || !subject || (!text && !html)) {
-        return Response.json({error:'to, subject, and text/html required'},{status:400,headers:CORS});
+        return Response.json({error:'to, subject, and text/html required'},{status:400,headers:NO_CORS});
       }
 
       const fromAddr = from?.includes('AuthiChain') || from?.includes('authichain')
@@ -61,13 +89,13 @@ export default {
         from: finalFrom,
         to,
         error: result.message
-      },{headers:CORS});
+      },{headers:NO_CORS});
     }
 
     if (path === '/batch' && req.method === 'POST') {
       let body = {}; try { body = await req.json(); } catch {}
       const emails = body.emails || [];
-      if (!emails.length) return Response.json({error:'emails array required'},{status:400,headers:CORS});
+      if (!emails.length) return Response.json({error:'emails array required'},{status:400,headers:NO_CORS});
 
       // Use Resend's batch endpoint (single request, up to 100 per call)
       // instead of sequential sends with 100ms sleeps — saves ~5s wall time
@@ -91,7 +119,7 @@ export default {
         ? data.map((item, i) => ({ to: batch[i].to, id: item.id, sent: !!item.id }))
         : [{ error: data.message || data.error || 'batch failed' }];
       const sent = results.filter(r => r.sent).length;
-      return Response.json({ok: r.ok, sent, total: emails.length, results},{headers:CORS});
+      return Response.json({ok: r.ok, sent, total: emails.length, results},{headers:NO_CORS});
     }
 
     return Response.json({service:'resend-relay',endpoints:['/health','/emails','/batch']},{headers:CORS});
