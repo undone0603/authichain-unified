@@ -6,8 +6,9 @@
  * edit the strings here without changing that file first.
  *
  * Each ship condition is one line in LAUNCH_WEEK_1. The defaults are the
- * conservative text: the section is off, Monday reads "(planned)", and
- * Wednesday reads "(planned)". Turning `show` on is Zac's Tier 2 go, and not
+ * conservative text: the section is off, Monday is live, and Tuesday through
+ * Thursday read "(planned)".
+ * Turning `show` on is Zac's Tier 2 go, and not
  * before Oct 12, 2026.
  *
  * Styling reuses the estate CSS variables (Plus Jakarta Sans, --accent, ...).
@@ -18,21 +19,29 @@
 export interface LaunchWeek1Flags {
   /** Render the section on "/". Off until Zac's Tier 2 go (not before Oct 12, 2026). */
   show: boolean;
-  /** Day 1 is live the morning of Oct 12 (npm package published and installs cleanly). Otherwise Monday stays "(planned)". */
+  /** Day 1 is live (npm package published and installs cleanly). Otherwise Monday stays "(planned)". */
   day1Live: boolean;
+  /** Day 2 is live. Otherwise Tuesday stays "(planned)". */
+  day2Live: boolean;
   /** The "Talk to us" lead form is live by Oct 12. Otherwise Wednesday reads "Talk to us (planned)". */
   leadFormLive: boolean;
+  /** The battery passport gap check is live by Oct 15. Otherwise Thursday reads "Battery passport gap check (planned)". */
+  day4Live: boolean;
 }
 
 export const LAUNCH_WEEK_1: LaunchWeek1Flags = {
   show: false,
-  day1Live: false,
+  day1Live: true,
+  day2Live: false,
   leadFormLive: false,
+  day4Live: false,
 };
 
 export const LW1_HEADLINE = "Launch Week #1: Oct 12–16";
 export const LW1_SUBLINE =
-  "Building the open-source Digital Product Passport, one working piece a day, then a Friday recap.";
+  "Digital Product Passport tooling, one piece a day as it ships, starting with an open-source verifier. Then a Friday recap.";
+export const LW1_NO_AFFILIATION =
+  "AuthiChain is an independent brand of Zachary Kietzman and is not affiliated with, endorsed by, or acting on behalf of any government agency.";
 
 export interface LaunchWeek1Row {
   day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri";
@@ -46,11 +55,11 @@ export function launchWeek1Rows(flags: LaunchWeek1Flags = LAUNCH_WEEK_1): Launch
     // If Day 1 slips, the verifier moves to "planned" (00-announcement.md, "If Day 1 slips").
     { day: "Mon", label: "Open verifier", planned: !flags.day1Live },
     // Day 2 stays "(planned)" until it ships.
-    { day: "Tue", label: "A place for agents to ask", planned: true },
+    { day: "Tue", label: "A place for agents to ask", planned: !flags.day2Live },
     flags.leadFormLive
       ? { day: "Wed", label: "Talk to us", planned: false, href: "/contact" }
       : { day: "Wed", label: "Talk to us", planned: true },
-    { day: "Thu", label: "Battery passport gap check", planned: false },
+    { day: "Thu", label: "Battery passport gap check", planned: !flags.day4Live },
     { day: "Fri", label: "The recap", planned: false },
   ];
 }
@@ -70,9 +79,11 @@ const LW1_CSS = `
 .lw1-label a { color: inherit; }
 .lw1-planned { color: var(--muted); font-weight: 400; }
 .lw1-nowrap { white-space: nowrap; }
+.lw1-affiliation { grid-column: 2; margin: 12px 0 0; color: #64748b; font-size: 13px; text-align: left; }
 @media (max-width: 767px) {
   .lw1 { padding: 48px 20px; }
   .lw1-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .lw1-affiliation { grid-column: 1; }
 }
 `;
 
@@ -103,6 +114,7 @@ export function launchWeek1Section(flags: LaunchWeek1Flags = LAUNCH_WEEK_1): str
       <ol class="lw1-days">
         ${rows}
       </ol>
+      <p class="lw1-affiliation">${esc(LW1_NO_AFFILIATION)}</p>
     </div>
   </section>`;
 }
