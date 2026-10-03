@@ -67,6 +67,16 @@ jobs:
           workers/authichain-verify-worker/src/protocol-verify.test.mjs
           workers/authichain-verify-worker/src/published-record.test.mjs
 
+      # node:test suites outside scripts/autonomy and scripts/ci that no other
+      # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
+      - name: Check other node:test suites
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts
+
+      # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
+      # solc 0.8.19 on first run; no other job ran these.
+      - name: Contract tests (Hardhat)
+        run: pnpm test:contracts
+
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
 

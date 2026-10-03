@@ -140,6 +140,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     description: page.metaDescription,
     canonicalPath: canonical,
     extraHead:
+      (page.noindex ? '<meta name="robots" content="noindex">\n' : "") +
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
       "</script>\n" +
@@ -305,6 +306,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const seoPage = getSeoPageBySlug(serial);
     if (seoPage) {
+      if (seoPage.noindex) c.header("X-Robots-Tag", "noindex");
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
@@ -591,7 +593,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🔐",
         title: "Signed seals",
-        desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
+        desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
       },
       {
         icon: "📱",
@@ -693,7 +695,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "✅",
         title: "Batch Testing",
-        desc: "Lab results, COA management, potency tracking. Immutable testing records.",
+        desc: "Lab results, COA management, potency tracking.",
       },
       {
         icon: "📱",
@@ -732,7 +734,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🏛️",
         title: "Public Records",
-        desc: "Government data on blockchain. Immutable, auditable, and publicly verifiable.",
+        desc: "Certificate contract live on Polygon; product certification through verify is in development.",
       },
       {
         icon: "📊",
@@ -763,7 +765,6 @@ const LANDING_CONTENT: Record<
     stats: [
       { value: "100%", label: "Transparent" },
       { value: "Real-Time", label: "Reporting" },
-      { value: "Blockchain", label: "Immutable" },
     ],
     closingLine: "Make government data public. Build trust with blockchain.",
     primaryCta: { label: "Get Started", href: "/dashboard" },

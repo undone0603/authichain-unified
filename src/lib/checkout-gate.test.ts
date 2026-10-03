@@ -3,6 +3,7 @@ import {
   buildGatedSessionBody,
   gatedCheckoutPlanIds,
   gatedConfirmUrl,
+  checkoutReturnOrigin,
   isAllowedPostOrigin,
   isAutomatedCheckoutRequest,
   planFromGatedPath,
@@ -226,6 +227,31 @@ describe("tryHandleGatedCheckout — POST", () => {
       expect(res!.status).toBe(status);
     }
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("keeps Stripe return URLs on an allowlisted host", () => {
+    const evil = new Request("https://authichain.govchain.us/api/checkout", {
+      method: "POST",
+      headers: { origin: "https://evil.example" },
+    });
+    expect(checkoutReturnOrigin(evil)).toBe("https://authichain.govchain.us");
+
+    const brand = new Request("https://authichain.govchain.us/api/checkout", {
+      method: "POST",
+      headers: { origin: "https://app.strainchain.io" },
+    });
+    expect(checkoutReturnOrigin(brand)).toBe("https://app.strainchain.io");
+
+    const httpOrigin = new Request("https://authichain.com/api/checkout", {
+      method: "POST",
+      headers: { origin: "http://authichain.com" },
+    });
+    expect(checkoutReturnOrigin(httpOrigin)).toBe("https://authichain.com");
+
+    const unknownHost = new Request("https://evil.example/api/checkout", {
+      method: "POST",
+    });
+    expect(checkoutReturnOrigin(unknownHost)).toBe("https://authichain.com");
   });
 
   it("allows cross-site POST from the estate sites", () => {

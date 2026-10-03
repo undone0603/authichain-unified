@@ -108,7 +108,7 @@ const PROTECTED_SEED_SLUGS = new Set([
 ]);
 
 const PROTECTED_SEED_MARKERS: Record<string, string> = {
-  "blockchain-product-authentication": "Built for every vertical",
+  "blockchain-product-authentication": "the manufacturer holds the keys, not us",
   "cannabis-blockchain-provenance": "What you get",
   "what-is-a-digital-product-passport": "What a DPP contains",
 };
@@ -128,7 +128,8 @@ describe("generated SEO money-path CTAs", () => {
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
       expect(how).toBeGreaterThan(-1);
       expect(cta).toBeGreaterThan(how);
-      expect(faq).toBeGreaterThan(cta);
+      // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
+      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
     }
   });
 
@@ -291,11 +292,38 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("RES-12: no AuthiChain or GovChain page claims Polygon anchoring or offline operation", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      if (p.brand === "AuthiChain") {
+        expect(text, p.slug).not.toMatch(
+          /anchored (on|to) Polygon|anchors (certificates|unit-level verification) on Polygon|Polygon anchoring/i
+        );
+      }
+      if (p.brand === "GovChain") {
+        expect(text, p.slug).not.toMatch(
+          /works? offline|offline-capable|without connectivity|low-connectivity/i
+        );
+      }
+    }
+  });
+
+  it("RES-13: no page claims Polygon or blockchain anchoring in the present tense", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(
+        /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
+      );
+      expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
     expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
-    expect(dpp?.bodyHtml).toContain("Ed25519-signed and anchored on Polygon");
+    expect(dpp?.bodyHtml).toContain("Ed25519-signed.");
+    expect(dpp?.bodyHtml).not.toContain("anchored on Polygon");
     expect(dpp?.bodyHtml).not.toContain("$49/mo");
     expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
     expect(dpp?.jsonLd.url).toBe(

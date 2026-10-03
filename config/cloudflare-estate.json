@@ -5,13 +5,64 @@
   "rule": "Every production Worker must have exactly one canonical source, one declared identity, and one authorized deployment path unless explicitly marked external or transitional.",
   "workers": {
     "authichain-revenue-worker": {
-      "status": "reconcile",
+      "status": "active",
       "canonical_path": "api",
+      "deployment_workflow": ".github/workflows/deploy-edge-worker.yml",
+      "consolidated": "2026-10-02: removed the services/api/worker.ts + wrangler.toml duplicate (an older copy without Stripe webhook signature verification), then services/api/server.js (a stale bundle of the old Express server). api/ is the deployed source and carries the tests.",
+      "note": "Move api/ under workers/ only in the same change as deploy-edge-worker.yml (carried over from #1471)."
+    },
+    "ai-classification": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/ai-classification",
       "duplicate_sources": [
-        "services/api/worker.ts",
-        "services/api/wrangler.toml"
+        "apps/qron-platform/workers/ai-classification",
+        "workers/ai-classification"
       ],
-      "action": "retire-services-api-copy (no workflow deploys it); move api/ under workers/ only in the same change as deploy-edge-worker.yml"
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "analytics": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/analytics",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/analytics",
+        "workers/analytics"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "auth": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/auth",
+      "duplicate_sources": ["apps/qron-platform/workers/auth", "workers/auth"],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "blockchain": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/blockchain",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/blockchain",
+        "workers/blockchain"
+      ],
+      "action": "compare-and-consolidate-after-deployment-consumer-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "stripe-webhook": {
+      "status": "duplicate-transitional",
+      "canonical_path": "workers/stripe-webhook",
+      "duplicate_sources": [
+        "apps/qron-platform/workers/stripe-webhook",
+        "workers/stripe-webhook"
+      ],
+      "action": "compare-and-consolidate-after-route-consumer-secret-audit",
+      "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
+    },
+    "authichain-edge-router": {
+      "status": "active",
+      "canonical_path": "worker-app",
+      "deployment_workflow": ".github/workflows/deploy-cloudflare.yml",
+      "consolidated": "2026-10-02: removed services/worker-app. No workflow deployed it (deploy-cloudflare.yml uses working-directory: worker-app). Its wrangler.toml declared the same Worker name with fewer routes and vars, and its code was older than worker-app/ (it still carried the /verify page that #950 removed), so a manual wrangler deploy from it would have rolled production back."
     },
     "authichain-outreach-engine": {
       "status": "reported-live-external",
@@ -43,17 +94,27 @@
     },
     "qron-edge": {
       "status": "reported-live-external",
-      "action": "import-after-route-consumer-audit"
+      "action": "import-after-route-consumer-audit",
+      "repository_evidence": "config/estate.json marks unknown; repo deploys qron-edge-fleet under apps/qron-platform."
     },
     "authichain-verify-worker": {
       "status": "reported-live-external",
       "risk": "critical",
-      "action": "reconcile-against-canonical-verification-path-before-change"
+      "action": "reconcile-against-canonical-verification-path-before-change",
+      "repository_evidence": "Repo-managed worker and deploy matrix; CAPABILITIES external claim conflicts with repository evidence."
     },
     "authichain-consensus-engine": {
       "status": "identity-collision",
       "risk": "critical",
-      "action": "resolve-repo-vs-live-identity-before-change"
+      "action": "resolve-repo-vs-live-identity-before-change",
+      "repository_evidence": "config/estate.json marks retire; CAPABILITIES also reports live external; verify Cloudflare state before retirement."
     }
+  },
+  "snapshot": {
+    "taken": "2026-09-26",
+    "workers": 66,
+    "d1": 7,
+    "kv": 20,
+    "r2": 10
   }
 }

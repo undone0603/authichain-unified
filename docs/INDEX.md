@@ -49,7 +49,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [marketing/funnel-tracking.md](marketing/funnel-tracking.md) — complete funnel reference
 - [marketing/funnel-email-example.md](marketing/funnel-email-example.md)
 - [marketing/ab-testing-guide.md](marketing/ab-testing-guide.md)
-- [marketing/brand-selling-points.md](marketing/brand-selling-points.md)
+- [marketing/brand-selling-points.md](marketing/brand-selling-points.md) — RETIRED 2026-10-02
 - [marketing/gov-engine-lead-pipeline.md](marketing/gov-engine-lead-pipeline.md)
 - [marketing/QUICK_START.md](marketing/QUICK_START.md) — lead scoring quick start
 - [marketing/email-proposals-integration.md](marketing/email-proposals-integration.md)
