@@ -111,7 +111,25 @@ describe("createDppCheckoutSession", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("honors DPP-SMOKE-E2E as a $0 demo session", async () => {
+  it("refuses a public DPP-SMOKE-E2E promo", async () => {
+    const { createDppCheckoutSession } = await import("./dpp-checkout");
+    const result = await createDppCheckoutSession({
+      searchParams: new URLSearchParams({
+        visit_id: "dpp_smoke_2",
+        promo: "DPP-SMOKE-E2E",
+      }),
+      stripeSecretKey: "sk_test_x",
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      status: 303,
+      error: "smoke_unauthorized",
+      url: "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_smoke_2",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("honors DPP-SMOKE-E2E as a $0 demo session when authorized", async () => {
     create.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
     });
@@ -122,6 +140,7 @@ describe("createDppCheckoutSession", () => {
         promo: "DPP-SMOKE-E2E",
       }),
       stripeSecretKey: "sk_test_x",
+      smokeAuthorized: true,
     });
     expect(result.ok).toBe(true);
     const arg = create.mock.calls[0][0];

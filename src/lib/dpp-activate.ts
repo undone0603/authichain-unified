@@ -90,11 +90,7 @@ export async function activateDppMerchant(opts: {
   if (linePriceId && !isDppOffer(md, linePriceId)) {
     return { ok: false, status: 400, error: "Not a DPP audit session" };
   }
-  if (
-    !isDppOffer(md) &&
-    session.amount_total !== 29900 &&
-    session.amount_total !== 0
-  ) {
+  if (!isDppOffer(md) && session.amount_total !== 29900) {
     return { ok: false, status: 400, error: "Not a DPP audit session" };
   }
 
