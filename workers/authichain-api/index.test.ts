@@ -277,7 +277,77 @@ describe("authichain-api keys", () => {
     const body = await res.json();
     const call = w.calls.find((c) => c.url.includes("authichain_api_create_key"));
     expect(call?.body).toEqual({ p_email: "a@example.com", p_api_key: body.api_key, p_name: "Ann" });
+    expect(call?.headers.get("authorization")).toBe("Bearer anon");
     expect(w.calls.some((c) => c.url.includes("/rest/v1/white_label_clients"))).toBe(false);
+  });
+
+  it("uses the service-role key only for create_key when it is bound", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      supabase({})
+    );
+    const res = await w.request("/api/v1/keys/create", {
+      method: "POST",
+      body: JSON.stringify({ email: "a@example.com" }),
+    });
+    expect(res.status).toBe(201);
+    const call = w.calls.find((c) => c.url.includes("authichain_api_create_key"));
+    expect(call?.headers.get("authorization")).toBe("Bearer service-role");
+    expect(call?.headers.get("apikey")).toBe("service-role");
+  });
+
+  it("resolves keys with the anon key even when a service role is bound", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      supabase({ resolve: [] })
+    );
+    const res = await w.request("/api/v1/me", { headers: { "X-API-Key": KEY } });
+    expect(res.status).toBe(401);
+    const call = w.calls.find((c) => c.url.includes("authichain_api_resolve_key"));
+    expect(call?.headers.get("authorization")).toBe("Bearer anon");
+  });
+
+  it("captures a lead with the service-role key and still resolves with anon", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service-role" },
+      (call) => {
+        const path = new URL(call.url).pathname;
+        if (path === "/rest/v1/rpc/authichain_api_resolve_key") {
+          return json([
+            {
+              id: "c1",
+              billing_plan: "pro",
+              company_name: "Acme",
+              api_call_limit: 1000,
+              user_id: null,
+            },
+          ]);
+        }
+        if (path === "/rest/v1/rpc/authichain_api_capture_lead") return json(null, 200);
+        return undefined;
+      }
+    );
+    const res = await w.request("/api/v1/leads", {
+      method: "POST",
+      headers: { "X-API-Key": KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "Buyer@Example.com",
+        source: "site",
+        name: "Bo",
+        company: "Co",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const lead = w.calls.find((c) => c.url.includes("authichain_api_capture_lead"));
+    const resolve = w.calls.find((c) => c.url.includes("authichain_api_resolve_key"));
+    expect(lead?.headers.get("authorization")).toBe("Bearer service-role");
+    expect(lead?.body).toEqual({
+      p_email: "buyer@example.com",
+      p_source: "site",
+      p_name: "Bo",
+      p_company: "Co",
+    });
+    expect(resolve?.headers.get("authorization")).toBe("Bearer anon");
   });
 
   it("does not hand out a key that was not saved", async () => {

@@ -8,15 +8,17 @@
 
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
+import { gatedConfirmUrl } from "./checkout-gate";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
+  dppSmokeRequestAuthorized,
   isDppSmokePromo,
   recordDppLoopEvent,
 } from "./dpp-loop";
 
 export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
-export { DPP_SMOKE_PROMO, isDppSmokePromo };
+export { DPP_SMOKE_PROMO, dppSmokeRequestAuthorized, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");
 
@@ -48,6 +50,8 @@ export async function createDppCheckoutSession(opts: {
   stripeSecretKey: string;
   supabase?: SupabaseLike | null;
   origin?: string;
+  /** Required to open the $0 DPP-SMOKE-E2E session. Public promo is refused. */
+  smokeAuthorized?: boolean;
 }): Promise<DppCheckoutResult> {
   const { searchParams, stripeSecretKey, supabase } = opts;
   const origin = opts.origin || DPP_CHECKOUT_ORIGIN;
@@ -65,6 +69,14 @@ export async function createDppCheckoutSession(opts: {
   const referrer = pick(searchParams, "referrer", 512);
   const source = utmSource || pick(searchParams, "source", 64) || "direct";
   const smoke = isDppSmokePromo(pick(searchParams, "promo", 32));
+  if (smoke && opts.smokeAuthorized !== true) {
+    return {
+      ok: false,
+      status: 303,
+      error: "smoke_unauthorized",
+      url: gatedConfirmUrl("dpp_readiness", searchParams),
+    };
+  }
   // Affiliate / referral attribution survives into Stripe metadata so the
   // webhook can accrue commission. First-touch ?ref= has no cookie yet on
   // this request, so accept the query aliases the proxy/middleware persists.

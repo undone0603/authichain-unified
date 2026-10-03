@@ -1,5 +1,6 @@
 # Remote-applied versions on QRON-v2 (nhdnkzhtadfkkluiulhs)
-# Captured 2026-09-20 from supabase_migrations.schema_migrations; refreshed 2026-09-29.
+# Captured 2026-09-20 from supabase_migrations.schema_migrations; refreshed 2026-09-29;
+# refreshed 2026-10-02 (AE-20261002-CFD-69, read-only list_migrations: 52 versions).
 # Every version here MUST have a matching supabase/migrations/<version>_*.sql
 # or GitHub branching / `supabase db push` fails with:
 #   Remote migration versions not found in local migrations directory.
@@ -44,6 +45,17 @@
 20260924150000
 20260925163907
 20260925203453
+20260929190000
+20260930152032
+20260930153248
+20260930153535
+20261001000121
+20261001103645
+20261001104022
+20261001182456
+20261001191414
+20261001194503
+20261002082748
 
 # Not on remote (keep in migrations.archive only; do not restore):
 # 20260706000003_affiliate_program

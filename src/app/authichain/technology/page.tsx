@@ -11,7 +11,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Technology | AuthiChain Protocol',
-  description: 'Deep dive into the Ed25519 signatures, Polygon anchoring, and the API powering AuthiChain.',
+  description: 'Deep dive into the Ed25519 signatures and the API powering AuthiChain.',
 };
 
 export default function AuthichainTechnology() {
@@ -46,7 +46,7 @@ export default function AuthichainTechnology() {
               <Server className="w-8 h-8 text-blue-400 mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">Polygon Anchoring</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                State hashes are periodically anchored to the Polygon Proof-of-Stake (PoS) network via an automated smart contract roll-up. This ensures immutable, publicly verifiable provenance without passing unpredictable gas fees to end users.
+                Certificate contract live on Polygon; product certification through verify is in development.
               </p>
             </div>
 

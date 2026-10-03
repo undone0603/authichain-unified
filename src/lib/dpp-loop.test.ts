@@ -3,6 +3,7 @@ import {
   DPP_PRICE_ID,
   dppActivateUrl,
   fetchAllLoopEvents,
+  dppSmokeRequestAuthorized,
   isDppDemoSession,
   isDppOffer,
   isDemoVisit,
@@ -63,6 +64,16 @@ describe("dpp-loop", () => {
     expect(isDppOffer({ plan: "dpp_readiness" })).toBe(true);
     expect(isDppOffer({}, DPP_PRICE_ID)).toBe(true);
     expect(isDppOffer({ plan: "starter" })).toBe(false);
+  });
+
+  it("authorizes the smoke promo only with a matching secret", () => {
+    const secret = "smoke-secret-value";
+    expect(dppSmokeRequestAuthorized(secret, secret)).toBe(true);
+    expect(dppSmokeRequestAuthorized("smoke-secret-other", secret)).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, "short")).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, "")).toBe(false);
+    expect(dppSmokeRequestAuthorized(secret, null)).toBe(false);
+    expect(dppSmokeRequestAuthorized(null, secret)).toBe(false);
   });
 
   it("detects demo/smoke metadata without treating it as a non-offer", () => {

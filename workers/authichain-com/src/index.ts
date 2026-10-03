@@ -65,7 +65,7 @@ import {
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
-import { withApolloTracker } from "./apollo-tracker.ts";
+import { withHtmlEgress } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -2615,7 +2615,7 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Product Fingerprint — AuthiChain</title>
-<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are anchored on Polygon mainnet and checkable with the open verifier.">
+<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are checkable with the open verifier.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
 <meta property="og:title" content="Product Fingerprint — AuthiChain">
@@ -2699,7 +2699,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. Signed AuthiChain records are anchored on Polygon mainnet: see the
+      This fingerprint is not stored and not anchored. Certificate contract live on Polygon; product certification through verify is in development. See the
       <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
       <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
     </div>
@@ -2834,6 +2834,16 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
     <li><code>invalid</code> &mdash; any required check failed</li>
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
+
+  <h2>One record, anchored on Polygon mainnet</h2>
+  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
+    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
+    It is a demonstration, not a product.</p>
+  <ul>
+    <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
+    <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
+    <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
+  </ul>
 
   <h2>Two rules we learned the hard way</h2>
   <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
@@ -3181,6 +3191,8 @@ interface Env {
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -3509,7 +3521,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
     // click-to-confirm page, so a stale APP_WORKER never sees a GET that
     // could open a Stripe session.
-    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request, env);
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
@@ -3569,6 +3581,6 @@ async function handleAuthichainCom(request: Request, env: Env) {
 
 export default {
   async fetch(request: Request, env: Env) {
-    return withApolloTracker(request, await handleAuthichainCom(request, env));
+    return withHtmlEgress(request, await handleAuthichainCom(request, env));
   },
 };

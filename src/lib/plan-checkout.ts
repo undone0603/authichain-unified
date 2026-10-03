@@ -6,6 +6,7 @@
 import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
+import { checkoutReturnOrigin } from "./checkout-gate";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -94,10 +95,7 @@ export async function createPlanCheckoutSession(opts: {
     plan.brand && plan.brand !== "musa"
       ? plan.brand
       : getBrandIdFromRequest(request);
-  const origin =
-    request.headers.get("origin") ||
-    new URL(request.url).origin ||
-    "https://authichain.govchain.us";
+  const origin = checkoutReturnOrigin(request);
 
   if (!stripeSecretKey) {
     return { ok: false, status: 500, error: "Stripe is not configured" };
