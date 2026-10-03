@@ -59,6 +59,7 @@ export function detectEnterpriseTheater(email: string) {
  * This is a placeholder for a real API call.
  */
 export async function fetchProfessionalData(email: string): Promise<Partial<EnrichedContact>> {
+  if (process.env.LEAD_APOLLO_ENRICH !== "on") return {};
   const apolloKey = process.env.APOLLO_API_KEY;
   if (!apolloKey) {
     console.warn('[enrichment] APOLLO_API_KEY missing - using heuristic fallback');
@@ -90,7 +91,7 @@ export async function fetchProfessionalData(email: string): Promise<Partial<Enri
  * Unified Enrichment Handler: Raw Email -> Real Contact
  */
 export async function enrichLead(email: string): Promise<EnrichedContact> {
-  console.log(`[enrichment] Starting cycle for: ${email}`);
+  console.log('[enrichment] Starting cycle');
 
   // 1. Core Heuristics
   const theater = detectEnterpriseTheater(email);
