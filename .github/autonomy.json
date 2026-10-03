@@ -132,6 +132,8 @@
         "buyer-signals.yml": "on",
         "ghost-traffic.yml": "on",
         "b2b-outreach.yml": "on",
+        "dpp-outreach-trigger.yml": "on",
+        "outreach-trigger.yml": "on",
         "weekly-video.yml": "off"
       }
     },
@@ -165,9 +167,7 @@
         "d1-license-migrate.yml": "manual",
         "deploy-qron-ai-api.yml": "manual",
         "deploy-govchain-nft-base.yml": "manual",
-        "dpp-outreach-trigger.yml": "manual",
         "guardrail-digest.yml": "manual",
-        "outreach-trigger.yml": "manual",
         "purge-cloudflare-cache.yml": "manual",
         "set-agentz-claw-secrets.yml": "manual",
         "set-authichain-resend-txt.yml": "manual",
