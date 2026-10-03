@@ -26,6 +26,7 @@ import {
 import type { X402Env } from "./x402-routes";
 import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
 import {
+  expectedRecordHash,
   readAnchorOnChain,
   verifySubmitted,
 } from "../../authichain-verify-worker/src/protocol-verify.mjs";
@@ -142,6 +143,54 @@ export const ANCHOR_EXAMPLE_TX =
   "0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7";
 
 /**
+ * verify_record says "verified" only for an allowlisted signer AND an anchor
+ * tx that is on chain, carries this record's hash, and was sent by the
+ * AuthiChain anchor wallet (acceptance per RES-45). A valid signature from
+ * any other key, or a tx that merely exists, is not verified.
+ */
+export const DEMONSTRATION_SIGNER_DID =
+  "did:key:z6MkfcH7Xe1bFoos1vr6ogWkV4hmdx2qM2dDXkg3VJ4cpAeS";
+/** sha256 of polygon-anchor-1's signing bytes; the demo key is pinned to it. */
+export const DEMONSTRATION_RECORD_HASH =
+  "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1";
+/**
+ * Production attestation issuer: kid lue84w… published at /protocol/jwks.json
+ * and /.well-known/jwks.json (authichain-edge-router,
+ * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
+ * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
+ */
+export const PRODUCTION_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const PRODUCTION_ISSUER_DID =
+  "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
+type AllowedSigner =
+  | { role: "demonstration"; kid: null; recordHash: string }
+  | { role: "production_issuer"; kid: string; recordHash: null };
+const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
+  // Demonstration signer, not the production issuer. Valid for polygon-anchor-1 only.
+  [DEMONSTRATION_SIGNER_DID]: {
+    role: "demonstration",
+    kid: null,
+    recordHash: DEMONSTRATION_RECORD_HASH,
+  },
+  [PRODUCTION_ISSUER_DID]: {
+    role: "production_issuer",
+    kid: PRODUCTION_ISSUER_KID,
+    recordHash: null,
+  },
+};
+/** Sender (and recipient, self-send) of demo anchor tx 0x2491…10b7. */
+export const ANCHOR_WALLET = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+/** AuthiChainProduct ERC-721 certificate contract on Polygon. */
+export const CERT_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+const ANCHOR_TO = new Set([ANCHOR_WALLET, CERT_CONTRACT].map(a => a.toLowerCase()));
+
+function signerDid(record: unknown): string {
+  const r = record as { issuer?: unknown; proof?: { verificationMethod?: unknown } };
+  const vm = r?.proof?.verificationMethod ?? r?.issuer;
+  return typeof vm === "string" ? vm.split("#")[0] : "";
+}
+
+/**
  * Free verify_record: the same reference verifier and Polygon read as
  * GET /api/verify on authichain-verify-worker, run in-process. A Worker's
  * fetch to its own zone does not reliably reach another Worker's route, so
@@ -173,10 +222,41 @@ export async function verifyRecordTool(
     rpcUrl: polygon ? opts.rpcUrl : undefined,
     fetchImpl: opts.fetchImpl,
   });
+  const did = signerDid(record);
+  const entry = ALLOWED_SIGNERS[did];
+  const trustReasons: string[] = [];
+  let allowed: AllowedSigner | undefined = entry;
+  if (!entry) {
+    trustReasons.push("signer_not_allowlisted");
+  } else if (entry.recordHash && expectedRecordHash(record) !== entry.recordHash) {
+    allowed = undefined;
+    trustReasons.push("demonstration_signer_not_valid_for_this_record");
+  }
+  if (anchor) {
+    if (!chain.onChain) trustReasons.push(`anchor_not_on_chain:${chain.status}`);
+    else if (String(chain.txFrom ?? "").toLowerCase() !== ANCHOR_WALLET.toLowerCase()) {
+      trustReasons.push("anchor_tx_not_from_anchor_wallet");
+    } else if (!ANCHOR_TO.has(String(chain.txTo ?? "").toLowerCase())) {
+      trustReasons.push("anchor_tx_not_to_anchor_address");
+    }
+  }
+  let verdict: string = protocol.verdict;
+  if (protocol.verdict === "verified" && trustReasons.length) verdict = "unverified";
   return {
-    verdict: protocol.verdict,
-    reasons: protocol.reasons,
+    verdict,
+    protocolVerdict: protocol.verdict,
+    reasons:
+      protocol.verdict === "invalid"
+        ? protocol.reasons
+        : [...protocol.reasons, ...trustReasons],
     checks: protocol.checks,
+    signer: {
+      did: did || null,
+      allowlisted: Boolean(allowed),
+      role: allowed?.role ?? null,
+      kid: allowed?.kid ?? null,
+      productionIssuer: allowed?.role === "production_issuer",
+    },
     anchorOnChain: chain.onChain,
     anchorChainStatus: chain.status,
     anchorBlock: chain.block ?? null,
