@@ -1,18 +1,6 @@
 /**
- * Paid verify for the public edge, where POST /api/x402 and POST /mcp
- * actually arrive.
- *
- * authichain-app does not answer POST /api/v1/agent-verify (it 404s), so
- * forwarding VERIFY_APP cannot complete a call. When this worker has
- * SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY,
- * it reads auth_seals over PostgREST and settles only after that read
- * succeeds. A missing row is a real answer (not_registered). A lookup
- * failure is HTTP 503 with settled:false, before settlePayment().
- *
- * verified stays false. attestSeal needs the Node verifier and is not
- * bundled here; a registry row is not an Ed25519 attestation.
- *
- * X402_PAID_VERIFY_BOUND stays false until a live paid POST returns 200.
+ * Worker-local auth_seals read for paid verify. Settle only after that read
+ * succeeds. verified stays false: a registry row is not an attestation.
  */
 import { parseSealRequest, registryAnswer } from "./agent-verify";
 import {
@@ -106,7 +94,7 @@ async function dailySpentAtomic(
   creds: SealLookupCredentials,
   payer: string,
   priceAtomic: bigint
-): Promise<bigint> {
+): Promise<bigint | null> {
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const query = [
     "automation_logs?select=id",
@@ -120,7 +108,9 @@ async function dailySpentAtomic(
     `${creds.url}/rest/v1/${query}`,
     creds.key
   );
-  if (!read.ok || !Array.isArray(read.body)) return 0n;
+  // A failed ledger read must never look like zero spend: zero would allow a
+  // caller to bypass the daily cap during an outage or RLS/config regression.
+  if (!read.ok || !Array.isArray(read.body)) return null;
   return BigInt(read.body.length) * priceAtomic;
 }
 
@@ -164,6 +154,7 @@ async function recordSpend(
         status: "success",
         payload: payer,
       }),
+      signal: AbortSignal.timeout(8000),
     });
   } catch {
     // The caller already settled. Dropping the ledger row fails the cap
@@ -238,6 +229,13 @@ export async function resolvePaidSealVerify(input: {
     proof.payer,
     priceAtomic
   );
+  if (spent === null) {
+    return {
+      action: "answer",
+      status: 503,
+      body: { error: "spend_ledger_unavailable", settled: false },
+    };
+  }
   if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
     return {
       action: "answer",

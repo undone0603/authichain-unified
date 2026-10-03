@@ -20,7 +20,8 @@ export type PlanId =
   | "strainchain_passport"
   | "strainchain_farm"
   | "musa_claim_file"
-  | "musa_audit_bundle";
+  | "musa_audit_bundle"
+  | "enterprise_compliance";
 
 export interface Plan {
   id: PlanId;
@@ -36,7 +37,7 @@ export interface Plan {
   features: string[];
   cta: string;
   highlighted?: boolean;
-  brand?: "qron" | "strainchain";
+  brand?: "qron" | "strainchain" | "musa";
   listed?: boolean;
 }
 
@@ -176,8 +177,11 @@ export const PLANS: Plan[] = [
   {
     // Created by Z in Stripe 2026-09-29 (prod_VLiM8xIrFVFa1M). Priced per SKU;
     // the Payment Link allows 1–25 SKUs, the gated checkout sells one.
-    // Unlisted: sold from /made-in-usa-claim-file, not the pricing grid.
+    // Listed 2026-09-29: also on the pricing grid and in PUBLIC_PLAN_IDS, not
+    // only /made-in-usa-claim-file. Own "musa" brand since 2026-09-30 (Z's
+    // choice): the pricing page shows it in its own section, not under QRON.
     id: "musa_claim_file",
+    brand: "musa",
     name: "Made in USA Claim File",
     price: 299,
     price_suffix: " per SKU",
@@ -187,15 +191,17 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
     stripe_mode: "payment",
     tier: "pro",
-    listed: false,
+    listed: true,
     features: ["Origin records for one SKU", "Bill-of-materials origin attestations from your suppliers", "A signed attestation anyone can verify", "Substantiation support, not legal advice"],
     cta: "Start my claim file",
   },
   {
     // Created by Z in Stripe 2026-09-29. One engagement, base scope 10 SKUs;
-    // larger scopes are quoted. Sold only through its Payment Link, which
-    // collects company name, SKU count, address and tax ID for the invoice.
+    // larger scopes are quoted. The Payment Link collects company name, SKU
+    // count, address and tax ID for the invoice; listed 2026-09-29, so the
+    // gated checkout and the pricing grid sell it too.
     id: "musa_audit_bundle",
+    brand: "musa",
     name: "Made in USA Claim File — Audit Bundle",
     price: 2500,
     price_suffix: " per engagement",
@@ -205,7 +211,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
     stripe_mode: "payment",
     tier: "pro",
-    listed: false,
+    listed: true,
     features: ["Claim files for up to 10 SKUs", "One engagement, invoiced to your company", "Larger scopes quoted separately", "Substantiation support, not legal advice"],
     cta: "Buy the audit bundle",
   },
@@ -218,13 +224,15 @@ export const PUBLIC_PLAN_IDS = [
   "creator",
   "dpp_readiness",
   "strainchain_passport",
+  "musa_claim_file",
+  "musa_audit_bundle",
 ] as const;
 
 export function isPurchasable(plan: Plan): boolean {
   return plan.price === 0 || Boolean(plan.stripe_price_id || plan.stripe_payment_link);
 }
 
-export function listedPlans(brand: "qron" | "strainchain" = "qron"): Plan[] {
+export function listedPlans(brand: "qron" | "strainchain" | "musa" = "qron"): Plan[] {
   return PLANS.filter(
     p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
   );
@@ -284,6 +292,7 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   strainchain_farm: 0,
   musa_claim_file: 0,
   musa_audit_bundle: 0,
+  enterprise_compliance: 0,
 };
 
 export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
@@ -300,4 +309,18 @@ export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
   strainchain_farm: "pro",
   musa_claim_file: "pro",
   musa_audit_bundle: "pro",
+  enterprise_compliance: "enterprise",
 };
+
+/**
+ * Entitlement for /dashboard/compliance (src/lib/compliance-access.ts): a
+ * profile whose subscription_plan is this id and whose subscription_status is
+ * active or trialing.
+ *
+ * Deliberately NOT in PLANS yet: it has no price. isPurchasable() treats a
+ * price of 0 as free, so a placeholder entry would make the tier claimable
+ * for nothing. To sell it, create the Stripe price, then add a PLANS entry
+ * with the real price, stripe_price_id and stripe_mode: "subscription".
+ * Until then planById() returns undefined and /checkout refuses it.
+ */
+export const COMPLIANCE_PLAN_ID: PlanId = "enterprise_compliance";

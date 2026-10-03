@@ -73,6 +73,7 @@ jobs:
         env:
           LOCAL_LLM_URL: ${{ vars.LOCAL_LLM_URL }}
           LOCAL_LLM_MODEL: ${{ vars.LOCAL_LLM_MODEL }}
+          LM_STUDIO_API_TOKEN: ${{ secrets.LM_STUDIO_API_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GEMMA_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}

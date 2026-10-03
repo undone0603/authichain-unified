@@ -14,16 +14,6 @@
     "unknown": "Source not found anywhere. Owner decides: snapshot or retire."
   },
   "off_repo_workers": {
-    "first-dollar-desk": {
-      "disposition": "archive",
-      "archive": "docs/archive/cf-workers/first-dollar-desk.js",
-      "note": "Live money path: Stripe payment links, Base USDC ledger in KV first-dollar-ledger, /mcp and /api/agent/verify. Highest-priority source to restore."
-    },
-    "authichain-agentz-webhook": {
-      "disposition": "archive",
-      "archive": "docs/archive/cf-workers/authichain-agentz-webhook.js",
-      "note": "Receives agentz-orchestration.yml events (x-agentz-secret) into KV with a 90-day TTL."
-    },
     "gmail-relay-z": {
       "disposition": "archive",
       "archive": "docs/archive/cf-workers/gmail-relay-z.js",

@@ -1,0 +1,40 @@
+# One Polygon mainnet transaction whose input is the demonstration record hash.
+# Uses the existing ops key. Does not print it. Refuses under 0.01 POL.
+name: Anchor demonstration record
+
+on:
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "Broadcast the transaction. Unchecked only prints the address and balance."
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anchor-polygon-record
+  cancel-in-progress: false
+
+jobs:
+  anchor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: "10.28.2"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - name: Anchor or report balance
+        env:
+          SEND: ${{ inputs.send }}
+          WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+        run: node scripts/anchor-polygon-record.mjs

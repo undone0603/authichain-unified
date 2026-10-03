@@ -42,6 +42,9 @@ jobs:
               - apps
               - docs/archive
               - scripts/ops
+              # Third-party code vendored unmodified (GS1's Apache-2.0 Digital
+              # Link toolkit); findings belong upstream, like node_modules.
+              - workers/gs1-resolver/src/vendor
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:

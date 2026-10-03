@@ -258,6 +258,31 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(getHyperdriveDb).not.toHaveBeenCalled();
   });
 
+  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
+    const res = await app.request(
+      "/p/quantum-financial-system-real-or-myth",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(body).toContain('<meta name="robots" content="noindex">');
+  });
+
+  it("leaves indexable SEO hubs without a robots noindex", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(body).not.toContain('name="robots"');
+  });
+
   it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
     const res = await app.request(
       "/p/cannabis-blockchain-provenance",
@@ -671,10 +696,11 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
     const body = await res.text();
     expect(body).toContain("Five free used. Buy Starter Pack $29.");
-    expect(body).toContain("Network error. Opening Starter checkout.");
+    expect(body).toContain("Network error. Buy the Starter pack to keep generating.");
     expect(body).not.toContain("Sign in or buy a generation pack.");
   });
 
+  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
   it("303s a valid URL to https://authichain.com/checkout/starter", async () => {
     const res = await app.request(
       "/generate",

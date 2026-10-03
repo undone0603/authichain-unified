@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../server/webhooks/stripe", () => ({
   handleStripeWebhook: vi.fn().mockResolvedValue({ received: true }),
@@ -52,6 +52,7 @@ describe("GET /api/checkout/dpp", () => {
   beforeEach(() => {
     dppCreate.mockReset();
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.DPP_SMOKE_SECRET;
   });
 
   it("HEAD does not create a Stripe session", async () => {
@@ -84,13 +85,27 @@ describe("GET /api/checkout/dpp", () => {
     expect(dppCreate).not.toHaveBeenCalled();
   });
 
-  it("DPP-SMOKE-E2E still creates the $0 demo session on GET", async () => {
+  it("public DPP-SMOKE-E2E 303s to the confirm page", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    const res = await app.request(
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_smoke"
+    );
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("DPP-SMOKE-E2E creates the $0 session when the header matches", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    process.env.DPP_SMOKE_SECRET = "smoke-secret-value";
     dppCreate.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
     });
     const res = await app.request(
-      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E",
+      { headers: { "x-dpp-smoke-secret": "smoke-secret-value" } }
     );
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
@@ -141,7 +156,9 @@ describe("GET /api/checkout", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.smoke).toBe("GET /api/checkout/dpp?promo=DPP-SMOKE-E2E");
+    expect(body.smoke).toBe(
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret"
+    );
     expect(body.webhook).toBe("POST /api/stripe/webhook");
   });
 });
@@ -225,15 +242,16 @@ describe("GET /api/stripe/webhook", () => {
 });
 
 describe("POST /api/webhooks/stripe", () => {
-  it("aliases to the canonical webhook handler", async () => {
+  it("returns 410 because the endpoint is retired", async () => {
     const res = await app.request("/api/webhooks/stripe", {
       method: "POST",
       body: "raw-stripe-payload",
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
-    expect(res.status).toBe(200);
-    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
-    expect(handleStripeWebhook).toHaveBeenCalled();
+    expect(res.status).toBe(410);
+    const body = await res.json();
+    expect(body.deprecated).toBe(true);
+    expect(body.error).toMatch(/\/api\/stripe\/webhook/);
   });
 });
 
@@ -854,5 +872,29 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
     if (body.result) {
       expect(body.result.data.json).toEqual({ ok: true });
     }
+  });
+});
+
+
+describe("GET /api/generate requires the service role", () => {
+  const keys = ["SUPABASE_URL","SUPABASE_ANON_KEY","NEXT_PUBLIC_SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"] as const;
+  const saved: Partial<Record<(typeof keys)[number], string | undefined>> = {};
+  beforeEach(() => {
+    for (const key of keys) saved[key] = process.env[key];
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "anon-test";
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+  afterEach(() => {
+    for (const key of keys) saved[key] === undefined ? delete process.env[key] : process.env[key] = saved[key]!;
+  });
+  it("does not report auth from the anon key", async () => {
+    const res = await app.request("/api/generate");
+    expect((await res.json()).auth).toBe(false);
+  });
+  it("stays 401 for a bearer token when credit checks cannot run", async () => {
+    const res = await app.request("/api/generate", { method:"POST", headers:{"content-type":"application/json",authorization:"Bearer eyJhbGciOiJub3Q"}, body:JSON.stringify({targetUrl:"https://example.com",prompt:"neon"}) });
+    expect(res.status).toBe(401);
   });
 });

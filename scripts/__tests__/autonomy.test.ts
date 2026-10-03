@@ -15,6 +15,7 @@ import {
 import {
   decideIssueAction,
   evaluateWorkflows,
+  isCallOnly,
   runProbes,
   signature,
 } from "../autonomy/ops-pulse.mjs";
@@ -289,6 +290,26 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+  });
+
+  it("skips the stale run history of reusable (workflow_call-only) loops", () => {
+    const runs = new Map([
+      ["a.yml", { conclusion: "failure", html_url: "u", created_at: "" }],
+    ]);
+    expect(evaluateWorkflows(rows, remote, runs, new Set(["a.yml"]))).toEqual(
+      []
+    );
+    expect(
+      isCallOnly(
+        "name: x\non:\n  workflow_call:\n    inputs:\n      a:\n        type: string\njobs:\n  j: {}\n"
+      )
+    ).toBe(true);
+    expect(
+      isCallOnly("on:\n  workflow_dispatch:\n  workflow_call:\njobs: {}\n")
+    ).toBe(false);
+    expect(isCallOnly('on:\n  schedule:\n    - cron: "0 6 * * *"\n')).toBe(
+      false
+    );
   });
 
   const red = {

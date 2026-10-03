@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { isCronAuthorized } from '../../../../lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -88,8 +89,7 @@ export async function POST(req: NextRequest) {
  * GET handler for Vercel Cron invocation
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req)) {
     return new Response('Unauthorized', { status: 401 });
   }
 

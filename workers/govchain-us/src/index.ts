@@ -64,7 +64,6 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="2" fill="#f0f9ff">GOVCHAIN</text>
   <line x1="240" y1="416" x2="520" y2="416" stroke="#3b82f6" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="32" font-weight="300" fill="#7e93b8">Federal Contract Intelligence</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#4b6080">AI Fit-Scoring · On-Chain Provenance · Made-in-USA Compliance</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#3b82f6">GOVCHAIN.US</text>
 </svg>`;
 
@@ -2300,6 +2299,31 @@ export default {
     // The homepage already fetches both of these endpoints; until now they fell
     // through to the marketing HTML, so the live feed's JSON.parse always threw
     // and the stats bar always read "temporarily unavailable".
+    if (p === '/api/govchain/grants') {
+      if (!env?.VERIFY_APP) {
+        return jsonResponse({ error: 'app_not_bound' }, 503, 'no-store');
+      }
+      const upstreamUrl = new URL(
+        `${url.pathname}${url.search}`,
+        'https://authichain-app.internal',
+      );
+      const proxied = new Request(upstreamUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.method === 'GET' || request.method === 'HEAD' ? null : request.body,
+        redirect: 'manual',
+      });
+      proxied.headers.set('X-Forwarded-Host', url.host);
+      proxied.headers.set('X-Forwarded-Proto', 'https');
+      const res = await env.VERIFY_APP.fetch(proxied);
+      const headers = new Headers(res.headers);
+      headers.set('x-served-by', 'govchain-us-proxy');
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+      });
+    }
     if (p === '/api/govchain/opportunities') {
       if (!supabaseConfigured(env)) {
         return jsonResponse({ error: 'supabase_not_configured', opportunities: [] }, 503, 'no-store');
@@ -2308,6 +2332,7 @@ export default {
         const opportunities = await fetchOpportunities(env, {
           minFit: Number(url.searchParams.get('min_fit') ?? 70),
           limit: Number(url.searchParams.get('limit') ?? 12),
+          q: url.searchParams.get('q') ?? undefined,
         });
         return jsonResponse({ opportunities });
       } catch {
@@ -2340,11 +2365,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GovChain — Federal Contract Intelligence & Public Provenance</title>
-<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GovChain">
 <meta property="og:title" content="GovChain — Federal Contract Intelligence &amp; Public Provenance">
-<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:url" content="https://govchain.us/">
 <meta property="og:image" content="https://govchain.us/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2354,7 +2379,7 @@ export default {
 <meta name="theme-color" content="#1d4ed8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).","sameAs":["https://authichain.govchain.us"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GovChain","url":"https://govchain.us","description":"Federal Contract Intelligence and Public Provenance powered by AuthiChain Protocol."}</script>
 <style>
 ${estateCssVars("govchain")}
@@ -2375,7 +2400,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Federal contract intelligence",
   title: "Win more federal work. Prove every claim.",
-  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).",
+  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements.",
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     { href: "/opportunities", label: "Browse opportunities", primary: false },
@@ -2443,7 +2468,6 @@ ${estateFeatures(
     <div class="compliance-grid">
       <div class="compliance-card"><h3>FAR / DFARS</h3><p>Evidence mapping for Federal Acquisition Regulation and defense supplement clauses.</p></div>
       <div class="compliance-card"><h3>NIST SP 800-171</h3><p>Controlled Unclassified Information control tracking with an audit-ready evidence trail.</p></div>
-      <div class="compliance-card"><h3>Buy American / Made in USA</h3><p>Cryptographic domestic-origin provenance for FTC MUSA and EO 14392 questions.</p></div>
       <div class="compliance-card"><h3>Section 889 / supply chain</h3><p>Prohibited-source screening and supply-chain provenance for prime and sub assurance.</p></div>
     </div>
   </div>

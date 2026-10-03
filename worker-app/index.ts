@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { reportGrowthEvent } from "./growth-record";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
@@ -15,6 +16,7 @@ import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
+import { registerComplianceEvaluate } from "./compliance-evaluate";
 import { registerX402Routes } from "./x402-routes";
 import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
 import { registerInboundRoutes } from "./inbound-routes";
@@ -54,6 +56,8 @@ type Env = {
   /** Key of the Resend account that owns the receiving domain; falls back to RESEND_API_KEY. */
   RESEND_INBOUND_API_KEY?: string;
   RESEND_API_KEY?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -68,15 +72,23 @@ type Env = {
   SUPABASE_ANON_KEY?: string;
 };
 
+function generateServiceKey(env?: Env): string | undefined {
+  return env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
 function hydrateProcessEnv(env?: Env) {
   if (!env) return;
   const copy: Array<[string, string | undefined]> = [
     ["STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY],
     ["STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET],
     ["STRIPE_WEBHOOK_AUTHICHAIN_SECRET", env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET],
-    ["NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL],
+    [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL,
+    ],
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
+    ["DPP_SMOKE_SECRET", env.DPP_SMOKE_SECRET],
     ["CRON_SECRET", env.CRON_SECRET],
     ["INTERNAL_API_SECRET", env.INTERNAL_API_SECRET],
     [
@@ -227,8 +239,9 @@ function isAppHostname(host: string): boolean {
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
 // https://authichain.com/checkout/<plan> (authichain-com), whose confirm form
-// POSTs to create the session. Only DPP-SMOKE-E2E (a $0 demo session used by
-// production-smoke-gate) still creates a session on GET.
+// POSTs to create the session. DPP-SMOKE-E2E still creates a $0 session on
+// GET only when x-dpp-smoke-secret matches DPP_SMOKE_SECRET. A public promo
+// 303s to the confirm page and does not open a session.
 app.get("/api/checkout/dpp", async c => {
   if (c.req.method === "HEAD") {
     for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
@@ -238,8 +251,16 @@ app.get("/api/checkout/dpp", async c => {
   }
   const search = new URL(c.req.url).searchParams;
   const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
-  const { isDppSmokePromo } = await import("../src/lib/dpp-loop");
-  if (!isDppSmokePromo(search.get("promo"))) {
+  const { dppSmokeRequestAuthorized, isDppSmokePromo } = await import(
+    "../src/lib/dpp-loop"
+  );
+  const smokeAuthorized =
+    isDppSmokePromo(search.get("promo")) &&
+    dppSmokeRequestAuthorized(
+      c.req.header("x-dpp-smoke-secret"),
+      c.env?.DPP_SMOKE_SECRET || process.env.DPP_SMOKE_SECRET
+    );
+  if (!smokeAuthorized) {
     return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", search));
   }
   try {
@@ -261,6 +282,7 @@ app.get("/api/checkout/dpp", async c => {
       searchParams: search,
       stripeSecretKey,
       supabase,
+      smokeAuthorized: true,
     });
     if (!result.ok) {
       if (result.status === 303 && result.url) {
@@ -310,7 +332,8 @@ app.get("/api/checkout", c => {
   return c.json({
     ok: true,
     methods: ["POST"],
-    smoke: "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E",
+    smoke:
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret",
     confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
@@ -373,13 +396,7 @@ app.get("/api/generate", async c => {
     c.env?.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.SUPABASE_URL;
-  const supabaseKey =
-    c.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    c.env?.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = generateServiceKey(c.env);
   return c.json(
     generateHealthBody(c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL, {
       authConfigured: Boolean(supabaseUrl && supabaseKey),
@@ -430,6 +447,17 @@ app.post("/api/generate", async c => {
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
     });
+    // LOOP-03: a 401 here is a stranger who filled the form and was walled by
+    // the auth requirement. /generate promises "Five generations are free", so
+    // this count measures the size of that broken promise, not noise.
+    //
+    // free_gen_granted / free_gen_exhausted are deliberately NOT emitted here.
+    // They describe the 5-free ANONYMOUS tier, which does not exist yet; a 200
+    // is an authenticated paid generation and a 403 is paid credits exhausted.
+    // Labelling either as "free" would corrupt the funnel the kill criteria read.
+    if (result.status === 401) {
+      reportGrowthEvent(c, { event: "generate_submit_anon", sku: "starter" });
+    }
     c.header("Cache-Control", "private, no-store");
     return c.json(result.body, result.status as 200 | 400 | 401 | 403 | 502);
   } catch (err: any) {
@@ -439,8 +467,8 @@ app.post("/api/generate", async c => {
 });
 
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
-// Landing JS on /dpp POSTs here. Next src/app/api/funnel is not on this worker;
-// unregistered /api/* falls through to ASSETS (404) and drops the first loop stage.
+// Landing JS on /dpp POSTs here. The framework-agnostic funnel recorder is
+// mounted directly on this worker so the first loop stage cannot fall through to ASSETS.
 app.post("/api/funnel", async c => {
   try {
     hydrateProcessEnv(c.env);
@@ -496,7 +524,7 @@ app.post("/api/funnel", async c => {
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.on("GET", ["/api/stripe/webhook", "/api/webhooks/stripe"], c => {
+app.get("/api/stripe/webhook", c => {
   c.header("Cache-Control", "private, no-store");
   return c.json({
     ok: true,
@@ -530,8 +558,20 @@ async function stripeWebhookPost(c: {
   }
 }
 
-app.post("/api/webhooks/stripe", c => stripeWebhookPost(c));
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
+
+// Retired alias (#1406). Answer 410 rather than falling through to ASSETS'
+// 404, so a Stripe endpoint still pointed here reads as retired, not missing.
+app.post("/api/webhooks/stripe", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json(
+    {
+      error: "Retired. Stripe webhooks go to /api/stripe/webhook.",
+      deprecated: true,
+    },
+    410
+  );
+});
 
 app.post("/api/dpp/activate", async c => {
   try {
@@ -593,8 +633,8 @@ function edgeSupabase(env?: Env) {
   );
 }
 
-// Next src/app/api/dpp/publish and /verify are not on this worker; unregistered
-// /api/* falls through to ASSETS 404 and the loop never records dpp_published.
+// DPP publish/verify share the framework-agnostic logic in src/lib so the
+// apex checkout origin can complete the publish → verify loop on this worker.
 app.post("/api/dpp/publish", async c => {
   try {
     hydrateProcessEnv(c.env);
@@ -1741,6 +1781,7 @@ app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
+registerComplianceEvaluate(app);
 registerX402Routes(app);
 registerUnsubscribeRoutes(app);
 registerInboundRoutes(app);

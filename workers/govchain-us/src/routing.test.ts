@@ -442,6 +442,64 @@ test("/onboard is proxied to the app, not answered with a 404", async () => {
   }
 });
 
+test("/api/govchain/grants proxies the canonical JSON handler", async () => {
+  const calls: Request[] = [];
+  const env = {
+    ...ENV,
+    VERIFY_APP: {
+      fetch: async (request: Request) => {
+        calls.push(request);
+        return Response.json(
+          { grants: [{ program: "Small Business Innovation Research", agency: "GSA" }], total: 1, limit: 20, offset: 0 },
+          { status: 200 },
+        );
+      },
+    },
+  } as typeof ENV;
+  const res = await worker.fetch(
+    new Request("https://govchain.us/api/govchain/grants?agency=GSA"),
+    env,
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+  assert.equal(calls.length, 1);
+  assert.equal(new URL(calls[0].url).pathname, "/api/govchain/grants");
+  assert.equal(new URL(calls[0].url).search, "?agency=GSA");
+  assert.equal(calls[0].headers.get("X-Forwarded-Host"), "govchain.us");
+  const body = (await res.json()) as { grants: StubRow[]; total: number };
+  assert.equal(body.total, 1);
+  assert.equal(body.grants[0].agency, "GSA");
+});
+
+test("/api/govchain/grants fails closed when the app binding is absent", async () => {
+  const res = await get("/api/govchain/grants");
+  assert.equal(res.status, 503);
+  assert.deepEqual(await res.json(), { error: "app_not_bound" });
+});
+
+test("/api/govchain/opportunities applies the search query", async () => {
+  const f = stubSupabase([ROW]);
+  try {
+    const res = await get("/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support");
+    assert.equal(res.status, 200);
+    assert.ok(
+      f.calls[0].includes("title.ilike.*Cyber%20support*"),
+      "q reaches PostgREST title search"
+    );
+    assert.ok(
+      f.calls[0].includes("agency.ilike.*Cyber%20support*"),
+      "q reaches PostgREST agency search"
+    );
+    assert.ok(
+      f.calls[0].includes("notice_id.ilike.*Cyber%20support*"),
+      "q reaches PostgREST notice search"
+    );
+  } finally {
+    f.restore();
+  }
+});
+
 test("/api/govchain/opportunities returns JSON the homepage can parse", async () => {
   const f = stubSupabase([ROW]);
   try {

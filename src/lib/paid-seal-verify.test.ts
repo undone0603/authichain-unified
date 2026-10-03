@@ -77,12 +77,40 @@ describe("resolvePaidSealVerify", () => {
     expect(calls).toEqual([]);
   });
 
+  it("fails closed when the spend ledger cannot be read", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("automation_logs")) {
+        return new Response("ledger down", { status: 500 });
+      }
+      throw new Error("registry and settlement must not run");
+    });
+    const decision = await resolvePaidSealVerify({
+      ...bound,
+      proofHeader: proof({ signature: "0xdead" }),
+      bodyText: JSON.stringify({ sealId: SEAL }),
+      fetchImpl,
+    });
+    expect(decision).toMatchObject({
+      action: "answer",
+      status: 503,
+      body: { error: "spend_ledger_unavailable", settled: false },
+    });
+    expect(calls.some(call => call.url.includes("automation_logs"))).toBe(true);
+    expect(calls.some(call => call.url.includes("auth_seals"))).toBe(false);
+    expect(calls.some(call => call.url.includes("/settle"))).toBe(false);
+  });
+
   it("returns 503 settled false when the registry read fails and does not settle", async () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     process.env.X402_NETWORK = "base";
-    const { fetchImpl, calls } = callsOf(
-      () => new Response("down", { status: 500 })
-    );
+    const { fetchImpl, calls } = callsOf(url => {
+      if (url.includes("automation_logs")) {
+        return new Response("[]", { status: 200 });
+      }
+      return new Response("down", { status: 500 });
+    });
     const decision = await resolvePaidSealVerify({
       ...bound,
       proofHeader: proof({ signature: "0xdead" }),
@@ -241,5 +269,24 @@ describe("resolvePaidSealVerify", () => {
       bodyText: "{}",
     });
     expect(decision).toEqual({ action: "forward" });
+  });
+
+  it("keeps the settled answer when the post-settlement spend log aborts", async () => {
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    let spendSignal: AbortSignal | undefined;
+    const { fetchImpl } = callsOf((url, init) => {
+      if (url.includes("/settle")) return new Response(JSON.stringify({success:true,txHash:"0xabc"}), {status:200});
+      if (url.includes("automation_logs") && (init?.method ?? "GET").toUpperCase() === "POST") { spendSignal = init?.signal ?? undefined; throw new DOMException("The operation was aborted","AbortError"); }
+      if (url.includes("auth_seals")) return new Response(JSON.stringify([{id:SEAL,product_id:"pack",batch_id:"b1",brand:"acme",created_at:"2026-01-01T00:00:00Z"}]), {status:200});
+      return new Response("[]",{status:200});
+    });
+    globalThis.fetch = fetchImpl;
+    try {
+      const decision = await resolvePaidSealVerify({...bound,env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"service-test"},proofHeader:proof({signature:"0xdead"}),bodyText:JSON.stringify({sealId:SEAL}),fetchImpl});
+      expect(decision).toMatchObject({action:"answer",status:200});
+      expect(spendSignal).toBeInstanceOf(AbortSignal);
+    } finally { globalThis.fetch = original; }
   });
 });

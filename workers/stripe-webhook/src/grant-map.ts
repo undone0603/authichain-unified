@@ -61,3 +61,35 @@ export function grantForPrice(priceId: string | null | undefined): Grant | null 
   if (!priceId || UNLISTED.has(priceId)) return null;
   return GRANT_BY_PRICE[priceId] ?? null;
 }
+
+/**
+ * Growth loop identity per plan. Lockstep with src/lib/growth/loops.ts
+ * GROWTH_LOOPS — this Worker deliberately duplicates catalogue constants rather
+ * than importing src/lib (same reason GRANT_BY_PRICE is duplicated above).
+ *
+ * Plans absent here have no loop (creator, strainchain_farm, qron_launch) and
+ * must not produce a purchase event.
+ */
+export type LoopIdentity = { loop: string; purchaseEvent: string };
+
+export const LOOP_BY_PLAN: Record<string, LoopIdentity> = {
+  starter: { loop: "loop_03_qron_starter", purchaseEvent: "purchase_starter_succeeded" },
+  dpp_readiness: { loop: "loop_02_dpp_check", purchaseEvent: "purchase_dpp_succeeded" },
+  strainchain_passport: {
+    loop: "loop_01_passport_scan",
+    purchaseEvent: "purchase_passport_succeeded",
+  },
+};
+
+export function loopForPlan(plan: string | null | undefined): LoopIdentity | null {
+  if (!plan) return null;
+  return LOOP_BY_PLAN[plan] ?? null;
+}
+
+/** Lockstep with src/lib/billing/live-catalog.ts FOUNDER_EMAILS. */
+export const FOUNDER_EMAILS = ["undone.k@gmail.com", "authichain@gmail.com"] as const;
+
+export function isFounderEmail(email: string | null | undefined): boolean {
+  const e = (email || "").toLowerCase().trim();
+  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+}

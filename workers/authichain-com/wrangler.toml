@@ -62,7 +62,13 @@ fallthrough = true
 binding = "APP_WORKER"
 service = "authichain-edge-router"
 
-# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID
+# API_WORKER: service binding to authichain-api for the public /api/v1 endpoints.
+[[services]]
+binding = "API_WORKER"
+service = "authichain-api"
+
+# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
+# DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
 
 # VERIFY_APP: service binding to the Next app worker `authichain-app`
 # (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This

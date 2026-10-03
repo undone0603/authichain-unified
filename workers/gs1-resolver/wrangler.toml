@@ -3,6 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+# Declared here so a deploy keeps it. It was first attached in the dashboard.
+routes = [{ pattern = "id.authichain.com", custom_domain = true }]
 
 # Reuse the existing provenance D1 from authichain-scan-validate.
 [[d1_databases]]
@@ -19,9 +21,15 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 PASSPORT_ORIGIN = "https://authichain.com"
 RESOLVER_ORIGIN = "https://id.authichain.com"
 
-# After first deploy, attach custom domain id.authichain.com in the dashboard.
-# Secrets:
-#   npx wrangler secret put ISSUE_SECRET
+# Custom domain id.authichain.com was attached in the Cloudflare dashboard
+# on 2026-09-30 and is now declared in `routes` above. ISSUE_SECRET is
+# currently set directly in the dashboard (rotated 2026-09-30) -- POST /issue works today against that
+# value. deploy-workers.yml has a "Bind ISSUE_SECRET on gs1-resolver" step
+# that binds secrets.GS1_RESOLVER_ISSUE_SECRET on every deploy IF that GitHub
+# secret is set; it no-ops otherwise. Setting that GitHub secret will
+# OVERWRITE the current dashboard-set value on the next deploy -- once set,
+# rotate ISSUE_SECRET with `gh secret set GS1_RESOLVER_ISSUE_SECRET`, not in
+# the dashboard, or the two will drift.
 
 [env.staging]
 name = "gs1-resolver-staging"
