@@ -5,8 +5,8 @@
 // Object storage — a `new_classes` migration is rejected at deploy time
 // with API error code 10097 ("In order to use Durable Objects with a free
 // plan, you must create a namespace using a `new_sqlite_classes`
-// migration."). See worker-app/wrangler.toml, services/worker-app/wrangler.toml
-// and workers/authichain-automation/wrangler.toml for a real instance of
+// migration."). See worker-app/wrangler.toml and
+// workers/authichain-automation/wrangler.toml for a real instance of
 // this failure.
 //
 // This check catches the mistake at PR time instead of at deploy time.
