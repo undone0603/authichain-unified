@@ -3,6 +3,12 @@ main = "index.js"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Private: reached only through service bindings (qron-automation's RELAY).
+# Keeps a plain `wrangler deploy` (e.g. a deploy-workers.yml dispatch) from
+# turning the public workers.dev URL or preview URLs back on (CFA-39).
+workers_dev = false
+preview_urls = false
+
 # SECURITY: The RESEND_API_KEY must be set as a secret, NOT in this file.
 # Run: npx wrangler secret put RESEND_API_KEY
 # Then paste your Resend API key when prompted.

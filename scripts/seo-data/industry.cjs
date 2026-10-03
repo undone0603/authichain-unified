@@ -106,7 +106,7 @@ module.exports = [
   { keyword: 'supply chain traceability aerospace', brand: 'govchain', schemaType: 'Service',
     lead: 'Provide aerospace supply-chain traceability with part genealogy, certificate hashing, and immutable maintenance history for airworthiness assurance.',
     bullets: ['Full part genealogy and provenance', 'Certificate-of-conformance hashing', 'audit-ready maintenance records'],
-    faqs: [{ q: 'Can it track airworthiness data?', a: 'Yes — certifications and maintenance events are anchored per part.' }] },
+    faqs: [{ q: 'Can it track airworthiness data?', a: 'Yes — certifications and maintenance events can be signed per part.' }] },
   { keyword: 'supply chain traceability pharmaceutical', brand: 'authichain', schemaType: 'Service',
     lead: 'Trace pharmaceuticals across the supply chain with DSCSA-aligned serialization and blockchain records that make provenance and recalls verifiable.',
     bullets: ['DSCSA-aligned serialization and lot tracking', 'chain of custody', 'Unit-level recall and diversion detection'],
