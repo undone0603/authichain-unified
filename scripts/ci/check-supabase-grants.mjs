@@ -17,7 +17,8 @@
  *      `grant ... on [table] public.<name> to anon|authenticated|service_role`
  *      in the same file, or an explicit exemption comment:
  *        -- supabase-grants-exempt: public.<name> <reason>
- *      (e.g. a table only reached over a direct Postgres connection).
+ *      (e.g. a table only reached over a direct Postgres connection). The reason
+ *      must be on the same line; a reasonless exemption is itself an error.
  *   2. A table granted to anon or authenticated must also
  *      `enable row level security` in the same file (grant + RLS + policy is
  *      one unit per the Supabase docs).
@@ -140,11 +141,26 @@ export function findRlsTables(sql) {
   return out;
 }
 
+// One exemption per line: "-- supabase-grants-exempt: public.<t> <reason>".
+// The reason must be on the SAME line; a following line never counts.
+const EXEMPT_RE = /--[ \t]*supabase-grants-exempt:[ \t]*(\S*)[ \t]*(.*)$/gim;
+
+/** Public tables with a valid (reasoned) exemption comment. */
 export function findExemptions(sql) {
   const out = new Set();
-  for (const m of sql.matchAll(/--\s*supabase-grants-exempt:\s*(\S+)\s+\S/gi)) {
+  for (const m of sql.matchAll(EXEMPT_RE)) {
+    if (!m[1] || !/\S/.test(m[2])) continue;
     const { schema, name } = parseQualified(m[1]);
     if (schema === "public") out.add(name);
+  }
+  return out;
+}
+
+/** Exemption comments missing a table or a same-line reason. */
+export function findInvalidExemptions(sql) {
+  const out = [];
+  for (const m of sql.matchAll(EXEMPT_RE)) {
+    if (!m[1] || !/\S/.test(m[2])) out.push(m[0].trim());
   }
   return out;
 }
@@ -153,6 +169,12 @@ export function findExemptions(sql) {
 export function checkMigrationSql(sql, label = "migration") {
   const errors = [];
   const warnings = [];
+  for (const bad of findInvalidExemptions(sql)) {
+    errors.push(
+      `${label}: exemption comment "${bad}" needs a table and a reason on the same line: ` +
+        `"-- supabase-grants-exempt: public.<table> <reason>".`
+    );
+  }
   const tables = findPublicTables(sql);
   if (tables.length === 0) return { errors, warnings };
   const { grants, allTables } = findGrants(sql);

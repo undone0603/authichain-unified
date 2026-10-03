@@ -72,3 +72,12 @@ supabase/migrations/20260929190000_growth_loop_events.sql
 supabase/migrations/20260930152032_attestation_trust_registry_and_status.sql
 supabase/migrations/20260930153248_attestation_status_idempotency_and_supersession.sql
 supabase/migrations/20260930153535_attestation_status_idempotency_index.sql
+# Added 2026-10-02 (AE-20261002-CFD-69): 7 versions already applied on QRON-v2, restored verbatim
+# from supabase_migrations.schema_migrations in PR #1515. Applied history is never edited, so they are baselined.
+supabase/migrations/20261001000121_20260930194500_musa_supplier_evidence_registry.sql
+supabase/migrations/20261001103645_ai_adapt_archive_v1.sql
+supabase/migrations/20261001104022_ai_adapt_archive_v2_queue.sql
+supabase/migrations/20261001182456_ai_adapt_archive_v3_pinned_texts.sql
+supabase/migrations/20261001191414_agent_action_receipts_v1.sql
+supabase/migrations/20261001194503_ops_bot_log_allow_partial_status.sql
+supabase/migrations/20261002082748_ai_adapt_archive_submit_skip_hf_wayback.sql

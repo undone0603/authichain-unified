@@ -111,6 +111,10 @@ jobs:
           STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
           WORKER_API_KEY: ${{ secrets.WORKER_API_KEY }}
           CRM_API_KEY: ${{ secrets.CRM_API_KEY }}
+          # POST /sales/inbound (api/sales-inbound.ts). Without both, the route
+          # answers 503 and spends nothing.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SALES_INBOUND_SECRET: ${{ secrets.SALES_INBOUND_SECRET }}
         run: |
           put_secret() {
             local key="$1"
@@ -132,6 +136,8 @@ jobs:
           put_secret STRIPE_PRICE_ENTERPRISE "$STRIPE_PRICE_ENTERPRISE"
           put_secret WORKER_API_KEY "$WORKER_API_KEY"
           put_secret CRM_API_KEY "$CRM_API_KEY"
+          put_secret ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+          put_secret SALES_INBOUND_SECRET "$SALES_INBOUND_SECRET"
 
       - name: Deploy revenue worker
         if: steps.secrets_check.outputs.skip != 'true'

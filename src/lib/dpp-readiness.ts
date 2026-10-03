@@ -227,7 +227,13 @@ export function daysUntil(isoDate: string, now: Date = new Date()): number {
 
 export function scoreDppReadiness(
   input: DppReadinessInput,
-  opts: { now?: Date; auditUrl?: string; auditPrice?: number } = {}
+  opts: {
+    now?: Date;
+    auditUrl?: string;
+    auditPrice?: number;
+    /** false while paid plans are on hold: the next step names no audit or price. */
+    offerAudit?: boolean;
+  } = {}
 ): DppReadinessResult {
   const category = categoryById(input.category) ?? categoryById("other")!;
   let score = 0;
@@ -253,6 +259,11 @@ export function scoreDppReadiness(
   } else if (category.status === "none") {
     nextStep =
       "No passport is scheduled for this category yet. Keep the identifier and supplier-data basics in place so you can move fast when one is.";
+  } else if (opts.offerAudit === false) {
+    nextStep =
+      days !== null
+        ? `${days} days left. Close the gaps above, starting with the data your suppliers must provide.`
+        : "Obligations are expected, not yet law. Close the gaps above before your importers start asking.";
   } else if (days !== null) {
     nextStep = `${days} days left. The $${price} EU DPP Readiness audit turns these gaps into a written plan for your product line${audit}.`;
   } else {

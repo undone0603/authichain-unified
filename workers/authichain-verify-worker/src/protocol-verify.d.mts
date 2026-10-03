@@ -13,7 +13,7 @@ export function verifySubmitted(
 export function readAnchorOnChain(
   record: unknown,
   anchor: unknown,
-  opts?: { rpcUrl?: string },
+  opts?: { rpcUrl?: string; fetchImpl?: typeof fetch },
 ): Promise<{
   queried: boolean;
   onChain: boolean;
