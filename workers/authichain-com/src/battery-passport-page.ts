@@ -114,7 +114,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The $299 is credited toward AuthiChain Basic if you continue.",
+    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.",
   },
   {
     q: "Is this legal advice or a certification?",
