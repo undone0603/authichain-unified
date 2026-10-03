@@ -24,6 +24,12 @@
  *
  * Secrets / vars (service-worker globals):
  *   SUPABASE_ANON_KEY           (secret, required)
+ *   SUPABASE_SERVICE_ROLE_KEY  (secret, optional) used only for
+ *                               authichain_api_create_key and
+ *                               authichain_api_capture_lead. Other calls stay
+ *                               on the anon key. Falls back to anon until the
+ *                               secret is bound; do not revoke anon execute
+ *                               on those two functions before that.
  *   CERT_SIGNING_KEY            (secret, optional) Ed25519 private key; enables
  *                               signed verification certificates + JWKS
  *   CERT_SIGNING_KEY_ID         (optional) kid override; default RFC 7638 thumbprint
@@ -249,13 +255,20 @@ function j(data, status, extraHeaders) {
 // NOTE: products has no tenant_id column (the 20260829_add_tenant_isolation
 // migration was never applied to the live database — see
 // supabase/REMOTE_APPLIED_VERSIONS.txt). Do not filter on it.
-function supaHeaders(prefer) {
+function supaHeaders(prefer, key) {
+  var token = key || SUPABASE_ANON_KEY;
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    apikey: token,
+    Authorization: "Bearer " + token,
     "Content-Type": "application/json",
     Prefer: prefer || "return=representation",
   };
+}
+
+// Service role only for the two SECURITY DEFINER writers. Every other
+// Supabase call keeps the anon key so RLS still applies.
+function privilegedWriteKey() {
+  return envVar("SUPABASE_SERVICE_ROLE_KEY") || SUPABASE_ANON_KEY;
 }
 
 async function supaGet(table, params) {
@@ -295,10 +308,10 @@ async function supaPost(table, body) {
 
 // SECURITY DEFINER functions from
 // supabase/migrations/20260925180000_authichain_api_self_serve_keys.sql.
-async function supaRpc(fn, args) {
+async function supaRpc(fn, args, key) {
   const res = await fetch(SUPA_URL + "/rest/v1/rpc/" + fn, {
     method: "POST",
-    headers: supaHeaders(),
+    headers: supaHeaders(undefined, key),
     body: JSON.stringify(args || {}),
   });
   let data = null;
@@ -845,11 +858,15 @@ async function handleRequest(req) {
     // swallowed, so keys and leads were never saved. Persist through the
     // SECURITY DEFINER function instead (stores only a sha256 of the key and
     // upserts the lead) and refuse to hand out a key that was not saved.
-    var saved = await supaRpc("authichain_api_create_key", {
-      p_email: email,
-      p_api_key: apiKey,
-      p_name: bk.name ? String(bk.name).slice(0, 200) : null,
-    }).catch(function () {
+    var saved = await supaRpc(
+      "authichain_api_create_key",
+      {
+        p_email: email,
+        p_api_key: apiKey,
+        p_name: bk.name ? String(bk.name).slice(0, 200) : null,
+      },
+      privilegedWriteKey()
+    ).catch(function () {
       return { ok: false, status: 0, data: null };
     });
     if (!saved.ok) {
@@ -1373,12 +1390,16 @@ async function handleRequest(req) {
       });
       if (!b5.email) return j({ error: "email required" }, 400);
       // Anon inserts into leads are rejected by RLS; use the lead RPC.
-      var leadResult = await supaRpc("authichain_api_capture_lead", {
-        p_email: String(b5.email).trim().toLowerCase(),
-        p_source: b5.source ? String(b5.source).slice(0, 100) : "api",
-        p_name: b5.name ? String(b5.name).slice(0, 200) : null,
-        p_company: b5.company ? String(b5.company).slice(0, 200) : null,
-      }).catch(function () {
+      var leadResult = await supaRpc(
+        "authichain_api_capture_lead",
+        {
+          p_email: String(b5.email).trim().toLowerCase(),
+          p_source: b5.source ? String(b5.source).slice(0, 100) : "api",
+          p_name: b5.name ? String(b5.name).slice(0, 200) : null,
+          p_company: b5.company ? String(b5.company).slice(0, 200) : null,
+        },
+        privilegedWriteKey()
+      ).catch(function () {
         return { ok: false };
       });
       if (!leadResult.ok)

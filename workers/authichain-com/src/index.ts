@@ -3181,6 +3181,8 @@ interface Env {
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -3509,7 +3511,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
     // click-to-confirm page, so a stale APP_WORKER never sees a GET that
     // could open a Stripe session.
-    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request, env);
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
