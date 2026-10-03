@@ -12,9 +12,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { CHECKOUT_REDIRECT_HEADERS } from "@/lib/checkout-email";
-import { createDppCheckoutSession, isDppSmokePromo } from "@/lib/dpp-checkout";
+import {
+  createDppCheckoutSession,
+  dppSmokeRequestAuthorized,
+  isDppSmokePromo,
+} from "@/lib/dpp-checkout";
 import { gatedConfirmUrl } from "@/lib/checkout-gate";
-import { dppSmokeRequestAuthorized } from "@/lib/dpp-loop";
 import { logAutomation } from "@/lib/automation";
 
 export const runtime = "nodejs";

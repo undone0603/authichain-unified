@@ -12,12 +12,13 @@ import { gatedConfirmUrl } from "./checkout-gate";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
 import {
   DPP_SMOKE_PROMO,
+  dppSmokeRequestAuthorized,
   isDppSmokePromo,
   recordDppLoopEvent,
 } from "./dpp-loop";
 
 export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
-export { DPP_SMOKE_PROMO, isDppSmokePromo };
+export { DPP_SMOKE_PROMO, dppSmokeRequestAuthorized, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");
 
