@@ -169,17 +169,22 @@ test("IndexNow key file is exact-path plain text with a short cache", async () =
 // CFD-194: Plus Jakarta Sans is self-hosted from each Worker's static assets.
 const SHARED_DIR = fileURLToPath(new URL(".", import.meta.url));
 const FONT_DIR = join(SHARED_DIR, "font-assets", "fonts");
-const GOOGLE_FONT_HOSTS = /fonts\.(googleapis|gstatic)\.com/;
+// Collect every `//host` in the text and compare hostnames exactly.
+const GOOGLE_FONT_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
+const mentionsGoogleFonts = (text: string): boolean =>
+  [...text.matchAll(/\/\/([a-z0-9.-]+)/gi)].some((m) =>
+    GOOGLE_FONT_HOSTS.has(m[1].toLowerCase())
+  );
 const FONT_WORKERS = ["authichain-com", "govchain-us", "qron-space", "strainchain-io"];
 
 test("estate font link is same-origin, not Google Fonts", () => {
-  assert.doesNotMatch(ESTATE_FONTS_LINK, GOOGLE_FONT_HOSTS);
+  assert.equal(mentionsGoogleFonts(ESTATE_FONTS_LINK), false);
   assert.match(ESTATE_FONTS_LINK, /href="\/fonts\/plus-jakarta-sans\.css"/);
 });
 
 test("self-hosted @font-face rules use swap and point at shipped woff2 files", () => {
   const css = readFileSync(join(FONT_DIR, "plus-jakarta-sans.css"), "utf8");
-  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ""), GOOGLE_FONT_HOSTS);
+  assert.equal(mentionsGoogleFonts(css.replace(/\/\*[\s\S]*?\*\//g, "")), false);
   const rules = css.match(/@font-face\{[^}]*\}/g) ?? [];
   assert.equal(rules.length, 20);
   const seen = new Set<string>();
@@ -215,11 +220,11 @@ test("font-serving Workers ship the font assets and no Google Fonts references",
     const toml = readFileSync(join(SHARED_DIR, "..", worker, "wrangler.toml"), "utf8");
     assert.match(toml, /\[assets\]\s*\ndirectory = "\.\.\/_shared\/font-assets"/, worker);
     for (const file of scan(join(SHARED_DIR, "..", worker, "src"))) {
-      assert.doesNotMatch(readFileSync(file, "utf8"), GOOGLE_FONT_HOSTS, file);
+      assert.equal(mentionsGoogleFonts(readFileSync(file, "utf8")), false, file);
     }
   }
   for (const name of readdirSync(SHARED_DIR).filter((n) => /^estate-.*\.ts$/.test(n))) {
     if (name.endsWith(".test.ts")) continue;
-    assert.doesNotMatch(readFileSync(join(SHARED_DIR, name), "utf8"), GOOGLE_FONT_HOSTS, name);
+    assert.equal(mentionsGoogleFonts(readFileSync(join(SHARED_DIR, name), "utf8")), false, name);
   }
 });
