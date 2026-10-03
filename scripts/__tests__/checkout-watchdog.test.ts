@@ -56,7 +56,6 @@ describe("checkout watchdog: live pages", () => {
     const { findings, linked } = await checkLivePages(impl);
     expect(findings).toEqual([]);
     expect(linked["https://strainchain.io/pricing"].planIds).toEqual([
-      "strainchain_farm",
       "strainchain_passport",
     ]);
     // Read-only: GETs only, and never Stripe or the session-opening API.
@@ -64,6 +63,11 @@ describe("checkout watchdog: live pages", () => {
     expect(calls.some(c => /stripe\.com|\/api\/checkout/.test(c.url))).toBe(
       false
     );
+  });
+
+  it("keeps the Farm card off the pricing pages (PM-222) without a finding", () => {
+    expect(expectedPlanIds("strainchain")).not.toContain("strainchain_farm");
+    expect(listedPlans("strainchain").map(p => p.id)).toContain("strainchain_farm");
   });
 
   it("expects every listed paid plan on its brand's page", () => {
@@ -110,7 +114,7 @@ describe("checkout watchdog: live pages", () => {
   it("reports a page that is down and a confirm page that 404s", async () => {
     const { impl } = siteFetch({
       "https://qron.space/pricing": { status: 522, body: "" },
-      "https://authichain.com/checkout/strainchain_farm": {
+      "https://authichain.com/checkout/strainchain_passport": {
         status: 404,
         body: "",
       },
@@ -118,7 +122,7 @@ describe("checkout watchdog: live pages", () => {
     const { findings } = await checkLivePages(impl);
     expect(findings.map(f => [f.kind, f.planId ?? f.url])).toEqual([
       ["page_down", "https://qron.space/pricing"],
-      ["confirm_page_broken", "strainchain_farm"],
+      ["confirm_page_broken", "strainchain_passport"],
     ]);
   });
 });

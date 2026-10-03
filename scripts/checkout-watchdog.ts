@@ -79,10 +79,19 @@ export type Finding = {
 const UA =
   "authichain-checkout-watchdog (+https://github.com/undone0603/authichain-unified)";
 
+/**
+ * Listed plans whose card is deliberately kept off the estate pricing pages
+ * (workers/_shared/estate-pricing.ts filters the same id). StrainChain Farm
+ * $149 buyer copy is removed (PM-222) while the plan and its Stripe price stay
+ * until the Monday off-sale, so a missing Farm card is expected, not a finding.
+ * Drop this with the "drop if Farm kept" commits.
+ */
+export const OFF_PAGE_PLAN_IDS: ReadonlySet<string> = new Set(["strainchain_farm"]);
+
 /** Paid plans a brand's pricing page should carry a checkout link for. */
 export function expectedPlanIds(brand: "qron" | "strainchain"): PlanId[] {
   return listedPlans(brand)
-    .filter(p => p.price > 0)
+    .filter(p => p.price > 0 && !OFF_PAGE_PLAN_IDS.has(p.id))
     .map(p => p.id);
 }
 
