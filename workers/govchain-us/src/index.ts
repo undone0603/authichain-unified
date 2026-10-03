@@ -2366,11 +2366,11 @@ export default {
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GovChain — Federal Contract Intelligence & Public Provenance</title>
-<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta name="description" content="GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GovChain">
 <meta property="og:title" content="GovChain — Federal Contract Intelligence &amp; Public Provenance">
-<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).">
+<meta property="og:description" content="AI fit-scoring, auto-drafted capability statements.">
 <meta property="og:url" content="https://govchain.us/">
 <meta property="og:image" content="https://govchain.us/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -2380,7 +2380,7 @@ export default {
 <meta name="theme-color" content="#1d4ed8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 ${ESTATE_FONTS_LINK}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).","sameAs":["https://authichain.govchain.us"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"GovChain","url":"https://govchain.us","logo":"https://govchain.us/favicon.svg","description":"GovChain turns SAM.gov into pursue-ready intelligence: AI fit-scoring, auto-drafted capability statements.","sameAs":["https://authichain.govchain.us"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"GovChain","url":"https://govchain.us","description":"Federal Contract Intelligence and Public Provenance powered by AuthiChain Protocol."}</script>
 <style>
 ${estateCssVars("govchain")}
@@ -2401,7 +2401,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "Federal contract intelligence",
   title: "Win more federal work. Prove every claim.",
-  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements, and a public datalog for Made-in-USA claims backed by a Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE (anchoring in development).",
+  lede: "GovChain turns SAM.gov into pursue-ready intelligence — AI fit-scoring, auto-drafted capability statements.",
   actions: [
     { href: "/onboard", label: "Request access", primary: true },
     { href: "/opportunities", label: "Browse opportunities", primary: false },
@@ -2469,7 +2469,7 @@ ${estateFeatures(
     <div class="compliance-grid">
       <div class="compliance-card"><h3>FAR / DFARS</h3><p>Evidence mapping for Federal Acquisition Regulation and defense supplement clauses.</p></div>
       <div class="compliance-card"><h3>NIST SP 800-171</h3><p>Controlled Unclassified Information control tracking with an audit-ready evidence trail.</p></div>
-      <div class="compliance-card"><h3>Buy American / Made in USA</h3><p>Cryptographic domestic-origin provenance for FTC MUSA and EO 14392 questions.</p></div>
+      <div class="compliance-card"><h3>Buy American / Made in USA</h3><p></p></div>
       <div class="compliance-card"><h3>Section 889 / supply chain</h3><p>Prohibited-source screening and supply-chain provenance for prime and sub assurance.</p></div>
     </div>
   </div>
