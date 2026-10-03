@@ -257,19 +257,21 @@ async function recordStarterGrowthEvent(
     const supabase = await getWebhookSupabase();
     if (!supabase) return;
 
-    const { buildGrowthEvent } = await import("../../src/lib/growth/emit");
+    const { buildGrowthEvent, hashEmail } =
+      await import("../../src/lib/growth/emit");
     const payload = await buildGrowthEvent({
       event,
       sku: "starter",
       email: checkoutSessionEmail(session),
     });
-    const { error } = await supabase.rpc("growth_record_event", {
+    const { error } = await supabase.rpc("growth_record_event_idempotent", {
       p_event: payload.event,
       p_loop: payload.loop,
       p_sku: payload.sku,
       p_founder: payload.founder,
       p_email_hash: payload.email_hash ?? null,
       p_occurred_at: payload.occurred_at,
+      p_idempotency_key: await hashEmail(session.id),
     });
     if (error) {
       console.warn(

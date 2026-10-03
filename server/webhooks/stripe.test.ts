@@ -512,12 +512,13 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       })
     );
     expect(growthRecordRpc).toHaveBeenCalledWith(
-      "growth_record_event",
+      "growth_record_event_idempotent",
       expect.objectContaining({
         p_event: "purchase_starter_succeeded",
         p_loop: "loop_03_qron_starter",
         p_sku: "starter",
         p_email_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_idempotency_key: expect.stringMatching(/^[a-f0-9]{64}$/),
       })
     );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
@@ -541,8 +542,42 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(growthRecordRpc).toHaveBeenCalledWith(
-      "growth_record_event",
+      "growth_record_event_idempotent",
       expect.objectContaining({ p_event: "purchase_starter_succeeded" })
+    );
+  });
+
+  it("uses a stable session key when a Starter purchase webhook is retried", async () => {
+    const session = {
+      id: "cs_starter_retry",
+      mode: "payment",
+      payment_status: "paid",
+      amount_total: 2900,
+      customer_details: { email: "buyer@example.com" },
+      metadata: { plan: "starter" },
+    };
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_retry", session)
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    const firstKey = growthRecordRpc.mock.calls[0]?.[1]?.p_idempotency_key;
+
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.async_payment_succeeded",
+        "evt_starter_retry_paid",
+        session
+      )
+    );
+    await handleStripeWebhook(RAW_BODY, SIG);
+
+    expect(firstKey).toMatch(/^[a-f0-9]{64}$/);
+    expect(growthRecordRpc.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        p_event: "purchase_starter_succeeded",
+        p_idempotency_key: firstKey,
+      })
     );
   });
 
@@ -700,12 +735,13 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(growthRecordRpc).toHaveBeenCalledWith(
-      "growth_record_event",
+      "growth_record_event_idempotent",
       expect.objectContaining({
         p_event: "checkout_abandoned",
         p_loop: "loop_03_qron_starter",
         p_sku: "starter",
         p_email_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_idempotency_key: expect.stringMatching(/^[a-f0-9]{64}$/),
       })
     );
     expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
