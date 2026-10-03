@@ -67,6 +67,7 @@
         "deploy-cloudflare.yml": "on",
         "deploy-edge-worker.yml": "on",
         "deploy-workers.yml": "on",
+        "worker-bundle-drift.yml": "on",
         "deploy-verifier-web.yml": "on",
         "content-routine-pr.yml": "on",
         "dependabot-auto-merge.yml": "off",
