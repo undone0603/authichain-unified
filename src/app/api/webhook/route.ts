@@ -4,6 +4,7 @@ import { PLAN_CREDITS, PLAN_TIER, type PlanId } from "@/lib/plans";
 import { generateLivingQR } from "@/lib/hf-generation";
 import { logAutomation } from "@/lib/automation";
 import { sendEmail } from "@/lib/email";
+import { getStripeSecretKey } from "../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 
@@ -608,7 +609,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripeSecretKey = getStripeSecretKey();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!stripeSecretKey || !webhookSecret) {

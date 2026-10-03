@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { localCivilToDate } from "@/lib/starmap/render";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = getStripeSecretKey();
     if (!key) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
     const stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
     const price = input.sku === "digital" ? process.env.NIGHTSTAMP_PRICE_9 : input.sku === "portal" ? process.env.NIGHTSTAMP_PRICE_29 : process.env.NIGHTSTAMP_PRICE_49;

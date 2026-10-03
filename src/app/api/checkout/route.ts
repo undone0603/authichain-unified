@@ -4,6 +4,7 @@ import { PLANS } from "@/lib/plans";
 import { createClient } from "@/utils/supabase/server";
 import { logAutomation } from "@/lib/automation";
 import { getBrandIdFromRequest } from "@/lib/brand-billing";
+import { getStripeSecretKey } from "../../../lib/stripe-secret";
 
 /** Read a single cookie value from a Cookie header. */
 function readCookie(cookieHeader: string, name: string): string | undefined {
@@ -45,7 +46,7 @@ async function trackFunnelEvent(
 
 export async function POST(request: Request) {
   try {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const stripeSecretKey = getStripeSecretKey();
     if (!stripeSecretKey) {
       return NextResponse.json(
         { error: "Stripe is not configured" },

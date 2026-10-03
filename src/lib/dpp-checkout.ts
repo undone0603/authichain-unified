@@ -16,6 +16,7 @@ import {
   isDppSmokePromo,
   recordDppLoopEvent,
 } from "./dpp-loop";
+import { normalizeStripeSecretKey, STRIPE_NOT_CONFIGURED_ERROR } from "./stripe-secret";
 
 export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
 export { DPP_SMOKE_PROMO, dppSmokeRequestAuthorized, isDppSmokePromo };
@@ -95,8 +96,8 @@ export async function createDppCheckoutSession(opts: {
     };
   }
 
-  if (!stripeSecretKey) {
-    return { ok: false, status: 500, error: "Stripe is not configured" };
+  if (!normalizeStripeSecretKey(stripeSecretKey)) {
+    return { ok: false, status: 500, error: STRIPE_NOT_CONFIGURED_ERROR };
   }
   if (!PLAN?.stripe_price_id || PLAN.stripe_mode !== "payment") {
     return { ok: false, status: 500, error: "DPP offer is not configured" };

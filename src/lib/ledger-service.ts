@@ -30,6 +30,7 @@ import {
   SOURCE_LIVE,
   isLedgerConfigured,
 } from "./ledger-contract";
+import { getStripeSecretKey } from "./stripe-secret";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -333,7 +334,7 @@ async function writeBackStripeMetadata(
   saleId?: string
 ): Promise<void> {
   if (input.skipStripeWriteback) return;
-  const secret = process.env.STRIPE_SECRET_KEY;
+  const secret = getStripeSecretKey();
   if (!secret) return;
 
   const metadata: Record<string, string> = {

@@ -1,0 +1,20 @@
+# qron-daily-ops — imported for PM-231 from the deployed Worker (version 09d777e5).
+# Bindings mirror the live settings. Secrets (set with `wrangler secret put`, never here):
+#   STRIPE_SECRET_KEY, GROQ_API_KEY, SUPABASE_ANON_KEY (all required; the Worker
+#   refuses to run without them), TELEGRAM_BOT_TOKEN (bound today, unused by this code).
+# Live today: no cron trigger, workers.dev disabled, no routes/custom domains.
+# The header comment's "0 6 * * *" schedule is NOT configured on the live Worker,
+# so no [triggers] block is added here (adding one would start daily runs).
+name = "qron-daily-ops"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+workers_dev = false
+
+[vars]
+SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
+GMAIL_RELAY_URL = "https://gmail-relay.undone-k.workers.dev/emails"
+RESEND_RELAY_URL = "https://resend-relay.undone-k.workers.dev/emails"
+
+[[kv_namespaces]]
+binding = "OUTREACH_KV"
+id = "291baff0863044998e9ba716dfc06085"

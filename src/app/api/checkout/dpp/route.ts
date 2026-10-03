@@ -19,6 +19,7 @@ import {
 } from "@/lib/dpp-checkout";
 import { gatedConfirmUrl } from "@/lib/checkout-gate";
 import { logAutomation } from "@/lib/automation";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await createDppCheckoutSession({
       searchParams: request.nextUrl.searchParams,
-      stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+      stripeSecretKey: getStripeSecretKey() || "",
       supabase: await getServiceSupabase(),
       smokeAuthorized: true,
     });

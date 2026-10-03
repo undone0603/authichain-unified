@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ function getErrorMessage(error: unknown): string {
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = getStripeSecretKey();
     if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
     _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
   }
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
 
-  if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
+  if (!getStripeSecretKey() || !webhookSecret) {
     console.error(
       "[stripe-webhook] Missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_AUTHICHAIN_SECRET"
     );

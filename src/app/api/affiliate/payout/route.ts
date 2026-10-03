@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { logAutomation } from "@/lib/automation";
+import { getStripeSecretKey, stripeNotConfiguredResponse } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ function getAdmin() {
 }
 
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
   return new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
 }
@@ -47,6 +48,10 @@ export async function POST(request: Request) {
       ok: false,
       message: "Stripe Connect not enabled — payouts skipped",
     });
+  }
+
+  if (!getStripeSecretKey()) {
+    return stripeNotConfiguredResponse();
   }
 
   const admin = getAdmin();

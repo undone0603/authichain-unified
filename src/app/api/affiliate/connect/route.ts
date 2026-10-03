@@ -3,12 +3,13 @@ import Stripe from "stripe";
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { logAutomation } from "@/lib/automation";
+import { getStripeSecretKey, stripeNotConfiguredResponse } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
   return new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
 }
@@ -41,11 +42,8 @@ export async function POST(_request: Request) {
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json(
-        { error: "Stripe not configured" },
-        { status: 503 }
-      );
+    if (!getStripeSecretKey()) {
+      return stripeNotConfiguredResponse();
     }
 
     const admin = getAdmin();
@@ -140,7 +138,7 @@ export async function GET(_request: Request) {
       return NextResponse.json({ connected: false, payouts_enabled: false });
     }
 
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!getStripeSecretKey()) {
       return NextResponse.json({ connected: true, payouts_enabled: false });
     }
 

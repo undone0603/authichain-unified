@@ -4,13 +4,14 @@ import { renderNightstamp, makePayload } from "@/lib/starmap/render";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { validateQRScannability } from "@/lib/vision";
 import { sendEmail } from "@/lib/email";
+import { getStripeSecretKey } from "../../../../lib/stripe-secret";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id");
   if (!sessionId) return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   try {
     const stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
