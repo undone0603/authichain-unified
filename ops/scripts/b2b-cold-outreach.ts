@@ -310,7 +310,7 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
   scannable, available via white-label API:</p>
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
-    <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
+    <li>Ed25519-signed authenticity certificate on every scan, anchored on Polygon (roadmap)</li>
     <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
     <li>FTC EO 14392 compliant origin verification (MADE IN USA shield support)</li>
   </ul>

@@ -11,7 +11,7 @@ import { ICP_SEO_SITEMAP_PATHS } from "./icp-seo-sitemap.ts";
 import { GAP_MAP_DISCLAIMER } from "./battery-gap-map.ts";
 
 const req = (path: string, method = "GET") =>
-  new Request(`https://authichain.com${path}`, { method });
+  new Request(`https://authichain.govchain.us${path}`, { method });
 
 describe("battery passport offer page", () => {
   const html = renderBatteryPassportPage(new Date("2026-09-23T12:00:00Z"));
@@ -31,9 +31,9 @@ describe("battery passport offer page", () => {
 
   it("sells the existing $299 plan through the email-gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    expect(html).toContain('action="/api/checkout/dpp"');
+    expect(html).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
-    expect(html).not.toContain('href="/api/checkout/dpp"');
+    expect(html).not.toContain('href="/api/checkout');
     expect(html).toContain('type="email" required');
   });
 
@@ -94,7 +94,7 @@ describe("battery passport offer page", () => {
     expect(plan.id).toBe("dpp_readiness");
     expect(html).toContain(`$${plan.price}`);
     expect(html).toMatch(
-      /<form class="checkout-email-form" action="\/api\/checkout\/dpp" method="get"/
+      /<form class="checkout-email-form" action="https:\/\/authichain\.com\/checkout\/dpp_readiness" method="post"/
     );
     expect(html).toContain('name="utm_campaign" value="battery-passport"');
   });
@@ -104,6 +104,15 @@ describe("battery passport offer page", () => {
       "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
     );
     expect(html).not.toContain("working passport you control");
+    expect(html).not.toContain("signed and publicly verifiable");
+    expect(html).toContain(
+      "A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out."
+    );
+    expect(html).toContain('href="https://authichain.com/api/verify?id=polygon-anchor-1"');
+    expect(html).toContain(
+      'href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"'
+    );
+    expect(html).toContain("It is not a battery and not a passport.");
     expect(html).not.toMatch(
       /gets your first passport published|publish your first passport/i
     );

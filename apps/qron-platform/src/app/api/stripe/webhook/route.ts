@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-08-26.dahlia' as const });
 
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
@@ -70,7 +70,10 @@ export async function POST(req: NextRequest) {
       case 'invoice.paid': {
         const invoice = event.data.object;
         const customerId = invoice.customer;
-        const subscriptionId = invoice.subscription;
+        const subscriptionId =
+          invoice.parent?.subscription_details?.subscription ??
+          (invoice as { subscription?: string | null }).subscription ??
+          null;
         const amountPaid = invoice.amount_paid / 100;
 
         const { data: profile } = await supabase
@@ -101,6 +104,10 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         const customerId = invoice.customer;
+        const subscriptionId =
+          invoice.parent?.subscription_details?.subscription ??
+          (invoice as { subscription?: string | null }).subscription ??
+          null;
 
         const { data: profile } = await supabase
           .from('profiles')
@@ -111,6 +118,7 @@ export async function POST(req: NextRequest) {
         if (profile) {
           await supabase.from('profiles').update({
             subscription_status: 'past_due',
+            ...(subscriptionId ? { stripe_subscription_id: subscriptionId } : {}),
           }).eq('id', profile.id);
 
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email`, {

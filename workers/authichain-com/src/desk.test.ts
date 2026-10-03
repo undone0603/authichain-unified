@@ -13,7 +13,7 @@ const ENV = {
 } as unknown as Env;
 
 async function get(path: string) {
-  return worker.fetch(new Request(`https://authichain.com${path}`), ENV);
+  return worker.fetch(new Request(`https://authichain.govchain.us${path}`), ENV);
 }
 
 test("/desk is a real page, not the indigo homepage", async () => {
@@ -23,19 +23,19 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.match(html, /<title>Self-serve desk — AuthiChain<\/title>/);
   assert.match(html, /Issue\. Bind\. Verify\./);
   assert.match(html, /--ink:#0c0c0d/);
-  assert.match(html, /action="\/api\/checkout\/dpp"/);
-  assert.doesNotMatch(html, /href="\/api\/checkout\/dpp"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.doesNotMatch(html, /Aura|MediLedger|Walmart/);
   assert.doesNotMatch(html, /1369/);
   assert.match(html, /\$QRON is not a payment rail/);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
   );
   // Retired StrainChain Basic link (no live Stripe account) must not return.
   assert.equal(html.includes("9B6cN59br5xcaCuazy1Nu1o"), false);
@@ -60,13 +60,12 @@ test("/desk/pricing collects recovery email for plan checkout", async () => {
   const res = await get("/desk/pricing");
   assert.equal(res.status, 200);
   const html = await res.text();
-  assert.match(html, /action="\/api\/checkout\/plan\/strainchain_passport"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/);
   assert.match(html, /name="email"/);
   assert.match(html, /\$49/);
-  assert.match(html, /\$499/);
-  assert.ok(
-    html.includes('href="https://buy.stripe.com/00w4gzgDT6Bg5iagXW1ND3A"')
-  );
+  assert.match(html, /\$299/);
+  assert.doesNotMatch(html, /\$499/);
+  assert.equal(html.includes("theater_1"), false);
   assert.doesNotMatch(html, /1Nu1p/);
   assert.doesNotMatch(html, /href="\/api\/checkout/);
 });
@@ -87,6 +86,9 @@ test("/desk/status records telegram sitemap live and Base pending", async () => 
   assert.match(html, /telegram is in sitemap/);
   assert.match(html, /getCode on 8453 is still 0x/);
   assert.match(html, /#1138 on main/);
+  assert.match(html, /25 Sep 2026/);
+  assert.match(html, /does not call Stripe/);
+  assert.match(html, /Theater \$499 and \$1,499 are not listed/);
 });
 
 test("/desk/hubs does not claim W3C VC specs are implemented", async () => {
@@ -171,7 +173,7 @@ test("/desk/pricing sells Farm $149/mo", async () => {
   const res = await get("/desk/pricing");
   const html = await res.text();
   assert.match(html, /\$149/);
-  assert.match(html, /action="\/api\/checkout\/plan\/strainchain_farm"/);
-  assert.ok(html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'));
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_farm"/);
+  assert.ok(html.includes('href="https://authichain.com/checkout/strainchain_farm"'));
   assert.doesNotMatch(html, /href="\/api\/checkout/);
 });

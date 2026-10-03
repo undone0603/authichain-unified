@@ -26,6 +26,12 @@
       "min_sample": 10
     }
   },
+  "launch_mode": {
+    "$comment": "Time-boxed loosening until first revenue (docs/OPERATING_CHARTER.md, Launch mode). Read by scripts/autonomy/launch-mode.mjs. After 'expires', or with enabled=false, every loop falls back to its normal gate. Max window 90 days (CI-enforced).",
+    "enabled": true,
+    "expires": "2026-10-31",
+    "cold_outreach_cap": 25
+  },
   "stripe_webhooks": [
     {
       "id": "we_1UGTCSGqTruSqV8ThM9bXVWp",
@@ -34,6 +40,12 @@
       "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
     }
   ],
+  "merge_autopilot": {
+    "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02: covers every path, including security, revenue, schema and the charter. Set enabled=false, or add the label 'hold' to one PR, to stop it. Script: scripts/autonomy/merge-autopilot.mjs.",
+    "enabled": true,
+    "trusted_authors": ["undone0603", "dependabot[bot]"],
+    "hold_labels": ["hold", "do-not-merge"]
+  },
   "lanes": {
     "ship": {
       "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",
@@ -42,9 +54,11 @@
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
+        "typecheck-ratchet.yml": "on",
         "codeql.yml": "on",
         "compliance-audit.yml": "on",
         "security-scan.yml": "on",
+        "windows-path-safety.yml": "on",
         "nightstamp-scan-gate.yml": "on",
         "production-drizzle-audit.yml": "on",
         "vercel-deploy-guard.yml": "on",
@@ -57,10 +71,14 @@
         "content-routine-pr.yml": "on",
         "dependabot-auto-merge.yml": "off",
         "automerge-dependabot.yml": "off",
+        "merge-autopilot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
         "autonomy-reconcile.yml": "on",
-        "stripe-webhook-reconcile.yml": "on"
+        "stripe-webhook-reconcile.yml": "on",
+        "mcp-registry-publish.yml": "on",
+        "npm-publish-verify.yml": "on",
+        "cloudflare-estate-audit.yml": "on"
       }
     },
     "health": {
@@ -70,6 +88,7 @@
         "ops-pulse.yml": "on",
         "cloudflare-production-health.yml": "on",
         "production-smoke-gate.yml": "on",
+        "checkout-watchdog.yml": "on",
         "schema-drift.yml": "on",
         "supabase-baseline.yml": "on",
         "verify-integrations.yml": "on",
@@ -78,7 +97,10 @@
         "repo-maintenance.yml": "off",
         "branch-hygiene.yml": "on",
         "pipeline-tick.yml": "on",
-        "genesis-cron.yml": "on"
+        "genesis-cron.yml": "on",
+        "gs1-conformance-pulse.yml": "on",
+        "trust-lab.yml": "on",
+        "estate-drift.yml": "on"
       }
     },
     "revenue": {
@@ -88,13 +110,15 @@
         "revenue-cycle.yml": "on",
         "agentz-orchestration.yml": "on",
         "email-proposals.yml": "on",
-        "gov-engine.yml": "off",
-        "gov-ingest.yml": "off",
-        "gov-score.yml": "off",
-        "gov-proposals.yml": "off",
-        "gov-notify.yml": "off",
+        "gov-engine.yml": "on",
+        "gov-ingest.yml": "on",
+        "gov-score.yml": "on",
+        "gov-proposals.yml": "on",
+        "gov-notify.yml": "on",
         "gov-mint.yml": "on",
-        "owner-digest.yml": "on"
+        "owner-digest.yml": "on",
+        "founder-business-pulse.yml": "on",
+        "affiliate-payouts.yml": "off"
       }
     },
     "growth": {
@@ -105,6 +129,7 @@
         "content-publish.yml": "on",
         "marketing-autonomous.yml": "on",
         "reddit-monitor.yml": "on",
+        "buyer-signals.yml": "on",
         "ghost-traffic.yml": "on",
         "b2b-outreach.yml": "on",
         "weekly-video.yml": "off"
@@ -158,7 +183,8 @@
         "upload-microsites-kv.yml": "manual",
         "verify-outreach-secrets.yml": "manual",
         "verify-scheduled-jobs.yml": "manual",
-        "x402-smoke.yml": "manual"
+        "x402-smoke.yml": "manual",
+        "anchor-polygon-record.yml": "manual"
       }
     },
     "retired": {

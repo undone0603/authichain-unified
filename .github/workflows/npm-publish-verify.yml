@@ -1,0 +1,75 @@
+name: npm publish authichain-verify
+
+# Publishes protocol/ (authichain-verify, the offline reference verifier) when
+# its package.json version is not on npm yet. Uses secrets.NPM_TOKEN when set,
+# otherwise npm trusted publishing (OIDC). npm only accepts a trusted publisher
+# for a package that already exists, so the very first publish needs NPM_TOKEN.
+# Without either, the run logs a notice and stays green.
+#
+# MANUAL ONLY (AE-20261002-CFD-13). A publish is a public release (Tier 2), so
+# it needs the owner's explicit yes. This workflow no longer runs on push to
+# main: merging a protocol/package.json version bump does NOT publish. To
+# publish, the owner runs it by hand: Actions > "npm publish authichain-verify"
+# > Run workflow (branch main), or `gh workflow run npm-publish-verify.yml`.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-verify
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish authichain-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: protocol
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: npm with trusted-publishing support
+        run: npm install -g npm@latest
+
+      - name: Decide
+        id: plan
+        env:
+          HAS_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          name=$(node -p "require('./package.json').name")
+          ver=$(node -p "require('./package.json').version")
+          if npm view "$name@$ver" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "$name@$ver is already on npm"
+            exit 0
+          fi
+          exists=false
+          npm view "$name" name >/dev/null 2>&1 && exists=true
+          if [ "$HAS_TOKEN" = "true" ] || [ "$exists" = "true" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$name is not on npm yet. Add repo secret NPM_TOKEN once for the first publish; later releases can use trusted publishing."
+          fi
+
+      - name: Conformance
+        if: steps.plan.outputs.publish == 'true'
+        run: npm run conformance
+
+      - name: Publish
+        if: steps.plan.outputs.publish == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

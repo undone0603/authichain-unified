@@ -1,41 +1,58 @@
 /**
- * Apollo.io website visitor tracker for authichain.com.
- * appId is the server-assigned referrer id from Manage Tracked Domain
- * (6ab2b3b358b37e000c06b0fa), not a guessed one.
+ * HTML egress wrapper for authichain.com.
+ *
+ * The Apollo.io website visitor tracker that used to be injected here was
+ * removed from every authichain.com page (AE-20261002-CFD-09): no third-party
+ * visitor-tracking script and no CSP allowance for assets.apollo.io.
+ *
+ * Still rewrites the homepage Made in America card so it cannot sell the
+ * $299 DPP SKU. index.ts still hardcodes that form; this wrapper is the
+ * HTML egress path every GET already uses. That behaviour is unchanged.
  */
-export const APOLLO_APP_ID = "6ab2b3b358b37e000c06b0fa";
-
-export const APOLLO_SCRIPT_SRC =
-  "https://assets.apollo.io/micro/website-tracker/tracker.iife.js";
-
 const SKIP_PREFIXES = ["/api", "/telegram", "/miniapp"];
 
-export const APOLLO_SNIPPET = `<script>
-function initApollo(){
-  var n=Math.random().toString(36).substring(7);
-  var o=document.createElement("script");
-  o.src="${APOLLO_SCRIPT_SRC}?nocache="+n;
-  o.async=true;
-  o.defer=true;
-  o.onload=function(){
-    if (window.trackingFunctions && window.trackingFunctions.onLoad) {
-      window.trackingFunctions.onLoad({appId:"${APOLLO_APP_ID}"});
-    }
-  };
-  document.head.appendChild(o);
-}
-initApollo();
-</script>`;
+const MUSA_CHECKOUT = "https://authichain.com/checkout/musa_claim_file";
+const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
-export function cspAllowApollo(csp: string): string {
-  if (csp.includes("assets.apollo.io")) return csp;
-  return csp.replace(
-    "script-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://assets.apollo.io"
+/** Homepage origin card only. Do not touch other DPP forms. */
+export function rewriteHomepageMusaCard(html: string): string {
+  const marker = 'id="origin-musa-checkout"';
+  const formStart = html.indexOf(marker);
+  if (formStart < 0) return html;
+
+  const tagStart = html.lastIndexOf("<form", formStart);
+  const formEnd = html.indexOf("</form>", formStart);
+  if (tagStart < 0 || formEnd < 0) return html;
+
+  const formClose = formEnd + "</form>".length;
+  let form = html.slice(tagStart, formClose);
+  form = form
+    .split(DPP_CHECKOUT)
+    .join(MUSA_CHECKOUT)
+    .replace(
+      "Start EU DPP Readiness Audit — $299",
+      "Start my claim file — $299"
+    );
+
+  let next = html.slice(0, tagStart) + form + html.slice(formClose);
+
+  const after = tagStart + form.length;
+  const nextArticle = next.indexOf("<article", after);
+  const windowEnd =
+    nextArticle >= 0 ? nextArticle : Math.min(next.length, after + 900);
+  const window = next
+    .slice(after, windowEnd)
+    .split(DPP_CHECKOUT)
+    .join(MUSA_CHECKOUT);
+  next = next.slice(0, after) + window + next.slice(windowEnd);
+
+  return next.replace(
+    "start today with the $299 EU DPP Readiness Audit",
+    "start today with the $299 Made in USA Claim File"
   );
 }
 
-export async function withApolloTracker(
+export async function withHtmlEgress(
   request: Request,
   response: Response
 ): Promise<Response> {
@@ -44,17 +61,9 @@ export async function withApolloTracker(
   if (SKIP_PREFIXES.some(p => path === p || path.startsWith(p + "/"))) {
     return response;
   }
+  if (path !== "/" && path !== "") return response;
   const type = response.headers.get("content-type") ?? "";
   if (!type.includes("text/html")) return response;
-  const html = await response.text();
-  if (html.includes("assets.apollo.io")) {
-    return new Response(html, response);
-  }
-  const next = html.includes("</head>")
-    ? html.replace("</head>", `${APOLLO_SNIPPET}</head>`)
-    : html;
-  const headers = new Headers(response.headers);
-  const csp = headers.get("content-security-policy");
-  if (csp) headers.set("content-security-policy", cspAllowApollo(csp));
-  return new Response(next, { status: response.status, headers });
+  const html = rewriteHomepageMusaCard(await response.text());
+  return new Response(html, response);
 }

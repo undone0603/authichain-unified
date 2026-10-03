@@ -56,3 +56,6 @@ workers/govchain-us/src/index.ts
 # assets. Prettier's parser overflows its stack on these, same failure mode as
 # the two files above. Skip until the images move out of source.
 workers/passport-demo/src/index.js
+
+# Founder control-plane manifest is canonical JSON and intentionally hand-formatted.
+.github/founder-business.json

@@ -24,6 +24,9 @@ import {
   settlePayment,
   X402_REGISTRY_NOT_BOUND,
 } from "@/lib/x402";
+import { attestSeal } from "@/lib/seal-attestation";
+// Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
+import { parseSealRequest, registryAnswer } from "../../../../lib/agent-verify";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +39,11 @@ const PRICE_USD =
 
 async function dailySpentAtomic(
   payer: string,
-  priceAtomic: bigint
-): Promise<bigint> {
-  const supabase = await createClient();
+  priceAtomic: bigint,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<bigint | null> {
+  const supabase = createAdminClient(supabaseUrl, serviceKey);
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await supabase
     .from("automation_logs")
@@ -46,7 +51,7 @@ async function dailySpentAtomic(
     .eq("workflow_name", "x402_spend")
     .eq("payload", payer)
     .gt("created_at", windowStart);
-  if (error) return 0n; // fail-open on ledger read; rate limit still applies
+  if (error) return null;
   return BigInt(count || 0) * priceAtomic;
 }
 
@@ -101,37 +106,38 @@ export async function POST(request: Request) {
     string,
     unknown
   >;
-  const rawSealId =
-    input.sealId ?? input.seal_id ?? input.productId ?? input.serial;
-  const sealId =
-    typeof rawSealId === "string" && rawSealId.trim() ? rawSealId.trim() : null;
-  if (!sealId) {
-    return NextResponse.json(
-      { error: "seal_id_required", settled: false },
-      { status: 400 }
-    );
+  const parsed = parseSealRequest(input);
+  if (!parsed.ok) {
+    return NextResponse.json(parsed.body, { status: parsed.status });
   }
+  const { sealId } = parsed;
 
-  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
-  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
-  const spent = await dailySpentAtomic(proof.payer, priceAtomic);
-  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
-    return NextResponse.json(
-      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
-      { status: 402 }
-    );
-  }
-
-  // Look the seal up against the same registry the free consumer-facing
-  // /api/verify endpoint checks (auth_seals), so a paid agent call can never
-  // return "verified" for a seal that doesn't exist. A lookup error is an
-  // outage, not a "not found", and is refused unpaid.
+  // A row in auth_seals is not an attestation. verified is true only when
+  // protocol/verifier.mjs returns verdict "verified" (Ed25519 + mainnet anchor).
+  // The paid ledger also requires the service role: if we cannot read it,
+  // fail closed before settlement rather than treating the spend as zero.
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) {
     return NextResponse.json({ ...X402_REGISTRY_NOT_BOUND }, { status: 503 });
   }
   const admin = createAdminClient(supabaseUrl, serviceKey);
+
+  const priceAtomic = BigInt(usdToAtomic(PRICE_USD));
+  const capAtomic = BigInt(usdToAtomic(dailyCapUsd()));
+  const spent = await dailySpentAtomic(proof.payer, priceAtomic, supabaseUrl, serviceKey);
+  if (spent === null) {
+    return NextResponse.json(
+      { error: "spend_ledger_unavailable", settled: false },
+      { status: 503 }
+    );
+  }
+  if (wouldExceedCap(spent, priceAtomic, capAtomic)) {
+    return NextResponse.json(
+      { error: "daily_spend_cap_exceeded", capUsd: dailyCapUsd() },
+      { status: 402 }
+    );
+  }
   const { data: seal, error: sealError } = await admin
     .from("auth_seals")
     .select("*")
@@ -161,37 +167,39 @@ export async function POST(request: Request) {
     );
   }
 
-  // 6. Record the spend (one row == one priced call).
-  const supabase = await createClient();
-  await supabase.from("automation_logs").insert({
+  // 6. Record the spend (one row == one priced call). Use the same privileged
+  // client as the cap read so RLS cannot silently drop the ledger entry.
+  await admin.from("automation_logs").insert({
     workflow_name: "x402_spend",
     trigger_type: "event",
     status: "success",
     payload: proof.payer,
   });
 
-  const verified = !!seal;
-  const details: Record<string, unknown> = seal
-    ? {
-        productId: seal.product_id,
-        batchId: seal.batch_id,
-        brand: seal.brand,
-        createdAt: seal.created_at,
-      }
-    : {};
+  const attestation = attestSeal(
+    seal ? (seal as Record<string, unknown>) : null
+  );
+  const answer = registryAnswer(seal as Record<string, unknown> | null);
+  if (attestation.verdict) {
+    answer.details.verdict = attestation.verdict;
+    answer.details.reasons = attestation.reasons;
+    if (attestation.verified) answer.checks.signature = "checked";
+  }
   await onVerificationEvent({
     seal_id: sealId,
     brand: (seal?.brand as string | undefined) ?? "authichain.com",
     scan_context: { source: "agent-verify", payer: proof.payer },
-    status: verified ? "valid" : "invalid",
+    status: attestation.verified ? "valid" : "invalid",
   });
 
   return NextResponse.json(
     {
-      verified,
-      authenticityScore: verified ? 100 : 0,
+      verified: attestation.verified,
+      registered: answer.registered,
+      status: answer.status,
+      checks: answer.checks,
       subject: sealId,
-      details,
+      details: answer.details,
       settlement: {
         payer: proof.payer,
         amountAtomic: verification.amount.toString(),

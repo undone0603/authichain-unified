@@ -1,10 +1,10 @@
 // scripts/ingest-sam.ts
 // FIXED: proper ESM .ts file — replaces broken `tsx -e "..."` inline pattern
 // Top-level await works correctly here when invoked via `pnpm exec tsx scripts/ingest-sam.ts`
-import { createClient } from '@supabase/supabase-js';
-import { embed } from './lib/embed.ts';
+import { createClient } from "@supabase/supabase-js";
+import { embed } from "./lib/embed.ts";
 
-const isDryRun = process.env.DRY_RUN === 'true';
+const isDryRun = process.env.DRY_RUN === "true";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -21,62 +21,105 @@ const supabase = createClient(
 const pineconeIndex: any = await (async () => {
   const { PINECONE_API_KEY, PINECONE_INDEX } = process.env;
   if (!PINECONE_API_KEY || !PINECONE_INDEX) {
-    console.warn('⚠️  Pinecone not configured (PINECONE_API_KEY / PINECONE_INDEX missing) — vector writes will be skipped.');
+    console.warn(
+      "⚠️  Pinecone not configured (PINECONE_API_KEY / PINECONE_INDEX missing) — vector writes will be skipped."
+    );
     return null;
   }
   try {
-    const { Pinecone } = await import('@pinecone-database/pinecone');
+    const { Pinecone } = await import("@pinecone-database/pinecone");
     return new Pinecone({ apiKey: PINECONE_API_KEY }).index(PINECONE_INDEX);
   } catch (err: any) {
-    console.warn(`⚠️  Pinecone SDK unavailable (${(err?.message ?? String(err)).slice(0, 140)}) — vector writes will be skipped.`);
+    console.warn(
+      `⚠️  Pinecone SDK unavailable (${(err?.message ?? String(err)).slice(0, 140)}) — vector writes will be skipped.`
+    );
     return null;
   }
 })();
 let pineconeDisabled = pineconeIndex === null;
 
-const GOVCHAIN_URL = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
+const GOVCHAIN_URL = process.env.GOVCHAIN_URL ?? "https://govchain.us";
 
 // ── Fetch opportunities from SAM.gov API ──────────────────────────────────────
 // SAM.gov v2 requires MM/dd/yyyy format and BOTH postedFrom + postedTo.
 function samDate(d: Date): string {
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   const yyyy = d.getUTCFullYear();
   return `${mm}/${dd}/${yyyy}`;
 }
 
+// Same order as gov-engine's preflight (SAM_API_KEY first). The two used to
+// disagree, so after SAM_API_KEY was rotated preflight passed while ingest
+// kept calling SAM.gov with a stale SAM_GOV_API_KEY and died on the 401/403.
+// A rejected key now falls through to the other one.
+function samKeyCandidates(
+  env: NodeJS.ProcessEnv = process.env
+): { name: string; key: string }[] {
+  const out: { name: string; key: string }[] = [];
+  for (const name of ["SAM_API_KEY", "SAM_GOV_API_KEY"]) {
+    const key = env[name]?.trim();
+    if (key && !out.some(c => c.key === key)) out.push({ name, key });
+  }
+  return out;
+}
+
 async function fetchSAMOpportunities(): Promise<any[]> {
+  const candidates = samKeyCandidates();
+  if (candidates.length === 0)
+    throw new Error("Neither SAM_API_KEY nor SAM_GOV_API_KEY is set");
+
+  for (const [i, { name, key }] of candidates.entries()) {
+    const res = await fetchSAMPage(key);
+    if (
+      (res.status === 401 || res.status === 403) &&
+      i < candidates.length - 1
+    ) {
+      console.warn(
+        `⚠️  SAM.gov rejected ${name} (HTTP ${res.status}) — trying ${candidates[i + 1].name}. Rotate or delete the stale secret.`
+      );
+      continue;
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      // SAM.gov enforces a low daily quota (~1k req/day on free keys). When
+      // exhausted it returns 429 with code 900804. Don't kill the workflow
+      // on quota — return 0 new opps so downstream jobs (score/propose) can
+      // still run against existing data in gov_opportunities.
+      if (res.status === 429) {
+        console.warn(
+          `⚠️  SAM.gov quota exhausted (429) — skipping ingest. Body: ${body.slice(0, 200)}`
+        );
+        return [];
+      }
+      throw new Error(
+        `SAM.gov API error (${name}): ${res.status} ${res.statusText} — ${body.slice(0, 400)}`
+      );
+    }
+    console.log(`🔑 SAM.gov key: ${name}`);
+    const data = await res.json();
+    return data.opportunitiesData ?? [];
+  }
+  return [];
+}
+
+async function fetchSAMPage(apiKey: string): Promise<Response> {
   const now = new Date();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const params = new URLSearchParams({
-    api_key:    process.env.SAM_GOV_API_KEY!,
-    limit:      '100',
+    api_key: apiKey,
+    limit: "100",
     postedFrom: samDate(weekAgo),
-    postedTo:   samDate(now),
-    ptype:      'o',
+    postedTo: samDate(now),
+    ptype: "o",
     // Broad query captures blockchain + CMMC/FedRAMP compliance opportunities.
     // CMMC 2.0 deadline Nov 10 2026 and FedRAMP CR26 Jan 1 2027 make
     // supply-chain traceability the hottest procurement category right now.
-    q:          'blockchain authentication provenance verification supply chain CMMC FedRAMP cybersecurity compliance counterfeit',
+    q: "blockchain authentication provenance verification supply chain CMMC FedRAMP cybersecurity compliance counterfeit",
   });
 
-  const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    // SAM.gov enforces a low daily quota (~1k req/day on free keys). When
-    // exhausted it returns 429 with code 900804. Don't kill the workflow
-    // on quota — return 0 new opps so downstream jobs (score/propose) can
-    // still run against existing data in gov_opportunities.
-    if (res.status === 429) {
-      console.warn(`⚠️  SAM.gov quota exhausted (429) — skipping ingest. Body: ${body.slice(0, 200)}`);
-      return [];
-    }
-    throw new Error(`SAM.gov API error: ${res.status} ${res.statusText} — ${body.slice(0, 400)}`);
-  }
-
-  const data = await res.json();
-  return data.opportunitiesData ?? [];
+  return fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
 }
 
 // ── Embed text and store in Pinecone + Supabase ───────────────────────────────
@@ -85,8 +128,8 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
   const providerHits: Record<string, number> = {};
 
   for (const opp of opportunities) {
-    const text = [opp.title, opp.description ?? '', opp.naicsCode ?? '']
-      .join(' ')
+    const text = [opp.title, opp.description ?? "", opp.naicsCode ?? ""]
+      .join(" ")
       .slice(0, 8000);
 
     const { vector, provider } = await embed(text);
@@ -100,11 +143,11 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
               id: opp.noticeId,
               values: vector,
               metadata: {
-                title:        opp.title,
-                agency:       opp.fullParentPathName ?? '',
-                deadline:     opp.responseDeadLine ?? '',
-                naics:        opp.naicsCode ?? '',
-                sam_url:      `https://sam.gov/opp/${opp.noticeId}/view`,
+                title: opp.title,
+                agency: opp.fullParentPathName ?? "",
+                deadline: opp.responseDeadLine ?? "",
+                naics: opp.naicsCode ?? "",
+                sam_url: `https://sam.gov/opp/${opp.noticeId}/view`,
                 govchain_url: `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
               },
             },
@@ -113,57 +156,65 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
           const msg = err?.message || String(err);
           // 404 = index doesn't exist; disable for rest of run rather than flooding logs
           if (/404|not\s*found/i.test(msg)) {
-            console.warn(`⚠️  Pinecone index not found (${process.env.PINECONE_INDEX}) — disabling vector writes for this run.`);
+            console.warn(
+              `⚠️  Pinecone index not found (${process.env.PINECONE_INDEX}) — disabling vector writes for this run.`
+            );
             pineconeDisabled = true;
           } else {
-            console.warn(`⚠️  Pinecone upsert failed for ${opp.noticeId}: ${msg.slice(0, 160)}`);
+            console.warn(
+              `⚠️  Pinecone upsert failed for ${opp.noticeId}: ${msg.slice(0, 160)}`
+            );
           }
         }
       }
 
       const poc = opp.pointOfContact?.[0];
-      const contactEmail: string | null = poc?.email || poc?.emailAddress || null;
+      const contactEmail: string | null =
+        poc?.email || poc?.emailAddress || null;
 
-      await supabase.from('gov_opportunities').upsert({
-        notice_id:       opp.noticeId,
-        title:           opp.title,
-        agency:          opp.fullParentPathName,
-        deadline:        opp.responseDeadLine,
-        naics_code:      opp.naicsCode,
-        description:     opp.description?.slice(0, 5000),
-        contact_email:   contactEmail,
+      await supabase.from("gov_opportunities").upsert({
+        notice_id: opp.noticeId,
+        title: opp.title,
+        agency: opp.fullParentPathName,
+        deadline: opp.responseDeadLine,
+        naics_code: opp.naicsCode,
+        description: opp.description?.slice(0, 5000),
+        contact_email: contactEmail,
         estimated_value: opp.award?.amount ?? null,
-        raw:             opp,
-        sam_url:         `https://sam.gov/opp/${opp.noticeId}/view`,
-        govchain_url:    `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
-        ingested_at:     new Date().toISOString(),
-        status:          'new',
+        raw: opp,
+        sam_url: `https://sam.gov/opp/${opp.noticeId}/view`,
+        govchain_url: `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
+        ingested_at: new Date().toISOString(),
+        status: "new",
       });
     }
 
     count++;
-    if (count % 10 === 0) console.log(`  Processed ${count}/${opportunities.length}...`);
+    if (count % 10 === 0)
+      console.log(`  Processed ${count}/${opportunities.length}...`);
   }
 
   const breakdown = Object.entries(providerHits)
     .map(([p, n]) => `${p}=${n}`)
-    .join(', ');
-  console.log(`🔌 Embedding providers used: ${breakdown || 'none'}`);
+    .join(", ");
+  console.log(`🔌 Embedding providers used: ${breakdown || "none"}`);
 
   return count;
 }
 
 // ── Main (top-level await) ────────────────────────────────────────────────────
-console.log('🔍 Fetching SAM.gov opportunities...');
+console.log("🔍 Fetching SAM.gov opportunities...");
 const opportunities = await fetchSAMOpportunities();
 console.log(`📦 Fetched ${opportunities.length} opportunities`);
 
 const count = await embedAndStore(opportunities);
-console.log(`✅ Ingested ${count} opportunities${isDryRun ? ' (DRY RUN — no writes)' : ''}`);
+console.log(
+  `✅ Ingested ${count} opportunities${isDryRun ? " (DRY RUN — no writes)" : ""}`
+);
 
 // Set GitHub Actions output via GITHUB_OUTPUT env file (::set-output is deprecated)
 if (process.env.GITHUB_OUTPUT) {
-  const { appendFileSync } = await import('node:fs');
+  const { appendFileSync } = await import("node:fs");
   appendFileSync(process.env.GITHUB_OUTPUT, `count=${count}\n`);
 }
 process.exit(0);

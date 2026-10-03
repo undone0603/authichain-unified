@@ -248,16 +248,39 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/api/checkout/dpp"');
-    expect(body).not.toContain(
-      'href="https://authichain.com/api/checkout/dpp"'
-    );
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();
+  });
+
+  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
+    const res = await app.request(
+      "/p/quantum-financial-system-real-or-myth",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(body).toContain('<meta name="robots" content="noindex">');
+  });
+
+  it("leaves indexable SEO hubs without a robots noindex", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(body).not.toContain('name="robots"');
   });
 
   it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
@@ -271,13 +294,11 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("What you get");
     expect(body).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(body).not.toContain(
-      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
-    );
+    expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(body).toContain('href="https://strainchain.io/pricing"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
@@ -359,11 +380,11 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain("Issue seals. Bind products. Verify anywhere.");
+    expect(body).toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="/api/checkout/dpp"');
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
   });
 });
@@ -398,13 +419,13 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain('name="email"');
     expect(body).toContain('name="company"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"'
+      'href="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     // Retired StrainChain Basic link (no live Stripe account) must not return.
     expect(body).not.toContain("9B6cN59br5xcaCuazy1Nu1o");
@@ -539,9 +560,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="/api/checkout/dpp"');
+    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
     expect(body).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
   });
 });
@@ -569,12 +590,57 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
       expect(body).toContain('name="email"');
-      expect(body).toContain('action="/api/checkout/dpp"');
+      expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
       expect(body).toContain(
-        'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+        'href="https://authichain.com/checkout/dpp_readiness"'
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
+  });
+});
+
+describe("/onboard and /generate: walkthrough friction fixes", () => {
+  it("titles /onboard per site from X-Forwarded-Host", async () => {
+    const title = async (host?: string) => {
+      const res = await app.request(
+        "/onboard",
+        host ? { headers: { "x-forwarded-host": host } } : {},
+        makeEnv() as any
+      );
+      return /<title>([^<]*)<\/title>/.exec(await res.text())?.[1];
+    };
+    expect(await title()).toBe("Request a pilot | AuthiChain");
+    expect(await title("govchain.us")).toBe("Request access | GovChain");
+    expect(await title("strainchain.io")).toBe("Request a pilot | StrainChain");
+    expect(await title("authichain.govchain.us")).toBe(
+      "Request a pilot | AuthiChain"
+    );
+  });
+
+  it("uses plain copy, product names, no /verify link and 44px targets", async () => {
+    const res = await app.request("/onboard", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("Request a free pilot seal</button>");
+    expect(body).not.toContain("not a placeholder");
+    expect(body).toContain("Or buy now, no call needed");
+    expect(body).toContain("StrainChain Passport — $49");
+    expect(body).toContain("StrainChain Farm Plan — $149/mo");
+    expect(body).toContain("EU DPP Readiness Audit — $299");
+    expect(body).not.toContain('href="/verify"');
+    expect(body).toContain('href="https://authichain.com/contact"');
+    expect(body).toContain("min-height:44px");
+  });
+
+  it("styles /generate and drops API wording", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("min-height:44px");
+    expect(body).toContain('<label for="targetUrl">Product URL</label>');
+    expect(body).toContain("5 free, then 100 for $29, no subscription.");
+    expect(body).toContain("not an authenticity proof");
+    expect(body).not.toContain("<code>POST /api/generate</code>");
+    expect(body).not.toContain("/dashboard");
+    expect(body).not.toContain('href="/login"');
   });
 });
 
@@ -597,10 +663,10 @@ describe("renderDynamicPage: /generate Living QR", () => {
     // Top-ups are the live Starter/Creator packs; the retired credit bundles
     // ($9.99/$39.99/$99.99) had links on no live Stripe account.
     expect(body).toContain(
-      'href="https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E"'
+      'href="https://authichain.com/checkout/starter"'
     );
     expect(body).toContain(
-      'href="https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F"'
+      'href="https://authichain.com/checkout/creator"'
     );
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
@@ -610,10 +676,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
         .slice(1)
         .some(rest => rest.slice(0, 40).includes("1Nu"))
     ).toBe(false);
-    expect(body).toContain("Need more generations");
+    expect(body).toContain("5 free, then 100 for $29");
+    expect(body).not.toContain("buy.stripe.com");
+    expect(body).not.toContain("Those 5 are signed");
+    expect(body).not.toContain("Those 5 are signed");
   });
 
-  it("303s a valid URL to /onboard", async () => {
+  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
+  it("303s a valid URL to the starter checkout", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -625,9 +695,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-    const location = res.headers.get("location") || "";
-    expect(location).toContain("/onboard");
-    expect(location).toContain("vertical=qron");
+    const location = new URL(
+      res.headers.get("location") || "",
+      "https://example.test"
+    );
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("targetUrl")).toBe(
+      "https://example.com/sku"
+    );
+    expect(location.searchParams.get("prompt")).toBe("neon");
   });
 });
 

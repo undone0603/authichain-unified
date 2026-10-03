@@ -125,6 +125,16 @@ function sessionOffer(session: any): string {
   );
 }
 
+/**
+ * True when the session names a catalogue plan other than the DPP audit
+ * (e.g. the $299 Made in USA claim file, or a $29 Starter Pack). Such a
+ * session has no offer key, so without this it would get the DPP emails.
+ */
+function isOtherPlan(session: any): boolean {
+  const plan = String(session?.metadata?.plan || "");
+  return plan !== "" && plan !== "dpp_readiness";
+}
+
 function sessionEmail(session: any): string {
   return (
     session?.customer_details?.email ||
@@ -285,6 +295,7 @@ async function handleCompleted(env: Env, session: any): Promise<void> {
     // Ignore unrelated checkouts
     return;
   }
+  if (isOtherPlan(session)) return;
   // If payment link metadata didn't copy, still accept when amount matches audit
   const amount = session.amount_total ?? 29900;
   const email = sessionEmail(session);
@@ -352,6 +363,7 @@ async function handleExpired(env: Env, session: any): Promise<void> {
 
   const offer = sessionOffer(session);
   if (offer && offer !== env.OFFER_KEY && offer !== OFFER) return;
+  if (isOtherPlan(session)) return;
 
   const email = sessionEmail(session);
   if (!email || !email.includes("@")) return;

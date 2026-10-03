@@ -13,6 +13,8 @@ import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
+const GATED_DPP_ACTION = new URL("/checkout/dpp_readiness", "https://authichain.com").href;
+
 const ENV = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-test-key",
@@ -129,7 +131,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.ok(text.includes(planPaymentLink("strainchain_passport") ?? ""));
   assert.equal(
     `href="${planPaymentLink("dpp_readiness")}"`.startsWith(
-      'href="https://buy.stripe.com'
+      'href="https://authichain.com/checkout/'
     ),
     true
   );
@@ -272,15 +274,15 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
   assert.equal(body.catalog, "/api/x402/catalog");
   assert.equal(
     new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(
     new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-    "buy.stripe.com"
+    "authichain.com"
   );
   assert.equal(body.humanCheckout.starterPaymentLink, undefined);
   const blob = JSON.stringify(body);
@@ -295,11 +297,11 @@ test("/pricing is a live money page, not a 404", async () => {
   assert.match(html, /<title>Pricing — GovChain<\/title>/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
-  assert.match(html, /action="https:\/\/authichain.com\/api\/checkout\/dpp"/);
-  assert.match(html, /href="https:\/\/authichain.com\/pricing"/);
+  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/);
+  assert.match(html, /href="https:\/\/authichain\.govchain\.us\/pricing"/);
   assert.doesNotMatch(html, /href="\/api\/checkout\//);
   assert.ok(
-    html.includes('href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"')
+    html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
   assert.doesNotMatch(html, /does not exist/);
 });
@@ -312,7 +314,19 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     assert.ok(html.includes("Nothing here is an award"));
     const hrefs = [...html.matchAll(/\bhref="([^"]+)"/g)].map(m => m[1]);
     const actions = [...html.matchAll(/\baction="([^"]+)"/g)].map(m => m[1]);
-    assert.ok(hrefs.includes("https://authichain.com/made-in-america"), path);
+    const isAppUrl = (raw: string, pathname: string) => {
+      try {
+        const u = new URL(raw);
+        return (
+          u.protocol === "https:" &&
+          u.hostname === "authichain.govchain.us" &&
+          u.pathname === pathname
+        );
+      } catch {
+        return false;
+      }
+    };
+    assert.ok(hrefs.some(h => isAppUrl(h, "/made-in-america")), path);
     assert.ok(
       hrefs.includes(
         "https://govchain.us/p/sbir-svip-blockchain-document-verification"
@@ -321,7 +335,7 @@ test("free DoD packet is live, unpaid, and does not claim an award", async () =>
     );
     assert.ok(hrefs.includes("/onboard"), path);
     assert.ok(
-      actions.includes("https://authichain.com/api/checkout/dpp"),
+      actions.some(a => a === GATED_DPP_ACTION),
       path
     );
     assert.ok(!html.includes("SBIR awarded"));
@@ -425,6 +439,64 @@ test("/onboard is proxied to the app, not answered with a 404", async () => {
     assert.equal(new URL(calls[0].url).pathname, "/onboard");
   } finally {
     globalThis.fetch = real;
+  }
+});
+
+test("/api/govchain/grants proxies the canonical JSON handler", async () => {
+  const calls: Request[] = [];
+  const env = {
+    ...ENV,
+    VERIFY_APP: {
+      fetch: async (request: Request) => {
+        calls.push(request);
+        return Response.json(
+          { grants: [{ program: "Small Business Innovation Research", agency: "GSA" }], total: 1, limit: 20, offset: 0 },
+          { status: 200 },
+        );
+      },
+    },
+  } as typeof ENV;
+  const res = await worker.fetch(
+    new Request("https://govchain.us/api/govchain/grants?agency=GSA"),
+    env,
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(res.headers.get("x-served-by"), "govchain-us-proxy");
+  assert.equal(calls.length, 1);
+  assert.equal(new URL(calls[0].url).pathname, "/api/govchain/grants");
+  assert.equal(new URL(calls[0].url).search, "?agency=GSA");
+  assert.equal(calls[0].headers.get("X-Forwarded-Host"), "govchain.us");
+  const body = (await res.json()) as { grants: StubRow[]; total: number };
+  assert.equal(body.total, 1);
+  assert.equal(body.grants[0].agency, "GSA");
+});
+
+test("/api/govchain/grants fails closed when the app binding is absent", async () => {
+  const res = await get("/api/govchain/grants");
+  assert.equal(res.status, 503);
+  assert.deepEqual(await res.json(), { error: "app_not_bound" });
+});
+
+test("/api/govchain/opportunities applies the search query", async () => {
+  const f = stubSupabase([ROW]);
+  try {
+    const res = await get("/api/govchain/opportunities?min_fit=70&limit=6&q=Cyber%20support");
+    assert.equal(res.status, 200);
+    assert.ok(
+      f.calls[0].includes("title.ilike.*Cyber%20support*"),
+      "q reaches PostgREST title search"
+    );
+    assert.ok(
+      f.calls[0].includes("agency.ilike.*Cyber%20support*"),
+      "q reaches PostgREST agency search"
+    );
+    assert.ok(
+      f.calls[0].includes("notice_id.ilike.*Cyber%20support*"),
+      "q reaches PostgREST notice search"
+    );
+  } finally {
+    f.restore();
   }
 });
 

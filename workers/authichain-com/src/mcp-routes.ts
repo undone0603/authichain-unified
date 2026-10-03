@@ -14,13 +14,23 @@ import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
   buildPaymentRequired,
+  forwardPaidVerifyMcp,
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
-  type X402HealthEnv,
+  x402PaidVerifyStatus,
+  type X402EnvVars,
+  type X402VerifyBinding,
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
+import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
+import {
+  DPP_CATEGORIES,
+  DPP_QUESTIONS,
+  parseDppReadinessInput,
+  scoreDppReadiness,
+} from "../../../src/lib/dpp-readiness.ts";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -38,8 +48,9 @@ const TOOLS = [
   },
   {
     name: "verify",
-    description:
-      "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT.",
+    description: x402PaidVerifyStatus().bound
+      ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
+      : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
     inputSchema: {
       type: "object",
       properties: {
@@ -52,7 +63,10 @@ const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. Cryptographic verify is tools/call verify ($0.05 USDC on Base).",
+      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. " +
+      (x402PaidVerifyStatus().bound
+        ? "Paid verify is tools/call verify ($0.05 USDC on Base)."
+        : "Paid tools/call verify ($0.05 USDC on Base) is not answering yet: it refuses before settlement."),
     inputSchema: {
       type: "object",
       properties: {
@@ -64,7 +78,38 @@ const TOOLS = [
       required: ["assetId"],
     },
   },
+  {
+    name: "dpp_readiness_check",
+    description:
+      "Free EU Digital Product Passport readiness check. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        category: {
+          type: "string",
+          enum: DPP_CATEGORIES.map(c => c.id),
+          description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join(
+            "; "
+          ),
+        },
+        sells_in_eu: {
+          type: "boolean",
+          description:
+            "Sold into the EU directly or via an importer. Default true.",
+        },
+        ...Object.fromEntries(
+          DPP_QUESTIONS.map(q => [
+            q.id,
+            { type: "boolean", description: q.question },
+          ])
+        ),
+      },
+      required: ["category"],
+    },
+  },
 ];
+
+const DPP_CHECK_URL = "https://authichain.com/dpp-check";
 
 function normalizePath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
@@ -91,7 +136,7 @@ function json(
 
 function hydrateX402(env?: X402Env) {
   if (!env) return;
-  const keys: Array<keyof X402HealthEnv> = [
+  const keys: Array<keyof X402EnvVars> = [
     "X402_PAY_TO",
     "X402_FACILITATOR_URL",
     "X402_NETWORK",
@@ -129,7 +174,10 @@ export function mcpPricingDiscovery(env?: X402Env) {
       wellKnown: "https://authichain.com/.well-known/x402.json",
       mcp: "https://authichain.com/mcp",
       docs: "https://authichain.com/x402",
-      note: "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT.",
+      note: x402PaidVerifyStatus().bound
+        ? "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT."
+        : "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
+      paidVerify: x402PaidVerifyStatus(),
     },
     humanCheckout: {
       rail: "stripe",
@@ -226,7 +274,9 @@ function rpcError(id: unknown, message: string, code = -32601): Response {
 async function unpaidOrRefusedVerify(
   request: Request,
   env: X402Env | undefined,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  id: unknown,
+  verifyApp?: X402VerifyBinding
 ): Promise<Response> {
   hydrateX402(env);
   const payTo = (env?.X402_PAY_TO || process.env.X402_PAY_TO || "").trim();
@@ -246,19 +296,58 @@ async function unpaidOrRefusedVerify(
     payTo,
     description: "AuthiChain MCP verify",
   });
-  const proof = parsePaymentHeader(
-    readPaymentProofHeader(name => request.headers.get(name))
-  );
-  if (!proof) {
+  const proofHeader = readPaymentProofHeader(name => request.headers.get(name));
+  const proof = parsePaymentHeader(proofHeader);
+  if (!proof || !proofHeader) {
     return json(402, required.v2, required.headers);
   }
 
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: Boolean(verifyApp),
+    proofHeader,
+    bodyText: JSON.stringify(args),
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain MCP verify",
+    env,
+  });
+  if (decision.action === "answer") {
+    if (decision.status !== 200) {
+      return json(decision.status, decision.body, decision.headers);
+    }
+    const headers: Record<string, string> = { ...decision.headers };
+    return json(
+      200,
+      {
+        jsonrpc: "2.0",
+        id: id ?? null,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(decision.body, null, 2),
+            },
+          ],
+          structuredContent: decision.body,
+        },
+      },
+      headers
+    );
+  }
+  if (decision.action === "forward" && verifyApp) {
+    return forwardPaidVerifyMcp(verifyApp, request, proofHeader, args, id);
+  }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
   return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
-async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
+async function handleRpc(
+  request: Request,
+  env?: X402Env,
+  verifyApp?: X402VerifyBinding
+): Promise<Response> {
   let body: {
     jsonrpc?: string;
     id?: unknown;
@@ -303,7 +392,13 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
       });
     }
     if (name === "verify" || name === "authichain_verify_product") {
-      return unpaidOrRefusedVerify(request, env, params.arguments ?? {});
+      return unpaidOrRefusedVerify(
+        request,
+        env,
+        params.arguments ?? {},
+        id,
+        verifyApp
+      );
     }
     if (name === "query_provenance" || name === "authichain_query_provenance") {
       const args = params.arguments ?? {};
@@ -317,11 +412,38 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
         ],
       });
     }
+    if (name === "dpp_readiness_check") {
+      const args = params.arguments ?? {};
+      const input = parseDppReadinessInput(k => args[k]);
+      if (!input) {
+        return rpcResult(id, {
+          content: [
+            {
+              type: "text",
+              text: `category is required, one of: ${DPP_CATEGORIES.map(c => c.id).join(", ")}`,
+            },
+          ],
+          isError: true,
+        });
+      }
+      const result = scoreDppReadiness(input, {
+        auditPrice: planUsd("dpp_readiness"),
+        auditUrl: planPaymentLink("dpp_readiness"),
+      });
+      return rpcResult(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2),
+          },
+        ],
+      });
+    }
     return rpcResult(id, {
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
         },
       ],
       isError: true,
@@ -333,7 +455,8 @@ async function handleRpc(request: Request, env?: X402Env): Promise<Response> {
 
 export async function tryHandleMcp(
   request: Request,
-  env: X402Env = {}
+  env: X402Env = {},
+  verifyApp?: X402VerifyBinding
 ): Promise<Response | null> {
   if (!isMcpPath(new URL(request.url).pathname)) return null;
 
@@ -366,7 +489,7 @@ export async function tryHandleMcp(
   }
 
   if (request.method === "POST") {
-    return handleRpc(request, env);
+    return handleRpc(request, env, verifyApp);
   }
 
   return json(405, { error: "method not allowed" });

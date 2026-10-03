@@ -3,7 +3,8 @@
  * Captures replies to proposals@authichain.com: classify sentiment, match the
  * sender to a lead/proposal, store the reply in inbound_replies, and mark the
  * lead as replied. Like the original, it does not write HubSpot and does not
- * send anything; /api/cron/nurture-replies (not yet ported) follows up later.
+ * send anything; /api/cron/nurture-replies is ported on the edge router but
+ * stays GROUP B / HELD (dry-run until NURTURE_SEND_ENABLED=true and ?send=1).
  *
  * Differences from the Next.js route, all deliberate:
  * - Signed events only. The original accepted any unauthenticated POST, so
@@ -32,12 +33,15 @@ import {
   inboundReplyAction,
   isProbablyLegitimateReply,
   resolveReplyClassifierBackend,
+  type WorkersAIBinding,
 } from "../src/lib/sentiment-classifier";
 
 export type ResendInboundEnv = {
   RESEND_WEBHOOK_SECRET?: string;
   RESEND_API_KEY?: string;
   OPENAI_API_KEY?: string;
+  /** Workers AI binding ([ai] in wrangler.toml): the free classifier. */
+  AI?: WorkersAIBinding;
   NEXT_PUBLIC_SUPABASE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
@@ -50,7 +54,7 @@ export const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
 
 function envValue(
   c: InboundContext,
-  name: keyof ResendInboundEnv
+  name: Exclude<keyof ResendInboundEnv, "AI">
 ): string | undefined {
   return c.env?.[name] || process.env[name] || undefined;
 }
@@ -234,7 +238,7 @@ async function handleProbe(c: InboundContext) {
     ok: true,
     signatureRequired: true,
     webhookSecretConfigured: Boolean(envValue(c, "RESEND_WEBHOOK_SECRET")),
-    classifier: resolveReplyClassifierBackend(classifierEnv(c)),
+    classifier: resolveReplyClassifierBackend(classifierEnv(c), c.env?.AI),
     sideEffects: {
       hubspotWrite: false,
       draftReply: false,
@@ -309,8 +313,12 @@ async function handleInbound(c: InboundContext) {
 
     const match = await matchReplyToProposal(admin, senderEmail, subject);
     const env = classifierEnv(c);
-    const backend = resolveReplyClassifierBackend(env);
-    const sentiment = await classifyReplyEmail(body, subject, { env });
+    const workersAI = c.env?.AI;
+    const backend = resolveReplyClassifierBackend(env, workersAI);
+    const sentiment = await classifyReplyEmail(body, subject, {
+      env,
+      workersAI,
+    });
 
     let leadId = match.leadId;
     if (!leadId) {
@@ -395,6 +403,7 @@ async function handleInbound(c: InboundContext) {
         action: inboundReplyAction(sentiment.sentiment, leadId),
         classifier: {
           provider: sentiment.provider,
+          workersAiAvailable: backend.workersAiAvailable,
           missingSecret: backend.missingSecret ?? null,
           paidLlmAvailable: backend.paidLlmAvailable,
           fallbackReason: sentiment.fallbackReason ?? null,

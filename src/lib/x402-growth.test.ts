@@ -7,17 +7,19 @@ import {
   x402ListingPack,
 } from "./x402-growth";
 
-const LIVE_PAY_TO = "0xaebfa6b08fb25b59748c93273ab8880e20ffe437";
-const STALE_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+const LIVE_PAY_TO = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+// $QRON ERC-20 contract on Polygon — must never appear as a wallet.
+const STALE_PAY_TO = "0xaebfa6b08fb25b59748c93273ab8880e20ffe437"; // pragma: allowlist secret
 
 describe("x402ListingPack", () => {
-  it("copies wallet and price from health and never invents 0x5db5…", () => {
+  it("copies wallet and price from health and never invents the $QRON contract", () => {
     const pack = x402ListingPack({
       payTo: LIVE_PAY_TO,
       pricePerCall: { usd: 0.05, atomic: "50000" },
       asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       ready: true,
       status: "ready",
+      paidVerify: { bound: true, status: "bound" },
     });
     expect(pack.wallet).toBe(LIVE_PAY_TO);
     expect(pack.payapi.form.wallet).toBe(LIVE_PAY_TO);
@@ -28,6 +30,18 @@ describe("x402ListingPack", () => {
     expect(pack.tools).toBe(3);
     expect(JSON.stringify(pack)).not.toContain(STALE_PAY_TO);
     expect(pack.ready).toBe(true);
+  });
+
+  it("is not ready while the paid verify route is unbound", () => {
+    const pack = x402ListingPack({
+      payTo: LIVE_PAY_TO,
+      ready: true,
+      status: "ready",
+      paidVerify: { bound: false, status: "unbound" },
+    });
+    expect(pack.wallet).toBe(LIVE_PAY_TO);
+    expect(pack.ready).toBe(false);
+    expect(pack.paidVerify).toBe("unbound");
   });
 
   it("leaves wallet null when health has no payTo", () => {

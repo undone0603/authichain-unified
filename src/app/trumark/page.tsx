@@ -7,8 +7,8 @@ export const metadata: Metadata = {
     "TruMark is the physical scan seal. Publish a StrainChain genetics passport at $49, or start EU DPP Readiness at $299. Self-serve checkout — no call booking.",
 };
 
-const PASSPORT = "/api/checkout/plan/strainchain_passport";
-const DPP = "/api/checkout/dpp";
+const PASSPORT = "https://authichain.com/checkout/strainchain_passport";
+const DPP = "https://authichain.com/checkout/dpp_readiness";
 
 export default function TruMarkPage() {
   return (

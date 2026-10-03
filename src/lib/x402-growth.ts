@@ -4,8 +4,8 @@
  * Health is the only source of payTo / price / asset / network.
  * Listing packs, directory rows, skills, and sister aliases copy those
  * fields. Do not hardcode a second wallet. Do not put $QRON on this rail.
- * Do not rebind X402_PAY_TO away from the owner-authorized treasury
- * 0xaebf…e437.
+ * X402_PAY_TO is the owner's keyed EOA 0x5db5…6AA2. Never list the $QRON
+ * ERC-20 contract 0xAebf…E437 as a wallet.
  */
 
 export const GROWTH_ORIGIN = "https://authichain.com";
@@ -66,7 +66,8 @@ export const GROWTH_DIRECTORIES: GrowthDirectory[] = [
     url: "https://payapi.market",
     listUrl: "https://payapi.market/list",
     mcp: "https://payapi.market/mcp",
-    probe: "unpaid POST paidRoute must 402 with Base USDC to listing wallet at <= $0.05",
+    probe:
+      "unpaid POST paidRoute must 402 with Base USDC to listing wallet at <= $0.05",
     status: "ready",
     notes: "Submit from /api/x402/listing. Do not type a wallet by hand.",
   },
@@ -76,7 +77,8 @@ export const GROWTH_DIRECTORIES: GrowthDirectory[] = [
     url: "https://payai.network",
     probe: "unpaid 402 body extensions.bazaar + PAYMENT-REQUIRED header",
     status: "declared",
-    notes: "Declared on the 402. Facilitator stays https://facilitator.payai.network.",
+    notes:
+      "Declared on the 402. Facilitator stays https://facilitator.payai.network.",
   },
   {
     id: "mcp-clients",
@@ -147,6 +149,7 @@ export type ListingHealth = {
   ready?: boolean;
   status?: string;
   mode?: string;
+  paidVerify?: { bound: boolean; status: string; detail?: string };
 };
 
 export type X402ListingPack = {
@@ -173,7 +176,12 @@ export type X402ListingPack = {
   listing: string;
   ready: boolean;
   railStatus: string;
-  directories: Array<{ id: string; status: GrowthDirectoryStatus; listUrl?: string }>;
+  paidVerify: string;
+  directories: Array<{
+    id: string;
+    status: GrowthDirectoryStatus;
+    listUrl?: string;
+  }>;
   sisters: Array<{ origin: string; paidPath: string }>;
   skills: Array<{ id: string; path: string; mcpTool?: string }>;
   payapi: {
@@ -211,10 +219,7 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
       "Paid product-authenticity verify for agents. Unpaid POST returns HTTP 402 ($0.05 USDC on Base). Free catalog, health, and MCP discovery.",
     baseUrl: GROWTH_ORIGIN,
     paidRoute: `${GROWTH_ORIGIN}/api/v1/agent-verify`,
-    paidAliases: [
-      `${GROWTH_ORIGIN}/api/x402`,
-      `${GROWTH_ORIGIN}/mcp`,
-    ],
+    paidAliases: [`${GROWTH_ORIGIN}/api/x402`, `${GROWTH_ORIGIN}/mcp`],
     wallet,
     priceUsd: price.usd,
     priceAtomic: price.atomic,
@@ -228,8 +233,9 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
     health: `${GROWTH_ORIGIN}/api/x402/health`,
     docs: `${GROWTH_ORIGIN}/x402`,
     listing: `${GROWTH_ORIGIN}/api/x402/listing`,
-    ready: Boolean(health.ready && wallet),
+    ready: Boolean(health.ready && wallet && health.paidVerify?.bound === true),
     railStatus: health.status || "unknown",
+    paidVerify: health.paidVerify?.status ?? "unknown",
     directories: GROWTH_DIRECTORIES.map(d => ({
       id: d.id,
       status: d.status,
@@ -256,7 +262,7 @@ export function x402ListingPack(health: ListingHealth = {}): X402ListingPack {
         toolCount: 3,
       },
       rules: [
-        "Copy wallet from this pack or live /api/x402/health payTo. Never type 0x5db5….",
+        "Copy wallet from this pack or live /api/x402/health payTo. Never type the $QRON contract 0xAebf….",
         "Paid route must already 402 unpaid with Base USDC to that wallet.",
         "Price must match health.pricePerCall.usd (live $0.05).",
         "Do not list a sister origin as a second provider wallet.",
@@ -283,7 +289,9 @@ export type GrowthDiscoveryBody = {
   pack: X402ListingPack;
 };
 
-export function growthDiscovery(health: ListingHealth = {}): GrowthDiscoveryBody {
+export function growthDiscovery(
+  health: ListingHealth = {}
+): GrowthDiscoveryBody {
   return {
     protocol: "x402",
     origin: GROWTH_ORIGIN,

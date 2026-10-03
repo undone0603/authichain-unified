@@ -16,7 +16,15 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { fingerprintCultivar } from "@/lib/fingerprint";
-import { getCultivar, getDossier, toSlug } from "@/lib/genetics";
+import {
+  UNLISTED_CACHE_CONTROL,
+  UNLISTED_ROBOTS_TAG,
+  farmIsUnlisted,
+  getCultivar,
+  getDossier,
+  isPublicFarm,
+  toSlug,
+} from "@/lib/genetics";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +40,26 @@ export async function GET(req: NextRequest) {
         ok: false,
         error: "farm and cultivar are required",
         usage:
-          "/api/genetics/verify?farm=mendo-love-farms&cultivar=vt-26[&digest=sha256:...]",
+          "/api/genetics/verify?farm=<farm-slug>&cultivar=<cultivar-slug>[&digest=sha256:...]",
       },
       { status: 400 }
     );
   }
 
-  const dossier = getDossier(farm);
+  if (farmIsUnlisted(farm)) {
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      {
+        status: 404,
+        headers: {
+          "cache-control": UNLISTED_CACHE_CONTROL,
+          "x-robots-tag": UNLISTED_ROBOTS_TAG,
+        },
+      }
+    );
+  }
+
+  const dossier = isPublicFarm(farm) ? getDossier(farm) : null;
   if (!dossier) {
     return NextResponse.json(
       { ok: false, error: "unknown_farm", farm },

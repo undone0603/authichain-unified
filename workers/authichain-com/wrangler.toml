@@ -24,8 +24,26 @@ zone_name = "authichain.com"
 pattern = "app.authichain.com/"
 zone_name = "authichain.com"
 
+# Primary site host (moved from the apex). Workers Custom Domain on the
+# govchain.us zone; attached live 2026-09-25. Declared here so a redeploy keeps it.
+[[routes]]
+pattern = "authichain.govchain.us"
+custom_domain = true
+
+# authichain.com apex Workers Custom Domain (attached out-of-band before #1245;
+# the post-#1245 deploy removed it because it was not declared here, and it had
+# to be reattached via API on 2026-09-25). Declared so deploys keep it.
+[[routes]]
+pattern = "authichain.com"
+custom_domain = true
+
 [observability]
 enabled = true
+
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
 
 # APP_WORKER: service binding to `authichain-edge-router` (worker-app/index.ts),
 # the native Cloudflare replacement for the old Vercel deployment
@@ -44,4 +62,25 @@ enabled = true
 binding = "APP_WORKER"
 service = "authichain-edge-router"
 
-# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID
+# API_WORKER: service binding to authichain-api for the public /api/v1 endpoints.
+[[services]]
+binding = "API_WORKER"
+service = "authichain-api"
+
+# Secrets (set at deploy from GitHub): STRIPE_SECRET_KEY, optional STRIPE_PRICE_ID.
+# DPP_SMOKE_SECRET (16+ chars) gates the $0 DPP-SMOKE-E2E session. Unset fails closed.
+
+# VERIFY_APP: service binding to the Next app worker `authichain-app`
+# (wrangler.app.jsonc). Paid verify prefers the Supabase read below. This
+# binding is only the fallback when those vars are absent. wrangler deploy
+# fails if `authichain-app` is not deployed.
+[[services]]
+binding = "VERIFY_APP"
+service = "authichain-app"
+
+# Public auth_seals SELECT (RLS allows it). The service role is not committed;
+# if SUPABASE_SERVICE_ROLE_KEY is set as a secret, the paid path prefers it.
+# Deploy with --keep-vars so dashboard x402 vars stay.
+[vars]
+SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"

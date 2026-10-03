@@ -2329,7 +2329,6 @@ footer{text-align:center;padding:2rem;border-top:1px solid var(--border);color:v
     <div class="integration">🛍️ Shopify</div>
     <div class="integration">🏭 SAP PLM</div>
     <div class="integration">📦 Oracle SCM</div>
-    <div class="integration">🎨 Arianee Protocol</div>
     <div class="integration">🔗 IPFS / Pinata</div>
   </div>
 </section>

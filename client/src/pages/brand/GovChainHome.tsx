@@ -344,7 +344,7 @@ export default function GovChainHome() {
             <p className="text-sm text-muted-foreground text-center">Sovereign Verification for Government &amp; Defense. Powered by AuthiChain.</p>
           </div>
           <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
-          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 GovChain by AuthiChain, Inc.</p>
+          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 GovChain by AuthiChain</p>
         </div>
       </footer>
     </div>

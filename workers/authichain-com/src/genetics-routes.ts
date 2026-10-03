@@ -12,8 +12,12 @@
 
 import {
   DECARB,
+  UNLISTED_CACHE_CONTROL,
+  UNLISTED_ROBOTS_TAG,
+  farmIsUnlisted,
   getCultivar,
   getDossier,
+  isPublicFarm,
   listFarms,
   toSlug,
   type CultivarView,
@@ -35,8 +39,13 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
 };
 
 const CHECKOUT =
-  "https://authichain.com/api/checkout/plan/strainchain_passport";
-const MENDO_MICRO = "https://authichain.com/m/mendo";
+  "https://authichain.com/checkout/strainchain_passport";
+
+/**
+ * Which farms may render. Defaults to the library's public gate; tests pass
+ * their own to render the withdrawn fixture farm.
+ */
+export type FarmGate = (farmSlug: string) => boolean;
 
 const PROVENANCE_LABEL: Record<Provenance, string> = {
   confirmed_in_writing: "Confirmed in writing",
@@ -130,14 +139,14 @@ code{font-size:.85em;background:rgba(148,163,184,.1);padding:.1rem .35rem;border
 <div class="wrap">
 <nav>
   <a class="brand" href="https://strainchain.io">StrainChain</a>
-  <a href="https://authichain.com/pricing">Pricing</a>
+  <a href="https://authichain.govchain.us/pricing">Pricing</a>
   <a href="https://strainchain.io/onboard">Onboard</a>
-  <a href="https://authichain.com">AuthiChain</a>
+  <a href="https://authichain.govchain.us">AuthiChain</a>
 </nav>
 ${body}
 <footer>
   AuthiChain brand · StrainChain genetics passports · Legal entity ZACHARY KIETZMAN (sole proprietor; AuthiChain is a brand, not a corporation).<br>
-  Totals are recomputed from the source panel at page load (decarb ${DECARB}), never transcribed. Last reconciled ${esc(updated)}. LT-63 has no panel yet.
+  Totals are recomputed from the source panel at page load (decarb ${DECARB}), never transcribed. ${updated ? `Last reconciled ${esc(updated)}.` : ""}
 </footer>
 </div>
 </body>
@@ -147,7 +156,7 @@ ${body}
 function checkoutCard(): string {
   return `<div class="card">
   <h2>StrainChain Passport — $49</h2>
-  <p>One cultivar genetics passport: CoA chemistry with totals derived at render, lineage edges tagged by evidence, public verify URL. LT-63 still has no panel — Passport publishes the first verified lot when it arrives.</p>
+  <p>One cultivar genetics passport: CoA chemistry with totals derived at render, lineage edges tagged by evidence, public verify URL.</p>
   <div class="cta">
     ${checkoutEmailFormHtml({
       action: CHECKOUT,
@@ -163,7 +172,6 @@ function checkoutCard(): string {
       planId: "strainchain_farm",
       label: "Farm Plan $149/mo",
     })}
-    <a class="btn btn-outline" href="${MENDO_MICRO}">LT-63 licensing microsite</a>
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>
 </div>`;
@@ -176,8 +184,8 @@ function neverBreed(): string {
 </div>`;
 }
 
-function farmPage(farmSlug: string): string | null {
-  const d = getDossier(farmSlug);
+function farmPage(farmSlug: string, isPublic: FarmGate): string | null {
+  const d = isPublic(farmSlug) ? getDossier(farmSlug) : null;
   if (!d) return null;
   const views = d.cultivars
     .map(c => getCultivar(farmSlug, toSlug(c.id)))
@@ -245,7 +253,12 @@ ${checkoutCard()}
   });
 }
 
-function cultivarPage(farmSlug: string, cultivarSlug: string): string | null {
+function cultivarPage(
+  farmSlug: string,
+  cultivarSlug: string,
+  isPublic: FarmGate
+): string | null {
+  if (!isPublic(farmSlug)) return null;
   const view = getCultivar(farmSlug, cultivarSlug);
   const d = getDossier(farmSlug);
   if (!view || !d) return null;
@@ -379,17 +392,24 @@ ${checkoutCard()}
   });
 }
 
-function geneticsIndex(): string {
-  const farms = listFarms()
-    .map(slug => {
-      const d = getDossier(slug);
-      if (!d) return "";
-      return `<div class="card">
-  <h2><a href="/genetics/${esc(slug)}">${esc(d.farm.name)}</a></h2>
-  <p>${d.certificates.length} CoAs on file · ${d.cultivars.length} cultivars · LT-63 licensing cultivar still missing a panel.</p>
+function geneticsIndex(isPublic: FarmGate): string {
+  const dossiers = listFarms()
+    .filter(isPublic)
+    .map(slug => getDossier(slug))
+    .filter((d): d is NonNullable<typeof d> => d !== null);
+  const farms = dossiers.length
+    ? dossiers
+        .map(
+          d => `<div class="card">
+  <h2><a href="/genetics/${esc(d.farm.slug)}">${esc(d.farm.name)}</a></h2>
+  <p>${d.certificates.length} CoAs on file · ${d.cultivars.length} cultivars.</p>
+</div>`
+        )
+        .join("")
+    : `<div class="card">
+  <h2>No public libraries yet</h2>
+  <p>Libraries appear here once a breeder publishes one. The breeder can export or withdraw it at any time.</p>
 </div>`;
-    })
-    .join("");
 
   const body = `
 <span class="badge">Genetics</span>
@@ -398,44 +418,53 @@ function geneticsIndex(): string {
 ${farms}
 ${checkoutCard()}
 `;
-  const d = getDossier("mendo-love-farms");
   return shell({
     title: "Genetics libraries · StrainChain",
     description: "Public genetics passport libraries on StrainChain.",
     canonical: "https://strainchain.io/genetics",
     body,
-    updated: d?.updated ?? "",
+    updated: dossiers[0]?.updated ?? "",
   });
 }
 
 function passportIndex(): string {
-  const d = getDossier("mendo-love-farms");
   const body = `
 <span class="badge">Passport</span>
 <h1>StrainChain Passport</h1>
 <p class="lede">One-cultivar genetics passport — $49. Publish CoA-backed chemistry and provenance-tagged lineage for a single cultivar.</p>
-<div class="card gap">
-  <h2>LT-63 status</h2>
-  <p>The Mendo Love Farms licensing cultivar (LT-63) has <strong style="color:var(--text)">no CoA in library yet</strong>, so there is no live passport URL for it. When Mike sends the panel, Passport is the instrument to publish it. See the empty <a href="/genetics/mendo-love-farms/lt-63">LT-63 dossier</a>.</p>
-</div>
 <div class="card">
-  <h2>See the library</h2>
-  <p>Cultivars that already have panels are linked from the farm index. Totals there are recomputed, not transcribed.</p>
-  <p style="margin-top:.5rem"><a href="/genetics/mendo-love-farms">${esc(d?.farm.name ?? "Mendo Love Farms")} genetics →</a></p>
+  <h2>What you get</h2>
+  <p>Every total is recomputed from your lab panel, not copied from a headline. Lineage claims are tagged by the evidence behind them. You own the record and can export or withdraw it at any time.</p>
 </div>
+${neverBreed()}
 ${checkoutCard()}
-<div class="cta">
-  <a class="btn btn-outline" href="/genetics/mendo-love-farms">Open Mendo library</a>
-</div>
 `;
   return shell({
     title: "StrainChain Passport · $49",
     description:
-      "One-cultivar genetics passport. CoA-backed chemistry; LT-63 gap documented.",
+      "One-cultivar genetics passport. CoA-backed chemistry with totals recomputed from the source panel.",
     canonical: "https://strainchain.io/passport",
     body,
-    updated: d?.updated ?? "",
+    updated: "",
   });
+}
+
+
+const UNLISTED_HEADERS: Record<string, string> = {
+  ...HTML_SECURITY_HEADERS,
+  "cache-control": UNLISTED_CACHE_CONTROL,
+  "x-robots-tag": UNLISTED_ROBOTS_TAG,
+};
+
+/** No chemistry, no farm name, no checkout. Private and unindexed. */
+function unlistedDenied(): Response {
+  const body = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Not found</title>
+</head><body>Not found</body></html>`;
+  return new Response(body, { status: 404, headers: UNLISTED_HEADERS });
 }
 
 function html(status: number, body: string): Response {
@@ -443,13 +472,16 @@ function html(status: number, body: string): Response {
 }
 
 /** Returns a Response if this worker owns the path; otherwise null. */
-export function tryHandleGeneticsRoutes(request: Request): Response | null {
+export function tryHandleGeneticsRoutes(
+  request: Request,
+  isPublic: FarmGate = isPublicFarm
+): Response | null {
   const url = new URL(request.url);
   const p = url.pathname.replace(/\/+$/, "") || "/";
   const parts = p.split("/").filter(Boolean);
 
   if (p === "/genetics") {
-    return html(200, geneticsIndex());
+    return html(200, geneticsIndex(isPublic));
   }
   if (p === "/passport") {
     return html(200, passportIndex());
@@ -457,15 +489,18 @@ export function tryHandleGeneticsRoutes(request: Request): Response | null {
   if (p.startsWith("/passport/")) {
     return Response.redirect(new URL("/passport", url).toString(), 302);
   }
+  if (parts[0] === "genetics" && (parts.length === 2 || parts.length === 3)) {
+    if (farmIsUnlisted(parts[1])) return unlistedDenied();
+  }
   if (parts[0] === "genetics" && parts.length === 2) {
-    const page = farmPage(parts[1]);
-    return page ? html(200, page) : html(404, geneticsIndex());
+    const page = farmPage(parts[1], isPublic);
+    return page ? html(200, page) : html(404, geneticsIndex(isPublic));
   }
   if (parts[0] === "genetics" && parts.length === 3) {
-    const page = cultivarPage(parts[1], parts[2]);
+    const page = cultivarPage(parts[1], parts[2], isPublic);
     if (!page) {
-      const farm = farmPage(parts[1]);
-      return farm ? html(404, farm) : html(404, geneticsIndex());
+      const farm = farmPage(parts[1], isPublic);
+      return farm ? html(404, farm) : html(404, geneticsIndex(isPublic));
     }
     return html(200, page);
   }

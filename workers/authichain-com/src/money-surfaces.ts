@@ -17,11 +17,10 @@ import {
   estateSkipLink,
   estateSteps,
 } from "../../_shared/estate-landing.ts";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
 
-export const DPP_CHECKOUT = "/api/checkout/dpp";
-export const PASSPORT_CHECKOUT_PATH = "/api/checkout/plan/strainchain_passport";
-const PASSPORT_PAYMENT_LINK = planPaymentLink("strainchain_passport") ?? "";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
+export const CLAIM_FILE_CHECKOUT = "https://authichain.com/checkout/musa_claim_file";
+export const PASSPORT_CHECKOUT_PATH = "https://authichain.com/checkout/strainchain_passport";
 
 const TRUMARK_PATHS = new Set(["/trumark", "/trumark/"]);
 const MADE_IN_AMERICA_PATHS = new Set([
@@ -112,7 +111,7 @@ function surfaceFooter() {
         links: [
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
-          { href: "/m/mendo", label: "Mendo / LT-63" },
+          { href: "/passport", label: "Genetics passport" },
           { href: "/partners/brief", label: "Partner brief" },
         ],
       },
@@ -211,7 +210,7 @@ export function renderMadeInAmericaPage(): string {
   return pageShell({
     title: "Made in America origin claims | AuthiChain",
     description:
-      "Substantiate Made in USA / Made in America origin claims with a signed per-unit record. FTC 16 CFR Part 323 and EO 14392 context. Start EU DPP Readiness at $299.",
+      "Substantiate Made in USA / Made in America origin claims with a signed per-unit record. FTC 16 CFR Part 323 and EO 14392 context. Made in USA Claim File, $299 per SKU.",
     canonical: "https://authichain.com/made-in-america",
     keywords:
       "Made in America, Made in USA, FTC 16 CFR Part 323, EO 14392, origin claims, Buy American",
@@ -222,10 +221,11 @@ export function renderMadeInAmericaPage(): string {
     title: "Prove the origin claim before anyone asks.",
     lede: "The FTC Made in USA Labeling Rule (16 CFR Part 323) turns on whether all or virtually all of a product is US-origin. Executive Order 14392 told the FTC to prioritize truthful Made in America advertising. A signed, per-unit record is documentation — it does not replace meeting the standard.",
     emailCheckout: {
-      action: DPP_CHECKOUT,
-      label: "Start DPP checkout — $299",
+      action: CLAIM_FILE_CHECKOUT,
+      label: "Start my claim file — $299",
     },
     actions: [
+      { href: "/made-in-usa-claim-file", label: "What's in the claim file", primary: false },
       { href: "/partners/brief", label: "Partner brief", primary: false },
       { href: "/pricing", label: "View pricing", primary: false },
     ],
@@ -268,16 +268,16 @@ export function renderMadeInAmericaPage(): string {
     "rules"
   )}
   ${estateCtaBand({
-    title: "Start EU DPP Readiness",
-    lede: "Enter a work email so abandoned-checkout recovery can reach you. Channel partners and label printers: request the written packet at hello@authichain.com. No call booking.",
+    title: "Get a Made in USA claim file",
+    lede: "Origin records, supplier attestations and a signed attestation for one product, $299 per SKU. Substantiation support, not legal advice. Channel partners and label printers: request the written packet at hello@authichain.com. No call booking.",
     emailCheckout: {
-      action: DPP_CHECKOUT,
-      label: "Start DPP checkout",
+      action: CLAIM_FILE_CHECKOUT,
+      label: "Start my claim file",
     },
     actions: [
       {
-        href: PASSPORT_PAYMENT_LINK,
-        label: "Pay $49 on Stripe",
+        href: "/made-in-usa-claim-file",
+        label: "What's in the file",
         primary: false,
       },
       {

@@ -12,8 +12,8 @@
 // Env: GITHUB_TOKEN (issues:write, actions:read), GITHUB_REPOSITORY,
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
-import { appendFileSync } from "node:fs";
-import { loadManifest, flatten } from "./reconcile.mjs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { loadManifest, flatten, fetchRemoteWorkflows } from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
 export const PROBES = [
@@ -85,10 +85,27 @@ async function probeAll(probes, { fetchImpl, timeoutMs }) {
 }
 
 /**
+ * Pure. True when a workflow's only trigger is `workflow_call`. Its jobs run
+ * inside the caller's run, so its own run list holds only stale standalone
+ * runs from before it became reusable, and the caller's run is the real signal.
+ */
+export function isCallOnly(yamlText) {
+  const block = /^on:\s*\n((?:[ \t]+.*\n?|\s*\n)*)/m.exec(yamlText)?.[1] ?? "";
+  const triggers = [...block.matchAll(/^ {2}([a-z_]+):/gm)].map(m => m[1]);
+  return triggers.length === 1 && triggers[0] === "workflow_call";
+}
+
+/**
  * Pure. manifestRows: flatten(manifest). remote: [{id,path,state}].
  * latestRuns: Map(file -> {conclusion, html_url, created_at}) for runs on the default branch.
+ * callOnly: Set of files that only run via workflow_call (no run history of their own).
  */
-export function evaluateWorkflows(manifestRows, remote, latestRuns) {
+export function evaluateWorkflows(
+  manifestRows,
+  remote,
+  latestRuns,
+  callOnly = new Set()
+) {
   const byFile = new Map(remote.map(w => [w.path.split("/").pop(), w]));
   const problems = [];
   for (const r of manifestRows) {
@@ -106,6 +123,7 @@ export function evaluateWorkflows(manifestRows, remote, latestRuns) {
     const run = latestRuns.get(r.file);
     if (
       run &&
+      !callOnly.has(r.file) &&
       ["failure", "timed_out", "startup_failure"].includes(run.conclusion)
     ) {
       problems.push({
@@ -240,16 +258,26 @@ async function main() {
   };
 
   if (token && repo) {
-    const remote = (
-      await gh(`/repos/${repo}/actions/workflows?per_page=100`, { token })
-    ).workflows;
+    // Paginated: the repo registers ~100 workflows, so a single page would
+    // silently drop some from the "not active" check.
+    const remote = await fetchRemoteWorkflows({ repo, token });
     const files = rows
       .filter(r => r.managed && r.desired === "on" && r.lane !== "ship")
       .map(r => r.file);
+    const callOnly = new Set(
+      files.filter(f => {
+        try {
+          return isCallOnly(readFileSync(`.github/workflows/${f}`, "utf8"));
+        } catch {
+          return false;
+        }
+      })
+    );
     report.workflows = evaluateWorkflows(
       rows,
       remote,
-      await latestRunsFor(repo, token, files)
+      await latestRunsFor(repo, token, files),
+      callOnly
     );
   }
 

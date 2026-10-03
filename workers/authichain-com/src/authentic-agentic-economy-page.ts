@@ -143,7 +143,7 @@ function sources(): string {
       cite: "Galaxy (2026). Agents as economic actors still need a fact layer before they spend. AuthiChain is that layer for physical goods.",
     },
     {
-      href: "https://authichain.com/x402",
+      href: "https://authichain.govchain.us/x402",
       title: "AuthiChain x402 agent pay (live)",
       cite: "Estate capability: $0.05 USDC on Base per verification. Health at GET /api/x402/health. Unpaid POST returns HTTP 402.",
     },
@@ -210,7 +210,7 @@ ${estateHero({
   title: "Agents can pay. They still need to know if it is real.",
   lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
   emailCheckout: {
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout — $299",
   },
   actions: [
@@ -220,9 +220,7 @@ ${estateHero({
 })}
 ${estateTrust([
   { value: "Ed25519", label: "Signed seals" },
-  { value: "Polygon", label: "On-chain anchor" },
   { value: "$0.05", label: "x402 per verify" },
-  { value: "2.1s", label: "Agent consensus" },
 ])}
 ${estateFeatures(
   "What is live on this estate",
@@ -230,7 +228,7 @@ ${estateFeatures(
   [
     {
       title: "Signed seals",
-      body: "Cryptographic digital seals anchored on Polygon. Tamper-evident and publicly verifiable from /anchor and the certificate registry.",
+      body: "Ed25519-signed records, checkable offline with the open verifier at /protocol.",
     },
     {
       title: "5-agent consensus",
@@ -279,7 +277,7 @@ ${estateCtaBand({
   title: "Start on a live path",
   lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
   emailCheckout: {
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout",
   },
   actions: [

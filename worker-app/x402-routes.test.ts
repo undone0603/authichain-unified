@@ -173,3 +173,86 @@ describe("POST /api/x402", () => {
     expect(body.settled).toBe(false);
   });
 });
+
+describe("POST /api/x402 with the VERIFY_APP binding", () => {
+  it("forwards the paid call to the Next registry route", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    const header = proofHeader({
+      scheme: "exact",
+      network: "base",
+      payer: PAYER,
+      amount: "50000",
+    });
+    const seen: Request[] = [];
+    const env = {
+      VERIFY_APP: {
+        fetch: async (r: Request) => {
+          seen.push(r);
+          return new Response(JSON.stringify({ verified: true }), {
+            status: 200,
+          });
+        },
+      },
+    };
+    const res = await app().request(
+      "https://authichain.com/api/x402",
+      {
+        method: "POST",
+        headers: { "x-payment": header, "content-type": "application/json" },
+        body: JSON.stringify({ sealId: "seal-1" }),
+      },
+      env
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ verified: true });
+    expect(seen[0].url).toBe("https://authichain.com/api/v1/agent-verify");
+    expect(seen[0].headers.get("x-payment")).toBe(header);
+    expect(await seen[0].json()).toEqual({ sealId: "seal-1" });
+  });
+
+  it("answers from supabase instead of forwarding a bad proof", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    const original = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    const seen: Request[] = [];
+    try {
+      const header = proofHeader({
+        scheme: "exact",
+        network: "not-a-network",
+        payer: "not-an-address",
+        amount: "1",
+      });
+      const res = await app().request(
+        "https://authichain.com/api/x402",
+        {
+          method: "POST",
+          headers: { "x-payment": header, "content-type": "application/json" },
+          body: JSON.stringify({ sealId: "probe" }),
+        },
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+          VERIFY_APP: {
+            fetch: async (r: Request) => {
+              seen.push(r);
+              return new Response("no", { status: 404 });
+            },
+          },
+        }
+      );
+      expect(res.status).toBe(402);
+      const body = (await res.json()) as { error?: string };
+      expect(body.error).not.toBe("registry_not_bound");
+      expect(calls).toEqual([]);
+      expect(seen).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

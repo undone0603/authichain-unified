@@ -6,7 +6,7 @@
 // diagnosis and suggested fix on that issue, once per run. It changes nothing.
 
 import { loadManifest } from "../autonomy/reconcile.mjs";
-import { FOOTER, chat, clip, config, gh, say } from "./lib.mjs";
+import { FOOTER, chat, clip, config, gh, redact, say } from "./lib.mjs";
 
 export const MAX_RUNS = 3;
 export const WINDOW_HOURS = 24;
@@ -46,7 +46,12 @@ export function logTail(log, lines = 150, max = 6000) {
     .split("\n")
     .slice(-lines)
     .join("\n");
-  return clip(tail, max);
+  return clip(redact(tail), max);
+}
+
+/** The issue comment for one run. The model's answer is scrubbed again: it is posted publicly. */
+export function triageComment(run, answer) {
+  return `${marker(run.id)}\n**Gemma triage: ${run.name}** ([run](${run.html_url}))\n\n${redact(answer)}${FOOTER}`;
 }
 
 export function buildPrompt(run, jobName, tail) {
@@ -108,7 +113,7 @@ async function main() {
         system: SYSTEM,
         user: buildPrompt(run, job.name, logTail(log)),
       });
-      const body = `${marker(run.id)}\n**Gemma triage: ${run.name}** ([run](${run.html_url}))\n\n${answer}${FOOTER}`;
+      const body = triageComment(run, answer);
       if (cfg.dry) {
         say(body);
         continue;

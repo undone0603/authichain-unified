@@ -30,7 +30,7 @@ import {
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
 export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
-export const BATTERY_CHECKOUT_ACTION = "/api/checkout/dpp";
+export const BATTERY_CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
 export const BATTERY_UTM = {
   utm_source: "site",
   utm_medium: "offer-page",
@@ -64,7 +64,7 @@ function checkoutForm(id: string, label: string): string {
   const hidden = Object.entries(BATTERY_UTM)
     .map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`)
     .join("");
-  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="get" id="${id}">
+  return `<form class="checkout-email-form" action="${BATTERY_CHECKOUT_ACTION}" method="post" id="${id}">
   <label class="checkout-email-label" for="${id}-email">Work email
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
@@ -361,6 +361,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
       <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
       <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
+      <p class="bp-note">Not sure what you'd get? <a href="${BATTERY_PASSPORT_PATH}/sample-audit">Read a full sample assessment</a> worked through on a fictional e-bike pack.</p>
     </div>
   </header>
 
@@ -380,7 +381,9 @@ ${gapMapSection()}
       <h2>What you get</h2>
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
-      <p class="section-sub">Every record you publish from your AuthiChain workspace is signed and publicly verifiable, so a scan proves it came from you and hasn't been altered. It supports, and does not replace, the Art. 77 passport issued by the operator placing the battery on the EU market.</p>
+      <p><a href="${BATTERY_PASSPORT_PATH}/sample-audit">See a sample written assessment</a>: figure check, Annex XIII gap table and an ordered action plan.</p>
+      <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This assessment supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
+      <p class="section-sub">The only published demonstration record has both of those checks. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a> and the <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">Polygon transaction</a>.</p>
     </div>
   </section>
 
@@ -406,6 +409,7 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
+        { href: `${BATTERY_PASSPORT_PATH}/sample-audit`, label: "Sample assessment" },
         { href: "/pricing", label: "Pricing" },
       ],
     },

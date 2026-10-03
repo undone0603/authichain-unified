@@ -20,6 +20,9 @@ describe("llms.txt", () => {
     expect(text).toContain("https://authichain.com/.well-known/x402");
     expect(text).toContain("https://authichain.com/openapi.json");
     expect(text).toContain("https://authichain.com/mcp");
+    expect(text).toContain("https://authichain.com/battery-passport");
+    expect(text).toContain("18 February 2027");
+    expect(text).toContain("e-bike / LMT");
     expect(text).toContain(planPaymentLink("dpp_readiness"));
     expect(text).toContain(planPaymentLink("strainchain_passport"));
     expect(text).toContain(planPaymentLink("strainchain_farm"));
@@ -29,14 +32,14 @@ describe("llms.txt", () => {
 
   it("answers GET and ignores other paths", async () => {
     const hit = tryHandleLlmsTxt(
-      new Request("https://authichain.com/llms.txt")
+      new Request("https://authichain.govchain.us/llms.txt")
     );
     expect(hit).not.toBeNull();
     expect(hit?.status).toBe(200);
     expect(hit?.headers.get("content-type")).toMatch(/text\/plain/);
     expect(await hit!.text()).toContain("POST https://authichain.com/api/x402");
     expect(
-      tryHandleLlmsTxt(new Request("https://authichain.com/pricing"))
+      tryHandleLlmsTxt(new Request("https://authichain.govchain.us/pricing"))
     ).toBeNull();
   });
 });

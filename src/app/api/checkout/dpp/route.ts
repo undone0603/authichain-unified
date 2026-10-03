@@ -1,7 +1,10 @@
 /**
  * Attributed Checkout Session for the EU DPP Readiness Audit ($299).
  *
- * GET /api/checkout/dpp?... → 303 to Stripe Checkout
+ * GET /api/checkout/dpp?... → 303 to the click-to-confirm page
+ * https://authichain.com/checkout/dpp_readiness (its POST creates the
+ * session). DPP-SMOKE-E2E opens a $0 session only when x-dpp-smoke-secret
+ * matches DPP_SMOKE_SECRET. A public promo redirects to the confirm page.
  *
  * Canonical session create lives in `src/lib/dpp-checkout.ts` (also used by
  * worker-app). Do not fork price/metadata here.
@@ -9,7 +12,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { CHECKOUT_REDIRECT_HEADERS } from "@/lib/checkout-email";
-import { createDppCheckoutSession } from "@/lib/dpp-checkout";
+import {
+  createDppCheckoutSession,
+  dppSmokeRequestAuthorized,
+  isDppSmokePromo,
+} from "@/lib/dpp-checkout";
+import { gatedConfirmUrl } from "@/lib/checkout-gate";
 import { logAutomation } from "@/lib/automation";
 
 export const runtime = "nodejs";
@@ -31,11 +39,28 @@ export async function HEAD() {
 }
 
 export async function GET(request: NextRequest) {
+  const smokeAuthorized =
+    isDppSmokePromo(request.nextUrl.searchParams.get("promo")) &&
+    dppSmokeRequestAuthorized(
+      request.headers.get("x-dpp-smoke-secret"),
+      process.env.DPP_SMOKE_SECRET
+    );
+  if (!smokeAuthorized) {
+    const redirect = NextResponse.redirect(
+      gatedConfirmUrl("dpp_readiness", request.nextUrl.searchParams),
+      303
+    );
+    for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
+      redirect.headers.set(key, value);
+    }
+    return redirect;
+  }
   try {
     const result = await createDppCheckoutSession({
       searchParams: request.nextUrl.searchParams,
       stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
       supabase: await getServiceSupabase(),
+      smokeAuthorized: true,
     });
     if (!result.ok) {
       if (result.status === 303 && result.url) {

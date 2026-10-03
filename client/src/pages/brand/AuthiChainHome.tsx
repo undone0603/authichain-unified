@@ -375,7 +375,7 @@ export default function AuthiChainHome() {
             </a>
           </div>
           <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
-          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 AuthiChain, Inc.</p>
+          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 AuthiChain</p>
         </div>
       </footer>
     </div>

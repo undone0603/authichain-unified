@@ -83,8 +83,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
+      - name: Launch mode
+        id: launch
+        run: node scripts/autonomy/launch-mode.mjs
+
       - name: Read autonomy manifest
         id: autonomy
+        env:
+          # launch_mode.cold_outreach_cap while launch mode is active, else
+          # cold_outreach.max_new_prospects_per_day (scripts/autonomy/launch-mode.mjs).
+          LAUNCH_CAP: ${{ steps.launch.outputs.cold_outreach_cap }}
         run: |
           set -euo pipefail
           node -e '
@@ -92,9 +100,10 @@ jobs:
             const segs = m.segments.filter((s) => !["partners", "high_leverage", "all"].includes(s));
             const day = new Date().getUTCDay();
             const seg = segs.length ? segs[day % segs.length] : "qron";
+            const cap = Number.parseInt(process.env.LAUNCH_CAP, 10);
             const out = [
               `enabled=${m.enabled === true}`,
-              `cap=${m.max_new_prospects_per_day}`,
+              `cap=${Number.isInteger(cap) ? cap : m.max_new_prospects_per_day}`,
               `segment=${seg}`,
             ].join("\n");
             require("fs").appendFileSync(process.env.GITHUB_OUTPUT, out + "\n");
@@ -132,10 +141,25 @@ jobs:
           echo "latch exit=$code"
           exit 0
 
+      # A live send needs an opt-out that gets recorded. With
+      # OUTREACH_UNSUBSCRIBE_SECRET this asks the edge router to verify a token
+      # made with the same secret, so a secret bound here but not on the Worker
+      # (or a mismatch) keeps the run dry instead of mailing dead links.
+      # Applies to scheduled and manual runs alike. Always exits 0.
+      - name: Opt-out check
+        id: optout
+        env:
+          OUTREACH_UNSUBSCRIBE_SECRET: ${{ secrets.OUTREACH_UNSUBSCRIBE_SECRET }}
+          UNSUBSCRIBE_ORIGIN: ${{ vars.UNSUBSCRIBE_ORIGIN }}
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
+          OUTREACH_ALLOW_MAILTO_OPTOUT: ${{ vars.OUTREACH_ALLOW_MAILTO_OPTOUT }}
+        run: pnpm exec tsx scripts/outreach-optout-check.ts
+
       - name: Resolve dry-run / live mode
         id: mode
         env:
           BREAKER_REASON: ${{ steps.breaker.outputs.reason }}
+          OPTOUT_REASON: ${{ steps.optout.outputs.reason }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "schedule" ]; then
@@ -144,14 +168,18 @@ jobs:
             if [ "${{ steps.autonomy.outputs.enabled }}" = "true" ] \
               && [ "${{ vars.OWNER_LIVE_SEND }}" = "true" ] \
               && [ "${{ steps.breaker.outputs.tripped }}" = "false" ] \
-              && [ "${{ steps.latch.outputs.held }}" = "false" ]; then
+              && [ "${{ steps.latch.outputs.held }}" = "false" ] \
+              && [ "${{ steps.optout.outputs.ready }}" = "true" ]; then
               echo "dry_run=false" >> "$GITHUB_OUTPUT"
               echo "cap=${{ steps.autonomy.outputs.cap }}" >> "$GITHUB_OUTPUT"
               echo "Scheduled run → LIVE (manifest on, OWNER_LIVE_SEND=true, breaker clear), cap ${{ steps.autonomy.outputs.cap }}"
             else
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
               echo "cap=0" >> "$GITHUB_OUTPUT"
-              echo "Scheduled run → dry-run (manifest=${{ steps.autonomy.outputs.enabled }}, OWNER_LIVE_SEND=${{ vars.OWNER_LIVE_SEND }}, breaker tripped=${{ steps.breaker.outputs.tripped }}, latch held=${{ steps.latch.outputs.held }})"
+              echo "Scheduled run → dry-run (manifest=${{ steps.autonomy.outputs.enabled }}, OWNER_LIVE_SEND=${{ vars.OWNER_LIVE_SEND }}, breaker tripped=${{ steps.breaker.outputs.tripped }}, latch held=${{ steps.latch.outputs.held }}, opt-out ready=${{ steps.optout.outputs.ready }})"
+              if [ "${{ steps.optout.outputs.ready }}" != "true" ] && [ "${{ steps.autonomy.outputs.enabled }}" = "true" ]; then
+                echo "::warning::Cold outreach held in dry run: no recordable opt-out (${OPTOUT_REASON})"
+              fi
               if [ "${{ steps.breaker.outputs.tripped }}" = "true" ] && [ "${{ steps.autonomy.outputs.enabled }}" = "true" ]; then
                 echo "::warning::Cold outreach paused by deliverability breaker: ${BREAKER_REASON}"
               fi
@@ -163,6 +191,11 @@ jobs:
           if [ "$dry" = "false" ]; then
             if [ "${{ vars.OWNER_LIVE_SEND }}" != "true" ]; then
               echo "::warning::live requested but vars.OWNER_LIVE_SEND is not true — forcing dry-run"
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "${{ steps.optout.outputs.ready }}" != "true" ]; then
+              echo "::warning::live requested but no recordable opt-out (${OPTOUT_REASON}) — forcing dry-run"
               echo "dry_run=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -204,6 +237,9 @@ jobs:
           AUTHICHAIN_BOOK_URL: ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
           FLUSH_QUEUED_ONLY: ${{ inputs.flush_queued || 'false' }}
+          # Launch mode: an unverified segment sender falls back to the verified
+          # OUTREACH_FROM_EMAIL instead of skipping the segment.
+          OUTREACH_SENDER_FALLBACK: ${{ steps.launch.outputs.active }}
           # Scheduled: cold_outreach.max_new_prospects_per_day from the manifest.
           # Manual dispatch: tiny batch of 2. Never a list dump.
           MAX_LIVE_SENDS: ${{ steps.mode.outputs.cap != '0' && steps.mode.outputs.cap || '2' }}
@@ -218,6 +254,9 @@ jobs:
           # No default: authichain.com/unsubscribe does not exist. Unset means
           # guardedSend uses a mailto: opt-out to the reply-to inbox.
           UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
+          OUTREACH_UNSUBSCRIBE_SECRET: ${{ secrets.OUTREACH_UNSUBSCRIBE_SECRET }}
+          UNSUBSCRIBE_ORIGIN: ${{ vars.UNSUBSCRIBE_ORIGIN }}
+          OUTREACH_ALLOW_MAILTO_OPTOUT: ${{ vars.OUTREACH_ALLOW_MAILTO_OPTOUT }}
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
@@ -242,4 +281,7 @@ jobs:
           # No default: authichain.com/unsubscribe does not exist. Unset means
           # guardedSend uses a mailto: opt-out to the reply-to inbox.
           UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL }}
+          OUTREACH_UNSUBSCRIBE_SECRET: ${{ secrets.OUTREACH_UNSUBSCRIBE_SECRET }}
+          UNSUBSCRIBE_ORIGIN: ${{ vars.UNSUBSCRIBE_ORIGIN }}
+          OUTREACH_ALLOW_MAILTO_OPTOUT: ${{ vars.OUTREACH_ALLOW_MAILTO_OPTOUT }}
           RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}

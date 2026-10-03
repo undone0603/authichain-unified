@@ -3,7 +3,7 @@ import { planPaymentLink } from "../../../src/lib/plans.ts";
 import { isMcpPath, tryHandleMcp } from "./mcp-routes";
 
 function req(path: string, init?: RequestInit): Request {
-  return new Request(`https://authichain.com${path}`, init);
+  return new Request(`https://authichain.govchain.us${path}`, init);
 }
 
 afterEach(() => {
@@ -19,7 +19,9 @@ describe("mcp discovery", () => {
     expect(isMcpPath("/api/mcp")).toBe(true);
     expect(isMcpPath("/.well-known/mcp.json")).toBe(true);
     expect(isMcpPath("/api/x402")).toBe(false);
-    expect(isMcpPath("/api/checkout/dpp")).toBe(false);
+    expect(isMcpPath("https://authichain.com/checkout/dpp_readiness")).toBe(
+      false
+    );
   });
 
   it("GET discovery points at Payment Links and unpaid POST x402, not GET checkout", async () => {
@@ -51,7 +53,7 @@ describe("mcp discovery", () => {
       );
       expect(
         new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
-      ).toBe("buy.stripe.com");
+      ).toBe("authichain.com");
       expect(JSON.stringify(body)).not.toContain("/api/checkout");
     }
   });
@@ -97,9 +99,45 @@ describe("mcp discovery", () => {
       planPaymentLink("strainchain_farm")
     );
     expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
-      "buy.stripe.com"
+      "authichain.com"
     );
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
+  });
+
+  it("tools/call dpp_readiness_check is free and scores the answers", async () => {
+    const call = (args: Record<string, unknown>) =>
+      tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 3,
+            method: "tools/call",
+            params: { name: "dpp_readiness_check", arguments: args },
+          }),
+        })
+      );
+    const ok = await call({
+      category: "battery_passport",
+      unique_id: true,
+      supplier_data: true,
+    });
+    expect(ok?.status).toBe(200);
+    const body = (await ok!.json()) as {
+      result: { content: Array<{ text: string }>; isError?: boolean };
+    };
+    expect(body.result.isError).toBeUndefined();
+    const result = JSON.parse(body.result.content[0].text);
+    expect(result.score).toBe(40);
+    expect(result.category.date).toBe("2027-02-18");
+    expect(result.web).toBe("https://authichain.com/dpp-check");
+    expect(result.nextStep).toContain(planPaymentLink("dpp_readiness"));
+
+    const bad = (await (await call({}))!.json()) as {
+      result: { isError?: boolean };
+    };
+    expect(bad.result.isError).toBe(true);
   });
 
   it("tools/call verify is unpaid HTTP 402, not fake SECURED JSON", async () => {
@@ -175,6 +213,106 @@ describe("mcp discovery", () => {
       const body = (await res!.json()) as { error: string; settled: boolean };
       expect(body.error).toBe("registry_not_bound");
       expect(body.settled).toBe(false);
+      expect(calls).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("uses the seal lookup instead of VERIFY_APP when supabase is set", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    let forwarded = 0;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "not-a-network",
+          payer: "not-an-address",
+          amount: "1",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 11,
+            method: "tools/call",
+            params: { name: "verify", arguments: { sealId: "probe" } },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        },
+        {
+          fetch: async () => {
+            forwarded += 1;
+            return new Response("no");
+          },
+        }
+      );
+      expect(res?.status).toBe(402);
+      const body = (await res!.json()) as { error?: string };
+      expect(body.error).not.toBe("registry_not_bound");
+      expect(calls).toEqual([]);
+      expect(forwarded).toBe(0);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("query_provenance stays free when a payment header and supabase are present", async () => {
+    const orig = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return new Response("[]");
+    }) as typeof fetch;
+    try {
+      const proof = Buffer.from(
+        JSON.stringify({
+          scheme: "exact",
+          network: "base",
+          payer: "0x1234567890abcdef1234567890abcdef12345678",
+          amount: "50000",
+          signature: "0xdead",
+        })
+      ).toString("base64");
+      const res = await tryHandleMcp(
+        req("/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-payment": proof },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 12,
+            method: "tools/call",
+            params: {
+              name: "query_provenance",
+              arguments: { assetId: "NOPE-XYZ" },
+            },
+          }),
+        }),
+        {
+          X402_PAY_TO: "0xabc0000000000000000000000000000000000001",
+          X402_FACILITATOR_URL: "https://facilitator.example",
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-test",
+        }
+      );
+      expect(res?.status).toBe(200);
+      const body = (await res!.json()) as {
+        result: { content: Array<{ text: string }> };
+      };
+      const data = JSON.parse(body.result.content[0].text) as { verified: boolean };
+      expect(data.verified).toBe(false);
       expect(calls).toEqual([]);
     } finally {
       globalThis.fetch = orig;
@@ -302,7 +440,77 @@ describe("mcp discovery", () => {
   });
 
   it("returns null for other paths so APP_WORKER still owns them", async () => {
-    expect(await tryHandleMcp(req("/api/checkout/dpp"))).toBeNull();
+    expect(
+      await tryHandleMcp(req("https://authichain.com/checkout/dpp_readiness"))
+    ).toBeNull();
     expect(await tryHandleMcp(req("/dashboard"))).toBeNull();
+  });
+});
+
+describe("mcp paid verify with the VERIFY_APP binding", () => {
+  const proof = Buffer.from(
+    JSON.stringify({
+      scheme: "exact",
+      network: "base",
+      payer: "0x1234567890abcdef1234567890abcdef12345678",
+      amount: "50000",
+      signature: "0xdead",
+    })
+  ).toString("base64");
+  const call = () =>
+    req("/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-payment": proof },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "verify", arguments: { serial: "AC-1" } },
+      }),
+    });
+
+  it("wraps a settled registry answer as a JSON-RPC result", async () => {
+    const seen: Request[] = [];
+    const res = await tryHandleMcp(
+      call(),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async (r: Request) => {
+          seen.push(r);
+          return new Response(
+            JSON.stringify({ verified: false, subject: "AC-1" }),
+            {
+              status: 200,
+              headers: { "PAYMENT-RESPONSE": "settled" },
+            }
+          );
+        },
+      }
+    );
+    expect(res?.status).toBe(200);
+    expect(res!.headers.get("PAYMENT-RESPONSE")).toBe("settled");
+    const body = (await res!.json()) as {
+      id: number;
+      result: { structuredContent: { subject: string } };
+    };
+    expect(body.id).toBe(4);
+    expect(body.result.structuredContent.subject).toBe("AC-1");
+    expect(new URL(seen[0].url).pathname).toBe("/api/v1/agent-verify");
+    expect(new URL(seen[0].url).search).toBe("");
+    expect(await seen[0].json()).toEqual({ serial: "AC-1" });
+  });
+
+  it("passes a registry refusal through as HTTP", async () => {
+    const res = await tryHandleMcp(
+      call(),
+      { X402_PAY_TO: "0xabc0000000000000000000000000000000000001" },
+      {
+        fetch: async () =>
+          new Response(JSON.stringify({ error: "seal_id_required" }), {
+            status: 400,
+          }),
+      }
+    );
+    expect(res?.status).toBe(400);
   });
 });

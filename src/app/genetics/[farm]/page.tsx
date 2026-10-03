@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDossier, getCultivar, listFarms, toSlug } from "@/lib/genetics";
+import {
+  farmIsUnlisted,
+  getDossier,
+  getCultivar,
+  isPublicFarm,
+  listPublicFarms,
+  toSlug,
+} from "@/lib/genetics";
 import {
   IssuerCommitment,
   PassportFooter,
@@ -13,7 +20,7 @@ import { ThcvTimeline } from "../ThcvTimeline";
 type Params = { farm: string };
 
 export function generateStaticParams(): Params[] {
-  return listFarms().map(farm => ({ farm }));
+  return listPublicFarms().map(farm => ({ farm }));
 }
 
 export async function generateMetadata({
@@ -22,6 +29,9 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { farm } = await params;
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) {
+    return { title: "Not found", robots: { index: false, follow: false } };
+  }
   const d = getDossier(farm);
   if (!d) return { title: "Not found" };
   return {
@@ -36,6 +46,7 @@ export default async function FarmIndex({
   params: Promise<Params>;
 }) {
   const { farm } = await params;
+  if (farmIsUnlisted(farm) || !isPublicFarm(farm)) notFound();
   const d = getDossier(farm);
   if (!d) notFound();
 
@@ -114,7 +125,7 @@ export default async function FarmIndex({
         </strong>{" "}
         Unlimited cultivars and passports, updated on every new certificate.{" "}
         <a
-          href="/api/checkout/plan/strainchain_farm"
+          href="https://authichain.com/checkout/strainchain_farm"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
           Start a Farm Plan →

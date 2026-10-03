@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { systemFont } from '@/lib/system-font';
 import './globals.css';
 import { ReferralTracker } from '@/components/ReferralTracker';
 import { FunnelTracker } from '@/components/FunnelTracker';
@@ -10,15 +10,8 @@ import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 import { SiteNav } from '@/components/SiteNav';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+const geistSans = systemFont({ variable: '--font-geist-sans' });
+const geistMono = systemFont({ variable: '--font-geist-mono' });
 
 export const metadata: Metadata = {
   title: {
@@ -32,7 +25,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.',
+    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure.',
     url: 'https://qron.space',
     siteName: 'QRON Space',
     images: [

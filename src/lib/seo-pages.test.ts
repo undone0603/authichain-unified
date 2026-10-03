@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from "./seo-pages";
+import { planById } from "./plans";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
@@ -46,10 +47,12 @@ describe("seo-pages loader", () => {
     expect(page?.jsonLd["@type"]).toBe("Article");
     expect(page?.bodyHtml).toContain("authentic agentic economy");
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(page?.bodyHtml).toContain('name="email"');
-    expect(page?.bodyHtml).toContain('href="https://authichain.com/x402"');
+    expect(page?.bodyHtml).toContain(
+      'href="https://authichain.govchain.us/x402"'
+    );
     expect(page?.bodyHtml).not.toContain("GET /api/checkout");
     expect(page?.jsonLd.url).toBe(
       "https://authichain.com/authentic-agentic-economy"
@@ -60,19 +63,19 @@ describe("seo-pages loader", () => {
     const page = getSeoPageBySlug("cannabis-coa-verification-blockchain");
     expect(page).not.toBeNull();
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(page?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_farm"'
+      'action="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(page?.bodyHtml).toContain(
-      "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"
+      "https://authichain.com/checkout/strainchain_farm"
     );
   });
 });
 
 const GENERATED_HOW_IT_WORKS =
-  "Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence";
+  "Issue a unique identifier per unit and link it to a signed record";
 
 // Mirrors scripts/gen-seo-pages.cjs PROTECTED_SEED_SLUGS — hand-authored pages
 // that must not be rewritten when the generator runs.
@@ -105,7 +108,7 @@ const PROTECTED_SEED_SLUGS = new Set([
 ]);
 
 const PROTECTED_SEED_MARKERS: Record<string, string> = {
-  "blockchain-product-authentication": "Built for every vertical",
+  "blockchain-product-authentication": "the manufacturer holds the keys, not us",
   "cannabis-blockchain-provenance": "What you get",
   "what-is-a-digital-product-passport": "What a DPP contains",
 };
@@ -125,7 +128,8 @@ describe("generated SEO money-path CTAs", () => {
       const faq = p.bodyHtml.indexOf("<h2>FAQ</h2>");
       expect(how).toBeGreaterThan(-1);
       expect(cta).toBeGreaterThan(how);
-      expect(faq).toBeGreaterThan(cta);
+      // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
+      if (faq !== -1) expect(faq).toBeGreaterThan(cta);
     }
   });
 
@@ -134,19 +138,20 @@ describe("generated SEO money-path CTAs", () => {
     const textiles = getSeoPageBySlug("eu-digital-product-passport-textiles");
     expect(batteries?.bodyHtml).toContain('name="email"');
     expect(batteries?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
-    expect(batteries?.bodyHtml).not.toContain(
-      'href="https://authichain.com/api/checkout/dpp"'
-    );
+    expect(batteries?.bodyHtml).not.toContain('href="/api/checkout');
     expect(batteries?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(textiles?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(batteries?.bodyHtml).toContain(
       'href="https://authichain.com/pricing"'
+    );
+    expect(batteries?.bodyHtml).toContain(
+      'href="https://authichain.com/dpp-check"'
     );
   });
 
@@ -156,19 +161,19 @@ describe("generated SEO money-path CTAs", () => {
       "made-in-america-origin-claim-substantiation"
     );
     expect(musa?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(musa?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(musa?.bodyHtml).toContain(
-      'href="https://authichain.com/made-in-america"'
+      'href="https://authichain.govchain.us/made-in-america"'
     );
     expect(origin?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(origin?.bodyHtml).toContain(
-      'href="https://authichain.com/made-in-america"'
+      'href="https://authichain.govchain.us/made-in-america"'
     );
   });
 
@@ -176,16 +181,14 @@ describe("generated SEO money-path CTAs", () => {
     const trumark = getSeoPageBySlug("trumark-product-authentication-seal");
     expect(trumark?.bodyHtml).toContain('name="email"');
     expect(trumark?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(trumark?.bodyHtml).not.toContain(
-      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
+    expect(trumark?.bodyHtml).not.toContain('href="/api/checkout');
+    expect(trumark?.bodyHtml).toContain(
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(trumark?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
-    );
-    expect(trumark?.bodyHtml).toContain(
-      'href="https://authichain.com/trumark"'
+      'href="https://authichain.govchain.us/trumark"'
     );
   });
 
@@ -193,13 +196,11 @@ describe("generated SEO money-path CTAs", () => {
     const cannabis = getSeoPageBySlug("blockchain-qr-code-for-cannabis");
     expect(cannabis?.bodyHtml).toContain('name="email"');
     expect(cannabis?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(cannabis?.bodyHtml).not.toContain(
-      'href="https://authichain.com/api/checkout/plan/strainchain_passport"'
-    );
+    expect(cannabis?.bodyHtml).not.toContain('href="/api/checkout');
     expect(cannabis?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'
@@ -240,23 +241,21 @@ describe("generated SEO money-path CTAs", () => {
   it("routes seed CTAs to the same live money URLs as generated hubs", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/dpp"'
+      'action="https://authichain.com/checkout/dpp_readiness"'
     );
     expect(dpp?.bodyHtml).toContain('name="email"');
     expect(dpp?.bodyHtml).toContain('href="https://authichain.com/pricing"');
-    expect(dpp?.bodyHtml).not.toContain(
-      'href="https://authichain.com/api/checkout/dpp"'
-    );
+    expect(dpp?.bodyHtml).not.toContain('href="/api/checkout');
     expect(dpp?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"'
+      'href="https://authichain.com/checkout/dpp_readiness"'
     );
 
     const cannabis = getSeoPageBySlug("cannabis-blockchain-provenance");
     expect(cannabis?.bodyHtml).toContain(
-      'action="https://authichain.com/api/checkout/plan/strainchain_passport"'
+      'action="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
-      'href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"'
+      'href="https://authichain.com/checkout/strainchain_passport"'
     );
     expect(cannabis?.bodyHtml).toContain(
       'href="https://strainchain.io/pricing"'
@@ -269,5 +268,66 @@ describe("generated SEO money-path CTAs", () => {
     const qron = getSeoPageBySlug("ai-qr-code-art-generator");
     expect(qron?.bodyHtml).toContain('href="https://qron.space/pricing"');
     expect(qron?.bodyHtml).not.toContain("/api/checkout/");
+  });
+
+  it("no page advertises a price or chain that is not real", () => {
+    // $49/mo was never an AuthiChain SKU and nothing anchors to Bitcoin L1.
+    // Workers serve pages.json verbatim, so this guards the data itself.
+    for (const p of listSeoPages()) {
+      const blob = JSON.stringify(p);
+      expect(blob, p.slug).not.toMatch(/\$49\s*\/\s*mo/i);
+      expect(blob, p.slug).not.toContain("Bitcoin L1");
+    }
+  });
+
+  it("every stated DPP Readiness price matches src/lib/plans.ts", () => {
+    const price = planById("dpp_readiness")?.price;
+    expect(price).toBeGreaterThan(0);
+    for (const p of listSeoPages()) {
+      for (const m of p.bodyHtml.matchAll(
+        /EU DPP Readiness is \$(\d+) one-time/g
+      )) {
+        expect(Number(m[1]), p.slug).toBe(price);
+      }
+    }
+  });
+
+  it("RES-12: no AuthiChain or GovChain page claims Polygon anchoring or offline operation", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      if (p.brand === "AuthiChain") {
+        expect(text, p.slug).not.toMatch(
+          /anchored (on|to) Polygon|anchors (certificates|unit-level verification) on Polygon|Polygon anchoring/i
+        );
+      }
+      if (p.brand === "GovChain") {
+        expect(text, p.slug).not.toMatch(
+          /works? offline|offline-capable|without connectivity|low-connectivity/i
+        );
+      }
+    }
+  });
+
+  it("RES-13: no page claims Polygon or blockchain anchoring in the present tense", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(
+        /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
+      );
+      expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+    }
+  });
+
+  it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
+    const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
+    expect(dpp?.bodyHtml).toContain("What a DPP contains");
+    expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
+    expect(dpp?.bodyHtml).toContain("Ed25519-signed.");
+    expect(dpp?.bodyHtml).not.toContain("anchored on Polygon");
+    expect(dpp?.bodyHtml).not.toContain("$49/mo");
+    expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
+    expect(dpp?.jsonLd.url).toBe(
+      "https://authichain.com/p/what-is-a-digital-product-passport"
+    );
   });
 });

@@ -45,7 +45,7 @@ export const PLANS: Plan[] = [
     description: '100 AI QR generations, never expire',
     generations: 100,
     stripe_price_id: 'price_1UIoEVGqTruSqV8T61lp48wB',
-    stripe_payment_link: 'https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E',
+    stripe_payment_link: 'https://authichain.com/checkout/starter',
     stripe_mode: 'payment',
     tier: 'pro',
     features: [
@@ -63,7 +63,7 @@ export const PLANS: Plan[] = [
     description: '500 AI QR generations — best value',
     generations: 500,
     stripe_price_id: 'price_1UIoEYGqTruSqV8TCXTNipvh',
-    stripe_payment_link: 'https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F',
+    stripe_payment_link: 'https://authichain.com/checkout/creator',
     stripe_mode: 'payment',
     tier: 'pro',
     features: [

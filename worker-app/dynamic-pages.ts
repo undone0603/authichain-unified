@@ -45,7 +45,8 @@ import { getQronById } from "../server/identity-db-helpers";
 import { products, certificates } from "../drizzle/schema";
 import { BRANDS, type BrandId } from "../shared/brands";
 import { notifyPilotIntake } from "./onboard-notify";
-import { listedPlans } from "../src/lib/plans";
+import { reportGrowthEvent } from "./growth-record";
+import { listedPlans, planPaymentLink } from "../src/lib/plans";
 import { PAYMENT_LINKS } from "../server/payment-links";
 import {
   CHECKOUT_EMAIL_FORM_CSS,
@@ -77,6 +78,22 @@ function serveSpaShell(c: Context): Promise<Response> {
     new Request(new URL("/index.html", c.req.url), c.req.raw)
   );
 }
+
+// Estate look for the plain server-rendered forms (/onboard, /generate):
+// system font, readable measure, AuthiChain accent, and 44px minimum touch
+// targets on every input, select, button and action link (WCAG 2.5.5).
+export const SITE_FORM_CSS =
+  ":root{color-scheme:dark}" +
+  "body{margin:0;background:#09090b;color:#fafafa;font:16px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}" +
+  "main{max-width:40rem;margin:0 auto;padding:2rem 1.25rem 3rem}" +
+  "h1{font-size:1.75rem;line-height:1.2;margin:0 0 .75rem}h2{font-size:1.15rem;margin:1.5rem 0 .5rem}" +
+  "p{color:#d4d4d8}a{color:#00FFD1}code{color:#d4d4d8}" +
+  "label{display:block;margin:1rem 0 .35rem;font-weight:600;color:#fafafa}" +
+  "input,select{box-sizing:border-box;width:100%;min-height:44px;padding:.6rem .75rem;font:inherit;color:#fafafa;background:#18181b;border:1px solid #3f3f46;border-radius:.5rem}" +
+  "input:focus,select:focus{outline:2px solid #00FFD1;outline-offset:1px}" +
+  "button,.btn-link{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:44px;min-width:44px;margin-top:1.25rem;padding:.6rem 1.25rem;font:inherit;font-weight:700;color:#000;background:#00FFD1;border:0;border-radius:.5rem;cursor:pointer;text-decoration:none}" +
+  "main a{display:inline-flex;align-items:center;min-height:44px}" +
+  "[role=alert]{color:#fca5a5}";
 
 function htmlDocument(opts: {
   title: string;
@@ -123,6 +140,7 @@ function renderSeoHubHtml(page: SeoPage, pathname: string): string {
     description: page.metaDescription,
     canonicalPath: canonical,
     extraHead:
+      (page.noindex ? '<meta name="robots" content="noindex">\n' : "") +
       '<script type="application/ld+json">' +
       JSON.stringify(page.jsonLd) +
       "</script>\n" +
@@ -288,6 +306,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const seoPage = getSeoPageBySlug(serial);
     if (seoPage) {
+      if (seoPage.noindex) c.header("X-Robots-Tag", "noindex");
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
@@ -412,7 +431,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Scan a QR code or enter a product ID to check authenticity.</p>\n" +
+      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -567,14 +586,14 @@ const LANDING_CONTENT: Record<
 > = {
   authichain: {
     eyebrow: "Product Authentication",
-    headline: "Issue seals. Bind products. Verify anywhere.",
+    headline: "Signed QR seals for real products.",
     subhead:
       "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
     features: [
       {
         icon: "🔐",
         title: "Signed seals",
-        desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
+        desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
       },
       {
         icon: "📱",
@@ -608,7 +627,7 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "/api/checkout/dpp" },
+    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -676,7 +695,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "✅",
         title: "Batch Testing",
-        desc: "Lab results, COA management, potency tracking. Immutable testing records.",
+        desc: "Lab results, COA management, potency tracking.",
       },
       {
         icon: "📱",
@@ -715,7 +734,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🏛️",
         title: "Public Records",
-        desc: "Government data on blockchain. Immutable, auditable, and publicly verifiable.",
+        desc: "Certificate contract live on Polygon; product certification through verify is in development.",
       },
       {
         icon: "📊",
@@ -746,7 +765,6 @@ const LANDING_CONTENT: Record<
     stats: [
       { value: "100%", label: "Transparent" },
       { value: "Real-Time", label: "Reporting" },
-      { value: "Blockchain", label: "Immutable" },
     ],
     closingLine: "Make government data public. Build trust with blockchain.",
     primaryCta: { label: "Get Started", href: "/dashboard" },
@@ -808,7 +826,7 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
-  const primaryIsCheckout = /\/api\/checkout\//.test(content.primaryCta.href);
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
   const primaryHtml = primaryIsCheckout
     ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
@@ -905,22 +923,22 @@ const EMAIL_RE =
 function onboardPayNowHtml(): string {
   return (
     '<section aria-label="Live checkout" class="onboard-pay">\n' +
-    "<h2>Or pay now — no call</h2>\n" +
-    "<p>Published catalogue. Pilot intake stays free.</p>\n" +
+    "<h2>Or buy now, no call needed</h2>\n" +
+    "<p>The pilot request is free.</p>\n" +
     '<p class="onboard-pay-links">\n' +
     catalogPaymentLinkHtml({
       planId: "strainchain_passport",
-      label: "Passport $49",
+      label: "StrainChain Passport — $49",
     }) +
     "\n" +
     catalogPaymentLinkHtml({
       planId: "strainchain_farm",
-      label: "Farm $149/mo",
+      label: "StrainChain Farm Plan — $149/mo",
     }) +
     "\n" +
     catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "DPP $299",
+      label: "EU DPP Readiness Audit — $299",
     }) +
     "\n" +
     "</p>\n" +
@@ -928,7 +946,21 @@ function onboardPayNowHtml(): string {
   );
 }
 
-function onboardFormHtml(error?: string): string {
+/** Per-site /onboard title. The estate apexes proxy here with X-Forwarded-Host. */
+export function onboardTitle(host: string): string {
+  const h = host.toLowerCase().replace(/:\d+$/, "");
+  if (h === "govchain.us" || (h.endsWith(".govchain.us") && h !== "authichain.govchain.us"))
+    return "Request access | GovChain";
+  if (h === "strainchain.io" || h.endsWith(".strainchain.io"))
+    return "Request a pilot | StrainChain";
+  return "Request a pilot | AuthiChain";
+}
+
+function onboardHost(c: Context): string {
+  return c.req.header("x-forwarded-host") || new URL(c.req.url).host;
+}
+
+function onboardFormHtml(error?: string, host = ""): string {
   const errorBlock = error
     ? '<p role="alert">' + escapeHtml(error) + "</p>\n"
     : "";
@@ -936,19 +968,20 @@ function onboardFormHtml(error?: string): string {
     id => '<option value="' + id + '">' + escapeHtml(id) + "</option>"
   ).join("\n");
   return htmlDocument({
-    title: "Onboard a Pilot | AuthiChain",
+    title: onboardTitle(host),
     description:
       "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +
+      SITE_FORM_CSS +
       CHECKOUT_EMAIL_FORM_CSS +
-      ".onboard-pay{margin-top:2rem;padding-top:1.25rem;border-top:1px solid #cbd5e1}.onboard-pay h2{font-size:1.1rem;margin:0 0 .4rem}.onboard-pay p{margin:0 0 .75rem}.onboard-pay-links{display:flex;flex-wrap:wrap;gap:.6rem}.onboard-pay-links a{display:inline-block;padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;text-decoration:none;font-weight:600}" +
+      ".onboard-pay{margin-top:2rem;padding-top:1.25rem;border-top:1px solid #cbd5e1}.onboard-pay h2{font-size:1.1rem;margin:0 0 .4rem}.onboard-pay p{margin:0 0 .75rem}.onboard-pay-links{display:flex;flex-wrap:wrap;gap:.6rem}.onboard-pay-links a{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;text-decoration:none;font-weight:600}" +
       "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Onboard a Pilot</h1>\n" +
-      "<p>Company, first product, work email. This is the public intake for the authentic economy — not a placeholder.</p>\n" +
+      "<p>Tell us your company, your first product and a work email, and we'll follow up about a free pilot seal.</p>\n" +
       errorBlock +
       '<form action="/onboard" method="post">\n' +
       '<label for="company">Company</label>\n' +
@@ -967,10 +1000,10 @@ function onboardFormHtml(error?: string): string {
       '<input id="sku" name="sku" type="text" maxlength="40">\n' +
       '<label for="serial">Serial (optional)</label>\n' +
       '<input id="serial" name="serial" type="text" maxlength="40">\n' +
-      '<button type="submit">Request pilot seal</button>\n' +
+      '<button type="submit">Request a free pilot seal</button>\n' +
       "</form>\n" +
       onboardPayNowHtml() +
-      '<p><a href="/verify">Verify an existing seal</a></p>\n' +
+      '<p>Questions? <a href="https://authichain.com/contact">Talk to us</a></p>\n' +
       "</main>",
   });
 }
@@ -1048,26 +1081,26 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       .trim()
       .slice(0, 40);
   } catch {
-    return htmlResponse(c, onboardFormHtml("Could not read the form."), 400);
+    return htmlResponse(c, onboardFormHtml("Could not read the form.", onboardHost(c)), 400);
   }
   if (!company || !contactName || !productName) {
     return htmlResponse(
       c,
-      onboardFormHtml("Company, contact, and first product are required."),
+      onboardFormHtml("Company, contact, and first product are required.", onboardHost(c)),
       400
     );
   }
   if (!EMAIL_RE.test(email)) {
     return htmlResponse(
       c,
-      onboardFormHtml("A valid work email is required."),
+      onboardFormHtml("A valid work email is required.", onboardHost(c)),
       400
     );
   }
   if (
     !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
   ) {
-    return htmlResponse(c, onboardFormHtml("Unknown vertical."), 400);
+    return htmlResponse(c, onboardFormHtml("Unknown vertical.", onboardHost(c)), 400);
   }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
@@ -1092,7 +1125,7 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     console.error("[onboard] lead_captures insert failed", err);
     return htmlResponse(
       c,
-      onboardFormHtml("Could not record the pilot request. Try again."),
+      onboardFormHtml("Could not record the pilot request. Try again.", onboardHost(c)),
       500
     );
   }
@@ -1171,13 +1204,13 @@ function renderOnboardReceived(c: Context): Response {
     ".</p>\n" +
     "<p>Next: verify a production JWS against live JWKS, then complete EU DPP Readiness when ready to pay.</p>\n" +
     emailCheckoutWithPaymentLinkHtml({
-      action: "/api/checkout/dpp",
+      action: "https://authichain.com/checkout/dpp_readiness",
       label: "Start DPP checkout — $299",
       formId: "onboard-dpp-checkout",
       inputId: "onboard-dpp-email",
     }) +
     "<ul>\n" +
-    '<li><a href="/verify">Verify a seal</a></li>\n' +
+    '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1203,7 +1236,7 @@ async function renderOnboard(c: Context): Promise<Response> {
   if (c.req.method === "POST") {
     return handleOnboardPost(c);
   }
-  return htmlResponse(c, onboardFormHtml(), 200);
+  return htmlResponse(c, onboardFormHtml(undefined, onboardHost(c)), 200);
 }
 
 // --- /story/<id> - StoryMode -------------------------------------------------
@@ -1238,7 +1271,7 @@ function launchProofStoryHtml(): string {
       "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
-      '<p><a href="/verify">Verify a seal</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      '<p><a href="/verify">Verify a seal (in development)</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
       "</main>",
   });
 }
@@ -1336,7 +1369,7 @@ function dashboardHtml(): string {
       "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
-      '<li><a href="/verify">Verify a seal</a></li>\n' +
+      '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
       '<li><a href="/generate">Generate a Living QR</a></li>\n' +
       '<li><a href="/protocol">Protocol</a></li>\n' +
       '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +
@@ -1366,7 +1399,7 @@ function authenticateHtml(): string {
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
       "</ul>\n" +
       emailCheckoutWithPaymentLinkHtml({
-        action: "/api/checkout/dpp",
+        action: "https://authichain.com/checkout/dpp_readiness",
         label: "Start DPP checkout — $299",
         formId: "auth-dpp-checkout",
         inputId: "auth-dpp-email",
@@ -1390,7 +1423,7 @@ function generatePackLinksHtml(): string {
       const href =
         p.id === "dpp_readiness"
           ? "/pricing"
-          : p.stripe_payment_link || "/pricing";
+          : planPaymentLink(p.id) || "/pricing";
       return (
         '<a href="' +
         escapeHtml(href) +
@@ -1424,31 +1457,38 @@ function generateCreditLinksHtml(): string {
     );
   }).join("\n");
   return (
-    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-block;padding:8px 12px;border:1px solid #111;border-radius:6px;text-decoration:none;color:#111;background:#fff}.credit-btn:hover{background:#f3f4f6}</style>\n" +
-    "<p>Need more generations? Buy a pack on the published Stripe Payment Link.</p>\n" +
+    "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
+    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
   );
 }
 
-function generateFormHtml(error?: string): string {
+function generateFormHtml(error?: string, paid = false, cancelled = false): string {
+  const statusBlock = paid
+    ? '<p role="alert" id="generate-paid">Payment received</p>\n'
+    : cancelled
+      ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
+      : '';
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
-      "Create a Living QR for a product URL. Public generate CTA for qron.space.",
+      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
+    extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
-      "<p>Target URL and a short prompt. Signed-in packs spend a generation credit via <code>POST /api/generate</code>. Without a session this form still queues a QRON onboard for a pilot seal.</p>\n" +
+      statusBlock +
+      "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
-      '<label for="targetUrl">Product or verify URL</label>\n' +
+      '<label for="targetUrl">Product URL</label>\n' +
       '<input id="targetUrl" name="targetUrl" type="url" required maxlength="500" placeholder="https://">\n' +
       '<label for="prompt">Style prompt (optional)</label>\n' +
       '<input id="prompt" name="prompt" type="text" maxlength="200" placeholder="Industrial tech aesthetic">\n' +
@@ -1458,7 +1498,9 @@ function generateFormHtml(error?: string): string {
       "<p>Need a generation pack? " +
       generatePackLinksHtml() +
       ' · <a href="/pricing">All pricing</a></p>\n' +
-      '<p><a href="/onboard">Onboard a full pilot</a> · <a href="/dashboard">Dashboard</a> · <a href="/login">Sign in</a></p>\n' +
+      // Absolute: qron.space proxies this page, and qron.space/dashboard and
+      // /login do not exist (404). Account links stay hidden until they do.
+      "" +
       "<script>\n" +
       "(function(){\n" +
       "var form=document.getElementById('generate-form');\n" +
@@ -1493,7 +1535,7 @@ function generateFormHtml(error?: string): string {
       "out.hidden=false;\n" +
       'out.innerHTML=\'<img alt="Generated Living QR" src="\'+url.replace(/"/g,\'\')+\'" width="320" height="320">\';\n' +
       "})\n" +
-      ".catch(function(){err.hidden=false;err.textContent='Network error. Queuing onboard instead.';form.submit();});\n" +
+      " .catch(function(){err.hidden=false;err.textContent='Network error. Buy the Starter pack to keep generating.';});\n" +
       "});\n" +
       "})();\n" +
       "</script>\n" +
@@ -1520,11 +1562,9 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/onboard", c.req.url);
-  dest.searchParams.set("vertical", "qron");
-  dest.searchParams.set("productName", "Living QR");
-  dest.searchParams.set("sku", prompt || "generate");
-  dest.searchParams.set("serial", targetUrl.slice(0, 40));
+  const dest = new URL("/checkout/starter", c.req.url);
+  dest.searchParams.set("targetUrl", targetUrl);
+  if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
 }
 
@@ -1532,7 +1572,12 @@ async function renderGenerate(c: Context): Promise<Response> {
   if (c.req.method === "POST") {
     return handleGeneratePost(c);
   }
-  return htmlResponse(c, generateFormHtml(), 200);
+  const url = new URL(c.req.url);
+  return htmlResponse(
+    c,
+    generateFormHtml(undefined, url.searchParams.get("paid") === "1", url.searchParams.get("cancelled") === "1"),
+    200
+  );
 }
 
 // --- Dispatcher --------------------------------------------------------------
@@ -1576,6 +1621,10 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.
+    if (c.req.method === "GET") {
+      reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
+    }
     return renderGenerate(c);
   }
 

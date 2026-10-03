@@ -72,12 +72,15 @@ describe("b2b copy", () => {
     expect(strainchainEmail(TARGETS[2]).html).not.toContain("Hi Head");
   });
 
-  it("uses catalogue prices and payment links only", () => {
+  it("uses catalogue prices and gated checkout links only (never buy.stripe.com)", () => {
     const s = strainchainEmail(TARGETS[2]).html;
     expect(s).toContain("$49 per cultivar");
-    expect(s).toContain("buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y");
+    expect(s).toContain("https://authichain.com/checkout/strainchain_passport?");
+    expect(s).not.toContain("buy.stripe.com");
+    expect(s).not.toContain("prefilled_email");
     const q = qronEmail(TARGETS[4]).html;
     expect(q).toContain("$99 for 500 generations");
-    expect(q).toContain("buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d");
+    expect(q).toContain("https://authichain.com/checkout/creator?");
+    expect(q).not.toContain("buy.stripe.com");
   });
 });

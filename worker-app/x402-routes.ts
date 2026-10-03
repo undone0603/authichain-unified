@@ -6,7 +6,10 @@
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
- * POST /api/x402 + /api/v1/agent-verify → 402 advertisement or paid verify
+ * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid. A
+ *      paid call reads auth_seals on this worker when SUPABASE_URL and a key
+ *      are set, and settles only after that read. Otherwise it is forwarded
+ *      over VERIFY_APP, or refused 503 before settlement when neither is set.
  *
  * Do not rebind X402_PAY_TO away from the owner-authorized treasury
  * 0xaebf…e437. Do not rebind
@@ -18,6 +21,7 @@
 import type { Hono } from "hono";
 import {
   buildPaymentRequired,
+  forwardPaidVerify,
   parsePaymentHeader,
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
@@ -27,14 +31,27 @@ import {
   x402PriceUsd,
   x402ScanFanout,
   type X402HealthEnv,
+  type X402VerifyBinding,
 } from "../src/lib/x402";
+import {
+  resolvePaidSealVerify,
+  type SealLookupEnv,
+} from "../src/lib/paid-seal-verify";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
-type X402Bindings = X402HealthEnv & {
-  X402_PAY_TO?: string;
-  NODE_ENV?: string;
-};
+type X402Bindings = X402HealthEnv &
+  SealLookupEnv & {
+    X402_PAY_TO?: string;
+    NODE_ENV?: string;
+  };
+
+/** VERIFY_APP is a Fetcher, which X402HealthEnv's string index can't hold. */
+function verifyAppBinding(env: unknown): X402VerifyBinding | undefined {
+  const binding = (env as { VERIFY_APP?: X402VerifyBinding } | undefined)
+    ?.VERIFY_APP;
+  return typeof binding?.fetch === "function" ? binding : undefined;
+}
 
 function hydrateX402(env?: X402Bindings) {
   if (!env) return;
@@ -117,6 +134,7 @@ async function agentVerify(c: {
   env?: X402Bindings;
   req: {
     url: string;
+    raw: Request;
     header: (name: string) => string | undefined;
     json: () => Promise<unknown>;
   };
@@ -150,10 +168,31 @@ async function agentVerify(c: {
   });
   const proofHeader = readPaymentProofHeader(name => c.req.header(name));
   const proof = parsePaymentHeader(proofHeader);
-  if (!proof) {
+  if (!proof || !proofHeader) {
     return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
   }
 
+  const verifyApp = verifyAppBinding(c.env);
+  const bodyText = await c.req.raw.text();
+  const decision = await resolvePaidSealVerify({
+    hasVerifyApp: Boolean(verifyApp),
+    proofHeader,
+    bodyText,
+    resource,
+    priceUsd,
+    payTo,
+    description: "AuthiChain agent verification",
+    env: c.env,
+  });
+  if (decision.action === "answer") {
+    return c.json(decision.body, decision.status, {
+      ...NO_STORE,
+      ...decision.headers,
+    });
+  }
+  if (decision.action === "forward" && verifyApp) {
+    return forwardPaidVerify(verifyApp, c.req.raw, proofHeader, bodyText);
+  }
   // No registry lookup is bound here: refuse before settlePayment() so the
   // agent is never charged for an answer that cannot be real.
   return c.json(X402_REGISTRY_NOT_BOUND, 503, NO_STORE);

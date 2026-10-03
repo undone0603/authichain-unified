@@ -7,6 +7,8 @@
 // Gemma only ever writes suggestions into GitHub issues. It never merges,
 // sends, charges or edits code; a person decides what ships.
 
+import { localLlmHeaders } from "../lib/local-llm-auth.mjs";
+
 export const DEFAULTS = {
   url: "http://192.168.254.10:1234",
   model: "google/gemma-4-e4b",
@@ -32,6 +34,32 @@ export function config(env = process.env) {
     repo: env.GITHUB_REPOSITORY,
     token: env.GITHUB_TOKEN,
   };
+}
+
+// Logs and model output can carry prospect emails and credentials. Anything
+// that reaches the model or a public issue goes through redact() first.
+// Kept on purpose: 40-hex git SHAs, 0x wallet addresses, GitHub's *** masks.
+const REDACTIONS = [
+  [/-----BEGIN [A-Z ]+-----[\s\S]*?-----END [A-Z ]+-----/g, "[redacted:pem]"],
+  [/\beyJ[\w-]+\.[\w-]+\.[\w-]+/g, "[redacted:jwt]"],
+  [/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, "$1[redacted:creds]@"],
+  [/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[redacted:email]"],
+  [/\b(Bearer)\s+[\w.~+/-]+=*/gi, "$1 [redacted:token]"],
+  [/\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]+/g, "[redacted:stripe]"],
+  [/\bre_[A-Za-z0-9_]{8,}/g, "[redacted:resend]"],
+  [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})/g, "[redacted:github]"],
+  [
+    /\b([A-Z][A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|PWD)[A-Z0-9_]*)(\s*[=:]\s*)(?!\*{3})[^\s'"]+/g,
+    "$1$2[redacted:secret]",
+  ],
+  [/([?&](?:t|token|key|access_token|api_key|sig|signature|code)=)[^&\s#]+/gi, "$1[redacted:param]"],
+  [/\b(?:0x)?[a-fA-F0-9]{64}\b/g, "[redacted:hex]"],
+];
+
+export function redact(text) {
+  let s = String(text ?? "");
+  for (const [re, to] of REDACTIONS) s = s.replace(re, to);
+  return s;
 }
 
 export function clip(text, max) {
@@ -94,10 +122,11 @@ export async function chat({
   fetchImpl = fetch,
   timeoutMs = 180_000,
   maxTokens = 1400,
+  env = process.env,
 }) {
   const res = await fetchImpl(`${url}/v1/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: localLlmHeaders(url, env),
     body: JSON.stringify({
       model,
       temperature: 0.3,

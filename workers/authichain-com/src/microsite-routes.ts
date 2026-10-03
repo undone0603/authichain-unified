@@ -13,11 +13,11 @@ import {
 import { MICROSITE_HTML } from "./microsite-packs.ts";
 
 export const PASSPORT_CHECKOUT =
-  "https://authichain.com/api/checkout/plan/strainchain_passport";
-export const DPP_CHECKOUT = "https://authichain.com/api/checkout/dpp";
+  "https://authichain.com/checkout/strainchain_passport";
+export const DPP_CHECKOUT = "https://authichain.com/checkout/dpp_readiness";
 
 export type MicrositePackId =
-  "mendo" | "trumark" | "musa" | "strainchain" | "bat-2026-001";
+  "trumark" | "musa" | "strainchain" | "bat-2026-001";
 
 export interface MicrositeDef {
   pack: MicrositePackId;
@@ -27,12 +27,6 @@ export interface MicrositeDef {
 }
 
 export const MICROSITES: Record<string, MicrositeDef> = {
-  mendo: {
-    pack: "mendo",
-    canonicalPath: "/m/mendo",
-    aliases: ["/m/realthcv", "/m/lt-63"],
-    hosts: ["mendo.authichain.com", "realthcv.authichain.com"],
-  },
   trumark: {
     pack: "trumark",
     canonicalPath: "/m/trumark",
@@ -103,8 +97,6 @@ function hubCardCopy(pack: MicrositePackId): {
   dpp: boolean;
 } {
   switch (pack) {
-    case "mendo":
-      return { title: "Mendo / RealTHCV / LT-63", dpp: false };
     case "trumark":
       return { title: "TruMark seal", dpp: false };
     case "musa":
@@ -122,8 +114,8 @@ function renderHub(): string {
       const { title, dpp } = hubCardCopy(def.pack);
       const cta = dpp ? "DPP checkout — $299" : "Passport checkout — $49";
       const action = dpp
-        ? "/api/checkout/dpp"
-        : "/api/checkout/plan/strainchain_passport";
+        ? "https://authichain.com/checkout/dpp_readiness"
+        : "https://authichain.com/checkout/strainchain_passport";
       return `<article class="card"><h2><a href="${def.canonicalPath}">${title}</a></h2>${checkoutEmailFormHtml(
         {
           action,
@@ -166,7 +158,7 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
   <p>Passport $49 and EU DPP Readiness $299. No call booking. AuthiChain is a brand; the SAM legal entity is ZACHARY KIETZMAN.</p>
   ${cards}
   ${checkoutEmailFormHtml({
-    action: "/api/checkout/plan/strainchain_passport",
+    action: "https://authichain.com/checkout/strainchain_passport",
     label: "Passport checkout — $49",
     inputId: "hub-footer-passport-email",
     formId: "hub-footer-passport-checkout",
@@ -176,7 +168,7 @@ footer{color:#64748b;font-size:.85rem;margin-top:32px}
     label: "Pay $49 on Stripe",
   })}
   ${checkoutEmailFormHtml({
-    action: "/api/checkout/dpp",
+    action: "https://authichain.com/checkout/dpp_readiness",
     label: "DPP checkout — $299",
     inputId: "hub-footer-dpp-email",
     formId: "hub-footer-dpp-checkout",

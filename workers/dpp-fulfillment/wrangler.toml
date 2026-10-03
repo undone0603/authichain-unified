@@ -21,7 +21,7 @@ preview_id = "fdc266b0b356450392add7e51d887123"
 
 [vars]
 OFFER_KEY = "dpp_readiness_2026"
-PAYMENT_LINK_URL = "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+PAYMENT_LINK_URL = "https://authichain.com/checkout/dpp_readiness"
 FROM_EMAIL = "AuthiChain <hello@authichain.com>"
 REPLY_TO = "hello@authichain.com"
 FOUNDER_NOTIFY = "hello@authichain.com"

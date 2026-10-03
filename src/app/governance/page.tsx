@@ -302,8 +302,8 @@ export default function Governance() {
             &copy; 2026 AuthiChain Protocol ◆ Governance DAO
           </p>
           <div className="flex gap-6 flex-wrap justify-center">
-             <Link href="/tokenomics" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Tokenomics</Link>
-             <Link href="/proposals" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Proposals</Link>
+             <Link href="/governance/tokenomics" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Tokenomics</Link>
+             <Link href="/governance/proposals" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Proposals</Link>
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>

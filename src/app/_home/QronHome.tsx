@@ -407,7 +407,7 @@ export function QronHome() {
               {
                 icon: <Lock className="w-4 h-4" />,
                 stat: 'Ed25519',
-                label: 'signed & Polygon-anchored',
+                label: 'signed',
               },
               {
                 icon: <Shield className="w-4 h-4" />,
@@ -822,7 +822,7 @@ export function QronHome() {
                 />
               </div>
               <p className="text-sm" style={{ color: '#9e9e9e' }}>
-                Cryptographically signed · Blockchain-anchored · Publicly
+                Cryptographically signed · Publicly
                 verifiable
               </p>
 
@@ -1010,7 +1010,7 @@ export function QronHome() {
           <div className="text-center mb-12">
             <span className="protocol-badge mb-4 inline-flex">
               <Zap className="w-3 h-3" />
-              Elite / Theater 3 Capabilities
+              Art Engine Capabilities
             </span>
             <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4 uppercase tracking-tighter">
               <span className="gold-text">Cryptographic Art Engine</span>
@@ -1061,7 +1061,7 @@ export function QronHome() {
               </div>
               <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">TrueMark™ Anchor</h3>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                Every generated asset receives an immutable TrueMark ID. Scannable AI art acts as a physical-to-digital bridge, anchoring the item to Polygon and Base layer-2 networks.
+                Every generated asset receives a TrueMark ID. Scannable AI art acts as a physical-to-digital bridge.
               </p>
             </div>
 
@@ -1183,7 +1183,7 @@ export function QronHome() {
               Browse Full Demo Gallery →
             </a>
             <p className="text-xs mt-3" style={{ color: '#6b6b6b' }}>
-              20+ iconic brands · Order yours from $49 · Delivered in ~5 min
+              20+ iconic brands · Delivered in ~5 min · Plans below
             </p>
           </div>
         </section>
@@ -1514,7 +1514,7 @@ export function QronHome() {
               },
               {
                 q: 'What if I need more generations than my plan includes?',
-                a: 'QRON Studio Pro gives you unlimited generations for $99/month, or contact us for a custom enterprise contract.',
+                a: 'Buy another pack. Starter adds 100 generations for $29 and Creator adds 500 for $99, both one-time.',
               },
               {
                 q: 'What AI model generates the QR art?',

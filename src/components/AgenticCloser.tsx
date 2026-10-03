@@ -12,7 +12,7 @@ export default function AgenticCloser() {
   const [messages, setMessages] = useState<Message[]>([{
     id: 'system-init',
     role: 'assistant',
-    content: 'System Initialized. I am AgentZ, Integration Engineer for AuthiChain. How can I assist you with the Zapbox integration or our $199 Single-Project Pilot today?',
+    content: 'System Initialized. I am AgentZ, Integration Engineer for AuthiChain. How can I assist you with the Zapbox integration today?',
   }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

@@ -104,6 +104,20 @@ vi.mock("../../src/lib/stripe-webhook-log", () => ({
   },
 }));
 
+const { accrueAffiliateCommission } = vi.hoisted(() => ({
+  accrueAffiliateCommission: vi
+    .fn()
+    .mockResolvedValue({
+      credited: true,
+      affiliateId: "aff_1",
+      commission: 9.8,
+    }),
+}));
+
+vi.mock("../../src/lib/affiliate-accrual", () => ({
+  accrueAffiliateCommission,
+}));
+
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn().mockReturnValue({ from: vi.fn() }),
 }));
@@ -890,5 +904,71 @@ describe("handleStripeWebhook — fulfillment collision guard ($299 recurring vs
       expect.objectContaining({ id: "cs_dpp_legit" }),
       "price_1TwmD8GqTruSqV8TpAF8dfyA"
     );
+  });
+});
+
+describe("handleStripeWebhook — affiliate accrual", () => {
+  it("credits the affiliate on a paid checkout carrying affiliate_code", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_aff_001", {
+        id: "cs_aff_001",
+        mode: "payment",
+        payment_status: "paid",
+        metadata: { affiliate_code: "CUP20" },
+        amount_total: 4900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(accrueAffiliateCommission).toHaveBeenCalledWith(expect.anything(), {
+      affiliateCode: "CUP20",
+      amountCents: 4900,
+      conversion: true,
+    });
+  });
+
+  it("does not credit an unpaid (async) checkout", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_aff_002", {
+        id: "cs_aff_002",
+        mode: "payment",
+        payment_status: "unpaid",
+        metadata: { affiliate_code: "CUP20" },
+        amount_total: 4900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(accrueAffiliateCommission).not.toHaveBeenCalled();
+  });
+
+  it("credits renewals once, from invoice.paid only", async () => {
+    const invoice = {
+      id: "in_aff_001",
+      billing_reason: "subscription_cycle",
+      amount_paid: 19900,
+      currency: "usd",
+      parent: {
+        subscription_details: { metadata: { affiliate_code: "CUP20" } },
+      },
+      lines: { data: [] },
+    };
+    const { handleStripeWebhook } = await import("./stripe.js");
+
+    mockConstructEvent.mockReturnValue(
+      makeEvent("invoice.payment_succeeded", "evt_aff_003", invoice)
+    );
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(accrueAffiliateCommission).not.toHaveBeenCalled();
+
+    mockConstructEvent.mockReturnValue(
+      makeEvent("invoice.paid", "evt_aff_004", invoice)
+    );
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(accrueAffiliateCommission).toHaveBeenCalledWith(expect.anything(), {
+      affiliateCode: "CUP20",
+      amountCents: 19900,
+      conversion: false,
+    });
   });
 });

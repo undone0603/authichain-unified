@@ -10,24 +10,15 @@
     "passport": {
       "sku": "strainchain_passport",
       "priceUsd": 49,
-      "href": "https://authichain.com/api/checkout/plan/strainchain_passport"
+      "href": "https://authichain.com/checkout/strainchain_passport"
     },
     "dpp": {
       "sku": "dpp_readiness",
       "priceUsd": 299,
-      "href": "https://authichain.com/api/checkout/dpp"
+      "href": "https://authichain.com/checkout/dpp_readiness"
     }
   },
   "packs": [
-    {
-      "slug": "mendo",
-      "file": "mendo/index.html",
-      "canonicalPath": "/m/mendo",
-      "aliases": ["/m/realthcv", "/m/lt-63"],
-      "hosts": ["mendo.authichain.com", "realthcv.authichain.com"],
-      "kvKeys": ["mendo/index.html", "realthcv/index.html"],
-      "primaryCta": "passport"
-    },
     {
       "slug": "trumark",
       "file": "trumark/index.html",

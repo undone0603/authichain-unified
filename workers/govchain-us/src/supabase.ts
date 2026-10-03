@@ -26,6 +26,8 @@ export interface SupabaseEnv {
   SUPABASE_ANON_KEY?: string;
   /** Origin that renders /onboard. Set in wrangler.toml. */
   APP_ORIGIN?: string;
+  /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
+  VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -121,16 +123,29 @@ async function restGet(
  * Ordering is `deadline.asc.nullslast` so an opportunity with no deadline sinks
  * rather than heading the list — a null sorts first in Postgres ascending order
  * by default, which would put the least actionable rows on top.
+ *
+ * Rows whose deadline has already passed are filtered out, so the "live"
+ * homepage feed and /opportunities never advertise closed notices. The cutoff
+ * is today's UTC date (YYYY-MM-DD), which compares correctly whether `deadline`
+ * is stored as timestamptz or as an ISO-8601 string. Rows with no deadline are
+ * kept (they render as "Deadline TBD" and sort last).
  */
 export async function fetchOpportunities(
   env: SupabaseEnv,
-  opts: { minFit?: number; limit?: number } = {}
+  opts: { minFit?: number; limit?: number; q?: string } = {}
 ): Promise<GovOpportunity[]> {
   const minFit = Number.isFinite(opts.minFit) ? Number(opts.minFit) : 70;
   const limit = Math.min(Math.max(Number(opts.limit) || 12, 1), 100);
+  const q = typeof opts.q === "string" ? opts.q.trim() : "";
+  const search = q
+    ? `or=(title.ilike.*${encodeURIComponent(q)}*,agency.ilike.*${encodeURIComponent(q)}*,notice_id.ilike.*${encodeURIComponent(q)}*)`
+    : "";
+  const today = new Date().toISOString().slice(0, 10);
   const query = [
     `select=${LIST_COLUMNS}`,
     `fit_score=gte.${minFit}`,
+    `or=(deadline.gte.${today},deadline.is.null)`,
+    search,
     "order=deadline.asc.nullslast",
     `limit=${limit}`,
   ].join("&");
@@ -178,11 +193,18 @@ async function countRows(
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** The three counters the homepage stats bar reads. */
+/**
+ * The three counters the homepage stats bar reads.
+ *
+ * The opportunity counters skip expired notices using the same deadline
+ * cutoff as `fetchOpportunities` (today's UTC date; no deadline = still open).
+ */
 export async function fetchStats(env: SupabaseEnv): Promise<GovStats> {
+  const today = new Date().toISOString().slice(0, 10);
+  const open = `or=(deadline.gte.${today},deadline.is.null)`;
   const [scored, highFit, proposals] = await Promise.all([
-    countRows(env, OPPORTUNITIES_VIEW, "fit_score=not.is.null"),
-    countRows(env, OPPORTUNITIES_VIEW, "fit_score=gte.70"),
+    countRows(env, OPPORTUNITIES_VIEW, `fit_score=not.is.null&${open}`),
+    countRows(env, OPPORTUNITIES_VIEW, `fit_score=gte.70&${open}`),
     countRows(env, PROPOSALS_VIEW),
   ]);
   return {

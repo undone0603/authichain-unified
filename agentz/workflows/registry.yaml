@@ -110,7 +110,7 @@ workflows:
     requires: [n8n_api_key, resend_api_key]
     prerequisites: []
     description: |
-      Verify Resend key (re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE) is
+      Verify the Resend key (secret RESEND_API_KEY) is
       injected into n8n environment, then activate each of the 10
       blueprints sequentially with a 30s health-check between each.
 
@@ -206,7 +206,11 @@ workflows:
     estimated_minutes: 10
     requires: [stripe_secret, twitter_session]
     prerequisites: []
-    confirm_before_run: false
+    # Money gate: the handler creates a $49 "QRON Pro" product/price when none
+    # matches. That SKU is not in src/lib/plans.ts, so it never runs unattended.
+    confirm_before_run: true
+    requires_human_approval: true
+    risk_class: high
     description: |
       Generates Stripe payment links for QRON Pro subscriptions ($49/mo) and
       simulates distribution via automated Twitter/Reddit DMs to warm leads.
@@ -377,6 +381,10 @@ workflows:
     estimated_minutes: 10
     requires: [stripe_secret, twitter_session]
     prerequisites: []
+    # Money gate: same off-catalogue $49 QRON Pro price as qron_stripe_links.
+    confirm_before_run: true
+    requires_human_approval: true
+    risk_class: high
     description: |
       Automates the economic onboarding for QRON Pro:
       1) Queries Stripe for QRON Pro pricing.

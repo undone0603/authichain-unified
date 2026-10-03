@@ -68,17 +68,29 @@ export async function activateDppMerchant(opts: {
     apiVersion: "2026-08-26.dahlia" as const,
   });
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  // Line items name the product actually bought. A Payment Link sale carries
+  // no metadata, so without them a $299 Made in USA claim file is
+  // indistinguishable from a $299 DPP audit by amount alone.
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["line_items"],
+  });
   if (session.payment_status !== "paid" && session.status !== "complete") {
     return { ok: false, status: 402, error: "Checkout session is not paid" };
   }
 
   const md = (session.metadata || {}) as Record<string, unknown>;
-  if (
-    !isDppOffer(md) &&
-    session.amount_total !== 29900 &&
-    session.amount_total !== 0
-  ) {
+  // Another $299 product (the Made in USA claim file) shares the DPP amount,
+  // so an explicit non-DPP plan must never activate a DPP workspace.
+  const otherPlan =
+    typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
+  if (otherPlan && !isDppOffer(md)) {
+    return { ok: false, status: 400, error: "Not a DPP audit session" };
+  }
+  const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
+  if (linePriceId && !isDppOffer(md, linePriceId)) {
+    return { ok: false, status: 400, error: "Not a DPP audit session" };
+  }
+  if (!isDppOffer(md) && session.amount_total !== 29900) {
     return { ok: false, status: 400, error: "Not a DPP audit session" };
   }
 

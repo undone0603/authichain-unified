@@ -98,7 +98,11 @@ describe('milestoneStatus', () => {
 
 describe('formatMilestoneDate', () => {
   it('renders day precision', () => {
-    expect(formatMilestoneDate(registry())).toBe('Jul 19, 2026');
+    expect(formatMilestoneDate(battery())).toBe('Feb 18, 2027');
+  });
+
+  it('renders month precision', () => {
+    expect(formatMilestoneDate(registry())).toBe('Jul 2026');
   });
 
   it('renders a quarter range', () => {
@@ -114,7 +118,7 @@ describe('formatMilestoneDate', () => {
 
 describe('countdownLabel', () => {
   it('reads past tense once the milestone is in force', () => {
-    expect(countdownLabel(registry(), AUG_2026)).toBe('In force since Jul 19, 2026');
+    expect(countdownLabel(registry(), AUG_2026)).toBe('In force since Jul 2026');
   });
 
   it('gives whole months at distance', () => {

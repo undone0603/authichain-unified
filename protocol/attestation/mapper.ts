@@ -1,4 +1,13 @@
-import { Attestation, Identity, Evidence } from "./types";
+import { Identity, Evidence } from "./types";
+
+const REAL_SHA256 = /^sha256:[A-Fa-f0-9]{64}$/;
+
+function digestOrOmit(bytes: string | undefined): string | null {
+  if (!bytes) return null;
+  if (bytes.startsWith("sha256:mock-digest")) return null;
+  if (!REAL_SHA256.test(bytes)) return null;
+  return bytes;
+}
 
 export function mapDbToIdentity(product: any, cert: any): Identity {
   return {
@@ -20,30 +29,33 @@ export function mapDbToIdentity(product: any, cert: any): Identity {
 export function mapDbToEvidence(product: any, cert: any, dpp: any): Evidence[] {
   const evidence: Evidence[] = [];
 
-  if (product.manufacturingDate) {
+  const mfgDigest = digestOrOmit(product.evidenceDigest || product.manufacturingDigest);
+  if (product.manufacturingDate && mfgDigest) {
     evidence.push({
       type: "manufacturing",
       issuer: "Manufacturer",
       timestamp: product.manufacturingDate,
-      digest: "sha256:mock-digest-mfg",
+      digest: mfgDigest,
     });
   }
 
-  if (cert.status === "approved") {
+  const inspDigest = digestOrOmit(cert.evidenceDigest || cert.inspectionDigest);
+  if (cert.status === "approved" && inspDigest) {
     evidence.push({
       type: "inspection",
       issuer: "AuthiChain-Audit",
       timestamp: cert.issuedAt,
-      digest: "sha256:mock-digest-insp",
+      digest: inspDigest,
     });
   }
 
-  if (dpp) {
+  const dppDigest = digestOrOmit(dpp?.evidenceDigest || dpp?.digest);
+  if (dpp && dppDigest) {
     evidence.push({
       type: "ownership",
       issuer: "DPP-Registry",
-      timestamp: new Date().toISOString(),
-      digest: "sha256:mock-digest-dpp",
+      timestamp: dpp.timestamp || new Date().toISOString(),
+      digest: dppDigest,
     });
   }
 

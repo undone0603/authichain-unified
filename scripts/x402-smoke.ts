@@ -8,8 +8,8 @@
  *   X402_PAY_TO          default owner-authorized treasury (same as live health payTo)
  *   X402_RPC             optional Base RPC (public mainnet.base.org fallback)
  *
- * Live payTo is the owner-authorized treasury (0xaebf…e437), not the
- * $QRON holder EOA (0x5db5…) and not the NFT deployer EOA (0xbad4…).
+ * Live payTo is the owner's keyed EOA (0x5db5…6AA2), not the $QRON
+ * ERC-20 contract (0xAebf…E437) and not the NFT deployer EOA (0xbad4…).
  * See docs/strategy/WEB3_IDENTITY.md.
  *
  * Live succeeds only on HTTP 200 with settlement.trustless + txHash.

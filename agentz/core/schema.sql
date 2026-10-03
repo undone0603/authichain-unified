@@ -1,5 +1,10 @@
 -- AuthiChain / AgentZ Database Schema
 -- Compiled for Supabase Implementation
+--
+-- DO NOT APPLY this file to AuthiChain production (QRON-v2 / nhdnkzhtadfkkluiulhs).
+-- It is a separate products/scans/campaigns sketch for AgentZ local experiments.
+-- Production missions alignment is drizzle/migrations/013_missions_schema_align.sql
+-- and is founder-yes only. No db:push from CI.
 
 -- 1. Products Table
 CREATE TABLE IF NOT EXISTS products (
@@ -69,12 +74,11 @@ CREATE TABLE IF NOT EXISTS redemptions (
 
 -- 6. Public Reports Table
 CREATE TABLE IF NOT EXISTS public_reports (
-  id TEXT PRIMARY KEY, -- e.g., 'authenticity_index'
+  id TEXT PRIMARY KEY,
   data JSONB NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for performance
 CREATE INDEX IF NOT EXISTS idx_products_qr_id ON products(qr_id);
 CREATE INDEX IF NOT EXISTS idx_scan_events_product_id ON scan_events(product_id);
 CREATE INDEX IF NOT EXISTS idx_scan_events_wallet ON scan_events(wallet);

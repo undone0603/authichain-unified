@@ -33,7 +33,7 @@ describe("x402 facilitator bind matches authichain-com", () => {
       expect(yml).toContain(`'${FACILITATOR}'`);
       expect(yml).toContain(USDC);
       expect(yml).not.toMatch(
-        /PAY_TO[^'\n]*['"]0x5db511706FB6317cd23A7655F67450c5AC6e6AA2['"]/
+        /PAY_TO[^'\n]*['"]0xaebfa6b08fb25b59748c93273ab8880e20ffe437['"]/i // pragma: allowlist secret
       );
       expect(yml).not.toMatch(
         /FACILITATOR[^'\n]*['"]https:\/\/x402\.org\/facilitator['"]/

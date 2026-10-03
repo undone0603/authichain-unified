@@ -4,7 +4,8 @@ name: AgentZ — Autonomous Sales & Lead Orchestration
 # Calls live claw + AgentZ. Does not invent OPENCLAW_GATEWAY_URL.
 # Does not thaw content-publish or genesis cold send.
 # Architect via claw is dry-run only. Qualify/HubSpot stay dry-run on
-# schedule; live DB/CRM only when dispatch unchecks dry_run.
+# schedule unless launch mode is active (.github/autonomy.json launch_mode);
+# otherwise live DB/CRM only when dispatch unchecks dry_run.
 #
 # Public hosts (not secrets):
 #   CLAW_URL=https://claw.authichain.com
@@ -46,17 +47,32 @@ jobs:
     outputs:
       dry_run: ${{ steps.mode.outputs.dry_run }}
       ping_agentz: ${{ steps.mode.outputs.ping_agentz }}
+      launch: ${{ steps.launch.outputs.active }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/autonomy.json
+            scripts/autonomy/launch-mode.mjs
+          sparse-checkout-cone-mode: false
+      - id: launch
+        run: node scripts/autonomy/launch-mode.mjs
       - id: mode
         shell: bash
         run: |
           set -euo pipefail
-          # Schedule is always dry-run. OWNER_LIVE_SEND gates email-proposals /
-          # b2b-outreach only — it must not flip AgentZ to auto or HubSpot live.
+          # Schedule is dry-run unless launch mode is active (docs/OPERATING_CHARTER.md).
+          # OWNER_LIVE_SEND gates email-proposals / b2b-outreach only. The AgentZ
+          # architect stays dry-run either way.
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "dry_run=true" >> "$GITHUB_OUTPUT"
             echo "ping_agentz=true" >> "$GITHUB_OUTPUT"
-            echo "Scheduled run → dry-run (qualify/HubSpot skipped writes; claw/AgentZ health + architect dry-run)"
+            if [ "${{ steps.launch.outputs.active }}" = "true" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → live qualify/HubSpot (launch mode until ${{ steps.launch.outputs.expires }})"
+            else
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+              echo "Scheduled run → dry-run (qualify/HubSpot skipped writes; claw/AgentZ health + architect dry-run)"
+            fi
             exit 0
           fi
           dry="${{ inputs.dry_run }}"
@@ -94,10 +110,13 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Health + optional architect dry-run
+        # AgentZ runs on the owner's LAN behind a tunnel. In launch mode it being
+        # offline must not turn the revenue loop red; the failed step stays visible.
+        continue-on-error: ${{ needs.resolve-mode.outputs.launch == 'true' }}
         run: |
           set -euo pipefail
           if [ -n "${OPENCLAW_GATEWAY_URL:-}" ]; then
@@ -247,13 +266,22 @@ jobs:
           SYNC_MI_LEADS_STATUS: ${{ needs.sync-mi-leads.result }}
           FUNNEL_REPORT_STATUS: ${{ needs.funnel-report.result }}
           DRY_RUN: ${{ needs.resolve-mode.outputs.dry_run }}
+          LAUNCH: ${{ needs.resolve-mode.outputs.launch }}
           AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
         run: |
           set -euo pipefail
           status="success"
+          stages=("$PREFLIGHT_STATUS" "$QUALIFY_LEADS_STATUS" "$FUNNEL_REPORT_STATUS")
+          if [ "$LAUNCH" = "true" ]; then
+            if [ "$PING_STATUS" != "success" ] && [ "$PING_STATUS" != "skipped" ]; then
+              echo "::warning::claw/AgentZ ping: $PING_STATUS (LAN tunnel offline?). Launch mode: not counted as a loop failure."
+            fi
+          else
+            stages+=("$PING_STATUS")
+          fi
           # skipped HubSpot on dry-run is expected, not a failure
-          for stage in "$PING_STATUS" "$PREFLIGHT_STATUS" "$QUALIFY_LEADS_STATUS" "$FUNNEL_REPORT_STATUS"; do
+          for stage in "${stages[@]}"; do
             if [ "$stage" != "success" ] && [ "$stage" != "skipped" ]; then
               status="failure"
               break
@@ -263,11 +291,18 @@ jobs:
             status="failure"
           fi
 
-          curl --fail-with-body --silent --show-error -X POST \
-            -H "Content-Type: application/json" \
-            -H "x-agentz-secret: $AGENTZ_WEBHOOK_SECRET" \
-            "$APP_URL/api/agentz/webhook" \
-            -d "{\"event\":\"automation.complete\",\"payload\":{\"workflow\":\"agentz-orchestration\",\"run_id\":\"${{ github.run_id }}\",\"status\":\"$status\",\"dry_run\":\"$DRY_RUN\",\"claw_url\":\"${CLAW_URL}\",\"agentz_url\":\"${AGENTZ_API_URL}\",\"stages\":{\"ping_claw_agentz\":\"$PING_STATUS\",\"preflight\":\"$PREFLIGHT_STATUS\",\"qualify_leads\":\"$QUALIFY_LEADS_STATUS\",\"sync_mi_leads\":\"$SYNC_MI_LEADS_STATUS\",\"funnel_report\":\"$FUNNEL_REPORT_STATUS\"}}}"
+          post_webhook() {
+            curl --fail-with-body --silent --show-error --max-time 20 -X POST \
+              -H "Content-Type: application/json" \
+              -H "x-agentz-secret: $AGENTZ_WEBHOOK_SECRET" \
+              "$APP_URL/api/agentz/webhook" \
+              -d "{\"event\":\"automation.complete\",\"payload\":{\"workflow\":\"agentz-orchestration\",\"run_id\":\"${{ github.run_id }}\",\"status\":\"$status\",\"dry_run\":\"$DRY_RUN\",\"claw_url\":\"${CLAW_URL}\",\"agentz_url\":\"${AGENTZ_API_URL}\",\"stages\":{\"ping_claw_agentz\":\"$PING_STATUS\",\"preflight\":\"$PREFLIGHT_STATUS\",\"qualify_leads\":\"$QUALIFY_LEADS_STATUS\",\"sync_mi_leads\":\"$SYNC_MI_LEADS_STATUS\",\"funnel_report\":\"$FUNNEL_REPORT_STATUS\"}}}"
+          }
+          if [ "$LAUNCH" = "true" ]; then
+            post_webhook || echo "::warning::AgentZ webhook unreachable. Launch mode: the job summary is the record."
+          else
+            post_webhook
+          fi
 
           if [ "$status" != "success" ]; then
             echo "::error::AgentZ reported a failed or skipped stage. See the orchestration summary above."

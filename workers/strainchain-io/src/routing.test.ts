@@ -69,8 +69,8 @@ test("verification paths are proxied to the app, not answered with marketing", a
   const f = stubFetch();
   try {
     for (const path of [
-      "/genetics/mendo-love-farms",
-      "/genetics/mendo-love-farms/vt-26",
+      "/genetics/example-farm",
+      "/genetics/example-farm/vt-26",
       "/passport/AC-DEMO-001",
       "/onboard",
       "/p/cannabis-blockchain-provenance",
@@ -131,17 +131,17 @@ test("the apex offers Passport checkout and the Farm Plan Payment Link", async (
   assert.match(html, /name="email"/);
   assert.match(
     html,
-    /action="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
   assert.doesNotMatch(
     html,
-    /href="https:\/\/authichain.com\/api\/checkout\/plan\/strainchain_passport"/
+    /href="(?:https:\/\/[^"]*)?\/api\/checkout\//
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y"')
+    html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
   assert.ok(
-    html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
   );
   assert.doesNotMatch(html, /9B6cN59br5xcaCuazy1Nu1o/);
   assert.match(html, /Passport checkout — \$49/);
@@ -243,11 +243,12 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.match(await sitemap.text(), /<urlset/);
 });
 
-test("the sitemap advertises the genetics library", async () => {
+test("the sitemap advertises the passport, not the withdrawn Mendo library", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
   const paths = sitemapHttpsLocs(xml).map(url => url.pathname);
-  assert.ok(paths.includes("/genetics/mendo-love-farms"));
+  assert.ok(paths.includes("/passport"));
+  assert.ok(!paths.includes("/genetics/mendo-love-farms"));
   assert.ok(paths.includes("/onboard"));
   assert.ok(paths.includes("/pricing"));
   assert.ok(paths.includes("/llms.txt"));
@@ -266,7 +267,7 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.ok(text.includes(planPaymentLink("dpp_readiness") ?? ""));
   assert.equal(
     `href="${planPaymentLink("strainchain_passport")}"`.startsWith(
-      'href="https://buy.stripe.com'
+      'href="https://authichain.com/checkout/'
     ),
     true
   );
@@ -415,15 +416,15 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     assert.equal(body.catalog, "/api/x402/catalog");
     assert.equal(
       new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(
       new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-      "buy.stripe.com"
+      "authichain.com"
     );
     assert.equal(body.humanCheckout.starterPaymentLink, undefined);
     const blob = JSON.stringify(body);
@@ -444,7 +445,7 @@ test("/pricing is a real catalogue page, not a 404", async () => {
     const html = await res.text();
     assert.match(html, /<title>Pricing — StrainChain<\/title>/);
     assert.ok(
-      html.includes('href="https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z"')
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
     );
     assert.match(html, /\$149/);
     assert.doesNotMatch(html, /StrainChain Basic/);
@@ -515,4 +516,40 @@ test("trailing-slash stripping is linear, not quadratic", () => {
     Date.now() - started < 1000,
     "must not degrade on a long slash run"
   );
+});
+
+test("/api/strainchain/stats proxies the canonical JSON handler", async () => {
+  const real = globalThis.fetch;
+  const calls: Request[] = [];
+  globalThis.fetch = (async (
+    input: Request | string | URL,
+    init?: RequestInit
+  ) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push(req);
+    return new Response(JSON.stringify({
+      lab_tests: 2,
+      total_chain_events: 4,
+      dispensary_receipts: 1,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const res = await get("/api/strainchain/stats");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), "application/json");
+    assert.deepEqual(await res.json(), {
+      lab_tests: 2,
+      total_chain_events: 4,
+      dispensary_receipts: 1,
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(new URL(calls[0].url).host, "app.example.com");
+    assert.equal(new URL(calls[0].url).pathname, "/api/strainchain/stats");
+    assert.equal(calls[0].headers.get("X-Forwarded-Host"), "strainchain.io");
+  } finally {
+    globalThis.fetch = real;
+  }
 });

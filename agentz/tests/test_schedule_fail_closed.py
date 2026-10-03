@@ -12,14 +12,23 @@ def _read(name: str) -> str:
     return (WORKFLOWS / name).read_text()
 
 
+LAUNCH_GUARD = 'if [ "${{ steps.launch.outputs.active }}" = "true" ]; then'
+
+
 def test_agentz_orchestration_schedule_defaults_dry_run():
+    """Schedule is dry-run unless launch mode is active (docs/OPERATING_CHARTER.md)."""
     yml = _read("agentz-orchestration.yml")
     assert "${{ inputs.dry_run || 'false' }}" not in yml
+    assert "run: node scripts/autonomy/launch-mode.mjs" in yml
     assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' in yml
     schedule_block = yml.split('if [ "${{ github.event_name }}" = "schedule" ]; then', 1)[1]
     schedule_block = schedule_block.split("fi", 1)[0]
-    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in schedule_block
-    assert 'echo "dry_run=false"' not in schedule_block
+    before, guarded = schedule_block.split(LAUNCH_GUARD, 1)
+    live, fallback = guarded.split("else", 1)
+    assert 'echo "dry_run=false"' not in before
+    assert 'echo "dry_run=false" >> "$GITHUB_OUTPUT"' in live
+    assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in fallback
+    assert 'echo "dry_run=false"' not in fallback
     assert "DRY_RUN: ${{ needs.resolve-mode.outputs.dry_run }}" in yml
 
 

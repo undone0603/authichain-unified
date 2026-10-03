@@ -12,8 +12,8 @@ importers:
         specifier: ^4.13.1
         version: 4.13.1
       stripe:
-        specifier: ^22.6.0
-        version: 22.6.1(@types/node@26.6.2)
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.6.2)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260915.1
@@ -606,8 +606,8 @@ packages:
       '@types/node':
         optional: true
 
-  stripe@22.6.1:
-    resolution: {integrity: sha512-hAKSkGeVt2u46TRYhmnvwmVHxBNtOCJnPjc+SH5sP2B2ypElYzAAY3Ljx0Ar8C2w8nfpFQiZ95qoDCDsFkXMTA==}
+  stripe@22.6.2:
+    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/node': '>=18'
@@ -1075,7 +1075,7 @@ snapshots:
       '@img/sharp-win32-x64': 0.35.4
       '@types/node': 26.6.2
 
-  stripe@22.6.1(@types/node@26.6.2):
+  stripe@22.6.2(@types/node@26.6.2):
     optionalDependencies:
       '@types/node': 26.6.2
 

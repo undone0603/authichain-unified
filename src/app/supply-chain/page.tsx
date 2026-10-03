@@ -16,7 +16,7 @@ export default function SupplyChainPage() {
       headline="Prove Every Hand-Off, On-Chain."
       subhead="Track products from origin to shelf with QR-anchored custody events, lab-certificate hashing, and verifiable digital product passports."
       primaryCta={{ label: 'Request demo', href: '/onboard' }}
-      secondaryCta={{ label: 'View genetics library', href: '/genetics/mendo-love-farms' }}
+      secondaryCta={{ label: 'How a passport works', href: 'https://strainchain.io/passport' }}
       stats={[
         { value: 'QR', label: 'Anchored events' },
         { value: 'METRC', label: 'Synced' },
@@ -27,7 +27,7 @@ export default function SupplyChainPage() {
         {
           icon: <Boxes className="h-6 w-6" />,
           title: 'End-to-End Custody',
-          desc: 'Record every hand-off — cultivation, processing, transport, retail — as an immutable, QR-anchored chain of custody.',
+          desc: 'Record every hand-off — cultivation, processing, transport, retail — as a QR-anchored chain of custody.',
         },
         {
           icon: <MapPin className="h-6 w-6" />,
