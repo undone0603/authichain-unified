@@ -4,7 +4,9 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Secrets (wrangler secret put --name authichain-edge-router, not committed):
-# STRIPE_SECRET_KEY is required for GET /api/checkout/dpp.
+# STRIPE_SECRET_KEY is required for an authorized DPP smoke checkout.
+# DPP_SMOKE_SECRET (16+ chars) gates GET /api/checkout/dpp?promo=DPP-SMOKE-E2E
+# via the x-dpp-smoke-secret header. Unset fails closed to the confirm page.
 # Live Dashboard endpoint we_1UGTCSGqTruSqV8ThM9bXVWp posts here. Bind the
 # current Reveal signing secret as STRIPE_WEBHOOK_AUTHICHAIN_SECRET (and
 # STRIPE_WEBHOOK_SECRET as fallback). GitHub Actions deploy-cloudflare.yml

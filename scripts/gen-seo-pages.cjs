@@ -205,7 +205,7 @@ function ensureMoneyCta(page) {
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF', cmmc: 'CMMC', mcp: 'MCP' };
+const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR', ppwr: 'PPWR', did: 'DID', cen: 'CEN', cenelec: 'CENELEC', espr: 'ESPR', nft: 'NFT', fsma: 'FSMA', iso: 'ISO', sd: 'SD', jwt: 'JWT', eudi: 'EUDI', cbam: 'CBAM', w3c: 'W3C', api: 'API', iec: 'IEC', jtc: 'JTC', dfars: 'DFARS', agec: 'AGEC', sb: 'SB', epr: 'EPR', usa: 'USA', usda: 'USDA', weee: 'WEEE', dsa: 'DSA', sme: 'SME', eudamed: 'EUDAMED', udi: 'UDI', ai: 'AI', fmd: 'FMD', emvs: 'EMVS', csddd: 'CSDDD', ftc: 'FTC', oid4vci: 'OID4VCI', uk: 'UK', eo: 'EO', trumark: 'TruMark', jcs: 'JCS', rdf: 'RDF', cmmc: 'CMMC', mcp: 'MCP', fips: 'FIPS', rfc: 'RFC' };
 const titleCase = (s) =>
   s.split(/\b/).map((w) => {
     const lw = w.toLowerCase();
@@ -238,7 +238,7 @@ const DATA = [
   ...[
     { keyword: 'eu ban on destroying unsold clothes and shoes records', brand: 'authichain', schemaType: 'Service',
       lead: 'Under the ESPR, large companies may not destroy unsold apparel, clothing accessories and footwear from 19 July 2026 unless a listed exception applies, and they must disclose the volumes they discard; medium-sized companies follow on 19 July 2030.',
-      bullets: ['A signed, timestamped record per batch of unsold goods: what it was, how many units, and the decision taken, in a form an auditor can check without asking you', 'Anchoring commits the hash of each record to a public ledger, so the date of a disposal decision is checkable rather than asserted', 'Records are W3C Verifiable Credentials verified offline with the Apache-2.0 reference verifier, so an authority needs no account with us'],
+      bullets: ['A signed, timestamped record per batch of unsold goods: what it was, how many units, and the decision taken, in a form an auditor can check without asking you', 'Anchoring commits the hash of each record to a public ledger, so the date of a disposal decision is checkable rather than asserted'],
       faqs: [{ q: 'Who has to comply with the destruction ban?', a: 'The ESPR applies the ban to large companies from 19 July 2026 and to medium-sized companies from 19 July 2030. Small and micro enterprises are outside it. Check your size class against the regulation text.' }, { q: 'Does a signed record prove the goods were not destroyed?', a: 'No. A signature proves who made a statement and when, and an anchor proves the hash existed at a point in time. Neither proves the physical outcome; the record is evidence you attach to your own disclosure.' }] },
     { keyword: 'espr dpp independent service provider backup copy', brand: 'authichain', schemaType: 'Service',
       lead: 'ESPR Article 10 requires the data in a digital product passport to be available through an independent third-party service provider, so a passport stays reachable if the manufacturer stops operating.',
@@ -256,7 +256,7 @@ const DATA = [
       lead: 'The ESPR lets each product group set the granularity of its digital product passport (model, batch or individual item), so the level your passport must sit at is decided by the delegated act for your product, not by a single rule.',
       bullets: ['A record can carry a GS1 Digital Link URL with a GTIN alone for model level, GTIN plus lot for batch level, or GTIN plus serial for item level', 'Each record is a signed W3C Verifiable Credential, so the same format and verifier work at every level', 'The spec requires a stable URL per item that does not change when the item changes hands, which is what item-level passports need'],
       faqs: [{ q: 'Which granularity applies to my product?', a: 'It depends on the delegated act for your product group. Read the act once it is published; until then, a record format that supports all three levels avoids a rebuild.' }, { q: 'Does a finer level make a record more trustworthy?', a: 'No. Granularity says how precisely a record identifies goods. Trust still comes from who signed it and, where present, from the anchor.' }] },
-    { keyword: 'ed25519 fips 186-5 rfc 8032 signature compliance', brand: 'authichain', schemaType: 'Service',
+    { keyword: 'ed25519 fips 186-5 rfc 8032 signature', brand: 'authichain', schemaType: 'Service',
       lead: 'Ed25519 is specified in RFC 8032 and approved as EdDSA in FIPS 186-5; AuthiChain records are signed with it, which is a statement about the algorithm and not a certification of any product.',
       bullets: ['The reference verifier uses Ed25519 verification over JCS-canonicalised record bytes, so you can read exactly what is signed', 'Using an approved algorithm is different from using a FIPS 140-validated module; AuthiChain does not claim module validation', 'Ed25519 is an elliptic-curve scheme and is not post-quantum secure, as with all such signatures'],
       faqs: [{ q: 'Is AuthiChain FIPS validated?', a: 'No. The signature algorithm is the one FIPS 186-5 approves. No cryptographic module validation is claimed.' }, { q: 'Can I check the signature without trusting AuthiChain?', a: 'Yes. The verifier is Apache-2.0 with no dependencies and runs offline; any RFC 8032 implementation can check the same signature over the same canonical bytes.' }] },
@@ -277,17 +277,21 @@ function buildEntry(d) {
   const url = `https://${b.origin || b.domain}/p/${slug}`;
   const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
-  const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+  // d.meta (optional) pins the meta description to the lead's first sentence
+  // without the price suffix. Used where a claims removal (RES-13) shortened
+  // a lead and the template would otherwise pull a new $ clause into meta.
+  const metaDescription = d.meta
+    ? clampMeta(d.meta, 158)
+    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
     `<h2>Why ${esc(b.name)}</h2>` +
     `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
     `<h2>How it works</h2>` +
-    `<p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. ${esc(b.price)}</p>` +
+    `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
-    `<h2>FAQ</h2>` +
-    d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('');
+    (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -307,17 +311,23 @@ function buildEntry(d) {
           { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
         ],
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: d.faqs.map((f) => ({
-          '@type': 'Question',
-          name: f.q,
-          acceptedAnswer: { '@type': 'Answer', text: f.a },
-        })),
-      },
+      ...(d.faqs.length
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: d.faqs.map((f) => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+              })),
+            },
+          ]
+        : []),
     ],
   };
-  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd };
+  // noindex: true keeps a page reachable at /p/<slug> but out of
+  // sitemap-slugs.json; worker-app/dynamic-pages.ts emits robots noindex for it.
+  return { slug, keyword: d.keyword, brand: b.name, domain: b.domain, title, metaDescription, h1, bodyHtml, jsonLd, ...(d.noindex ? { noindex: true } : {}) };
 }
 const PROTECTED_SEED_SLUGS = new Set([
   'ai-qr-code-art-generator',
@@ -386,7 +396,7 @@ fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 // Landing workers must not import the full catalogue; they list /p/<slug> in
 // their sitemaps from this small per-domain index instead.
 const byDomain = {};
-for (const p of merged) (byDomain[p.domain] ||= []).push(p.slug);
+for (const p of merged) if (!p.noindex) (byDomain[p.domain] ||= []).push(p.slug);
 for (const d of Object.keys(byDomain)) byDomain[d].sort();
 fs.writeFileSync(SLUGS_OUT, JSON.stringify(byDomain, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);

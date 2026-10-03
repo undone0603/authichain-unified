@@ -8,14 +8,17 @@ import { join, relative, resolve } from "node:path";
 
 const root = process.cwd();
 const ledger = JSON.parse(readFileSync(resolve(root, "config/cloudflare-estate.json"), "utf8"));
-const workersRoot = resolve(root, "workers");
+const excluded = new Set(["node_modules", ".git", ".next", "dist", "build"]);
+const workersRoot = root;
 const candidates = [];
 
 function walk(dir) {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) walk(full);
+    if (entry.isDirectory()) {
+      if (!excluded.has(entry.name)) walk(full);
+    }
     else if (entry.name === "wrangler.toml") candidates.push(full);
   }
 }
@@ -34,14 +37,17 @@ for (const file of candidates) {
 
 let failed = false;
 for (const [name, paths] of [...names.entries()].sort()) {
-  if (paths.length > 1) {
+  const entry = ledger.workers[name];
+  if (paths.length > 1 && entry?.status !== "duplicate-transitional") {
     console.error("::error::Duplicate Worker identity \"" + name + "\": " + paths.join(", "));
     failed = true;
   }
 }
 
 for (const [name, entry] of Object.entries(ledger.workers)) {
-  if (entry.status === "reconcile" && entry.canonical_path) {
+  // reconcile/transitional targets must gain their config; active ones keep it.
+  const guarded = ["reconcile", "duplicate-transitional", "active"];
+  if (guarded.includes(entry.status) && entry.canonical_path) {
     const path = resolve(root, entry.canonical_path, "wrangler.toml");
     if (!existsSync(path)) {
       console.error("::error::Reconciliation target missing Wrangler config: " + entry.canonical_path);
@@ -51,5 +57,6 @@ for (const [name, entry] of Object.entries(ledger.workers)) {
 }
 
 console.log("Cloudflare estate audit: " + names.size + " unique repo Worker identities across " + candidates.length + " Wrangler declarations.");
+console.log("Transitional duplicates must be resolved before their ledger entry can move to active.");
 console.log("Ledger entries: " + Object.keys(ledger.workers).length + "; external/transitional identities remain explicitly tracked.");
 process.exit(failed ? 1 : 0);

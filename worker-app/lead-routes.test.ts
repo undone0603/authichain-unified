@@ -183,7 +183,10 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
         { ...env, APOLLO_API_KEY: "apollo-test" } as LeadEnv
       );
       expect(res.status).toBe(200);
-      expect(fetchCalls.some(c => c.url.includes("apollo.io"))).toBe(false);
+      const hosts = fetchCalls.map(c => new URL(c.url).hostname);
+      expect(
+        hosts.some(h => h === "api.apollo.io" || h.endsWith(".apollo.io"))
+      ).toBe(false);
       expect(hubspotCalls().length).toBeGreaterThan(0);
     } finally {
       if (prev === undefined) delete process.env.APOLLO_API_KEY;

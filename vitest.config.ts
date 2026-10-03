@@ -83,6 +83,11 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "attestation") + "$1",
       },
+      {
+        find: /^@\/lib\/compliance(\/.*)?$/,
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "compliance") + "$1",
+      },
       // Same carve-out as attestation above: these live under src/lib, while
       // the catch-all sends @/* to client/src. A blanket @/lib rule cannot be
       // used — client/src/lib/utils.ts is imported as @/lib/utils by most of
@@ -173,11 +178,15 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.spec.ts",
       "worker-app/**/*.test.ts",
+      "worker/**/*.test.ts",
       "scripts/**/*.test.ts",
       "client/**/*.test.ts",
       "client/**/*.test.tsx",
       "workers/**/*.test.ts",
       "protocol/**/*.test.mjs",
+      "protocol/**/*.test.ts",
+      "ops/**/*.test.ts",
+      "scripts/**/*.test.js",
       "packages/**/*.test.ts",
       "apps/**/*.test.ts",
       "apps/**/*.test.tsx",
