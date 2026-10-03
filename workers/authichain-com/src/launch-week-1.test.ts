@@ -35,7 +35,8 @@ test("copy matches the announcement draft's Visual section", () => {
   );
   const html = launchWeek1Section(ON);
   const h2 = html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/)?.[1] ?? "";
-  assert.equal(h2.replace(/<[^>]+>/g, ""), "Launch Week #1: Oct 12–16");
+  // Same text; the dates are wrapped in a nowrap span.
+  assert.equal(h2, 'Launch Week #1: <span class="lw1-nowrap">Oct 12–16</span>');
   assert.ok(html.includes(LW1_SUBLINE));
 });
 
