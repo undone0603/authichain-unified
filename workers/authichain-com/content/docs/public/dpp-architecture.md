@@ -67,7 +67,7 @@ Live and citeable:
 - Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. Unpaid `POST /api/x402` returns HTTP 402.
 - Human commercial path: EU DPP Readiness, $299 one-time.
 
-EU DPP Readiness includes a written assessment, self-serve workspace activation, and 50 generations to publish a first passport. The $299 is a credit balance toward AuthiChain Basic invoices until it is used. Basic is listed on [/pricing#basic](/pricing#basic). This docs page does not start a Basic subscription — checkout lives on pricing.
+EU DPP Readiness includes a written assessment, self-serve workspace activation, and 50 generations to publish a first passport. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days. Basic is listed on [/pricing#basic](/pricing#basic). This docs page does not start a Basic subscription — checkout lives on pricing.
 
 ## What is in development
 

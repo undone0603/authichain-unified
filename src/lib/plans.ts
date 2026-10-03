@@ -142,7 +142,7 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299 credited toward AuthiChain Basic on conversion"],
+    features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299, and it counts toward a $1,000 pilot if you start one within 30 days"],
     cta: "Start DPP Readiness Audit",
   },
   {

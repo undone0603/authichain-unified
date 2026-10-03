@@ -56,10 +56,7 @@ describe("tryHandleX402", () => {
         paid: boolean;
         priceUsd: number | null;
       }>;
-      humanCheckout: {
-        farmUsd: number;
-        farmPaymentLink?: string;
-      };
+      humanCheckout: Record<string, unknown>;
     };
     expect(body.protocol).toBe("x402");
     expect(body.payTo).toBe("0xabc0000000000000000000000000000000000001");
@@ -67,10 +64,9 @@ describe("tryHandleX402", () => {
     expect(body.endpoints.some(e => e.paid && e.path === "/api/x402")).toBe(
       true
     );
-    expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    // Farm $149/mo is off the agent catalog (PM-222).
+    expect("farmUsd" in body.humanCheckout).toBe(false);
+    expect("farmPaymentLink" in body.humanCheckout).toBe(false);
   });
 
   it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {

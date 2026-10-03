@@ -13,7 +13,6 @@ import { ESTATE_BRANDS, type EstateBrandId } from "./estate-landing.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-const FARM_LINK = planPaymentLink("strainchain_farm") ?? "";
 const STARTER_LINK = planPaymentLink("starter") ?? "";
 const CREATOR_LINK = planPaymentLink("creator") ?? "";
 const X402_USD = x402PriceUsd();
@@ -64,7 +63,6 @@ function humanCheckoutLines(brand: SisterDiscoveryBrand): string[] {
     "## Human checkout (Stripe Payment Links)",
     `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
     `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
-    `- StrainChain Farm Plan $${planUsd("strainchain_farm")}/mo: ${FARM_LINK}`,
   ];
   if (brand === "qron") {
     lines.push(
@@ -113,10 +111,8 @@ export type EstateOpenApiDocument = {
       source: "src/lib/plans.ts";
       passportUsd: number;
       dppUsd: number;
-      farmUsd: number;
       passportPaymentLink: string;
       dppPaymentLink: string;
-      farmPaymentLink: string;
     };
   };
   servers: Array<{ url: string }>;
@@ -138,10 +134,8 @@ export function renderEstateOpenApi(
         source: "src/lib/plans.ts",
         passportUsd: planUsd("strainchain_passport"),
         dppUsd: planUsd("dpp_readiness"),
-        farmUsd: planUsd("strainchain_farm"),
         passportPaymentLink: PASSPORT_LINK,
         dppPaymentLink: DPP_LINK,
-        farmPaymentLink: FARM_LINK,
       },
     },
     servers: [{ url: origin }],

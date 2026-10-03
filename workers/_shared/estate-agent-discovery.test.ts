@@ -72,7 +72,7 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
-    assert.ok(text.includes(FARM));
+    assert.equal(text.includes(FARM), false); // Farm off buyer copy (PM-222)
     assert.equal(httpsUrl(PASSPORT).hostname, "authichain.com");
     assert.equal(httpsUrl(DPP).hostname, "authichain.com");
     assert.equal(httpsUrl(FARM).hostname, "authichain.com");
@@ -116,7 +116,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
     assert.ok(post.post.responses["402"]);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
-    assert.equal(spec.info["x-human-checkout"].farmPaymentLink, FARM);
+    assert.equal("farmPaymentLink" in spec.info["x-human-checkout"], false);
     assert.equal(
       spec.info["x-human-checkout"].passportUsd,
       planUsd("strainchain_passport")
@@ -125,10 +125,7 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       spec.info["x-human-checkout"].dppUsd,
       planUsd("dpp_readiness")
     );
-    assert.equal(
-      spec.info["x-human-checkout"].farmUsd,
-      planUsd("strainchain_farm")
-    );
+    assert.equal("farmUsd" in spec.info["x-human-checkout"], false);
     const body = JSON.stringify(spec);
     assert.equal(body.includes("/api/checkout"), false);
     assert.ok(hasHttpsHost(body, "authichain.com"));

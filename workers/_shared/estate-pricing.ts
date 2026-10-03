@@ -6,7 +6,7 @@
  * `src/app/pricing/page.tsx` never answers those apexes. AuthiChain and QRON
  * render the same customer-facing catalogue as `src/lib/plans.ts` (`listedPlans`)
  * with live Payment Links or email-gated checkout. StrainChain uses
- * `strainchain_passport` / `strainchain_farm` from `listedPlans('strainchain')`
+ * `strainchain_passport` from `listedPlans('strainchain')`
  * (Payment Links plus email-gated checkout). Do not invent prices here.
  *
  * The retired AuthiChain Starter ($299/mo), StrainChain Basic ($199/mo) and
@@ -190,10 +190,8 @@ function strainchainCatalogueCard(plan: Plan, featured: boolean): string {
 function strainchainPricingGrid(): string {
   const catalogue = listedPlans("strainchain");
   const passport = catalogue.find(p => p.id === "strainchain_passport");
-  const farm = catalogue.find(p => p.id === "strainchain_farm");
   const cards = [
     ...(passport ? [strainchainCatalogueCard(passport, true)] : []),
-    ...(farm ? [strainchainCatalogueCard(farm, false)] : []),
   ].join("");
   return `<div class="pricing-grid">${cards}</div>`;
 }
@@ -238,8 +236,9 @@ function pricingPage(origin: PricingOrigin): PricingPage {
   if (origin === "strainchain") {
     const catalogue = listedPlans("strainchain");
     const passport = catalogue.find(p => p.id === "strainchain_passport");
-    const farm = catalogue.find(p => p.id === "strainchain_farm");
-    const catalogueOffers = catalogue.map(p => ({
+    const catalogueOffers = catalogue
+      .filter(p => p.id !== "strainchain_farm")
+      .map(p => ({
       "@type": "Offer" as const,
       name: p.name,
       description: p.description,
@@ -251,7 +250,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "strainchain",
       title: "Pricing — StrainChain",
       description:
-        "Passport ($49) and Farm Plan ($149/mo) use live Stripe checkout from the published catalogue.",
+        "Passport ($49) uses live Stripe checkout from the published catalogue.",
       canonical: "https://strainchain.io/pricing",
       themeColor: "#15803d",
       primary: passport
@@ -270,7 +269,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
         "Genetics passport SKUs check out via live Stripe — figures from the catalogue only.",
       secondary: { href: "/onboard", label: "Request demo", primary: false },
       plansNote:
-        "Passport is $49 on the published Payment Link. Farm Plan ($149/mo) is the recurring plan, on its Payment Link or email-gated checkout on authichain.com.",
+        "Passport is $49 on the published Payment Link.",
       ctaTitle: passport ? passport.cta : "Request demo",
       ctaLede: passport
         ? "$49 one-time per cultivar — live Stripe checkout."
@@ -283,9 +282,6 @@ function pricingPage(origin: PricingOrigin): PricingPage {
                 label: passport.name,
               },
             ]
-          : []),
-        ...(farm?.stripe_payment_link
-          ? [{ href: gatedCheckoutUrl(farm.id), label: farm.name }]
           : []),
         { href: "/onboard", label: "Onboard" },
         { href: "/pricing", label: "Pricing" },

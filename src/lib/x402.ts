@@ -958,10 +958,8 @@ export type X402CatalogBody = {
     rail: "stripe";
     passportUsd: number;
     dppUsd: number;
-    farmUsd: number;
     passportPaymentLink?: string;
     dppPaymentLink?: string;
-    farmPaymentLink?: string;
     source: string;
   };
   discovery: {
@@ -1048,10 +1046,8 @@ export async function x402Catalog(
       rail: "stripe",
       passportUsd: planUsd("strainchain_passport"),
       dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       source: "src/lib/plans.ts",
     },
     discovery: {

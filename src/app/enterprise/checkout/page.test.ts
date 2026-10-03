@@ -11,12 +11,13 @@ describe("/enterprise/checkout", () => {
     expect(html).not.toContain("/api/checkout/enterprise");
   });
 
-  it("prices the Farm Plan from plans.ts and links its gated checkout", () => {
+  it("does not sell the Farm Plan (PM-222)", () => {
     const farm = planById("strainchain_farm");
     const link = planPaymentLink("strainchain_farm");
     expect(farm && link).toBeTruthy();
-    expect(html).toContain(`$${farm!.price}`);
-    expect(html).toContain(`href="${link}"`);
+    expect(html).not.toContain(`$${farm!.price}`);
+    expect(html).not.toContain(`href="${link}"`);
+    expect(html).not.toContain("Farm Plan");
   });
 
   it("offers the anchor partnership as custom, with unbuilt features as roadmap", () => {

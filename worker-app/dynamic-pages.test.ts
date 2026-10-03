@@ -421,7 +421,7 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain(
       'href="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(body).toContain(
+    expect(body).not.toContain(
       'href="https://authichain.com/checkout/strainchain_farm"'
     );
     expect(body).toContain(
@@ -624,7 +624,8 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     expect(body).not.toContain("not a placeholder");
     expect(body).toContain("Or buy now, no call needed");
     expect(body).toContain("StrainChain Passport — $49");
-    expect(body).toContain("StrainChain Farm Plan — $149/mo");
+    expect(body).not.toContain("Farm Plan");
+    expect(body).not.toContain("$149");
     expect(body).toContain("EU DPP Readiness Audit — $299");
     expect(body).not.toContain('href="/verify"');
     expect(body).toContain('href="https://authichain.com/contact"');

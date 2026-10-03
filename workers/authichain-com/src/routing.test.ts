@@ -272,8 +272,8 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     );
     const farmPay = planPaymentLink("strainchain_farm") ?? "";
     assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
-    assert.equal(new URL(farmPay).hostname, "authichain.com");
-    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    // Farm $149/mo is off buyer copy (PM-222).
+    assert.equal(html.includes(`href="${farmPay}"`), false, `${path} must not list Farm`);
     assert.doesNotMatch(html, /href=["']\/api\/checkout/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
@@ -593,19 +593,18 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
       protocol: string;
       catalog: string;
       health: string;
-      humanCheckout?: { farmPaymentLink?: string; farmUsd?: number };
+      humanCheckout?: Record<string, unknown>;
     };
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
+    // Farm $149/mo is off the agent catalog (PM-222).
+    assert.ok(body.humanCheckout, path);
+    assert.equal("farmPaymentLink" in body.humanCheckout!, false, path);
+    assert.equal("farmUsd" in body.humanCheckout!, false, path);
     assert.equal(
-      body.humanCheckout?.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
-      "authichain.com",
+      JSON.stringify(body).includes(planPaymentLink("strainchain_farm") ?? "@@"),
+      false,
       path
     );
   }

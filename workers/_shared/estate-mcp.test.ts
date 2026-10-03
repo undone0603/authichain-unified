@@ -70,10 +70,8 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
             source: string;
             passportUsd: number;
             dppUsd: number;
-            farmUsd: number;
             passportPaymentLink: string;
             dppPaymentLink: string;
-            farmPaymentLink: string;
             starterPaymentLink?: string;
             creatorPaymentLink?: string;
           };
@@ -108,13 +106,12 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         `${host} ${path}`
       );
       assert.equal(
-        body.pricing.humanCheckout.farmUsd,
-        planUsd("strainchain_farm"),
+        "farmUsd" in body.pricing.humanCheckout,
+        false,
         `${host} ${path}`
       );
       stripeLink(body.pricing.humanCheckout.passportPaymentLink);
       stripeLink(body.pricing.humanCheckout.dppPaymentLink);
-      stripeLink(body.pricing.humanCheckout.farmPaymentLink);
       assert.equal(
         body.pricing.humanCheckout.passportPaymentLink,
         PASSPORT,
@@ -126,8 +123,8 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
         `${host} ${path}`
       );
       assert.equal(
-        body.pricing.humanCheckout.farmPaymentLink,
-        FARM,
+        "farmPaymentLink" in body.pricing.humanCheckout,
+        false,
         `${host} ${path}`
       );
       assert.equal(
@@ -215,7 +212,8 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
   };
   assert.ok(priced.result.content[0].text.includes("POST /api/x402"));
   assert.ok(priced.result.content[0].text.includes(PASSPORT));
-  assert.ok(priced.result.content[0].text.includes(FARM));
+  assert.equal(priced.result.content[0].text.includes(FARM), false);
+  assert.equal(priced.result.content[0].text.includes("Farm"), false);
   assert.equal(priced.result.content[0].text.includes("/api/checkout"), false);
 });
 

@@ -110,7 +110,7 @@ ${estateFeatures(
     },
     {
       title: "Not a cannabis pitch",
-      body: "DoD-seeking manufacturers get origin and document-hash copy. StrainChain Farm is a different SKU.",
+      body: "DoD-seeking manufacturers get origin and document-hash copy.",
     },
   ],
   "honesty"

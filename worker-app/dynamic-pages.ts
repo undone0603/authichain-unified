@@ -603,7 +603,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.",
       },
       {
         icon: "🌍",
@@ -932,11 +932,6 @@ function onboardPayNowHtml(): string {
     }) +
     "\n" +
     catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "StrainChain Farm Plan — $149/mo",
-    }) +
-    "\n" +
-    catalogPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "EU DPP Readiness Audit — $299",
     }) +
@@ -970,7 +965,7 @@ function onboardFormHtml(error?: string, host = ""): string {
   return htmlDocument({
     title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +

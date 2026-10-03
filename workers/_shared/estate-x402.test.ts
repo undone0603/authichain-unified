@@ -219,7 +219,7 @@ test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
   );
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
+test("GET /api/x402/catalog is 200 with Passport+DPP Payment Links, no Farm (PM-222)", async () => {
   const passport = planPaymentLink("strainchain_passport") ?? "";
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const farm = planPaymentLink("strainchain_farm") ?? "";
@@ -243,10 +243,8 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
         rail: string;
         passportUsd: number;
         dppUsd: number;
-        farmUsd: number;
         passportPaymentLink?: string;
         dppPaymentLink?: string;
-        farmPaymentLink?: string;
         starterUsd?: number;
         creatorUsd?: number;
         starterPaymentLink?: string;
@@ -278,10 +276,11 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       host
     );
     assert.equal(body.humanCheckout.dppUsd, planUsd("dpp_readiness"), host);
-    assert.equal(body.humanCheckout.farmUsd, planUsd("strainchain_farm"), host);
+    assert.equal("farmUsd" in body.humanCheckout, false, host);
     assert.equal(body.humanCheckout.passportPaymentLink, passport, host);
     assert.equal(body.humanCheckout.dppPaymentLink, dpp, host);
-    assert.equal(body.humanCheckout.farmPaymentLink, farm, host);
+    assert.equal("farmPaymentLink" in body.humanCheckout, false, host);
+    assert.equal(JSON.stringify(body).includes(farm), false, host);
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
       "authichain.com",
@@ -289,11 +288,6 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
     );
     assert.equal(
       new URL(body.humanCheckout.dppPaymentLink ?? "").hostname,
-      "authichain.com",
-      host
-    );
-    assert.equal(
-      new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
       "authichain.com",
       host
     );

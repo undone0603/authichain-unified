@@ -86,7 +86,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "📊",
           title: "EU DPP Readiness",
-          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.",
         },
         {
           icon: "🌍",

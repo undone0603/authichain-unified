@@ -167,7 +167,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2337,8 +2337,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
-      { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days." },
     ],
     "technology",
   );
@@ -2831,7 +2830,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
   <h2>One record, anchored on Polygon mainnet</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
+  <p>The published demonstration record is signed with its own demonstration Ed25519 key (the did:key inside the record, not the production issuer) and its hash is committed in Polygon transaction
     <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
     It is a demonstration, not a product.</p>
   <ul>
@@ -2963,7 +2962,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
+        The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.
         Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
       </p>
     </div>

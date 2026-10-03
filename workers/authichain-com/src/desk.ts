@@ -82,7 +82,7 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "Public catalogue",
     state: "live",
     detail:
-      "Passport $49, Farm $149/mo, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
+      "Passport $49, DPP $299, Starter $29, Creator $99. Free cap is 5 generations. Theater $499 and $1,499 are not listed (#1234).",
   },
   {
     surface: "gov-mint",
@@ -174,7 +174,7 @@ type DeskSeal = {
   origin: string;
   finding: string;
   disclaimer: string;
-  plan?: "dpp_readiness" | "strainchain_farm" | "strainchain_passport";
+  plan?: "dpp_readiness" | "strainchain_passport";
   gift?: string;
   fields: { label: string; value: string }[];
   votes: Record<AgentId, AgentVote>;
@@ -229,13 +229,12 @@ const DESK_SEALS: DeskSeal[] = [
     origin: "Northern Lower Peninsula, MI",
     finding: "Genetics passport matches the sample CoA hash. Not a METRC filing.",
     disclaimer: SAMPLE_NOTE,
-    plan: "strainchain_farm",
     fields: [
       { label: "Cultivar", value: "SAMPLE-01" },
       { label: "CoA hash", value: "sha256:7c91…e2ab" },
       { label: "METRC lot", value: "1A4060300002DEMO" },
       { label: "Pack", value: "Jar + CoA, not a dispensary license" },
-      { label: "SKU", value: "Farm $149/mo · Passport $49" },
+      { label: "SKU", value: "Passport $49" },
     ],
     votes: ALL_PASS,
   },
@@ -379,7 +378,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Sealing",
         title: "Passport on the jar",
-        body: "Sealed 12 Sep 2026. Farm is $149 a month. A single cultivar passport is $49. This page is the sample story for that jar.",
+        body: "Sealed 12 Sep 2026. A single cultivar passport is $49. This page is the sample story for that jar.",
       },
     ],
     "GC-MIA-DLA-0005": [
@@ -465,13 +464,6 @@ function sealCta(seal: DeskSeal): string {
     return catalogPaymentLinkHtml({
       planId: "dpp_readiness",
       label: "Pay $299 DPP Readiness",
-      className: "btn",
-    });
-  }
-  if (seal.plan === "strainchain_farm") {
-    return catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "Pay Farm $149/mo",
       className: "btn",
     });
   }
@@ -648,11 +640,6 @@ function home(): string {
          label: "Passport $49",
          className: "btn ghost",
        })}
-       ${catalogPaymentLinkHtml({
-         planId: "strainchain_farm",
-         label: "Farm $149/mo",
-         className: "btn ghost",
-       })}
      </div>
      <div class="grid g3" style="margin-top:2.5rem">
        <div class="card"><p class="kicker">TruMark</p><p>Scan seal. Not a SKU.</p><a href="/trumark">Open TruMark</a></div>
@@ -706,32 +693,19 @@ function pricing(): string {
     inputId: "desk-price-pass-email",
     buttonClass: "btn",
   });
-  const farm = checkoutEmailFormHtml({
-    action: "https://authichain.com/checkout/strainchain_farm",
-    label: "Start a Farm Plan",
-    formId: "desk-price-farm",
-    inputId: "desk-price-farm-email",
-    buttonClass: "btn",
-  });
   return shell(
     "Pricing — AuthiChain desk",
-    "Live catalogue. Farm $149/mo is the recurring SKU. A POST on the confirm page starts Stripe.",
+    "Live catalogue. A POST on the confirm page starts Stripe.",
     "/desk/pricing",
     `<p class="kicker">Published catalogue</p>
      <h1>Prices that already charge.</h1>
      <p class="muted">The confirm page is a GET. Stripe starts only when that form is posted with a work email.</p>
      <div class="grid g2" style="margin-top:1.5rem">
-       <div class="card"><p class="kicker">Farm</p><p class="price">$149<span style="font-size:1rem;color:var(--muted)">/mo</span></p><p class="muted">Unlimited cultivars. Recurring. Same live Stripe link as strainchain.io.</p>${farm}
-         <p style="margin-top:.75rem">${catalogPaymentLinkHtml({
-           planId: "strainchain_farm",
-           label: "Pay $149/mo on Stripe",
-           className: "btn ghost",
-         })}</p></div>
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
-       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
+       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Counts toward a $1,000 pilot within 30 days.</p>${dpp}</div>
      </div>
-     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
+     <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed.</p>`
   );
 }
 
@@ -800,7 +774,7 @@ function hubs(): string {
      <h1>Seed hubs live on each apex.</h1>
      <p class="muted">W3C Render Method, Confidence Method, and Data Model 2.1 are research pages. This protocol does not implement them yet.</p>
      <div class="grid g2" style="margin-top:1.5rem">${cards}</div>
-     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / Farm $149/mo / QRON packs / GovChain onboard.</p>`
+     <p class="muted" style="margin-top:1.5rem">Checkout stays DPP $299 / Passport $49 / QRON packs / GovChain onboard.</p>`
   );
 }
 

@@ -95,7 +95,7 @@ const JSON_LD = {
           name: "What is the authentic agentic economy?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Agents can already pay and call tools. They still need a machine-verifiable check that a physical product, passport, or claim is real. AuthiChain is that check: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.",
+            text: "Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is building that check: MCP tools today; 5-agent consensus and paid x402 verification are in development.",
           },
         },
         {
@@ -219,7 +219,7 @@ ${estateHero({
   ],
 })}
 ${estateTrust([
-  { value: "Ed25519", label: "Signed seals" },
+  { value: "Ed25519", label: "Signed verify responses" },
   { value: "$0.05", label: "x402 per verify" },
 ])}
 ${estateFeatures(
@@ -244,7 +244,7 @@ ${estateFeatures(
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.",
     },
     {
       title: "Machine-readable passports",
