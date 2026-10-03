@@ -22,11 +22,18 @@
  *   contacts. It now requires INTERNAL_API_SECRET. Its Vercel Cron GET (a
  *   no-op) is not ported.
  * - User-supplied fields are HTML-escaped in the notification email.
+ * - Lead capture no longer sends the email to Apollo for enrichment
+ *   (AE-20261002-CFD-04). Scoring uses only the local domain heuristic, so
+ *   business-domain leads still sync to HubSpot exactly as before when no
+ *   Apollo key was bound. n8n is unchanged.
+ * - Lead capture stores company, role, battery_categories, target_date and
+ *   message (migration 20261002125000). If those columns are not there yet,
+ *   the insert is retried without them so no lead is lost.
  */
 import type { Context, Hono } from "hono";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { detectBot } from "../src/app/api/book/bot-detection";
-import { enrichLead } from "../src/lib/industrial/enrichment";
+import { detectEnterpriseTheater } from "../src/lib/industrial/enrichment";
 
 export type LeadEnv = {
   HUBSPOT_ACCESS_TOKEN?: string;
@@ -38,7 +45,6 @@ export type LeadEnv = {
   SALES_NOTIFY_EMAIL?: string;
   MAKE_LEAD_WEBHOOK_URL?: string;
   N8N_LEAD_WEBHOOK_URL?: string;
-  APOLLO_API_KEY?: string;
   INTERNAL_API_SECRET?: string;
   NEXT_PUBLIC_SUPABASE_URL?: string;
   SUPABASE_URL?: string;
@@ -383,20 +389,40 @@ async function handleBook(c: LeadContext) {
   }
 }
 
-async function runLeadAutomation(
-  c: LeadContext,
-  lead: {
-    email: string;
-    name?: string;
-    source?: string;
-    product_interest?: string;
-  }
-) {
+type CapturedLead = {
+  email: string;
+  name?: string;
+  source?: string;
+  product_interest?: string;
+  company?: string;
+  role?: string;
+  message?: string;
+};
+
+/**
+ * Local, no-network lead scoring. Same heuristic enrichLead() used before,
+ * minus the Apollo people/match call: nothing about the lead leaves for
+ * enrichment.
+ */
+export function scoreLeadLocally(email: string): {
+  is_enterprise: boolean;
+  lead_score: number;
+} {
+  const theater = detectEnterpriseTheater(email);
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  const isEnterprise =
+    !!theater ||
+    !["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"].includes(domain);
+  let score = 10;
+  if (isEnterprise) score += 40;
+  if (theater) score += 30;
+  return { is_enterprise: isEnterprise, lead_score: Math.min(score, 100) };
+}
+
+async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
   try {
-    const apollo = envValue(c, "APOLLO_API_KEY");
-    if (apollo) process.env.APOLLO_API_KEY = apollo;
-    const enriched = await enrichLead(lead.email);
-    const finalLead = { ...lead, ...enriched };
+    const scored = scoreLeadLocally(lead.email);
+    const finalLead = { ...lead, ...scored };
 
     const make = envValue(c, "MAKE_LEAD_WEBHOOK_URL");
     if (make) {
@@ -428,9 +454,18 @@ async function runLeadAutomation(
     }
 
     const token = hubspotToken(c);
-    if (token && (enriched.is_enterprise || enriched.lead_score > 60)) {
+    if (token && (scored.is_enterprise || scored.lead_score > 60)) {
+      const [first, ...rest] = (lead.name ?? "").trim().split(/\s+/);
       const synced = await syncContactToHubSpot(
-        { ...finalLead, source: lead.source },
+        {
+          email: lead.email,
+          first_name: first || undefined,
+          last_name: rest.join(" ") || undefined,
+          company_name: lead.company,
+          job_title: lead.role,
+          lead_score: scored.lead_score,
+          source: lead.source,
+        },
         token
       );
       await logAutomation(
@@ -452,22 +487,62 @@ async function runLeadAutomation(
   }
 }
 
+function clip(value: unknown, max: number): string | undefined {
+  const v = str(value);
+  return v === undefined
+    ? undefined
+    : v.replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+/** categories may arrive as an array or a comma-separated string. */
+export function readCategories(value: unknown): string[] | undefined {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : [];
+  const out = list
+    .map(v => clip(v, 60))
+    .filter((v): v is string => !!v)
+    .slice(0, 10);
+  return out.length ? out : undefined;
+}
+
+/** PostgREST/Postgres "column does not exist" (migration not applied yet). */
+function isMissingColumnError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "PGRST204" ||
+    error.code === "42703" ||
+    /column .* (does not exist|of 'lead_captures')/i.test(error.message ?? "")
+  );
+}
+
 async function handleLeadCapture(c: LeadContext) {
   const body = await readJson(c);
   const email = str(body?.email);
   if (!body || !email) return c.json({ error: "Email required" }, 400);
 
-  const lead = {
+  const lead: CapturedLead = {
     email,
     name: str(body.name),
     source: str(body.source) || "website",
     product_interest: str(body.product_interest) || "qron",
+    company: clip(body.company, 200),
+    role: clip(body.role, 120),
+    message: str(body.message)?.trim().slice(0, 2000),
+  };
+  const formFields = {
+    company: lead.company ?? null,
+    role: lead.role ?? null,
+    battery_categories: readCategories(body.categories) ?? null,
+    target_date: clip(body.target_date, 60) ?? null,
+    message: lead.message ?? null,
   };
 
   try {
     const admin = await supabaseAdmin(c);
     if (!admin) throw new Error("Supabase not configured");
-    const { error } = await admin.from("lead_captures").insert({
+    const base = {
       email,
       name: lead.name ?? null,
       source: lead.source,
@@ -476,7 +551,17 @@ async function handleLeadCapture(c: LeadContext) {
       utm_medium: str(body.utm_medium) ?? null,
       utm_campaign: str(body.utm_campaign) ?? null,
       product_interest: lead.product_interest,
-    });
+    };
+    let { error } = await admin
+      .from("lead_captures")
+      .insert({ ...base, ...formFields });
+    if (error && isMissingColumnError(error)) {
+      // Migration 20261002125000 not applied yet: keep the lead, drop the extras.
+      console.warn(
+        "[lead-capture] form-field columns missing; stored base row"
+      );
+      ({ error } = await admin.from("lead_captures").insert(base));
+    }
     if (error) throw new Error(error.message);
   } catch (err) {
     console.error("[lead-capture] DB error:", errorMessage(err));

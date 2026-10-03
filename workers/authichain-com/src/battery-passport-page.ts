@@ -27,10 +27,12 @@ import {
   type AnnexRow,
   type Placing,
 } from "./battery-gap-map";
+import { LEAD_FORM_CSS, batteryLeadFormSection } from "./battery-lead-form";
 
 export const BATTERY_PASSPORT_PATH = "/battery-passport";
 export const BATTERY_PASSPORT_CANONICAL = `https://authichain.com${BATTERY_PASSPORT_PATH}`;
-export const BATTERY_CHECKOUT_ACTION = "https://authichain.com/checkout/dpp_readiness";
+export const BATTERY_CHECKOUT_ACTION =
+  "https://authichain.com/checkout/dpp_readiness";
 export const BATTERY_UTM = {
   utm_source: "site",
   utm_medium: "offer-page",
@@ -340,6 +342,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
     .gm-table th, .gm-table td { text-align:left; padding:.45rem .5rem; border-top:1px solid var(--border); vertical-align:top; }
     .gm-status { font-family:ui-monospace,monospace; font-size:.82rem; white-space:nowrap; }
     .gm-errors { color:#c0392b; }
+    ${LEAD_FORM_CSS}
   </style>
 </head>
 <body>
@@ -394,6 +397,8 @@ ${gapMapSection()}
     </div>
   </section>
 
+${batteryLeadFormSection()}
+
   <section class="estate-cta cta-section" id="get-started">
     <div class="wrap">
       <h2>Start before your importer asks for it</h2>
@@ -409,7 +414,10 @@ ${estateFooter(
       heading: "Start",
       links: [
         { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
-        { href: `${BATTERY_PASSPORT_PATH}/sample-audit`, label: "Sample assessment" },
+        {
+          href: `${BATTERY_PASSPORT_PATH}/sample-audit`,
+          label: "Sample assessment",
+        },
         { href: "/pricing", label: "Pricing" },
       ],
     },
