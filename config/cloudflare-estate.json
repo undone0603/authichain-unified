@@ -8,7 +8,7 @@
       "status": "active",
       "canonical_path": "api",
       "deployment_workflow": ".github/workflows/deploy-edge-worker.yml",
-      "consolidated": "2026-10-02: removed the services/api/worker.ts + wrangler.toml duplicate (an older copy without Stripe webhook signature verification). api/ is the deployed source and carries the tests.",
+      "consolidated": "2026-10-02: removed the services/api/worker.ts + wrangler.toml duplicate (an older copy without Stripe webhook signature verification), then services/api/server.js (a stale bundle of the old Express server). api/ is the deployed source and carries the tests.",
       "note": "Move api/ under workers/ only in the same change as deploy-edge-worker.yml (carried over from #1471)."
     },
     "ai-classification": {
@@ -59,15 +59,10 @@
       "repository_evidence": "Both Wrangler files declare the same Worker name, entrypoint, compatibility date, flags, and observability settings; deploy-workers.yml explicitly deploys workers/*."
     },
     "authichain-edge-router": {
-      "status": "duplicate-transitional",
+      "status": "active",
       "canonical_path": "worker-app",
-      "duplicate_sources": [
-        "worker-app/wrangler.toml",
-        "services/worker-app/wrangler.toml"
-      ],
-      "action": "compare-bindings-routes-and-deployment-consumers-before-consolidation",
-      "risk": "critical",
-      "repository_evidence": "Both configs declare authichain-edge-router and document the duplicate. They differ in assets/alias/routes/vars, so this cannot be treated as a byte-identical mirror."
+      "deployment_workflow": ".github/workflows/deploy-cloudflare.yml",
+      "consolidated": "2026-10-02: removed services/worker-app. No workflow deployed it (deploy-cloudflare.yml uses working-directory: worker-app). Its wrangler.toml declared the same Worker name with fewer routes and vars, and its code was older than worker-app/ (it still carried the /verify page that #950 removed), so a manual wrangler deploy from it would have rolled production back."
     },
     "authichain-outreach-engine": {
       "status": "reported-live-external",

@@ -164,6 +164,42 @@ export function isAllowedPostOrigin(request: Request): boolean {
   );
 }
 
+const CHECKOUT_RETURN_FALLBACK = "https://authichain.com";
+
+function allowedHttpsOrigin(value: string | null | undefined): string | null {
+  const raw = (value || "").trim();
+  if (!raw || raw === "null") return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  const ok = ALLOWED_POST_ORIGIN_HOSTS.some(
+    allowed => host === allowed || host.endsWith(`.${allowed}`)
+  );
+  return ok ? url.origin : null;
+}
+
+/**
+ * Origin embedded in Stripe success_url and cancel_url.
+ * An allowlisted https Origin wins, then the request URL's own origin.
+ * A missing or foreign Origin is not treated as allowed.
+ */
+export function checkoutReturnOrigin(request: Request): string {
+  const fromHeader = allowedHttpsOrigin(request.headers.get("origin"));
+  if (fromHeader) return fromHeader;
+  let requestOrigin: string | null = null;
+  try {
+    requestOrigin = new URL(request.url).origin;
+  } catch {
+    requestOrigin = null;
+  }
+  return allowedHttpsOrigin(requestOrigin) || CHECKOUT_RETURN_FALLBACK;
+}
+
 // ─── HTML ───────────────────────────────────────────────────────────────────
 
 function esc(value: unknown): string {
