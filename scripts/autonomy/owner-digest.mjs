@@ -204,14 +204,15 @@ async function countSupabaseRows(env, table, filters, select = "id") {
     method: "HEAD",
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `******
+      ["Authorization"]: ["Bearer", env.SUPABASE_SERVICE_ROLE_KEY].join(" "),
       Prefer: "count=exact",
     },
   });
   if (!response.ok) throw new Error(`Supabase ${table} ${response.status}`);
 
   const total = response.headers.get("content-range")?.split("/").at(-1);
-  if (!total || total === "*") throw new Error(`Supabase ${table} count missing`);
+  if (!total || total === "*")
+    throw new Error(`Supabase ${table} count missing`);
   return Number(total);
 }
 
@@ -276,7 +277,7 @@ export function buildDigest(d, { force = false } = {}) {
       item("QRON Starter funnel events: not connected");
     else
       item(
-        `QRON Starter funnel, last 7 days: ${b.starterFunnel.views} views, ${b.starterFunnel.unauthenticated} unauthenticated attempts, ${b.starterFunnel.sessions} checkout sessions, ${b.starterFunnel.abandoned} abandoned, ${b.starterFunnel.purchases} non-founder fulfilled purchases`
+        `QRON Starter funnel, last 7 days: ${b.starterFunnel.views} views, ${b.starterFunnel.unauthenticated} unauthenticated attempts, ${b.starterFunnel.sessions} checkout sessions, ${b.starterFunnel.abandoned} abandoned, ${b.starterFunnel.purchases} non-founder fulfilled purchase${b.starterFunnel.purchases === 1 ? "" : "s"}`
       );
     item(
       b.checkoutWebhookFailures == null

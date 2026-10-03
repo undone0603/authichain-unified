@@ -19,6 +19,10 @@ contract.
 The kill window starts only after `/generate` views, unauthenticated attempts,
 checkout events, Stripe expirations, and successfully fulfilled Starter
 purchases all record to `growth_loop_events` and the path is verified.
+Stripe outcome events use a SHA-256 digest of the Checkout Session ID as a
+deduplication key. The owner digest reports seven-day funnel counts and failed
+checkout webhooks when those Supabase records are available. Apply the
+additive migration and verify the live event counts before starting the window.
 
 ## Priority
 
@@ -84,13 +88,13 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | Visitor hits `/generate`; generation requires a signed-in account with credits |
-| Mechanism | Account credits → email-gated `/checkout/starter` → Stripe; unauthenticated attempts route to Starter checkout |
-| CVR | Baseline not established: `generate_view` → `checkout_session_started` → fulfilled paid purchase |
-| Events | `generate_view`, `generate_submit_anon` (unauthenticated attempt), `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` (paid and fulfilled) |
-| Kill | 14 days after end-to-end event wiring is deployed and verified: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view` |
+|           |                                                                                                                                                                                                                            |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger   | Visitor hits `/generate`; generation requires a signed-in account with credits                                                                                                                                             |
+| Mechanism | Account credits → email-gated `/checkout/starter` → Stripe; unauthenticated attempts route to Starter checkout                                                                                                             |
+| CVR       | Baseline not established: `generate_view` → `checkout_session_started` → fulfilled paid purchase                                                                                                                           |
+| Events    | `generate_view`, `generate_submit_anon` (unauthenticated attempt), `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` (paid and fulfilled) |
+| Kill      | 14 days after end-to-end event wiring is deployed and verified: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view`                                                                                        |
 
 ### Lifecycle email (recovery only)
 
@@ -131,13 +135,13 @@ CTA: same.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | `/p/{dpp-slug}` or docs visitor |
-| Mechanism | Free score → email optional → `$299` gated checkout |
-| CVR | estimate 0.5–2% completed check → paid |
-| Events | `dpp_check_view`, `dpp_check_completed`, `dpp_check_email_captured`, `checkout_dpp_view`, `purchase_dpp_succeeded` |
-| Kill | 30 days: 0 non-founder paid and ≥80 completed checks |
+|           |                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| Trigger   | `/p/{dpp-slug}` or docs visitor                                                                                    |
+| Mechanism | Free score → email optional → `$299` gated checkout                                                                |
+| CVR       | estimate 0.5–2% completed check → paid                                                                             |
+| Events    | `dpp_check_view`, `dpp_check_completed`, `dpp_check_email_captured`, `checkout_dpp_view`, `purchase_dpp_succeeded` |
+| Kill      | 30 days: 0 non-founder paid and ≥80 completed checks                                                               |
 
 Proof still required before any “brands use this” line: one stranger `purchase_dpp_succeeded` plus the delivered written assessment file.
 
@@ -168,13 +172,13 @@ Use the live VT-26 page as the template. Do not invent panels.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | Organic genetics URL or package QR |
-| Mechanism | Public record → $49 self-serve publish |
-| CVR | estimate 1–4% view → paid |
-| Events | `genetics_view`, `passport_qr_scan`, `checkout_passport_view`, `purchase_passport_succeeded` |
-| Kill | 30 days: 0 non-founder paid and ≥150 genetics views |
+|           |                                                                                              |
+| --------- | -------------------------------------------------------------------------------------------- |
+| Trigger   | Organic genetics URL or package QR                                                           |
+| Mechanism | Public record → $49 self-serve publish                                                       |
+| CVR       | estimate 1–4% view → paid                                                                    |
+| Events    | `genetics_view`, `passport_qr_scan`, `checkout_passport_view`, `purchase_passport_succeeded` |
+| Kill      | 30 days: 0 non-founder paid and ≥150 genetics views                                          |
 
 ---
 

@@ -105,13 +105,11 @@ vi.mock("../../src/lib/stripe-webhook-log", () => ({
 }));
 
 const { accrueAffiliateCommission } = vi.hoisted(() => ({
-  accrueAffiliateCommission: vi
-    .fn()
-    .mockResolvedValue({
-      credited: true,
-      affiliateId: "aff_1",
-      commission: 9.8,
-    }),
+  accrueAffiliateCommission: vi.fn().mockResolvedValue({
+    credited: true,
+    affiliateId: "aff_1",
+    commission: 9.8,
+  }),
 }));
 
 vi.mock("../../src/lib/affiliate-accrual", () => ({

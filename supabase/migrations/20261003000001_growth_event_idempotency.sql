@@ -9,6 +9,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS growth_loop_events_event_idempotency_idx
   ON public.growth_loop_events (event, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
+CREATE INDEX IF NOT EXISTS stripe_events_checkout_error_time_idx
+  ON public.stripe_events (event_type, processed_at)
+  WHERE status = 'error'
+    AND event_type IN (
+      'checkout.session.completed',
+      'checkout.session.async_payment_succeeded'
+    );
+
 CREATE OR REPLACE FUNCTION public.growth_record_event_idempotent(
   p_event text,
   p_loop text,

@@ -752,7 +752,7 @@ describe("owner digest scoreboard", async () => {
       "battery-passport page: 1 checkouts started, 0 paid"
     );
     expect(full).toContain(
-      "QRON Starter funnel, last 7 days: 25 views, 4 unauthenticated attempts, 2 checkout sessions, 1 abandoned, 1 non-founder fulfilled purchases"
+      "QRON Starter funnel, last 7 days: 25 views, 4 unauthenticated attempts, 2 checkout sessions, 1 abandoned, 1 non-founder fulfilled purchase"
     );
     expect(full).toContain("Checkout webhook failures, last 7 days: 0");
     expect(full).toContain("Paid by customers: $49.00");
