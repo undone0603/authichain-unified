@@ -64,7 +64,6 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="240" y="390" font-family="Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="2" fill="#f0f9ff">GOVCHAIN</text>
   <line x1="240" y1="416" x2="520" y2="416" stroke="#3b82f6" stroke-width="3"/>
   <text x="240" y="472" font-family="Arial,sans-serif" font-size="32" font-weight="300" fill="#7e93b8">Federal Contract Intelligence</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#4b6080">AI Fit-Scoring · On-Chain Provenance · Made-in-USA Compliance</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#3b82f6">GOVCHAIN.US</text>
 </svg>`;
 
@@ -2469,7 +2468,6 @@ ${estateFeatures(
     <div class="compliance-grid">
       <div class="compliance-card"><h3>FAR / DFARS</h3><p>Evidence mapping for Federal Acquisition Regulation and defense supplement clauses.</p></div>
       <div class="compliance-card"><h3>NIST SP 800-171</h3><p>Controlled Unclassified Information control tracking with an audit-ready evidence trail.</p></div>
-      <div class="compliance-card"><h3>Buy American / Made in USA</h3><p></p></div>
       <div class="compliance-card"><h3>Section 889 / supply chain</h3><p>Prohibited-source screening and supply-chain provenance for prime and sub assurance.</p></div>
     </div>
   </div>
