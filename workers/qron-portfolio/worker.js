@@ -215,7 +215,7 @@ h2 .a{color:var(--primary)}
 
 <section class="cb" id="contact">
   <h2 style="margin-bottom:24px">Ready to <span class="a">Stand Out</span>?</h2>
-  <p style="color:var(--text-dim);font-size:18px;margin-bottom:48px;max-width:500px;margin-left:auto;margin-right:auto">Get your first custom QRON art QR code in under 24 hours. 100% scannable guaranteed.</p>
+  <p style="color:var(--text-dim);font-size:18px;margin-bottom:48px;max-width:500px;margin-left:auto;margin-right:auto">Get your first custom QRON art QR code. 100% scannable guaranteed.</p>
   <form id="leadForm" style="max-width:480px;margin:0 auto 48px;text-align:left">
     <input type="text" name="name" placeholder="Your Name" required style="width:100%;padding:14px;margin-bottom:12px;background:#111;border:1px solid var(--border);border-radius:4px;color:#fff;font-family:var(--body);font-size:14px">
     <input type="email" name="email" placeholder="Email Address" required style="width:100%;padding:14px;margin-bottom:12px;background:#111;border:1px solid var(--border);border-radius:4px;color:#fff;font-family:var(--body);font-size:14px">
@@ -243,8 +243,8 @@ document.getElementById('leadForm').addEventListener('submit',async function(e){
   btn.textContent='Sending...';btn.disabled=true;
   try{
     const d={name:this.name.value,email:this.email.value,company:this.company.value,style:this.style.value,message:this.message.value,source:'portfolio'};
-    const r=await fetch('https://qron-automation.undone-k.workers.dev/webhook/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    if(r.ok){msg.style.display='block';msg.style.color='#00ff88';msg.textContent='Received! We will reply within 2 hours with your free sample.';this.reset();}
+    const r=await fetch('https://qron.space/autoflow/webhook/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    if(r.ok){msg.style.display='block';msg.style.color='#00ff88';msg.textContent='Received! We will reply.';this.reset();}
     else throw new Error('fail');
   }catch(e){msg.style.display='block';msg.style.color='var(--primary)';msg.textContent='Thanks! Email us at authichain@gmail.com and we will get right back to you.';}
   btn.textContent='Get a Free Sample';btn.disabled=false;
