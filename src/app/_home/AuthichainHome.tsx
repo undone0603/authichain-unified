@@ -31,7 +31,7 @@ export function AuthichainHome() {
         {
           icon: <Award className="h-6 w-6" />,
           title: "EU DPP Readiness",
-          desc: "Live self-serve checkout. Written readiness assessment, merchant activation, and 50 workspace generations. $299 credited toward AuthiChain Basic on conversion.",
+          desc: "Live self-serve checkout. Written readiness assessment, merchant activation, and 50 workspace generations. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.",
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,

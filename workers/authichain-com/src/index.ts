@@ -167,7 +167,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2337,7 +2337,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days." },
     ],
     "technology",
   );
@@ -2962,7 +2962,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
         Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
+        The audit is $299, and it counts toward a $1,000 pilot if you start one within 30 days.
         Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
       </p>
     </div>

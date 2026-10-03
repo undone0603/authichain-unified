@@ -247,7 +247,7 @@ export default {
             { name: 'StrainChain Passport', price: '$49', requests: 'One-time', features: ['One published genetics passport', 'Totals recomputed from the source CoA panel', 'QR code and shareable link'], stripeLink: 'https://authichain.com/checkout/strainchain_passport' },
             { name: 'QRON Starter Pack', price: '$29', requests: '100 generations', features: ['100 AI QR generations, never expire', 'Holographic & Memory modes', 'Designed for AuthiChain signed verification (in development)'], stripeLink: 'https://authichain.com/checkout/starter' },
             { name: 'QRON Creator Pack', price: '$99', requests: '500 generations', features: ['500 AI QR generations, never expire', 'All Pro modes and premium styles', 'Priority generation queue'], stripeLink: 'https://authichain.com/checkout/creator' },
-            { name: 'EU DPP Readiness Audit', price: '$299', requests: 'One-time', features: ['Written EU DPP readiness assessment', '50 workspace generations', 'Credited toward AuthiChain Basic'], stripeLink: 'https://authichain.com/checkout/dpp_readiness' },
+            { name: 'EU DPP Readiness Audit', price: '$299', requests: 'One-time', features: ['Written EU DPP readiness assessment', '50 workspace generations', '$299, and it counts toward a $1,000 pilot if you start one within 30 days'], stripeLink: 'https://authichain.com/checkout/dpp_readiness' },
             { name: 'Theater 3: Elite', price: '$1,499/mo', requests: 'Unlimited', features: ['Unlimited industrial artifacts', 'Custom AI model training', 'Real-time security webhooks'], stripeLink: 'https://authichain.com/checkout/theater_3' },
           ]
         }, cors);
