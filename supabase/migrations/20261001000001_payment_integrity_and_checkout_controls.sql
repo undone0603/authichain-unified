@@ -342,3 +342,9 @@ REVOKE ALL ON FUNCTION public.record_gated_checkout_session(text, text)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_gated_checkout_session(text, text)
   TO service_role;
+
+-- Server-only. RLS is on and there are no client policies.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_commission_events TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_payout_claims TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.gated_checkout_attempts TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.checkout_rate_limits TO service_role;
