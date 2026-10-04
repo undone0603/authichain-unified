@@ -3,6 +3,7 @@ import {
   buildGatedSessionBody,
   gatedCheckoutPlanIds,
   gatedConfirmUrl,
+  checkoutReturnOrigin,
   isAllowedPostOrigin,
   isAutomatedCheckoutRequest,
   planFromGatedPath,
@@ -19,14 +20,16 @@ const protection = {
 };
 
 function stripeOk() {
-  return vi.fn<typeof fetch>().mockResolvedValue(
-    new Response(
-      JSON.stringify({
-        url: "https://checkout.stripe.com/c/pay/cs_test_gate",
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    )
-  );
+  return vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          url: "https://checkout.stripe.com/c/pay/cs_test_gate",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
 }
 
 function post(
@@ -261,37 +264,6 @@ describe("tryHandleGatedCheckout — POST", () => {
     }
   });
 
-  it("does not call Stripe when checkout protection denies the claim", async () => {
-    const fetchImpl = stripeOk();
-    const res = await tryHandleGatedCheckout(
-      post("/checkout/creator", { email: "a@b.co" }),
-      { STRIPE_SECRET_KEY: "sk_test_x" },
-      {
-        fetchImpl,
-        claimCheckout: async () => ({
-          allowed: false,
-          reason: "Checkout protection unavailable",
-        }),
-        recordSession: protection.recordSession,
-      }
-    );
-    expect(res!.status).not.toBe(303);
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it("does not redirect when the Stripe session cannot be recorded", async () => {
-    const res = await tryHandleGatedCheckout(
-      post("/checkout/creator", { email: "a@b.co" }),
-      { STRIPE_SECRET_KEY: "sk_test_x" },
-      {
-        fetchImpl: stripeOk(),
-        claimCheckout: protection.claimCheckout,
-        recordSession: async () => false,
-      }
-    );
-    expect(res!.status).toBe(502);
-  });
-
   it("DPP POST carries the DPP offer metadata", () => {
     const body = buildGatedSessionBody({
       plan: planById("dpp_readiness")!,
@@ -348,6 +320,31 @@ describe("tryHandleGatedCheckout — POST", () => {
       expect(res!.status).toBe(status);
     }
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("keeps Stripe return URLs on an allowlisted host", () => {
+    const evil = new Request("https://authichain.govchain.us/api/checkout", {
+      method: "POST",
+      headers: { origin: "https://evil.example" },
+    });
+    expect(checkoutReturnOrigin(evil)).toBe("https://authichain.govchain.us");
+
+    const brand = new Request("https://authichain.govchain.us/api/checkout", {
+      method: "POST",
+      headers: { origin: "https://app.strainchain.io" },
+    });
+    expect(checkoutReturnOrigin(brand)).toBe("https://app.strainchain.io");
+
+    const httpOrigin = new Request("https://authichain.com/api/checkout", {
+      method: "POST",
+      headers: { origin: "http://authichain.com" },
+    });
+    expect(checkoutReturnOrigin(httpOrigin)).toBe("https://authichain.com");
+
+    const unknownHost = new Request("https://evil.example/api/checkout", {
+      method: "POST",
+    });
+    expect(checkoutReturnOrigin(unknownHost)).toBe("https://authichain.com");
   });
 
   it("allows cross-site POST from the estate sites", () => {

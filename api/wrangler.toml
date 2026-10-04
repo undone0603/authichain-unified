@@ -6,5 +6,13 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 APP_ENV = "production"
 
+# Rate limit for POST /sales/inbound (api/sales-inbound.ts): every accepted
+# request creates a Stripe session and a Claude call, so the route refuses
+# all traffic if this binding is missing. Keys are per client IP and per email.
+[[ratelimits]]
+name = "SALES_RATE_LIMITER"
+namespace_id = "2401"
+simple = { limit = 5, period = 60 }
+
 [observability]
 enabled = true

@@ -24,6 +24,7 @@ CRED_KEY_TO_ENV = {
     "google_session":       "GOOGLE_SESSION_COOKIE",
     "cloudflare_api_token": "CLOUDFLARE_API_TOKEN",
     "cloudflare_account":   "CLOUDFLARE_ACCOUNT_ID",
+    "cloudflare_microsites_kv_namespace": "CLOUDFLARE_MICROSITES_KV_NAMESPACE",
     "stripe_secret":        "STRIPE_SECRET_KEY",
     "n8n_api_key":          "N8N_API_KEY",
     "n8n_base_url":         "N8N_BASE_URL",

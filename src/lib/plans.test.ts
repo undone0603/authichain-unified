@@ -140,10 +140,10 @@ describe("listedPlans", () => {
     expect(planUsd("qron_launch")).toBe(19);
   });
 
-  it("keeps the live self-serve money path at $19 / $29 / $99 / $299", () => {
+  it("keeps the live self-serve money path at $19 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
     expect(byId.qron_launch.price).toBe(19);
-    expect(byId.starter.price).toBe(29);
+    expect(byId.starter?.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(

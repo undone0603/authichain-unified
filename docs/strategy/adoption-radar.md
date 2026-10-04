@@ -1096,3 +1096,100 @@ Noted here per instructions, not edited into `SPEC.md`:
   above rather than invented here to fill the section.
 
 ---
+
+## 2026-10-01
+
+General web search; most primary pages (`untp.unece.org`, `eudigitalproductpassport.org`,
+`regenstudio.world`) were egress-blocked from this session, so everything below is read from
+search-result summaries, not primary documents. Absence of a finding means "not found by this
+search," not "did not happen." No entry was written for 2026-09-29; this one covers both weeks.
+
+### What actually moved
+
+- **EN 18246 and EN 18239 appear to have been published on 16 September 2026 — resolving the
+  lapsed-date question from 2026-09-22.** Search results state CEN and CENELEC published both
+  ("all eight" DPP standards are now out) on 16 September, with Official Journal citation expected
+  in autumn 2026 ([standards roundup](https://public.cdxsystem.com/en/web/cdx/w/eu-digital-product-passport-what-the-new-technical-standards-mean-for-your-business),
+  [renoon](https://www.renoon.com/blog/digital-product-passport-latest-updates-the-next-developments-to-watch)).
+  Caveat: the [iteh catalogue page](https://standards.iteh.ai/catalog/standards/cen/9d9fbc1f-0c14-4e84-ab6c-f233e3f19398/pren-18246)
+  still carries the prEN title, and I could not read the standard itself or any CEN page. Treat as
+  "likely published, secondary sources only." One summary describes EN 18246 as specifying
+  verification through digital signatures and cryptographic proofs (ESDC); I have not read its
+  text, so I make no claim about how it relates to our §3/§5.
+- **UNTP v1.0: still no confirmation.** The only dated material found still says v0.7.0 public
+  review closed 13 July and v1.0 was expected by 1 September
+  ([UNTP](https://untp.unece.org/docs/next/governance/meetings/generalUpdates/), search snippet
+  only). Month-old target now passed with nothing found confirming release.
+- **W3C Confidence Method / Render Method: still not confirmed as Recommendations.** Search
+  summaries say the WG scheduled Recommendation for September 2026 and wanted Candidate
+  Recommendation at TPAC 2026; the horizontal-review issues still show a window to 2026-10-12
+  ([a11y-request#176](https://github.com/w3c/a11y-request/issues/176),
+  [privacy-request#225](https://github.com/w3cping/privacy-request/issues/225)). Consistent with
+  the 2026-09-22 correction: in progress, not shipped.
+- **EU DPP Registry:** still live since 2026-07-20; product-specific delegated acts are the next
+  step, with textile rules reported for Q3–Q4 2027 ([renoon](https://www.renoon.com/blog/digital-product-passport-latest-updates-the-next-developments-to-watch)).
+- **EPCIS 2.1:** still "end of 2026" ([sensefinity](https://www.sensefinity.com/blog/2026/9/5/epcis-in-2026-the-state-of-supply-chain-event-data)); fourth week unchanged.
+- **Quiet or not found:** no dated Spherity, Transmute, OriginTrail news; no open public-comment
+  period on a provenance/credential standard; no public thread arguing verdict-vs-score for
+  physical-item provenance. A recent arXiv paper on lookup-private credential status
+  ([ShadowPath, 2608.19937](https://arxiv.org/pdf/2608.19937)) surfaced; relevant to revocation
+  design but I read only the title.
+
+### Correction to prior entries — please read
+
+The 2026-09-22 entry named the **W3C Verifiable Supply Chain Community Group** as the top
+awareness target, as a third-party venue. A search this week surfaced
+[github.com/undone0603/vsc](https://github.com/undone0603/vsc), described as that group's
+industry-profiles repo — under the same GitHub account as this repository. I cannot tell from
+search results who chairs the group or whether it is independent of AuthiChain. If it is the
+owner's own group, it is not an outside awareness target, and prior entries' framing ("putting us
+in front of the people defining the category") overstated it. Treat that target as **unverified
+independence** until the owner confirms.
+
+### Differentiated
+
+- **Offline verification, no server dependency** — unchanged; nothing found contradicts it.
+- **Three verdicts, no score** — unchanged. Confidence Method remains an optional scoring-style
+  extension point, still in process.
+- **Adversarial conformance suite (28 fixtures, `--strict`)** — still no comparable suite found
+  for GS1 Digital Link, EPCIS, the DPP Registry, UNTP, or vendor tooling. If EN 18246 comes with
+  test vectors I have not seen them.
+- **Apache-2.0 with patent grant** — unchanged.
+
+### Behind
+
+- **No revocation until v0.2** — unchanged and plainly a gap; Bitstring Status List is stable.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **EN 18246 is now (likely) a published European standard on DPP data authentication and we have
+  not read it, mapped to it, or claimed anything about it.** If it mandates a signature or
+  envelope form we do not support, EU-facing adopters will ask. This is the most material new
+  fact this week.
+- **No crypto-agility/post-quantum story, no JOSE/COSE interop position, no access-tiering
+  model** — carried forward unchanged (EN 18239 defines tiered access: public, restricted,
+  authority-only, proprietary, per a secondary summary).
+- **We hold no certification and no standards-body recognition.** Nothing here implies otherwise.
+
+### Awareness targets
+
+- **EN 18246 / CEN-CENELEC JTC 24 readers (most actionable):** obtain the text of
+  EN 18246:2026 via a national standards body and write a short mapping of its ESDC requirements
+  against `SPEC.md` §3/§5, publishing where it overlaps and where it does not. DPP implementers
+  are about to be asked about this standard; a candid mapping is relevant because our spec's
+  offline verification and conformance suite address exactly the "any party can verify" property
+  the standard describes. Sources: [iteh catalogue](https://standards.iteh.ai/catalog/standards/cen/9d9fbc1f-0c14-4e84-ab6c-f233e3f19398/pren-18246).
+- **W3C VC WG horizontal review, closes 2026-10-12:**
+  [privacy-request#225](https://github.com/w3cping/privacy-request/issues/225) — a comment that
+  confidenceMethod must not alter a binary verifier's verdict would be on-record before
+  Candidate Recommendation.
+- **UNTP:** [untp.unece.org](https://untp.unece.org/docs/specification/) — still blocked; check
+  whether v1.0 shipped.
+- **GS1 VC/DID landscape:** [ref.gs1.org](https://ref.gs1.org/docs/2025/VCs-and-DIDs-tech-landscape)
+  — carried forward; the catalogue of the exact stack our spec aligns to.
+
+### Spec gaps
+
+- New: **no stated relationship to EN 18246 (ESDC)** — cannot be assessed until the text is read.
+- Carried, unresolved: confidenceMethod must not affect §5.1; name Bitstring Status List for v0.2;
+  crypto-agility; EU vocabulary bridge; §6 no-auth scope; JOSE/COSE position.
+
+---

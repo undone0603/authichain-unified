@@ -24,15 +24,15 @@ The `Autonomy reconcile` workflow runs on each merge to main and once a day.
 It enables or disables workflows until GitHub matches the manifest. If a PR adds a
 workflow without classifying it, the check fails.
 
-| Lane    | What it does                                                                  | Who acts                |
-| ------- | ----------------------------------------------------------------------------- | ----------------------- |
-| ship    | Build, test, security scan and deploy on push                                 | Automatic               |
-| health  | **Loop 1.** Hourly `ops-pulse` plus daily read-only probes                    | Automatic; alerts owner |
-| revenue | **Loop 2.** Moves warm leads to checkout, dunning, gov digest, revenue report | Automatic               |
-| growth  | **Loop 3.** SEO pages, owned social, listening, gated cold outreach           | Automatic within caps   |
-| repair  | **Loop 4.** Classifies failed checks and opens draft fix PRs                  | Automatic; owner merges |
-| manual  | Secret binding, backfills, one-off sends                                      | Owner runs by hand      |
-| retired | Kept disabled for history                                                     | Nobody                  |
+| Lane    | What it does                                                                  | Who acts                                       |
+| ------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| ship    | Build, test, security scan and deploy on push                                 | Automatic                                      |
+| health  | **Loop 1.** Hourly `ops-pulse` plus daily read-only probes                    | Automatic; alerts owner                        |
+| revenue | **Loop 2.** Moves warm leads to checkout, dunning, gov digest, revenue report | Automatic                                      |
+| growth  | **Loop 3.** SEO pages, owned social, listening, gated cold outreach           | Automatic within caps                          |
+| repair  | **Loop 4.** Classifies failed checks and opens draft fix PRs                  | Automatic; owner marks ready, autopilot merges |
+| manual  | Secret binding, backfills, one-off sends                                      | Owner runs by hand                             |
+| retired | Kept disabled for history                                                     | Nobody                                         |
 
 To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 
@@ -42,6 +42,7 @@ To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 - Publish SEO and content pages and posts to channels the company owns.
 - Follow up with **warm** leads (inbound, replied, or started a checkout) using the live payment links in `src/lib/plans.ts`.
 - Open draft PRs with deterministic fixes (format, lint, stale branch).
+- Merge a trusted PR into main once it is green and clean (the merge autopilot, below).
 - Send cold outreach, but only inside the rules in the next section.
 
 ## What always waits for the owner
@@ -52,7 +53,6 @@ To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
   only ever adds the events listed.
 - Production database migrations (see `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`).
 - DNS, Cloudflare Access, secrets rotation, and Vercel anything.
-- Merging a PR that touches security, revenue, schema, or this charter.
 - Any claim of a customer, partner, certification or result that isn't verifiable.
 
 ## Launch mode
@@ -76,7 +76,35 @@ tighten back automatically. The switch is `launch_mode` in
   check, CAN-SPAM footer and address, opt-out), the deliverability breaker and
   its latch, `OWNER_LIVE_SEND`, the truth rule, model-credit or gas spend
   (`gov-score`, `gov-proposals`, `gov-mint` stay dry on schedule), prices,
-  secrets and DNS, and owner-only merges.
+  secrets and DNS.
+
+## Merge autopilot
+
+The owner decided on 2026-10-02 that a branch which is green and clean merges
+on its own, whatever it touches, security, revenue, schema and this charter
+included. That replaces the earlier rule that such merges wait for the owner.
+The switch is `merge_autopilot` in `.github/autonomy.json`; the workflow is
+`merge-autopilot.yml` and the rules live in `scripts/autonomy/merge-autopilot.mjs`.
+
+- **Who:** PRs into `main` from a branch in this repository, opened by an
+  author listed in `trusted_authors`. Forks, drafts and anyone else are skipped.
+- **Green:** every check run on the head commit has finished as success,
+  neutral or skipped, any commit status is success, and GitHub reports the PR
+  `clean`. A red, pending or cancelled check means wait.
+- **Behind main:** the autopilot merges `main` into the branch (GitHub's
+  update-branch, a merge commit, never a rebase) and waits for CI to pass on
+  the result before it merges. Merges are squash merges pinned to the checked
+  head commit, so a push that lands mid-check is never merged unseen.
+- **Conflicts:** the PR gets the `merge-conflict` label and waits for a person
+  or an agent to resolve it. The label comes off once it merges cleanly again.
+- **Stop it:** add the `hold` label to one PR, or set `enabled` to `false` (or
+  the workflow's line to `"off"`) and merge.
+- **Token:** it needs a fine-grained PAT stored as the secret
+  `MERGE_AUTOPILOT_TOKEN` (contents and pull requests, read and write, this
+  repository only). On the default Actions token GitHub starts no workflows for
+  the commits the autopilot makes, so it does not update behind branches, and
+  its merges do not trigger the push-to-main deploys. Each run's summary says
+  which mode it ran in.
 
 ## Cold outreach
 
@@ -135,7 +163,7 @@ lifts the "leave cold outreach off" freeze recorded in
 | Retain  | Failed payment, dunning, win-back            | webhook `invoice.payment_failed`, `revenue-cycle` dunning, `winback`                          | Create a win-back promo if you want one           |
 | Operate | Sites, money path, loops health              | `ops-pulse`, smoke/health gates                                                               | Act on `ops-alert` issues                         |
 | Operate | Keep workflows matching the plan             | `autonomy-reconcile`                                                                          | Edit `.github/autonomy.json`                      |
-| Operate | Fix broken checks                            | `ci-repair-loop` (draft PRs)                                                                  | Merge                                             |
+| Operate | Fix broken checks                            | `ci-repair-loop` (draft PRs)                                                                  | Mark the draft ready; the autopilot merges it     |
 | Report  | Weekly numbers + what's waiting              | `owner-digest` (email)                                                                        | Read it                                           |
 | Improve | Copy, outreach and alert suggestions (Gemma) | `gemma-loops` on the self-hosted `lan-gemma` runner                                           | Apply what you like in a PR                       |
 
@@ -170,7 +198,7 @@ below. Every other item falls back to something that already exists.
 
 | Name                            | Kind                                                                          | Default when unset                              | Purpose                                                                                                              |
 | ------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `LM_STUDIO_API_TOKEN`            | secret                                                                        | Not set                                           | Optional local-model server token for native model load/unload and authenticated LAN requests                    |
+| `LM_STUDIO_API_TOKEN`           | secret                                                                        | Not set                                         | Optional local-model server token for native model load/unload and authenticated LAN requests                        |
 | `STRIPE_READ_KEY`               | secret                                                                        | `STRIPE_SECRET_KEY` (already set)               | Recommended: a restricted, read-only key for the dashboard and monitors                                              |
 | `FOUNDER_EMAILS`                | secret                                                                        | `founder_emails` in `.github/autonomy.json`     | Charges from these don't count as revenue or trigger alerts                                                          |
 | `OWNER_EMAIL`                   | secret                                                                        | `owner_email` in `.github/autonomy.json`        | Where the digest goes                                                                                                |

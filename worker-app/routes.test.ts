@@ -52,6 +52,7 @@ describe("GET /api/checkout/dpp", () => {
   beforeEach(() => {
     dppCreate.mockReset();
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.DPP_SMOKE_SECRET;
   });
 
   it("HEAD does not create a Stripe session", async () => {
@@ -84,13 +85,27 @@ describe("GET /api/checkout/dpp", () => {
     expect(dppCreate).not.toHaveBeenCalled();
   });
 
-  it("DPP-SMOKE-E2E still creates the $0 demo session on GET", async () => {
+  it("public DPP-SMOKE-E2E 303s to the confirm page", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    const res = await app.request(
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(
+      "https://authichain.com/checkout/dpp_readiness?visit_id=dpp_smoke"
+    );
+    expect(dppCreate).not.toHaveBeenCalled();
+  });
+
+  it("DPP-SMOKE-E2E creates the $0 session when the header matches", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_dpp";
+    process.env.DPP_SMOKE_SECRET = "smoke-secret-value";
     dppCreate.mockResolvedValue({
       url: "https://checkout.stripe.com/c/pay/cs_test_smoke",
     });
     const res = await app.request(
-      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E"
+      "/api/checkout/dpp?visit_id=dpp_smoke&promo=DPP-SMOKE-E2E",
+      { headers: { "x-dpp-smoke-secret": "smoke-secret-value" } }
     );
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe(
@@ -141,7 +156,9 @@ describe("GET /api/checkout", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.smoke).toBe("GET /api/checkout/dpp?promo=DPP-SMOKE-E2E");
+    expect(body.smoke).toBe(
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret"
+    );
     expect(body.webhook).toBe("POST /api/stripe/webhook");
   });
 });
@@ -191,6 +208,9 @@ describe("GET /api/generate", () => {
     expect(body.methods).toContain("POST");
     expect(body.auth).toBe(false);
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
+      true
+    );
+    expect(body.packs.some((p: { price: number }) => p.price === 99)).toBe(
       true
     );
   });

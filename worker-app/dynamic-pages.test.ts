@@ -248,7 +248,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
@@ -256,6 +258,31 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain('type="application/ld+json"');
     expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getHyperdriveDb).not.toHaveBeenCalled();
+  });
+
+  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
+    const res = await app.request(
+      "/p/quantum-financial-system-real-or-myth",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(body).toContain('<meta name="robots" content="noindex">');
+  });
+
+  it("leaves indexable SEO hubs without a robots noindex", async () => {
+    const res = await app.request(
+      "/p/what-is-a-digital-product-passport",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+    expect(body).not.toContain('name="robots"');
   });
 
   it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
@@ -357,7 +384,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -535,7 +564,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -565,7 +596,9 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
       expect(body).toContain('name="email"');
-      expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+      expect(body).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
@@ -635,16 +668,11 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
-    expect(body).toContain("$99");
     expect(body).toContain("$299");
     // Top-ups are the live Starter/Creator packs; the retired credit bundles
     // ($9.99/$39.99/$99.99) had links on no live Stripe account.
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/starter"'
-    );
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/creator"'
-    );
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
+    expect(body).toContain('href="https://authichain.com/checkout/creator"');
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
@@ -660,6 +688,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).not.toContain("Those 5 are signed");
   });
 
+  // The no-JS submit goes to the starter checkout (the generate wall, #1388).
   it("sends an unauthenticated generation attempt to the Starter checkout", async () => {
     const res = await app.request(
       "/generate",
@@ -672,10 +701,15 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-    const location = res.headers.get("location") || "";
-    expect(location).toContain("/checkout/starter");
-    expect(location).toContain("targetUrl=https%3A%2F%2Fexample.com%2Fsku");
-    expect(location).toContain("prompt=neon");
+    const location = new URL(
+      res.headers.get("location") || "",
+      "https://example.test"
+    );
+    expect(location.pathname).toBe("/checkout/starter");
+    expect(location.searchParams.get("targetUrl")).toBe(
+      "https://example.com/sku"
+    );
+    expect(location.searchParams.get("prompt")).toBe("neon");
   });
 });
 

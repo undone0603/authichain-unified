@@ -8,6 +8,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Lets content-routine-pr.yml run this gate on routine branches. PRs opened
+  # with GITHUB_TOKEN never trigger pull_request workflows, so without this a
+  # routine PR gets no "Main quality gate" check at all (that is how #1474
+  # merged with no CI on 2026-10-02). workflow_dispatch from GITHUB_TOKEN does
+  # start runs. production-proof stays push-only (its `if:` is unchanged).
+  workflow_dispatch:
 
 jobs:
   ci:

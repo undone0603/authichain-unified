@@ -65,7 +65,7 @@ import {
   tryHandleMicrosite,
 } from "./microsite-routes.ts";
 import { icpSeoSitemapUrls } from "./icp-seo-sitemap.ts";
-import { withApolloTracker } from "./apollo-tracker.ts";
+import { withHtmlEgress } from "./apollo-tracker.ts";
 import {
   listMilestones,
   milestoneStatus,
@@ -161,10 +161,6 @@ const SEO = {
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
-    {
-      q: 'How does AuthiChain verify a product?',
-      a: 'Issue a cryptographically signed seal, bind it to the physical item, then verify from any camera against the on-chain record.',
-    },
     {
       q: 'How much does AuthiChain cost?',
       a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
@@ -2341,7 +2337,6 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "Signed seals", body: "Digital seals backed by AuthiChain's certificate contract, live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Our goal: tamper-evident seals with a signed certificate anyone can verify." },
       { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
@@ -2432,7 +2427,7 @@ function marketReality() {
         label: "Pay $299 on Stripe",
       })}
       <a class="btn btn-outline" href="/digital-product-passport">Read the DPP brief</a>
-      <a class="btn btn-outline" href="/anchor">Anchor a product</a>
+      <a class="btn btn-outline" href="/anchor">Fingerprint a product</a>
     </div>
   </div>
 </section>`;
@@ -2614,12 +2609,12 @@ const ANCHOR_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Anchor a Product — AuthiChain</title>
-<meta name="description" content="Anchor any physical product to the blockchain in 30 seconds. Free, no account required. SHA-256 fingerprint + permanent certificate.">
+<title>Product Fingerprint — AuthiChain</title>
+<meta name="description" content="Compute a SHA-256 fingerprint of a product description in your browser. Nothing is sent or stored. Signed AuthiChain records are checkable with the open verifier.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
-<meta property="og:title" content="Anchor a Product — AuthiChain">
-<meta property="og:description" content="Blockchain certificate in 30 seconds. Free. No account.">
+<meta property="og:title" content="Product Fingerprint — AuthiChain">
+<meta property="og:description" content="A SHA-256 fingerprint of a product description, computed in your browser. Nothing is sent or stored.">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <meta property="og:url" content="https://authichain.com/anchor">
 <meta name="twitter:card" content="summary_large_image">
@@ -2665,17 +2660,11 @@ textarea{resize:vertical;min-height:80px}
 <body>
 <nav class="nav">
   <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="/onboard" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
+  <a href="/protocol" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Open verifier</a>
 </nav>
 <div class="wrap">
-  <h1>Anchor a Product to the <span>Blockchain</span></h1>
-  <p class="sub">Generate a cryptographic certificate of authenticity in 30 seconds. Free, permanent, no account required. Your data is hashed in-browser before being sent.</p>
-
-  <div class="steps">
-    <div class="step active" id="s1"><span class="step-num">1</span> Enter details</div>
-    <div class="step" id="s2"><span class="step-num">2</span> Hash &amp; sign</div>
-    <div class="step" id="s3"><span class="step-num">3</span> Certificate issued</div>
-  </div>
+  <h1>Product <span>Fingerprint</span></h1>
+  <p class="sub">Compute a SHA-256 fingerprint of a product description, in your browser. Free, no account. Nothing you type leaves this page.</p>
 
   <div class="card">
     <div class="row">
@@ -2688,213 +2677,82 @@ textarea{resize:vertical;min-height:80px}
         <input id="f-brand" type="text" placeholder="e.g. Nike" maxlength="100">
       </div>
     </div>
-    <div class="row">
-      <div>
-        <label>SKU / Serial</label>
-        <input id="f-sku" type="text" placeholder="Optional" maxlength="100">
-      </div>
-      <div>
-        <label>Industry</label>
-        <select id="f-industry">
-          <option value="general">General</option>
-          <option value="luxury">Luxury Goods</option>
-          <option value="fashion">Fashion &amp; Apparel</option>
-          <option value="electronics">Electronics</option>
-          <option value="pharma">Pharmaceuticals</option>
-          <option value="food">Food &amp; Beverage</option>
-          <option value="art">Art &amp; Collectibles</option>
-          <option value="sports">Sports Memorabilia</option>
-          <option value="cosmetics">Cosmetics &amp; Beauty</option>
-          <option value="auto">Automotive Parts</option>
-          <option value="cannabis">Cannabis &amp; Hemp</option>
-        </select>
-      </div>
-    </div>
+    <label>SKU / Serial</label>
+    <input id="f-sku" type="text" placeholder="Optional" maxlength="100">
     <label>Description</label>
     <textarea id="f-desc" placeholder="Optional — color, size, edition, condition…" maxlength="2000"></textarea>
-    <div id="hash-row" style="display:none">
-      <label>SHA-256 Fingerprint (generated in-browser)</label>
-      <div class="hash-preview" id="hash-display"></div>
-    </div>
     <div class="err" id="f-err"></div>
     <div class="privacy">
-      Your product details are hashed in your browser using SHA-256 before being sent. Only the fingerprint + your chosen metadata is stored. We do not collect personal data.
+      <strong style="color:#f8fafc">What this does:</strong> hashes <code>name|brand|sku|description</code> with SHA-256 in your browser.
+      <strong style="color:#f8fafc">What it does not do:</strong> it does not store anything, issue a certificate, or write to a blockchain.
+      The same input always gives the same fingerprint, so you can recompute it later to show a description has not changed.
     </div>
-    <button class="btn" id="anchor-btn" onclick="doAnchor()" style="margin-top:1.5rem">Generate Certificate &rarr;</button>
+    <button class="btn" id="anchor-btn" onclick="doFingerprint()" style="margin-top:1.5rem">Compute Fingerprint &rarr;</button>
   </div>
 
   <div class="result" id="result">
-    <div style="font-size:2rem;margin-bottom:.5rem">&#x2705;</div>
-    <div style="font-weight:700;font-size:1.15rem;margin-bottom:.25rem">Certificate Anchored</div>
-    <div class="cert-id" id="cert-id-display"></div>
-    <div class="qr-wrap"><img id="qr-img" src="" alt="QR code" width="160" height="160"></div>
-    <div>
-      <a class="cert-link" id="cert-link" href="#">View Certificate &rarr;</a>
-    </div>
+    <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
+    <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This certificate ID is permanent and publicly verifiable at<br>
-      <strong style="color:#f8fafc">authichain.com/cert/&lt;ID&gt;</strong><br><br>
-      Share the QR code with buyers, customs agents, or insurers. Anyone who scans it can instantly verify your product.
+      This fingerprint is not stored and not anchored. Certificate contract live on Polygon; product certification through verify is in development. See the
+      <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
+      <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>
 
 <script>
-async function doAnchor() {
-  var btn = document.getElementById('anchor-btn');
+async function doFingerprint() {
   var err = document.getElementById('f-err');
   var name = document.getElementById('f-name').value.trim();
   var brand = document.getElementById('f-brand').value.trim();
   var desc = document.getElementById('f-desc').value.trim();
   var sku = document.getElementById('f-sku').value.trim();
-  var industry = document.getElementById('f-industry').value;
 
   err.style.display = 'none';
   if (!name) { err.textContent = 'Product name is required.'; err.style.display = 'block'; return; }
   if (!brand) { err.textContent = 'Brand is required.'; err.style.display = 'block'; return; }
 
-  btn.disabled = true;
-  btn.textContent = 'Generating fingerprint…';
-  document.getElementById('s1').classList.remove('active');
-  document.getElementById('s2').classList.add('active');
-
-  try {
-    var payload = name + '|' + brand + '|' + (sku || '') + '|' + (desc || '');
-    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-    var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
-    document.getElementById('hash-display').textContent = hash;
-    document.getElementById('hash-row').style.display = 'block';
-
-    btn.textContent = 'Anchoring to blockchain…';
-    document.getElementById('s2').classList.remove('active');
-    document.getElementById('s2').classList.add('done');
-    document.getElementById('s3').classList.add('active');
-
-    var res = await fetch('https://api.authichain.com/api/v1/anchor', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name:name,brand:brand,description:desc,sku:sku,industry:industry,hash:hash})
-    });
-    var data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'Anchor failed');
-
-    document.getElementById('s3').classList.remove('active');
-    document.getElementById('s3').classList.add('done');
-
-    var certId = data.id;
-    var certUrl = data.certUrl || ('https://authichain.govchain.us/cert/' + certId);
-    document.getElementById('cert-id-display').textContent = certId;
-    document.getElementById('cert-link').href = certUrl;
-    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(certUrl);
-    document.getElementById('qr-img').src = qrUrl;
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
-    btn.textContent = 'Anchored! Generate Another →';
-    btn.disabled = false;
-    btn.onclick = function(){ location.reload(); };
-  } catch(e) {
-    err.textContent = e.message || 'Something went wrong. Please try again.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Generate Certificate →';
-    document.getElementById('s2').classList.remove('active','done');
-    document.getElementById('s1').classList.add('active');
-    document.getElementById('s3').classList.remove('active','done');
-  }
+  var payload = name + '|' + brand + '|' + (sku || '') + '|' + (desc || '');
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+  document.getElementById('hash-display').textContent = hash;
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 </script>
 </body>
 </html>`;
 
+// /cert/AC-xxxxxxxx ids were handed out by the old /anchor page, which posted to
+// the demo api.authichain.com gateway. That gateway has no storage bound, so no
+// id was ever saved and none was ever on a blockchain. Say so instead of
+// fetching a record that cannot exist.
 function certPage(certId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Certificate \${certId} — AuthiChain</title>
-<meta name="description" content="Verify blockchain certificate \${certId} on AuthiChain. Cryptographic proof of product authenticity.">
+<meta name="robots" content="noindex">
+<title>Certificate ${certId} — AuthiChain</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="theme-color" content="#c9a227">
-<meta property="og:title" content="AuthiChain Certificate \${certId}">
-<meta property="og:description" content="Blockchain-anchored product certificate. Verify authenticity instantly.">
-<meta property="og:image" content="https://authichain.com/og-image.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
-a{color:#c9a227;text-decoration:none}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
-.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
-.nav-logo span{color:#c9a227}
-.wrap{max-width:600px;margin:0 auto;padding:3rem 1.5rem 6rem;text-align:center}
-.cert-card{background:#0a0a0f;border:2px solid rgba(201,162,39,.35);border-radius:1.25rem;padding:2.5rem;text-align:left;position:relative;overflow:hidden}
-.cert-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#c9a227,#00ffd1)}
-.cert-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.1);border:1px solid #22c55e;border-radius:2rem;padding:.3rem .9rem;font-size:.8rem;font-weight:600;color:#22c55e;margin-bottom:1.5rem}
-.cert-id{font-family:monospace;font-size:1.5rem;font-weight:700;color:#c9a227;letter-spacing:.08em;margin-bottom:1.5rem}
-.field{margin-bottom:1.1rem}
-.field-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:.25rem}
-.field-value{font-size:.95rem;color:#f8fafc;word-break:break-word}
-.hash{font-family:monospace;font-size:.72rem;color:#94a3b8;word-break:break-all}
-.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:1.5rem 0}
-.qr-section{text-align:center;margin-top:1.5rem}
-.qr-section img{border-radius:.5rem;border:3px solid #fff}
-.actions{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:2rem}
-.btn-outline{padding:.6rem 1.4rem;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;color:#c9a227;font-weight:600;font-size:.9rem}
-.btn-outline:hover{background:rgba(201,162,39,.1)}
-.status-loading{padding:4rem;text-align:center;color:#94a3b8}
-.status-err{padding:4rem;text-align:center}
-.ts{font-size:.75rem;color:#555}
+a{color:#c9a227}
+.wrap{max-width:600px;margin:0 auto;padding:4rem 1.5rem;line-height:1.6}
+h1{font-size:1.5rem;margin-bottom:1rem}
+code{font-family:monospace;color:#c9a227}
+p{color:#94a3b8;margin-bottom:1rem}
 </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
-  <a href="/anchor" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Anchor a Product</a>
-</nav>
 <div class="wrap">
-  <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.5rem">Product Certificate</h1>
-  <p style="color:#94a3b8;margin-bottom:2rem;font-size:.9rem">Blockchain-anchored proof of authenticity</p>
-  <div id="main"><div class="status-loading">Fetching certificate…</div></div>
+  <h1>This certificate is not on record</h1>
+  <p><code>${certId}</code> was issued by an earlier demo of the /anchor page. That demo did not store certificates or write them to a blockchain, so this id cannot be verified.</p>
+  <p>To check a signed provenance record, use the <a href="/protocol">open verifier</a>. To fingerprint a product description, use <a href="/anchor">/anchor</a>.</p>
 </div>
-<script>
-(function(){
-  var id = \${JSON.stringify(certId)};
-  var el = document.getElementById('main');
-  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-  fetch('https://api.authichain.com/api/v1/cert/'+encodeURIComponent(id))
-    .then(function(r){return r.json()})
-    .then(function(data){
-      if(!data.success||!data.certificate){
-        el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem">Certificate Not Found</div><div style="color:#94a3b8;margin-bottom:1.5rem">'+esc(id)+'</div><a href="/anchor" style="color:#c9a227;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;padding:.6rem 1.4rem;font-weight:600">Anchor a Product</a></div>';
-        return;
-      }
-      var c=data.certificate;
-      var certUrl='https://authichain.govchain.us/cert/'+esc(id);
-      var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent('https://authichain.govchain.us/cert/'+id);
-      var ts=c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}):'';
-      el.innerHTML='<div class="cert-card">'
-        +'<div class="cert-badge">&#x2714; Anchored &amp; Verified</div>'
-        +'<div class="cert-id">'+esc(c.id)+'</div>'
-        +(c.name?'<div class="field"><div class="field-label">Product</div><div class="field-value">'+esc(c.name)+'</div></div>':'')
-        +(c.brand?'<div class="field"><div class="field-label">Brand</div><div class="field-value">'+esc(c.brand)+'</div></div>':'')
-        +(c.sku?'<div class="field"><div class="field-label">SKU / Serial</div><div class="field-value">'+esc(c.sku)+'</div></div>':'')
-        +(c.industry&&c.industry!=='general'?'<div class="field"><div class="field-label">Industry</div><div class="field-value" style="text-transform:capitalize">'+esc(c.industry)+'</div></div>':'')
-        +(c.description?'<div class="field"><div class="field-label">Description</div><div class="field-value">'+esc(c.description)+'</div></div>':'')
-        +'<hr class="divider">'
-        +'<div class="field"><div class="field-label">SHA-256 Fingerprint</div><div class="hash">'+esc(c.hash||'')+'</div></div>'
-        +(ts?'<div class="field" style="margin-top:.75rem"><div class="field-label">Anchored</div><div class="ts">'+esc(ts)+'</div></div>':'')
-        +'<div class="qr-section"><img src="'+qrUrl+'" alt="QR code" width="140" height="140"><div style="font-size:.75rem;color:#94a3b8;margin-top:.6rem">Scan to verify</div></div>'
-        +'</div>'
-        +'<div class="actions">'
-        +'<a class="btn-outline" href="/anchor">Anchor Another</a>'
-        +'<a class="btn-outline" href="/onboard" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
-        +'</div>';
-    })
-    .catch(function(e){
-      el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444">Failed to load</div><div style="color:#94a3b8;margin-top:.5rem">'+esc(e.message)+'</div></div>';
-    });
-})();
-<\/script>
 </body>
 </html>`;
 }
@@ -2945,7 +2803,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
 </style>
 </head>
 <body>
-<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Anchor a product</a></nav>
+<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Fingerprint a product</a></nav>
 <div class="wrap">
   <div class="badge">Apache-2.0 &middot; v0.1.0 draft</div>
   <h1>Verify it yourself.</h1>
@@ -2971,6 +2829,16 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
     <li><code>invalid</code> &mdash; any required check failed</li>
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
+
+  <h2>One record, anchored on Polygon mainnet</h2>
+  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
+    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
+    It is a demonstration, not a product.</p>
+  <ul>
+    <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
+    <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
+    <li>For agents: MCP tool <code>verify_record</code> at <code>https://authichain.com/mcp</code>, free</li>
+  </ul>
 
   <h2>Two rules we learned the hard way</h2>
   <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
@@ -3318,6 +3186,8 @@ interface Env {
   APP_WORKER_TIMEOUT_MS?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRICE_ID?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -3646,7 +3516,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
     // click-to-confirm page, so a stale APP_WORKER never sees a GET that
     // could open a Stripe session.
-    const checkoutGate = tryHandleApiCheckoutEmailGate(request);
+    const checkoutGate = tryHandleApiCheckoutEmailGate(request, env);
     if (checkoutGate) return checkoutGate;
     // Intercept before APP_PREFIXES — /api otherwise proxies to APP_WORKER
     // and unmounted GET /api/x402 and /api/mcp answer an empty ASSETS 404.
@@ -3706,6 +3576,6 @@ async function handleAuthichainCom(request: Request, env: Env) {
 
 export default {
   async fetch(request: Request, env: Env) {
-    return withApolloTracker(request, await handleAuthichainCom(request, env));
+    return withHtmlEgress(request, await handleAuthichainCom(request, env));
   },
 };

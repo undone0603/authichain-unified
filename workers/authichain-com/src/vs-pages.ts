@@ -49,7 +49,8 @@ const BASE_VS_PAGES: VsDefinition[] = [
       {
         feature: "On-chain cryptographic anchoring",
         authichain: "Certificate contract live on Polygon",
-        competitor: "Has shipped blockchain integrations (Cardano, Hyperledger)",
+        competitor:
+          "Has shipped blockchain integrations (Cardano, Hyperledger)",
       },
       {
         feature: "AI image analysis (5-agent consensus)",
@@ -226,7 +227,10 @@ const BASE_VS_PAGES: VsDefinition[] = [
  * $299 and unverified claims. They return as pilot pages: honest cells, no
  * price, and a pilot request instead of the DPP checkout.
  */
-export const VS_PAGES: VsDefinition[] = [...BASE_VS_PAGES, ...RESTORED_VS_PAGES];
+export const VS_PAGES: VsDefinition[] = [
+  ...BASE_VS_PAGES,
+  ...RESTORED_VS_PAGES,
+];
 
 const PILOT_SLUGS = new Set(RESTORED_VS_PAGES.map(d => d.slug));
 
@@ -312,7 +316,7 @@ export function renderVsPage(def: VsDefinition): string {
   const canonical = `https://authichain.com/vs/${def.slug}`;
   const ctas = PILOT_SLUGS.has(def.slug)
     ? `<a class="cta" href="/onboard?ref=vs-${esc(def.slug)}">Request a pilot seal</a><a class="cta ghost" href="/verify">Verify a seal</a>`
-    : `<a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Get started</a><a class="cta ghost" href="/anchor">See Live Demo</a>`;
+    : `<a class="cta" href="${esc(planPaymentLink("dpp_readiness") ?? "/digital-product-passport")}">Get started</a><a class="cta ghost" href="/protocol">See the open verifier</a>`;
   const rows = def.rows
     .map(
       r =>
