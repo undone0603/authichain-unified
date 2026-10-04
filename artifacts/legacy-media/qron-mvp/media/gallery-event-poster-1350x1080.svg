@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1350 1080" width="1350" height="1080">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0508"/>
+      <stop offset="40%" stop-color="#0d0a00"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a22700"/>
+      <stop offset="20%" stop-color="#c9a227"/>
+      <stop offset="80%" stop-color="#e8c547"/>
+      <stop offset="100%" stop-color="#c9a22700"/>
+    </linearGradient>
+    <radialGradient id="spotLight" cx="50%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="qrGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow4">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow8">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1350" height="1080" fill="url(#bgGrad)"/>
+  <rect width="1350" height="1080" fill="url(#spotLight)"/>
+  <rect x="24" y="24" width="1302" height="1032" rx="4" fill="none" stroke="#c9a227" stroke-width="1.5" opacity="0.4"/>
+  <rect x="36" y="36" width="1278" height="1008" rx="4" fill="none" stroke="#c9a227" stroke-width="0.5" opacity="0.2"/>
+  <rect x="500" y="62" width="350" height="40" rx="20" fill="#1a1200" stroke="#c9a227" stroke-width="1.5"/>
+  <text x="675" y="88" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" font-weight="700" fill="#c9a227" letter-spacing="4">EXCLUSIVE INVITE ONLY</text>
+  <text x="675" y="210" text-anchor="middle" font-family="system-ui,sans-serif" font-size="96" font-weight="900" fill="white" filter="url(#glow4)">TECH</text>
+  <text x="675" y="320" text-anchor="middle" font-family="system-ui,sans-serif" font-size="96" font-weight="900" fill="#c9a227" filter="url(#glow8)">SUMMIT</text>
+  <text x="675" y="400" text-anchor="middle" font-family="system-ui,sans-serif" font-size="72" font-weight="300" fill="white" opacity="0.9" letter-spacing="16">2026</text>
+  <line x1="200" y1="430" x2="1150" y2="430" stroke="url(#goldLine)" stroke-width="1.5"/>
+  <text x="675" y="488" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" fill="#c9a227" letter-spacing="6">MARCH 28-30, 2026</text>
+  <text x="675" y="528" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" fill="white" opacity="0.7" letter-spacing="4">GRAND HYATT - SAN FRANCISCO, CA</text>
+  <line x1="400" y1="558" x2="950" y2="558" stroke="url(#goldLine)" stroke-width="1"/>
+  <text x="675" y="610" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#888" letter-spacing="4">FEATURED SPEAKERS</text>
+  <text x="675" y="648" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" fill="white" opacity="0.85">Dr. A. Chen  |  M. Rodriguez  |  K. Tanaka  |  J. Williams</text>
+  <g transform="translate(960, 660)">
+    <text x="140" y="0" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#c9a227" letter-spacing="3">VERIFY YOUR TICKET</text>
+    <rect x="40" y="14" width="200" height="200" rx="4" fill="url(#qrGlow)" filter="url(#glow8)"/>
+    <rect x="48" y="22" width="184" height="184" rx="6" fill="#0a0a0a" stroke="#c9a227" stroke-width="2.5" filter="url(#glow4)"/>
+    <rect x="60" y="34" width="34" height="34" rx="2" fill="none" stroke="#c9a227" stroke-width="2"/>
+    <rect x="66" y="40" width="22" height="22" rx="1" fill="#c9a227"/>
+    <rect x="71" y="45" width="12" height="12" fill="#0a0a0a"/>
+    <rect x="74" y="48" width="6" height="6" fill="#c9a227"/>
+    <rect x="186" y="34" width="34" height="34" rx="2" fill="none" stroke="#c9a227" stroke-width="2"/>
+    <rect x="192" y="40" width="22" height="22" rx="1" fill="#c9a227"/>
+    <rect x="197" y="45" width="12" height="12" fill="#0a0a0a"/>
+    <rect x="200" y="48" width="6" height="6" fill="#c9a227"/>
+    <rect x="60" y="158" width="34" height="34" rx="2" fill="none" stroke="#c9a227" stroke-width="2"/>
+    <rect x="66" y="164" width="22" height="22" rx="1" fill="#c9a227"/>
+    <rect x="71" y="169" width="12" height="12" fill="#0a0a0a"/>
+    <rect x="74" y="172" width="6" height="6" fill="#c9a227"/>
+    <g fill="#c9a227" opacity="0.75">
+      <rect x="106" y="34" width="7" height="7"/><rect x="121" y="34" width="7" height="7"/>
+      <rect x="136" y="34" width="7" height="7"/><rect x="151" y="34" width="7" height="7"/>
+      <rect x="106" y="49" width="7" height="7"/><rect x="136" y="49" width="7" height="7"/>
+      <rect x="106" y="64" width="7" height="7"/><rect x="121" y="64" width="7" height="7"/>
+      <rect x="60" y="79" width="7" height="7"/><rect x="75" y="79" width="7" height="7"/>
+      <rect x="106" y="79" width="7" height="7"/><rect x="136" y="79" width="7" height="7"/>
+      <rect x="196" y="79" width="7" height="7"/><rect x="60" y="94" width="7" height="7"/>
+      <rect x="90" y="94" width="7" height="7"/><rect x="121" y="94" width="7" height="7"/>
+      <rect x="181" y="94" width="7" height="7"/><rect x="60" y="109" width="7" height="7"/>
+      <rect x="106" y="109" width="7" height="7"/><rect x="136" y="109" width="7" height="7"/>
+      <rect x="196" y="109" width="7" height="7"/><rect x="60" y="124" width="7" height="7"/>
+      <rect x="121" y="124" width="7" height="7"/><rect x="181" y="124" width="7" height="7"/>
+      <rect x="196" y="169" width="7" height="7"/><rect x="106" y="154" width="7" height="7"/>
+      <rect x="136" y="154" width="7" height="7"/><rect x="181" y="154" width="7" height="7"/>
+      <rect x="106" y="169" width="7" height="7"/><rect x="151" y="169" width="7" height="7"/>
+    </g>
+    <text x="140" y="220" text-anchor="middle" font-family="monospace" font-size="9" fill="#c9a227" opacity="0.5">QRON | AuthiChain Protocol</text>
+  </g>
+  <g transform="translate(80, 660)">
+    <rect width="820" height="200" rx="8" fill="#0d0a00" stroke="#c9a22733" stroke-width="1"/>
+    <text x="410" y="50" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#888" letter-spacing="4">WHAT TO EXPECT</text>
+    <line x1="40" y1="68" x2="780" y2="68" stroke="#c9a22733" stroke-width="1"/>
+    <g font-family="system-ui,sans-serif" font-size="16" fill="white" opacity="0.8">
+      <text x="50" y="106">&#9670;  Blockchain Authentication Deep Dive</text>
+      <text x="50" y="132">&#9670;  AI-Powered Supply Chain Verification</text>
+      <text x="50" y="158">&#9670;  QRON QR Art Technology Showcase</text>
+      <text x="50" y="184">&#9670;  AuthiChain Protocol Launch Announcement</text>
+    </g>
+  </g>
+  <rect x="0" y="950" width="1350" height="130" fill="#0a0800"/>
+  <line x1="0" y1="950" x2="1350" y2="950" stroke="#c9a22766" stroke-width="1"/>
+  <text x="675" y="1002" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#c9a227">Ticket Authentication Powered by QRON</text>
+  <text x="675" y="1038" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#666" letter-spacing="2">qron.space | AuthiChain Protocol | Ed25519 Cryptographic Signing</text>
+</svg>

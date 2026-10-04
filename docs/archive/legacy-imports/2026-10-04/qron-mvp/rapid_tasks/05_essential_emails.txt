@@ -1,0 +1,9 @@
+﻿PRIORITY: MEDIUM - Essential Emails
+TIME: 12 minutes max
+
+3 CRITICAL emails only:
+1. Welcome (instant)
+2. Conversion (3 hours after)
+3. Win-back (7 days)
+
+Save: business_output/essential_emails.md

@@ -1,0 +1,386 @@
+﻿{
+  "schemaVersion": 1,
+  "importedAt": "2026-10-04",
+  "policy": {
+    "sourceFilesPreserved": true,
+    "rawChatsImported": false,
+    "googleNativeLinkStubsImported": false,
+    "credentialLikeContentImported": false,
+    "canonicalDocumentationChanged": false,
+    "productionMediaWired": false
+  },
+  "files": [
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\authichain-economy-map.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/authichain-economy-map.md",
+      "sha256": "9a1a1f5ad30223f0850cfa6f748f1ce9c591024e1857ed9e7f31e92f8b7f84ba"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\authentic-economy-route-map.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/authentic-economy-route-map.md",
+      "sha256": "b4ae2209ec61f08ce753a611e046f97157521025fde29c242de9a5d3467eb855"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\agentz-v5-investor.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/agentz-v5-investor.md",
+      "sha256": "90d9196947f85f8d4706d500370618b511933f3fc2f239640754f8e87e5a9d44"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\qron-economy-map.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/qron-economy-map.md",
+      "sha256": "cab3df5c8411f9a3ebf41e75b9ebba84d9f5c52e24a4fde3649d998332038048"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\project_summary_and_next_steps.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/project_summary_and_next_steps.md",
+      "sha256": "e8e712c292147d5c0915da5d1ce13dfbade987a6563850f1361c60199349d160"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\auth_overview.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/auth_overview.md",
+      "sha256": "34e861ed5e6a869302f712595b8b5a9d0e13323b98e8aaee748f6d050170d7c1"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\strainchain-economy-map.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/strainchain-economy-map.md",
+      "sha256": "b38a11edb140293684f360a34dd68b40d3de62fce40f00bcbdc1149efd8cb5f0"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\agentz-v4-developer-api.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/agentz-v4-developer-api.md",
+      "sha256": "1350991e8ad6bc1a224e6544729965098d2e5182355447173e89fcff49d2c44a"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\strainchain\\ACTIVATION.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/strainchain/ACTIVATION.md",
+      "sha256": "b792dd27bcd2091f8dd0cfa6c7bdb2538707225199c56faed71c64b52e2d2d2b"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\rapidapi-submission.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/rapidapi-submission.md",
+      "sha256": "1d6e6b3cc459ff24519bb33e4033bf1ac2af9d9f0f337dc67ebd2a49bdbe8a8f"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\launch-kit.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/launch-kit.md",
+      "sha256": "2c5eac2834bb09b3fa236d8bcd72846d6706557e4efe4afe405371a966919e1e"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\strainchain\\cold-email-michigan.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/strainchain/cold-email-michigan.md",
+      "sha256": "20f46c859ff2bbddbd2cd8adc33216e2ae6b392b4e364b6999a906b599a780f5"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\outputs\\agentz-v3-marketing.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/outputs/agentz-v3-marketing.md",
+      "sha256": "10211e0d73767d0883d10b273355de0400c73f73074fe73d27678def63a5299e"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\strainchain\\intake.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/strainchain/intake.md",
+      "sha256": "520465f2b7eac2878168f1a05e7b33dff16b3b5584e79fd35d7d4b2a8a68d131"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\strainchain\\demo-mapping.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/strainchain/demo-mapping.md",
+      "sha256": "173ac181af2372e00cbd553be1a6a46b7a69624156b666df4def4275f7b8049e"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\traffic_generation_strategy.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/traffic_generation_strategy.md",
+      "sha256": "b9cf163d50f00c33d9a6de100d5cd4e8038130fcdf3b64260f8c9b9d5f3b9bb0"
+    },
+    {
+      "category": "document",
+      "source": "G:\\My Drive\\strainchain_business_proposal.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/google-drive/strainchain_business_proposal.md",
+      "sha256": "1725c3355c99559d6954d5a479f938d2e85f1c7185b96f1e1f505b947f170e3b"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\07_launch_ops.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/07_launch_ops.txt",
+      "sha256": "8cfc36c760fe7972f1c9e34c3770e9944c6bf7ef8ea6dd73ce8ed15aef75c38d"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\06_tech_mvp.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/06_tech_mvp.txt",
+      "sha256": "6d0b336463be9aacd3db9326f74457336239f55d61cd39079533edcf7094238a"
+    },
+    {
+      "category": "document",
+      "source": "G:\\My Drive\\AuthiChain OS Modules\\Operational Playbooks\\🚀 AuthiChain Launch Instructions.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/google-drive/AuthiChain OS Modules/Operational Playbooks/authichain-launch-instructions.md",
+      "sha256": "79c6de35e4ca87ad4cb749bb9b2b7f11b2356a25fb9c3f2b808d982a8c749c5f"
+    },
+    {
+      "category": "document",
+      "source": "G:\\My Drive\\How to Utilize and Implement OPENAI_API_KEY\\Product Hunt Submission - AuthiChain.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/google-drive/How to Utilize and Implement OPENAI_API_KEY/Product Hunt Submission - AuthiChain.md",
+      "sha256": "ee4d93a551571a78eb5c97c8083173d578cadde664fdca2bb1299ca8c18b908c"
+    },
+    {
+      "category": "document",
+      "source": "G:\\My Drive\\How to Utilize and Implement OPENAI_API_KEY\\AuthiChain_ComprehensiveProjectDocumentation.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/google-drive/How to Utilize and Implement OPENAI_API_KEY/AuthiChain_ComprehensiveProjectDocumentation.md",
+      "sha256": "6917c56853348a9cb86e7533578361b2847362950a63e0873deb3803dc6c1dd6"
+    },
+    {
+      "category": "document",
+      "source": "G:\\My Drive\\How to Utilize and Implement OPENAI_API_KEY\\AuthiChain Founder\u0027s Deal - Social Media Campaign.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/google-drive/How to Utilize and Implement OPENAI_API_KEY/AuthiChain Founder\u0027s Deal - Social Media Campaign.md",
+      "sha256": "bfa883ebfff9174361272b2aa4be7df6fcbaebd060ddd998d45ade57e7856874"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\05_essential_emails.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/05_essential_emails.txt",
+      "sha256": "70c45f8395c2e24622eaff2eb15d517d40721e8d674520bf69baf9c3384536db"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\partners.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/public/partners.md",
+      "sha256": "2030e63535ec08cba113907ab6864eb9d0ae530f40334dc636813fd246f936fa"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\marketing\\intake.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/marketing/intake.md",
+      "sha256": "836b5b4caca7881f7d5b418c6e80f7ae25e5e6f7cd05eafec8ab6fbfae1b84a1"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\marketing\\demo-mapping.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/marketing/demo-mapping.md",
+      "sha256": "21da4b83de032ba4265249efd7dc3149b8e8fbb49e85de35b4927ba286c4be27"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\01_mvp_foundation.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/01_mvp_foundation.txt",
+      "sha256": "c78f3cb94acbb9f945be04b4ea2506e67cc5f7aca22b97b809391948321e8062"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\04_week1_marketing.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/04_week1_marketing.txt",
+      "sha256": "e5dd26709a306d1e1f817680090d5a5a4afa9cbd63bc7575cc77fbc3df562eb1"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\03_landing_page.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/03_landing_page.txt",
+      "sha256": "5823cd2cd27358c40a2f1019b79194479ff25d380b779b99ce9eb809ca2f8307"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\qron-mvp\\rapid_tasks\\02_revenue_fast.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/qron-mvp/rapid_tasks/02_revenue_fast.txt",
+      "sha256": "93ea5c0f1098dbd69c6814f0f4ca523055a14181e9e84ab66b5bfca07af5e7ac"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\opengraph-image.png",
+      "destination": "artifacts/legacy-media/qron-mvp/opengraph-image.png",
+      "sha256": "a1f6558d440bc84d6de7f5d96bad149e75f0fe0aab8dedb29d59245d4054af5d"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\og-image.png",
+      "destination": "artifacts/legacy-media/qron-mvp/og-image.png",
+      "sha256": "a1f6558d440bc84d6de7f5d96bad149e75f0fe0aab8dedb29d59245d4054af5d"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\icon-512.png",
+      "destination": "artifacts/legacy-media/qron-mvp/icon-512.png",
+      "sha256": "22c78320d83b361868f3f39c685bb38df13183431f45de487d1522efa1edc651"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\galactic.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/galactic.svg",
+      "sha256": "9bbe056261be164f846a65063dbd7b9ad85124213a7206711f0d2bf54e2947ea"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-ecommerce-card-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-ecommerce-card-1080.svg",
+      "sha256": "322fc09158d40569f07a379cf8f5c596555af06e8d583bf9d51d1284e90d2124"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-creator-merch-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-creator-merch-1080.svg",
+      "sha256": "9f93bbcec71c0f41d5642cbbf377e202dfb7da6d816dc2eae92252ece0c925f8"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-chromatic-portal-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-chromatic-portal-1080.svg",
+      "sha256": "2e65e74da77ee89e8551491c4588d376e65ad0eef610139bd2ad57c57c589ec8"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\icon-192.png",
+      "destination": "artifacts/legacy-media/qron-mvp/icon-192.png",
+      "sha256": "a7d56bd454d7c4f9899801015d843749815a0c7e6e86d605fd0c4f911c6d2d7f"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\authichain-mvp\\public\\qron\\strainchain-zkittlez-qr.svg",
+      "destination": "artifacts/legacy-media/strainchain/qron/strainchain-zkittlez-qr.svg",
+      "sha256": "aa820e7c4f454ff4ca20a6da9a68b2b1026cd94fce89cc2322745f1426875477"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\authichain-mvp\\public\\qron\\strainchain-zkittlez-qr.png",
+      "destination": "artifacts/legacy-media/strainchain/qron/strainchain-zkittlez-qr.png",
+      "sha256": "6e79ed71cd77f89c35f43324d66dbb6c1edafe1bd132e21868c64d43fd77e41b"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\authichain-mvp\\public\\images\\strainchain-hero.png",
+      "destination": "artifacts/legacy-media/strainchain/images/strainchain-hero.png",
+      "sha256": "bbb7837f5b372db4ae4c4289f44a6f72756e51ded7ad297b77e6fbb1bb711e81"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\authichain-mvp\\public\\showcase\\strainchain-qr.png",
+      "destination": "artifacts/legacy-media/strainchain/showcase/strainchain-qr.png",
+      "sha256": "bbb7837f5b372db4ae4c4289f44a6f72756e51ded7ad297b77e6fbb1bb711e81"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\hero-qron-flow-1920x1080.mp4",
+      "destination": "artifacts/legacy-media/qron-mvp/hero-qron-flow-1920x1080.mp4",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\favicon.png",
+      "destination": "artifacts/legacy-media/qron-mvp/favicon.png",
+      "sha256": "3598df88cfccd46ee1be058c887972aff4f6bdbc8ad5a82ad1003d005d8d80d0"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\apple-touch-icon.png",
+      "destination": "artifacts/legacy-media/qron-mvp/apple-touch-icon.png",
+      "sha256": "6df2cb7e2d6fca304f9cd4a9a1c0551c2da1e377be1d6e479c220a356a97f97b"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-event-badge-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-event-badge-1080.svg",
+      "sha256": "f45dc61e66a39935d184a7a01dd7d9a3eb4f69d45445d1d6d8bef7d37223ade4"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\AUTHENTIC_ECONOMY.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/AUTHENTIC_ECONOMY.md",
+      "sha256": "cb697dd4488dfca5b569a1a221093cf0548e730b79831d3178a5c9b77e31bdc9"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\AI_AUTOFLOW.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/AI_AUTOFLOW.md",
+      "sha256": "669f8b04719f888a2b94492edbae950691144911461b98cbd7bfe2275d6aea0b"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-archive\\2026-09-29-CANONICAL-untracked-list.txt",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-archive/2026-09-29-CANONICAL-untracked-list.txt",
+      "sha256": "ba512b8384e270f6dfebbb9d9df7a5d41590c608c2525bf13b2280333aba9c18"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\SUPABASE_SETUP.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/SUPABASE_SETUP.md",
+      "sha256": "d7d706ab4ddf1fb7beab2cbe631d796b2a8be768bff4d4172b91ea4cac7c8642"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\intake.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/intake.md",
+      "sha256": "b25b0b80ca4a5733447c800aa427ca860cd9684f92169c4994fe9e294a7ffb89"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\marketing\\demo-mapping.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/marketing/demo-mapping.md",
+      "sha256": "82571fc1b4d23de400dc40f8c1cc4781a732ecbc00e808f50ebadd26286238cb"
+    },
+    {
+      "category": "document",
+      "source": "C:\\Users\\rac\\authichain-mvp\\VISION.md",
+      "destination": "docs/archive/legacy-imports/2026-10-04/authichain-mvp/VISION.md",
+      "sha256": "a12534d90a639aaca42dcfcc9d2f0edfc0d20cf5d87852398d0c41d9ae1aa2ab"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\qron-comparison-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/qron-comparison-1080.svg",
+      "sha256": "3d4b397e923ddf0dead94429b00b0ed347003af9909578d08dd9e17c1ca08748"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\hero-qron-art.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/hero-qron-art.svg",
+      "sha256": "8e25f2d1480fe976a69a2e544a572a9044d0d2a533d6168d061cd707fe9778b5"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-static-portal-1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-static-portal-1080.svg",
+      "sha256": "b1be771d21318eef6e3f246a120082b447a378f6a779beb875401bb676caf763"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\gallery-event-poster-1350x1080.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/gallery-event-poster-1350x1080.svg",
+      "sha256": "ee30b419609b1749ee1dc6bf127220275641a220ece90137aa019ea827aa56a5"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\neon-matrix.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/neon-matrix.svg",
+      "sha256": "1e2e4fb4a67d40484b2556301ef6b70f70d6844e0df762ad5f5aba65520382f8"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\portfolio-qron-3.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/portfolio-qron-3.svg",
+      "sha256": "dcfa86053ef95aa794e095f1fb3debe6c2f0195b2f0786b5db3e09151e4061c6"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\portfolio-qron-2.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/portfolio-qron-2.svg",
+      "sha256": "1e118ae4d85585486e18c44f90cfdd2c6452a8836170459e1455f25c944b59bd"
+    },
+    {
+      "category": "media",
+      "source": "C:\\Users\\rac\\qron-mvp\\public\\media\\portfolio-qron-1.svg",
+      "destination": "artifacts/legacy-media/qron-mvp/media/portfolio-qron-1.svg",
+      "sha256": "66cbd6609449bbe3d61ad372f41cf707558de58fd61c1893985638539ce21ab4"
+    }
+  ]
+}

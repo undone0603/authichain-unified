@@ -1,0 +1,12 @@
+﻿PRIORITY: CRITICAL - Run First
+TIME: 15 minutes max
+
+Create MVP business foundation for QRON Living QR Art:
+
+1. ONE customer persona - name, pain point, budget
+2. CORE VALUE PROP - one sentence
+3. THREE TIERS - Free/Pro/Agency with features
+4. ONE LEAD MAGNET - Free AI QR Generator
+5. POSITIONING STATEMENT
+
+Save: business_output/mvp_foundation.md

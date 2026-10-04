@@ -1,0 +1,11 @@
+﻿PRIORITY: HIGH - Landing Page
+TIME: 12 minutes max
+
+Create minimal landing page for qron.space:
+- Hero section with CTA
+- 3 pain points
+- 6 style examples
+- Pricing tiers
+- Single conversion path
+
+Save: business_output/landing_mvp.md

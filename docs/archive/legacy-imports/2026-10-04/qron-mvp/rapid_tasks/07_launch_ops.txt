@@ -1,0 +1,9 @@
+﻿PRIORITY: LOW - Launch Ops
+TIME: 8 minutes max
+
+Launch week checklist:
+- Daily tasks (15 min)
+- Metrics to track
+- Support workflow
+
+Save: business_output/launch_ops.md

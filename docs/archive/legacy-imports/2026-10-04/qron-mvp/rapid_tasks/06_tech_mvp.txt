@@ -1,0 +1,10 @@
+﻿PRIORITY: MEDIUM - Tech MVP
+TIME: 10 minutes max
+
+Minimum requirements:
+- Supabase tables
+- API endpoints
+- Features for Day 1
+- What to skip
+
+Save: business_output/tech_mvp.md

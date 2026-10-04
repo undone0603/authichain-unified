@@ -1,0 +1,23 @@
+PRIORITY: HIGH - Week 1 Marketing
+TIME: 15 minutes max
+
+Execution sprint (do in order):
+1) Fiverr — publish the gig using ready copy (5 min)
+   - Done when: gig is live and URL is saved.
+2) Reddit + Indie Hackers — publish community posts using ready copy (5 min)
+   - Done when: both post URLs are saved.
+3) Polygon — deploy AuthiChainNFT.sol (budget: 1-2 MATIC)
+   - Done when: contract address + Polygonscan link are saved.
+4) Living Portals — enable qron.space/p/[shortcode] redirect + scan analytics
+   - Done when: one test shortcode redirects correctly and scan event is recorded.
+
+Artifacts to capture before ending sprint:
+- Fiverr gig URL
+- Reddit post URL
+- Indie Hackers post URL
+- Contract address + Polygonscan URL
+- Test shortcode + analytics screenshot/link
+
+GOAL: 500 signups, Dollar 5K revenue
+
+Save: business_output/week1_blitz.md
