@@ -733,6 +733,14 @@ describe("owner digest scoreboard", async () => {
         visitors: 120,
         checkouts: 2,
         campaigns: { "battery-passport": { started: 1, paid: 0 } },
+        starterFunnel: {
+          views: 25,
+          unauthenticated: 4,
+          sessions: 2,
+          abandoned: 1,
+          purchases: 1,
+        },
+        checkoutWebhookFailures: 0,
         replies: 1,
         failing: [{ title: "AgentZ", url: "u" }],
       },
@@ -743,6 +751,10 @@ describe("owner digest scoreboard", async () => {
     expect(full).toContain(
       "battery-passport page: 1 checkouts started, 0 paid"
     );
+    expect(full).toContain(
+      "QRON Starter funnel, last 7 days: 25 views, 4 unauthenticated attempts, 2 checkout sessions, 1 abandoned, 1 non-founder fulfilled purchase"
+    );
+    expect(full).toContain("Checkout webhook failures, last 7 days: 0");
     expect(full).toContain("Paid by customers: $49.00");
     expect(full).toContain("Replies received: 1");
     expect(full).toContain("Systems failing: 1");
@@ -750,6 +762,8 @@ describe("owner digest scoreboard", async () => {
     expect(empty).toContain("Unique visitors: not connected");
     expect(empty).toContain("Paid by customers: not connected");
     expect(empty).toContain("battery-passport page: not connected");
+    expect(empty).toContain("QRON Starter funnel events: not connected");
+    expect(empty).toContain("Checkout webhook failures: not connected");
     expect(empty).toContain("Systems failing: not connected");
   });
 });

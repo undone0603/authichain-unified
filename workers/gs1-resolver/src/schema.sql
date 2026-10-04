@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS seals (
 
 CREATE INDEX IF NOT EXISTS idx_seals_gtin ON seals(gtin);
 CREATE INDEX IF NOT EXISTS idx_seals_cert ON seals(cert_id);
+CREATE INDEX IF NOT EXISTS idx_seals_cert_nocase ON seals(cert_id COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_seals_status ON seals(status);
 
 CREATE TABLE IF NOT EXISTS scans (
