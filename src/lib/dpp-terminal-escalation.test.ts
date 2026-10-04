@@ -179,12 +179,19 @@ describe("DPP terminal escalation (upsert_failed → retry budget → exception)
       .fn()
       .mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    await publishFounderAlert({
-      title: `DPP exception: ${exc.visitId} stalled at ${exc.furthest}`,
-      text: `visit ${exc.visitId} paid but never ${exc.stall.nextExpected} (${exc.stall.reason}, ${exc.stall.hours?.toFixed(1)}h)`,
-      subject: `DPP exception: ${exc.visitId}`,
-      kind: "draft",
-    });
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_API_KEY2", "");
+    try {
+      await publishFounderAlert({
+        title: `DPP exception: ${exc.visitId} stalled at ${exc.furthest}`,
+        text: `visit ${exc.visitId} paid but never ${exc.stall.nextExpected} (${exc.stall.reason}, ${exc.stall.hours?.toFixed(1)}h)`,
+        subject: `DPP exception: ${exc.visitId}`,
+        kind: "draft",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];

@@ -522,10 +522,13 @@ describe("dppExceptionAlert", () => {
       .fn()
       .mockResolvedValue(new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_API_KEY2", "");
     try {
       await publishFounderAlert(alert);
     } finally {
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe(NTFY_URL);
