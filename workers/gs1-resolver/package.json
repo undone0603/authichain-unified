@@ -6,6 +6,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "schema": "wrangler d1 execute authichain-provenance --file=src/schema.sql",
+    "migrate": "wrangler d1 migrations apply authichain-provenance --remote",
     "test": "node --experimental-strip-types src/gs1.test.ts && node --experimental-strip-types src/clone.test.ts && npx tsx src/readonly.test.ts && npx tsx src/lifecycle.test.ts && npx tsx src/conformance.test.ts"
   }
 }

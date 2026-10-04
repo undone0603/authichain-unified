@@ -9,6 +9,7 @@ workers_dev = true
 binding = "DB"
 database_name = "authichain-provenance"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+migrations_dir = "migrations"
 
 [vars]
 # PASSPORT_ORIGIN is where a scanned seal sends a human. As of 2026-09-11 that

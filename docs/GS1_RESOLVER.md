@@ -21,10 +21,15 @@ src/lib/passport.ts       Fetch helper
 
 ```bash
 cd workers/gs1-resolver
-npx wrangler d1 execute authichain-provenance --file=src/schema.sql
+npm run migrate
 npx wrangler deploy
 npx wrangler secret put ISSUE_SECRET
 ```
+
+Run migrations against the remote D1 database before deploying code that depends
+on a new column. `src/schema.sql` documents the current baseline; it does not
+upgrade an existing `seals` table. D1 records applied migrations and will not
+run them twice.
 
 Point `id.authichain.com` at this worker. Set:
 
