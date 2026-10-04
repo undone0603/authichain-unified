@@ -3,6 +3,8 @@ import { verifyApiKey } from '@/lib/auth-api';
 import { reportAgentUsage } from '@/lib/industrial/billing';
 import { logAutomation } from '@/lib/automation';
 import { agentPricingDiscovery } from '@/lib/authentic-economy';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
+import { MCP_TOOLS, runMeteredMcpTool } from '../../../lib/mcp-tools';
 
 /**
  * MCP ENDPOINT (Model Context Protocol)
@@ -12,49 +14,6 @@ import { agentPricingDiscovery } from '@/lib/authentic-economy';
  * Pricing is the three-rail join (plans.ts / x402 / $QRON theater), not a
  * second Polygon schedule. Do not invent SKUs here.
  */
-
-const TOOLS = [
-  {
-    name: "authichain_verify_product",
-    description: "Verifies product authenticity using a 5-agent AI consensus mechanism. Requires a serial number.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        serial: { type: "string", description: "The product serial number or Ed25519 hash" }
-      },
-      required: ["serial"]
-    }
-  },
-  {
-    name: "authichain_register_product",
-    description: "Registers a new product in the registry and mints a corresponding NFT certificate on Polygon.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        manufacturer: { type: "string" },
-        target_url: { type: "string" }
-      },
-      required: ["name", "manufacturer", "target_url"]
-    }
-  },
-  {
-    name: "authichain_check_eu_dpp",
-    description: "Validates product compliance with EU Digital Product Passport (DPP) standards.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        certification_id: { type: "string" }
-      },
-      required: ["certification_id"]
-    }
-  },
-  {
-    name: "authichain_get_pricing",
-    description: "Retrieves the current API pricing tiers and discovery information.",
-    inputSchema: { type: "object", properties: {} }
-  }
-];
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (method === "tools/list") {
-      return NextResponse.json({ tools: TOOLS });
+      return NextResponse.json({ tools: MCP_TOOLS });
     }
 
     // 2. Handle callTool (Requires Authentication for Billing)
@@ -96,53 +55,22 @@ export async function POST(req: NextRequest) {
             }]
           });
 
-        case "authichain_verify_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'verify_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(verify_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'verify_product' }, msg);
-          });
-
-          return NextResponse.json({
-            content: [{
-              type: "text",
-              text: `Verification initiated for ${args.serial}. Consensus nodes: 5/5. Status: SECURED.`
-            }]
-          });
-
-        case "authichain_check_eu_dpp":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'check_eu_dpp').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(check_eu_dpp) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'check_eu_dpp' }, msg);
-          });
-
-          return NextResponse.json({
-            content: [{
-              type: "text",
-              text: `EU DPP Compliance Audit initiated for cert: ${args.certification_id}. Lifecycle emissions: 2.4kg. Circularity score: 8/10. Status: COMPLIANT.`
-            }]
-          });
-
-        case "authichain_register_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'register_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(register_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'register_product' }, msg);
-          });
-          
-          return NextResponse.json({
-            content: [{
-              type: "text",
-              text: `Registration protocol activated for ${args.name} by ${args.manufacturer}. Certificate pending on-chain anchor.`
-            }]
-          });
-
-        default:
-          return NextResponse.json({ error: `Tool ${name} not implemented` }, { status: 404 });
+        default: {
+          const outcome = await runMeteredMcpTool(name, args ?? {}, getSupabaseAdmin());
+          if (!outcome) {
+            return NextResponse.json({ error: `Tool ${name} not implemented` }, { status: 404 });
+          }
+          // Only a real answer is metered (see src/lib/mcp-tools.ts).
+          const tool = outcome.meter;
+          if (tool) {
+            reportAgentUsage(userId, tool).catch((err) => {
+              const msg = err instanceof Error ? err.message : String(err);
+              console.error(`[MCP] reportAgentUsage(${tool}) failed:`, err);
+              void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool }, msg);
+            });
+          }
+          return NextResponse.json(outcome.result);
+        }
       }
     }
 
