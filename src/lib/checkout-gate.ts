@@ -116,12 +116,9 @@ export function gatedConfirmUrl(
   return url.toString();
 }
 
-// ─── Bot / prefetch detection (belt and braces; the POST step is the fix) ───
-
 const BOT_UA_RE =
   /bot\b|bot\/|crawler|spider|slurp|linkpreview|preview\/|scanner|facebookexternalhit|embedly|quora link|outbrain|vkshare|w3c_validator|headlesschrome|phantomjs|puppeteer|playwright|python-requests|python-urllib|aiohttp|httpx|go-http-client|okhttp|java\/|libwww|wget\/|curl\/|node-fetch|undici|axios\/|scrapy|barracuda|mimecast|proofpoint|safelinks|urldefense|trendmicro|symantec|forcepoint|fortiguard|zscaler|ironport|google-safety|googleother|bingpreview|ahrefs|semrush|mj12|petalbot|yandex|baiduspider|pingdom|statuscake|uptimerobot|checkly/i;
 
-/** Headers browsers send on speculative loads (never a human click). */
 export function isPrefetchRequest(request: Request): boolean {
   const h = request.headers;
   const values = [
@@ -149,7 +146,6 @@ export function isAutomatedCheckoutRequest(request: Request): boolean {
   );
 }
 
-/** Reject explicit foreign Origins (auto-submitting third-party forms). */
 export function isAllowedPostOrigin(request: Request): boolean {
   const origin = (request.headers.get("origin") || "").trim();
   if (!origin || origin === "null") return true;
@@ -300,8 +296,6 @@ function htmlResponse(html: string, status = 200): Response {
   return new Response(html, { status, headers: HTML_HEADERS });
 }
 
-// ─── Stripe session (POST only) ─────────────────────────────────────────────
-
 export type GatedSessionResult =
   | { ok: true; url: string }
   | { ok: false; status: number; error: string; detail?: string };
@@ -324,10 +318,6 @@ function newVisitId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`;
 }
 
-/**
- * Build the form body for POST /v1/checkout/sessions. Mirrors the metadata of
- * src/lib/dpp-checkout.ts (DPP) and src/lib/plan-checkout.ts (plans).
- */
 export function buildGatedSessionBody(opts: {
   plan: Plan;
   email: string;
@@ -360,14 +350,15 @@ export function buildGatedSessionBody(opts: {
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
   body.set("payment_method_types[0]", "card");
-  // The claim file has its own landing: /dpp/thanks would tell a Made in USA
-  // buyer their "DPP audit" was provisioned.
   const isClaimFile = plan.id === "musa_claim_file";
+  const isStarter = plan.id === "starter";
   body.set(
     "success_url",
     isClaimFile
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
-      : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+      : isStarter
+        ? "https://authichain.com/generate?paid=1&session_id={CHECKOUT_SESSION_ID}"
+        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
   );
   body.set(
     "cancel_url",
@@ -375,7 +366,9 @@ export function buildGatedSessionBody(opts: {
       ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file?cancelled=1`
-        : `${origin}/pricing?cancelled=1`
+        : isStarter
+          ? "https://authichain.com/generate?cancelled=1"
+          : `${origin}/pricing?cancelled=1`
   );
   body.set("client_reference_id", visitId.slice(0, 200));
   body.set("customer_email", email);
@@ -444,8 +437,6 @@ export async function createGatedCheckoutSession(opts: {
   return { ok: true, url: data.url };
 }
 
-// ─── Request handler ────────────────────────────────────────────────────────
-
 export type GatedCheckoutEnv = { STRIPE_SECRET_KEY?: string };
 
 /**
@@ -486,11 +477,6 @@ async function readFormFields(request: Request): Promise<URLSearchParams> {
   return new URLSearchParams();
 }
 
-/**
- * /checkout and /checkout/<plan>.
- *   GET/HEAD → confirm page (200) or chooser; unknown plan 404. Never Stripe.
- *   POST     → validate (email, honeypot, origin, bot/prefetch) → 303 Stripe.
- */
 export async function tryHandleGatedCheckout(
   request: Request,
   env: GatedCheckoutEnv,
@@ -521,7 +507,6 @@ export async function tryHandleGatedCheckout(
       ? new Response(null, { status: 404, headers: HTML_HEADERS })
       : htmlResponse(html, 404);
   }
-  // Canonicalise aliases (/checkout/dpp → /checkout/dpp_readiness).
   if (p !== `/checkout/${plan.id}` && (method === "GET" || method === "HEAD")) {
     return new Response(null, {
       status: 301,
@@ -573,7 +558,6 @@ export async function tryHandleGatedCheckout(
     );
   }
   if ((fields.get("website") || "").trim()) {
-    // Honeypot filled — silently show the page again, no Stripe call.
     return htmlResponse(renderCheckoutConfirmPage({ plan, params: fields }), 400);
   }
   const email = pickCheckoutEmail(fields.get("email"));
@@ -615,7 +599,6 @@ export async function tryHandleGatedCheckout(
   });
 }
 
-/** Every catalogue plan that the gate can sell (for tests/inventory). */
 export function gatedCheckoutPlanIds(): PlanId[] {
   return PLANS.filter(p => p.stripe_price_id && p.stripe_mode).map(p => p.id);
 }

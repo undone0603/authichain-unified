@@ -655,6 +655,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     );
     expect(body).toContain('name="targetUrl"');
     expect(body).toContain("fetch('/api/generate'");
+    expect(body).not.toContain("Request a free pilot");
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
         expect(body).toContain("$29");
@@ -678,11 +679,28 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("5 free, then 100 for $29");
     expect(body).not.toContain("buy.stripe.com");
     expect(body).not.toContain("Those 5 are signed");
+  });
+
+  it("drops the free-pilot /onboard link from the default page", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).not.toContain("Request a free pilot");
+    expect(body).not.toContain("https://authichain.com/onboard");
     expect(body).not.toContain("Those 5 are signed");
+    expect(body).not.toContain('id="generate-exhausted"');
+  });
+
+  it("points the JS 403 wall at Starter checkout", async () => {
+    const res = await app.request("/generate", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(body).toContain("Five free used. Buy Starter Pack $29.");
+    expect(body).toContain("Network error. Buy the Starter pack to keep generating.");
+    expect(body).not.toContain("Sign in or buy a generation pack.");
   });
 
   // The no-JS submit goes to the starter checkout (the generate wall, #1388).
-  it("303s a valid URL to the starter checkout", async () => {
+  it("303s a valid URL to https://authichain.com/checkout/starter", async () => {
     const res = await app.request(
       "/generate",
       {
@@ -694,15 +712,40 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-    const location = new URL(
-      res.headers.get("location") || "",
-      "https://example.test"
-    );
-    expect(location.pathname).toBe("/checkout/starter");
-    expect(location.searchParams.get("targetUrl")).toBe(
-      "https://example.com/sku"
-    );
-    expect(location.searchParams.get("prompt")).toBe("neon");
+    const location = res.headers.get("location") || "";
+    expect(location).toContain("https://authichain.com/checkout/starter");
+    expect(location).not.toContain("/onboard");
+    expect(location).toContain("utm_source=generate");
+    expect(location).toContain("utm_medium=paywall");
+    expect(location).not.toContain("targetUrl");
+  });
+
+  it("shows the paid banner on ?paid=1", async () => {
+    const res = await app.request("/generate?paid=1", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain('id="generate-paid"');
+    expect(body).toContain("Payment received");
+    expect(body).not.toContain("Those 5 are signed");
+  });
+
+  it("shows the cancelled banner on ?cancelled=1", async () => {
+    const res = await app.request("/generate?cancelled=1", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain('id="generate-cancelled"');
+    expect(body).toContain("https://authichain.com/checkout/starter");
+  });
+
+  it("shows the 5/5 wall on ?exhausted=1", async () => {
+    const res = await app.request("/generate?exhausted=1", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain('id="generate-exhausted"');
+    expect(body).toContain("Those 5 are signed. The next 100 are $29.");
+    expect(body).toContain("https://authichain.com/checkout/starter");
+    expect(body).toContain("https://authichain.com/checkout/qron_launch");
+    expect(body).toContain('id="generate-form"');
   });
 });
 
@@ -735,5 +778,17 @@ describe("renderDynamicPage: /story StoryMode", () => {
 
     expect(res.status).toBe(404);
     expect(body).toContain("Story not found");
+  });
+});
+
+
+describe("renderDynamicPage: /generate payment state", () => {
+  it("shows payment received and keeps the generate form", async () => {
+    const res = await app.request("/generate?paid=1", {}, makeEnv() as any);
+    const body = await res.text();
+    expect(res.status).toBe(200);
+    expect(body).toContain("Payment received");
+    expect(body).toContain('<p role="status" id="generate-paid">');
+    expect(body).toContain('id="generate-form"');
   });
 });

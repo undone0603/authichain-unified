@@ -1465,12 +1465,38 @@ function generateCreditLinksHtml(): string {
   );
 }
 
-function generateFormHtml(error?: string, paid = false, cancelled = false): string {
-  const statusBlock = paid
-    ? '<p role="alert" id="generate-paid">Payment received</p>\n'
-    : cancelled
-      ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
-      : '';
+// Banner state for GET /generate: ?paid=1 and ?cancelled=1 come back from
+// Starter checkout; ?exhausted=1 is the 5/5 wall. Default renders nothing, so
+// the wall copy never shows on the plain page.
+type GenerateNotice = "paid" | "cancelled" | "exhausted" | undefined;
+
+function generateNoticeHtml(notice: GenerateNotice): string {
+  if (notice === "paid") {
+    return '<p role="status" id="generate-paid">Payment received. Your Starter pack is ready — generate below.</p>\n';
+  }
+  if (notice === "cancelled") {
+    return (
+      '<p role="status" id="generate-cancelled">Checkout cancelled. ' +
+      '<a href="https://authichain.com/checkout/starter">Return to Starter checkout</a></p>\n'
+    );
+  }
+  if (notice === "exhausted") {
+    return (
+      '<section id="generate-exhausted">\n' +
+      "<h2>Those 5 are signed. The next 100 are $29.</h2>\n" +
+      "<p>" +
+      '<a href="https://authichain.com/checkout/starter">Buy Starter Pack $29</a>' +
+      " · " +
+      '<a href="https://authichain.com/checkout/qron_launch">qron_launch $19/mo</a>' +
+      "</p>\n" +
+      "</section>\n"
+    );
+  }
+  return "";
+}
+
+function generateFormHtml(error?: string, notice?: GenerateNotice): string {
+  const statusBlock = generateNoticeHtml(notice);
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
@@ -1521,7 +1547,9 @@ function generateFormHtml(error?: string, paid = false, cancelled = false): stri
       "}\n" +
       "if(r.res.status===403){\n" +
       "err.hidden=false;\n" +
-      "err.textContent=r.data.message||'Sign in or buy a generation pack.';\n" +
+      "err.textContent=r.data.message||'Five free used. Buy Starter Pack $29.';\n" +
+      "out.hidden=false;\n" +
+      "out.innerHTML='<a href=\"https://authichain.com/checkout/starter\">Buy Starter Pack $29</a>';\n" +
       "return;\n" +
       "}\n" +
       "if(!r.res.ok){\n" +
@@ -1545,13 +1573,9 @@ function generateFormHtml(error?: string, paid = false, cancelled = false): stri
 
 async function handleGeneratePost(c: Context): Promise<Response> {
   let targetUrl = "";
-  let prompt = "";
   try {
     const form = await c.req.parseBody();
     targetUrl = String(form.targetUrl || "").trim();
-    prompt = String(form.prompt || "")
-      .trim()
-      .slice(0, 200);
   } catch {
     return htmlResponse(c, generateFormHtml("Could not read the form."), 400);
   }
@@ -1562,10 +1586,12 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/checkout/starter", c.req.url);
-  dest.searchParams.set("targetUrl", targetUrl);
-  if (prompt) dest.searchParams.set("prompt", prompt);
-  return c.redirect(dest.pathname + dest.search, 303);
+  // Absolute: qron.space proxies /generate, and a relative /checkout/starter
+  // would resolve to qron.space instead of the authichain.com checkout.
+  const dest = new URL("https://authichain.com/checkout/starter");
+  dest.searchParams.set("utm_source", "generate");
+  dest.searchParams.set("utm_medium", "paywall");
+  return c.redirect(dest.toString(), 303);
 }
 
 async function renderGenerate(c: Context): Promise<Response> {
@@ -1573,11 +1599,15 @@ async function renderGenerate(c: Context): Promise<Response> {
     return handleGeneratePost(c);
   }
   const url = new URL(c.req.url);
-  return htmlResponse(
-    c,
-    generateFormHtml(undefined, url.searchParams.get("paid") === "1", url.searchParams.get("cancelled") === "1"),
-    200
-  );
+  const notice: GenerateNotice =
+    url.searchParams.get("paid") === "1"
+      ? "paid"
+      : url.searchParams.get("cancelled") === "1"
+        ? "cancelled"
+        : url.searchParams.get("exhausted") === "1"
+          ? "exhausted"
+          : undefined;
+  return htmlResponse(c, generateFormHtml(undefined, notice), 200);
 }
 
 // --- Dispatcher --------------------------------------------------------------
