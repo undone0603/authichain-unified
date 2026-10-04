@@ -7,16 +7,33 @@ export interface PipelineSnapshot {
   pendingTasks: number;
   runningTasks: number;
   waitingHumanTasks: number;
+  oldestPendingTasks: TaskSummary[];
+  runningTasksByAge: TaskSummary[];
+  waitingHumanDetails: TaskSummary[];
   completedTasks24h: number;
   failedTasks24h: number;
   successRate24h: number | null;
   recentErrors: { error: string; updatedAt: Date }[];
 }
 
+export interface TaskSummary {
+  id: string;
+  kind: string;
+  title: string;
+  updatedAt: Date;
+}
+
 export async function getPipelineSnapshot(): Promise<PipelineSnapshot> {
   const db = await getDb();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [currentCounts, recentCounts, recentErrors] = await Promise.all([
+  const [
+    currentCounts,
+    recentCounts,
+    oldestPending,
+    running,
+    waitingHuman,
+    recentErrors,
+  ] = await Promise.all([
     db
       .select({ status: missionTasks.status, count: count() })
       .from(missionTasks)
@@ -37,6 +54,39 @@ export async function getPipelineSnapshot(): Promise<PipelineSnapshot> {
       )
       .orderBy(desc(missionTasks.updatedAt))
       .limit(5),
+    db
+      .select({
+        id: missionTasks.id,
+        kind: missionTasks.kind,
+        title: missionTasks.title,
+        updatedAt: missionTasks.updatedAt,
+      })
+      .from(missionTasks)
+      .where(eq(missionTasks.status, "pending"))
+      .orderBy(missionTasks.createdAt)
+      .limit(5),
+    db
+      .select({
+        id: missionTasks.id,
+        kind: missionTasks.kind,
+        title: missionTasks.title,
+        updatedAt: missionTasks.updatedAt,
+      })
+      .from(missionTasks)
+      .where(eq(missionTasks.status, "in_progress"))
+      .orderBy(missionTasks.updatedAt)
+      .limit(5),
+    db
+      .select({
+        id: missionTasks.id,
+        kind: missionTasks.kind,
+        title: missionTasks.title,
+        updatedAt: missionTasks.updatedAt,
+      })
+      .from(missionTasks)
+      .where(eq(missionTasks.status, "waiting_human"))
+      .orderBy(missionTasks.updatedAt)
+      .limit(5),
   ]);
 
   const sampledAt = new Date();
@@ -51,6 +101,9 @@ export async function getPipelineSnapshot(): Promise<PipelineSnapshot> {
     pendingTasks: current.get("pending") ?? 0,
     runningTasks: current.get("in_progress") ?? 0,
     waitingHumanTasks: current.get("waiting_human") ?? 0,
+    oldestPendingTasks: oldestPending,
+    runningTasksByAge: running,
+    waitingHumanDetails: waitingHuman,
     completedTasks24h,
     failedTasks24h,
     successRate24h:
@@ -74,11 +127,27 @@ export function formatPipelineSnapshot(snapshot: PipelineSnapshot): string {
         )
         .join("\n")
     : "  - none";
+  const taskList = (tasks: TaskSummary[]) =>
+    tasks.length
+      ? tasks
+          .map(task => {
+            const ageHours = Math.max(
+              0,
+              (snapshot.sampledAt.getTime() - task.updatedAt.getTime()) /
+                (60 * 60_000)
+            );
+            return `  - ${task.kind} [${task.id}] ${task.title} (${ageHours.toFixed(1)}h)`;
+          })
+          .join("\n")
+      : "  - none";
 
   return [
     `Sampled: ${snapshot.sampledAt.toISOString()}`,
     `Tasks now: ${snapshot.pendingTasks} pending, ${snapshot.runningTasks} in progress, ${snapshot.waitingHumanTasks} waiting for a person`,
     `Last 24h: ${snapshot.completedTasks24h} completed, ${snapshot.failedTasks24h} failed, ${rate} success rate`,
+    `Oldest pending tasks:\n${taskList(snapshot.oldestPendingTasks)}`,
+    `In-progress tasks, oldest activity first:\n${taskList(snapshot.runningTasksByAge)}`,
+    `Waiting for a person:\n${taskList(snapshot.waitingHumanDetails)}`,
     `Recent task errors:\n${errors}`,
   ].join("\n");
 }
