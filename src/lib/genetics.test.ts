@@ -120,6 +120,17 @@ describe("the Mendo Love Farms dossier", () => {
     expect(crosses.peakRatio!).toBeGreaterThan(lt11.peakRatio!);
   });
 
+  it("does not rank totals-only certificates as measured THCV", () => {
+    const crosses = getCultivar(farm, "vt-26xlt-11")!;
+    expect(crosses.certificates).toHaveLength(3);
+    expect(crosses.certificates.every(c => c.cannabinoids_pct == null)).toBe(true);
+    expect(crosses.certificates.some(c => c.totals_pct.thcv != null)).toBe(true);
+    expect(crosses.certificates.every(c => c.derived.totalThcvPct == null)).toBe(true);
+    expect(crosses.peakThcvPct).toBeNull();
+    expect(crosses.peakRatio).toBeNull();
+    expect(crosses.thcvRank).toBe(crosses.totalCultivars);
+  });
+
   it("carries lineage provenance rather than flattening it to a claim", () => {
     const lt11 = getCultivar(farm, "lt-11")!;
     expect(lt11.parentEdges[0].provenance).toBe("confirmed_in_writing");
