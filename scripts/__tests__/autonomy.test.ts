@@ -472,7 +472,7 @@ describe("approval queue", async () => {
 });
 
 describe("owner digest", async () => {
-  const { buildDigest, summarize } =
+  const { buildDigest, summarize, summarizePipelineQueue, readPipelineQueue } =
     await import("../autonomy/owner-digest.mjs");
   const base = {
     money: null,
@@ -526,6 +526,111 @@ describe("owner digest", async () => {
       new Set(["me@x.com"])
     );
     expect(m).toMatchObject({ revenue: 4900, payments: 1 });
+  });
+
+  it("surfaces owner-gated or stale queue work in a same-day digest", () => {
+    const queue = summarizePipelineQueue(
+      { pending: 2, inProgress: 1, waitingHuman: 1 },
+      { pending: 4, running: 1, waitingHuman: 2 }
+    );
+    const digest = buildDigest({
+      ...base,
+      date: "2026-10-04T12:30:00Z",
+      pipelineQueue: queue,
+    });
+
+    expect(digest.shouldSend).toBe(true);
+    expect(digest.text).toContain(
+      "Tasks: 2 pending, 1 in progress, 1 waiting for a person"
+    );
+    expect(digest.text).toContain(
+      "Owner action: review 1 task(s) waiting for a person"
+    );
+    expect(digest.text).not.toContain("task id");
+  });
+
+  it("sends a same-day digest when queued or running work becomes stale", () => {
+    for (const queue of [
+      summarizePipelineQueue(
+        { pending: 1, inProgress: 0, waitingHuman: 0 },
+        { pending: 24, running: null, waitingHuman: null }
+      ),
+      summarizePipelineQueue(
+        { pending: 0, inProgress: 1, waitingHuman: 0 },
+        { pending: null, running: 6, waitingHuman: null }
+      ),
+    ]) {
+      expect(queue.needsAttention).toBe(true);
+      expect(
+        buildDigest({
+          ...base,
+          date: "2026-10-04T12:30:00Z",
+          pipelineQueue: queue,
+        }).shouldSend
+      ).toBe(true);
+    }
+  });
+
+  it("derives queue counts and oldest ages from status-limited REST queries", async () => {
+    const now = Date.parse("2026-10-04T12:00:00Z");
+    const requests = [];
+    const fetchImpl = async (input, options = {}) => {
+      const url = new URL(String(input));
+      requests.push({ url, options });
+      const status = url.searchParams.get("status").slice(3);
+      const counts = { pending: 2, in_progress: 3, waiting_human: 1 };
+      if (options.method === "HEAD") {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => `0-0/${counts[status]}` },
+        };
+      }
+      const ages = { pending: 30, in_progress: 7, waiting_human: 2 };
+      const column = url.searchParams.get("select");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [
+          { [column]: new Date(now - ages[status] * 3_600_000).toISOString() },
+        ],
+      };
+    };
+
+    const queue = await readPipelineQueue({
+      supabaseUrl: "https://project.supabase.co",
+      serviceRoleKey: "test-secret",
+      fetchImpl,
+      now,
+    });
+
+    expect(requests).toHaveLength(6);
+    expect(queue.counts).toEqual({
+      pending: 2,
+      inProgress: 3,
+      waitingHuman: 1,
+    });
+    expect(queue.oldestAgeHours).toEqual({
+      pending: 30,
+      running: 7,
+      waitingHuman: 2,
+    });
+    expect(queue.nextAction).toMatch(/review 1 task/);
+  });
+
+  it("chooses retry/runner action for stale work without owner-gated tasks", () => {
+    expect(
+      summarizePipelineQueue(
+        { pending: 1, inProgress: 1, waitingHuman: 0 },
+        { pending: 1, running: 8, waitingHuman: null }
+      ).nextAction
+    ).toMatch(/Check the pipeline runner.*8\.0 hours/);
+    expect(
+      summarizePipelineQueue(
+        { pending: 1, inProgress: 0, waitingHuman: 0 },
+        { pending: 25, running: null, waitingHuman: null }
+      ).nextAction
+    ).toMatch(/Check the pipeline runner.*25\.0 hours/);
   });
 });
 
