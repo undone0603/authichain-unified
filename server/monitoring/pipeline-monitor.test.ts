@@ -16,6 +16,8 @@ describe("pipeline task monitor", () => {
       oldestWaitingHumanAgeHours: 3,
       completedTasks24h: 8,
       failedTasks24h: 2,
+      completedTasksPrevious24h: 5,
+      failedTasksPrevious24h: 4,
       successRate24h: 80,
     };
 
@@ -25,6 +27,7 @@ describe("pipeline task monitor", () => {
       "2 pending, 1 in progress, 3 waiting for a person"
     );
     expect(output).toContain("8 completed, 2 failed, 80.0% success rate");
+    expect(output).toContain("Trend vs previous 24h: completed +3, failed -2");
     expect(output).toContain(
       "Oldest task ages: pending 2.0h, in progress 1.0h, waiting for a person 3.0h"
     );
@@ -43,11 +46,14 @@ describe("pipeline task monitor", () => {
       oldestWaitingHumanAgeHours: null,
       completedTasks24h: 0,
       failedTasks24h: 0,
+      completedTasksPrevious24h: 0,
+      failedTasksPrevious24h: 0,
       successRate24h: null,
     };
 
     const output = formatPipelineSnapshot(snapshot);
     expect(output).toContain("n/a success rate");
+    expect(output).toContain("Trend vs previous 24h: completed 0, failed 0");
     expect(output).toContain(
       "Oldest task ages: pending none, in progress none, waiting for a person none"
     );
