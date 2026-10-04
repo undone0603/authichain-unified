@@ -31,6 +31,8 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 ## Operations
 
 - [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — main-only integration, Cloudflare deploy authority, smoke + repair loop
+- [operations/FOUNDER_ONLY_BUSINESS.md](operations/FOUNDER_ONLY_BUSINESS.md) — AI-operated, founder-governed authority and business loop
+- [operations/AUTONOMOUS_AI_STACK.md](operations/AUTONOMOUS_AI_STACK.md) — provider-neutral AI operating and scaling model
 - [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verify is shared
 - [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist
 - [operations/PILOT-READY-BASELINE.md](operations/PILOT-READY-BASELINE.md) — engineering acceptance gate for the first real-product pilot

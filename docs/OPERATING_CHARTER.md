@@ -17,6 +17,31 @@ waits for the owner. Where an older doc disagrees, this file and
   Cloudflare Workers free tier, and GitHub issues for alerts. None of it needs
   the owner's computer to be on.
 
+## AI-operated, founder-governed company
+
+The company is AI-operated, not AI-accountable. Agents run routine,
+bounded work from source-controlled rules; the founder remains accountable for
+material commitments and for the policy that grants an agent authority.
+
+| Domain                   | Agents may do alone                                                                                        | Founder-only commitment                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Health and capacity      | Measure system health, prioritize alerts, defer non-urgent work, and surface workload evidence             | Collect or process personal health data; make medical, employment, or financial decisions about a person                 |
+| Scale                    | Measure outcomes, propose and run bounded reversible experiments, and stop or revert on a failed guardrail | Increase a spend cap, commit inventory/capital, or accept an irreversible commercial obligation                          |
+| Customers and partners   | Respond within approved content, consent, identity, pricing, and escalation rules                          | Sign a contract, make a legal/regulatory representation, grant a refund outside policy, or make an unverified claim      |
+| Money and infrastructure | Create approved checkout sessions; observe, reconcile, and alert on money and production health            | Change prices/SKUs, issue refunds, move funds/payouts, rotate secrets, change DNS/access, or apply production migrations |
+
+Personal health or wearable data is out of scope by default. If the founder
+ever elects to provide it, the use must be explicit, minimum-necessary,
+private, advisory-only, and revocable. It may reduce non-urgent alerts or
+create scheduling buffers; it must never determine health, employment,
+financial, or customer outcomes.
+
+Every autonomous optimization follows one loop: **measure → propose → bounded
+experiment → verify → retain or revert**. Each experiment needs a recorded
+metric, time/spend/rate limit, rollback path, and escalation condition. An
+agent may not bypass consent, authentication, payment, privacy, deliverability,
+or truth controls to improve a metric.
+
 ## The switchboard: `.github/autonomy.json`
 
 Every file in `.github/workflows/` appears in exactly one lane of the manifest.

@@ -2,6 +2,22 @@
 
 AuthiChain uses a provider-neutral orchestration policy so models and tools can be swapped without rewriting business logic.
 
+## Governance layer
+
+The company is AI-operated and founder-governed. The operating charter and
+switchboard define what agents may execute; they do not delegate legal,
+financial, medical, or other material accountability to a model.
+
+Every agent action needs a bounded authority, observable inputs and outputs,
+an audit record, a failure mode, and an escalation path. Agent selection
+optimizes for **fit × evidence × confidence × cost × latency × privacy**,
+not for maximum automation.
+
+Personal health or wearable data is excluded by default. Any future
+founder-provided capacity signal must be explicit, minimum-necessary,
+private, advisory-only, revocable, and limited to scheduling or
+non-urgent-work prioritization.
+
 ## Operating layers
 
 1. **Orchestrator** — classify the customer circumstance and select the workflow.
@@ -10,7 +26,18 @@ AuthiChain uses a provider-neutral orchestration policy so models and tools can 
 4. **Fit** — score urgency, pain, authentication/DPP need, data availability, buying signal, and budget.
 5. **Revenue** — move qualified demand through HubSpot → Stripe → provisioning → activation → usage.
 6. **Build** — turn approved GitHub work into tested PRs and deployments.
-7. **Observability** — record model/tool choice, cost, latency, errors, and business outcome.
+7. **Observability** — record model/tool choice, cost, latency, errors, business outcome, and guardrail status.
+
+## Scaling loop
+
+The stack may optimize only through a measurable, reversible loop:
+
+`measure → propose → bounded experiment → verify → retain or revert`
+
+Each experiment declares its metric, duration, spend/rate cap, rollback, and
+escalation condition. An agent cannot increase a cap, make an irreversible
+commercial commitment, or bypass consent, privacy, authentication, payment,
+deliverability, or truth controls.
 
 ## Open-source-first candidates
 
