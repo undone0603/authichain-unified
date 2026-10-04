@@ -573,28 +573,31 @@ describe("owner digest", async () => {
 
   it("derives queue counts and oldest ages from status-limited REST queries", async () => {
     const now = Date.parse("2026-10-04T12:00:00Z");
-    const requests = [];
-    const fetchImpl = async (input, options = {}) => {
+    const requests: Array<{ url: URL; method: string }> = [];
+    const fetchImpl: typeof fetch = async (input, options = {}) => {
       const url = new URL(String(input));
-      requests.push({ url, options });
-      const status = url.searchParams.get("status").slice(3);
+      const rawStatus = url.searchParams.get("status")?.slice(3);
       const counts = { pending: 2, in_progress: 3, waiting_human: 1 };
+      if (!rawStatus || !Object.hasOwn(counts, rawStatus)) {
+        throw new Error(`Unexpected task status: ${rawStatus}`);
+      }
+      const status = rawStatus as keyof typeof counts;
+      requests.push({ url, method: options.method ?? "GET" });
       if (options.method === "HEAD") {
-        return {
-          ok: true,
+        return new Response(null, {
           status: 200,
-          headers: { get: () => `0-0/${counts[status]}` },
-        };
+          headers: { "content-range": `0-0/${counts[status]}` },
+        });
       }
       const ages = { pending: 30, in_progress: 7, waiting_human: 2 };
       const column = url.searchParams.get("select");
-      return {
-        ok: true,
-        status: 200,
-        json: async () => [
+      if (!column) throw new Error("Missing age column in task query");
+      return new Response(
+        JSON.stringify([
           { [column]: new Date(now - ages[status] * 3_600_000).toISOString() },
-        ],
-      };
+        ]),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
     };
 
     const queue = await readPipelineQueue({
