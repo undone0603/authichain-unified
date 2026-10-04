@@ -192,10 +192,34 @@ export function sumVisitors(groups) {
   return groups.reduce((n, g) => n + (g?.uniq?.uniques ?? 0), 0);
 }
 
+async function countSupabaseRows(env, table, filters, select = "id") {
+  const url = new URL(
+    `${env.SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/${table}`
+  );
+  url.searchParams.set("select", select);
+  for (const [key, value] of Object.entries(filters))
+    url.searchParams.set(key, value);
+
+  const response = await fetch(url, {
+    method: "HEAD",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      ["Authorization"]: ["Bearer", env.SUPABASE_SERVICE_ROLE_KEY].join(" "),
+      Prefer: "count=exact",
+    },
+  });
+  if (!response.ok) throw new Error(`Supabase ${table} ${response.status}`);
+
+  const total = response.headers.get("content-range")?.split("/").at(-1);
+  if (!total || total === "*")
+    throw new Error(`Supabase ${table} count missing`);
+  return Number(total);
+}
+
 /**
  * Pure. Decide whether to send and render the email.
  * d = {date, money|null, leads7|null, approvals:[{title,url}], alerts:[{title,url}], prs:[{title,url,draft}], setup:[text],
- *      board?: {visitors|null, checkouts|null, campaigns:{[c]:{started,paid}}|null, replies|null, failing:[{title,url}]|null}}
+ *      board?: {visitors|null, checkouts|null, campaigns:{[c]:{started,paid}}|null, starterFunnel|null, checkoutWebhookFailures|null, replies|null, failing:[{title,url}]|null}}
  */
 export function buildDigest(d, { force = false } = {}) {
   const waiting = d.approvals.length + d.alerts.length;
@@ -249,6 +273,17 @@ export function buildDigest(d, { force = false } = {}) {
       Object.entries(b.campaigns).forEach(([c, v]) =>
         item(`${c} page: ${v.started} checkouts started, ${v.paid} paid`)
       );
+    if (b.starterFunnel == null)
+      item("QRON Starter funnel events: not connected");
+    else
+      item(
+        `QRON Starter funnel, last 7 days: ${b.starterFunnel.views} views, ${b.starterFunnel.unauthenticated} unauthenticated attempts, ${b.starterFunnel.sessions} checkout sessions, ${b.starterFunnel.abandoned} abandoned, ${b.starterFunnel.purchases} non-founder fulfilled purchase${b.starterFunnel.purchases === 1 ? "" : "s"}`
+      );
+    item(
+      b.checkoutWebhookFailures == null
+        ? "Checkout webhook failures: not connected"
+        : `Checkout webhook failures, last 7 days: ${b.checkoutWebhookFailures}`
+    );
     item(
       d.money
         ? `Paid by customers: ${usd(d.money.revenue)} (Stripe-confirmed)`
@@ -317,6 +352,8 @@ async function collect(env) {
       visitors: null,
       checkouts: null,
       campaigns: null,
+      starterFunnel: null,
+      checkoutWebhookFailures: null,
       replies: null,
       failing: null,
     },
@@ -379,6 +416,52 @@ async function collect(env) {
           Number((r.headers.get("content-range") ?? "*/0").split("/")[1]) || 0;
     } catch (e) {
       console.log(`leads skipped: ${e.message}`);
+    }
+    const occurred = new Date(since * 1000).toISOString();
+    const eventCount = event =>
+      countSupabaseRows(env, "growth_loop_events", {
+        loop: "eq.loop_03_qron_starter",
+        event: `eq.${event}`,
+        occurred_at: `gte.${occurred}`,
+      });
+    try {
+      const [views, unauthenticated, sessions, abandoned, purchases] =
+        await Promise.all([
+          eventCount("generate_view"),
+          eventCount("generate_submit_anon"),
+          eventCount("checkout_session_started"),
+          eventCount("checkout_abandoned"),
+          countSupabaseRows(env, "growth_loop_events", {
+            loop: "eq.loop_03_qron_starter",
+            event: "eq.purchase_starter_succeeded",
+            founder: "eq.false",
+            occurred_at: `gte.${occurred}`,
+          }),
+        ]);
+      d.board.starterFunnel = {
+        views,
+        unauthenticated,
+        sessions,
+        abandoned,
+        purchases,
+      };
+    } catch (e) {
+      console.log(`Starter funnel skipped: ${e.message}`);
+    }
+    try {
+      d.board.checkoutWebhookFailures = await countSupabaseRows(
+        env,
+        "stripe_events",
+        {
+          event_type:
+            "in.(checkout.session.completed,checkout.session.async_payment_succeeded)",
+          status: "eq.error",
+          processed_at: `gte.${occurred}`,
+        },
+        "event_id"
+      );
+    } catch (e) {
+      console.log(`checkout webhook failures skipped: ${e.message}`);
     }
   }
   if (env.CLOUDFLARE_API_TOKEN) {

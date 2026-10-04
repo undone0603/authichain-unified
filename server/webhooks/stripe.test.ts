@@ -105,21 +105,26 @@ vi.mock("../../src/lib/stripe-webhook-log", () => ({
 }));
 
 const { accrueAffiliateCommission } = vi.hoisted(() => ({
-  accrueAffiliateCommission: vi
-    .fn()
-    .mockResolvedValue({
-      credited: true,
-      affiliateId: "aff_1",
-      commission: 9.8,
-    }),
+  accrueAffiliateCommission: vi.fn().mockResolvedValue({
+    credited: true,
+    affiliateId: "aff_1",
+    commission: 9.8,
+  }),
 }));
 
 vi.mock("../../src/lib/affiliate-accrual", () => ({
   accrueAffiliateCommission,
 }));
 
+const { growthRecordRpc } = vi.hoisted(() => ({
+  growthRecordRpc: vi.fn().mockResolvedValue({ error: null }),
+}));
+
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn().mockReturnValue({ from: vi.fn() }),
+  createClient: vi.fn().mockReturnValue({
+    from: vi.fn(),
+    rpc: growthRecordRpc,
+  }),
 }));
 
 // The Stripe SDK is mocked above, so these values are never used to reach
@@ -149,6 +154,7 @@ beforeEach(async () => {
   vi.mocked(db.hasWebhookEventProcessed).mockResolvedValue(false);
   vi.mocked(db.logActivity).mockResolvedValue(undefined);
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
+  growthRecordRpc.mockResolvedValue({ error: null });
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
@@ -490,7 +496,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         amount_total: 2900,
         customer: "cus_pack",
         customer_details: { email: "buyer@example.com" },
-        metadata: { plan: "starter", brand: "authichain" },
+        metadata: { brand: "authichain" },
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
@@ -503,7 +509,90 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         email: "buyer@example.com",
       })
     );
+    expect(growthRecordRpc).toHaveBeenCalledWith(
+      "growth_record_event_idempotent",
+      expect.objectContaining({
+        p_event: "purchase_starter_succeeded",
+        p_loop: "loop_03_qron_starter",
+        p_sku: "starter",
+        p_email_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_idempotency_key: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })
+    );
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("does not fail a fulfilled Starter checkout when growth recording fails", async () => {
+    growthRecordRpc.mockResolvedValue({
+      error: { message: "growth store unavailable" },
+    });
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_growth_down", {
+        id: "cs_starter_growth_down",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        customer_details: { email: "buyer@example.com" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(growthRecordRpc).toHaveBeenCalledWith(
+      "growth_record_event_idempotent",
+      expect.objectContaining({ p_event: "purchase_starter_succeeded" })
+    );
+  });
+
+  it("uses a stable session key when a Starter purchase webhook is retried", async () => {
+    const session = {
+      id: "cs_starter_retry",
+      mode: "payment",
+      payment_status: "paid",
+      amount_total: 2900,
+      customer_details: { email: "buyer@example.com" },
+      metadata: { plan: "starter" },
+    };
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_retry", session)
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    const firstKey = growthRecordRpc.mock.calls[0]?.[1]?.p_idempotency_key;
+
+    mockConstructEvent.mockReturnValue(
+      makeEvent(
+        "checkout.session.async_payment_succeeded",
+        "evt_starter_retry_paid",
+        session
+      )
+    );
+    await handleStripeWebhook(RAW_BODY, SIG);
+
+    expect(firstKey).toMatch(/^[a-f0-9]{64}$/);
+    expect(growthRecordRpc.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        p_event: "purchase_starter_succeeded",
+        p_idempotency_key: firstKey,
+      })
+    );
+  });
+
+  it("does not classify recurring subscriptions as Starter checkouts by amount", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_starter_subscription", {
+        id: "cs_starter_subscription",
+        mode: "subscription",
+        customer_email: "buyer@example.com",
+        amount_total: 2900,
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(growthRecordRpc).not.toHaveBeenCalled();
   });
 
   it("fulfills checkout.session.async_payment_succeeded for delayed wallets", async () => {
@@ -651,14 +740,25 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.expired", "evt_expired_001", {
         id: "cs_expired_001",
+        mode: "payment",
         customer_email: "lost@example.com",
         metadata: { user_id: "30", plan: "starter", customer_name: "Alex" },
-        amount_total: 4900,
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");
     const result = await handleStripeWebhook(RAW_BODY, SIG);
     expect(result.received).toBe(true);
+    expect(growthRecordRpc).toHaveBeenCalledWith(
+      "growth_record_event_idempotent",
+      expect.objectContaining({
+        p_event: "checkout_abandoned",
+        p_loop: "loop_03_qron_starter",
+        p_sku: "starter",
+        p_email_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_idempotency_key: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })
+    );
     expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
       expect.objectContaining({ to: "lost@example.com" })
     );
@@ -673,9 +773,10 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.expired", "evt_expired_nodb", {
         id: "cs_expired_nodb",
+        mode: "payment",
         customer_email: "lost2@example.com",
         metadata: { plan: "starter" },
-        amount_total: 4900,
+        amount_total: 2900,
       })
     );
     const { handleStripeWebhook } = await import("./stripe.js");

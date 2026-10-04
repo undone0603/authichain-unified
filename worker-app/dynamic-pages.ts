@@ -1458,7 +1458,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Sign in to use account credits. Starter Pack: 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1477,14 +1477,14 @@ function generateFormHtml(error?: string, paid = false, cancelled = false): stri
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
-      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
+      "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Sign in to use account credits. Starter Pack includes 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
@@ -1621,7 +1621,12 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
+<<<<<<< HEAD
     // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.
+=======
+    // LOOP-03 top of funnel. GET only; unauthenticated POST attempts are
+    // recorded by the /api/generate handler.
+>>>>>>> origin/pr-1547-head
     if (c.req.method === "GET") {
       reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
     }
