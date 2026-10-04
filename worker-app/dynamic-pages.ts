@@ -1458,7 +1458,7 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>5 free, then 500 for $99, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1477,7 +1477,7 @@ function generateFormHtml(error?: string, paid = false, cancelled = false): stri
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
-      "Generate a scannable Living QR. Five free, then 500 for $99. A QR is not an authenticity proof.",
+      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
@@ -1562,7 +1562,7 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/checkout/creator", c.req.url);
+  const dest = new URL("/checkout/starter", c.req.url);
   dest.searchParams.set("targetUrl", targetUrl);
   if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
