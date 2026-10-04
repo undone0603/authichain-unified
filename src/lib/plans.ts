@@ -65,6 +65,7 @@ export const PLANS: Plan[] = [
     description: "100 AI QR generations, never expire",
     generations: 100,
     stripe_price_id: "price_1UIoEVGqTruSqV8T61lp48wB",
+    stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
     tier: "pro",
     features: [
@@ -74,7 +75,7 @@ export const PLANS: Plan[] = [
       "Designed for AuthiChain signed verification (in development)",
     ],
     cta: "Buy Starter Pack",
-    listed: false,
+    listed: true,
   },
   {
     id: "qron_launch",

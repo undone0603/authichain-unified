@@ -117,11 +117,11 @@ test("theater stays in the catalogue and off public pricing HTML", () => {
   assert.equal(qronHtml.includes("theater_3"), false);
 });
 
-test("creator links the gated confirm page; starter is off the cards", () => {
+test("creator and starter link the gated confirm page", () => {
   const starter = listedPlans("qron").find(p => p.id === "starter");
   const creator = listedPlans("qron").find(p => p.id === "creator");
-  assert.equal(starter, undefined);
-  assert.equal(plan("starter").listed, false);
+  assert.ok(starter);
+  assert.equal(plan("starter").listed, true);
   assert.ok(creator?.stripe_payment_link);
   assert.equal(
     planCheckoutCta(creator, "authichain").href,
@@ -157,10 +157,10 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   assert.match(html, /<title>Pricing — AuthiChain<\/title>/);
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.equal(hasDeadLink(html), false);
-  for (const id of ["dpp_readiness", "creator"] as const) {
+  for (const id of ["dpp_readiness", "starter", "creator"] as const) {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
-  assert.equal(html.includes("/checkout/starter"), false);
+  assert.equal(html.includes("/checkout/starter"), true);
   assert.match(html, /href="\/x402"/);
   assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
@@ -177,7 +177,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   const creatorPay =
     planPaymentLink("creator") ?? "";
   assert.equal(html.includes(`"url":"${dppPay}"`), true);
-  assert.equal(html.includes(`"url":"${starterPay}"`), false);
+  assert.equal(html.includes(`"url":"${starterPay}"`), true);
   assert.equal(html.includes(`"url":"${creatorPay}"`), true);
   const acLdStart = html.indexOf("application/ld+json");
   const acLd = html.slice(acLdStart, html.indexOf("</script>", acLdStart));
@@ -206,7 +206,7 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
 
 test("qron /pricing lists the packs, not the retired credit bundles", () => {
   const html = renderEstatePricingPage("qron");
-  assert.equal(html.includes(escHtml(plan("starter").name)), false);
+  assert.ok(html.includes(escHtml(plan("starter").name)));
   assert.ok(html.includes(escHtml(plan("creator").name)));
   assert.doesNotMatch(html, /QRON generation credits/);
   assert.doesNotMatch(html, /\$9\.99/);
@@ -379,7 +379,7 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.match(html, />Plans and prices</);
   assert.doesNotMatch(html, /primary money path/);
   assert.doesNotMatch(html, /Prices that already charge/);
-  assert.equal(html.includes(escHtml(`QRON ${plan("starter").name}`)), false);
+  assert.ok(html.includes(escHtml(`QRON ${plan("starter").name}`)));
   assert.ok(html.includes(escHtml(`QRON ${plan("creator").name}`)));
   assert.doesNotMatch(html, /Theater 1/);
   assert.doesNotMatch(html, /Theater 3/);

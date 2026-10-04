@@ -34,14 +34,12 @@ function offer(id: PlanId): PaymentLinkOffer {
 
 export const PAYMENT_LINKS = {
   qron: {
-    // Starter Pack price is archived (checkout-watchdog, #1546). These
-    // aliases follow the live Creator Payment Link, same as credits1000.
-    singleDesign: offer("creator"),
+    singleDesign: offer("starter"),
     brandPack: offer("creator"),
     // theater_3 is unlisted since the #1234 catalog freeze; no importer
     // reads this key, so it follows credits1000 to the top listed QRON pack.
     enterprise: offer("creator"),
-    credits50: offer("creator"),
+    credits50: offer("starter"),
     credits250: offer("creator"),
     credits1000: offer("creator"),
   },

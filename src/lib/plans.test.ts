@@ -125,7 +125,7 @@ describe("listedPlans", () => {
     const qron = listedPlans("qron").map(p => p.id);
     expect(qron).toContain("free");
     expect(qron).toContain("qron_launch");
-    expect(qron).not.toContain("starter");
+    expect(qron).toContain("starter");
     expect(qron).toContain("creator");
     expect(qron).toContain("dpp_readiness");
     expect(qron).not.toContain("theater_1");
@@ -143,7 +143,7 @@ describe("listedPlans", () => {
   it("keeps the live self-serve money path at $19 / $99 / $299", () => {
     const byId = Object.fromEntries(listedPlans("qron").map(p => [p.id, p]));
     expect(byId.qron_launch.price).toBe(19);
-    expect(byId.starter).toBeUndefined();
+    expect(byId.starter?.price).toBe(29);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
     expect(planByStripePriceId("price_1UJjzPGqTruSqV8TmhFSc8vh")?.id).toBe(
