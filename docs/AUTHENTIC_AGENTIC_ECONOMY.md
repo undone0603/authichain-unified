@@ -11,16 +11,16 @@ object → signed seal (Ed25519 + optional Polygon NFT)
       → public receipt
 ```
 
-A seal proves the record the issuer published has not been altered since it was signed. It does not certify a lab, a government, or that the physical item was never swapped.
+A seal proves the record the issuer published has not been altered since it was signed. It does not certify a lab, a government, regulatory compliance, physical custody, or that the physical item was never swapped. Lab and supply-chain information remains issuer-provided provenance evidence.
 
 ## Public money URLs (only these)
 
-| URL | SKU | Price |
-|---|---|---|
-| https://authichain.com/battery-passport | dpp_readiness | $299 one-time |
-| https://qron.space/generate | starter / creator | $29 / $99 one-time |
-| https://strainchain.io/onboard | strainchain_passport | $49 one-time |
-| https://authichain.com/x402 | agent verify | $0.05 USDC |
+| URL                                     | SKU                  | Price              |
+| --------------------------------------- | -------------------- | ------------------ |
+| https://authichain.com/battery-passport | dpp_readiness        | $299 one-time      |
+| https://qron.space/generate             | starter / creator    | $29 / $99 one-time |
+| https://strainchain.io/onboard          | strainchain_passport | $49 one-time       |
+| https://authichain.com/x402             | agent verify         | $0.05 USDC         |
 
 Apex product CTAs stay `/onboard`, `/dapp`, `/verify`. Never a `*.vercel.app` URL.
 
@@ -48,7 +48,7 @@ Signup and webhook provisioners must write `users.generations_limit = 5`, not `0
 1. Human verify — `/verify`. Miss → `/onboard`.
 2. Human issue — `/onboard`, qron.space/generate. Packs start at $29.
 3. Battery / EU DPP — `/battery-passport` → $299. Not legal advice. Deadline 18 Feb 2027.
-4. StrainChain CoA passport — $49. Totals recomputed from the uploaded panel. Not a METRC replacement.
+4. StrainChain CoA passport — $49. Packaging QR → verification lookup → issuer-provided provenance details → authenticity result. Totals recomputed from the uploaded panel. Not a METRC replacement.
 5. Gov contractor seal — govchain.us copy on the same seal. Not FedRAMP, not SAM.gov.
 6. Agent verify — MCP + `POST /api/x402`. Unpaid → HTTP 402.
 

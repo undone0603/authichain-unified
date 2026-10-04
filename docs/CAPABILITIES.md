@@ -7,7 +7,7 @@ _Compiled 2026-07-15 by walking every executable surface. Companion to `docs/NET
 One Express app (`server/_core/app.ts`), deployed as the Vercel `qron-platform` project, serves all principal domains. tRPC surface, grouped by capability:
 
 - **Auth & identity:** `auth`, `system`, `admin` (admin-gated), `reputation` (points/trust — tables live, populated on authentic scans)
-- **Core product (authentication):** `products`, `authenticate`, `certificates`, `qrcode`, `supplyChain`, `provenance` via API
+- **Core product (authentication):** `products`, `authenticate`, `certificates`, `qrcode`, `supplyChain`, `provenance` via API. StrainChain candidate record metadata includes lineage or phenotype, lab-result references, packaging or brand details, and supply-chain timestamps; availability and verification remain issuer-specific.
 - **Web3:** `nft`, `blockchain`, `staking`, `character` (on-chain agent identities)
 - **Revenue:** `subscription`, `payments`, `stripeConnect`, `sales`, `marketplace`, `bonuses`, `referral`, `affiliate`
 - **Growth/marketing:** `marketing`, `emailCampaigns`, `emailDrafts`, `autopilot`, `abTesting`, `analytics`, `feedback`, `personalization`
