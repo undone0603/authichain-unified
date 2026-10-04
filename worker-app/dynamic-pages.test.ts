@@ -248,7 +248,9 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("What a DPP contains");
     expect(body).toContain("<h2>Get started</h2>");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).not.toContain('href="/api/checkout');
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
@@ -382,7 +384,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -560,7 +564,9 @@ describe("renderDynamicPage: /onboard pilot intake", () => {
     expect(body).toContain("abcd1234");
     expect(body).toContain("Trulieve");
     expect(body).toContain('name="email"');
-    expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+    expect(body).toContain(
+      'action="https://authichain.com/checkout/dpp_readiness"'
+    );
     expect(body).toContain(
       'href="https://authichain.com/checkout/dpp_readiness"'
     );
@@ -590,7 +596,9 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
       expect(body).toContain('name="email"');
-      expect(body).toContain('action="https://authichain.com/checkout/dpp_readiness"');
+      expect(body).toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
+      );
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
       );
@@ -659,16 +667,12 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("fetch('/api/generate'");
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
-        expect(body).toContain("$29");
+    expect(body).toContain("$29");
     expect(body).toContain("$299");
     // Top-ups are the live Starter/Creator packs; the retired credit bundles
     // ($9.99/$39.99/$99.99) had links on no live Stripe account.
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/starter"'
-    );
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/creator"'
-    );
+    expect(body).toContain('href="https://authichain.com/checkout/starter"');
+    expect(body).toContain('href="https://authichain.com/checkout/creator"');
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(
@@ -684,12 +688,8 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).not.toContain("Those 5 are signed");
   });
 
-<<<<<<< HEAD
   // The no-JS submit goes to the starter checkout (the generate wall, #1388).
-  it("303s a valid URL to the starter checkout", async () => {
-=======
   it("sends an unauthenticated generation attempt to the Starter checkout", async () => {
->>>>>>> origin/pr-1547-head
     const res = await app.request(
       "/generate",
       {
@@ -701,7 +701,6 @@ describe("renderDynamicPage: /generate Living QR", () => {
       makeEnv() as any
     );
     expect(res.status).toBe(303);
-<<<<<<< HEAD
     const location = new URL(
       res.headers.get("location") || "",
       "https://example.test"
@@ -711,12 +710,6 @@ describe("renderDynamicPage: /generate Living QR", () => {
       "https://example.com/sku"
     );
     expect(location.searchParams.get("prompt")).toBe("neon");
-=======
-    const location = res.headers.get("location") || "";
-    expect(location).toContain("/checkout/starter");
-    expect(location).toContain("targetUrl=https%3A%2F%2Fexample.com%2Fsku");
-    expect(location).toContain("prompt=neon");
->>>>>>> origin/pr-1547-head
   });
 });
 

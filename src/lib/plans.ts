@@ -46,22 +46,19 @@ export const PLANS: Plan[] = [
     id: "free",
     name: "Free",
     price: 0,
-    description: "5 account-based generations. Sign-in required. Lookup verify only.",
+    description:
+      "5 account-based generations. Sign-in required. Lookup verify only.",
     generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
-<<<<<<< HEAD
     features: [
-      "5 generations",
+      "5 generations per account",
+      "Sign-in required",
       "Lookup verify only (no GPT-4V)",
       "Then Starter $29 or DPP $299",
     ],
-    cta: "Start with 5 free",
-=======
-    features: ["5 generations per account", "Sign-in required", "Lookup verify only (no GPT-4V)", "Then Starter $29 or DPP $299"],
     cta: "Sign in for 5 credits",
->>>>>>> origin/pr-1547-head
   },
   {
     id: "starter",

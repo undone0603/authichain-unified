@@ -431,7 +431,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
+      '<p>Enter a product ID to look up its record. Verification against AuthiChain\'s Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -627,7 +627,10 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
+    primaryCta: {
+      label: "Start DPP checkout",
+      href: "https://authichain.com/checkout/dpp_readiness",
+    },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -826,7 +829,9 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
-  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(
+    content.primaryCta.href
+  );
   const primaryHtml = primaryIsCheckout
     ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
@@ -949,7 +954,10 @@ function onboardPayNowHtml(): string {
 /** Per-site /onboard title. The estate apexes proxy here with X-Forwarded-Host. */
 export function onboardTitle(host: string): string {
   const h = host.toLowerCase().replace(/:\d+$/, "");
-  if (h === "govchain.us" || (h.endsWith(".govchain.us") && h !== "authichain.govchain.us"))
+  if (
+    h === "govchain.us" ||
+    (h.endsWith(".govchain.us") && h !== "authichain.govchain.us")
+  )
     return "Request access | GovChain";
   if (h === "strainchain.io" || h.endsWith(".strainchain.io"))
     return "Request a pilot | StrainChain";
@@ -1081,12 +1089,19 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       .trim()
       .slice(0, 40);
   } catch {
-    return htmlResponse(c, onboardFormHtml("Could not read the form.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Could not read the form.", onboardHost(c)),
+      400
+    );
   }
   if (!company || !contactName || !productName) {
     return htmlResponse(
       c,
-      onboardFormHtml("Company, contact, and first product are required.", onboardHost(c)),
+      onboardFormHtml(
+        "Company, contact, and first product are required.",
+        onboardHost(c)
+      ),
       400
     );
   }
@@ -1100,7 +1115,11 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   if (
     !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
   ) {
-    return htmlResponse(c, onboardFormHtml("Unknown vertical.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Unknown vertical.", onboardHost(c)),
+      400
+    );
   }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
@@ -1125,7 +1144,10 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     console.error("[onboard] lead_captures insert failed", err);
     return htmlResponse(
       c,
-      onboardFormHtml("Could not record the pilot request. Try again.", onboardHost(c)),
+      onboardFormHtml(
+        "Could not record the pilot request. Try again.",
+        onboardHost(c)
+      ),
       500
     );
   }
@@ -1465,12 +1487,16 @@ function generateCreditLinksHtml(): string {
   );
 }
 
-function generateFormHtml(error?: string, paid = false, cancelled = false): string {
+function generateFormHtml(
+  error?: string,
+  paid = false,
+  cancelled = false
+): string {
   const statusBlock = paid
     ? '<p role="alert" id="generate-paid">Payment received</p>\n'
     : cancelled
       ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
-      : '';
+      : "";
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
@@ -1575,7 +1601,11 @@ async function renderGenerate(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   return htmlResponse(
     c,
-    generateFormHtml(undefined, url.searchParams.get("paid") === "1", url.searchParams.get("cancelled") === "1"),
+    generateFormHtml(
+      undefined,
+      url.searchParams.get("paid") === "1",
+      url.searchParams.get("cancelled") === "1"
+    ),
     200
   );
 }
@@ -1621,12 +1651,8 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
-<<<<<<< HEAD
-    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.
-=======
     // LOOP-03 top of funnel. GET only; unauthenticated POST attempts are
-    // recorded by the /api/generate handler.
->>>>>>> origin/pr-1547-head
+    // recorded as generate_submit_anon by the /api/generate handler.
     if (c.req.method === "GET") {
       reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
     }
