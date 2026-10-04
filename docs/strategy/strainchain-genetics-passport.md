@@ -121,6 +121,22 @@ evidence attached. An inferred edge is never rendered as a confirmed one. This i
 the single strongest thing the prototypes did and it is now enforced by the type
 system rather than by whoever writes the page.
 
+### Evidence-to-passport preflight
+
+`src/lib/strainchain-lifecycle.ts` connects the local certificate/source audit to
+public-listing eligibility and cultivar fingerprints. It is deliberately read-only:
+it does not issue a seal, anchor a digest, publish a page, or alter source data.
+Evidence errors, review warnings, and non-public farm status hold fingerprint
+preparation. Even when those gates pass, issuer approval and item-level identifiers
+remain required before a seal can be issued.
+
+The May 2025 provisional patent draft in `docs/drive-import/ip/` is historical
+design context, not proof of a filed patent or a specification for current
+automation. Its proposed live lab-oracle integration, NFT minting, and multi-party
+consensus are not implied by this preflight or by a fingerprint match. The Google
+Drive original remains the filing-form source; it was not available to this
+checkout for independent comparison.
+
 ---
 
 ## 3. Pricing — decided

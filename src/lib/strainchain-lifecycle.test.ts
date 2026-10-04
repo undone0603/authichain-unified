@@ -34,5 +34,4 @@ describe("StrainChain evidence-to-passport lifecycle", () => {
     expect(report.issuerAction).toBe("blocked");
     expect(report.blockers.length).toBeGreaterThan(0);
   });
-
 });
