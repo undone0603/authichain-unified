@@ -164,6 +164,26 @@
         "rollback": "Use the Stripe Dashboard or owner-approved reconciliation to restore the prior endpoint configuration",
         "cost_cap": "Zero additional spend",
         "success_metric": "Declared webhook events are present without altering undeclared endpoint configuration"
+      },
+      "content-publish.yml": {
+        "owner": "Growth owner",
+        "evidence": "A validated social bundle committed to main and channel credential preflight results",
+        "permitted_action": "Publish a validated owned-channel bundle and record the publication ledger",
+        "approval_boundary": "Bundle approval through merge to main, channel configuration, claims, audience changes, and credential changes",
+        "failure_behavior": "Force dry-run for schedules and stop publishing when bundle validation fails",
+        "rollback": "Disable the workflow and correct or withdraw published owned content through the channel process",
+        "cost_cap": "Existing approved channel and provider budgets only",
+        "success_metric": "Each published bundle has a validated source and a durable publication record"
+      },
+      "gov-proposals.yml": {
+        "owner": "GovChain owner",
+        "evidence": "Eligible opportunity data, approved source material, and a successful dry-run",
+        "permitted_action": "Generate internal proposal drafts for review",
+        "approval_boundary": "Live generation, external submission, legal conclusions, pricing, and any binding proposal commitment",
+        "failure_behavior": "Default to dry-run and stop when required opportunity or source evidence is unavailable",
+        "rollback": "Discard the draft and disable the workflow through the switchboard",
+        "cost_cap": "Zero model spend unless the owner explicitly approves a live generation path",
+        "success_metric": "Reviewable, evidence-linked proposal drafts with no external submission"
       }
     }
   },
