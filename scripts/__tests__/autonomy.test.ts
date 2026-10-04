@@ -688,7 +688,7 @@ describe("owner digest scoreboard", async () => {
   });
 
   it("counts real checkouts per tracked campaign, zero when quiet", () => {
-    const s = (campaign, extra = {}) => ({
+    const s = (campaign: string, extra: Record<string, unknown> = {}) => ({
       livemode: true,
       customer_details: { email: "buyer@ebike.eu" },
       metadata: { utm_campaign: campaign },
