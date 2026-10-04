@@ -29,6 +29,11 @@ on:
         required: false
         default: false
         type: boolean
+      monitor_only:
+        description: "Read live pipeline task metrics without running the pipeline"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: pipeline-tick
@@ -61,7 +66,7 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Report activation state
-        if: steps.db-check.outputs.skip != 'true'
+        if: steps.db-check.outputs.skip != 'true' && inputs.monitor_only != true
         env:
           CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
         run: |
@@ -121,7 +126,7 @@ jobs:
       # Do not put that marker on ordinary CI commits — it starts a live tick.
       - name: Run pipeline tick
         id: tick
-        if: steps.db-check.outputs.skip != 'true'
+        if: steps.db-check.outputs.skip != 'true' && inputs.monitor_only != true
         env:
           AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED != 'false' && 'true' || 'false' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -142,6 +147,14 @@ jobs:
           else
             pnpm tsx server/jobs/pipeline-tick.ts
           fi
+
+      - name: Run read-only pipeline monitor
+        id: monitor
+        if: steps.db-check.outputs.skip != 'true' && inputs.monitor_only == true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
+        run: pnpm tsx scripts/monitor-autonomous-pipeline.ts --once
 
       - name: Produce launch proof
         if: steps.db-check.outputs.skip != 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
@@ -178,13 +191,23 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           DB_CONCLUSION: ${{ steps.db-check.conclusion }}
           TICK_CONCLUSION: ${{ steps.tick.conclusion }}
+          MONITOR_ONLY: ${{ inputs.monitor_only }}
+          MONITOR_CONCLUSION: ${{ steps.monitor.conclusion }}
         run: |
           set -euo pipefail
           {
-            echo "### Pipeline tick"
+            if [ "$MONITOR_ONLY" = "true" ]; then
+              echo "### Pipeline task monitor"
+            else
+              echo "### Pipeline tick"
+            fi
             echo ""
             if [ "$DB_CONCLUSION" = "failure" ]; then
               echo "- outcome: **failed** (DATABASE_URL missing)"
+            elif [ "$MONITOR_ONLY" = "true" ] && [ "$MONITOR_CONCLUSION" = "success" ]; then
+              echo "- outcome: **read-only snapshot completed**"
+            elif [ "$MONITOR_ONLY" = "true" ]; then
+              echo "- outcome: **failed** (monitor did not complete)"
             elif [ "$TICK_CONCLUSION" = "failure" ]; then
               echo "- outcome: **failed** (tick error)"
             elif [ "$TICK_CONCLUSION" = "success" ] && [ "$DRY_RUN" = "true" ]; then
