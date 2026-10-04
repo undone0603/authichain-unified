@@ -1,6 +1,7 @@
 -- Durable, idempotent commission accounting, payout claims, and checkout
 -- request controls. All externally-called functions are service-role only.
 
+-- supabase-grants-exempt: public.affiliate_commission_events service_role grant is in 20261004000002_payment_integrity_grants.sql
 CREATE TABLE IF NOT EXISTS public.affiliate_commission_events (
   event_id text PRIMARY KEY,
   affiliate_id uuid NOT NULL,
@@ -10,8 +11,6 @@ CREATE TABLE IF NOT EXISTS public.affiliate_commission_events (
 );
 
 ALTER TABLE public.affiliate_commission_events ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_commission_events
-  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.accrue_affiliate_commission(
   p_event_id text,
@@ -88,6 +87,7 @@ REVOKE ALL ON FUNCTION public.accrue_affiliate_commission(text, text, bigint, bo
 GRANT EXECUTE ON FUNCTION public.accrue_affiliate_commission(text, text, bigint, boolean)
   TO service_role;
 
+-- supabase-grants-exempt: public.affiliate_payout_claims service_role grant is in 20261004000002_payment_integrity_grants.sql
 CREATE TABLE IF NOT EXISTS public.affiliate_payout_claims (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   affiliate_id uuid NOT NULL,
@@ -108,8 +108,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS affiliate_payout_one_processing_per_affiliate
   WHERE status = 'processing';
 
 ALTER TABLE public.affiliate_payout_claims ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_payout_claims
-  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_affiliate_payout(
   p_affiliate_id uuid,
@@ -231,6 +229,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS affiliate_payouts_idempotency_key_idx
   ON public.affiliate_payouts (idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
+-- supabase-grants-exempt: public.gated_checkout_attempts service_role grant is in 20261004000002_payment_integrity_grants.sql
 CREATE TABLE IF NOT EXISTS public.gated_checkout_attempts (
   dedupe_key text PRIMARY KEY,
   checkout_key text NOT NULL UNIQUE,
@@ -240,6 +239,7 @@ CREATE TABLE IF NOT EXISTS public.gated_checkout_attempts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- supabase-grants-exempt: public.checkout_rate_limits service_role grant is in 20261004000002_payment_integrity_grants.sql
 CREATE TABLE IF NOT EXISTS public.checkout_rate_limits (
   ip_hash text PRIMARY KEY,
   window_started_at timestamptz NOT NULL,
@@ -251,10 +251,6 @@ CREATE INDEX IF NOT EXISTS checkout_rate_limits_window_idx
 
 ALTER TABLE public.gated_checkout_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_rate_limits ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.gated_checkout_attempts
-  TO service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.checkout_rate_limits
-  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_gated_checkout(
   p_checkout_key text,
