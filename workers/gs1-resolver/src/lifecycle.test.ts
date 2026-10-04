@@ -51,6 +51,7 @@ function fakeDb() {
               chain,
               contract,
               tx_hash,
+              fingerprint_sha256,
               metadata_json,
               created_at,
             ] = values;
@@ -70,7 +71,7 @@ function fakeDb() {
               chain,
               contract,
               tx_hash,
-              fingerprint_sha256: null,
+              fingerprint_sha256,
               status: "issued",
               status_reason: null,
               revoked_at: null,
@@ -137,6 +138,7 @@ test("issue, resolve by certificate ID, revoke, and read the revoked passport", 
       brand: "Acme",
       productName: "Widget",
       issuer: "Acme Inc",
+      fingerprintSha256: `sha256:${"a".repeat(64)}`,
       metadata: { evidence: "coa-reference" },
     }),
     runtime
@@ -145,13 +147,22 @@ test("issue, resolve by certificate ID, revoke, and read the revoked passport", 
   assert.equal(issued.status, 201);
   const issueBody = await issued.json();
   assert.equal(issueBody.lookupKey, "gtin:09506000149301:ser:SN-001");
+  assert.equal(db.seals[0].fingerprint_sha256, "a".repeat(64));
 
   const passport = await worker.fetch(
     new Request("https://id.example.com/v1/passport/AC-DEMO-001"),
     runtime
   );
   assert.equal(passport.status, 200);
-  assert.equal((await passport.json()).status, "issued");
+  const passportBody = await passport.json();
+  assert.equal(passportBody.status, "issued");
+  assert.deepEqual(passportBody.fingerprint, {
+    digest: `sha256:${"a".repeat(64)}`,
+    source: "issuer_supplied",
+    verified: false,
+    caveat:
+      "The resolver stores this digest as supplied. It does not verify the source bytes, what they cover, or when they existed.",
+  });
 
   const revoked = await worker.fetch(
     authenticatedPost("/revoke", {
@@ -202,6 +213,23 @@ test("revocation requires the issuer secret and a reason", async () => {
     env()
   );
   assert.equal(noReason.status, 400);
+});
+
+test("seal issuance rejects malformed SHA-256 fingerprints", async () => {
+  const db = fakeDb();
+  const response = await worker.fetch(
+    authenticatedPost("/issue", {
+      certId: "AC-BAD-FINGERPRINT",
+      fingerprintSha256: "sha256:not-a-digest",
+    }),
+    env(db)
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "invalid_fingerprint_sha256",
+  });
+  assert.equal(db.seals.length, 0);
 });
 
 test("certificate-ID fallback refuses ambiguous records", async () => {

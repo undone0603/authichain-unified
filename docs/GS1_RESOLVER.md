@@ -45,6 +45,13 @@ GET  /v1/passport/AC-DEMO-001                                # read-only
 POST /issue { "gtin":"9506000134352", "serial":"UNIT-9", "brand":"Acme" }
 ```
 
+`POST /issue` requires the configured issuer secret in the `Authorization`
+header. It may include
+`fingerprintSha256` as 64 hexadecimal characters, optionally prefixed with
+`sha256:`. The resolver stores the normalized digest and returns it on passport
+reads as issuer-supplied and unverified; it does not check the source bytes or
+anchor the digest.
+
 Corrected 2026-09-11. This list previously advertised `/v1/scan`, `/v1/issue`
 and `/v1/revoke`, none of which the worker implements, and `/v1/passport/{id}`,
 which it did not implement either -- so `src/lib/passport.ts`, which called it,

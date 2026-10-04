@@ -252,6 +252,35 @@ export default async function UnitPassport({
           </section>
         )}
 
+        {passport.fingerprint && (
+          <section>
+            <p className="rule" style={{ marginBottom: 14 }}>
+              Record fingerprint
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table className="ledger">
+                <tbody>
+                  <Row
+                    label="Digest"
+                    value={passport.fingerprint.digest}
+                    mono
+                  />
+                  <Row label="Source" value="Issuer supplied; not verified" />
+                </tbody>
+              </table>
+            </div>
+            <p
+              style={{
+                fontSize: ".8rem",
+                color: "var(--muted)",
+                marginTop: 12,
+              }}
+            >
+              {passport.fingerprint.caveat}
+            </p>
+          </section>
+        )}
+
         <footer
           style={{
             borderTop: "1px solid var(--line-strong)",

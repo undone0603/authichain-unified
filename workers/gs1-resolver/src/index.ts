@@ -263,6 +263,15 @@ function passportPayload(
     anchor: seal?.tx_hash
       ? { chain: seal.chain, contract: seal.contract, txHash: seal.tx_hash }
       : null,
+    fingerprint: seal?.fingerprint_sha256
+      ? {
+          digest: `sha256:${seal.fingerprint_sha256}`,
+          source: "issuer_supplied",
+          verified: false,
+          caveat:
+            "The resolver stores this digest as supplied. It does not verify the source bytes, what they cover, or when they existed.",
+        }
+      : null,
     history: seal
       ? {
           scanCount: extra.scanCount ?? seal.scan_count,
@@ -967,6 +976,18 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
   const certId = typeof body.certId === "string" ? body.certId : null;
   if (!certId) return json({ error: "certId_required" }, 400);
 
+  const fingerprintInput = body.fingerprintSha256;
+  let fingerprintSha256: string | null = null;
+  if (fingerprintInput != null) {
+    if (
+      typeof fingerprintInput !== "string" ||
+      !/^(?:sha256:)?[a-f0-9]{64}$/i.test(fingerprintInput)
+    ) {
+      return json({ error: "invalid_fingerprint_sha256" }, 400);
+    }
+    fingerprintSha256 = fingerprintInput.replace(/^sha256:/i, "").toLowerCase();
+  }
+
   // A seal whose GTIN, lot or serial is not valid Digital Link syntax could
   // never be resolved (the resolver answers 400), so refuse it here.
   if (typeof body.gtin === "string") {
@@ -995,8 +1016,9 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
   try {
     await env.DB.prepare(
       `INSERT INTO seals (id, lookup_key, gtin, lot, serial, cert_id, brand, product_name,
-                          issuer, chain, contract, tx_hash, status, metadata_json, created_at)
-       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,'issued',?13,?14)`
+                          issuer, chain, contract, tx_hash, fingerprint_sha256, status,
+                          metadata_json, created_at)
+       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,'issued',?14,?15)`
     )
       .bind(
         id,
@@ -1011,6 +1033,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
         (body.chain as string) ?? "polygon",
         (body.contract as string) ?? null,
         (body.txHash as string) ?? null,
+        fingerprintSha256,
         body.metadata ? JSON.stringify(body.metadata) : null,
         Date.now()
       )
