@@ -62,8 +62,11 @@ type SealRow = {
   chain: string | null;
   contract: string | null;
   tx_hash: string | null;
+  fingerprint_sha256: string | null;
   status: string;
   status_reason: string | null;
+  revoked_at: number | null;
+  revoke_reason: string | null;
   first_country: string | null;
   first_activated_at: number | null;
   scan_count: number;
@@ -122,9 +125,17 @@ function geoOf(request: Request): {
 }
 
 async function loadSeal(env: Env, key: string): Promise<SealRow | null> {
-  return await env.DB.prepare("SELECT * FROM seals WHERE lookup_key = ?1")
+  const seal = await env.DB.prepare("SELECT * FROM seals WHERE lookup_key = ?1")
     .bind(key)
     .first<SealRow>();
+  if (seal || !key.startsWith("cert:")) return seal;
+
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM seals WHERE cert_id = ?1 COLLATE NOCASE LIMIT 2"
+  )
+    .bind(key.slice("cert:".length))
+    .all<SealRow>();
+  return results?.length === 1 ? results[0] : null;
 }
 
 async function recentScans(
@@ -846,6 +857,10 @@ export default {
       return handleIssue(request, env);
     }
 
+    if (url.pathname === "/revoke" && request.method === "POST") {
+      return handleRevoke(request, env);
+    }
+
     // Read-only passport lookup, for surfaces that render a passport without a
     // person having scanned anything.
     //
@@ -936,6 +951,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
       503
     );
   }
+
   const auth = request.headers.get("authorization") || "";
   if (auth !== `Bearer ${env.ISSUE_SECRET}`) {
     return json({ error: "unauthorized" }, 401);
@@ -1018,4 +1034,87 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     },
     201
   );
+}
+
+function hasIssueAuthorization(request: Request, secret: string): boolean {
+  const actual = request.headers.get("authorization") || "";
+  const expected = "Bearer " + secret;
+  if (actual.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
+/** Revoke an issued seal. Requires ISSUE_SECRET and the lookup key returned by /issue. */
+async function handleRevoke(request: Request, env: Env): Promise<Response> {
+  if (!env.ISSUE_SECRET) {
+    return json(
+      { error: "issuing_disabled", detail: "ISSUE_SECRET is not configured." },
+      503
+    );
+  }
+  if (!hasIssueAuthorization(request, env.ISSUE_SECRET)) {
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+
+  const lookupKey =
+    typeof body.lookupKey === "string" ? body.lookupKey.trim() : "";
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!lookupKey) return json({ error: "lookupKey_required" }, 400);
+  if (!reason || reason.length > 500) {
+    return json({ error: "reason_required", maxLength: 500 }, 400);
+  }
+
+  try {
+    const seal = await loadSeal(env, lookupKey);
+    if (!seal) return json({ error: "seal_not_found" }, 404);
+    if (seal.status === "revoked") {
+      return json({
+        id: seal.id,
+        lookupKey: seal.lookup_key,
+        certId: seal.cert_id,
+        status: "revoked",
+        revokedAt: seal.revoked_at,
+        reason: seal.revoke_reason ?? seal.status_reason,
+        alreadyRevoked: true,
+      });
+    }
+
+    await env.DB.prepare(
+      `UPDATE seals
+          SET status = 'revoked',
+              status_reason = ?1,
+              revoked_at = ?2,
+              revoke_reason = ?1
+        WHERE lookup_key = ?3 AND status != 'revoked'`
+    )
+      .bind(reason, Date.now(), lookupKey)
+      .run();
+
+    const revoked = await loadSeal(env, lookupKey);
+    if (!revoked || revoked.status !== "revoked") {
+      return json({ error: "revoke_not_applied" }, 409);
+    }
+    return json({
+      id: revoked.id,
+      lookupKey: revoked.lookup_key,
+      certId: revoked.cert_id,
+      status: "revoked",
+      revokedAt: revoked.revoked_at,
+      reason: revoked.revoke_reason ?? reason,
+      alreadyRevoked: false,
+    });
+  } catch (err) {
+    console.error("revoke failed", String(err));
+    return json({ error: "revoke_failed" }, 500);
+  }
 }
