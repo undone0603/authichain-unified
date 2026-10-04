@@ -37,7 +37,7 @@ npx vitest run server/db.test.ts
 npx vitest run client/vitest.config.ts -t "test name"   # client has its own vitest config
 ```
 
-Contracts: `pnpm test:contracts` (hardhat test, config `hardhat.config.cts`).
+Contracts: `pnpm test:contracts` (hardhat test, config `hardhat.config.ts`).
 
 AgentZ (Python) tests use pytest and live in `agentz/tests/`:
 
