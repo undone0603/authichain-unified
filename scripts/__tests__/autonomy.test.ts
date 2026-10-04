@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { vi as vitest } from "vitest";
 import {
   flatten,
   listWorkflowFiles,
@@ -299,8 +300,18 @@ describe("ops pulse", () => {
     const scheduledRows = [
       { file: "daily.yml", lane: "health", managed: true, desired: "on" },
       { file: "weekly.yml", lane: "health", managed: true, desired: "on" },
-      { file: "manual-masked.yml", lane: "health", managed: true, desired: "on" },
-      { file: "unregistered.yml", lane: "health", managed: true, desired: "on" },
+      {
+        file: "manual-masked.yml",
+        lane: "health",
+        managed: true,
+        desired: "on",
+      },
+      {
+        file: "unregistered.yml",
+        lane: "health",
+        managed: true,
+        desired: "on",
+      },
     ];
     const scheduledRemote = [
       { id: 1, path: ".github/workflows/daily.yml", state: "active" },
@@ -315,28 +326,40 @@ describe("ops pulse", () => {
     ]);
     const now = Date.parse("2026-10-03T12:00:00Z");
     const runs = new Map([
-      ["weekly.yml", {
-        conclusion: "success",
-        created_at: "2026-09-01T09:00:00Z",
-        html_url: "weekly-run",
-      }],
-      ["manual-masked.yml", {
-        latest: {
+      [
+        "weekly.yml",
+        {
           conclusion: "success",
-          created_at: "2026-10-03T11:00:00Z",
-          html_url: "manual-run",
+          created_at: "2026-09-01T09:00:00Z",
+          html_url: "weekly-run",
         },
-        scheduled: {
-          conclusion: "success",
-          created_at: "2026-09-01T08:00:00Z",
-          html_url: "old-cron-run",
+      ],
+      [
+        "manual-masked.yml",
+        {
+          latest: {
+            conclusion: "success",
+            created_at: "2026-10-03T11:00:00Z",
+            html_url: "manual-run",
+          },
+          scheduled: {
+            conclusion: "success",
+            created_at: "2026-09-01T08:00:00Z",
+            html_url: "old-cron-run",
+          },
         },
-      }],
+      ],
     ]);
 
     expect(
-      evaluateWorkflows(scheduledRows, scheduledRemote, runs, new Set(), schedules, now)
-        .map(problem => `${problem.file}:${problem.kind}`)
+      evaluateWorkflows(
+        scheduledRows,
+        scheduledRemote,
+        runs,
+        new Set(),
+        schedules,
+        now
+      ).map(problem => `${problem.file}:${problem.kind}`)
     ).toEqual([
       "daily.yml:no_scheduled_run",
       "weekly.yml:stale",
@@ -347,7 +370,9 @@ describe("ops pulse", () => {
 
   it("uses the shortest configured schedule and parses quoted cron entries", () => {
     expect(
-      scheduledCrons('on:\n  schedule:\n    - cron: "0 */6 * * *"\n    - cron: \'0 9 * * 1\'\n')
+      scheduledCrons(
+        "on:\n  schedule:\n    - cron: \"0 */6 * * *\"\n    - cron: '0 9 * * 1'\n"
+      )
     ).toEqual(["0 */6 * * *", "0 9 * * 1"]);
     expect(staleAfterMs("0 */6 * * *")).toBe(14 * 60 * 60_000);
     expect(staleAfterMs("invalid")).toBeNull();
@@ -393,14 +418,17 @@ describe("ops pulse", () => {
         schedules,
         Date.parse("2026-10-03T12:00:00Z")
       ).map(problem => `${problem.file}:${problem.kind}`)
-    ).toEqual(["failed.yml:scheduled_failing", "unavailable.yml:run_lookup_failed"]);
+    ).toEqual([
+      "failed.yml:scheduled_failing",
+      "unavailable.yml:run_lookup_failed",
+    ]);
   });
 
   it("queries scheduled workflow history separately from manual runs", async () => {
     const requests: string[] = [];
-    vi.stubGlobal(
+    vitest.stubGlobal(
       "fetch",
-      vi.fn(async (url: string) => {
+      vitest.fn(async (url: string) => {
         requests.push(url);
         const scheduled = url.includes("event=schedule");
         return {
@@ -435,7 +463,7 @@ describe("ops pulse", () => {
       expect(record.latest.html_url).toBe("manual-run");
       expect(record.scheduled.html_url).toBe("cron-run");
     } finally {
-      vi.unstubAllGlobals();
+      vitest.unstubAllGlobals();
     }
   });
 

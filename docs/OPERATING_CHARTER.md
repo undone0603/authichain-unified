@@ -24,15 +24,15 @@ The `Autonomy reconcile` workflow runs on each merge to main and once a day.
 It enables or disables workflows until GitHub matches the manifest. If a PR adds a
 workflow without classifying it, the check fails.
 
-| Lane    | What it does                                                                  | Who acts                |
-| ------- | ----------------------------------------------------------------------------- | ----------------------- |
-| ship    | Build, test, security scan and deploy on push                                 | Automatic               |
-| health  | **Loop 1.** Hourly `ops-pulse` checks and scheduled-loop freshness         | Automatic; alerts owner |
-| revenue | **Loop 2.** Moves warm leads to checkout, dunning, gov digest, revenue report | Automatic               |
-| growth  | **Loop 3.** SEO pages, owned social, listening, gated cold outreach           | Automatic within caps   |
-| repair  | **Loop 4.** Classifies failed checks and opens draft fix PRs                  | Automatic; owner merges |
-| manual  | Secret binding, backfills, one-off sends                                      | Owner runs by hand      |
-| retired | Kept disabled for history                                                     | Nobody                  |
+| Lane    | What it does                                                                  | Who acts                                       |
+| ------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| ship    | Build, test, security scan and deploy on push                                 | Automatic                                      |
+| health  | **Loop 1.** Hourly `ops-pulse` plus daily read-only probes                    | Automatic; alerts owner                        |
+| revenue | **Loop 2.** Moves warm leads to checkout, dunning, gov digest, revenue report | Automatic                                      |
+| growth  | **Loop 3.** SEO pages, owned social, listening, gated cold outreach           | Automatic within caps                          |
+| repair  | **Loop 4.** Classifies failed checks and opens draft fix PRs                  | Automatic; owner marks ready, autopilot merges |
+| manual  | Secret binding, backfills, one-off sends                                      | Owner runs by hand                             |
+| retired | Kept disabled for history                                                     | Nobody                                         |
 
 To turn a loop off, change `"on"` to `"off"` for it and merge. That's all.
 
