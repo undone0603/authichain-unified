@@ -1,5 +1,6 @@
 # Loop 1 heartbeat: read-only probes of the public sites, every managed
-# loop, and paid-but-unfulfilled checkouts. Opens ONE issue labelled `ops-alert` when something is red and closes
+# loop (including scheduled-run freshness), and paid-but-unfulfilled checkouts.
+# Opens ONE issue labelled `ops-alert` when something is red and closes
 # it when green. No issue = healthy. See docs/OPERATING_CHARTER.md.
 name: Ops pulse
 

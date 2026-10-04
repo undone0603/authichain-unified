@@ -3,7 +3,8 @@
 //
 // Loop 1 heartbeat. Read-only checks, one alert issue:
 //   - public sites and money-path endpoints answer as expected
-//   - every managed "on" workflow is enabled on GitHub and its latest run is not failing
+//   - every managed "on" workflow is enabled, its latest run is not failing,
+//     and its scheduled runs are recent enough for their configured cadence
 //
 // When anything is red, opens (or updates) a single issue labelled `ops-alert`.
 // When everything is green again, comments and closes it. GitHub notifies the
@@ -13,6 +14,7 @@
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
 import { appendFileSync, readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { loadManifest, flatten, fetchRemoteWorkflows } from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
@@ -95,6 +97,35 @@ export function isCallOnly(yamlText) {
   return triggers.length === 1 && triggers[0] === "workflow_call";
 }
 
+export function scheduledCrons(yamlText) {
+  return [...yamlText.matchAll(/^\s*-\s*cron:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))/gm)]
+    .map(match => match[1] ?? match[2] ?? match[3]);
+}
+
+/** Conservative maximum interval between executions for common GitHub cron schedules. */
+export function staleAfterMs(cron) {
+  const fields = cron.trim().split(/\s+/);
+  if (fields.length !== 5) return null;
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = fields;
+  const minuteStep = /^\*\/(\d+)$/.exec(minute);
+  const hourStep = /^\*\/(\d+)$/.exec(hour);
+  let interval;
+
+  if (minuteStep && Number(minuteStep[1]) > 0)
+    interval = Number(minuteStep[1]) * 60_000;
+  else if (minute === "*") interval = 60_000;
+  else if (hourStep && Number(hourStep[1]) > 0)
+    interval = Number(hourStep[1]) * 60 * 60_000;
+  else if (hour === "*") interval = 60 * 60_000;
+  else if (month !== "*") interval = 365 * 24 * 60 * 60_000;
+  else if (dayOfMonth !== "*") interval = 31 * 24 * 60 * 60_000;
+  else if (dayOfWeek !== "*") interval = 7 * 24 * 60 * 60_000;
+  else if (minute !== "*" && hour !== "*") interval = 24 * 60 * 60_000;
+  else return null;
+
+  return interval * 2 + 2 * 60 * 60_000;
+}
+
 /**
  * Pure. manifestRows: flatten(manifest). remote: [{id,path,state}].
  * latestRuns: Map(file -> {conclusion, html_url, created_at}) for runs on the default branch.
@@ -104,12 +135,15 @@ export function evaluateWorkflows(
   manifestRows,
   remote,
   latestRuns,
-  callOnly = new Set()
+  callOnly = new Set(),
+  schedules = new Map(),
+  now = Date.now()
 ) {
   const byFile = new Map(remote.map(w => [w.path.split("/").pop(), w]));
   const problems = [];
   for (const r of manifestRows) {
     if (!r.managed || r.desired !== "on" || r.lane === "ship") continue;
+    const crons = schedules.get(r.file) ?? [];
     const w = byFile.get(r.file);
     if (w && w.state !== "active") {
       problems.push({
@@ -120,10 +154,32 @@ export function evaluateWorkflows(
       });
       continue;
     }
-    const run = latestRuns.get(r.file);
+    if (!w && crons.length) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "unregistered",
+        detail: "enabled workflow is not registered on GitHub",
+      });
+      continue;
+    }
+    if (!w) continue;
+    const runRecord = latestRuns.get(r.file);
+    const run = runRecord && Object.hasOwn(runRecord, "latest")
+      ? runRecord.latest
+      : runRecord;
+    if (runRecord?.error || runRecord?.latestError) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "run_lookup_failed",
+        detail: `could not read workflow run history: ${runRecord.error ?? runRecord.latestError}`,
+      });
+      continue;
+    }
+    if (callOnly.has(r.file)) continue;
     if (
       run &&
-      !callOnly.has(r.file) &&
       ["failure", "timed_out", "startup_failure"].includes(run.conclusion)
     ) {
       problems.push({
@@ -132,6 +188,78 @@ export function evaluateWorkflows(
         kind: "failing",
         detail: `last run ${run.conclusion}`,
         url: run.html_url,
+      });
+      continue;
+    }
+    if (!crons.length) continue;
+    if (runRecord?.scheduledError) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "run_lookup_failed",
+        detail: `could not read scheduled run history: ${runRecord.scheduledError}`,
+      });
+      continue;
+    }
+    const scheduledRun =
+      runRecord && Object.hasOwn(runRecord, "scheduled")
+        ? runRecord.scheduled
+        : run;
+    if (!scheduledRun) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "no_scheduled_run",
+        detail: "scheduled workflow has no completed schedule-triggered run on main",
+      });
+      continue;
+    }
+    if (
+      ["failure", "timed_out", "startup_failure"].includes(
+        scheduledRun.conclusion
+      )
+    ) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "scheduled_failing",
+        detail: `last scheduled run ${scheduledRun.conclusion}`,
+        url: scheduledRun.html_url,
+      });
+      continue;
+    }
+    const freshnessLimits = crons.map(staleAfterMs);
+    if (freshnessLimits.some(limit => limit === null)) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "schedule_unrecognized",
+        detail: `could not determine freshness window for schedule: ${crons.join(", ")}`,
+      });
+      continue;
+    }
+    const freshnessLimit = Math.min(...freshnessLimits);
+    const runTime = Date.parse(scheduledRun.created_at ?? "");
+    if (!Number.isFinite(runTime)) {
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "run_time_unknown",
+        detail: "latest completed run has no valid timestamp",
+        url: scheduledRun.html_url,
+      });
+      continue;
+    }
+    const age = now - runTime;
+    if (age > freshnessLimit) {
+      const ageHours = Math.floor(age / (60 * 60_000));
+      const limitHours = Math.ceil(freshnessLimit / (60 * 60_000));
+      problems.push({
+        file: r.file,
+        lane: r.lane,
+        kind: "stale",
+        detail: `last completed run was ${ageHours}h ago (stale after ${limitHours}h)`,
+        url: scheduledRun.html_url,
       });
     }
   }
@@ -215,25 +343,46 @@ async function gh(path, { method = "GET", token, body } = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-async function latestRunsFor(repo, token, files) {
+export async function latestRunsFor(
+  repo,
+  token,
+  files,
+  scheduledFiles = new Set()
+) {
   const map = new Map();
   await Promise.all(
     files.map(async f => {
-      try {
-        const d = await gh(
-          `/repos/${repo}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`,
-          { token }
-        );
-        const r = d.workflow_runs?.[0];
-        if (r)
-          map.set(f, {
-            conclusion: r.conclusion,
-            html_url: r.html_url,
-            created_at: r.created_at,
-          });
-      } catch {
-        /* workflow not registered yet */
-      }
+      const latestPath = `/repos/${repo}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`;
+      const readLatest = async path => {
+        try {
+          const d = await gh(path, { token });
+          const r = d.workflow_runs?.[0];
+          return r
+            ? {
+                conclusion: r.conclusion,
+                html_url: r.html_url,
+                created_at: r.created_at,
+              }
+            : null;
+        } catch (error) {
+          return { error: error.message };
+        }
+      };
+
+      const latest = await readLatest(latestPath);
+      const scheduled = scheduledFiles.has(f)
+        ? await readLatest(`${latestPath}&event=schedule`)
+        : undefined;
+      map.set(f, {
+        latest: latest && !latest.error ? latest : null,
+        latestError: latest?.error,
+        ...(scheduledFiles.has(f)
+          ? {
+              scheduled: scheduled && !scheduled.error ? scheduled : null,
+              scheduledError: scheduled?.error,
+            }
+          : {}),
+      });
     })
   );
   return map;
@@ -264,20 +413,29 @@ async function main() {
     const files = rows
       .filter(r => r.managed && r.desired === "on" && r.lane !== "ship")
       .map(r => r.file);
-    const callOnly = new Set(
-      files.filter(f => {
-        try {
-          return isCallOnly(readFileSync(`.github/workflows/${f}`, "utf8"));
-        } catch {
-          return false;
-        }
-      })
-    );
+    const callOnly = new Set();
+    const schedules = new Map();
+    for (const file of files) {
+      try {
+        const yamlText = readFileSync(`.github/workflows/${file}`, "utf8");
+        if (isCallOnly(yamlText)) callOnly.add(file);
+        const crons = scheduledCrons(yamlText);
+        if (crons.length) schedules.set(file, crons);
+      } catch (error) {
+        console.error(`Could not read workflow definition ${file}:`, error);
+      }
+    }
     report.workflows = evaluateWorkflows(
       rows,
       remote,
-      await latestRunsFor(repo, token, files),
-      callOnly
+      await latestRunsFor(
+        repo,
+        token,
+        files,
+        new Set(schedules.keys())
+      ),
+      callOnly,
+      schedules
     );
   }
 
@@ -364,7 +522,7 @@ async function main() {
   console.log(`alert issue: ${d.action}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(e => {
     console.error(e);
     process.exit(1);

@@ -2,7 +2,7 @@
  * Pipeline tick tests — verifies control flow, UCB1 task ordering, and result shape.
  * All sub-jobs and db functions are mocked.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ─── Mutable env ──────────────────────────────────────────────────────────────
 
@@ -54,6 +54,11 @@ describe('runPipelineTick', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnv.autonomousPipelineEnabled = true;
+  });
+
+  afterEach(async () => {
+    const { runTask } = await import('./jobs/task-runner.js');
+    vi.mocked(runTask).mockReset().mockResolvedValue({ ok: true });
   });
 
   it('returns { enabled: false, skipped: true } when pipeline is disabled', async () => {
@@ -130,7 +135,7 @@ describe('runPipelineTick', () => {
     expect(result.missionTasks.errors).toBe(0);
   });
 
-  it('increments errors count when a task throws, does not abort remaining tasks', async () => {
+  it('reports failed tasks and rejects the tick after processing remaining tasks', async () => {
     const { getDueTasks } = await import('./db.js');
     const { runTask } = await import('./jobs/task-runner.js');
 
@@ -139,15 +144,31 @@ describe('runPipelineTick', () => {
       { id: 't2', kind: 'CRM_UPDATE',     missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
     ]);
 
-    vi.mocked(runTask)
-      .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: true });
+    vi.mocked(runTask).mockImplementation(async task =>
+      task.id === 't1' ? { ok: false, error: 'test task error' } : { ok: true },
+    );
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick() as any;
+    const result = runPipelineTick();
 
-    expect(result.missionTasks.ran).toBe(1);
-    expect(result.missionTasks.errors).toBe(1);
+    await expect(result).rejects.toMatchObject({
+      name: 'PipelineTaskFailure',
+      summary: expect.objectContaining({
+        status: 'partial',
+        missionTasks: {
+          total: 2,
+          ran: 1,
+          errors: 1,
+          failures: [
+            {
+              id: 't1',
+              kind: 'FIND_GOV_LEADS',
+              error: 'test task error',
+            },
+          ],
+        },
+      }),
+    });
     expect(vi.mocked(runTask)).toHaveBeenCalledTimes(2);
   });
 
@@ -158,6 +179,7 @@ describe('runPipelineTick', () => {
     expect(result.missionTasks.total).toBe(0);
     expect(result.missionTasks.ran).toBe(0);
     expect(result.missionTasks.errors).toBe(0);
+    expect(result.status).toBe('completed');
   });
 
   it('UCB1-scored tasks with known kinds run (does not crash with unknown segment mapping)', async () => {

@@ -16,7 +16,10 @@ import {
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
+  latestRunsFor,
   runProbes,
+  scheduledCrons,
+  staleAfterMs,
   signature,
 } from "../autonomy/ops-pulse.mjs";
 
@@ -290,6 +293,150 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+  });
+
+  it("alerts when an enabled scheduled workflow has no run or an overdue run", () => {
+    const scheduledRows = [
+      { file: "daily.yml", lane: "health", managed: true, desired: "on" },
+      { file: "weekly.yml", lane: "health", managed: true, desired: "on" },
+      { file: "manual-masked.yml", lane: "health", managed: true, desired: "on" },
+      { file: "unregistered.yml", lane: "health", managed: true, desired: "on" },
+    ];
+    const scheduledRemote = [
+      { id: 1, path: ".github/workflows/daily.yml", state: "active" },
+      { id: 2, path: ".github/workflows/weekly.yml", state: "active" },
+      { id: 3, path: ".github/workflows/manual-masked.yml", state: "active" },
+    ];
+    const schedules = new Map([
+      ["daily.yml", ["0 6 * * *"]],
+      ["weekly.yml", ["0 9 * * 5"]],
+      ["manual-masked.yml", ["0 8 * * *"]],
+      ["unregistered.yml", ["0 8 * * *"]],
+    ]);
+    const now = Date.parse("2026-10-03T12:00:00Z");
+    const runs = new Map([
+      ["weekly.yml", {
+        conclusion: "success",
+        created_at: "2026-09-01T09:00:00Z",
+        html_url: "weekly-run",
+      }],
+      ["manual-masked.yml", {
+        latest: {
+          conclusion: "success",
+          created_at: "2026-10-03T11:00:00Z",
+          html_url: "manual-run",
+        },
+        scheduled: {
+          conclusion: "success",
+          created_at: "2026-09-01T08:00:00Z",
+          html_url: "old-cron-run",
+        },
+      }],
+    ]);
+
+    expect(
+      evaluateWorkflows(scheduledRows, scheduledRemote, runs, new Set(), schedules, now)
+        .map(problem => `${problem.file}:${problem.kind}`)
+    ).toEqual([
+      "daily.yml:no_scheduled_run",
+      "weekly.yml:stale",
+      "manual-masked.yml:stale",
+      "unregistered.yml:unregistered",
+    ]);
+  });
+
+  it("uses the shortest configured schedule and parses quoted cron entries", () => {
+    expect(
+      scheduledCrons('on:\n  schedule:\n    - cron: "0 */6 * * *"\n    - cron: \'0 9 * * 1\'\n')
+    ).toEqual(["0 */6 * * *", "0 9 * * 1"]);
+    expect(staleAfterMs("0 */6 * * *")).toBe(14 * 60 * 60_000);
+    expect(staleAfterMs("invalid")).toBeNull();
+  });
+
+  it("reports scheduled-run failures and scheduled history lookup errors", () => {
+    const scheduledRows = [
+      { file: "failed.yml", lane: "health", managed: true, desired: "on" },
+      { file: "unavailable.yml", lane: "health", managed: true, desired: "on" },
+    ];
+    const scheduledRemote = scheduledRows.map(row => ({
+      id: row.file,
+      path: `.github/workflows/${row.file}`,
+      state: "active",
+    }));
+    const schedules = new Map(
+      scheduledRows.map(row => [row.file, ["0 6 * * *"]])
+    );
+    const runs = new Map([
+      [
+        "failed.yml",
+        {
+          latest: {
+            conclusion: "success",
+            created_at: "2026-10-03T11:00:00Z",
+          },
+          scheduled: {
+            conclusion: "failure",
+            created_at: "2026-10-03T06:00:00Z",
+            html_url: "failed-schedule",
+          },
+        },
+      ],
+      ["unavailable.yml", { scheduledError: "GitHub API unavailable" }],
+    ]);
+
+    expect(
+      evaluateWorkflows(
+        scheduledRows,
+        scheduledRemote,
+        runs,
+        new Set(),
+        schedules,
+        Date.parse("2026-10-03T12:00:00Z")
+      ).map(problem => `${problem.file}:${problem.kind}`)
+    ).toEqual(["failed.yml:scheduled_failing", "unavailable.yml:run_lookup_failed"]);
+  });
+
+  it("queries scheduled workflow history separately from manual runs", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        requests.push(url);
+        const scheduled = url.includes("event=schedule");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            workflow_runs: [
+              {
+                conclusion: "success",
+                created_at: scheduled
+                  ? "2026-09-01T08:00:00Z"
+                  : "2026-10-03T11:00:00Z",
+                html_url: scheduled ? "cron-run" : "manual-run",
+              },
+            ],
+          }),
+        };
+      })
+    );
+
+    try {
+      const runs = await latestRunsFor(
+        "owner/repo",
+        "token",
+        ["workflow.yml"],
+        new Set(["workflow.yml"])
+      );
+      const record = runs.get("workflow.yml");
+
+      expect(requests).toHaveLength(2);
+      expect(requests.some(url => url.includes("event=schedule"))).toBe(true);
+      expect(record.latest.html_url).toBe("manual-run");
+      expect(record.scheduled.html_url).toBe("cron-run");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("skips the stale run history of reusable (workflow_call-only) loops", () => {

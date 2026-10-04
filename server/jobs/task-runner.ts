@@ -34,7 +34,9 @@ import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
-export async function runTask(task: Task): Promise<{ ok: boolean }> {
+export async function runTask(
+  task: Task
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const claimed = await markTaskRunning(task.id);
   if (!claimed) return { ok: true }; // Another worker already claimed this task
 
@@ -214,6 +216,6 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
       missionId: task.missionId,
       error: message,
     }});
-    return { ok: false };
+    return { ok: false, error: message };
   }
 }
