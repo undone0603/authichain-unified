@@ -7,24 +7,41 @@
  * failing sink can never affect the Stripe response.
  */
 import { describe, expect, it, vi } from "vitest";
-import { tryHandleGatedCheckout, type CheckoutGateEvent } from "./checkout-gate";
+import {
+  tryHandleGatedCheckout,
+  type CheckoutGateEvent,
+} from "./checkout-gate";
 
 const HUMAN_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 const ENV = { STRIPE_SECRET_KEY: "sk_live_x" };
 
+const protection = {
+  claimCheckout: vi.fn(async () => ({ allowed: true as const })),
+  recordSession: vi.fn(async () => true),
+};
+
 function stripeOk() {
   return vi.fn(
     async () =>
-      new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_test_gate" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          url: "https://checkout.stripe.com/c/pay/cs_test_gate",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
   );
 }
 
-function post(path: string, form: Record<string, string>, headers: Record<string, string> = {}) {
+function post(
+  path: string,
+  form: Record<string, string>,
+  headers: Record<string, string> = {}
+) {
   return new Request(`https://authichain.com${path}`, {
     method: "POST",
     headers: {
@@ -47,7 +64,11 @@ describe("checkout view events", () => {
     const cases: Array<[string, string, string]> = [
       ["starter", "checkout_starter_view", "starter"],
       ["dpp_readiness", "checkout_dpp_view", "dpp_readiness"],
-      ["strainchain_passport", "checkout_passport_view", "strainchain_passport"],
+      [
+        "strainchain_passport",
+        "checkout_passport_view",
+        "strainchain_passport",
+      ],
     ];
     for (const [planId, event, sku] of cases) {
       const s = sink();
@@ -57,7 +78,7 @@ describe("checkout view events", () => {
           headers: { "user-agent": HUMAN_UA },
         }),
         ENV,
-        { fetchImpl, onEvent: s.onEvent },
+        { fetchImpl, onEvent: s.onEvent }
       );
       expect(res!.status).toBe(200);
       expect(fetchImpl).not.toHaveBeenCalled();
@@ -73,7 +94,7 @@ describe("checkout view events", () => {
         headers: { "user-agent": HUMAN_UA },
       }),
       ENV,
-      { fetchImpl: vi.fn(), onEvent: s.onEvent },
+      { fetchImpl: vi.fn(), onEvent: s.onEvent }
     );
     expect(res!.status).toBe(200);
     expect(s.seen).toEqual([]);
@@ -82,9 +103,11 @@ describe("checkout view events", () => {
   it("reports nothing on HEAD", async () => {
     const s = sink();
     await tryHandleGatedCheckout(
-      new Request("https://authichain.com/checkout/starter", { method: "HEAD" }),
+      new Request("https://authichain.com/checkout/starter", {
+        method: "HEAD",
+      }),
       ENV,
-      { fetchImpl: vi.fn(), onEvent: s.onEvent },
+      { fetchImpl: vi.fn(), onEvent: s.onEvent }
     );
     expect(s.seen).toEqual([]);
   });
@@ -97,7 +120,7 @@ describe("checkout POST events", () => {
     const res = await tryHandleGatedCheckout(
       post("/checkout/starter", { email: "buyer@brand.com" }),
       ENV,
-      { fetchImpl, onEvent: s.onEvent },
+      { fetchImpl, ...protection, onEvent: s.onEvent }
     );
     expect(res!.status).toBe(303);
     expect(s.seen.map(e => e.event)).toEqual([
@@ -115,7 +138,7 @@ describe("checkout POST events", () => {
     const res = await tryHandleGatedCheckout(
       post("/checkout/dpp_readiness", { email: "buyer@brand.com" }),
       ENV,
-      { fetchImpl: stripeOk(), onEvent: s.onEvent },
+      { fetchImpl: stripeOk(), ...protection, onEvent: s.onEvent }
     );
     expect(res!.status).toBe(303);
     expect(s.seen).toEqual([]);
@@ -127,7 +150,7 @@ describe("checkout POST events", () => {
     const res = await tryHandleGatedCheckout(
       post("/checkout/starter", { email: "nope" }),
       ENV,
-      { fetchImpl, onEvent: s.onEvent },
+      { fetchImpl, onEvent: s.onEvent }
     );
     expect(res!.status).toBe(400);
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -137,9 +160,13 @@ describe("checkout POST events", () => {
   it("reports nothing for an automated request", async () => {
     const s = sink();
     const res = await tryHandleGatedCheckout(
-      post("/checkout/starter", { email: "buyer@brand.com" }, { "user-agent": "curl/8.4.0" }),
+      post(
+        "/checkout/starter",
+        { email: "buyer@brand.com" },
+        { "user-agent": "curl/8.4.0" }
+      ),
       ENV,
-      { fetchImpl: vi.fn(), onEvent: s.onEvent },
+      { fetchImpl: vi.fn(), onEvent: s.onEvent }
     );
     expect(res!.status).toBe(403);
     expect(s.seen).toEqual([]);
@@ -151,7 +178,7 @@ describe("checkout POST events", () => {
     const res = await tryHandleGatedCheckout(
       post("/checkout/starter", { email: "buyer@brand.com" }),
       ENV,
-      { fetchImpl, onEvent: s.onEvent },
+      { fetchImpl, ...protection, onEvent: s.onEvent }
     );
     expect(res!.status).toBe(502);
     expect(s.seen.map(e => e.event)).toEqual(["checkout_email_captured"]);
@@ -165,10 +192,11 @@ describe("analytics can never break checkout", () => {
       ENV,
       {
         fetchImpl: stripeOk(),
+        ...protection,
         onEvent: () => {
           throw new Error("sink exploded");
         },
-      },
+      }
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toContain("checkout.stripe.com");
@@ -178,7 +206,7 @@ describe("analytics can never break checkout", () => {
     const res = await tryHandleGatedCheckout(
       post("/checkout/starter", { email: "buyer@brand.com" }),
       ENV,
-      { fetchImpl: stripeOk() },
+      { fetchImpl: stripeOk(), ...protection }
     );
     expect(res!.status).toBe(303);
   });

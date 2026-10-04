@@ -13,17 +13,20 @@ import { planById, planPaymentLink } from "./plans";
 const HUMAN_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
+const protection = {
+  claimCheckout: vi.fn(async () => ({ allowed: true as const })),
+  recordSession: vi.fn(async () => true),
+};
+
 function stripeOk() {
-  return vi
-    .fn<typeof fetch>()
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          url: "https://checkout.stripe.com/c/pay/cs_test_gate",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
-    );
+  return vi.fn<typeof fetch>().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        url: "https://checkout.stripe.com/c/pay/cs_test_gate",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  );
 }
 
 function post(
@@ -191,7 +194,7 @@ describe("tryHandleGatedCheckout — POST", () => {
         checkout_key: "12345678-1234-4234-8234-123456789abc",
       }),
       { STRIPE_SECRET_KEY: "sk_test_x" },
-      { fetchImpl }
+      { fetchImpl, ...protection }
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toBe(
@@ -238,11 +241,17 @@ describe("tryHandleGatedCheckout — POST", () => {
     const request = () =>
       post("/checkout/creator", { email: "a@b.co", checkout_key: checkoutKey });
     const env = { STRIPE_SECRET_KEY: "sk_test_x" };
-    const first = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const first = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(first!.status).toBe(502);
     expect(await first!.text()).toContain(checkoutKey);
 
-    const retry = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const retry = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(retry!.status).toBe(303);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     for (const [, init] of fetchImpl.mock.calls) {
@@ -250,6 +259,37 @@ describe("tryHandleGatedCheckout — POST", () => {
         "Idempotency-Key": checkoutKey,
       });
     }
+  });
+
+  it("does not call Stripe when checkout protection denies the claim", async () => {
+    const fetchImpl = stripeOk();
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/creator", { email: "a@b.co" }),
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      {
+        fetchImpl,
+        claimCheckout: async () => ({
+          allowed: false,
+          reason: "Checkout protection unavailable",
+        }),
+        recordSession: protection.recordSession,
+      }
+    );
+    expect(res!.status).not.toBe(303);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect when the Stripe session cannot be recorded", async () => {
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/creator", { email: "a@b.co" }),
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      {
+        fetchImpl: stripeOk(),
+        claimCheckout: protection.claimCheckout,
+        recordSession: async () => false,
+      }
+    );
+    expect(res!.status).toBe(502);
   });
 
   it("DPP POST carries the DPP offer metadata", () => {
