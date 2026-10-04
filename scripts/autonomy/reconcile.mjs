@@ -20,6 +20,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const MANIFEST_PATH = join(ROOT, ".github", "autonomy.json");
 export const WORKFLOW_DIR = join(ROOT, ".github", "workflows");
 const VALID_STATES = new Set(["on", "off", "manual"]);
+const GOVERNANCE_FIELDS = [
+  "owner",
+  "evidence",
+  "permitted_action",
+  "approval_boundary",
+  "failure_behavior",
+  "rollback",
+  "cost_cap",
+  "success_metric",
+];
 
 export function loadManifest(path = MANIFEST_PATH) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -83,6 +93,69 @@ export function validateManifest(manifest, workflowFiles) {
       errors.push(
         `${f} is in .github/autonomy.json but no such workflow file exists`
       );
+  }
+  const governance = manifest.workflow_governance;
+  if (!governance || typeof governance !== "object") {
+    errors.push("workflow_governance is required");
+  } else {
+    const defaults = governance.defaults;
+    const overrides = governance.overrides;
+    if (!defaults || typeof defaults !== "object") {
+      errors.push("workflow_governance.defaults is required");
+    } else {
+      for (const lane of Object.keys(manifest.lanes ?? {})) {
+        const metadata = defaults[lane];
+        if (!metadata || typeof metadata !== "object") {
+          errors.push(`workflow_governance.defaults.${lane} is required`);
+          continue;
+        }
+        for (const field of GOVERNANCE_FIELDS) {
+          if (
+            typeof metadata[field] !== "string" ||
+            metadata[field].trim() === ""
+          ) {
+            errors.push(
+              `workflow_governance.defaults.${lane}.${field} must be a non-empty string`
+            );
+          }
+        }
+      }
+      for (const lane of Object.keys(defaults)) {
+        if (!(lane in (manifest.lanes ?? {}))) {
+          errors.push(
+            `workflow_governance.defaults.${lane} has no matching lane`
+          );
+        }
+      }
+    }
+    if (!overrides || typeof overrides !== "object") {
+      errors.push("workflow_governance.overrides is required");
+    } else {
+      for (const [file, metadata] of Object.entries(overrides)) {
+        if (!seen.has(file)) {
+          errors.push(
+            `workflow_governance.overrides.${file} has no matching workflow`
+          );
+          continue;
+        }
+        if (!metadata || typeof metadata !== "object") {
+          errors.push(
+            `workflow_governance.overrides.${file} must be an object`
+          );
+          continue;
+        }
+        for (const field of GOVERNANCE_FIELDS) {
+          if (
+            typeof metadata[field] !== "string" ||
+            metadata[field].trim() === ""
+          ) {
+            errors.push(
+              `workflow_governance.overrides.${file}.${field} must be a non-empty string`
+            );
+          }
+        }
+      }
+    }
   }
   const co = manifest.cold_outreach;
   if (co) {

@@ -40,6 +40,92 @@
       "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
     }
   ],
+  "workflow_governance": {
+    "$comment": "Every workflow inherits its lane default. Add a complete override only when a workflow has stricter or different controls. Validated by scripts/autonomy/reconcile.mjs.",
+    "defaults": {
+      "ship": {
+        "owner": "Engineering owner",
+        "evidence": "Passing required checks and versioned deployment configuration",
+        "permitted_action": "Build, test, scan, and deploy changes through approved workflows",
+        "approval_boundary": "Security, revenue, schema, charter, and protected-branch decisions",
+        "failure_behavior": "Fail closed and report the failed check or deployment",
+        "rollback": "Revert the change or use the existing deployment rollback",
+        "cost_cap": "Existing approved CI and deployment resources only",
+        "success_metric": "Required checks pass and the deployed health checks are green"
+      },
+      "health": {
+        "owner": "Operations owner",
+        "evidence": "Live health probes, scheduled-run freshness, and observable system state",
+        "permitted_action": "Monitor, open or close the defined alert, and report drift",
+        "approval_boundary": "Infrastructure, secret, DNS, access, and production configuration changes",
+        "failure_behavior": "Fail closed, retain evidence, and open an ops alert",
+        "rollback": "Disable the affected loop through the switchboard",
+        "cost_cap": "Zero additional spend",
+        "success_metric": "Fresh probes with no unresolved health alert when systems are healthy"
+      },
+      "revenue": {
+        "owner": "Revenue owner",
+        "evidence": "Verified payment, entitlement, lead, and funnel events",
+        "permitted_action": "Process approved lifecycle events and report observable funnel state",
+        "approval_boundary": "Prices, refunds, new SKUs, payouts, and unverified revenue claims",
+        "failure_behavior": "Fail closed on missing payment or entitlement evidence and alert the owner",
+        "rollback": "Disable the affected workflow and reconcile from authoritative events",
+        "cost_cap": "Existing approved payment and model budgets only",
+        "success_metric": "Observable progression from approved demand through provisioned value"
+      },
+      "growth": {
+        "owner": "Growth owner",
+        "evidence": "Verified contact, consent, content, and channel evidence",
+        "permitted_action": "Publish owned content and send only charter-compliant, gated outreach",
+        "approval_boundary": "Claims, unapproved audiences, spend, and policy exceptions",
+        "failure_behavior": "Fail closed on missing consent, opt-out, deliverability, or truth controls",
+        "rollback": "Disable the workflow and withdraw or correct owned content when required",
+        "cost_cap": "Existing approved channel and model budgets only",
+        "success_metric": "Qualified traffic or replies without a control breach"
+      },
+      "improve": {
+        "owner": "Operations owner",
+        "evidence": "Live source material, failed-run evidence, or measured product feedback",
+        "permitted_action": "Prepare suggestions and draft improvements",
+        "approval_boundary": "Merges, sends, charges, and production changes",
+        "failure_behavior": "Produce no side effect when evidence is missing or stale",
+        "rollback": "Disable the suggestion loop through the switchboard",
+        "cost_cap": "Zero additional spend",
+        "success_metric": "Actionable, evidence-linked suggestions reviewed by the owner"
+      },
+      "repair": {
+        "owner": "Engineering owner",
+        "evidence": "Reproducible failed checks and deterministic fix evidence",
+        "permitted_action": "Classify failures and prepare draft fixes on a branch",
+        "approval_boundary": "Merges and changes involving security, revenue, schema, or policy",
+        "failure_behavior": "Fail closed and open an alert when no deterministic repair is available",
+        "rollback": "Close the draft or revert the repair branch",
+        "cost_cap": "Existing approved CI and model budgets only",
+        "success_metric": "Reduced repeat failures after reviewed fixes"
+      },
+      "manual": {
+        "owner": "Owner",
+        "evidence": "Explicit owner invocation and the tool's documented prerequisites",
+        "permitted_action": "Run the requested one-shot operator tool",
+        "approval_boundary": "The owner invocation is the approval boundary",
+        "failure_behavior": "Stop before side effects when prerequisites or approval are absent",
+        "rollback": "Use the tool-specific documented remediation or rollback",
+        "cost_cap": "Owner-approved resources only",
+        "success_metric": "The requested operation completes with recorded evidence"
+      },
+      "retired": {
+        "owner": "Operations owner",
+        "evidence": "Documented supersession or cost-versus-value decision",
+        "permitted_action": "Remain disabled for historical reference",
+        "approval_boundary": "Any reactivation requires owner review",
+        "failure_behavior": "Stay disabled",
+        "rollback": "Restore the retired state through the switchboard",
+        "cost_cap": "Zero additional spend",
+        "success_metric": "No unintended execution"
+      }
+    },
+    "overrides": {}
+  },
   "lanes": {
     "ship": {
       "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",

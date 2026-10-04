@@ -6,17 +6,17 @@ scorecard conflicts with it.
 
 ## Required fields
 
-| Field             | Requirement                                                                      |
-| ----------------- | -------------------------------------------------------------------------------- |
-| Owner             | Named person or team accountable for the outcome.                                |
-| Lane              | One switchboard lane: ship, health, revenue, growth, repair, manual, or retired. |
-| Evidence          | Live source required before the automation can act.                              |
-| Permitted action  | Narrow, observable action the automation may take alone.                         |
-| Approval boundary | Side effects that always stop for owner approval.                                |
-| Failure behavior  | Fail-closed condition, alert route, and retry limit.                             |
-| Rollback          | Reversible configuration or deployment path.                                     |
-| Cost cap          | Spend, model, or resource limit; use zero when no cost is authorized.            |
-| Success metric    | Observable outcome and review cadence.                                           |
+| Field             | Requirement                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Owner             | Named person or team accountable for the outcome.                                         |
+| Lane              | One switchboard lane: ship, health, revenue, growth, improve, repair, manual, or retired. |
+| Evidence          | Live source required before the automation can act.                                       |
+| Permitted action  | Narrow, observable action the automation may take alone.                                  |
+| Approval boundary | Side effects that always stop for owner approval.                                         |
+| Failure behavior  | Fail-closed condition, alert route, and retry limit.                                      |
+| Rollback          | Reversible configuration or deployment path.                                              |
+| Cost cap          | Spend, model, or resource limit; use zero when no cost is authorized.                     |
+| Success metric    | Observable outcome and review cadence.                                                    |
 
 ## Initial scorecards
 
