@@ -36,3 +36,14 @@ High-risk or low-confidence decisions escalate to a human. Routine fulfillment s
 ## First production target
 
 Do not expand the agent surface until the DPP revenue loop passes its deployed end-to-end smoke test: attribution → checkout → payment → provisioning → activation → DPP publication → verification → retention.
+
+## Related operating documents
+
+- [Solo Unicorn architecture](./SOLO_UNICORN_ARCHITECTURE.md) — founder-led
+  automation model and approval boundaries.
+- [Automation scorecard](./AUTOMATION_SCORECARD.md) — measurable operating
+  contract for each automation.
+- [Founder capacity protocol](./FOUNDER_CAPACITY_PROTOCOL.md) — approval and
+  workload handling without personal health-data collection.
+- [Autonomy change checklist](./AUTONOMY_CHANGE_CHECKLIST.md) — required
+  review before enabling or changing automation.

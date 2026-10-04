@@ -91,6 +91,12 @@ Autonomous business-operations agent. Capabilities span gov grant proposals, Doc
 
 - **Stripe** acct `acct_1SXIyEGqTruSqV8T` ("Authichain+claude"): ~28 active payment links, 3 flagship subscription tiers (`src/app/pricing/page.tsx`, 5 buy-links live), 1 registered webhook path. **Zero successful charges ever** — every historical charge is a failed owner self-test. Constraint is traffic, not plumbing.
 - **Revenue provisioning:** `checkout.session.completed` → find/create user by email → record revenue → welcome email. Verified working end-to-end.
+- **QRON generation entitlements:** authenticated users have profile-backed
+  generation limits. Provisioning writes the limit and resets usage; generation
+  checks the current profile before work and uses a conditional update to deduct
+  one credit, preventing concurrent requests from overspending the same limit.
+  Enterprise or an explicit unlimited sentinel bypasses deduction. Current
+  enforcement: `src/lib/provisioning.ts` and `src/lib/business-tier.ts`.
 - **x402 agent pay (LIVE, not `not_configured`):** `GET https://authichain.com/api/x402/health` → 200 `ready` / `trustless`. PayTo / tokenomics EOA `0xaebf…e437` (owner-authorized treasury; not the `$QRON` holder `0x5db5…`, not the NFT deployer), Base `8453`, Circle USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, **$0.05 / call**, PayAI facilitator reachable. `POST /api/x402` returns **402** with asset + EIP-712 extra when unpaid. Public docs: `https://authichain.com/x402`. Machine catalog: `GET /api/x402/catalog` and `/.well-known/x402.json` (prices copied from health). Tokenomics: `docs/strategy/AGENT_TOKENOMICS_x402.md`. Identity: `docs/strategy/WEB3_IDENTITY.md`. `$QRON` is not this rail. Do not rebind payTo away from the authorized treasury / facilitator. Live self-pay smokes already succeeded — do not treat another settle as required. // pragma: allowlist secret
 
 ## Cross-cutting risks (for a future ops pass)
