@@ -8,6 +8,11 @@ import { sendEmail } from "@/lib/email";
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
 import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
 import {
+  appendServiceOrderEventOnce,
+  isServiceOrderPlanId,
+  validateServiceOrderSession,
+} from "@/lib/service-order";
+import {
   anchorStripeReversal,
   anchorStripeSale,
   resolveBuyerWallet,
@@ -240,6 +245,27 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        const serviceOrderPlan = isServiceOrderPlanId(plan) ? plan : null;
+        if (serviceOrderPlan) {
+          // These services require explicit intake. The only meaning of
+          // "provisioned" here is that the existing account entitlement path
+          // completed; activation separately records accepted intake.
+          // Checkout Session webhook payloads do not include line_items. Read
+          // the canonical Session with its line items before validating price.
+          const authoritativeSession = await stripe.checkout.sessions.retrieve(
+            session.id,
+            { expand: ["line_items"] }
+          );
+          validateServiceOrderSession(serviceOrderPlan, authoritativeSession);
+          await appendServiceOrderEventOnce(getSupabase(), {
+            plan: serviceOrderPlan,
+            sessionId: session.id,
+            stage: "payment_succeeded",
+            source: md.source || "direct",
+            email,
+          });
+        }
+
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
         // never lost.
@@ -253,6 +279,23 @@ export async function POST(req: NextRequest) {
           isTrial,
           generationsGrant,
         });
+
+        if (serviceOrderPlan && prov.status === "upsert_failed") {
+          throw new Error(
+            `Service order generic provisioning failed: ${prov.error || "profiles upsert failed"}`
+          );
+        }
+        if (serviceOrderPlan) {
+          await appendServiceOrderEventOnce(getSupabase(), {
+            plan: serviceOrderPlan,
+            sessionId: session.id,
+            stage: "provisioned",
+            source: md.source || "direct",
+            email,
+            profileId: prov.profileId,
+            metadata: { generic_provisioning_status: prov.status },
+          });
+        }
 
         if (prov.profileId) {
           await getSupabase()
