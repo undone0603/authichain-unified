@@ -621,6 +621,30 @@ describe("owner digest", async () => {
     expect(queue.nextAction).toMatch(/review 1 task/);
   });
 
+  it("rejects missing or malformed task-count Content-Range headers", async () => {
+    for (const contentRange of [null, "not-a-range", "0-0/*"]) {
+      const fetchImpl: typeof fetch = async (_input, options = {}) => {
+        if (options.method === "HEAD") {
+          return new Response(null, {
+            status: 200,
+            headers: contentRange ? { "content-range": contentRange } : {},
+          });
+        }
+        return new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      };
+      await expect(
+        readPipelineQueue({
+          supabaseUrl: "https://project.supabase.co",
+          serviceRoleKey: "test-secret",
+          fetchImpl,
+        })
+      ).rejects.toThrow(/missing or invalid Content-Range/);
+    }
+  });
+
   it("chooses retry/runner action for stale work without owner-gated tasks", () => {
     expect(
       summarizePipelineQueue(

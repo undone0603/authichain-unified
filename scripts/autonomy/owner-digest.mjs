@@ -377,11 +377,12 @@ export async function readPipelineQueue({
     });
     if (!response.ok)
       throw new Error(`mission_tasks count (${status}) -> ${response.status}`);
-    const range = response.headers.get("content-range") ?? "";
-    const total = Number(range.slice(range.lastIndexOf("/") + 1));
+    const range = response.headers.get("content-range");
+    const match = range?.match(/^(?:\d+-\d+|\*)\/(\d+|\*)$/);
+    const total = match?.[1] === "*" ? NaN : Number(match?.[1]);
     if (!Number.isSafeInteger(total) || total < 0)
       throw new Error(
-        `mission_tasks count (${status}) returned an invalid total`
+        `mission_tasks count (${status}) returned a missing or invalid Content-Range`
       );
     return total;
   };
