@@ -192,15 +192,49 @@ export function sumVisitors(groups) {
   return groups.reduce((n, g) => n + (g?.uniq?.uniques ?? 0), 0);
 }
 
+/** Pure. Derive a private owner action from aggregate task-queue health. */
+export function summarizePipelineQueue(
+  counts,
+  oldestAgeHours,
+  { stalePendingHours = 24, staleRunningHours = 6 } = {}
+) {
+  let nextAction = "No queued, running, or human-blocked tasks.";
+  let needsAttention = false;
+
+  if (counts.waitingHuman > 0) {
+    needsAttention = true;
+    nextAction = `Owner action: review ${counts.waitingHuman} task(s) waiting for a person in the Command Center.`;
+  } else if (
+    oldestAgeHours.running !== null &&
+    oldestAgeHours.running >= staleRunningHours
+  ) {
+    needsAttention = true;
+    nextAction = `Check the pipeline runner; the oldest in-progress task has had no update for ${oldestAgeHours.running.toFixed(1)} hours.`;
+  } else if (
+    oldestAgeHours.pending !== null &&
+    oldestAgeHours.pending >= stalePendingHours
+  ) {
+    needsAttention = true;
+    nextAction = `Check the pipeline runner; the oldest queued task has waited ${oldestAgeHours.pending.toFixed(1)} hours.`;
+  } else if (counts.pending > 0 || counts.inProgress > 0) {
+    nextAction =
+      "Queued work is within its freshness window; let the next runner tick continue it.";
+  }
+
+  return { counts, oldestAgeHours, needsAttention, nextAction };
+}
+
 /**
  * Pure. Decide whether to send and render the email.
  * d = {date, money|null, leads7|null, approvals:[{title,url}], alerts:[{title,url}], prs:[{title,url,draft}], setup:[text],
+ *      pipelineQueue?: {counts, oldestAgeHours, needsAttention, nextAction}|null,
  *      board?: {visitors|null, checkouts|null, campaigns:{[c]:{started,paid}}|null, replies|null, failing:[{title,url}]|null}}
  */
 export function buildDigest(d, { force = false } = {}) {
   const waiting = d.approvals.length + d.alerts.length;
   const monday = new Date(d.date).getUTCDay() === 1;
-  const shouldSend = force || monday || waiting > 0;
+  const shouldSend =
+    force || monday || waiting > 0 || d.pipelineQueue?.needsAttention === true;
   const subject = waiting
     ? `AuthiChain: ${waiting} thing${waiting > 1 ? "s" : ""} need${waiting > 1 ? "" : "s"} you`
     : `AuthiChain weekly: ${d.money ? `${usd(d.money.revenue)} from customers` : "numbers"}, nothing needs you`;
@@ -230,6 +264,23 @@ export function buildDigest(d, { force = false } = {}) {
     list(() =>
       [...d.approvals, ...d.alerts].forEach(x => item(x.title, x.url))
     );
+
+  section("Pipeline work");
+  list(() => {
+    if (!d.pipelineQueue) {
+      item("Task queue status: not connected");
+      return;
+    }
+    const { counts, oldestAgeHours, nextAction } = d.pipelineQueue;
+    const age = value => (value === null ? "none" : `${value.toFixed(1)}h`);
+    item(
+      `Tasks: ${counts.pending} pending, ${counts.inProgress} in progress, ${counts.waitingHuman} waiting for a person`
+    );
+    item(
+      `Oldest: pending ${age(oldestAgeHours.pending)}, in progress ${age(oldestAgeHours.running)}, waiting for a person ${age(oldestAgeHours.waitingHuman)}`
+    );
+    item(nextAction);
+  });
 
   const b = d.board ?? {};
   const n = (v, label) => (v == null ? `${label}: not connected` : null);
@@ -304,6 +355,83 @@ async function getJson(url, headers) {
   return r.json();
 }
 
+export async function readPipelineQueue({
+  supabaseUrl,
+  serviceRoleKey,
+  fetchImpl = fetch,
+  now = Date.now(),
+}) {
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    Prefer: "count=exact",
+  };
+  const endpoint = new URL("/rest/v1/mission_tasks", supabaseUrl);
+  const countFor = async status => {
+    const url = new URL(endpoint);
+    url.searchParams.set("select", "id");
+    url.searchParams.set("status", `eq.${status}`);
+    const response = await fetchImpl(url, {
+      method: "HEAD",
+      headers: { ...headers, Range: "0-0" },
+    });
+    if (!response.ok)
+      throw new Error(`mission_tasks count (${status}) -> ${response.status}`);
+    const range = response.headers.get("content-range");
+    const match = range?.match(/^(?:\d+-\d+|\*)\/(\d+|\*)$/);
+    const total = match?.[1] === "*" ? NaN : Number(match?.[1]);
+    if (!Number.isSafeInteger(total) || total < 0)
+      throw new Error(
+        `mission_tasks count (${status}) returned a missing or invalid Content-Range`
+      );
+    return total;
+  };
+  const oldestAgeFor = async (status, timestampColumn) => {
+    const url = new URL(endpoint);
+    url.searchParams.set("select", timestampColumn);
+    url.searchParams.set("status", `eq.${status}`);
+    url.searchParams.set("order", `${timestampColumn}.asc`);
+    url.searchParams.set("limit", "1");
+    const response = await fetchImpl(url, { headers });
+    if (!response.ok)
+      throw new Error(`mission_tasks oldest (${status}) -> ${response.status}`);
+    const [row] = await response.json();
+    if (!row) return null;
+    const timestamp = Date.parse(row[timestampColumn]);
+    if (!Number.isFinite(timestamp))
+      throw new Error(
+        `mission_tasks oldest (${status}) returned an invalid timestamp`
+      );
+    return Math.max(0, (now - timestamp) / 3_600_000);
+  };
+  const statuses = [
+    ["pending", "created_at"],
+    ["in_progress", "updated_at"],
+    ["waiting_human", "updated_at"],
+  ];
+  const [pending, inProgress, waitingHuman] = await Promise.all(
+    statuses.map(async ([status, column]) => {
+      const [total, oldestAge] = await Promise.all([
+        countFor(status),
+        oldestAgeFor(status, column),
+      ]);
+      return { total, oldestAge };
+    })
+  );
+  return summarizePipelineQueue(
+    {
+      pending: pending.total,
+      inProgress: inProgress.total,
+      waitingHuman: waitingHuman.total,
+    },
+    {
+      pending: pending.oldestAge,
+      running: inProgress.oldestAge,
+      waitingHuman: waitingHuman.oldestAge,
+    }
+  );
+}
+
 async function collect(env) {
   const d = {
     date: new Date().toISOString(),
@@ -320,6 +448,7 @@ async function collect(env) {
       replies: null,
       failing: null,
     },
+    pipelineQueue: null,
   };
   const manifest = loadManifest();
   const founders = new Set(
@@ -379,6 +508,14 @@ async function collect(env) {
           Number((r.headers.get("content-range") ?? "*/0").split("/")[1]) || 0;
     } catch (e) {
       console.log(`leads skipped: ${e.message}`);
+    }
+    try {
+      d.pipelineQueue = await readPipelineQueue({
+        supabaseUrl: env.SUPABASE_URL,
+        serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+      });
+    } catch (e) {
+      console.log(`pipeline task status unavailable: ${e.message}`);
     }
   }
   if (env.CLOUDFLARE_API_TOKEN) {
