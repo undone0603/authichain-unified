@@ -119,6 +119,7 @@ describe("autonomy manifest", () => {
     const m = mini();
     delete (m.workflow_governance.defaults as Record<string, unknown>).growth;
     m.workflow_governance.overrides["missing.yml"] = {};
+    m.workflow_governance.overrides["a.yml"] = {};
     const errors = validateManifest(m, [
       "ci.yml",
       "a.yml",
@@ -127,6 +128,9 @@ describe("autonomy manifest", () => {
     ]).join("\n");
     expect(errors).toMatch(/defaults\.growth is required/);
     expect(errors).toMatch(/overrides\.missing\.yml has no matching workflow/);
+    expect(errors).toMatch(
+      /overrides\.a\.yml\.owner must be a non-empty string/
+    );
   });
 });
 
