@@ -124,7 +124,48 @@
         "success_metric": "No unintended execution"
       }
     },
-    "overrides": {}
+    "overrides": {
+      "b2b-outreach.yml": {
+        "owner": "Growth owner",
+        "evidence": "Verified or opt-in contacts, clear deliverability breaker, recordable opt-out, and approved segment",
+        "permitted_action": "Send a capped outreach batch only after every live-send gate passes",
+        "approval_boundary": "Owner live-send switch, breaker-latch resume, claims, audience exceptions, and spend",
+        "failure_behavior": "Force dry-run when any consent, opt-out, breaker, latch, or owner-switch control is absent",
+        "rollback": "Disable cold outreach or hold the breaker latch through the switchboard",
+        "cost_cap": "Configured daily prospect cap and existing approved provider budgets only",
+        "success_metric": "Qualified replies without a bounce, complaint, consent, or opt-out control breach"
+      },
+      "email-proposals.yml": {
+        "owner": "Revenue owner",
+        "evidence": "Verified opportunity data and owner recipient configuration",
+        "permitted_action": "Send an internal opportunity digest to the owner",
+        "approval_boundary": "Any external recipient, proposal commitment, pricing, or send without the owner live-send switch",
+        "failure_behavior": "Force dry-run unless the owner live-send switch is explicitly enabled",
+        "rollback": "Disable the workflow through the switchboard",
+        "cost_cap": "Existing approved email-provider budget only",
+        "success_metric": "Owner receives an evidence-backed digest with no external delivery"
+      },
+      "gov-mint.yml": {
+        "owner": "GovChain owner",
+        "evidence": "Verified target-chain bytecode, approved contract configuration, and a successful dry-run preflight",
+        "permitted_action": "Run dry-run mint preparation and verify target-chain deployment state",
+        "approval_boundary": "Any live transaction, wallet use, chain change, contract change, or gas spend",
+        "failure_behavior": "Refuse live minting when target bytecode or required approval is absent",
+        "rollback": "Keep dry-run enabled and disable the workflow through the switchboard",
+        "cost_cap": "Zero gas spend unless the owner explicitly approves a live transaction",
+        "success_metric": "A dry-run proves the target contract is ready without a chain write"
+      },
+      "stripe-webhook-reconcile.yml": {
+        "owner": "Revenue owner",
+        "evidence": "A successful production deployment and webhook events declared in the switchboard",
+        "permitted_action": "Add only the declared events to the declared webhook endpoint",
+        "approval_boundary": "Endpoint changes, event removal, undeclared webhook mutation, and Stripe credential changes",
+        "failure_behavior": "Plan-only on manual dispatch unless explicitly requested; otherwise stop on reconciliation failure",
+        "rollback": "Use the Stripe Dashboard or owner-approved reconciliation to restore the prior endpoint configuration",
+        "cost_cap": "Zero additional spend",
+        "success_metric": "Declared webhook events are present without altering undeclared endpoint configuration"
+      }
+    }
   },
   "lanes": {
     "ship": {
