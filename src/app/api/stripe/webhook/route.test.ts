@@ -21,6 +21,7 @@ const {
   mockRetrieve,
   mockAnchorSale,
   mockAnchorReversal,
+  mockAccrueAffiliateCommission,
   mockConstructEvent,
   mockRetrieveCheckoutSession,
   mockValidateServiceOrderSession,
@@ -33,6 +34,7 @@ const {
   const mockRetrieve = vi.fn();
   const mockAnchorSale = vi.fn().mockResolvedValue(undefined);
   const mockAnchorReversal = vi.fn().mockResolvedValue(undefined);
+  const mockAccrueAffiliateCommission = vi.fn();
   const mockConstructEvent = vi.fn();
   const mockRetrieveCheckoutSession = vi.fn();
   const mockValidateServiceOrderSession = vi.fn();
@@ -132,6 +134,7 @@ const {
   const fakeClient = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     from: (table: string): any => builderFor(table),
+    rpc: mockAccrueAffiliateCommission,
   };
 
   return {
@@ -139,6 +142,7 @@ const {
     mockRetrieve,
     mockAnchorSale,
     mockAnchorReversal,
+    mockAccrueAffiliateCommission,
     mockConstructEvent,
     mockRetrieveCheckoutSession,
     mockValidateServiceOrderSession,
@@ -300,6 +304,14 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
       recorded: true,
       orderKey: "service_order:strainchain_passport:cs_service_1",
     });
+    mockAccrueAffiliateCommission.mockResolvedValue({
+      data: {
+        credited: true,
+        affiliate_id: "aff_1",
+        commission: 14.9,
+      },
+      error: null,
+    });
     mockRetrieveCheckoutSession.mockResolvedValue({
       id: "cs_service_1",
       metadata: { plan: "strainchain_passport" },
@@ -366,12 +378,16 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
 
     expect(res.body).toMatchObject({ received: true });
     expect(mockRetrieve).toHaveBeenCalledWith("sub_123");
-    // $149.00 x 10% = $14.90 onto the active affiliate.
-    expect(calls.affiliateSelects).toBe(1);
-    expect(calls.affiliateUpdates).toHaveLength(1);
-    expect(calls.affiliateUpdates[0].payload).toMatchObject({
-      pending_payout: 14.9,
-    });
+    // $149.00 x 10% = $14.90 is recorded through the durable SQL ledger.
+    expect(mockAccrueAffiliateCommission).toHaveBeenCalledWith(
+      "accrue_affiliate_commission",
+      {
+        p_event_id: "evt_inv_cycle_001",
+        p_affiliate_code: "AFF-TEST",
+        p_amount_cents: 14900,
+        p_conversion: false,
+      }
+    );
     // Renewal anchored under the invoice id.
     expect(mockAnchorSale).toHaveBeenCalledTimes(1);
     expect(mockAnchorSale).toHaveBeenCalledWith(

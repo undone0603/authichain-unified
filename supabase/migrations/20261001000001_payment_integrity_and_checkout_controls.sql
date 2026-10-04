@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.affiliate_commission_events (
 );
 
 ALTER TABLE public.affiliate_commission_events ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_commission_events
+  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.accrue_affiliate_commission(
   p_event_id text,
@@ -106,6 +108,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS affiliate_payout_one_processing_per_affiliate
   WHERE status = 'processing';
 
 ALTER TABLE public.affiliate_payout_claims ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_payout_claims
+  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_affiliate_payout(
   p_affiliate_id uuid,
@@ -247,6 +251,10 @@ CREATE INDEX IF NOT EXISTS checkout_rate_limits_window_idx
 
 ALTER TABLE public.gated_checkout_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_rate_limits ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.gated_checkout_attempts
+  TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.checkout_rate_limits
+  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_gated_checkout(
   p_checkout_key text,
