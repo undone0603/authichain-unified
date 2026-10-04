@@ -168,7 +168,7 @@ export default async function CultivarDossier({
             {certificates.length === 1 ? "" : "s"} on file
           </span>
           <span style={meta}>
-            {view.peakThcvPct == null
+            {view.peakThcvPct == null || view.thcvRank == null
               ? "Unranked — no measured THCV panel"
               : `Rank ${view.thcvRank} of ${view.totalCultivars} on peak THCV`}
           </span>
@@ -279,12 +279,8 @@ export default async function CultivarDossier({
                   <td className="mono" style={{ fontSize: ".8rem" }}>
                     {cert.collected}
                   </td>
-                  <td className="mono n">
-                    {pct(cert.derived.totalThcvPct)}
-                  </td>
-                  <td className="mono n">
-                    {pct(cert.derived.totalThcPct)}
-                  </td>
+                  <td className="mono n">{pct(cert.derived.totalThcvPct)}</td>
+                  <td className="mono n">{pct(cert.derived.totalThcPct)}</td>
                   <td className="mono n">
                     {cert.derived.ratio == null
                       ? "—"

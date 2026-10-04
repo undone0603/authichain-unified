@@ -52,7 +52,11 @@ export default async function FarmIndex({
 
   const views = d.cultivars
     .map(c => getCultivar(farm, toSlug(c.id))!)
-    .sort((a, b) => (b.peakThcvPct ?? 0) - (a.peakThcvPct ?? 0));
+    .sort((a, b) => {
+      if (a.peakThcvPct == null) return b.peakThcvPct == null ? 0 : 1;
+      if (b.peakThcvPct == null) return -1;
+      return b.peakThcvPct - a.peakThcvPct;
+    });
   const verifiedPeak = views.find(v => v.peakThcvPct != null) ?? null;
 
   const flaggedTotal = d.certificates.filter(c => c.derived.mismatch).length;
@@ -112,7 +116,7 @@ export default async function FarmIndex({
           <Stat v={String(d.cultivars.length)} l="Cultivars" />
           <Stat v={String(d.certificates.length)} l="Certificates reconciled" />
           <Stat
-            v={verifiedPeak ? `${verifiedPeak.peakThcvPct!.toFixed(2)}%` : "—"}
+            v={verifiedPeak ? `${verifiedPeak.peakThcvPct?.toFixed(2)}%` : "—"}
             l={
               verifiedPeak
                 ? `Peak verified THCV — ${verifiedPeak.cultivar.id}`

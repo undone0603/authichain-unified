@@ -108,27 +108,21 @@ describe("the Mendo Love Farms dossier", () => {
     expect(vt26.peakThcvPct!).toBeGreaterThan(lt35.peakThcvPct!);
   });
 
-  it("does not claim the crosses exceed both parents on absolute THCV", () => {
-    const crosses = getCultivar(farm, "vt-26xlt-11")!;
-    const vt26 = getCultivar(farm, "vt-26")!;
-    const lt11 = getCultivar(farm, "lt-11")!;
-    // Above the pollen parent, below the seed parent — the real shape.
-    expect(crosses.peakThcvPct!).toBeGreaterThan(lt11.peakThcvPct!);
-    expect(crosses.peakThcvPct!).toBeLessThan(vt26.peakThcvPct!);
-    // The ratio, however, does exceed both.
-    expect(crosses.peakRatio!).toBeGreaterThan(vt26.peakRatio!);
-    expect(crosses.peakRatio!).toBeGreaterThan(lt11.peakRatio!);
-  });
-
   it("does not rank totals-only certificates as measured THCV", () => {
     const crosses = getCultivar(farm, "vt-26xlt-11")!;
     expect(crosses.certificates).toHaveLength(3);
-    expect(crosses.certificates.every(c => c.cannabinoids_pct == null)).toBe(true);
-    expect(crosses.certificates.some(c => c.totals_pct.thcv != null)).toBe(true);
-    expect(crosses.certificates.every(c => c.derived.totalThcvPct == null)).toBe(true);
+    expect(crosses.certificates.every(c => c.cannabinoids_pct == null)).toBe(
+      true
+    );
+    expect(crosses.certificates.some(c => c.totals_pct.thcv != null)).toBe(
+      true
+    );
+    expect(
+      crosses.certificates.every(c => c.derived.totalThcvPct == null)
+    ).toBe(true);
     expect(crosses.peakThcvPct).toBeNull();
     expect(crosses.peakRatio).toBeNull();
-    expect(crosses.thcvRank).toBe(crosses.totalCultivars);
+    expect(crosses.thcvRank).toBeNull();
   });
 
   it("carries lineage provenance rather than flattening it to a claim", () => {
@@ -237,9 +231,9 @@ describe("LT-63 — known, licensable, and untested", () => {
     expect(lt63.parentEdges[0].provenance).toBe("confirmed_in_writing");
   });
 
-  it("ranks last on THCV rather than corrupting the ordering", () => {
+  it("does not assign a measured rank when no certificate exists", () => {
     const lt63 = getCultivar(farm, "lt-63")!;
-    expect(lt63.thcvRank).toBe(lt63.totalCultivars);
+    expect(lt63.thcvRank).toBeNull();
   });
 });
 

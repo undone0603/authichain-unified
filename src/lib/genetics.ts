@@ -344,7 +344,7 @@ export interface CultivarView {
   parentEdges: LineageEdge[];
   childEdges: LineageEdge[];
   openQuestions: OpenQuestion[];
-  thcvRank: number;
+  thcvRank: number | null;
   totalCultivars: number;
 }
 
@@ -383,11 +383,13 @@ export function getCultivar(
     .map(c => c.derived.ratio)
     .filter((n): n is number => n != null);
 
-  const ranked = [...peakByCultivar.entries()].sort(([aId, aPeak], [bId, bPeak]) => {
-    if (aPeak == null) return bPeak == null ? aId.localeCompare(bId) : 1;
-    if (bPeak == null) return -1;
-    return bPeak - aPeak;
-  });
+  const ranked = [...peakByCultivar.entries()].sort(
+    ([aId, aPeak], [bId, bPeak]) => {
+      if (aPeak == null) return bPeak == null ? aId.localeCompare(bId) : 1;
+      if (bPeak == null) return -1;
+      return bPeak - aPeak;
+    }
+  );
 
   const q = d.openQuestions.filter(
     o => o.question.includes(cultivar.id) || o.blocks.includes(cultivar.id)
@@ -402,7 +404,10 @@ export function getCultivar(
     parentEdges: d.lineage.filter(e => e.child === cultivar.id),
     childEdges: d.lineage.filter(e => edgeParents(e).includes(cultivar.id)),
     openQuestions: q,
-    thcvRank: ranked.findIndex(([id]) => id === cultivar.id) + 1,
+    thcvRank:
+      peakByCultivar.get(cultivar.id) == null
+        ? null
+        : ranked.findIndex(([id]) => id === cultivar.id) + 1,
     totalCultivars: d.cultivars.length,
   };
 }

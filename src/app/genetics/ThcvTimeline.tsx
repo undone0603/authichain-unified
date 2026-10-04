@@ -180,7 +180,8 @@ export function ThcvTimeline({
                     fill="var(--ink-soft)"
                   >
                     {p.thcv.toFixed(3)}% ·{" "}
-                    {p.ratio == null ? "—" : `${p.ratio.toFixed(2)}:1`} · {p.date}
+                    {p.ratio == null ? "—" : `${p.ratio.toFixed(2)}:1`} ·{" "}
+                    {p.date}
                   </text>
                 </g>
               </g>
