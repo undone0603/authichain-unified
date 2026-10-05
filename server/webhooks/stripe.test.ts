@@ -1025,6 +1025,7 @@ describe("handleStripeWebhook — affiliate accrual", () => {
       affiliateCode: "CUP20",
       amountCents: 4900,
       conversion: true,
+      eventId: "evt_aff_001",
     });
   });
 
@@ -1070,6 +1071,7 @@ describe("handleStripeWebhook — affiliate accrual", () => {
       affiliateCode: "CUP20",
       amountCents: 19900,
       conversion: false,
+      eventId: "evt_aff_004",
     });
   });
 });

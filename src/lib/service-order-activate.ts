@@ -31,12 +31,28 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isPlainEmail(value: string): boolean {
+  if (value.length === 0 || value.length > 254) return false;
+  let at = -1;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code <= 32 || code === 127) return false;
+    if (value[i] === "@") {
+      if (at !== -1) return false;
+      at = i;
+    }
+  }
+  if (at <= 0 || at >= value.length - 1) return false;
+  const dot = value.indexOf(".", at + 1);
+  return dot > at + 1 && dot < value.length - 1;
+}
+
 function hasContact(value: unknown): value is Contact {
   return Boolean(
     value &&
     typeof value === "object" &&
     text((value as Contact).name) &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text((value as Contact).email))
+    isPlainEmail(text((value as Contact).email))
   );
 }
 

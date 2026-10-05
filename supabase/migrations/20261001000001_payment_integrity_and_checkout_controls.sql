@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS public.affiliate_commission_events (
 
 ALTER TABLE public.affiliate_commission_events ENABLE ROW LEVEL SECURITY;
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_commission_events TO service_role;
+REVOKE ALL ON TABLE public.affiliate_commission_events FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.accrue_affiliate_commission(
   p_event_id text,
   p_affiliate_code text,
@@ -108,6 +111,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS affiliate_payout_one_processing_per_affiliate
   WHERE status = 'processing';
 
 ALTER TABLE public.affiliate_payout_claims ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_payout_claims TO service_role;
+REVOKE ALL ON TABLE public.affiliate_payout_claims FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.claim_affiliate_payout(
   p_affiliate_id uuid,
@@ -251,6 +256,10 @@ CREATE INDEX IF NOT EXISTS checkout_rate_limits_window_idx
 
 ALTER TABLE public.gated_checkout_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_rate_limits ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.gated_checkout_attempts TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.checkout_rate_limits TO service_role;
+REVOKE ALL ON TABLE public.gated_checkout_attempts FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.checkout_rate_limits FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.claim_gated_checkout(
   p_checkout_key text,
@@ -346,3 +355,9 @@ REVOKE ALL ON FUNCTION public.record_gated_checkout_session(text, text)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_gated_checkout_session(text, text)
   TO service_role;
+
+-- Server-only. RLS is on and there are no client policies.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_commission_events TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.affiliate_payout_claims TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.gated_checkout_attempts TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.checkout_rate_limits TO service_role;

@@ -64,6 +64,7 @@ const {
       filters: Array<[string, unknown]>;
     }>,
     eventInserts: [] as Array<Record<string, unknown>>,
+    rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   };
 
   // Minimal thenable query builder: select chains end in a terminal
