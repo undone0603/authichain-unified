@@ -23,7 +23,7 @@ import {
   type FireReason,
   type RewardKind,
   type Tenure,
-} from "@/lib/bench/law";
+} from "../../lib/bench/law";
 
 const CHECKOUT = "https://buy.stripe.com/7sY6oH0EVf7M25Yazy1ND3K";
 const KEY = "bench-folio-v1";
