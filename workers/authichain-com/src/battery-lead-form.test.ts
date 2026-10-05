@@ -58,11 +58,14 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
       expect(section).toContain(`value="${c}"`);
     expect(section).toContain("<legend>Battery categories");
     expect(section).toContain('aria-live="polite"');
-    expect(section).toContain("Request a scoping call");
+    expect(section).toContain("Request a written reply");
+    expect(section).not.toContain("Request a scoping call");
   });
 
   it("shows the approved consent line and the fine print", () => {
     expect(section).toContain(LEAD_CONSENT);
+    expect(section).toContain("This is not a booked call.");
+    expect(section).not.toContain("scoping call");
     expect(section).not.toContain("PLACEHOLDER");
     expect(section).not.toContain("lf-placeholder");
     expect(section).toContain('<a href="/privacy">Privacy policy</a>');
