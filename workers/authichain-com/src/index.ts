@@ -23,6 +23,7 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
+import { legalRoute } from "./legal-pages.ts";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -2458,6 +2459,8 @@ function ecosystemFooter() {
         heading: "Company",
         links: [
           { href: "/contact", label: "Contact" },
+          { href: "/privacy", label: "Privacy" },
+          { href: "/terms", label: "Terms" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
           { href: "/passport", label: "Genetics passport" },
@@ -3398,6 +3401,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
+        { loc: 'https://authichain.com/privacy', freq: 'yearly', pri: '0.4' },
+        { loc: 'https://authichain.com/terms', freq: 'yearly', pri: '0.4' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
@@ -3552,6 +3557,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
     if (p === '/contact') {
       return new Response(renderContactPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    const legal = legalRoute(p);
+    if (legal?.kind === 'redirect') {
+      return Response.redirect(new URL(legal.to, url).toString(), 301);
+    }
+    if (legal?.kind === 'html') {
+      return new Response(legal.html, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     if (p === '/vs' || p === '/vs/') {
       return new Response(renderVsIndex(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

@@ -175,6 +175,74 @@ test("/contact is a real page, not the homepage", async () => {
   const html = await res.text();
   assert.match(html, /hello@authichain\.com/);
   assert.match(html, /<title>Contact AuthiChain<\/title>/);
+  assert.match(html, /href="\/privacy"/);
+  assert.match(html, /href="\/terms"/);
+});
+
+test("/privacy and /terms are the operator's pages, not a placeholder", async () => {
+  for (const [path, title, canonical] of [
+    ["/privacy", "Privacy Policy — AuthiChain", "https://authichain.com/privacy"],
+    ["/privacy/", "Privacy Policy — AuthiChain", "https://authichain.com/privacy"],
+    ["/terms", "Terms of Service — AuthiChain", "https://authichain.com/terms"],
+    ["/terms/", "Terms of Service — AuthiChain", "https://authichain.com/terms"],
+  ] as const) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/, path);
+    const html = await res.text();
+    assert.match(html, new RegExp(`<title>${title}</title>`), path);
+    assert.match(html, new RegExp(`<link rel="canonical" href="${canonical}">`), path);
+    assert.match(html, /Zachary Kietzman/, path);
+    assert.match(html, /sole proprietor/, path);
+    assert.match(html, /hello@authichain\.com/, path);
+    assert.match(html, /support@authichain\.com/, path);
+    assert.match(html, /not affiliated with, endorsed by, or acting on behalf of any government agency/, path);
+    assert.match(html, /Effective 5 October 2026/, path);
+    assert.doesNotMatch(html, /privacy@authichain\.com/, path);
+    assert.doesNotMatch(html, /legal@authichain\.com/, path);
+    assert.doesNotMatch(html, /Vercel/, path);
+    assert.doesNotMatch(html, /AuthiChain Inc/i, path);
+    assert.doesNotMatch(html, /Bitcoin/, path);
+  }
+
+  const privacy = await (await get("/privacy")).text();
+  assert.match(privacy, /We do not sell personal information/);
+  assert.match(privacy, /Stripe/);
+  assert.match(privacy, /do not receive your card number/);
+  assert.match(privacy, /0\.05 USDC/);
+  assert.match(privacy, /\$QRON token is not a way to pay/);
+  assert.match(privacy, /simulated/);
+
+  const terms = await (await get("/terms")).text();
+  assert.match(terms, /not a GS1 Conformant Resolver/);
+  assert.match(terms, /not a legal opinion/);
+  assert.match(terms, /0\.05 USDC/);
+  assert.match(terms, /\$QRON token is not accepted as payment/);
+  assert.match(terms, /State of Michigan/);
+  assert.match(terms, /href="\/privacy"/);
+
+  for (const [from, to] of [
+    ["/privacy-policy", "/privacy"],
+    ["/legal/privacy", "/privacy"],
+    ["/terms-of-service", "/terms"],
+    ["/tos", "/terms"],
+    ["/legal/terms", "/terms"],
+  ] as const) {
+    const res = await get(from);
+    assert.equal(res.status, 301, from);
+    assert.equal(
+      new URL(res.headers.get("location") ?? "", "https://authichain.com").pathname,
+      to,
+      from
+    );
+  }
+
+  const confirm = await get("/checkout/dpp_readiness");
+  assert.equal(confirm.status, 200);
+  const confirmHtml = await confirm.text();
+  assert.match(confirmHtml, /By continuing you agree to the <a href="\/terms">Terms of Service<\/a>/);
+  assert.match(confirmHtml, /href="\/privacy"/);
+  assert.match(confirmHtml, /No newsletter/);
 });
 
 test("/docs serves the wave-1 pages and leaves /docs/x402 alone", async () => {
@@ -955,6 +1023,14 @@ test("the sitemap no longer lists pages that do not exist", async () => {
     );
   }
   assert.ok(xml.includes("<loc>https://authichain.com/contact</loc>"));
+  assert.equal(
+    xml.split("<loc>https://authichain.com/privacy</loc>").length - 1,
+    1
+  );
+  assert.equal(
+    xml.split("<loc>https://authichain.com/terms</loc>").length - 1,
+    1
+  );
   assert.equal(
     xml.split("<loc>https://authichain.com/telegram</loc>").length - 1,
     1,
