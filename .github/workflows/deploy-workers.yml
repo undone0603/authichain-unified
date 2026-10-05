@@ -161,7 +161,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [secret-scan, deploy-matrix]
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    # GitHub fails the whole workflow when `strategy.matrix` expands to an
+    # empty array, even if the job is then shown as skipped. The selector
+    # prints `[]` on a plain push that changed no allow-listed worker
+    # (CLOUDFLARE_DEPLOY_ENABLED stays off). Skip this job before strategy
+    # expansion in that case. A non-empty list still deploys.
+    if: ${{ needs.deploy-matrix.outputs.workers != '[]' && needs.deploy-matrix.outputs.workers != '' }}
     strategy:
       fail-fast: false
       matrix:
