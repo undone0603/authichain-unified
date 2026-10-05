@@ -17,6 +17,7 @@
 
 import { isFounder } from "./revenue-watch.mjs";
 import { flatten, loadManifest } from "./reconcile.mjs";
+import { pickLatestCompletedRun } from "./ops-pulse.mjs";
 
 const usd = c =>
   "$" +
@@ -534,10 +535,10 @@ async function collect(env) {
       const latest = await Promise.all(
         files.map(f =>
           getJson(
-            `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`,
+            `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/${f}/runs?per_page=100`,
             gh
           )
-            .then(j => j.workflow_runs?.[0])
+            .then(j => pickLatestCompletedRun(j.workflow_runs))
             .catch(() => undefined)
         )
       );

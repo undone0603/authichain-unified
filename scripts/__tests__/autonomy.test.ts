@@ -16,6 +16,7 @@ import {
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
+  pickLatestCompletedRun,
   runProbes,
   signature,
 } from "../autonomy/ops-pulse.mjs";
@@ -290,6 +291,32 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+  });
+
+  it("keeps the newest completed run on main when the branch query is stale", () => {
+    const picked = pickLatestCompletedRun([
+      {
+        head_branch: "feat",
+        conclusion: "failure",
+        created_at: "2026-10-05T00:00:00Z",
+        html_url: "pr",
+      },
+      {
+        head_branch: "main",
+        conclusion: "success",
+        created_at: "2026-10-04T15:59:22Z",
+        html_url: "new",
+      },
+      {
+        head_branch: "main",
+        conclusion: "failure",
+        created_at: "2026-09-01T13:20:33Z",
+        html_url: "old",
+      },
+    ]);
+    expect(picked.html_url).toBe("new");
+    expect(picked.conclusion).toBe("success");
+    expect(pickLatestCompletedRun([])).toBeNull();
   });
 
   it("skips the stale run history of reusable (workflow_call-only) loops", () => {

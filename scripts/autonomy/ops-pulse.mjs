@@ -100,6 +100,25 @@ export function isCallOnly(yamlText) {
  * latestRuns: Map(file -> {conclusion, html_url, created_at}) for runs on the default branch.
  * callOnly: Set of files that only run via workflow_call (no run history of their own).
  */
+/**
+ * Newest completed run whose head branch is the default branch.
+ *
+ * Do not ask the Actions API for `?branch=main`, and do not combine
+ * `?status=completed` with `per_page` greater than 1. On this repo both
+ * queries return a stale page: `branch=main` still pointed at August and
+ * September failures on 2026-10-05, and `status=completed&per_page=5`
+ * returned that same old page while `per_page=1` and the unfiltered list
+ * showed a later success on main. Filter the unfiltered page here.
+ */
+export function pickLatestCompletedRun(runs, branch = "main") {
+  let best = null;
+  for (const run of runs ?? []) {
+    if (!run || run.head_branch !== branch || !run.conclusion) continue;
+    if (!best || String(run.created_at) > String(best.created_at)) best = run;
+  }
+  return best;
+}
+
 export function evaluateWorkflows(
   manifestRows,
   remote,
@@ -221,10 +240,10 @@ async function latestRunsFor(repo, token, files) {
     files.map(async f => {
       try {
         const d = await gh(
-          `/repos/${repo}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`,
+          `/repos/${repo}/actions/workflows/${f}/runs?per_page=100`,
           { token }
         );
-        const r = d.workflow_runs?.[0];
+        const r = pickLatestCompletedRun(d.workflow_runs);
         if (r)
           map.set(f, {
             conclusion: r.conclusion,
