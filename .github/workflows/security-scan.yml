@@ -1,7 +1,9 @@
 name: Security Scan
-# Runs gitleaks on every push to main, every PR, and weekly.
-# Uses --no-git mode on PRs for speed; full history scan on schedule.
-# Historical findings in docs/archive and scripts are allow-listed via .gitleaksignore
+# Runs the gitleaks binary on every push to main, every PR, and weekly.
+# PRs and pushes scan the tree only. The Monday schedule scans history.
+# Historical findings in docs/archive and scripts are allow-listed via .gitleaksignore.
+# gitleaks-action@v3 looks up a license through the GitHub API and fails
+# the job when that call is rate-limited. This binary does not.
 
 on:
   push:
@@ -20,16 +22,20 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
-          # gitleaks diffs <sha>^..<sha>, which needs the parent commit present —
-          # fetch-depth: 1 leaves it unresolvable ("ambiguous argument ... unknown
-          # revision"), so fetch full history on every trigger.
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+          # The Monday history scan needs every commit. Tree scans do not.
+          # A bare 0 is falsy in an expression, so the depths are strings.
+          fetch-depth: ${{ github.event_name == 'schedule' && '0' || '1' }}
+      - name: Scan for secrets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: ${{ github.event_name == 'pull_request' }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          tar --no-same-owner -xzf gitleaks.tgz gitleaks
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            ./gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+          else
+            ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
+          fi

@@ -120,21 +120,58 @@ export function decide(pr, checkRuns, status, behindBy, cfg, opts = {}) {
   return { action: "merge", reason: "green, clean, up to date" };
 }
 
+export function isGitHubRateLimit(status, body) {
+  if (status !== 403 && status !== 429) return false;
+  const text = String(body).toLowerCase();
+  return text.includes("rate limit") || text.includes("secondary rate");
+}
+
+export class RateLimitError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
+const GH_HEADERS = token => ({
+  Accept: "application/vnd.github+json",
+  Authorization: `Bearer ${token}`,
+  "X-GitHub-Api-Version": "2022-11-28",
+  "User-Agent": "authichain-merge-autopilot",
+});
+
 async function gh(path, { method = "GET", token, body } = {}) {
   const res = await fetch(`https://api.github.com${path}`, {
     method,
     headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "authichain-merge-autopilot",
+      ...GH_HEADERS(token),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok)
-    throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    if (isGitHubRateLimit(res.status, text))
+      throw new RateLimitError(`${method} ${path} -> ${res.status} rate limit`);
+    throw new Error(`${method} ${path} -> ${res.status} ${text}`);
+  }
   return res.status === 204 ? null : res.json();
+}
+
+// /rate_limit does not spend the core budget. A sweep that starts with
+// almost nothing left 403s on the PR list and keeps the installation red.
+async function coreRemaining(token) {
+  try {
+    const res = await fetch("https://api.github.com/rate_limit", {
+      headers: GH_HEADERS(token),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const n = data?.resources?.core?.remaining;
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
 }
 
 async function main() {
@@ -162,10 +199,27 @@ async function main() {
       ""
     );
 
-  const prs = await gh(
-    `/repos/${repo}/pulls?state=open&base=${BASE_BRANCH}&per_page=100`,
-    { token }
-  );
+  const remaining = await coreRemaining(token);
+  if (remaining !== null && remaining < 25) {
+    lines.push(
+      `Stopped: GitHub core rate limit has ${remaining} requests left. The next sweep retries.`
+    );
+    return finish(lines);
+  }
+
+  let prs;
+  try {
+    prs = await gh(
+      `/repos/${repo}/pulls?state=open&base=${BASE_BRANCH}&per_page=100`,
+      { token }
+    );
+  } catch (err) {
+    if (err instanceof RateLimitError) {
+      lines.push("Stopped: GitHub rate limit. The next sweep retries.");
+      return finish(lines);
+    }
+    throw err;
+  }
   lines.push("| PR | Action | Why |", "| --- | --- | --- |");
 
   for (const listed of prs) {
@@ -217,6 +271,14 @@ async function main() {
           body: { merge_method: MERGE_METHOD, sha },
         });
     } catch (err) {
+      if (err instanceof RateLimitError) {
+        lines.push(
+          `| #${n} | stopped | GitHub rate limit |`,
+          "",
+          "Stopped: GitHub rate limit. The next sweep retries."
+        );
+        return finish(lines);
+      }
       // One PR failing (a race with a new push, a 405 from a branch rule)
       // must not stop the sweep; the next run retries.
       decision = { action: "error", reason: String(err.message).slice(0, 200) };

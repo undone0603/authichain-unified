@@ -30,9 +30,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Scan the tree being deployed
         run: |
-          # security-scan.yml still reads full git history. This job only
-          # refuses to ship a tree that contains a secret. Removed keys in
-          # old commits were failing this scan and skipping every deploy.
+          # Tree scan only. Removed keys in old commits were failing a
+          # history scan and skipping every deploy.
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
