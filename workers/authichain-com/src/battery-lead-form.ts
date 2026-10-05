@@ -1,9 +1,9 @@
 /**
  * "Scope a pilot" lead form for /battery-passport (AE-20261002-CFD-04).
  *
- * Copy: /workspace/drafts/battery-passport/page-section-lead-form.md (AuthiChain
- * Marketing draft), used as written. Zachary approved the consent sentence
- * on 2026-10-05. It is escaped text. The privacy policy link under it is a
+ * Copy: written reply, not a booked call. Zac, 2026-10-05, closed #1485 as no
+ * and asked for this copy fix. The 2026-10-05 consent sentence that promised
+ * a scoping call is replaced here. The privacy policy link under it is a
  * real anchor.
  *
  * Endpoint: the existing POST /api/leads/capture on authichain-edge-router
@@ -20,15 +20,15 @@ export const LEAD_FORM_ID = "scope-pilot";
 export const LEAD_FORM_ENDPOINT = "/api/leads/capture";
 export const LEAD_FORM_SOURCE = "battery-passport-page";
 
-/** Approved by Zachary on 2026-10-05. */
+/** Replaces the 2026-10-05 scoping-call sentence. Zac, 2026-10-05. */
 export const LEAD_CONSENT =
-  "By sending this, you agree we may email you at the work address above to set up a scoping call. We store the details in this form for that request. The privacy policy is at authichain.com/privacy.";
+  "By sending this, you agree we may email you a written reply at the work address above. We store the details in this form for that request. This is not a booked call. The privacy policy is at authichain.com/privacy.";
 
 export const LEAD_FINE_PRINT =
   "AuthiChain is an independent brand of Zachary Kietzman and is not affiliated with, endorsed by, or acting on behalf of any government agency.";
 
 export const LEAD_SUCCESS_MESSAGE =
-  "Thanks. We've got your details and will reply by email to set up a scoping call.";
+  "Thanks. We've got your details and will reply by email. This is a written reply, not a booked call.";
 
 export const LEAD_ERROR_MESSAGE =
   "That didn't go through. Please try again, or reach us at authichain.com/contact.";
@@ -155,7 +155,7 @@ const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
         c
       ]!
   );
@@ -194,7 +194,7 @@ export function batteryLeadFormSection(): string {
       <p class="bp-note">Live today: AuthiChain's open protocol spec (Apache-2.0) and its offline reference verifier. Certificate issuance and public verification are in development.</p>
 
       <h3 id="scope-pilot-heading">Scope a pilot</h3>
-      <p class="section-sub">Tell us what you place on the EU market. We'll reply to set up a scoping call. Pricing is shared on the call.</p>
+      <p class="section-sub">Tell us what you place on the EU market. We'll reply by email with a written answer. This is not a booked call.</p>
       <form class="lf-form" id="lead-form" action="${LEAD_FORM_ENDPOINT}" method="post" novalidate>
         <input type="hidden" name="source" value="${LEAD_FORM_SOURCE}">
         <label for="lf-name">Name <span class="lf-req">(required)</span>
@@ -222,7 +222,7 @@ export function batteryLeadFormSection(): string {
         </label>
         <div class="lf-hp" aria-hidden="true"><label for="lf-website">Leave this field empty<input id="lf-website" name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
         <div class="lf-actions">
-          <button class="btn btn-primary" type="submit">Request a scoping call</button>
+          <button class="btn btn-primary" type="submit">Request a written reply</button>
           <p class="bp-note" id="lf-consent">${esc(LEAD_CONSENT)}</p>
           <p class="bp-note"><a href="/privacy">Privacy policy</a></p>
         </div>
