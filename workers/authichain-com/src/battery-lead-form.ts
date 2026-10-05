@@ -1,10 +1,11 @@
 /**
- * "Scope a pilot" lead form for /battery-passport (AE-20261002-CFD-04).
+ * Optional scoping form for /battery-passport (AE-20261002-CFD-04).
  *
- * Copy: /workspace/drafts/battery-passport/page-section-lead-form.md (AuthiChain
- * Marketing draft), used as written. Zachary approved the consent sentence
- * on 2026-10-05. It is escaped text. The privacy policy link under it is a
- * real anchor.
+ * The marketing draft listed a done-for-you pilot: gap analysis, a data map,
+ * and a complete passport record for one model. Those deliverables are not
+ * rendered. The form only requests a scoping call. Zachary approved the
+ * consent sentence on 2026-10-05. It is escaped text. The privacy policy
+ * link under it is a real anchor.
  *
  * Endpoint: the existing POST /api/leads/capture on authichain-edge-router
  * (worker-app/lead-routes.ts). The form sends company, role, categories,
@@ -28,7 +29,7 @@ export const LEAD_FINE_PRINT =
   "AuthiChain is an independent brand of Zachary Kietzman and is not affiliated with, endorsed by, or acting on behalf of any government agency.";
 
 export const LEAD_SUCCESS_MESSAGE =
-  "Thanks. We've got your details and will reply by email to set up a scoping call.";
+  "Thanks. We've got your details. We may email you at the work address above to set up a scoping call.";
 
 export const LEAD_ERROR_MESSAGE =
   "That didn't go through. Please try again, or reach us at authichain.com/contact.";
@@ -136,7 +137,6 @@ const LEAD_FORM_SCRIPT = `(function () {
 })();`;
 
 export const LEAD_FORM_CSS = `
-    .lf-cards { margin-top:1rem; }
     .lf-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(14rem,1fr)); gap:.9rem 1.1rem; margin:1.25rem 0 .5rem; }
     .lf-form label, .lf-form legend { display:flex; flex-direction:column; gap:.3rem; font-size:.92rem; font-weight:600; }
     .lf-form input[type=text], .lf-form input[type=email], .lf-form textarea { padding:.55rem .65rem; border:1px solid var(--border); border-radius:.5rem; font:inherit; background:transparent; color:inherit; }
@@ -160,26 +160,7 @@ const esc = (s: string) =>
       ]!
   );
 
-const CARDS: Array<{ title: string; body: string }> = [
-  {
-    title: "Gap analysis.",
-    body: "Which required fields you have, which are missing, and who owns each one.",
-  },
-  {
-    title: "Data map.",
-    body: "Every field mapped to its source system or supplier and to its Annex XIII access tier.",
-  },
-  {
-    title: "Complete passport record for one model.",
-    body: "Built from your mapped fields to the Battery Pass data model.",
-  },
-];
-
 export function batteryLeadFormSection(): string {
-  const cards = CARDS.map(
-    c =>
-      `<article class="estate-card card"><p><strong>${esc(c.title)}</strong> ${esc(c.body)}</p></article>`
-  ).join("");
   const categories = BATTERY_CATEGORIES.map(
     (c, i) =>
       `<label><input type="checkbox" name="categories" value="${esc(c)}" id="lf-cat-${i}"> ${esc(c)}</label>`
@@ -189,12 +170,10 @@ export function batteryLeadFormSection(): string {
       <p class="estate-badge">EU Battery Regulation, Article 77</p>
       <h2>Battery passports are required from 18 February 2027.</h2>
       <p class="section-sub">From that date, LMT batteries (e-bikes, scooters and other light electric vehicles), industrial batteries over 2 kWh (including home storage), and EV batteries placed on the EU market need an electronic battery passport, reached through a QR code on the battery.</p>
-      <p class="section-sub">The Battery Passport Readiness pilot is done for you. We review your in-scope batteries against Article 77 and Annex XIII, map every required field to its source and access tier, and build a complete passport record for one battery model, structured to the Battery Pass data model, so your team sees the full record before rolling it out.</p>
-      <div class="estate-grid lf-cards">${cards}</div>
       <p class="bp-note">Live today: AuthiChain's open protocol spec (Apache-2.0) and its offline reference verifier. Certificate issuance and public verification are in development.</p>
 
-      <h3 id="scope-pilot-heading">Scope a pilot</h3>
-      <p class="section-sub">Tell us what you place on the EU market. We'll reply to set up a scoping call. Pricing is shared on the call.</p>
+      <h3 id="scope-pilot-heading">Request a scoping call</h3>
+      <p class="section-sub">This form is optional. Tell us what you place on the EU market. We may email you at the work address in this form to set up a scoping call.</p>
       <form class="lf-form" id="lead-form" action="${LEAD_FORM_ENDPOINT}" method="post" novalidate>
         <input type="hidden" name="source" value="${LEAD_FORM_SOURCE}">
         <label for="lf-name">Name <span class="lf-req">(required)</span>
@@ -227,7 +206,7 @@ export function batteryLeadFormSection(): string {
           <p class="bp-note"><a href="/privacy">Privacy policy</a></p>
         </div>
       </form>
-      <noscript><p class="bp-note">Scope a pilot at <a href="https://authichain.com/contact">https://authichain.com/contact</a></p></noscript>
+      <noscript><p class="bp-note">Request a scoping call at <a href="https://authichain.com/contact">https://authichain.com/contact</a></p></noscript>
       <div id="lead-form-status" class="lf-status" tabindex="-1" aria-live="polite" hidden></div>
       <p class="bp-note">${esc(LEAD_FINE_PRINT)}</p>
     </div>

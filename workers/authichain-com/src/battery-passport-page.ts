@@ -7,9 +7,11 @@
  * no new price. Checkout is tagged utm_campaign=battery-passport so the
  * Command Center and Stripe metadata show which sales this page produced.
  *
- * Truth rules: deliverables are exactly the dpp_readiness plan features in
- * src/lib/plans.ts; regulatory facts are dated and hedged (not legal advice);
- * no customer logos, testimonials or counts.
+ * Truth rules: the $299 list on this page is the workspace, self-serve
+ * activation, and 50 generations. src/lib/plans.ts also names a written
+ * assessment and a Basic credit; those stay off this page until they exist.
+ * Regulatory facts are dated and hedged (not legal advice). No customer
+ * logos, testimonials, or counts.
  */
 import {
   ESTATE_BASE_CSS,
@@ -71,7 +73,7 @@ function checkoutForm(id: string, label: string): string {
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
   ${hidden}
-  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and your readiness assessment. Not a newsletter.</p>
+  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and workspace activation. Not a newsletter.</p>
   <button class="btn btn-primary" type="submit">${esc(label)}</button>
 </form>`;
 }
@@ -105,6 +107,13 @@ const CHECKLIST: Array<{ tier: string; who: string; items: string[] }> = [
   },
 ];
 
+/** What paid checkout on this page grants. Not the full plan.features list. */
+const PAGE_DELIVERABLES = [
+  "AuthiChain workspace",
+  "Self-serve activation",
+  "50 workspace generations",
+] as const;
+
 const FAQ: Array<{ q: string; a: string }> = [
   {
     q: "Which batteries need a passport?",
@@ -116,7 +125,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "A written readiness assessment for your battery line (which data you already have, what is missing, and who in your supply chain holds it), self-serve activation of your AuthiChain workspace, and 50 workspace generations to prepare your QR-linked passport data for the operator who places the battery on the EU market. The $299 is credited toward AuthiChain Basic if you continue.",
+    a: "Self-serve activation of your AuthiChain workspace, and 50 workspace generations.",
   },
   {
     q: "Is this legal advice or a certification?",
@@ -124,7 +133,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Do I have to book a call?",
-    a: "No. Checkout is self-serve. Questions go to the contact page and get a written answer.",
+    a: "No. The $299 checkout is self-serve. The scoping form on this page is optional. We may email you at the work address in that form to set up a scoping call.",
   },
 ];
 
@@ -255,7 +264,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   const price = plan?.price ?? 299;
   const days = daysUntilDeadline(now);
   const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Get a written readiness assessment that gets you ready for your first passport, for $${price}, self-serve.`;
+  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation and 50 workspace generations, for $${price}.`;
   const checklist = CHECKLIST.map(
     g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
@@ -263,9 +272,9 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <ul>${g.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
     </article>`
   ).join("");
-  const deliverables = (plan?.features ?? [])
-    .map(f => `<li>${esc(f)}</li>`)
-    .join("");
+  const deliverables = PAGE_DELIVERABLES.map(f => `<li>${esc(f)}</li>`).join(
+    ""
+  );
   const faq = FAQ.map(
     f =>
       `<details class="bp-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`
@@ -362,9 +371,8 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <p class="estate-badge hero-badge">EU Battery Regulation · Digital Battery Passport</p>
       <p class="bp-countdown"><strong>${days}</strong> <span>days until 18 February 2027</span></p>
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
-      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
+      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}.</p>
       <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
-      <p class="bp-note">Not sure what you'd get? <a href="${BATTERY_PASSPORT_PATH}/sample-audit">Read a full sample assessment</a> worked through on a fictional e-bike pack.</p>
     </div>
   </header>
 
@@ -384,8 +392,7 @@ ${gapMapSection()}
       <h2>What you get</h2>
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
-      <p><a href="${BATTERY_PASSPORT_PATH}/sample-audit">See a sample written assessment</a>: figure check, Annex XIII gap table and an ordered action plan.</p>
-      <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This assessment supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
+      <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This page supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
       <p class="section-sub">The only published demonstration record has both of those checks. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a> and the <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">Polygon transaction</a>.</p>
     </div>
   </section>
@@ -402,7 +409,7 @@ ${batteryLeadFormSection()}
   <section class="estate-cta cta-section" id="get-started">
     <div class="wrap">
       <h2>Start before your importer asks for it</h2>
-      <p class="section-sub">Enter your work email to open Stripe checkout. You'll get your readiness assessment and workspace access by email.</p>
+      <p class="section-sub">Enter your work email to open Stripe checkout. After payment, workspace activation is sent by email.</p>
       <div class="estate-actions">${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}</div>
     </div>
   </section>
@@ -433,7 +440,7 @@ ${estateFooter(
     },
     { heading: "Company", links: [{ href: "/contact", label: "Contact" }] },
   ],
-  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. Not legal advice. No call booking — checkout or a written answer."
+  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. Not legal advice. Checkout is self-serve. The scoping form on this page is optional."
 )}
 </body>
 </html>`;

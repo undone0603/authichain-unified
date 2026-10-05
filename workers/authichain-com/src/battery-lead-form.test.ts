@@ -78,6 +78,11 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
       /testimonial|trusted by|customers love|guarantee/i
     );
     expect(section).not.toMatch(/AuthiChain,? Inc/);
+    expect(section).not.toContain("Gap analysis");
+    expect(section).not.toContain("Data map");
+    expect(section).not.toContain("Complete passport record");
+    expect(section).not.toMatch(/done for you/i);
+    expect(section).not.toContain("Pricing is shared on the call");
   });
 
   it("sends the extra fields on their own and as a product_interest summary", () => {
