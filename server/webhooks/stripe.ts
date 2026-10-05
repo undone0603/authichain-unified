@@ -857,6 +857,7 @@ export async function handleStripeWebhook(
               affiliateCode,
               amountCents,
               conversion: false,
+              eventId: event.id,
             });
             console.log("[stripe-webhook] affiliate renewal accrual", accrual);
           }
@@ -987,6 +988,7 @@ export async function handleStripeWebhook(
             affiliateCode,
             amountCents,
             conversion: true,
+            eventId: event.id,
           });
           console.log("[stripe-webhook] affiliate accrual", accrual);
         }
