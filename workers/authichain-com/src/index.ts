@@ -23,6 +23,8 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
+import { legalRoute } from "./legal-pages.ts";
+import { seoPassportResponse } from "../../../src/lib/seo-pages";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -2458,6 +2460,8 @@ function ecosystemFooter() {
         heading: "Company",
         links: [
           { href: "/contact", label: "Contact" },
+          { href: "/privacy", label: "Privacy" },
+          { href: "/terms", label: "Terms" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
           { href: "/passport", label: "Genetics passport" },
@@ -3248,7 +3252,8 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
- * (/p SEO hubs, /landing/*) until edge-router deploys.
+ * (/p/<serial> and /landing/*). Known SEO hubs are rendered here and
+ * do not pass through this proxy.
  */
 async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   if (!env.APP_WORKER) {
@@ -3398,6 +3403,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
+        { loc: 'https://authichain.com/privacy', freq: 'yearly', pri: '0.4' },
+        { loc: 'https://authichain.com/terms', freq: 'yearly', pri: '0.4' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
@@ -3553,6 +3560,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (p === '/contact') {
       return new Response(renderContactPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
+    const legal = legalRoute(p);
+    if (legal?.kind === 'redirect') {
+      return Response.redirect(new URL(legal.to, url).toString(), 301);
+    }
+    if (legal?.kind === 'html') {
+      return new Response(legal.html, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
     if (p === '/vs' || p === '/vs/') {
       return new Response(renderVsIndex(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3564,6 +3578,19 @@ async function handleAuthichainCom(request: Request, env: Env) {
       // An unknown competitor slug is a 404, not the /vs index — otherwise every
       // invented slug would answer 200 and the sitemap would be unfalsifiable.
       return notFound(p);
+    }
+    // Committed SEO hubs are served here. /p/<serial> that is not a slug still
+    // falls through to APP_WORKER. The deployed edge router is behind
+    // content/seo/pages.json, so those sitemap URLs were 404 "Product Not Found".
+    const seoPassport = seoPassportResponse(p);
+    if (seoPassport) {
+      return new Response(seoPassport.html, {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
     }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       return proxyAppWorker(request, env);
