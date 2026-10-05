@@ -22,10 +22,9 @@
  *   contacts. It now requires INTERNAL_API_SECRET. Its Vercel Cron GET (a
  *   no-op) is not ported.
  * - User-supplied fields are HTML-escaped in the notification email.
- * - Lead capture no longer sends the email to Apollo for enrichment
- *   (AE-20261002-CFD-04). Scoring uses only the local domain heuristic, so
- *   business-domain leads still sync to HubSpot exactly as before when no
- *   Apollo key was bound. n8n is unchanged.
+ * - Apollo people/match runs only when LEAD_APOLLO_ENRICH=on. A bound
+ *   APOLLO_API_KEY is copied onto the process either way and is not a
+ *   reason to call Apollo. n8n is unchanged.
  * - Lead capture stores company, role, battery_categories, target_date and
  *   message (migration 20261002125000). If those columns are not there yet,
  *   the insert is retried without them so no lead is lost.
@@ -33,7 +32,7 @@
 import type { Context, Hono } from "hono";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { detectBot } from "../src/app/api/book/bot-detection";
-import { detectEnterpriseTheater } from "../src/lib/industrial/enrichment";
+import { enrichLead } from "../src/lib/industrial/enrichment";
 
 export type LeadEnv = {
   HUBSPOT_ACCESS_TOKEN?: string;
@@ -46,6 +45,7 @@ export type LeadEnv = {
   MAKE_LEAD_WEBHOOK_URL?: string;
   N8N_LEAD_WEBHOOK_URL?: string;
   INTERNAL_API_SECRET?: string;
+  APOLLO_API_KEY?: string;
   NEXT_PUBLIC_SUPABASE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
@@ -399,29 +399,15 @@ type CapturedLead = {
   message?: string;
 };
 
-/**
- * Local, no-network lead scoring. Same heuristic enrichLead() used before,
- * minus the Apollo people/match call: nothing about the lead leaves for
- * enrichment.
- */
-export function scoreLeadLocally(email: string): {
-  is_enterprise: boolean;
-  lead_score: number;
-} {
-  const theater = detectEnterpriseTheater(email);
-  const domain = email.split("@")[1]?.toLowerCase() ?? "";
-  const isEnterprise =
-    !!theater ||
-    !["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"].includes(domain);
-  let score = 10;
-  if (isEnterprise) score += 40;
-  if (theater) score += 30;
-  return { is_enterprise: isEnterprise, lead_score: Math.min(score, 100) };
-}
-
 async function runLeadAutomation(c: LeadContext, lead: CapturedLead) {
   try {
-    const scored = scoreLeadLocally(lead.email);
+    const apollo = envValue(c, "APOLLO_API_KEY");
+    if (apollo) process.env.APOLLO_API_KEY = apollo;
+    const enriched = await enrichLead(lead.email);
+    const scored = {
+      is_enterprise: enriched.is_enterprise,
+      lead_score: enriched.lead_score,
+    };
     const finalLead = { ...lead, ...scored };
 
     const make = envValue(c, "MAKE_LEAD_WEBHOOK_URL");
