@@ -24,7 +24,7 @@ import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
 import { legalRoute } from "./legal-pages.ts";
-import { seoPassportResponse } from "../../../src/lib/seo-pages.ts";
+import { seoPassportResponse } from "../../../src/lib/seo-pages";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
