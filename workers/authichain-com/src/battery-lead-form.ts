@@ -225,6 +225,7 @@ export function batteryLeadFormSection(): string {
         <div class="lf-actions">
           <button class="btn btn-primary" type="submit">Request a scoping call</button>
           <p class="bp-note" id="lf-consent"><span class="lf-placeholder">${esc(LEAD_CONSENT_PLACEHOLDER)}</span></p>
+          <p class="bp-note"><a href="/privacy">Privacy policy</a></p>
         </div>
       </form>
       <noscript><p class="bp-note">Scope a pilot at <a href="https://authichain.com/contact">https://authichain.com/contact</a></p></noscript>

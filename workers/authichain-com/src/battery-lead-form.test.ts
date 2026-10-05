@@ -64,6 +64,7 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
   it("shows the consent line as a visible PLACEHOLDER and the fine print", () => {
     expect(section).toContain(LEAD_CONSENT_PLACEHOLDER.replace(/'/g, "&#39;"));
     expect(LEAD_CONSENT_PLACEHOLDER).toMatch(/^PLACEHOLDER/);
+    expect(section).toContain('<a href="/privacy">Privacy policy</a>');
     expect(section).toContain(LEAD_FINE_PRINT.replace(/'/g, "&#39;"));
     expect(section).toContain(JSON.stringify(LEAD_SUCCESS_MESSAGE));
     expect(section).toContain(JSON.stringify(LEAD_ERROR_MESSAGE));
