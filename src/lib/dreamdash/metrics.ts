@@ -92,10 +92,13 @@ export function nextAction(lead: Lead): string {
   return "Log a touch";
 }
 
-export function closePriority(lead: Lead) {
+// `now` is explicit (defaulting to the clock) so the stale bonus is testable:
+// with an implicit clock, a fixture lead silently turned stale a week after
+// the test was written and the ranking test started failing on its own.
+export function closePriority(lead: Lead, now = Date.now()) {
   let p = lead.score;
   if (lead.draftPending) p += 18;
-  if (isStale(lead)) p += 14;
+  if (isStale(lead, now)) p += 14;
   if (lead.stage === "signed") p += 28;
   if (lead.stage === "contracted") p += 24;
   if (lead.stage === "demoed") p += 12;
@@ -103,10 +106,10 @@ export function closePriority(lead: Lead) {
   return p;
 }
 
-export function closeOrder(leads: Lead[], limit = 3) {
+export function closeOrder(leads: Lead[], limit = 3, now = Date.now()) {
   return [...leads]
     .filter(isOpen)
-    .sort((a, b) => closePriority(b) - closePriority(a) || b.value - a.value)
+    .sort((a, b) => closePriority(b, now) - closePriority(a, now) || b.value - a.value)
     .slice(0, limit);
 }
 

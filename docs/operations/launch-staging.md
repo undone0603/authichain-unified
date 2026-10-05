@@ -14,7 +14,6 @@ human-gated step (outward/irreversible). Capture pipeline is verified working.
 |---|---|---|---|
 | `content/launch/strainchain_reddit.md` | r/cannabis, r/MichiganCannabis | MI dispensary operators / MSOs | strainchain.io + $199 buy link |
 | `content/launch/qron_reddit_v3.md` | r/QRcode, r/generative | designers, brand/maker | qron.space free generator |
-| `content/launch/govchain_twitter.md` | X (govchain) | govtech / procurement | govchain.us |
 | `content/launch/authichain_linkedin.md` | LinkedIn | brand-protection / luxury / pharma | authichain.com |
 
 Post copy is written value-first (community-appropriate, not spammy). **Publish gate: human.**

@@ -251,14 +251,26 @@ describe('runOutboundEmail', () => {
     expect(markTaskWaitingHuman).toHaveBeenCalledWith('task-test-001');
   });
 
-  it('throws if LLM returns unparseable JSON', async () => {
+  it('falls back to the template email when the LLM returns unparseable JSON', async () => {
     mockEnv.requireOutreachApproval = false;
     invokeLLM.mockResolvedValueOnce({ choices: [{ message: { content: 'bad json' } }] });
 
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
-    await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
-      segment: 'GOV', leadEmail: 'x@y.com',
-    }))).rejects.toThrow(/unparseable JSON/);
+    await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
+      segment: 'GOV', sequence: 1, leadEmail: 'lead@gov.com', leadName: 'Alice', leadOrg: 'GovCorp',
+      verificationSource: 'apollo_verified',
+    }));
+
+    expect(logActivity).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'outbound_email_llm_fallback',
+      details: expect.objectContaining({ reason: expect.stringMatching(/unparseable JSON/) }),
+    }));
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    const { body } = sendEmail.mock.calls[0][0] as { body: string };
+    expect(body).toMatch(/^Hi Alice,\n\n/);
+    expect(body).toContain('GovCorp');
+    // Real line breaks, not the two characters "\" and "n".
+    expect(body).not.toContain('\\n');
   });
 
   it('throws if no leadEmail on direct send', async () => {

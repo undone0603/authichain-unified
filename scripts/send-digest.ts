@@ -130,5 +130,15 @@ async function sendSlackDigest() {
   }
 }
 
-await sendSlackDigest();
+// A digest that cannot be built or posted (network error, non-JSON reply,
+// Supabase hiccup) is still only a missing nice-to-have. Warn with the reason
+// instead of an unhandled rejection that fails the whole gov-engine run.
+try {
+  await sendSlackDigest();
+} catch (err) {
+  const reason = err instanceof Error ? err.message : String(err);
+  console.warn(
+    `::warning title=Slack digest not sent::${reason.replace(/[\r\n]+/g, " ").slice(0, 300)}`
+  );
+}
 process.exit(0);

@@ -36,7 +36,7 @@ const DEMOS = [
     name: 'BMW iX Pilot',
     style: 'Brushed Aluminum',
     image: '/media/samples/04_flux_ev_industry.png',
-    description: 'Industrial telemetry meets luxury aesthetic. Anchored on Polygon.',
+    description: 'Industrial telemetry meets luxury aesthetic.',
     hash: '0x2j8k...9f21'
   },
   {

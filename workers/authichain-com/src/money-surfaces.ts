@@ -239,10 +239,6 @@ export function renderMadeInAmericaPage(): string {
         body: "Log US manufacturing stages and component origin against a specific batch or serial.",
       },
       {
-        title: "Anchor",
-        body: "Hash and sign the record. Polygon anchoring makes later edits visible.",
-      },
-      {
         title: "Show",
         body: "A scan returns the chain of custody. Consumers, buyers, and regulators see the same evidence.",
       },
