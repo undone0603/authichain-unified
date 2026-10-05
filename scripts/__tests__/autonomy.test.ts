@@ -812,7 +812,17 @@ describe("stripe webhook reconcile", async () => {
     const hooks = loadManifest().stripe_webhooks;
     expect(hooks[0]).toMatchObject({
       url: "https://authichain.com/api/stripe/webhook",
-      ensure_events: ["checkout.session.expired"],
+      ensure_events: [
+        "checkout.session.completed",
+        "checkout.session.expired",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.voided",
+        "charge.refunded",
+        "customer.subscription.deleted",
+        "customer.subscription.updated",
+        "customer.subscription.trial_will_end",
+      ],
     });
   });
 });
