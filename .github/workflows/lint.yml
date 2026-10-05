@@ -31,6 +31,9 @@ jobs:
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
+      - name: Check every node:test file has a CI runner
+        run: node scripts/ci/check-node-test-runners.mjs
+
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
         run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
 
