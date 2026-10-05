@@ -1,8 +1,66 @@
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import react from "@vitejs/plugin-react";
+import { configDefaults, defineConfig } from "vitest/config";
 
 const templateRoot = path.resolve(import.meta.dirname);
+
+const NODE_TEST_IMPORT = /(?:from\s+|require\(\s*)["']node:test["']/;
+const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
+const SKIP_DIRS = new Set([
+  "node_modules",
+  "dist",
+  ".git",
+  "coverage",
+  ".turbo",
+  ".next",
+]);
+
+// Setting `test.exclude` replaces Vitest's defaults, so they are spread back
+// in below. node:test files stay with their workspace runners.
+function nodeTestFiles(root: string): string[] {
+  const found: string[] = [];
+  const scan = [
+    "api",
+    "apps",
+    "client",
+    "packages",
+    "protocol",
+    "scripts",
+    "server",
+    "shared",
+    "src",
+    "worker-app",
+    "workers",
+  ];
+  const walk = (dir: string) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const ent of entries) {
+      if (SKIP_DIRS.has(ent.name)) continue;
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (!TEST_FILE.test(ent.name)) continue;
+      let text = "";
+      try {
+        text = readFileSync(abs, "utf8");
+      } catch {
+        continue;
+      }
+      if (!NODE_TEST_IMPORT.test(text)) continue;
+      found.push(path.relative(root, abs).split(path.sep).join("/"));
+    }
+  };
+  for (const rel of scan) walk(path.join(root, rel));
+  return found;
+}
 
 export default defineConfig({
   root: templateRoot,
@@ -25,6 +83,11 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "attestation") + "$1",
       },
+      {
+        find: /^@\/lib\/compliance(\/.*)?$/,
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "compliance") + "$1",
+      },
       // Same carve-out as attestation above: these live under src/lib, while
       // the catch-all sends @/* to client/src. A blanket @/lib rule cannot be
       // used — client/src/lib/utils.ts is imported as @/lib/utils by most of
@@ -39,12 +102,13 @@ export default defineConfig({
         replacement:
           path.resolve(templateRoot, "src", "lib", "genetics") + "$1",
       },
-      // Next webhook route deps (src/app/api/stripe/webhook/route.ts). None of
-      // these basenames exist under client/src/lib, so no client test can be
+      // Next webhook route deps (src/app/api/stripe/webhook/route.ts), plus
+      // founder-alerts (src/lib/dreamdash/notify-draft.ts). None of these
+      // basenames exist under client/src/lib, so no client test can be
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
       },
       {
@@ -101,7 +165,11 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
-    exclude: ["apps/agent-browser/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "apps/agent-browser/**",
+      ...nodeTestFiles(templateRoot),
+    ],
     include: [
       "api/**/*.test.ts",
       "server/**/*.test.ts",
@@ -110,11 +178,15 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.spec.ts",
       "worker-app/**/*.test.ts",
+      "worker/**/*.test.ts",
       "scripts/**/*.test.ts",
       "client/**/*.test.ts",
       "client/**/*.test.tsx",
       "workers/**/*.test.ts",
       "protocol/**/*.test.mjs",
+      "protocol/**/*.test.ts",
+      "ops/**/*.test.ts",
+      "scripts/**/*.test.js",
       "packages/**/*.test.ts",
       "apps/**/*.test.ts",
       "apps/**/*.test.tsx",

@@ -33,6 +33,8 @@ describe("sample battery readiness assessment", () => {
     expect(html).toContain("not legal advice");
     expect(html).not.toContain("has not been altered.");
     expect(html).toContain("This sample is not that passport.");
+    expect(html).toContain('href="https://authichain.com/api/verify?id=polygon-anchor-1"');
+    expect(html).toContain("It is not a battery and not a passport.");
   });
 
   it("derives every figure from the gap map and the readiness score", () => {

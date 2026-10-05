@@ -52,7 +52,7 @@ export default function GrantsPage() {
         {
           icon: <Landmark className="h-6 w-6" />,
           title: 'Audit-Ready Ledger',
-          desc: 'Every action is recorded to an immutable ledger, giving you a defensible trail for contracting-officer scrutiny.',
+          desc: 'Every action is recorded, giving you a defensible trail for contracting-officer scrutiny.',
         },
       ]}
       closingLine="Government Opportunities, Proven On-Chain."

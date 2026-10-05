@@ -55,6 +55,7 @@ agentz/runs.jsonl
 # Shared Claude Code config (SessionStart hook); settings.local.json stays ignored.
 !.claude/settings.json
 !.claude/hooks/
+!.claude/commands/
 Thumbs.db
 
 # TypeScript
@@ -110,6 +111,8 @@ maison-elite-ai-dropship/
 
 # Debug/lint output artifacts
 eslint_errors.txt
+.eslint-report.json
+eslint-target.json
 *.errors.txt
 test-output.txt
 

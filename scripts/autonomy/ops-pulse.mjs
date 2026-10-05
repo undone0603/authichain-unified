@@ -13,7 +13,7 @@
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
 import { appendFileSync, readFileSync } from "node:fs";
-import { loadManifest, flatten } from "./reconcile.mjs";
+import { loadManifest, flatten, fetchRemoteWorkflows } from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
 export const PROBES = [
@@ -258,9 +258,9 @@ async function main() {
   };
 
   if (token && repo) {
-    const remote = (
-      await gh(`/repos/${repo}/actions/workflows?per_page=100`, { token })
-    ).workflows;
+    // Paginated: the repo registers ~100 workflows, so a single page would
+    // silently drop some from the "not active" check.
+    const remote = await fetchRemoteWorkflows({ repo, token });
     const files = rows
       .filter(r => r.managed && r.desired === "on" && r.lane !== "ship")
       .map(r => r.file);

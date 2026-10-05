@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
-import { isMcpPath, tryHandleMcp } from "./mcp-routes";
+import {
+  ANCHOR_EXAMPLE_TX,
+  isMcpPath,
+  tryHandleMcp,
+  verifyRecordTool,
+} from "./mcp-routes";
+import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
+import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
 
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
@@ -24,7 +31,7 @@ describe("mcp discovery", () => {
     );
   });
 
-  it("GET discovery points at Payment Links and unpaid POST x402, not GET checkout", async () => {
+  it("GET discovery says verify is free and lists no prices or Payment Links", async () => {
     for (const path of ["/mcp", "/api/mcp", "/.well-known/mcp.json"]) {
       const res = await tryHandleMcp(req(path));
       expect(res, path).not.toBeNull();
@@ -33,28 +40,30 @@ describe("mcp discovery", () => {
         protocol: string;
         pay: { x402: string };
         pricing: {
-          humanCheckout: {
-            passportPaymentLink?: string;
-            dppPaymentLink?: string;
-            farmPaymentLink?: string;
-          };
+          verify: { price: string; mcpTool: string };
+          paidPlans: { status: string };
+          humanCheckout?: unknown;
         };
       };
       expect(body.protocol).toBe("mcp");
       expect(body.pay.x402).toBe("POST https://authichain.com/api/x402");
-      expect(body.pricing.humanCheckout.dppPaymentLink).toBe(
-        planPaymentLink("dpp_readiness")
-      );
-      expect(body.pricing.humanCheckout.passportPaymentLink).toBe(
-        planPaymentLink("strainchain_passport")
-      );
-      expect(body.pricing.humanCheckout.farmPaymentLink).toBe(
-        planPaymentLink("strainchain_farm")
-      );
-      expect(
-        new URL(body.pricing.humanCheckout.farmPaymentLink ?? "").hostname
-      ).toBe("authichain.com");
-      expect(JSON.stringify(body)).not.toContain("/api/checkout");
+      expect(body.pricing.verify.price).toBe("free");
+      expect(body.pricing.verify.mcpTool).toBe("verify_record");
+      expect(body.pricing.paidPlans.status).toBe("on_hold");
+      expect(body.pricing.humanCheckout).toBeUndefined();
+      const text = JSON.stringify(body);
+      expect(text).not.toContain("$0.05");
+      expect(text).not.toContain("PaymentLink");
+      expect(text).not.toContain("USDC");
+      for (const plan of [
+        "dpp_readiness",
+        "strainchain_passport",
+        "strainchain_farm",
+      ] as const) {
+        const link = planPaymentLink(plan);
+        if (link) expect(text).not.toContain(link);
+      }
+      expect(text).not.toContain("/api/checkout");
     }
   });
 
@@ -89,19 +98,38 @@ describe("mcp discovery", () => {
     const priced = (await call!.json()) as {
       result: { content: Array<{ text: string }> };
     };
-    expect(priced.result.content[0].text).toContain(
-      "POST /api/v1/agent-verify"
+    const pricing = JSON.parse(priced.result.content[0].text) as {
+      verify: { price: string; mcpTool: string; http: string };
+      paidPlans: { status: string };
+    };
+    expect(pricing.verify.price).toBe("free");
+    expect(pricing.verify.mcpTool).toBe("verify_record");
+    expect(pricing.verify.http).toBe(
+      "GET https://authichain.com/api/verify?id=polygon-anchor-1"
     );
-    expect(priced.result.content[0].text).toContain(
-      planPaymentLink("strainchain_passport")
-    );
-    expect(priced.result.content[0].text).toContain(
-      planPaymentLink("strainchain_farm")
-    );
-    expect(new URL(planPaymentLink("strainchain_farm") ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(pricing.paidPlans.status).toBe("on_hold");
+    expect(priced.result.content[0].text).not.toContain("$0.05");
+    expect(priced.result.content[0].text).not.toContain("USDC");
+    for (const plan of [
+      "dpp_readiness",
+      "strainchain_passport",
+      "strainchain_farm",
+    ] as const) {
+      const link = planPaymentLink(plan);
+      if (link) expect(priced.result.content[0].text).not.toContain(link);
+    }
     expect(priced.result.content[0].text).not.toContain("/api/checkout");
+
+    const tools = listed.result.tools as Array<{
+      name: string;
+      description?: string;
+    }>;
+    for (const t of tools) {
+      expect(t.description ?? "", t.name).not.toContain("$0.05");
+    }
+    expect(tools.find(t => t.name === "get_pricing")?.description).toMatch(
+      /^Free\./
+    );
   });
 
   it("tools/call dpp_readiness_check is free and scores the answers", async () => {
@@ -132,7 +160,9 @@ describe("mcp discovery", () => {
     expect(result.score).toBe(40);
     expect(result.category.date).toBe("2027-02-18");
     expect(result.web).toBe("https://authichain.com/dpp-check");
-    expect(result.nextStep).toContain(planPaymentLink("dpp_readiness"));
+    // Paid plans are on hold: the MCP result names no audit, price or link.
+    expect(result.nextStep).not.toContain(planPaymentLink("dpp_readiness"));
+    expect(result.nextStep).not.toMatch(/\$\d|audit/i);
 
     const bad = (await (await call({}))!.json()) as {
       result: { isError?: boolean };
@@ -311,7 +341,9 @@ describe("mcp discovery", () => {
       const body = (await res!.json()) as {
         result: { content: Array<{ text: string }> };
       };
-      const data = JSON.parse(body.result.content[0].text) as { verified: boolean };
+      const data = JSON.parse(body.result.content[0].text) as {
+        verified: boolean;
+      };
       expect(data.verified).toBe(false);
       expect(calls).toEqual([]);
     } finally {
@@ -349,7 +381,8 @@ describe("mcp discovery", () => {
     expect(data.verified).toBe(false);
     expect(text).not.toContain("EU DPP Ready");
     expect(text).not.toContain("Polygon / Base");
-    expect(data.compliance).toContain("$299");
+    expect(data.compliance).not.toMatch(/\$\d/);
+    expect(data.compliance).toContain("dpp_readiness_check");
   });
 
   it("query_provenance marks the desk seed as a sample, not an attestation", async () => {
@@ -512,5 +545,101 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
       }
     );
     expect(res?.status).toBe(400);
+  });
+});
+
+describe("mcp verify_record (free, open verifier + Polygon read)", () => {
+  const hash = anchorJson.recordHash.replace(/^sha256:/, "");
+  function rpcStub(input: string, status = "0x1"): typeof fetch {
+    return (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const { method } = JSON.parse(String(init?.body)) as { method: string };
+      const result =
+        method === "eth_getTransactionByHash"
+          ? { hash: ANCHOR_EXAMPLE_TX, input }
+          : { status, blockNumber: "0x5a4b714" };
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    }) as typeof fetch;
+  }
+
+  it("is listed as a free tool", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      })
+    );
+    const body = (await res!.json()) as {
+      result: { tools: Array<{ name: string; description: string }> };
+    };
+    const tool = body.result.tools.find(t => t.name === "verify_record");
+    expect(tool).toBeDefined();
+    expect(tool!.description).toMatch(/^Free\./);
+    expect(tool!.description).toMatch(/polygon-anchor-1/);
+  });
+
+  it("verifies the published record and confirms the hash is in the Polygon tx", async () => {
+    const result = await verifyRecordTool(
+      { id: "polygon-anchor-1" },
+      { fetchImpl: rpcStub("0x" + hash) }
+    );
+    expect(result).toMatchObject({
+      verdict: "verified",
+      anchorOnChain: true,
+      anchorChainStatus: "tx_contains_record_hash",
+      anchorBlock: "0x5a4b714",
+      anchorTransaction: ANCHOR_EXAMPLE_TX,
+      source: "published_example",
+      demonstration: true,
+    });
+  });
+
+  it("reports the anchor as not on chain when the tx lacks the hash", async () => {
+    const result = await verifyRecordTool(
+      { id: "polygon-anchor-1" },
+      { fetchImpl: rpcStub("0xdeadbeef") }
+    );
+    expect(result).toMatchObject({
+      anchorOnChain: false,
+      anchorChainStatus: "hash_not_in_tx",
+    });
+  });
+
+  it("a submitted record with no anchor is valid-unanchored and makes no RPC call", async () => {
+    let called = false;
+    const result = await verifyRecordTool(
+      { record: recordJson },
+      {
+        fetchImpl: (async () => {
+          called = true;
+          throw new Error("no rpc expected");
+        }) as typeof fetch,
+      }
+    );
+    expect(result).toMatchObject({
+      verdict: "valid-unanchored",
+      anchorOnChain: false,
+      source: "submitted",
+      demonstration: false,
+    });
+    expect(called).toBe(false);
+  });
+
+  it("an unknown id is an error, not a fake verdict", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: { name: "verify_record", arguments: { id: "AC-1234ABCD" } },
+        }),
+      })
+    );
+    const body = (await res!.json()) as {
+      result: { isError?: boolean; content: Array<{ text: string }> };
+    };
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toMatch(/only published record/);
   });
 });

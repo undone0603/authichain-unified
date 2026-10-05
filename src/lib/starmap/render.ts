@@ -4,7 +4,6 @@ import type { NightstampInput, NightstampPayload } from "./types";
 
 const TAU = Math.PI * 2;
 const deg = (v: number) => (v * Math.PI) / 180;
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 type Palette = { bg: number; qr: number; star: number; starBright: number };
 

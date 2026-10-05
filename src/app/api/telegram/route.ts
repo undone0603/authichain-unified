@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
+import { requireTelegramSecret } from '../../../lib/telegram-webhook-auth';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
@@ -18,6 +19,9 @@ type TelegramMessage = {
  * so the paid fulfillment path remains the source of truth for the artifact.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireTelegramSecret(req);
+  if (denied) return denied;
+
   try {
     if (!TELEGRAM_BOT_TOKEN) {
       console.warn('[Telegram] TELEGRAM_BOT_TOKEN missing. Bot is inactive.');

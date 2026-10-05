@@ -11,13 +11,12 @@ export function QronMarketingHome() {
       brandId="qron"
       eyebrow="Living QR"
       headline="AI QR art that still scans."
-      subhead="Turn a URL into a signed Living QR for packaging and labels. Ed25519-signed, Polygon-anchored, scannable from any camera."
+      subhead="Turn a URL into a signed Living QR for packaging and labels. Ed25519-signed, scannable from any camera."
       primaryCta={{ label: 'Generate Living QR', href: '/generate' }}
       secondaryCta={{ label: 'View pricing', href: '/pricing' }}
       stats={[
         { value: 'Ed25519', label: 'Signed payload' },
         { value: 'Scannable', label: 'Any camera' },
-        { value: 'Polygon', label: 'On-chain anchor' },
         { value: 'Editable', label: 'Redirects' },
       ]}
       features={[
@@ -34,7 +33,7 @@ export function QronMarketingHome() {
         {
           icon: <ShieldCheck className="h-6 w-6" />,
           title: 'Cryptographically signed',
-          desc: 'Each QRON is Ed25519-signed and anchored on Polygon so the destination is verifiable.',
+          desc: 'Each QRON is Ed25519-signed so the destination is verifiable.',
         },
         {
           icon: <ScanLine className="h-6 w-6" />,

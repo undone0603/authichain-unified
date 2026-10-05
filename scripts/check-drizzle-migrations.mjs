@@ -16,6 +16,9 @@ if (packageJson.scripts?.['db:migrate'] !== 'drizzle-kit migrate') {
 }
 
 const retiredMigrationPaths = [
+  'manual-migration.js',
+  'patch-schema.js',
+  'update-schema.js',
   'scripts/manual-migration.js',
   'scripts/patch-schema.js',
   'scripts/update-schema.js',

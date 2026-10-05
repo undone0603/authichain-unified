@@ -32,7 +32,7 @@ import {
   recordStripeWebhookDelivery,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
-import { planByStripePriceId } from "../../src/lib/plans";
+import { planByAmountCents, planByStripePriceId } from "../../src/lib/plans";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 
 function maskEmail(email: string): string {
@@ -143,11 +143,11 @@ async function getWebhookSupabase() {
 
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
-): Promise<void> {
-  if (session.payment_status !== "paid") return;
+): Promise<boolean> {
+  if (session.payment_status !== "paid") return false;
   const linePriceId = checkoutLinePriceId(session);
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
-  if (isDppOffer(session.metadata || {}, linePriceId)) return;
+  if (isDppOffer(session.metadata || {}, linePriceId)) return false;
 
   const { PLAN_CREDITS, planByAmountCents, planByStripePriceId } =
     await import("../../src/lib/plans");
@@ -206,7 +206,7 @@ async function fulfillCatalogCreditsIfPaid(
         );
       }
     }
-    return;
+    return false;
   }
 
   const supabase = await getWebhookSupabase();
@@ -214,7 +214,7 @@ async function fulfillCatalogCreditsIfPaid(
     console.error(
       "[stripe-webhook] catalogue session paid but Supabase is not configured"
     );
-    return;
+    return false;
   }
 
   const { provisionPurchase } = await import("../../src/lib/provisioning");
@@ -237,6 +237,59 @@ async function fulfillCatalogCreditsIfPaid(
   if (prov.status === "upsert_failed") {
     throw new Error(
       `Catalogue provision failed: ${prov.error || "profiles upsert failed"}`
+    );
+  }
+  return prov.status === "provisioned";
+}
+
+function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
+  if (session.mode !== "payment" || isRecurringCheckoutSession(session)) {
+    return false;
+  }
+
+  const linePrice = planByStripePriceId(checkoutLinePriceId(session));
+  if (linePrice) return linePrice.id === "starter";
+
+  const amountPlan = planByAmountCents(session.amount_total);
+  if (amountPlan) return amountPlan.id === "starter";
+
+  return session.metadata?.plan === "starter";
+}
+
+async function recordStarterGrowthEvent(
+  event: "checkout_abandoned" | "purchase_starter_succeeded",
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  try {
+    const supabase = await getWebhookSupabase();
+    if (!supabase) return;
+
+    const { buildGrowthEvent, hashEmail } =
+      await import("../../src/lib/growth/emit");
+    const payload = await buildGrowthEvent({
+      event,
+      sku: "starter",
+      email: checkoutSessionEmail(session),
+    });
+    const { error } = await supabase.rpc("growth_record_event_idempotent", {
+      p_event: payload.event,
+      p_loop: payload.loop,
+      p_sku: payload.sku,
+      p_founder: payload.founder,
+      p_email_hash: payload.email_hash ?? null,
+      p_occurred_at: payload.occurred_at,
+      p_idempotency_key: await hashEmail(session.id),
+    });
+    if (error) {
+      console.warn(
+        `[stripe-webhook] growth event ${event} not recorded:`,
+        error.message
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[stripe-webhook] growth event ${event} skipped:`,
+      err instanceof Error ? err.message : String(err)
     );
   }
 }
@@ -804,6 +857,7 @@ export async function handleStripeWebhook(
               affiliateCode,
               amountCents,
               conversion: false,
+              eventId: event.id,
             });
             console.log("[stripe-webhook] affiliate renewal accrual", accrual);
           }
@@ -889,7 +943,18 @@ export async function handleStripeWebhook(
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
           await fulfillDppCheckoutIfPaid(session);
-          await fulfillCatalogCreditsIfPaid(session);
+          const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
+          if (
+            catalogFulfilled &&
+            isStarterCheckoutSession(session) &&
+            session.amount_total !== null &&
+            session.amount_total > 0
+          ) {
+            await recordStarterGrowthEvent(
+              "purchase_starter_succeeded",
+              session
+            );
+          }
         } catch (dppErr) {
           console.error("[stripe-webhook] checkout fulfill failed", dppErr);
           throw dppErr;
@@ -923,6 +988,7 @@ export async function handleStripeWebhook(
             affiliateCode,
             amountCents,
             conversion: true,
+            eventId: event.id,
           });
           console.log("[stripe-webhook] affiliate accrual", accrual);
         }
@@ -965,6 +1031,10 @@ export async function handleStripeWebhook(
           },
           userId
         );
+
+        if (isStarterCheckoutSession(session)) {
+          await recordStarterGrowthEvent("checkout_abandoned", session);
+        }
 
         if (email) {
           const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;

@@ -8,7 +8,6 @@ on:
       - "workers/**/wrangler.toml"
       - "worker/**/wrangler.toml"
       - "api/**"
-      - "services/**"
       - "config/cloudflare-estate.json"
       - "scripts/cloudflare/audit-estate.mjs"
       - ".github/workflows/cloudflare-estate-audit.yml"

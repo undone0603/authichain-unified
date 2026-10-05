@@ -49,7 +49,8 @@
     "examples/polygon-anchor-1.anchor.json",
     "SPEC.md",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
   "scripts": {

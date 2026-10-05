@@ -16,6 +16,7 @@ import { renderDynamicPage } from "./dynamic-pages";
 import { registerJwksRoute } from "./jwks";
 import { registerIssuerRoutes } from "./issuer";
 import { registerAttestationApi } from "./attestation-api";
+import { registerComplianceEvaluate } from "./compliance-evaluate";
 import { registerX402Routes } from "./x402-routes";
 import { registerUnsubscribeRoutes } from "./unsubscribe-routes";
 import { registerInboundRoutes } from "./inbound-routes";
@@ -55,6 +56,8 @@ type Env = {
   /** Key of the Resend account that owns the receiving domain; falls back to RESEND_API_KEY. */
   RESEND_INBOUND_API_KEY?: string;
   RESEND_API_KEY?: string;
+  /** Header x-dpp-smoke-secret. Unset or shorter than 16 fails closed. */
+  DPP_SMOKE_SECRET?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -85,6 +88,7 @@ function hydrateProcessEnv(env?: Env) {
     ],
     ["SUPABASE_URL", env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL],
     ["SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY],
+    ["DPP_SMOKE_SECRET", env.DPP_SMOKE_SECRET],
     ["CRON_SECRET", env.CRON_SECRET],
     ["INTERNAL_API_SECRET", env.INTERNAL_API_SECRET],
     [
@@ -235,8 +239,9 @@ function isAppHostname(host: string): boolean {
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
 // https://authichain.com/checkout/<plan> (authichain-com), whose confirm form
-// POSTs to create the session. Only DPP-SMOKE-E2E (a $0 demo session used by
-// production-smoke-gate) still creates a session on GET.
+// POSTs to create the session. DPP-SMOKE-E2E still creates a $0 session on
+// GET only when x-dpp-smoke-secret matches DPP_SMOKE_SECRET. A public promo
+// 303s to the confirm page and does not open a session.
 app.get("/api/checkout/dpp", async c => {
   if (c.req.method === "HEAD") {
     for (const [key, value] of Object.entries(CHECKOUT_REDIRECT_HEADERS)) {
@@ -246,8 +251,16 @@ app.get("/api/checkout/dpp", async c => {
   }
   const search = new URL(c.req.url).searchParams;
   const { gatedConfirmUrl } = await import("../src/lib/checkout-gate");
-  const { isDppSmokePromo } = await import("../src/lib/dpp-loop");
-  if (!isDppSmokePromo(search.get("promo"))) {
+  const { dppSmokeRequestAuthorized, isDppSmokePromo } = await import(
+    "../src/lib/dpp-loop"
+  );
+  const smokeAuthorized =
+    isDppSmokePromo(search.get("promo")) &&
+    dppSmokeRequestAuthorized(
+      c.req.header("x-dpp-smoke-secret"),
+      c.env?.DPP_SMOKE_SECRET || process.env.DPP_SMOKE_SECRET
+    );
+  if (!smokeAuthorized) {
     return checkoutRedirectResponse(gatedConfirmUrl("dpp_readiness", search));
   }
   try {
@@ -269,6 +282,7 @@ app.get("/api/checkout/dpp", async c => {
       searchParams: search,
       stripeSecretKey,
       supabase,
+      smokeAuthorized: true,
     });
     if (!result.ok) {
       if (result.status === 303 && result.url) {
@@ -318,7 +332,8 @@ app.get("/api/checkout", c => {
   return c.json({
     ok: true,
     methods: ["POST"],
-    smoke: "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E",
+    smoke:
+      "GET /api/checkout/dpp?promo=DPP-SMOKE-E2E requires x-dpp-smoke-secret",
     confirm: "GET https://authichain.com/checkout/<plan> (POST form creates the session)",
     webhook: "POST /api/stripe/webhook",
     thanks: "/dpp/thanks",
@@ -544,6 +559,19 @@ async function stripeWebhookPost(c: {
 }
 
 app.post("/api/stripe/webhook", c => stripeWebhookPost(c));
+
+// Retired alias (#1406). Answer 410 rather than falling through to ASSETS'
+// 404, so a Stripe endpoint still pointed here reads as retired, not missing.
+app.post("/api/webhooks/stripe", c => {
+  c.header("Cache-Control", "private, no-store");
+  return c.json(
+    {
+      error: "Retired. Stripe webhooks go to /api/stripe/webhook.",
+      deprecated: true,
+    },
+    410
+  );
+});
 
 app.post("/api/dpp/activate", async c => {
   try {
@@ -1753,6 +1781,7 @@ app.post("/generate/", c => renderDynamicPage(c));
 registerJwksRoute(app);
 registerIssuerRoutes(app);
 registerAttestationApi(app);
+registerComplianceEvaluate(app);
 registerX402Routes(app);
 registerUnsubscribeRoutes(app);
 registerInboundRoutes(app);
