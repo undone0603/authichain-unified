@@ -18,7 +18,13 @@ import {
   TEMPLATES,
   extractTemplates,
 } from "../gemma/outreach-review.mjs";
-import { logTail, marker, pickRuns, triageComment } from "../gemma/alert-triage.mjs";
+import {
+  completedOnBranch,
+  logTail,
+  marker,
+  pickRuns,
+  triageComment,
+} from "../gemma/alert-triage.mjs";
 
 function fakeFetch(status: number, payload: unknown) {
   const calls: Array<{ url: string; body: any }> = [];
@@ -161,6 +167,17 @@ describe("alert triage", () => {
       { now }
     );
     expect(picked.map(r => r.id)).toEqual([1, 5]);
+  });
+
+  it("ignores other branches and runs that have not finished", () => {
+    const runs = [
+      { ...run(1, 10, "failure", 1), head_branch: "main" },
+      { ...run(2, 10, "failure", 1), head_branch: "feat" },
+      { ...run(3, 11, "failure", 1), head_branch: "main", conclusion: "" },
+    ];
+    expect(pickRuns(completedOnBranch(runs), { now }).map(r => r.id)).toEqual([
+      1,
+    ]);
   });
 
   it("caps the number of runs", () => {
