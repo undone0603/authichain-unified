@@ -124,7 +124,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Do I have to book a call?",
-    a: "No. Checkout is self-serve. Questions go to the contact page and get a written answer.",
+    a: "No. The $299 checkout is self-serve. The scoping form on this page is optional, and we reply by email.",
   },
 ];
 
@@ -362,7 +362,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <p class="estate-badge hero-badge">EU Battery Regulation · Digital Battery Passport</p>
       <p class="bp-countdown"><strong>${days}</strong> <span>days until 18 February 2027</span></p>
       <h1>Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU.</h1>
-      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}. No sales call.</p>
+      <p class="estate-lede hero-sub">From 18 February 2027, every LMT battery, every industrial battery over 2 kWh and every EV battery placed on the EU market must carry a QR code linking to a digital passport. AuthiChain tells you exactly what data you're missing and gets you ready for your first passport, for a one-time $${price}.</p>
       <div class="estate-actions hero-cta">${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}</div>
       <p class="bp-note">Not sure what you'd get? <a href="${BATTERY_PASSPORT_PATH}/sample-audit">Read a full sample assessment</a> worked through on a fictional e-bike pack.</p>
     </div>
@@ -433,7 +433,7 @@ ${estateFooter(
     },
     { heading: "Company", links: [{ href: "/contact", label: "Contact" }] },
   ],
-  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. Not legal advice. No call booking — checkout or a written answer."
+  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. Not legal advice. Checkout is self-serve. The scoping form on this page is optional."
 )}
 </body>
 </html>`;

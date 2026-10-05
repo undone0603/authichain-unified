@@ -90,6 +90,19 @@ describe("battery passport offer page", () => {
     expect(section).toContain("textContent");
   });
 
+  it("keeps the $299 checkout ahead of the optional scoping form", () => {
+    const hero = html.indexOf('id="hero-checkout"');
+    const form = html.indexOf('id="lead-form"');
+    const bottom = html.indexOf('id="cta-checkout"');
+    expect(hero).toBeGreaterThan(-1);
+    expect(form).toBeGreaterThan(hero);
+    expect(bottom).toBeGreaterThan(form);
+    expect(html).toContain("Get passport-ready");
+    expect(html).toContain("The scoping form on this page is optional");
+    expect(html).not.toMatch(/No sales call/i);
+    expect(html).not.toMatch(/No call booking/i);
+  });
+
   it("keeps the $299 dpp_readiness checkout tagged battery-passport", () => {
     expect(plan.id).toBe("dpp_readiness");
     expect(html).toContain(`$${plan.price}`);
