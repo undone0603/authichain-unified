@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderBatteryPassportPage } from "./battery-passport-page.ts";
 import {
   BATTERY_CATEGORIES,
-  LEAD_CONSENT_PLACEHOLDER,
+  LEAD_CONSENT,
   LEAD_ERROR_MESSAGE,
   LEAD_FINE_PRINT,
   LEAD_FORM_ENDPOINT,
@@ -61,9 +61,10 @@ describe("battery passport lead form (AE-20261002-CFD-04)", () => {
     expect(section).toContain("Request a scoping call");
   });
 
-  it("shows the consent line as a visible PLACEHOLDER and the fine print", () => {
-    expect(section).toContain(LEAD_CONSENT_PLACEHOLDER.replace(/'/g, "&#39;"));
-    expect(LEAD_CONSENT_PLACEHOLDER).toMatch(/^PLACEHOLDER/);
+  it("shows the approved consent line and the fine print", () => {
+    expect(section).toContain(LEAD_CONSENT);
+    expect(section).not.toContain("PLACEHOLDER");
+    expect(section).not.toContain("lf-placeholder");
     expect(section).toContain('<a href="/privacy">Privacy policy</a>');
     expect(section).toContain(LEAD_FINE_PRINT.replace(/'/g, "&#39;"));
     expect(section).toContain(JSON.stringify(LEAD_SUCCESS_MESSAGE));

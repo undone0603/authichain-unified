@@ -2,9 +2,9 @@
  * "Scope a pilot" lead form for /battery-passport (AE-20261002-CFD-04).
  *
  * Copy: /workspace/drafts/battery-passport/page-section-lead-form.md (AuthiChain
- * Marketing draft), used as written. The consent line is NOT final: it renders
- * as a visible PLACEHOLDER until Zachary approves the wording (8:45 list,
- * Tier 2 item 6). Do not merge with the placeholder replaced by unapproved text.
+ * Marketing draft), used as written. Zachary approved the consent sentence
+ * on 2026-10-05. It is escaped text. The privacy policy link under it is a
+ * real anchor.
  *
  * Endpoint: the existing POST /api/leads/capture on authichain-edge-router
  * (worker-app/lead-routes.ts). The form sends company, role, categories,
@@ -20,9 +20,9 @@ export const LEAD_FORM_ID = "scope-pilot";
 export const LEAD_FORM_ENDPOINT = "/api/leads/capture";
 export const LEAD_FORM_SOURCE = "battery-passport-page";
 
-/** Visible until Zachary approves the consent/privacy wording (8:45 list item 6). */
-export const LEAD_CONSENT_PLACEHOLDER =
-  "PLACEHOLDER: consent and privacy wording pending Zac's approval (8:45 list, Tier 2 item 6).";
+/** Approved by Zachary on 2026-10-05. */
+export const LEAD_CONSENT =
+  "By sending this, you agree we may email you at the work address above to set up a scoping call. We store the details in this form for that request. The privacy policy is at authichain.com/privacy.";
 
 export const LEAD_FINE_PRINT =
   "AuthiChain is an independent brand of Zachary Kietzman and is not affiliated with, endorsed by, or acting on behalf of any government agency.";
@@ -149,7 +149,6 @@ export const LEAD_FORM_CSS = `
     .lf-field-error { color:#c0392b; font-size:.88rem; margin:.35rem 0 0; }
     .lf-status { padding:.75rem 1rem; border-radius:.5rem; border:1px solid var(--border); margin:.75rem 0; }
     .lf-status.lf-error { border-color:#c0392b; color:#c0392b; }
-    .lf-placeholder { display:inline-block; padding:.2rem .45rem; border:2px dashed #c0392b; color:#c0392b; font-weight:650; }
 `;
 
 const esc = (s: string) =>
@@ -224,7 +223,7 @@ export function batteryLeadFormSection(): string {
         <div class="lf-hp" aria-hidden="true"><label for="lf-website">Leave this field empty<input id="lf-website" name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
         <div class="lf-actions">
           <button class="btn btn-primary" type="submit">Request a scoping call</button>
-          <p class="bp-note" id="lf-consent"><span class="lf-placeholder">${esc(LEAD_CONSENT_PLACEHOLDER)}</span></p>
+          <p class="bp-note" id="lf-consent">${esc(LEAD_CONSENT)}</p>
           <p class="bp-note"><a href="/privacy">Privacy policy</a></p>
         </div>
       </form>
