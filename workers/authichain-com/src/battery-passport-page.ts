@@ -108,7 +108,7 @@ const CHECKLIST: Array<{ tier: string; who: string; items: string[] }> = [
 ];
 
 /** What paid checkout on this page grants. Not the full plan.features list. */
-const PAGE_DELIVERABLES = [
+export const PAGE_DELIVERABLES = [
   "AuthiChain workspace",
   "Self-serve activation",
   "50 workspace generations",
@@ -423,7 +423,7 @@ ${estateFooter(
         { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
         {
           href: `${BATTERY_PASSPORT_PATH}/sample-audit`,
-          label: "Sample assessment",
+          label: "Fictional walkthrough",
         },
         { href: "/pricing", label: "Pricing" },
       ],

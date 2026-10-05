@@ -2963,12 +2963,11 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
-        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a sample assessment</a>
+        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a fictional walkthrough</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
-        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
+        Pay once. Self-serve activation opens your workspace.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
       </p>
     </div>
   </section>
@@ -3139,7 +3138,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
       <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Start with a written readiness assessment for your product line. Checkout is self-serve.</p>
+      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",

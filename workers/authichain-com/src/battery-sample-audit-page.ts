@@ -1,16 +1,16 @@
 /**
- * /battery-passport/sample-audit — what the $299 EU DPP Readiness Audit
- * delivers, shown on a fictional e-bike pack before anyone pays.
+ * /battery-passport/sample-audit — a fictional e-bike walkthrough of the
+ * free figure check and Annex XIII gap table.
  *
- * A stranger buying a $299 written deliverable with no reviews to read needs
- * to see the deliverable first. Every figure below is computed at render time
- * by the same code as the free tools (scorePack / annexXiiiRows from
- * battery-gap-map.ts, scoreDppReadiness from src/lib/dpp-readiness.ts), so the
- * sample cannot drift from what the gap map and the /dpp-check score say.
+ * Every figure is computed at render time by the same code as the free tools
+ * (scorePack / annexXiiiRows from battery-gap-map.ts, scoreDppReadiness from
+ * src/lib/dpp-readiness.ts), so the sample cannot drift from the gap map or
+ * the /dpp-check score.
  *
- * Truth rules: the product and brand are fictional and labelled as such on
- * the page; no customer, logo or testimonial; no identifier is generated;
- * deliverables are exactly the dpp_readiness plan features; not legal advice.
+ * Truth rules: the product and brand are fictional and labelled as such.
+ * This page is not a document the $299 checkout sends. Checkout opens a
+ * workspace. The on-page grant is PAGE_DELIVERABLES, not plan.features.
+ * Not legal advice.
  */
 import {
   ESTATE_BASE_CSS,
@@ -37,6 +37,7 @@ import {
   BATTERY_CHECKOUT_ACTION,
   BATTERY_PASSPORT_DEADLINE,
   BATTERY_PASSPORT_PATH,
+  PAGE_DELIVERABLES,
   daysUntilDeadline,
 } from "./battery-passport-page";
 
@@ -112,7 +113,7 @@ function checkoutForm(id: string, label: string): string {
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
   ${hidden}
-  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and your readiness assessment. Not a newsletter.</p>
+  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and workspace activation. Not a newsletter.</p>
   <button class="btn btn-primary" type="submit">${esc(label)}</button>
 </form>`;
 }
@@ -169,7 +170,7 @@ export function buildSampleAudit(now: Date = new Date()): SampleAudit {
     },
     {
       title: "Stand up the public record behind the QR code",
-      body: "The workspace included with the audit can hold the figures you have today for the operator's Art. 77 passport. A scan shows the record came from you and was not altered only when an Ed25519 signature and a mainnet anchor both check out. This sample is not that passport.",
+      body: "The workspace the checkout opens can hold the figures you have today for the operator's Art. 77 passport. A scan shows the record came from you and was not altered only when an Ed25519 signature and a mainnet anchor both check out. This sample is not that passport.",
     },
   ];
 
@@ -188,11 +189,11 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
   const price = plan?.price ?? 299;
   const a = buildSampleAudit(now);
   const title =
-    "Sample EU battery passport readiness assessment (e-bike pack) | AuthiChain";
-  const description = `See the written readiness assessment the $${price} EU DPP Readiness Audit delivers, worked through on a fictional 48 V e-bike battery: figure check, Annex XIII gap table and an ordered action plan.`;
-  const deliverables = (plan?.features ?? [])
-    .map(f => `<li>${esc(f)}</li>`)
-    .join("");
+    "Fictional e-bike battery passport walkthrough | AuthiChain";
+  const description = `A fictional 48 V e-bike battery walked through the free figure check and Annex XIII gap table. The $${price} checkout opens an AuthiChain workspace. This page is not a document that checkout sends.`;
+  const deliverables = PAGE_DELIVERABLES.map(f => `<li>${esc(f)}</li>`).join(
+    ""
+  );
   const figureRows: Array<[string, string]> = [
     ["Model", a.pack.model],
     ["Stated energy", `${a.pack.statedWh} Wh`],
@@ -221,7 +222,7 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Sample EU battery passport readiness assessment",
+    name: "Fictional e-bike battery passport walkthrough",
     url: SAMPLE_AUDIT_CANONICAL,
     description,
     isPartOf: { "@type": "WebSite", url: "https://authichain.com" },
@@ -286,15 +287,15 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
       { href: "/dpp-check", label: "Free DPP check" },
       { href: "/pricing", label: "Pricing" },
     ],
-    { href: "#get-started", label: `Get my assessment — $${price}` }
+    { href: "#get-started", label: `Get ready — $${price}` }
   )}
 <main id="main">
   <header class="estate-hero hero" id="hero">
     <div class="wrap hero-content">
       <p class="sa-sample">${esc(SAMPLE_LABEL)}</p>
-      <h1>This is what the $${price} battery passport readiness assessment looks like.</h1>
-      <p class="estate-lede hero-sub">We worked one through on a fictional 48 V e-bike pack from a brand that sells into the EU through a distributor. Yours is built the same way from your own datasheets and answers, and arrives by email as a written document. No call.</p>
-      <div class="estate-actions hero-cta"><a class="btn btn-primary" href="#get-started">Get this for my battery — $${price}</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}#gap-map">Try the free gap map first</a></div>
+      <h1>A fictional walkthrough of one e-bike battery line.</h1>
+      <p class="estate-lede hero-sub">We ran the free figure check and gap table on a fictional 48 V e-bike pack from a brand that sells into the EU through a distributor. The $${price} checkout opens an AuthiChain workspace. It does not email this page to you as a written assessment.</p>
+      <div class="estate-actions hero-cta"><a class="btn btn-primary" href="#get-started">Get ready — $${price}</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}#gap-map">Try the free gap map first</a></div>
     </div>
   </header>
 
@@ -358,11 +359,11 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
 
   <section class="estate-cta cta-section" id="get-started">
     <div class="wrap">
-      <h2>Get the same assessment for your battery</h2>
+      <h2>Open a workspace for your battery line</h2>
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="sa-list">${deliverables}</ul>
-      <p class="section-sub">Enter your work email to open Stripe checkout. You'll get your readiness assessment and workspace access by email.</p>
-      <div class="estate-actions">${checkoutForm("sample-checkout", `Get my assessment — $${price}`)}</div>
+      <p class="section-sub">Enter your work email to open Stripe checkout. After payment, workspace activation is sent by email.</p>
+      <div class="estate-actions">${checkoutForm("sample-checkout", `Get ready — $${price}`)}</div>
     </div>
   </section>
 </main>

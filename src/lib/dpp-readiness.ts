@@ -265,7 +265,7 @@ export function scoreDppReadiness(
         ? `${days} days left. Close the gaps above, starting with the data your suppliers must provide.`
         : "Obligations are expected, not yet law. Close the gaps above before your importers start asking.";
   } else if (days !== null) {
-    nextStep = `${days} days left. The $${price} EU DPP Readiness audit turns these gaps into a written plan for your product line${audit}.`;
+    nextStep = `${days} days left. The $${price} checkout opens an AuthiChain workspace for this product line${audit}.`;
   } else {
     nextStep = `Obligations are expected, not yet law. The $${price} EU DPP Readiness audit maps your gaps against the draft rules before your importers start asking${audit}.`;
   }
