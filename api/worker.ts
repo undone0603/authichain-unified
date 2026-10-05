@@ -1,6 +1,7 @@
 /**
  * AuthiChain Cloudflare Worker — Edge Revenue Engine
  * Routes: /seal /verify /certificate /provenance /stripe/checkout /stripe/webhook
+ *         /sales/inbound (api/sales-inbound.ts)
  *
  * Deploy: .github/workflows/deploy-edge-worker.yml
  *   (wrangler deploy --minify --config api/wrangler.toml). This is the only
@@ -9,6 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
+import { handleSalesInbound, type RateLimiter } from "./sales-inbound";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -22,6 +24,9 @@ export interface Env {
   NEXT_PUBLIC_APP_URL: string;
   CRM_BASE_URL: string;
   CRM_API_KEY: string;
+  ANTHROPIC_API_KEY: string;
+  SALES_INBOUND_SECRET: string;
+  SALES_RATE_LIMITER?: RateLimiter;
 }
 
 function getSupabase(env: Env) {
@@ -149,16 +154,14 @@ async function handleSeal(req: Request, env: Env): Promise<Response> {
   const qr_payload = `${env.NEXT_PUBLIC_APP_URL}/verify?seal=${seal_id}&hash=${qr_hash}`;
 
   const supabase = getSupabase(env);
-  await supabase
-    .from("auth_seals")
-    .insert({
-      id: seal_id,
-      product_id,
-      batch_id,
-      brand,
-      qr_payload,
-      polygon_tx: null,
-    });
+  await supabase.from("auth_seals").insert({
+    id: seal_id,
+    product_id,
+    batch_id,
+    brand,
+    qr_payload,
+    polygon_tx: null,
+  });
 
   return jsonResponse({ seal_id, qr_url: qr_payload });
 }
@@ -234,24 +237,20 @@ async function handleCertificate(req: Request, env: Env): Promise<Response> {
   const certificate_id = crypto.randomUUID();
 
   const supabase = getSupabase(env);
-  await supabase
-    .from("certificates")
-    .insert({
-      id: certificate_id,
-      product_id,
-      seal_id,
-      rarity_score,
-      polygon_nft_tx: null,
-      brand,
-    });
+  await supabase.from("certificates").insert({
+    id: certificate_id,
+    product_id,
+    seal_id,
+    rarity_score,
+    polygon_nft_tx: null,
+    brand,
+  });
 
-  await supabase
-    .from("usage_events")
-    .insert({
-      event_type: "certificate_minted",
-      event_ref: certificate_id,
-      brand,
-    });
+  await supabase.from("usage_events").insert({
+    event_type: "certificate_minted",
+    event_ref: certificate_id,
+    brand,
+  });
 
   await emitCrm(env, "createOpportunity", {
     brand,
@@ -293,13 +292,11 @@ async function handleProvenance(req: Request, env: Env): Promise<Response> {
     events: events ?? [],
   });
 
-  await supabase
-    .from("usage_events")
-    .insert({
-      event_type: "dispensary_scan",
-      event_ref: batch_id as string,
-      brand: resolved_brand,
-    });
+  await supabase.from("usage_events").insert({
+    event_type: "dispensary_scan",
+    event_ref: batch_id as string,
+    brand: resolved_brand,
+  });
 
   await emitCrm(env, "updateDealMetric", {
     brand: resolved_brand,
@@ -394,22 +391,20 @@ async function handleStripeWebhook(req: Request, env: Env): Promise<Response> {
     const stripe_customer_id = (session.customer as string) ?? "";
     const stripe_subscription_id = (session.subscription as string) ?? "";
 
-    await supabase
-      .from("subscriptions")
-      .upsert(
-        {
-          stripe_customer_id,
-          stripe_subscription_id,
-          plan_id,
-          brand,
-          email,
-          status: "active",
-          current_period_end: new Date(
-            Date.now() + 30 * 86400 * 1000
-          ).toISOString(),
-        },
-        { onConflict: "stripe_subscription_id" }
-      );
+    await supabase.from("subscriptions").upsert(
+      {
+        stripe_customer_id,
+        stripe_subscription_id,
+        plan_id,
+        brand,
+        email,
+        status: "active",
+        current_period_end: new Date(
+          Date.now() + 30 * 86400 * 1000
+        ).toISOString(),
+      },
+      { onConflict: "stripe_subscription_id" }
+    );
 
     await emitCrm(env, "onNewSubscription", {
       brand,
@@ -447,13 +442,15 @@ export default {
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, x-api-key, x-sales-inbound-secret",
         },
       });
     }
 
-    // API key guard (skip for public /verify and /stripe/webhook)
-    const unguarded = ["/verify", "/stripe/webhook"];
+    // API key guard. /verify is public, /stripe/webhook checks the Stripe
+    // signature, and /sales/inbound checks its own SALES_INBOUND_SECRET.
+    const unguarded = ["/verify", "/stripe/webhook", "/sales/inbound"];
     if (!unguarded.includes(path)) {
       const apiKey = req.headers.get("x-api-key");
       if (apiKey !== env.WORKER_API_KEY) {
@@ -471,6 +468,8 @@ export default {
           return await handleStripeCheckout(req, env);
         if (path === "/stripe/webhook")
           return await handleStripeWebhook(req, env);
+        if (path === "/sales/inbound")
+          return await handleSalesInbound(req, env);
       }
 
       if (method === "GET" && path === "/health") {

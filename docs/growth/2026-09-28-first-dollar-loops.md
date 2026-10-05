@@ -6,6 +6,24 @@ Live money: 0 stranger customers. One founder $10 charge is not a sale.
 Do not list First Dollar $1 or AuthiChain Seal $99/mo.
 Apex CTAs only: `/generate`, `/checkout/{plan}`, `/dpp-check`, `/verify`, `/onboard`. Never a `*.vercel.app` URL.
 
+## Current readiness — 2026-10-03
+
+LOOP-03 uses account-based credits: `POST /api/generate` requires an
+authenticated user, and an unauthenticated submission is routed to Starter
+checkout. There is no anonymous five-generation allowance. Public copy and the
+plan catalogue must describe sign-in/account credits rather than promise
+anonymous free use. `free_gen_granted` and `free_gen_exhausted` remain reserved
+for a future anonymous tier and are not part of the current measurement
+contract.
+
+The kill window starts only after `/generate` views, unauthenticated attempts,
+checkout events, Stripe expirations, and successfully fulfilled Starter
+purchases all record to `growth_loop_events` and the path is verified.
+Stripe outcome events use a SHA-256 digest of the Checkout Session ID as a
+deduplication key. The owner digest reports seven-day funnel counts and failed
+checkout webhooks when those Supabase records are available. Apply the
+additive migration and verify the live event counts before starting the window.
+
 ## Priority
 
 1. LOOP-03 QRON generate → Starter $29 (first stranger dollar).
@@ -20,16 +38,16 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Page: `qron.space/generate` (proxied to AuthiChain app)
 
-- **Headline:** Generate a Living QR. Five are free.
-- **Subhead:** Enter a product URL and an optional style prompt. Each free generation is lookup-verify only. Signed AuthiChain verification is in development.
+- **Headline:** Generate a Living QR with account credits.
+- **Subhead:** Enter a product URL and an optional style prompt. Sign-in is required. Starter Pack adds 100 generations for $29, one-time. Signed AuthiChain verification is in development.
 - **Proof (citeable only):** Ed25519 JWKS at `https://authichain.com/.well-known/jwks.json`. Polygon certificate contract `0x4da4D2675e52374639C9c954f4f653887A9972BE`. No customer logos.
 - **Primary CTA:** Queue Living QR
 - **Secondary CTA:** Buy Starter Pack — $29 → `https://authichain.com/checkout/starter`
 - **Tertiary:** Start Launch $19/mo → `https://authichain.com/checkout/qron_launch`
 
-### Paywall at 5/5 free
+### Starter Pack offer
 
-- **Headline:** Those 5 are signed. The next 100 are $29.
+- **Headline:** Need more generations?
 - **Subhead:** Starter Pack — 100 AI QR generations that never expire. No subscription.
 - **CTA:** Buy Starter Pack $29 → `/checkout/starter`
 - **Secondary:** or Launch at $19/mo → `/checkout/qron_launch`
@@ -48,8 +66,8 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Meta
 
-- Title: `Living QR generator | QRON — 5 free, then $29`
-- Description: `Generate scannable AI QR art. Five free lookup-only generations, then a $29 Starter Pack of 100 that never expire.`
+- Title: `Living QR generator | QRON — account credits and $29 Starter Pack`
+- Description: `Generate scannable AI QR art with account credits. Starter Pack includes 100 generations for $29, one-time.`
 
 ### JSON-LD
 
@@ -70,13 +88,13 @@ GovChain stays `/onboard` only. No self-serve gov price. No FedRAMP-ready claim.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | Anonymous hit on `/generate` |
-| Mechanism | 5 free → hard paywall → email-gated `/checkout/starter` → Stripe |
-| CVR | estimate 2–6% submit → paid (no stranger baseline yet) |
-| Events | `generate_view`, `generate_submit_anon`, `free_gen_granted`, `free_gen_exhausted`, `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` |
-| Kill | 14 days after events exist: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view` |
+|           |                                                                                                                                                                                                                            |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger   | Visitor hits `/generate`; generation requires a signed-in account with credits                                                                                                                                             |
+| Mechanism | Account credits → email-gated `/checkout/starter` → Stripe; unauthenticated attempts route to Starter checkout                                                                                                             |
+| CVR       | Baseline not established: `generate_view` → `checkout_session_started` → fulfilled paid purchase                                                                                                                           |
+| Events    | `generate_view`, `generate_submit_anon` (unauthenticated attempt), `checkout_starter_view`, `checkout_email_captured`, `checkout_session_started`, `checkout_abandoned`, `purchase_starter_succeeded` (paid and fulfilled) |
+| Kill      | 14 days after end-to-end event wiring is deployed and verified: 0 non-founder `purchase_starter_succeeded` and ≥200 `generate_view`                                                                                        |
 
 ### Lifecycle email (recovery only)
 
@@ -117,13 +135,13 @@ CTA: same.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | `/p/{dpp-slug}` or docs visitor |
-| Mechanism | Free score → email optional → `$299` gated checkout |
-| CVR | estimate 0.5–2% completed check → paid |
-| Events | `dpp_check_view`, `dpp_check_completed`, `dpp_check_email_captured`, `checkout_dpp_view`, `purchase_dpp_succeeded` |
-| Kill | 30 days: 0 non-founder paid and ≥80 completed checks |
+|           |                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| Trigger   | `/p/{dpp-slug}` or docs visitor                                                                                    |
+| Mechanism | Free score → email optional → `$299` gated checkout                                                                |
+| CVR       | estimate 0.5–2% completed check → paid                                                                             |
+| Events    | `dpp_check_view`, `dpp_check_completed`, `dpp_check_email_captured`, `checkout_dpp_view`, `purchase_dpp_succeeded` |
+| Kill      | 30 days: 0 non-founder paid and ≥80 completed checks                                                               |
 
 Proof still required before any “brands use this” line: one stranger `purchase_dpp_succeeded` plus the delivered written assessment file.
 
@@ -154,13 +172,13 @@ Use the live VT-26 page as the template. Do not invent panels.
 
 ### Loop mechanics
 
-| | |
-|---|---|
-| Trigger | Organic genetics URL or package QR |
-| Mechanism | Public record → $49 self-serve publish |
-| CVR | estimate 1–4% view → paid |
-| Events | `genetics_view`, `passport_qr_scan`, `checkout_passport_view`, `purchase_passport_succeeded` |
-| Kill | 30 days: 0 non-founder paid and ≥150 genetics views |
+|           |                                                                                              |
+| --------- | -------------------------------------------------------------------------------------------- |
+| Trigger   | Organic genetics URL or package QR                                                           |
+| Mechanism | Public record → $49 self-serve publish                                                       |
+| CVR       | estimate 1–4% view → paid                                                                    |
+| Events    | `genetics_view`, `passport_qr_scan`, `checkout_passport_view`, `purchase_passport_succeeded` |
+| Kill      | 30 days: 0 non-founder paid and ≥150 genetics views                                          |
 
 ---
 
