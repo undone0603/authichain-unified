@@ -4,6 +4,9 @@
  * GET  /api/x402 + /api/x402/health + /api/v1/agent-verify → public health
  *      (200, not_configured OK — GET must not 404)
  * GET  /api/x402/catalog + /.well-known/x402.json → machine catalog
+ * GET  /api/x402/listing + /api/x402/growth → PayAPI pack and directory list.
+ *      authichain.com/api/x402* lands on this worker, so a missing route here
+ *      is a public 404 even when the apex worker implements the same path.
  * GET  /.well-known/x402 → x402scan fan-out (version + resources)
  * GET  /openapi.json → OpenAPI 3.1 with x-payment-info
  * POST /api/x402 + /api/v1/agent-verify → 402 advertisement when unpaid. A
@@ -37,6 +40,7 @@ import {
   resolvePaidSealVerify,
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
+import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -94,6 +98,32 @@ async function health(c: {
 }) {
   hydrateX402(c.env);
   return c.json(await x402HealthReport(healthEnv(c.env)), 200, NO_STORE);
+}
+
+async function listing(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  const healthReport = await x402HealthReport(healthEnv(c.env));
+  return c.json(x402ListingPack(healthReport), 200, NO_STORE);
+}
+
+async function growth(c: {
+  env?: X402Bindings;
+  json: (
+    body: unknown,
+    status?: number,
+    headers?: Record<string, string>
+  ) => Response;
+}) {
+  hydrateX402(c.env);
+  const healthReport = await x402HealthReport(healthEnv(c.env));
+  return c.json(growthDiscovery(healthReport), 200, NO_STORE);
 }
 
 async function catalog(c: {
@@ -205,6 +235,8 @@ export function registerX402Routes<
   app.get("/api/x402", c => health(c));
   app.get("/api/x402/health", c => health(c));
   app.get("/api/x402/catalog", c => catalog(c));
+  app.get("/api/x402/listing", c => listing(c));
+  app.get("/api/x402/growth", c => growth(c));
   app.get("/.well-known/x402", c => fanout(c));
   app.get("/.well-known/x402.json", c => catalog(c));
   app.get("/openapi.json", c => openapi(c));

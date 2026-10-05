@@ -24,6 +24,7 @@ import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
 import { legalRoute } from "./legal-pages.ts";
+import { seoPassportResponse } from "../../../src/lib/seo-pages.ts";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -3251,7 +3252,8 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
- * (/p SEO hubs, /landing/*) until edge-router deploys.
+ * (/p/<serial> and /landing/*). Known SEO hubs are rendered here and
+ * do not pass through this proxy.
  */
 async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   if (!env.APP_WORKER) {
@@ -3576,6 +3578,19 @@ async function handleAuthichainCom(request: Request, env: Env) {
       // An unknown competitor slug is a 404, not the /vs index — otherwise every
       // invented slug would answer 200 and the sitemap would be unfalsifiable.
       return notFound(p);
+    }
+    // Committed SEO hubs are served here. /p/<serial> that is not a slug still
+    // falls through to APP_WORKER. The deployed edge router is behind
+    // content/seo/pages.json, so those sitemap URLs were 404 "Product Not Found".
+    const seoPassport = seoPassportResponse(p);
+    if (seoPassport) {
+      return new Response(seoPassport.html, {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
     }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       return proxyAppWorker(request, env);

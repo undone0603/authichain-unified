@@ -549,6 +549,19 @@ test("/dapp redirects to /dashboard (estate CTA)", async () => {
   );
 });
 
+test("GET /api/x402/listing and /api/x402/growth are answered here", async () => {
+  const listing = await get("/api/x402/listing");
+  assert.equal(listing.status, 200);
+  const listingBody = (await listing.json()) as { protocol?: string; listing?: string };
+  assert.equal(listingBody.protocol, "x402");
+  assert.match(listingBody.listing ?? "", /\/api\/x402\/listing$/);
+
+  const growth = await get("/api/x402/growth");
+  assert.equal(growth.status, 200);
+  const growthBody = (await growth.json()) as { listing?: string };
+  assert.match(growthBody.listing ?? "", /\/api\/x402\/listing$/);
+});
+
 test("GET /api/x402, /health, and /api/v1/agent-verify are answered here", async () => {
   for (const path of [
     "/api/x402",
@@ -903,6 +916,24 @@ test("/dashboard and /generate are proxied to the app", async () => {
   }
 });
 
+test("committed /p SEO hubs are served here, not a product-not-found proxy", async () => {
+  for (const path of [
+    "/p/battery-passport-readiness-assessment-cost",
+    "/p/verify-a-product-record-offline-without-a-vendor-account",
+    "/p/battery-passport-readiness-assessment-cost/",
+  ]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.notEqual(html, "app", path);
+    assert.match(html, /<h1>/, path);
+    assert.doesNotMatch(html, /Product Not Found/, path);
+  }
+  const cost = await (await get("/p/battery-passport-readiness-assessment-cost")).text();
+  assert.match(cost, /Battery Passport Readiness Assessment Cost/);
+  assert.match(cost, /not a certification or legal opinion/);
+});
+
 test("/p and /p/<serial> are proxied to the app, not marketing 404", async () => {
   for (const path of ["/p", "/p/", "/p/CERT-001", "/p/test"]) {
     const res = await get(path);
@@ -956,8 +987,10 @@ test("stale APP_WORKER checkout anchors become catalogue Payment Links", async (
         ),
     },
   } as unknown as Env;
+  // Known /p/<slug> hubs are rendered on this worker, so the rewrite only
+  // runs for a serial that still proxies and for /landing/*.
   for (const path of [
-    "/p/what-is-a-digital-product-passport",
+    "/p/CERT-001",
     "/landing/authichain",
   ]) {
     const html = await (await get(path, env)).text();
