@@ -28,7 +28,7 @@ export const LEAD_FINE_PRINT =
   "AuthiChain is an independent brand of Zachary Kietzman and is not affiliated with, endorsed by, or acting on behalf of any government agency.";
 
 export const LEAD_SUCCESS_MESSAGE =
-  "Thanks. We've got your details and will reply by email to set up a scoping call.";
+  "Thanks. We've got your details. We may email you at the work address above to set up a scoping call.";
 
 export const LEAD_ERROR_MESSAGE =
   "That didn't go through. Please try again, or reach us at authichain.com/contact.";
@@ -194,7 +194,7 @@ export function batteryLeadFormSection(): string {
       <p class="bp-note">Live today: AuthiChain's open protocol spec (Apache-2.0) and its offline reference verifier. Certificate issuance and public verification are in development.</p>
 
       <h3 id="scope-pilot-heading">Scope a pilot</h3>
-      <p class="section-sub">Tell us what you place on the EU market. We'll reply to set up a scoping call. Pricing is shared on the call.</p>
+      <p class="section-sub">Tell us what you place on the EU market. We may email you at the work address in this form to set up a scoping call. Pricing is shared on the call.</p>
       <form class="lf-form" id="lead-form" action="${LEAD_FORM_ENDPOINT}" method="post" novalidate>
         <input type="hidden" name="source" value="${LEAD_FORM_SOURCE}">
         <label for="lf-name">Name <span class="lf-req">(required)</span>
