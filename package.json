@@ -127,12 +127,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.86.0",
-<<<<<<< HEAD
-    "react-is": "^18.3.1",
-    "react-resizable-panels": "^4.13.3",
-=======
     "react-resizable-panels": "^4.14.1",
->>>>>>> origin/main
     "recharts": "^3.10.1",
     "resend": "^6.31.0",
     "sanitize-html": "^2.13.0",
