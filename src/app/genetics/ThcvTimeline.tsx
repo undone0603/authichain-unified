@@ -24,7 +24,7 @@ type Point = {
   sample: string;
   date: string;
   thcv: number;
-  ratio: number;
+  ratio: number | null;
   t: number;
   isFlagship: boolean;
 };
@@ -47,8 +47,8 @@ export function ThcvTimeline({
 }) {
   const pts: Point[] = certificates
     .map(c => {
-      const thcv = c.derived.totalThcvPct ?? c.totals_pct.thcv;
-      const ratio = c.derived.ratio ?? c.ratio_thcv_thc;
+      const thcv = c.derived.totalThcvPct;
+      const ratio = c.derived.ratio;
       if (thcv == null) return null;
       return {
         coaId: c.coa_id,
@@ -56,7 +56,7 @@ export function ThcvTimeline({
         sample: c.sample_name_on_coa,
         date: c.collected,
         thcv,
-        ratio: ratio ?? 0,
+        ratio,
         t: Date.parse(c.collected),
         isFlagship: c.cultivar === flagship,
       };
@@ -179,7 +179,9 @@ export function ThcvTimeline({
                     className="mono"
                     fill="var(--ink-soft)"
                   >
-                    {p.thcv.toFixed(3)}% · {p.ratio.toFixed(2)}:1 · {p.date}
+                    {p.thcv.toFixed(3)}% ·{" "}
+                    {p.ratio == null ? "—" : `${p.ratio.toFixed(2)}:1`} ·{" "}
+                    {p.date}
                   </text>
                 </g>
               </g>

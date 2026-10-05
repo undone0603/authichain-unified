@@ -48,13 +48,11 @@ export const GROWTH_LOOPS: GrowthLoop[] = [
     primaryCta: "https://authichain.com/checkout/starter",
     trigger: "Anonymous visitor hits qron.space/generate or authichain.com/generate.",
     mechanism:
-      "5 free lookup-only generations. At 5/5, hard paywall to Starter Pack $29. Work email required before Stripe session so abandoned-checkout recovery can fire. No newsletter.",
-    estimatedCvr: "estimate: 2–6% generate_submit_anon → purchase_starter_succeeded",
+      "Generation requires a signed-in account with credits. Unauthenticated submissions are counted and routed to Starter Pack checkout ($29 for 100 one-time generations). Work email is required before Stripe session creation.",
+    estimatedCvr: "baseline not established: generate_view → checkout_session_started → purchase_starter_succeeded",
     events: [
       "generate_view",
       "generate_submit_anon",
-      "free_gen_granted",
-      "free_gen_exhausted",
       "checkout_starter_view",
       "checkout_email_captured",
       "checkout_session_started",

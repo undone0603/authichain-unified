@@ -28,6 +28,7 @@
     "start:gov-engine": "tsx server/scripts/run_gov_engine.ts",
     "gov:engine": "bash scripts/ops/run-gov-engine.sh",
     "gov:monitor": "bash scripts/ops/monitor-gov-engine.sh",
+    "strainchain:audit": "tsx scripts/audit-strainchain-passports.ts",
     "gov:compile-nft": "node scripts/compile-authichain-nft.cjs",
     "gov:deploy-base": "tsx scripts/deploy-authichain-nft-base.ts",
     "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
@@ -43,7 +44,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.75",
+    "@ai-sdk/openai": "^4.0.83",
     "@anthropic-ai/sdk": "^0.131.0",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",

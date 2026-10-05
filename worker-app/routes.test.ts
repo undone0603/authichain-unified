@@ -210,6 +210,9 @@ describe("GET /api/generate", () => {
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
+    expect(body.packs.some((p: { price: number }) => p.price === 99)).toBe(
+      true
+    );
   });
 });
 

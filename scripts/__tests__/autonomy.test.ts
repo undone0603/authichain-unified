@@ -16,6 +16,7 @@ import {
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
+  pickLatestCompletedRun,
   runProbes,
   signature,
 } from "../autonomy/ops-pulse.mjs";
@@ -292,6 +293,32 @@ describe("ops pulse", () => {
     ).toEqual(["disabled"]);
   });
 
+  it("keeps the newest completed run on main when the branch query is stale", () => {
+    const picked = pickLatestCompletedRun([
+      {
+        head_branch: "feat",
+        conclusion: "failure",
+        created_at: "2026-10-05T00:00:00Z",
+        html_url: "pr",
+      },
+      {
+        head_branch: "main",
+        conclusion: "success",
+        created_at: "2026-10-04T15:59:22Z",
+        html_url: "new",
+      },
+      {
+        head_branch: "main",
+        conclusion: "failure",
+        created_at: "2026-09-01T13:20:33Z",
+        html_url: "old",
+      },
+    ]);
+    expect(picked.html_url).toBe("new");
+    expect(picked.conclusion).toBe("success");
+    expect(pickLatestCompletedRun([])).toBeNull();
+  });
+
   it("skips the stale run history of reusable (workflow_call-only) loops", () => {
     const runs = new Map([
       ["a.yml", { conclusion: "failure", html_url: "u", created_at: "" }],
@@ -433,7 +460,9 @@ describe("fulfilment watchdog", async () => {
 });
 
 describe("approval queue", async () => {
-  const { decide, latchHeld } = await import("../autonomy/approvals.mjs");
+  const { decide, latchHeld, latchSearchQuery } = await import(
+    "../autonomy/approvals.mjs"
+  );
   const issue = (labels: string[]) => ({
     labels: labels.map(name => ({ name })),
   });
@@ -468,6 +497,17 @@ describe("approval queue", async () => {
     expect(latchHeld(["approved"])).toBe(false);
     expect(latchHeld(["approved", "pending"])).toBe(true);
     expect(latchHeld(["denied"])).toBe(true);
+  });
+
+  it("still finds a decided latch after approval-needed is removed", () => {
+    const q = latchSearchQuery(
+      "undone0603/authichain-unified",
+      "cold-outreach-resume"
+    );
+    expect(q).toContain("is:issue");
+    expect(q).toContain("is:open");
+    expect(q).toContain('in:body "approval-key:cold-outreach-resume"');
+    expect(q).not.toContain("label:approval-needed");
   });
 });
 
@@ -733,6 +773,14 @@ describe("owner digest scoreboard", async () => {
         visitors: 120,
         checkouts: 2,
         campaigns: { "battery-passport": { started: 1, paid: 0 } },
+        starterFunnel: {
+          views: 25,
+          unauthenticated: 4,
+          sessions: 2,
+          abandoned: 1,
+          purchases: 1,
+        },
+        checkoutWebhookFailures: 0,
         replies: 1,
         failing: [{ title: "AgentZ", url: "u" }],
       },
@@ -743,6 +791,10 @@ describe("owner digest scoreboard", async () => {
     expect(full).toContain(
       "battery-passport page: 1 checkouts started, 0 paid"
     );
+    expect(full).toContain(
+      "QRON Starter funnel, last 7 days: 25 views, 4 unauthenticated attempts, 2 checkout sessions, 1 abandoned, 1 non-founder fulfilled purchase"
+    );
+    expect(full).toContain("Checkout webhook failures, last 7 days: 0");
     expect(full).toContain("Paid by customers: $49.00");
     expect(full).toContain("Replies received: 1");
     expect(full).toContain("Systems failing: 1");
@@ -750,6 +802,8 @@ describe("owner digest scoreboard", async () => {
     expect(empty).toContain("Unique visitors: not connected");
     expect(empty).toContain("Paid by customers: not connected");
     expect(empty).toContain("battery-passport page: not connected");
+    expect(empty).toContain("QRON Starter funnel events: not connected");
+    expect(empty).toContain("Checkout webhook failures: not connected");
     expect(empty).toContain("Systems failing: not connected");
   });
 });
@@ -798,7 +852,17 @@ describe("stripe webhook reconcile", async () => {
     const hooks = loadManifest().stripe_webhooks;
     expect(hooks[0]).toMatchObject({
       url: "https://authichain.com/api/stripe/webhook",
-      ensure_events: ["checkout.session.expired"],
+      ensure_events: [
+        "checkout.session.completed",
+        "checkout.session.expired",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.voided",
+        "charge.refunded",
+        "customer.subscription.deleted",
+        "customer.subscription.updated",
+        "customer.subscription.trial_will_end",
+      ],
     });
   });
 });

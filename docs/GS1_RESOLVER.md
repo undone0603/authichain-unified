@@ -21,10 +21,15 @@ src/lib/passport.ts       Fetch helper
 
 ```bash
 cd workers/gs1-resolver
-npx wrangler d1 execute authichain-provenance --file=src/schema.sql
+npm run migrate
 npx wrangler deploy
 npx wrangler secret put ISSUE_SECRET
 ```
+
+Run migrations against the remote D1 database before deploying code that depends
+on a new column. `src/schema.sql` documents the current baseline; it does not
+upgrade an existing `seals` table. D1 records applied migrations and will not
+run them twice.
 
 Point `id.authichain.com` at this worker. Set:
 
@@ -44,6 +49,13 @@ GET  /01/00012345678905/21/AC-DEMO-001                       # scans
 GET  /v1/passport/AC-DEMO-001                                # read-only
 POST /issue { "gtin":"9506000134352", "serial":"UNIT-9", "brand":"Acme" }
 ```
+
+`POST /issue` requires the configured issuer secret in the `Authorization`
+header. It may include
+`fingerprintSha256` as 64 hexadecimal characters, optionally prefixed with
+`sha256:`. The resolver stores the normalized digest and returns it on passport
+reads as issuer-supplied and unverified; it does not check the source bytes or
+anchor the digest.
 
 Corrected 2026-09-11. This list previously advertised `/v1/scan`, `/v1/issue`
 and `/v1/revoke`, none of which the worker implements, and `/v1/passport/{id}`,
