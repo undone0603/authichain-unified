@@ -40,7 +40,13 @@ def test_content_publish_schedule_defaults_dry_run():
     schedule_block = schedule_block.split("fi", 1)[0]
     assert 'echo "dry_run=true" >> "$GITHUB_OUTPUT"' in schedule_block
     assert 'echo "dry_run=false"' not in schedule_block
-    assert 'if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi' in yml
+    # Schedule sets dry_run=true. The publish step reads that output from
+    # the environment and adds --dry-run. The bundle path stays in the
+    # environment too, so a dispatch value is not parsed as shell.
+    assert 'DRY_RUN: ${{ steps.mode.outputs.dry_run }}' in yml
+    assert 'if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi' in yml
+    assert 'BUNDLE: ${{ inputs.bundle }}' in yml
+    assert '--bundle ${{ inputs.bundle }}' not in yml
     assert "if: steps.mode.outputs.dry_run != 'true'" in yml
 
 

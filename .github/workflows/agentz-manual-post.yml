@@ -52,17 +52,17 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${PAYLOAD:-}" ]; then
-            PAYLOAD='{}'
-          fi
           python3 - <<'PY'
           import json, os, sys
-          raw = os.environ.get("PAYLOAD", "{}")
+          raw = os.environ.get("PAYLOAD") or "{}"
           try:
-              json.loads(raw)
+              parsed = json.loads(raw)
           except Exception as exc:
               print(f"::error::payload is not valid JSON: {exc}", file=sys.stderr)
               sys.exit(1)
+          # Never expand the payload in the shell: "$(...)" inside it would run.
+          with open("/tmp/agentz-payload.json", "w", encoding="utf-8") as fh:
+              json.dump(parsed, fh)
           PY
 
           LIVE_Q="false"
@@ -78,7 +78,7 @@ jobs:
             -X POST \
             -H "Authorization: Bearer ${AGENT_SECRET}" \
             -H "Content-Type: application/json" \
-            -d "${PAYLOAD}" \
+            --data-binary @/tmp/agentz-payload.json \
             "${URL}") || true
 
           echo "HTTP ${HTTP}"

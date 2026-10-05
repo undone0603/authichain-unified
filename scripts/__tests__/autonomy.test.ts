@@ -433,7 +433,9 @@ describe("fulfilment watchdog", async () => {
 });
 
 describe("approval queue", async () => {
-  const { decide, latchHeld } = await import("../autonomy/approvals.mjs");
+  const { decide, latchHeld, latchSearchQuery } = await import(
+    "../autonomy/approvals.mjs"
+  );
   const issue = (labels: string[]) => ({
     labels: labels.map(name => ({ name })),
   });
@@ -468,6 +470,17 @@ describe("approval queue", async () => {
     expect(latchHeld(["approved"])).toBe(false);
     expect(latchHeld(["approved", "pending"])).toBe(true);
     expect(latchHeld(["denied"])).toBe(true);
+  });
+
+  it("still finds a decided latch after approval-needed is removed", () => {
+    const q = latchSearchQuery(
+      "undone0603/authichain-unified",
+      "cold-outreach-resume"
+    );
+    expect(q).toContain("is:issue");
+    expect(q).toContain("is:open");
+    expect(q).toContain('in:body "approval-key:cold-outreach-resume"');
+    expect(q).not.toContain("label:approval-needed");
   });
 });
 
