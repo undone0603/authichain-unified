@@ -29,3 +29,5 @@ export function grantForSku(sku: string): {
 export const CASH_SUCCESS_URL =
   "https://authichain.com/onboard?session_id={CHECKOUT_SESSION_ID}";
 export const CASH_CANCEL_URL = "https://authichain.com/pricing";
+export const CASH_EMAIL_HINT =
+  "Work email for the receipt and to reopen this checkout if it does not finish. No newsletter. AuthiChain does not file an EU registry and is not a government agency.";
