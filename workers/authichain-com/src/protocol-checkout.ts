@@ -108,7 +108,7 @@ export async function tryHandleProtocolCheckout(
     body.set("line_items[0][price_data][currency]", "usd");
     body.set(
       "line_items[0][price_data][product_data][name]",
-      "EU DPP Readiness Audit (smoke)"
+      "EU DPP Workspace (smoke)"
     );
     body.set("line_items[0][price_data][unit_amount]", "0");
     body.set("line_items[0][quantity]", "1");

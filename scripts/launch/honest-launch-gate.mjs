@@ -9,6 +9,9 @@ const SURFACES = [
   "src/lib/plans.ts",
   "workers/dpp-fulfillment/src/index.ts",
   "scripts/dpp-outreach/email-template.txt",
+  "worker-app/dynamic-pages.ts",
+  "workers/authichain-com/src/index.ts",
+  "workers/_shared/estate-pricing.ts",
 ];
 const BANNED = [
   /saves lives/i,

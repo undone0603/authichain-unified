@@ -927,7 +927,7 @@ function onboardPayNowHtml(): string {
     "\n" +
     catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "EU DPP Readiness Audit — $299",
+      label: "EU DPP Workspace — $299",
     }) +
     "\n" +
     "</p>\n" +

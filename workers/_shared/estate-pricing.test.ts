@@ -384,7 +384,7 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.doesNotMatch(html, /Theater 1/);
   assert.doesNotMatch(html, /Theater 3/);
   assert.doesNotMatch(html, /\$499/);
-  assert.match(html, />Start audit</);
+  assert.match(html, />Open workspace</);
   assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
   assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
   // Free and DPP card wording comes from plans.ts (see the catalogue test
