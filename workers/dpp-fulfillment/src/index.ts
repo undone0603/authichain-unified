@@ -160,7 +160,7 @@ Your workspace is provisioned by the app webhook. Complete self-serve activation
 
 ${activateUrl}
 
-That records merchant activation and unlocks the rest of the autonomous loop. Humans only handle exceptions.
+That records merchant activation for this workspace.
 
 The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.
 

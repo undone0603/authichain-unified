@@ -62,7 +62,7 @@ export default function TruMarkPage() {
           },
           {
             t: "EU DPP Readiness — $299",
-            d: "Written readiness assessment and self-serve activation. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
+            d: "The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. $299 on the published Stripe Payment Link, or enter a work email for recoverable checkout.",
           },
         ].map(c => (
           <article
