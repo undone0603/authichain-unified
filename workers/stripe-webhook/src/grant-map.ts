@@ -55,6 +55,10 @@ const UNLISTED = new Set([
   "price_1UIRF6GqTruSqV8TRjDYCkpi",
   "price_1UIRF7GqTruSqV8THhlI3zxp",
   "price_1UJbwzGqTruSqV8TJlaINJyW",
+  // Made in USA claim file and audit bundle. Live Stripe prices, no file grant.
+  // Hold until the webhook delivers the claim PDF. Do not grant generations.
+  "price_1UL0vVGqTruSqV8T5WYjrq6i",
+  "price_1UL15AGqTruSqV8TQHP3yNiR",
 ]);
 
 export function grantForPrice(priceId: string | null | undefined): Grant | null {
