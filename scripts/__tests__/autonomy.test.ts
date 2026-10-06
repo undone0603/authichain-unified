@@ -364,7 +364,7 @@ describe("ops pulse", () => {
         },
       ],
       "main",
-      (run: { id?: number }) => run.id === 2
+      run => run.id === 2
     );
     expect(picked?.html_url).toBe("ok");
   });

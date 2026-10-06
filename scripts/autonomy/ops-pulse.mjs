@@ -111,15 +111,20 @@ export function isCallOnly(yamlText) {
  * showed a later success on main. Filter the unfiltered page here.
  */
 /**
- * @param {Array<{ id?: number, head_branch?: string, conclusion?: string, created_at?: string, html_url?: string }> | null | undefined} runs
- * @param {string} [branch]
- * @param {(run: { id?: number }) => boolean} [skip]
+ * @typedef {{ id?: number, head_branch?: string, conclusion?: string, created_at?: string, html_url?: string }} PulseRun
  */
-export function pickLatestCompletedRun(runs, branch = "main", skip = (_run) => false) {
+
+/**
+ * @param {PulseRun[] | null | undefined} runs
+ * @param {string} [branch]
+ * @param {(run: PulseRun) => boolean} [skip]
+ * @returns {PulseRun | null}
+ */
+export function pickLatestCompletedRun(runs, branch = "main", skip) {
   let best = null;
   for (const run of runs ?? []) {
     if (!run || run.head_branch !== branch || !run.conclusion) continue;
-    if (skip(run)) continue;
+    if (typeof skip === "function" && skip(run)) continue;
     if (!best || String(run.created_at) > String(best.created_at)) best = run;
   }
   return best;
