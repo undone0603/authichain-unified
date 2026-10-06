@@ -364,9 +364,9 @@ describe("ops pulse", () => {
         },
       ],
       "main",
-      run => run.id === 2
+      (run: { id?: number }) => run.id === 2
     );
-    expect(picked.html_url).toBe("ok");
+    expect(picked?.html_url).toBe("ok");
   });
 
   it("skips the stale run history of reusable (workflow_call-only) loops", () => {

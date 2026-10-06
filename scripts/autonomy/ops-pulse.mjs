@@ -110,7 +110,12 @@ export function isCallOnly(yamlText) {
  * returned that same old page while `per_page=1` and the unfiltered list
  * showed a later success on main. Filter the unfiltered page here.
  */
-export function pickLatestCompletedRun(runs, branch = "main", skip = () => false) {
+/**
+ * @param {Array<{ id?: number, head_branch?: string, conclusion?: string, created_at?: string, html_url?: string }> | null | undefined} runs
+ * @param {string} [branch]
+ * @param {(run: { id?: number }) => boolean} [skip]
+ */
+export function pickLatestCompletedRun(runs, branch = "main", skip = (_run) => false) {
   let best = null;
   for (const run of runs ?? []) {
     if (!run || run.head_branch !== branch || !run.conclusion) continue;
