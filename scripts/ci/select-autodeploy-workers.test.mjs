@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { selectAutoDeployWorkers, AUTO_DEPLOY_ALLOWLIST } from "./select-autodeploy-workers.mjs";
+import {
+  selectAutoDeployWorkers,
+  AUTO_DEPLOY_ALLOWLIST,
+} from "./select-autodeploy-workers.mjs";
 
 // This is the Review Focus case from
 // docs/superpowers/plans/2026-09-30-gs1-resolver-autonomous-ops.md: a push
@@ -67,6 +70,8 @@ test("the production allowlist ships the public workers and not paid or archived
   }
   assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("authichain-agentz"), false);
   assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("passport-demo"), false);
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("stripe-webhook-worker"), false);
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("first-dollar-desk"), false);
   const shipped = selectAutoDeployWorkers(
     ["authichain-com", "passport-demo", "gs1-resolver"],
     AUTO_DEPLOY_ALLOWLIST

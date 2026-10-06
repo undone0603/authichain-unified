@@ -1,0 +1,25 @@
+# stripe-webhook-worker — recovered 2026-10-06 from the live Cloudflare script.
+# Safety fix for a stub verifyStripeSignature() that always returned true.
+# Disposition: retire. workers/stripe-webhook is the live handler.
+#
+# SOURCE ONLY. Do not deploy from this file without the owner's yes.
+# Not on AUTO_DEPLOY_ALLOWLIST and not in deploy-workers.yml's matrix, so
+# merging this does not deploy it. Do not connect Workers Builds to this
+# directory.
+#
+# Live today: workers.dev is ON (unsigned POSTs to the public URL returned
+# HTTP 200 on 2026-10-06). Keep that flag as-is; flipping it would be a
+# deploy-time behaviour change, not this PR.
+
+name = "stripe-webhook-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+workers_dev = true
+
+# Secret / var NAMES the live Worker reads. Values stay in Cloudflare.
+# Never put values here. Never `wrangler secret put` from this PR
+# (`secret put` deploys immediately). If a later approved deploy needs
+# STRIPE_WEBHOOK_SECRET, use `wrangler versions secret put` then
+# `versions upload` + `versions deploy`.
+#   STRIPE_WEBHOOK_SECRET
+#   CONSENSUS_ENGINE_URL

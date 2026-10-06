@@ -49,10 +49,6 @@
       "archive": "docs/archive/cf-workers/authichain-consensus-engine.js",
       "note": "Last modified 2026-06-18."
     },
-    "stripe-webhook-worker": {
-      "disposition": "retire",
-      "note": "Last modified 2026-06-18; stripe-webhook (workers/stripe-webhook) is the live handler."
-    },
     "qron-edge": {
       "disposition": "unknown",
       "note": "Last modified 2026-06-22. apps/qron-platform/wrangler.toml deploys qron-edge-fleet, not qron-edge."
