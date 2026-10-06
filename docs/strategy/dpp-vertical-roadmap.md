@@ -216,7 +216,7 @@ Never encode a sector-specific legal threshold into the canonical identity model
 Keep the commercial surface thin:
 
 - **Free:** DPP readiness check.
-- **$299:** written readiness assessment + workspace activation.
+- **$299:** AuthiChain workspace, self-serve activation, and 50 workspace generations.
 - **Passport workspace:** publish signed passport records from verified evidence.
 - **API:** machine verification / resolver / evidence lookup.
 - **Enterprise:** supplier network, bulk ingestion, exports, audit packages and metered verification.

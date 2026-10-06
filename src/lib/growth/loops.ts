@@ -70,7 +70,7 @@ export const GROWTH_LOOPS: GrowthLoop[] = [
     primaryCta: "https://authichain.com/checkout/dpp_readiness",
     trigger: "Organic /p/{dpp-slug} or /docs/dpp-architecture visitor opens /dpp-check.",
     mechanism:
-      "Free gap map. After score, offer written assessment + 50 generations for $299. Does not claim EU registry filing, notified-body status, or GS1 Conformant Resolver.",
+      "Free gap map. After score, offer an AuthiChain workspace, self-serve activation, and 50 workspace generations for $299. Does not claim EU registry filing, notified-body status, or GS1 Conformant Resolver.",
     estimatedCvr: "estimate: 0.5–2% dpp_check_completed → purchase_dpp_succeeded",
     events: [
       "dpp_check_view",

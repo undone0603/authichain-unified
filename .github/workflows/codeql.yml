@@ -45,10 +45,16 @@ jobs:
               # Third-party code vendored unmodified (GS1's Apache-2.0 Digital
               # Link toolkit); findings belong upstream, like node_modules.
               - workers/gs1-resolver/src/vendor
+      # Queries still run. This private repo has no GitHub Code Security
+      # license, and the code-scanning upload returns 403 ("Advanced
+      # security has not been purchased"), which failed the job.
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          upload: never
+          upload-database: false
+          wait-for-processing: false
 
   CodeQL:
     name: CodeQL

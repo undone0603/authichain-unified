@@ -36,6 +36,8 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+// Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
+import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
@@ -169,7 +171,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time checkout that opens an AuthiChain workspace, with self-serve activation and 50 workspace generations to publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2303,7 +2305,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2339,7 +2341,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2963,12 +2965,11 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
           buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
-        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a sample assessment</a>
+        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a fictional walkthrough</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
-        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
+        Pay once. Self-serve activation opens your workspace.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
       </p>
     </div>
   </section>
@@ -3139,7 +3140,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
       <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Start with a written readiness assessment for your product line. Checkout is self-serve.</p>
+      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",
@@ -3597,6 +3598,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
+    const attestationSchema = attestationSchemaResponse(p);
+    if (attestationSchema) return attestationSchema;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }

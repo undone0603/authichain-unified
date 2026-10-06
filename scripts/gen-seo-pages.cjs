@@ -140,7 +140,7 @@ function moneyCtaHtml(brandKey, keyword, brand) {
         : '';
     const batterySample =
       battery && primaryHref === LIVE_MONEY.authichainDppCheckout
-        ? `<p>Want to see the deliverable first? <a href="${LIVE_MONEY.batterySampleAudit}">Read a sample $299 battery assessment</a>.</p>`
+        ? `<p>Want to see a fictional walkthrough first? <a href="${LIVE_MONEY.batterySampleAudit}">Read the fictional e-bike walkthrough</a>.</p>`
         : '';
     return (
       `<h2>Get started</h2>` +

@@ -133,6 +133,23 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("does not sell the $299 checkout as a written assessment or a Basic credit", () => {
+    const banned = [
+      "sample $299 battery assessment",
+      "credited toward AuthiChain Basic",
+      "written readiness assessment",
+      "written EU DPP readiness assessment",
+      "written plan for your product line",
+      "Want to see the deliverable first?",
+    ];
+    for (const page of listSeoPages()) {
+      const blob = `${page.bodyHtml}\n${JSON.stringify(page.jsonLd)}`;
+      for (const phrase of banned) {
+        expect(blob, `${page.slug} ${phrase}`).not.toContain(phrase);
+      }
+    }
+  });
+
   it("links AuthiChain DPP / battery / textiles hubs to live DPP checkout", () => {
     const batteries = getSeoPageBySlug("eu-digital-product-passport-batteries");
     const textiles = getSeoPageBySlug("eu-digital-product-passport-textiles");

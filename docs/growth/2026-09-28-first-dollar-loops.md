@@ -125,13 +125,13 @@ CTA: same.
 ### FAQ
 
 1. **Does $299 file my passport with the EU?** No.
-2. **What does $299 buy?** A written readiness assessment, self-serve workspace activation, and 50 generations to publish a first passport draft.
+2. **What does $299 buy?** An AuthiChain workspace, self-serve activation, and 50 workspace generations.
 3. **Is AuthiChain a GS1 Conformant Resolver?** No.
 
 ### Meta
 
 - Title: `Free EU Digital Product Passport readiness check | AuthiChain`
-- Description: `Score DPP gaps for free. Written readiness and workspace activation are $299. AuthiChain does not operate the EU registry.`
+- Description: `Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.`
 
 ### Loop mechanics
 
@@ -143,7 +143,7 @@ CTA: same.
 | Events    | `dpp_check_view`, `dpp_check_completed`, `dpp_check_email_captured`, `checkout_dpp_view`, `purchase_dpp_succeeded` |
 | Kill      | 30 days: 0 non-founder paid and ≥80 completed checks                                                               |
 
-Proof still required before any “brands use this” line: one stranger `purchase_dpp_succeeded` plus the delivered written assessment file.
+Proof still required before any “brands use this” line: one stranger `purchase_dpp_succeeded` and a provisioned workspace with 50 generations.
 
 ---
 

@@ -244,7 +244,7 @@ ${estateFeatures(
     },
     {
       title: "EU DPP Readiness",
-      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
     },
     {
       title: "Machine-readable passports",

@@ -12,7 +12,7 @@ This note exists so marketing, SEO, and checkout copy stop collapsing three diff
 |---|---|---|---|
 | **TruMark** | The physical / scan seal. A shopper or inspector points a camera at a tag. Already named in the StrainChain demo (“Simulate TruMark Scan”), enterprise tag-mint copy, and the shared “01 / TRUMARK” theme. | Not a Stripe product. Do not invent a TruMark price or a “seal mint” checkout. | Story page: `https://authichain.com/trumark`. CTAs below. |
 | **Passport** | StrainChain genetics passport, one cultivar, built from existing CoAs. Totals are recomputed from the raw panel at render time — never transcribed. | Not an origin-claim product. Not unlimited tag mints. | `$49` · `GET https://authichain.com/api/checkout/plan/strainchain_passport` |
-| **DPP** | AuthiChain EU DPP Readiness: written assessment, self-serve activation, 50 workspace generations. The same rail used for Made in USA / origin-claim documentation. | Not a genetics passport. Not a call with sales. | `$299` · `GET https://authichain.com/api/checkout/dpp` |
+| **DPP** | AuthiChain EU DPP Readiness: an AuthiChain workspace, self-serve activation, and 50 workspace generations. The same rail used for Made in USA / origin-claim documentation. | Not a genetics passport. Not a call with sales. | `$299` · `GET https://authichain.com/api/checkout/dpp` |
 
 Enterprise tag programs (unlimited TruMark mints, channel printers) are a **written packet** via `hello@authichain.com`, or the published catalogue at `/pricing`. Do not quote a number that is not in `src/lib/plans.ts`.
 
