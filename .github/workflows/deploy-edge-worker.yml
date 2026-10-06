@@ -31,7 +31,6 @@ jobs:
   deploy:
     needs: secret-scan
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 20
 
     env:
@@ -146,6 +145,6 @@ jobs:
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
           CRM_BASE_URL: ${{ vars.CRM_BASE_URL }}
         run: |
-          pnpm exec wrangler deploy --minify --config api/wrangler.toml \
+          pnpm exec wrangler deploy --minify --keep-vars --config api/wrangler.toml \
             --var "NEXT_PUBLIC_APP_URL:$APP_URL" \
             --var "CRM_BASE_URL:$CRM_BASE_URL"
