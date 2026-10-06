@@ -170,7 +170,6 @@ export const PLANS: Plan[] = [
       "One-time checkout that opens an AuthiChain workspace with 50 generations. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
-    stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
     stripe_mode: "payment",
     tier: "pro",
     features: [
