@@ -7,6 +7,7 @@ import { getBrandIdFromRequest } from "./brand-billing";
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { checkoutReturnOrigin } from "./checkout-gate";
+import { CASH_CANCEL_URL, CASH_SUCCESS_URL, isCashSku } from "./cash-entitlement";
 import { PLANS, type PlanId } from "./plans";
 
 export type PlanCheckoutOk = { ok: true; url: string; planId: string };
@@ -60,7 +61,8 @@ export async function createPlanCheckoutSession(opts: {
   const email = pickCheckoutEmail(
     typeof body.email === "string" ? body.email : ""
   );
-  if (opts.requireEmail && !email) {
+  const cashSku = isCashSku(plan.id);
+  if ((opts.requireEmail || cashSku) && !email) {
     const visitId =
       typeof body.prospectId === "string" ? body.prospectId.trim() : "";
     return {
@@ -90,7 +92,6 @@ export async function createPlanCheckoutSession(opts: {
       : "";
   const source =
     typeof body.source === "string" ? body.source.trim().slice(0, 64) : "";
-  // "musa" only groups the pricing page; it is not a checkout brand.
   const brand =
     plan.brand && plan.brand !== "musa"
       ? plan.brand
@@ -109,10 +110,12 @@ export async function createPlanCheckoutSession(opts: {
       ...hostedCheckoutRecoveryParams(plan.stripe_mode),
       payment_method_types: ["card"],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
-        prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
-      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}`,
-      cancel_url: `${origin}/#pricing`,
+      success_url: cashSku
+        ? CASH_SUCCESS_URL
+        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
+            prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
+          }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}`,
+      cancel_url: cashSku ? CASH_CANCEL_URL : `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: plan.id,
