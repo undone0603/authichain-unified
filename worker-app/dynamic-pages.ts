@@ -1572,7 +1572,7 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/checkout/starter", c.req.url);
+  const dest = new URL("https://authichain.com/checkout/starter");
   dest.searchParams.set("targetUrl", targetUrl);
   if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
