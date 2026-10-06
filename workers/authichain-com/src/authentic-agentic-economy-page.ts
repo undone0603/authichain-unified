@@ -21,6 +21,7 @@ import {
   estateSteps,
   estateTrust,
 } from "../../_shared/estate-landing.ts";
+import { planPaymentLink } from "../../../src/lib/plans";
 
 export const AUTHENTIC_AGENTIC_ECONOMY_PATHS = [
   "/authentic-agentic-economy",
@@ -35,6 +36,9 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
     "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
 } as const;
 
+const STARTER_CHECKOUT =
+  planPaymentLink("starter") ?? "https://authichain.com/checkout/starter";
+
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
   return (AUTHENTIC_AGENTIC_ECONOMY_PATHS as readonly string[]).includes(
     pathname
@@ -45,7 +49,7 @@ function esc(value: unknown): string {
   return String(value ?? "").replace(
     /[<>&"']/g,
     c =>
-      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[
+      ({ "<": "<", ">": ">", "&": "&", '"': """, "'": "&#39;" })[
         c
       ] as string
   );
@@ -103,7 +107,7 @@ const JSON_LD = {
           name: "How do agents pay AuthiChain?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human money path remains EU DPP Readiness on Stripe.",
+            text: "Funded agents verify a product for $0.05 USDC on Base via the live x402 rail — not Polygon $QRON. Unpaid POST /api/x402 returns HTTP 402. Public docs are at /x402. The human checkout on this page is the $29 QRON Starter.",
           },
         },
         {
@@ -111,7 +115,7 @@ const JSON_LD = {
           name: "Does this replace a Digital Product Passport for people?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "No. Humans still enroll and activate DPP Readiness. The same certificate is what an agent should query before it transacts, so the passport is machine-readable rather than a PDF for humans only.",
+            text: "No. The $299 DPP page stays off the paid buttons until its heading says EU DPP Workspace. The $29 starter is the checkout linked from this page.",
           },
         },
       ],
@@ -202,20 +206,16 @@ ${estateNav(
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
   ],
-  { href: "/pricing", label: "View pricing" }
+  { href: STARTER_CHECKOUT, label: "Buy starter — $29" }
 )}
 <main id="main">
 ${estateHero({
   eyebrow: "The authentic agentic economy",
   title: "Agents can pay. They still need to know if it is real.",
-  lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
-  emailCheckout: {
-    action: "https://authichain.com/checkout/dpp_readiness",
-    label: "Start DPP checkout — $299",
-  },
+  lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The paid checkout on this page is the $29 QRON Starter.",
   actions: [
+    { href: STARTER_CHECKOUT, label: "Buy a QRON Starter Pack — $29", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
-    { href: "/onboard", label: "Onboard", primary: false },
   ],
 })}
 ${estateTrust([
@@ -243,8 +243,8 @@ ${estateFeatures(
       body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Unpaid POST /api/x402 returns HTTP 402. Public docs at /x402.",
     },
     {
-      title: "EU DPP Readiness",
-      body: "Primary human money path. EU DPP Readiness is $299 on the published Stripe Payment Link, or enter a work email so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
+      title: "QRON Starter",
+      body: "The paid button on this page is the $29 QRON Starter. The $299 DPP checkout stays off the buttons until its live heading says EU DPP Workspace.",
     },
     {
       title: "Machine-readable passports",
@@ -274,15 +274,11 @@ ${estateSteps(
 )}
 ${sources()}
 ${estateCtaBand({
-  title: "Start on a live path",
-  lede: "Humans enroll DPP Readiness. Agents pay per verification on x402. Same authenticity layer. Enter a work email so Stripe can recover the cart.",
-  emailCheckout: {
-    action: "https://authichain.com/checkout/dpp_readiness",
-    label: "Start DPP checkout",
-  },
+  title: "Buy the $29 starter",
+  lede: "Agents pay per verification on x402. Humans buy the $29 QRON Starter. The $299 page is not linked from here.",
   actions: [
+    { href: STARTER_CHECKOUT, label: "Buy a QRON Starter Pack — $29", primary: true },
     { href: "/x402", label: "x402 agent pay", primary: false },
-    { href: "/pricing", label: "View pricing", primary: false },
   ],
 })}
 </main>
@@ -292,7 +288,7 @@ ${estateFooter(
     {
       heading: "Start",
       links: [
-        { href: "/pricing", label: "DPP checkout" },
+        { href: STARTER_CHECKOUT, label: "Buy starter — $29" },
         { href: "/pricing", label: "Pricing" },
         { href: "/onboard", label: "Onboard" },
       ],
