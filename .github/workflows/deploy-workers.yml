@@ -238,7 +238,10 @@ jobs:
           else
             CONFIG=wrangler.toml
           fi
-          npx wrangler deploy --minify --config "$CONFIG"
+          # --keep-vars leaves dashboard vars in place. Without it, a full
+          # matrix deploy replaces them with the file and drops Stripe and
+          # x402 vars that are not in wrangler.toml.
+          npx wrangler deploy --minify --keep-vars --config "$CONFIG"
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

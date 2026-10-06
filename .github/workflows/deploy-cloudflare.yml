@@ -96,7 +96,7 @@ jobs:
       - name: Publish application Worker + Assets
         if: steps.secrets_check.outputs.skip != 'true'
         working-directory: worker-app
-        run: npx wrangler deploy --minify --config wrangler.toml
+        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -124,7 +124,7 @@ jobs:
               printf '%s' "$AUTHICHAIN_ATTESTATION_KEY_ID" | npx wrangler secret put \
                 AUTHICHAIN_ATTESTATION_KEY_ID --name "$WORKER_NAME"
               echo "bound AUTHICHAIN_ATTESTATION_KEY_ID on $WORKER_NAME"
-              npx wrangler deploy --minify --config wrangler.toml
+              npx wrangler deploy --minify --keep-vars --config wrangler.toml
             else
               echo "AUTHICHAIN_ATTESTATION_KEY_ID not supplied — leaving existing binding in place"
             fi
@@ -148,7 +148,7 @@ jobs:
           fi
           echo "bound AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 + PUBLIC_JWK on $WORKER_NAME"
           echo "re-deploying so custom routes attach to the version that has the secret"
-          npx wrangler deploy --minify --config wrangler.toml
+          npx wrangler deploy --minify --keep-vars --config wrangler.toml
           for i in 1 2 3 4 5 6 7 8; do
             sleep 5
             AFTER="$(curl -sS -o /tmp/jwks-after.json -w '%{http_code}' \
@@ -168,7 +168,7 @@ jobs:
       - name: Deploy authichain-scan-validate
         if: ${{ always() && steps.secrets_check.outputs.skip != 'true' }}
         working-directory: workers/authichain-scan-validate
-        run: npx wrangler deploy --minify --config wrangler.toml
+        run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
