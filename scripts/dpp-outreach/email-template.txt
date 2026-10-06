@@ -1,18 +1,18 @@
-Subject: EU DPP readiness for {{company}} — $299 audit (credited to AuthiChain)
+DO NOT SEND. Draft only. Founder has not approved an outbound send.
+
+Subject: EU DPP workspace for {{company}} — $299, not an audit
 
 Hi {{contact_name}},
 
-If {{company}} sells into the EU, Digital Product Passport requirements are moving from "roadmap" to buyer/compliance pressure.
+If {{company}} sells into the EU, Digital Product Passport requirements are moving from roadmap to buyer questions.
 
-We built a one-time EU DPP Readiness Audit ($299) that:
-- maps your current labeling/passport gaps
-- activates a self-serve AuthiChain workspace
-- credits the $299 toward AuthiChain Basic if you continue
+The $299 checkout opens an AuthiChain workspace with 50 generations. It is not an audit, not a certification, and not legal advice. It does not register a product in EUDAMED.
 
 Start here (tracked):
-https://authichain.com/dpp?utm_source=email&utm_medium=warm&utm_campaign={{utm_campaign}}&email={{email}}
+https://authichain.com/checkout/dpp_readiness?utm_source=email&utm_medium=warm&utm_campaign={{utm_campaign}}&email={{email}}
 
-Reply to this email with a good 15-minute window this week if you'd rather walk through it live.
+The public product is the $29 Starter pack if you only need AI QR generations:
+https://authichain.com/checkout/starter
 
 — Zac
 AuthiChain

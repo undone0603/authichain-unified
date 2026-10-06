@@ -30,7 +30,7 @@ export function rewriteHomepageMusaCard(html: string): string {
     .split(DPP_CHECKOUT)
     .join(MUSA_CHECKOUT)
     .replace(
-      "Start EU DPP Readiness Audit — $299",
+      "Open EU DPP Workspace — $299",
       "Start my claim file — $299"
     );
 
@@ -47,7 +47,7 @@ export function rewriteHomepageMusaCard(html: string): string {
   next = next.slice(0, after) + window + next.slice(windowEnd);
 
   return next.replace(
-    "start today with the $299 EU DPP Readiness Audit",
+    "open the $299 EU DPP Workspace",
     "start today with the $299 Made in USA Claim File"
   );
 }

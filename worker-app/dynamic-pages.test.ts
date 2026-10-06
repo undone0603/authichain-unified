@@ -633,7 +633,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     expect(body).toContain("Or buy now, no call needed");
     expect(body).toContain("StrainChain Passport — $49");
     expect(body).toContain("StrainChain Farm Plan — $149/mo");
-    expect(body).toContain("EU DPP Readiness Audit — $299");
+    expect(body).toContain("EU DPP Workspace — $299");
     expect(body).not.toContain('href="/verify"');
     expect(body).toContain('href="https://authichain.com/contact"');
     expect(body).toContain("min-height:44px");
