@@ -67,7 +67,7 @@ export function verifyUrlFor(id: string): string {
 }
 
 function bytesToB58(bytes: Uint8Array): string {
-  let digits = [0];
+  const digits = [0];
   for (const byte of bytes) {
     let carry = byte;
     for (let i = 0; i < digits.length; i++) {
@@ -90,7 +90,7 @@ function bytesToB58(bytes: Uint8Array): string {
 }
 
 function b58ToBytes(value: string): Uint8Array<ArrayBuffer> {
-  let bytes = [0];
+  const bytes = [0];
   for (const char of value) {
     const n = B58.indexOf(char);
     if (n < 0) throw new Error("bad base58");
