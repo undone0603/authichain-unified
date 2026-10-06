@@ -7,28 +7,17 @@
 # Security: every trigger runs the default-branch copy of this workflow and the
 # script. Nothing checks out or executes PR code; the job only reads PR state
 # through the API. Forks and untrusted authors are skipped by the script.
+#
+# Trigger cut: check_suite and the extra workflow_run names queued a sweep per
+# check and failed in ~3s with runner_id 0 (job 112344478251). One sweep reads
+# every open PR, so CI Main plus cron is enough.
 name: Merge autopilot
 
 on:
-  # Wake as soon as CI finishes. check_suite covers external apps (Cloudflare
-  # Workers Builds); GitHub does not fire it for Actions suites, so the main
-  # PR workflows are listed under workflow_run.
   workflow_run:
     workflows:
-      - CI
       - CI Main
-      - Lint
-      - Typecheck ratchet
-      - CodeQL
-      - Compliance Audit
-      - Security Scan
-      - Windows path safety
-      - Production Drizzle Audit
     types: [completed]
-  check_suite:
-    types: [completed]
-  pull_request_target:
-    types: [opened, reopened, ready_for_review, labeled, unlabeled]
   # A merge to main makes every other PR behind; sweep to update them.
   push:
     branches: [main]
@@ -45,7 +34,7 @@ on:
 # looks at all open PRs, so nothing is lost.
 concurrency:
   group: merge-autopilot
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
