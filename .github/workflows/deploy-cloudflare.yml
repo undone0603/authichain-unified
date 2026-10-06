@@ -66,11 +66,20 @@ jobs:
 
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm run build
         env:
+          NODE_OPTIONS: --max-old-space-size=4096
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
+        run: |
+          # Same cap as CI Main. The default heap aborts next build --webpack
+          # with exit 134 before the edge router can publish.
+          if pnpm build; then
+            exit 0
+          fi
+          echo "Production build failed; retrying once"
+          sleep 15
+          pnpm build
 
       - name: Inspect build output
         if: steps.secrets_check.outputs.skip != 'true'
