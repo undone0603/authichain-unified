@@ -1,15 +1,15 @@
 /**
  * Shared DPP $299 Checkout Session create.
  *
- * Used by Next `src/app/api/checkout/dpp` and `worker-app` GET /api/checkout/dpp
- * so the edge worker does not fork money logic. Totals/price come from
- * `src/lib/plans.ts` only.
+ * Paid return is https://authichain.com/onboard. No Basic credit.
+ * Price comes from src/lib/plans.ts only.
  */
 
 import { hostedCheckoutRecoveryParams } from "./checkout-recovery";
 import { checkoutNeedEmailRedirect, pickCheckoutEmail } from "./checkout-email";
 import { gatedConfirmUrl } from "./checkout-gate";
 import { DPP_OFFER_KEY, PLANS } from "./plans";
+import { CASH_CANCEL_URL, CASH_SUCCESS_URL } from "./cash-entitlement";
 import {
   DPP_SMOKE_PROMO,
   dppSmokeRequestAuthorized,
@@ -17,7 +17,7 @@ import {
   recordDppLoopEvent,
 } from "./dpp-loop";
 
-export const DPP_CHECKOUT_ORIGIN = "https://authichain.govchain.us";
+export const DPP_CHECKOUT_ORIGIN = "https://authichain.com";
 export { DPP_SMOKE_PROMO, dppSmokeRequestAuthorized, isDppSmokePromo };
 
 const PLAN = PLANS.find(p => p.id === "dpp_readiness");
@@ -50,11 +50,9 @@ export async function createDppCheckoutSession(opts: {
   stripeSecretKey: string;
   supabase?: SupabaseLike | null;
   origin?: string;
-  /** Required to open the $0 DPP-SMOKE-E2E session. Public promo is refused. */
   smokeAuthorized?: boolean;
 }): Promise<DppCheckoutResult> {
   const { searchParams, stripeSecretKey, supabase } = opts;
-  const origin = opts.origin || DPP_CHECKOUT_ORIGIN;
 
   const visitId =
     pick(searchParams, "visit_id") ||
@@ -77,9 +75,6 @@ export async function createDppCheckoutSession(opts: {
       url: gatedConfirmUrl("dpp_readiness", searchParams),
     };
   }
-  // Affiliate / referral attribution survives into Stripe metadata so the
-  // webhook can accrue commission. First-touch ?ref= has no cookie yet on
-  // this request, so accept the query aliases the proxy/middleware persists.
   const affiliateCode =
     pick(searchParams, "affiliate_code", 64) ||
     pick(searchParams, "ref", 64) ||
@@ -123,8 +118,8 @@ export async function createDppCheckoutSession(opts: {
     apiVersion: "2026-08-26.dahlia" as const,
   });
 
-  const successUrl = `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`;
-  const cancelUrl = `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`;
+  const successUrl = `${CASH_SUCCESS_URL}&visit_id=${encodeURIComponent(visitId)}`;
+  const cancelUrl = `${CASH_CANCEL_URL}?cancelled=1&visit_id=${encodeURIComponent(visitId)}`;
 
   try {
     const session = await stripe.checkout.sessions.create({
