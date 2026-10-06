@@ -729,7 +729,7 @@ function pricing(): string {
          })}</p></div>
        <div class="card"><p class="kicker">Passport</p><p class="price">$49</p><p class="muted">One cultivar. StrainChain, not an AuthiChain desk fee.</p>${passport}
          <p style="margin-top:.75rem"><a href="/telegram">Telegram Mini App</a></p></div>
-       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Credits toward AuthiChain Basic.</p>${dpp}</div>
+       <div class="card"><p class="kicker">EU DPP Readiness</p><p class="price">$299</p><p class="muted">One-time. Opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>${dpp}</div>
      </div>
      <p class="muted" style="margin-top:1.5rem">QRON Starter $29 / Creator $99 live on <a href="https://qron.space/generate">qron.space/generate</a>. GovChain is onboard only. Theater is not listed. Farm $149/mo is the founder-income recurring rail.</p>`
   );

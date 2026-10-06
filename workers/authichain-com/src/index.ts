@@ -2340,7 +2340,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",

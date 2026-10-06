@@ -31,7 +31,7 @@ export function AuthichainHome() {
         {
           icon: <Award className="h-6 w-6" />,
           title: "EU DPP Readiness",
-          desc: "Live self-serve checkout. Written readiness assessment, merchant activation, and 50 workspace generations. $299 credited toward AuthiChain Basic on conversion.",
+          desc: "Live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,

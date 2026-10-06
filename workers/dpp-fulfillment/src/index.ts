@@ -162,7 +162,7 @@ ${activateUrl}
 
 That records merchant activation and unlocks the rest of the autonomous loop. Humans only handle exceptions.
 
-Your $299 is fully credited toward AuthiChain Basic if you convert after the audit.
+The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.
 
 — AuthiChain
 hello@authichain.com
@@ -175,7 +175,7 @@ function recoveryBody(name: string, paymentUrl: string): string {
 
 You started checkout for the EU DPP Readiness Audit but didn't finish.
 
-The EU DPP registry is live — brands that can't prove provenance lose shelf access. The audit is still $299 one-time (credited toward AuthiChain Basic on conversion).
+The checkout is still $299 one-time. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.
 
 Finish checkout here:
 ${paymentUrl}
