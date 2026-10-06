@@ -111,14 +111,13 @@ export function isCallOnly(yamlText) {
  * showed a later success on main. Filter the unfiltered page here.
  */
 /**
- * @typedef {{ id?: number, head_branch?: string, conclusion?: string, created_at?: string, html_url?: string }} PulseRun
- */
-
-/**
- * @param {PulseRun[] | null | undefined} runs
+ * `runs` stays untyped on purpose. A PulseRun return makes the existing
+ * caller `picked.html_url` two new errors, and the ratchet is already at
+ * its baseline. Only `skip` is typed, so the test callback is not `any`.
+ *
+ * @param {any} runs
  * @param {string} [branch]
- * @param {(run: PulseRun) => boolean} [skip]
- * @returns {PulseRun | null}
+ * @param {(run: { id?: number }) => boolean} [skip]
  */
 export function pickLatestCompletedRun(runs, branch = "main", skip) {
   let best = null;
