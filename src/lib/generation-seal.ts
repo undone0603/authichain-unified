@@ -89,7 +89,7 @@ function bytesToB58(bytes: Uint8Array): string {
   return out;
 }
 
-function b58ToBytes(value: string): Uint8Array {
+function b58ToBytes(value: string): Uint8Array<ArrayBuffer> {
   let bytes = [0];
   for (const char of value) {
     const n = B58.indexOf(char);
