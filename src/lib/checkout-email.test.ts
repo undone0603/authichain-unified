@@ -152,6 +152,9 @@ describe("rewriteCheckoutHref (buy.stripe.com)", () => {
     ).toBe(
       "https://authichain.com/checkout/dpp_readiness?email=a%40b.co&utm_source=x"
     );
+    expect(
+      rewriteCheckoutHref("https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44")
+    ).toBe("https://authichain.com/checkout/dpp_readiness");
   });
 });
 
