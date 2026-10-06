@@ -16,6 +16,7 @@ import {
   decideIssueAction,
   evaluateWorkflows,
   isCallOnly,
+  isQueuedCancellation,
   pickLatestCompletedRun,
   runProbes,
   signature,
@@ -317,6 +318,55 @@ describe("ops pulse", () => {
     expect(picked.html_url).toBe("new");
     expect(picked.conclusion).toBe("success");
     expect(pickLatestCompletedRun([])).toBeNull();
+  });
+
+  it("does not page when the only jobs were cancelled before they started", () => {
+    const runs = new Map([
+      [
+        "a.yml",
+        {
+          conclusion: "failure",
+          html_url: "u",
+          created_at: "",
+          queued_cancellation: true,
+        },
+      ],
+    ]);
+    expect(evaluateWorkflows(rows, remote, runs)).toEqual([]);
+    expect(
+      isQueuedCancellation([
+        { conclusion: "cancelled", steps: [] },
+        { conclusion: "cancelled" },
+      ])
+    ).toBe(true);
+    expect(
+      isQueuedCancellation([{ conclusion: "failure", steps: [{ name: "x" }] }])
+    ).toBe(false);
+    expect(isQueuedCancellation([])).toBe(false);
+  });
+
+  it("skips a queued cancellation and keeps the older real run", () => {
+    const picked = pickLatestCompletedRun(
+      [
+        {
+          id: 2,
+          head_branch: "main",
+          conclusion: "failure",
+          created_at: "2026-10-06T00:00:00Z",
+          html_url: "cancelled",
+        },
+        {
+          id: 1,
+          head_branch: "main",
+          conclusion: "success",
+          created_at: "2026-10-05T00:00:00Z",
+          html_url: "ok",
+        },
+      ],
+      "main",
+      run => run.id === 2
+    );
+    expect(picked?.html_url).toBe("ok");
   });
 
   it("skips the stale run history of reusable (workflow_call-only) loops", () => {
