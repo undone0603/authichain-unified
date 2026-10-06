@@ -36,7 +36,8 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
-import { attestationSchemaResponse } from "./attestation-schema.ts";
+// Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
+import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
