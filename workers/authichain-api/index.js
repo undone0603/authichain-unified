@@ -5,7 +5,8 @@
  * v3.0 queries REAL Supabase backend for verify/classify/register/analytics.
  * This is what RapidAPI subscribers pay for.
  *
- * Plans: Free (10/hr), Basic ($9/mo, 100/day), Pro ($29/mo, 1000/day), Ultra ($99/mo, 10000/day)
+ * Public catalog is the free meter plus https://authichain.com/pricing.
+ * basic/pro/ultra/enterprise below are rate-limit buckets, not products for sale.
  * Auth: X-RapidAPI-Key, X-API-Key, or Authorization Bearer
  *
  * Routes:
@@ -44,22 +45,13 @@ const SUPA_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co";
 // (service-worker syntax). Set via: wrangler secret put SUPABASE_ANON_KEY --name authichain-api
 
 const PLANS = {
-  free: { name: "Free", price: "$0", dailyLimit: 100, hourlyLimit: 10 },
-  basic: { name: "Basic", price: "$9/mo", dailyLimit: 100, hourlyLimit: 100 },
-  pro: { name: "Pro", price: "$29/mo", dailyLimit: 1000, hourlyLimit: 1000 },
-  ultra: {
-    name: "Ultra",
-    price: "$99/mo",
-    dailyLimit: 10000,
-    hourlyLimit: 10000,
-  },
-  enterprise: {
-    name: "Enterprise",
-    price: "Custom",
-    dailyLimit: 999999,
-    hourlyLimit: 999999,
-  },
+  free: { name: "Free", dailyLimit: 100, hourlyLimit: 10 },
+  basic: { name: "API", dailyLimit: 100, hourlyLimit: 100 },
+  pro: { name: "API", dailyLimit: 1000, hourlyLimit: 1000 },
+  ultra: { name: "API", dailyLimit: 10000, hourlyLimit: 10000 },
+  enterprise: { name: "API", dailyLimit: 999999, hourlyLimit: 999999 },
 };
+const PRODUCTS_URL = "https://authichain.com/pricing";
 
 const DEMO_KEYS = {
   demo_test_key_2026: { plan: "free", name: "Demo User", isDemo: true },
@@ -800,16 +792,15 @@ async function handleRequest(req) {
   if (path === "/api/v1/pricing") {
     return j({
       success: true,
-      plans: Object.entries(PLANS).map(function (e) {
-        return {
-          id: e[0],
-          name: e[1].name,
-          price: e[1].price,
-          requests: e[0] === "free" ? "10/hour" : e[1].dailyLimit + "/day",
-        };
-      }),
-      subscribe:
-        "https://rapidapi.com/authichain-authichain-default/api/authichain-api",
+      plans: [
+        {
+          id: "free",
+          name: "Free",
+          price: "$0",
+          requests: "10/hour",
+        },
+      ],
+      products: PRODUCTS_URL,
     });
   }
 
@@ -913,8 +904,7 @@ async function handleRequest(req) {
           "Include your key in X-RapidAPI-Key, X-API-Key, or Authorization Bearer header.",
         get_free_key:
           'POST /api/v1/keys/create with {"email":"you@example.com"}',
-        subscribe:
-          "https://rapidapi.com/authichain-authichain-default/api/authichain-api",
+        products: PRODUCTS_URL,
       },
       401
     );
@@ -1336,11 +1326,14 @@ async function handleRequest(req) {
           limit: kd.limit,
           name: kd.name || "API User",
           isDemo: kd.isDemo || false,
-          planDetails: PLANS[kd.plan] || PLANS.free,
-          upgrade:
-            kd.plan !== "ultra"
-              ? "https://rapidapi.com/authichain-authichain-default/api/authichain-api"
-              : null,
+          planDetails: {
+            name: (PLANS[kd.plan] || PLANS.free).name,
+            requests:
+              kd.plan === "free"
+                ? "10/hour"
+                : (PLANS[kd.plan] || PLANS.free).dailyLimit + "/day",
+          },
+          upgrade: PRODUCTS_URL,
         },
         200,
         rateHeaders
