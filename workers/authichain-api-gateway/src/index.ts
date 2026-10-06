@@ -249,7 +249,6 @@ export default {
             { name: 'QRON Starter Pack', price: '$29', requests: '100 generations', features: ['100 AI QR generations, never expire', 'Holographic & Memory modes', 'Designed for AuthiChain signed verification (in development)'], stripeLink: 'https://authichain.com/checkout/starter' },
             { name: 'QRON Creator Pack', price: '$99', requests: '500 generations', features: ['500 AI QR generations, never expire', 'All Pro modes and premium styles', 'Priority generation queue'], stripeLink: 'https://authichain.com/checkout/creator' },
             { name: 'EU DPP Readiness', price: '$299', requests: 'One-time', features: ['AuthiChain workspace', 'Self-serve activation', '50 workspace generations'], stripeLink: 'https://authichain.com/checkout/dpp_readiness' },
-            { name: 'Theater 3: Elite', price: '$1,499/mo', requests: 'Unlimited', features: ['Unlimited industrial artifacts', 'Custom AI model training', 'Real-time security webhooks'], stripeLink: 'https://authichain.com/checkout/theater_3' },
           ]
         }, cors);
       }
@@ -468,26 +467,15 @@ td{padding:12px;border-bottom:1px solid #111}
 <p>Get current product and pricing information.</p>
 
 <h2>Products &amp; Pricing</h2>
+<p>These are the live checkout plans. Archived StrainChain Basic/Pro/Enterprise and QRON Single/Brand Pack prices are not offered.</p>
 
 <table>
 <tr><th>Plan</th><th>Price</th><th>Details</th></tr>
 <tr><td>Free (API Demo)</td><td style="color:#3ddc60">$0</td><td>10 requests/hour, classification + verification</td></tr>
-</table>
-
-<h3 style="margin-top:32px;color:#8b5cf6">StrainChain <span class="product-note">Cannabis Compliance</span></h3>
-<table>
-<tr><th>Plan</th><th>Price</th><th>Details</th></tr>
-<tr><td>Basic</td><td style="color:#3ddc60">$199/mo</td><td>Cannabis compliance tracking, basic analytics</td></tr>
-<tr><td>Pro</td><td style="color:#3ddc60">$499/mo</td><td>Advanced analytics, priority support, API access</td></tr>
-<tr><td>Enterprise</td><td style="color:#3ddc60">$999/mo</td><td>White-label, SLA, dedicated support, custom integrations</td></tr>
-</table>
-
-<h3 style="margin-top:32px;color:#8b5cf6">QRON <span class="product-note">QR Code Generation</span></h3>
-<table>
-<tr><th>Plan</th><th>Price</th><th>Details</th></tr>
-<tr><td>Single</td><td style="color:#3ddc60">$49</td><td>One-time, single QR code</td></tr>
-<tr><td>Brand Pack</td><td style="color:#3ddc60">$199</td><td>One-time, multiple QR codes + brand customization</td></tr>
-<tr><td>Enterprise</td><td style="color:#3ddc60">$999/mo</td><td>Unlimited QR codes, full brand suite, API access</td></tr>
+<tr><td>StrainChain Passport</td><td style="color:#3ddc60">$49</td><td>One published genetics passport</td></tr>
+<tr><td>QRON Starter Pack</td><td style="color:#3ddc60">$29</td><td>100 AI QR generations</td></tr>
+<tr><td>QRON Creator Pack</td><td style="color:#3ddc60">$99</td><td>500 AI QR generations</td></tr>
+<tr><td>EU DPP Readiness</td><td style="color:#3ddc60">$299</td><td>AuthiChain workspace, self-serve activation, 50 workspace generations</td></tr>
 </table>
 
 <h2>Accounts v2 (Admin)</h2>
