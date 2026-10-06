@@ -333,6 +333,33 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   assert.match(await sitemap.text(), /<urlset/);
 });
 
+test("POST /generate sends an anonymous submit to the $29 Starter checkout", async () => {
+  const real = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("should not proxy", { status: 500 });
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/generate", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "targetUrl=https%3A%2F%2Fexample.com%2Fsku&prompt=neon",
+      }),
+      { APP_ORIGIN: "https://app.example.com" }
+    );
+    assert.equal(res.status, 303);
+    assert.equal(called, false);
+    const location = new URL(res.headers.get("location") || "");
+    assert.equal(location.origin + location.pathname, "https://authichain.com/checkout/starter");
+    assert.equal(location.searchParams.get("targetUrl"), "https://example.com/sku");
+    assert.equal(location.searchParams.get("prompt"), "neon");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test("/generate is proxied to the app, not answered with a 404", async () => {
   const real = globalThis.fetch;
   const calls: Request[] = [];
