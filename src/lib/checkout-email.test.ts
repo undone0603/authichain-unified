@@ -143,6 +143,16 @@ describe("rewriteCheckoutHref (buy.stripe.com)", () => {
     expect(rewriteCheckoutHref("https://buy.stripe.com/unknown")).toBeUndefined();
     expect(rewriteCheckoutHref("https://authichain.com/checkout/creator")).toBeUndefined();
   });
+
+  it("sends the deleted DPP Payment Link to the $299 confirm page", () => {
+    expect(
+      rewriteCheckoutHref(
+        "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c?prefilled_email=a%40b.co&utm_source=x"
+      )
+    ).toBe(
+      "https://authichain.com/checkout/dpp_readiness?email=a%40b.co&utm_source=x"
+    );
+  });
 });
 
 describe("paymentLinkWithPrefilledEmail", () => {
