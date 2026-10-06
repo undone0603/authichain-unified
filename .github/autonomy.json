@@ -96,10 +96,10 @@
       "managed": true,
       "workflows": {
         "ops-pulse.yml": "on",
+        "honest-launch-gate.yml": "on",
         "cloudflare-production-health.yml": "on",
         "production-smoke-gate.yml": "on",
         "checkout-watchdog.yml": "on",
-        "honest-launch-gate.yml": "on",
         "schema-drift.yml": "on",
         "supabase-baseline.yml": "on",
         "verify-integrations.yml": "on",
