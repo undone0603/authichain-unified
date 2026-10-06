@@ -36,6 +36,7 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+import { attestationSchemaResponse } from "./attestation-schema.ts";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
@@ -169,7 +170,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time checkout that opens an AuthiChain workspace, with self-serve activation and 50 workspace generations to publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -3596,6 +3597,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
+    const attestationSchema = attestationSchemaResponse(p);
+    if (attestationSchema) return attestationSchema;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }

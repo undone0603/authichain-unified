@@ -128,10 +128,10 @@ export function planCheckoutCta(
   };
 }
 
-/** A $299 buyer with no reviews to read can see the written deliverable first. */
+/** The pricing card links the fictional walkthrough. The checkout does not send that page. */
 function sampleAuditLink(origin: PricingOrigin): string {
   const base = origin === "authichain" ? "" : "https://authichain.com";
-  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a sample assessment</a> on a fictional e-bike pack.</p>`;
+  return `<p class="section-sub" style="margin-top:12px">E-bike and other LMT batteries need a passport from 18 February 2027. <a href="${base}/battery-passport">See the gap map</a> and <a href="${base}/battery-passport/sample-audit">a fictional walkthrough</a> on a fictional e-bike pack.</p>`;
 }
 
 /** Plans sold as QRON products in Stripe ("QRON Starter Pack" etc.). */

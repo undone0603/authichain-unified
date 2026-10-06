@@ -67,7 +67,7 @@ Live and citeable:
 - Agent verification at [/x402](/x402) — $0.05 USDC per call on Base. Unpaid `POST /api/x402` returns HTTP 402.
 - Human commercial path: EU DPP Readiness, $299 one-time.
 
-EU DPP Readiness includes a written assessment, self-serve workspace activation, and 50 generations to publish a first passport. The $299 is a credit balance toward AuthiChain Basic invoices until it is used. Basic is listed on [/pricing#basic](/pricing#basic). This docs page does not start a Basic subscription — checkout lives on pricing.
+EU DPP Readiness opens an AuthiChain workspace, with self-serve activation and 50 generations to publish a first passport. Checkout is on [/pricing](/pricing).
 
 ## What is in development
 
@@ -113,7 +113,7 @@ Expect HTTP 402 and a payment requirement. That is how a machine starts a verifi
 Human path that is live today:
 
 1. [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — score the gaps.
-2. [/checkout/dpp_readiness](/checkout/dpp_readiness?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — $299 if you want the written assessment and workspace.
+2. [/checkout/dpp_readiness](/checkout/dpp_readiness?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — $299 if you want the workspace and 50 generations.
 3. [/onboard](/onboard?utm_source=docs&utm_medium=authority&utm_campaign=dpp-architecture) — pilot seal, work email, no call.
 
 ## Implementation guidance
@@ -164,4 +164,4 @@ Certain batteries from 18 February 2027 under Regulation (EU) 2023/1542. Confirm
 No. A QR is a carrier. The passport is the record behind it, plus the ability to verify who signed which claim.
 
 **Is the $299 an official certification?**
-No. It is a written readiness assessment and self-serve activation. Not legal advice. Not a notified-body certification. Not an EU registry filing.
+No. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Not legal advice. Not a notified-body certification. Not an EU registry filing.
