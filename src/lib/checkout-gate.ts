@@ -390,7 +390,7 @@ export function buildGatedSessionBody(opts: {
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
       : isStarter
         ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
-        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}&plan=${encodeURIComponent(plan.id)}`
   );
   body.set(
     "cancel_url",
