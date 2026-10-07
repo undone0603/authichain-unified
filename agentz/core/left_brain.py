@@ -490,6 +490,7 @@ class LeftBrain:
         _note_recovery_rate(base["optimization"], recovered_now)
         _note_cost_per_useful_outcome(base["optimization"], verified, choice.get("cost"))
         _note_resource_efficiency(base["optimization"], verified, choice.get("cost"))
+        _note_realized_revenue(base["optimization"], economics)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -684,6 +685,16 @@ def _note_resource_efficiency(report: dict[str, Any], verified: bool, cost: Any)
     if amount is None or amount <= 0:
         return
     report["resource_efficiency"] = round(1.0 / amount, 6)
+
+
+def _note_realized_revenue(report: dict[str, Any], economics: Mapping[str, Any]) -> None:
+    """Copy an explicit cash class. Other classes and a missing amount stay unknown."""
+    if report.get("source") != "no_supplied_history":
+        return
+    amount = _number(economics.get("cash_realized"))
+    if amount is None:
+        return
+    report["realized_revenue"] = round(amount, 6)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:

@@ -677,6 +677,104 @@ def test_live_attempt_records_resource_efficiency_without_inventing_cash(tmp_pat
     assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_live_attempt_records_realized_revenue_only_from_supplied_cash(tmp_path: Path):
+    """A gate copies an explicit cash class. Other classes and a bare advance stay unknown."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    bare = cycle(_advance_signal(decision_id="revenue-bare"), state_machine=sm)
+    assert bare["verification"]["success"] is True
+    assert bare["optimization"]["source"] == "no_supplied_history"
+    assert bare["optimization"]["realized_revenue"] is None
+    assert bare["optimization"]["verified_value"] is None
+    assert bare["optimization"]["net_value"] is None
+    assert bare["economics"]["cash_realized"] is None
+    assert bare["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    other_classes = LaunchStateMachine(state_file=tmp_path / "revenue_other.json")
+    other_classes.set_stage(LaunchStage.THREE_PILOTS)
+    mixed = cycle(
+        _advance_signal(
+            decision_id="revenue-other",
+            economics={
+                "pipeline_value": 499,
+                "contracted_revenue": 40,
+                "modeled_value": 12,
+                "unverified_value": 7,
+                "revenue": 499.95,
+            },
+        ),
+        state_machine=other_classes,
+    )
+    assert mixed["verification"]["success"] is True
+    assert mixed["optimization"]["realized_revenue"] is None
+    assert mixed["optimization"]["verified_value"] is None
+    assert mixed["optimization"]["net_value"] is None
+    assert mixed["economics"]["cash_realized"] is None
+    assert mixed["economics"]["pipeline_value"] == 499
+    assert mixed["revenue_ledger_written"] is False
+    assert other_classes.current_stage == LaunchStage.FIRST_REVENUE
+
+    paid_machine = LaunchStateMachine(state_file=tmp_path / "revenue_cash.json")
+    paid_machine.set_stage(LaunchStage.THREE_PILOTS)
+    paid_signal = _advance_signal(
+        decision_id="revenue-cash",
+        economics={"cash_realized": 3.5, "pipeline_value": 499},
+    )
+    expected_cash = paid_signal["economics"]["cash_realized"]
+    paid = cycle(paid_signal, state_machine=paid_machine)
+    assert paid["verification"]["success"] is True
+    assert paid["optimization"]["source"] == "no_supplied_history"
+    assert paid["optimization"]["realized_revenue"] == expected_cash
+    assert paid["economics"]["cash_realized"] == expected_cash
+    assert paid["economics"]["pipeline_value"] == 499
+    assert paid["optimization"]["verified_value"] is None
+    assert paid["optimization"]["net_value"] is None
+    assert paid["optimization"]["human_escalation_rate"] is None
+    assert paid["revenue_ledger_written"] is False
+    assert paid_machine.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=paid_machine.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    missed_machine = LaunchStateMachine(state_file=tmp_path / "revenue_miss.json")
+    missed_machine.set_stage(LaunchStage.THREE_PILOTS)
+    missed_signal = _advance_signal(
+        decision_id="revenue-miss",
+        gate_context={"active_pilots": 0},
+        economics={"cash_realized": 1.25},
+    )
+    missed = cycle(missed_signal, state_machine=missed_machine)
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["realized_revenue"] == missed_signal["economics"]["cash_realized"]
+    assert missed["economics"]["cash_realized"] == missed_signal["economics"]["cash_realized"]
+    assert missed["optimization"]["net_value"] is None
+    assert missed["revenue_ledger_written"] is False
+    assert missed_machine.current_stage == LaunchStage.THREE_PILOTS
+
+    idle = cycle({}, state_machine=paid_machine)
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["realized_revenue"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert paid_machine.current_stage == LaunchStage.FIRST_REVENUE
+
+    kept_machine = LaunchStateMachine(state_file=tmp_path / "revenue_history.json")
+    kept_machine.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="revenue-history-kept",
+            gate_context={"active_pilots": 0},
+            economics={"cash_realized": 9},
+            history=[{"cash_realized": 4}],
+        ),
+        state_machine=kept_machine,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["realized_revenue"] == 4
+    assert kept["verification"]["success"] is False
+    assert kept["economics"]["cash_realized"] == 9
+    assert kept["revenue_ledger_written"] is False
+    assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 
