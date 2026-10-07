@@ -11,12 +11,15 @@ describe("/enterprise/checkout", () => {
     expect(html).not.toContain("/api/checkout/enterprise");
   });
 
-  it("prices the Farm Plan from plans.ts and links its gated checkout", () => {
-    const farm = planById("strainchain_farm");
-    const link = planPaymentLink("strainchain_farm");
-    expect(farm && link).toBeTruthy();
-    expect(html).toContain(`$${farm!.price}`);
+  it("prices the passport from plans.ts and does not link Farm", () => {
+    const passport = planById("strainchain_passport");
+    const link = planPaymentLink("strainchain_passport");
+    const farmLink = planPaymentLink("strainchain_farm");
+    expect(passport && link && farmLink).toBeTruthy();
+    expect(html).toContain(`$${passport!.price}`);
     expect(html).toContain(`href="${link}"`);
+    expect(html).not.toContain(farmLink);
+    expect(html).not.toContain("Farm Plan");
   });
 
   it("offers the anchor partnership as custom, with unbuilt features as roadmap", () => {
