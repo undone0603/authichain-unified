@@ -68,9 +68,7 @@ describe("tryHandleX402", () => {
       true
     );
     expect(body.humanCheckout.farmUsd).toBe(149);
-    expect(new URL(body.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "authichain.com"
-    );
+    expect(body.humanCheckout.farmPaymentLink).toBeUndefined();
   });
 
   it("GET /api/x402/listing copies payTo from health for PayAPI", async () => {

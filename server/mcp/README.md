@@ -1,26 +1,49 @@
-# AuthiChain Trust Engine — MCP Server
+# AuthiChain MCP
 
-The authentic agentic economy — verification/trust layer. Any AI agent (Claude, Cursor,
-or an autonomous "business OS") can call AuthiChain to verify authenticity, classify a
-product, and **pay per verification via x402** — no human in the loop at runtime.
-
-## Run
+Use `server/mcp/api.ts` for the public API. It calls `https://authichain.com`.
+It does not mint certificates and it does not create API keys.
 
 ```bash
-npx tsx server/mcp/index.ts
+AUTHICHAIN_API_KEY=ac_live_... npx tsx server/mcp/api.ts
 ```
-
-Add to an MCP client (`.mcp.json` / client config):
 
 ```json
 {
   "mcpServers": {
-    "authichain": { "command": "npx", "args": ["tsx", "server/mcp/index.ts"] }
+    "authichain-api": {
+      "command": "npx",
+      "args": ["-y", "tsx", "server/mcp/api.ts"],
+      "env": {
+        "AUTHICHAIN_API_BASE": "https://authichain.com",
+        "AUTHICHAIN_API_KEY": "${AUTHICHAIN_API_KEY}"
+      }
+    }
   }
 }
 ```
 
-## Tools
+Create one free key with `POST /api/v1/keys/create` and `{"email":"<work email>"}`.
+Store it in the environment. The free meter is 10 requests an hour.
+
+| Tool | HTTP |
+| --- | --- |
+| `get_pricing` | `GET /api/v1/pricing` |
+| `list_industries` | `GET /api/v1/industries` |
+| `verify` | `POST /api/v1/verify` |
+| `classify` | `POST /api/v1/classify` |
+| `list_products` | `GET /api/v1/products` |
+| `whoami` | `GET /api/v1/me` |
+| `verify_paid` | `POST /api/x402` |
+
+`verify_paid` does not send the API key. Omit `payment` and the API returns 402 with the live price and `payTo`. Do not set a new pay-to address. `$QRON` is not that payment.
+
+## Local trust-engine server
+
+`server/mcp/index.ts` reads the local database. It is not the public API. Do not register it as the agent-facing server. Its verify and mint replies are not a certificate.
+
+## Local tools
+
+These are the local database tools. They are not the public API.
 
 | Tool                    | Purpose                                          |
 | ----------------------- | ------------------------------------------------ |

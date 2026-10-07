@@ -88,12 +88,10 @@ describe("canonical web3 identity lock", () => {
     expect(catalog.humanCheckout.dppPaymentLink).toBe(
       planPaymentLink("dpp_readiness")
     );
-    expect(catalog.humanCheckout.farmPaymentLink).toBe(
-      planPaymentLink("strainchain_farm")
-    );
+    expect(catalog.humanCheckout.farmPaymentLink).toBeUndefined();
     expect(catalog.humanCheckout.farmUsd).toBe(planUsd("strainchain_farm"));
-    expect(new URL(catalog.humanCheckout.farmPaymentLink ?? "").hostname).toBe(
-      "authichain.com"
+    expect(planPaymentLink("strainchain_farm")).toBe(
+      "https://authichain.com/checkout/strainchain_farm"
     );
   });
 
