@@ -10,7 +10,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
 
@@ -341,7 +341,11 @@ test("/x402 is public HTML for the live agent-pay rail", async () => {
     const farmPay = planPaymentLink("strainchain_farm") ?? "";
     assert.ok(farmPay, `${path} Farm Payment Link must exist in plans.ts`);
     assert.equal(new URL(farmPay).hostname, "authichain.com");
-    assert.ok(html.includes(`href="${farmPay}"`), `${path} must list Farm`);
+    assert.equal(
+      html.includes(`href="${farmPay}"`),
+      false,
+      `${path} must not list Farm`
+    );
     assert.doesNotMatch(html, /href=["']\/api\/checkout/);
     assert.doesNotMatch(html, /GET \/api\/checkout/);
   }
@@ -679,14 +683,10 @@ test("GET /api/x402/catalog and /.well-known/x402.json are answered here", async
     assert.equal(body.protocol, "x402", path);
     assert.equal(body.catalog, "/api/x402/catalog", path);
     assert.equal(body.health, "/api/x402/health", path);
+    assert.equal(body.humanCheckout?.farmPaymentLink, undefined, path);
     assert.equal(
-      body.humanCheckout?.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
-      path
-    );
-    assert.equal(
-      new URL(body.humanCheckout?.farmPaymentLink ?? "").hostname,
-      "authichain.com",
+      body.humanCheckout?.farmUsd,
+      planUsd("strainchain_farm"),
       path
     );
   }
