@@ -994,6 +994,128 @@ def test_live_attempt_records_net_value_only_from_an_explicit_amount(tmp_path: P
     assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_live_attempt_records_human_escalation_rate_only_from_an_explicit_amount(tmp_path: Path):
+    """A gate copies an explicit escalation rate. It does not infer one from this attempt."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    bare = cycle(_advance_signal(decision_id="escalation-bare"), state_machine=sm)
+    assert bare["verification"]["success"] is True
+    assert bare["mode"] == "VERIFIED"
+    assert bare["optimization"]["source"] == "no_supplied_history"
+    assert bare["optimization"]["human_escalation_rate"] is None
+    assert bare["economics"]["cash_realized"] is None
+    assert bare["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    escalated_machine = LaunchStateMachine(state_file=tmp_path / "escalation_stop.json")
+    escalated_machine.set_stage(LaunchStage.THREE_PILOTS)
+    escalated = cycle(
+        _advance_signal(
+            decision_id="escalation-stop",
+            discovery={"stops_before_execution": True},
+        ),
+        state_machine=escalated_machine,
+    )
+    assert escalated["mode"] == "ESCALATE"
+    assert escalated["optimization"]["human_escalation_rate"] is None
+    assert escalated["optimization"]["mission_violations"] is None
+    assert escalated["optimization"]["unauthorized_actions"] is None
+    assert escalated["revenue_ledger_written"] is False
+    assert escalated_machine.current_stage == LaunchStage.THREE_PILOTS
+
+    other_classes = LaunchStateMachine(state_file=tmp_path / "escalation_other.json")
+    other_classes.set_stage(LaunchStage.THREE_PILOTS)
+    mixed = cycle(
+        _advance_signal(
+            decision_id="escalation-other",
+            economics={
+                "cash_realized": 3.5,
+                "verified_value": 8,
+                "net_value": 2.75,
+                "pipeline_value": 499,
+                "contracted_revenue": 40,
+                "modeled_value": 12,
+                "unverified_value": 7,
+                "revenue": 499.95,
+            },
+        ),
+        state_machine=other_classes,
+    )
+    assert mixed["verification"]["success"] is True
+    assert mixed["optimization"]["human_escalation_rate"] is None
+    assert mixed["optimization"]["realized_revenue"] == 3.5
+    assert mixed["optimization"]["net_value"] == 2.75
+    assert "human_escalation_rate" not in mixed["economics"]
+    assert mixed["revenue_ledger_written"] is False
+    assert other_classes.current_stage == LaunchStage.FIRST_REVENUE
+
+    paid_machine = LaunchStateMachine(state_file=tmp_path / "escalation_amount.json")
+    paid_machine.set_stage(LaunchStage.THREE_PILOTS)
+    paid_signal = _advance_signal(
+        decision_id="escalation-amount",
+        economics={
+            "human_escalation_rate": 0.25,
+            "cash_realized": 3.5,
+            "verified_value": 8,
+            "net_value": 2.75,
+            "pipeline_value": 499,
+        },
+    )
+    expected_rate = paid_signal["economics"]["human_escalation_rate"]
+    paid = cycle(paid_signal, state_machine=paid_machine)
+    assert paid["verification"]["success"] is True
+    assert paid["mode"] == "VERIFIED"
+    assert paid["optimization"]["source"] == "no_supplied_history"
+    assert paid["optimization"]["human_escalation_rate"] == expected_rate
+    assert paid["optimization"]["realized_revenue"] == paid_signal["economics"]["cash_realized"]
+    assert paid["optimization"]["net_value"] == paid_signal["economics"]["net_value"]
+    assert paid["optimization"]["mission_violations"] is None
+    assert paid["optimization"]["unauthorized_actions"] is None
+    assert "human_escalation_rate" not in paid["economics"]
+    assert set(paid["economics"]) == set(VALUE_CLASSES)
+    assert paid["revenue_ledger_written"] is False
+    assert paid_machine.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=paid_machine.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    missed_machine = LaunchStateMachine(state_file=tmp_path / "escalation_miss.json")
+    missed_machine.set_stage(LaunchStage.THREE_PILOTS)
+    missed_signal = _advance_signal(
+        decision_id="escalation-miss",
+        gate_context={"active_pilots": 0},
+        economics={"human_escalation_rate": 0.5},
+    )
+    missed = cycle(missed_signal, state_machine=missed_machine)
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["human_escalation_rate"] == missed_signal["economics"]["human_escalation_rate"]
+    assert missed["optimization"]["mission_violations"] is None
+    assert missed["revenue_ledger_written"] is False
+    assert missed_machine.current_stage == LaunchStage.THREE_PILOTS
+
+    idle = cycle({}, state_machine=paid_machine)
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["human_escalation_rate"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert paid_machine.current_stage == LaunchStage.FIRST_REVENUE
+
+    kept_machine = LaunchStateMachine(state_file=tmp_path / "escalation_history.json")
+    kept_machine.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="escalation-history-kept",
+            gate_context={"active_pilots": 0},
+            economics={"human_escalation_rate": 0.25},
+            history=[{"escalated": True}],
+        ),
+        state_machine=kept_machine,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["human_escalation_rate"] == 1
+    assert kept["verification"]["success"] is False
+    assert "human_escalation_rate" not in kept["economics"]
+    assert kept["revenue_ledger_written"] is False
+    assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 

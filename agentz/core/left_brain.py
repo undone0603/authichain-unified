@@ -493,6 +493,7 @@ class LeftBrain:
         _note_realized_revenue(base["optimization"], economics)
         _note_verified_value(base["optimization"], data)
         _note_net_value(base["optimization"], data)
+        _note_human_escalation_rate(base["optimization"], data)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -719,6 +720,17 @@ def _note_net_value(report: dict[str, Any], data: Mapping[str, Any]) -> None:
     if amount is None:
         return
     report["net_value"] = round(amount, 6)
+
+
+def _note_human_escalation_rate(report: dict[str, Any], data: Mapping[str, Any]) -> None:
+    """Copy an explicit escalation rate. Do not infer one from this attempt."""
+    if report.get("source") != "no_supplied_history":
+        return
+    raw = data.get("economics") if isinstance(data.get("economics"), Mapping) else {}
+    amount = _number(raw.get("human_escalation_rate"))
+    if amount is None:
+        return
+    report["human_escalation_rate"] = round(amount, 6)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
