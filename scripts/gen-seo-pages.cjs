@@ -35,8 +35,6 @@ const LIVE_MONEY = {
   authichainDppCheck: 'https://authichain.com/dpp-check',
   strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
   strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
-  strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
-  strainchainFarmPay: 'https://authichain.com/checkout/strainchain_farm',
   // Public sample of the $299 assessment (#1340); shown before checkout on
   // battery pages so a buyer sees what they get before paying.
   batterySampleAudit: 'https://authichain.com/battery-passport/sample-audit',
