@@ -491,6 +491,7 @@ class LeftBrain:
         _note_cost_per_useful_outcome(base["optimization"], verified, choice.get("cost"))
         _note_resource_efficiency(base["optimization"], verified, choice.get("cost"))
         _note_realized_revenue(base["optimization"], economics)
+        _note_verified_value(base["optimization"], data)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -695,6 +696,17 @@ def _note_realized_revenue(report: dict[str, Any], economics: Mapping[str, Any])
     if amount is None:
         return
     report["realized_revenue"] = round(amount, 6)
+
+
+def _note_verified_value(report: dict[str, Any], data: Mapping[str, Any]) -> None:
+    """Copy an explicit verified amount. Other value classes stay out of this field."""
+    if report.get("source") != "no_supplied_history":
+        return
+    raw = data.get("economics") if isinstance(data.get("economics"), Mapping) else {}
+    amount = _number(raw.get("verified_value"))
+    if amount is None:
+        return
+    report["verified_value"] = round(amount, 6)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
