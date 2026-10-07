@@ -2,6 +2,8 @@
  * DPP paid-session fulfillment: loop events + provisionPurchase + activate email.
  * Shared by the Next Stripe webhook and server/webhooks/stripe.ts so apex
  * checkout.session.completed actually grants access.
+ *
+ * The $299 charge opens a workspace with 50 generations. It is not an audit.
  */
 
 import { provisionPurchase } from "./provisioning";
@@ -48,18 +50,10 @@ export async function fulfillDppPaidSession(
   const linePriceId =
     (typeof priceId === "string" && priceId) ||
     (typeof md.stripe_price_id === "string" ? md.stripe_price_id : null);
-  // $0 / DPP-SMOKE / is_demo / smoke_* visit ids are not filtered. A paid
-  // smoke session (payment_status=paid, amount_total=0) must still write
-  // payment_succeeded + provisioned. isDppOffer is the only offer gate.
   if (!isDppOffer(md, linePriceId)) {
     return { handled: false, profileId: null };
   }
 
-  // Fulfillment-collision guard (shared by both webhook endpoints): DPP
-  // readiness is a one-time audit. A subscription-mode / recurring Session —
-  // mode=subscription, a subscription id, or an unknown recurring price with
-  // no PLANS entry — must never be granted DPP credits. Fail closed without
-  // throwing: an unfulfillable recurring object can never succeed on retry.
   const subscriptionId = toId(session.subscription);
   if (session.mode === "subscription" || subscriptionId) {
     console.error(
@@ -124,9 +118,6 @@ export async function fulfillDppPaidSession(
       },
     });
   } else if (visitId && prov.status === "no_identity") {
-    // Retry cannot invent a buyer. Write provisioned with skip_reason so ops
-    // can tell a completed smoke from a half-fulfill. is_demo does not skip
-    // access grant — only Resend email noise.
     await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
       stage: "provisioned",
@@ -141,17 +132,14 @@ export async function fulfillDppPaidSession(
       },
     });
   } else if (prov.status === "upsert_failed") {
-    // Do not write dpp_loop:provisioned here — session-id dedupe would hide a
-    // later successful retry. Throw so Stripe Resend / retries can grant access.
     throw new Error(
       `DPP provision failed: ${prov.error || "profiles upsert failed"}`
     );
   }
 
-  // Demo/smoke may skip Resend noise. Access grant + funnel writes already ran.
   if (prov.profileId && email && !demo) {
     const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Readiness Audit",
+      planName: "EU DPP Workspace",
       activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
     });
     await sendEmail({

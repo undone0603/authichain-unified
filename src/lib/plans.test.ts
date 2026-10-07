@@ -118,7 +118,7 @@ describe("listedPlans", () => {
     const strainchain = listedPlans("strainchain")
       .map(p => p.id)
       .sort();
-    expect(strainchain).toEqual(["strainchain_farm", "strainchain_passport"]);
+    expect(strainchain).toEqual(["strainchain_passport"]);
   });
 
   it("lists public QRON plans including Launch and hides Theater", () => {

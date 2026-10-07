@@ -2375,12 +2375,12 @@ function originMoneySurfaces() {
       </article>
       <article class="estate-card card">
         <h3>Made in America</h3>
-        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or start today with the $299 EU DPP Readiness Audit.</p>
+        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or open the $299 EU DPP Workspace.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/dpp_readiness",
-            label: "Start EU DPP Readiness Audit — $299",
+            label: "Open EU DPP Workspace — $299",
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
           })}
@@ -2959,7 +2959,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start Your DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form",
           inputId: "dpp-email",
           buttonClass: "btn btn-outline",
@@ -3149,7 +3149,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form-footer",
           inputId: "dpp-email-footer",
           buttonClass: "btn btn-outline",

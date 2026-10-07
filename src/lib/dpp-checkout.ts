@@ -135,7 +135,7 @@ export async function createDppCheckoutSession(opts: {
             {
               price_data: {
                 currency: "usd",
-                product_data: { name: "EU DPP Readiness Audit (smoke)" },
+                product_data: { name: "EU DPP Workspace (smoke)" },
                 unit_amount: 0,
               },
               quantity: 1,
