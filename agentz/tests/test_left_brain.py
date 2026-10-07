@@ -567,7 +567,7 @@ def test_live_attempt_records_cost_per_useful_outcome_without_inventing_cash(tmp
     verified = brain.cycle(hit_signal)
     assert verified["verification"]["success"] is True
     assert verified["optimization"]["cost_per_useful_outcome"] == expected_cost
-    assert verified["optimization"]["resource_efficiency"] is None
+    assert verified["optimization"]["resource_efficiency"] == round(1 / float(expected_cost), 6)
     assert verified["optimization"]["realized_revenue"] is None
     assert verified["economics"]["cash_realized"] is None
     assert verified["revenue_ledger_written"] is False
@@ -587,7 +587,9 @@ def test_live_attempt_records_cost_per_useful_outcome_without_inventing_cash(tmp
     assert first["verification"]["success"] is True
     assert first["execution"]["recovered"] is False
     assert first["optimization"]["cost_per_useful_outcome"] == clean_signal["opportunities"][0]["cost"]
-    assert first["optimization"]["resource_efficiency"] is None
+    assert first["optimization"]["resource_efficiency"] == round(
+        1 / float(clean_signal["opportunities"][0]["cost"]), 6
+    )
     assert first["economics"]["cash_realized"] is None
     assert clean.current_stage == LaunchStage.FIRST_REVENUE
 
@@ -603,6 +605,73 @@ def test_live_attempt_records_cost_per_useful_outcome_without_inventing_cash(tmp
     )
     assert kept["optimization"]["source"] == "caller_supplied_history"
     assert kept["optimization"]["cost_per_useful_outcome"] == 4
+    assert kept["verification"]["success"] is False
+    assert kept["economics"]["cash_realized"] is None
+    assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_live_attempt_records_resource_efficiency_without_inventing_cash(tmp_path: Path):
+    """A verified gate records one useful outcome per unit of its own cost.
+
+    A miss has no useful outcome, so efficiency stays unknown. Cash and
+    supplied history are not replaced.
+    """
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="efficiency-miss")
+    )
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["resource_efficiency"] is None
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["optimization"]["verified_value"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    hit_signal = _advance_signal(decision_id="efficiency-hit")
+    expected_cost = hit_signal["opportunities"][0]["cost"]
+    verified = brain.cycle(hit_signal)
+    assert verified["verification"]["success"] is True
+    assert verified["optimization"]["resource_efficiency"] == round(1 / float(expected_cost), 6)
+    assert verified["optimization"]["cost_per_useful_outcome"] == expected_cost
+    assert verified["optimization"]["realized_revenue"] is None
+    assert verified["optimization"]["verified_value"] is None
+    assert verified["economics"]["cash_realized"] is None
+    assert verified["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["resource_efficiency"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    clean = LaunchStateMachine(state_file=tmp_path / "efficiency_clean.json")
+    clean.set_stage(LaunchStage.THREE_PILOTS)
+    clean_signal = _advance_signal(decision_id="efficiency-clean")
+    first = cycle(clean_signal, state_machine=clean)
+    clean_cost = clean_signal["opportunities"][0]["cost"]
+    assert first["verification"]["success"] is True
+    assert first["execution"]["recovered"] is False
+    assert first["optimization"]["resource_efficiency"] == round(1 / float(clean_cost), 6)
+    assert first["optimization"]["verified_value"] is None
+    assert first["economics"]["cash_realized"] is None
+    assert clean.current_stage == LaunchStage.FIRST_REVENUE
+
+    kept_machine = LaunchStateMachine(state_file=tmp_path / "efficiency_history.json")
+    kept_machine.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="efficiency-history-kept",
+            gate_context={"active_pilots": 0},
+            history=[{"useful": True, "cost": 4}],
+        ),
+        state_machine=kept_machine,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["resource_efficiency"] == round(1 / 4, 6)
     assert kept["verification"]["success"] is False
     assert kept["economics"]["cash_realized"] is None
     assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
