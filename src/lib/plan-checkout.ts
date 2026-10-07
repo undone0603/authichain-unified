@@ -111,7 +111,7 @@ export async function createPlanCheckoutSession(opts: {
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
       success_url: `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}${
         prospectId ? `&prospect_id=${encodeURIComponent(prospectId)}` : ""
-      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}`,
+      }${source ? `&utm_source=${encodeURIComponent(source)}` : ""}&plan=${encodeURIComponent(plan.id)}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
