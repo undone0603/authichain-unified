@@ -37,15 +37,48 @@ import {
   parseDppReadinessInput,
   scoreDppReadiness,
 } from "../../../src/lib/dpp-readiness.ts";
+import {
+  PACK_LIMIT,
+  PUBLISHED_PACKS,
+  findPublishedPack,
+  packUrl,
+} from "./published-packs";
+
+/**
+ * Protocol versions this endpoint can speak, newest first. `initialize`
+ * echoes the client's requested version when it is one of these and
+ * otherwise answers with LATEST, which is what the spec's negotiation step
+ * expects. The old code hardcoded "2024-11-05" into every reply regardless
+ * of what the client asked for.
+ */
+export const SUPPORTED_PROTOCOL_VERSIONS = [
+  "2025-06-18",
+  "2025-03-26",
+  "2024-11-05",
+] as const;
+export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
+
+/**
+ * The server's own version, reported in serverInfo and in GET discovery.
+ *
+ * This MUST equal `version` in the repo-root server.json, which is what the
+ * MCP registry publishes for io.github.undone0603/authichain. They had
+ * drifted: the registry advertised 1.2.0 while every live handshake
+ * answered 1.0.0, so a client could not tell which build it had reached.
+ * mcp-routes.test.ts asserts the two match, so the next bump has to touch
+ * both or CI fails.
+ */
+export const SERVER_VERSION = "1.3.0";
 
 const JSON_HEADERS = {
   "Cache-Control": "private, no-store",
   "CDN-Cache-Control": "no-store",
   "Content-Type": "application/json; charset=utf-8",
   "Access-Control-Allow-Origin": "*",
+  "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
 
-const TOOLS = [
+export const TOOLS = [
   {
     name: "get_pricing",
     description:
@@ -69,7 +102,9 @@ const TOOLS = [
   {
     name: "query_provenance",
     description:
-      "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. " +
+      "Free public lookup for an assetId / seal / QR token. Never attests. Resolves the published packs (" +
+      PUBLISHED_PACKS.map(p => p.slug).join(", ") +
+      "); any other id returns status unknown, because the certificates registry does not answer yet. " +
       "For free signature and anchor verification use verify_record.",
     inputSchema: {
       type: "object",
@@ -159,7 +194,8 @@ export const DEMONSTRATION_RECORD_HASH =
  * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
  * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
  */
-export const PRODUCTION_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const PRODUCTION_ISSUER_KID =
+  "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
 export const PRODUCTION_ISSUER_DID =
   "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
 type AllowedSigner =
@@ -182,10 +218,15 @@ const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
 export const ANCHOR_WALLET = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
 /** AuthiChainProduct ERC-721 certificate contract on Polygon. */
 export const CERT_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const ANCHOR_TO = new Set([ANCHOR_WALLET, CERT_CONTRACT].map(a => a.toLowerCase()));
+const ANCHOR_TO = new Set(
+  [ANCHOR_WALLET, CERT_CONTRACT].map(a => a.toLowerCase())
+);
 
 function signerDid(record: unknown): string {
-  const r = record as { issuer?: unknown; proof?: { verificationMethod?: unknown } };
+  const r = record as {
+    issuer?: unknown;
+    proof?: { verificationMethod?: unknown };
+  };
   const vm = r?.proof?.verificationMethod ?? r?.issuer;
   return typeof vm === "string" ? vm.split("#")[0] : "";
 }
@@ -228,20 +269,27 @@ export async function verifyRecordTool(
   let allowed: AllowedSigner | undefined = entry;
   if (!entry) {
     trustReasons.push("signer_not_allowlisted");
-  } else if (entry.recordHash && expectedRecordHash(record) !== entry.recordHash) {
+  } else if (
+    entry.recordHash &&
+    expectedRecordHash(record) !== entry.recordHash
+  ) {
     allowed = undefined;
     trustReasons.push("demonstration_signer_not_valid_for_this_record");
   }
   if (anchor) {
-    if (!chain.onChain) trustReasons.push(`anchor_not_on_chain:${chain.status}`);
-    else if (String(chain.txFrom ?? "").toLowerCase() !== ANCHOR_WALLET.toLowerCase()) {
+    if (!chain.onChain)
+      trustReasons.push(`anchor_not_on_chain:${chain.status}`);
+    else if (
+      String(chain.txFrom ?? "").toLowerCase() !== ANCHOR_WALLET.toLowerCase()
+    ) {
       trustReasons.push("anchor_tx_not_from_anchor_wallet");
     } else if (!ANCHOR_TO.has(String(chain.txTo ?? "").toLowerCase())) {
       trustReasons.push("anchor_tx_not_to_anchor_address");
     }
   }
   let verdict: string = protocol.verdict;
-  if (protocol.verdict === "verified" && trustReasons.length) verdict = "unverified";
+  if (protocol.verdict === "verified" && trustReasons.length)
+    verdict = "unverified";
   return {
     verdict,
     protocolVerdict: protocol.verdict,
@@ -359,7 +407,7 @@ function discoveryBody() {
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
-    serverInfo: { name: "authichain", version: "1.0.0" },
+    serverInfo: { name: "authichain", version: SERVER_VERSION },
     tools: TOOLS,
     pricing: mcpPricingDiscovery(),
     pay: {
@@ -375,19 +423,40 @@ function discoveryBody() {
 function queryProvenance(assetIdRaw: unknown) {
   const assetId = String(assetIdRaw ?? "").trim();
   const seed = assetId.toUpperCase() === "AC-7C2A91E4";
+  /**
+   * The published microsite packs are the only product-shaped records
+   * AuthiChain has actually published. Before this, an agent asking about
+   * BAT-2026-001 got `status: "unknown"` even though that batch has a
+   * live public page — the tool was answering "no" to a question the
+   * estate could already answer "yes" to.
+   *
+   * This resolves against published packs only. It does NOT stand in for
+   * the certificates registry, which still 404s (see
+   * docs/strategy/mcp-app-roadmap.md, G1): an id that is not a published
+   * pack still returns unknown, because there is nothing real to say.
+   */
+  const pack = findPublishedPack(assetId);
   return {
     assetId: assetId || null,
-    status: seed ? "desk_sample" : "unknown",
+    status: pack ? "published_pack" : seed ? "desk_sample" : "unknown",
     verified: false,
     authenticityScore: 0,
     protocol: "AuthiChain attestation 0.1",
-    product: seed
+    product: pack
       ? {
-          id: "AC-7C2A91E4",
-          name: "Michigan METRC sample",
-          source: "Self-serve desk seed. Not a live registry row.",
+          id: pack.slug,
+          name: pack.name,
+          source: pack.note,
+          published: packUrl(pack.slug),
+          limit: PACK_LIMIT,
         }
-      : null,
+      : seed
+        ? {
+            id: "AC-7C2A91E4",
+            name: "Michigan METRC sample",
+            source: "Self-serve desk seed. Not a live registry row.",
+          }
+        : null,
     ledger: {
       polygonNft: {
         chainId: 137,
@@ -416,6 +485,20 @@ function queryProvenance(assetIdRaw: unknown) {
     compliance:
       "EU DPP readiness is not a status on this lookup. Use dpp_readiness_check (free).",
   };
+}
+
+/**
+ * Echo the client's protocolVersion when this endpoint speaks it, else
+ * answer with the newest one it does. Per the spec the client then either
+ * proceeds on that version or disconnects.
+ */
+export function negotiateProtocolVersion(params: unknown): string {
+  const asked = (params as { protocolVersion?: unknown } | undefined)
+    ?.protocolVersion;
+  return typeof asked === "string" &&
+    (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(asked)
+    ? asked
+    : LATEST_PROTOCOL_VERSION;
 }
 
 function rpcResult(id: unknown, result: unknown): Response {
@@ -521,12 +604,45 @@ async function handleRpc(
   const method = body.method ?? "";
   const id = body.id;
 
-  if (method === "initialize" || method === "notifications/initialized") {
-    return rpcResult(id, {
-      protocolVersion: "2024-11-05",
-      capabilities: { tools: {} },
-      serverInfo: { name: "authichain", version: "1.0.0" },
+  /**
+   * A JSON-RPC notification has no `id` member at all — not `id: null`,
+   * which is a request with a null id. The transport spec requires a bare
+   * 202 with no body for one. This endpoint used to answer
+   * notifications/initialized with a full `result` object carrying
+   * `id: null`, which is a protocol violation: strict clients (Claude's
+   * remote connector among them) reject a response to a notification and
+   * the session never finishes its handshake.
+   */
+  const isNotification =
+    !Object.prototype.hasOwnProperty.call(body, "id") ||
+    method.startsWith("notifications/");
+  if (isNotification) {
+    return new Response(null, {
+      status: 202,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Access-Control-Allow-Origin": "*",
+        "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+      },
     });
+  }
+
+  if (method === "initialize") {
+    return rpcResult(id, {
+      protocolVersion: negotiateProtocolVersion(body.params),
+      capabilities: { tools: { listChanged: false } },
+      serverInfo: { name: "authichain", version: SERVER_VERSION },
+      instructions:
+        "AuthiChain verification is free. verify_record checks an Ed25519 " +
+        "signed provenance record and its Polygon anchor. dpp_readiness_check " +
+        "scores EU Digital Product Passport readiness. Neither inspects a " +
+        "physical product, and neither is legal advice.",
+    });
+  }
+
+  // Liveness utility from the base protocol: an empty result, no side effects.
+  if (method === "ping") {
+    return rpcResult(id, {});
   }
 
   if (method === "tools/list") {
@@ -633,8 +749,13 @@ export async function tryHandleMcp(
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, HEAD, OPTIONS",
+        // Accept and MCP-Protocol-Version are sent by spec-conformant
+        // clients on every call; omitting them here failed the preflight
+        // for any browser-side MCP client before the request was made.
         "Access-Control-Allow-Headers":
-          "Content-Type, Authorization, X-PAYMENT, PAYMENT-SIGNATURE",
+          "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, X-PAYMENT, PAYMENT-SIGNATURE",
+        "Access-Control-Expose-Headers":
+          "MCP-Protocol-Version, Mcp-Session-Id, WWW-Authenticate",
         "Access-Control-Max-Age": "86400",
       },
     });
@@ -651,6 +772,20 @@ export async function tryHandleMcp(
   }
 
   if (request.method === "GET") {
+    /**
+     * A spec client GETs the endpoint with Accept: text/event-stream to
+     * open a server-initiated stream. This server has none — every reply
+     * is the direct response to a POST — and the spec's answer for that
+     * is 405, not a body of the wrong media type. Plain GETs (curl, the
+     * registry crawler, a browser) still get the discovery JSON.
+     */
+    const accept = request.headers.get("Accept") ?? "";
+    if (accept.includes("text/event-stream")) {
+      return json(405, {
+        error: "sse_stream_not_supported",
+        note: "This endpoint answers each POST directly and opens no server-initiated stream. POST JSON-RPC to the same URL.",
+      });
+    }
     hydrateX402(env);
     return json(200, discoveryBody());
   }

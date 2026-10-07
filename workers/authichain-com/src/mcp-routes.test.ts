@@ -12,6 +12,8 @@ import {
   CERT_CONTRACT,
   DEMONSTRATION_RECORD_HASH,
   DEMONSTRATION_SIGNER_DID,
+  LATEST_PROTOCOL_VERSION,
+  SERVER_VERSION,
   PRODUCTION_ISSUER_DID,
   PRODUCTION_ISSUER_KID,
   isMcpPath,
@@ -20,6 +22,7 @@ import {
 } from "./mcp-routes";
 import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
 import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
+import serverManifest from "../../../server.json" with { type: "json" };
 
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
@@ -827,5 +830,153 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     };
     expect(body.result.isError).toBe(true);
     expect(body.result.content[0].text).toMatch(/only published record/);
+  });
+});
+
+/**
+ * Transport conformance. Before this, /mcp answered notifications with a
+ * full result object, hardcoded protocolVersion 2024-11-05 into every
+ * reply, and had no `ping` — each of which can stall a strict client's
+ * handshake.
+ */
+describe("mcp streamable http conformance", () => {
+  function rpc(body: unknown, headers: Record<string, string> = {}) {
+    return tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      })
+    );
+  }
+
+  it("answers a notification with 202 and no body", async () => {
+    const res = await rpc({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(res!.status).toBe(202);
+    expect(await res!.text()).toBe("");
+  });
+
+  it("treats any id-less message as a notification", async () => {
+    const res = await rpc({ jsonrpc: "2.0", method: "tools/list" });
+    expect(res!.status).toBe(202);
+  });
+
+  it("still answers a request whose id is literally null", async () => {
+    const res = await rpc({ jsonrpc: "2.0", id: null, method: "tools/list" });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as { result: { tools: unknown[] } };
+    expect(body.result.tools.length).toBeGreaterThan(0);
+  });
+
+  it("echoes a protocol version it supports", async () => {
+    for (const version of ["2024-11-05", "2025-03-26", "2025-06-18"]) {
+      const res = await rpc({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: version, capabilities: {} },
+      });
+      const body = (await res!.json()) as {
+        result: { protocolVersion: string; serverInfo: { name: string } };
+      };
+      expect(body.result.protocolVersion, version).toBe(version);
+      expect(body.result.serverInfo.name).toBe("authichain");
+    }
+  });
+
+  it("falls back to the newest version for an unknown one", async () => {
+    const res = await rpc({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "1999-01-01" },
+    });
+    const body = (await res!.json()) as {
+      result: { protocolVersion: string };
+    };
+    expect(body.result.protocolVersion).toBe(LATEST_PROTOCOL_VERSION);
+  });
+
+  it("answers ping with an empty result", async () => {
+    const res = await rpc({ jsonrpc: "2.0", id: 9, method: "ping" });
+    const body = (await res!.json()) as { id: number; result: object };
+    expect(body.id).toBe(9);
+    expect(body.result).toEqual({});
+  });
+
+  it("returns 405 for a GET that wants an SSE stream", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", { headers: { Accept: "text/event-stream" } })
+    );
+    expect(res!.status).toBe(405);
+    const body = (await res!.json()) as { error: string };
+    expect(body.error).toBe("sse_stream_not_supported");
+  });
+
+  it("still serves discovery JSON to a plain GET", async () => {
+    const res = await tryHandleMcp(req("/mcp"));
+    expect(res!.status).toBe(200);
+    expect(((await res!.json()) as { protocol: string }).protocol).toBe("mcp");
+  });
+
+  it("preflights the headers a spec client actually sends", async () => {
+    const res = await tryHandleMcp(req("/mcp", { method: "OPTIONS" }));
+    expect(res!.status).toBe(204);
+    const allow = res!.headers.get("Access-Control-Allow-Headers") ?? "";
+    for (const h of ["Accept", "MCP-Protocol-Version", "Mcp-Session-Id"]) {
+      expect(allow, h).toContain(h);
+    }
+    expect(res!.headers.get("Access-Control-Expose-Headers")).toContain(
+      "MCP-Protocol-Version"
+    );
+  });
+
+  /**
+   * server.json is what the MCP registry publishes. A client that reads
+   * the registry and then connects must see the same version in both
+   * places; before this they were 1.2.0 and 1.0.0.
+   */
+  it("reports the same version the registry publishes", async () => {
+    expect(SERVER_VERSION).toBe(serverManifest.version);
+
+    const res = await rpc({ jsonrpc: "2.0", id: 1, method: "initialize" });
+    const body = (await res!.json()) as {
+      result: { serverInfo: { version: string } };
+    };
+    expect(body.result.serverInfo.version).toBe(serverManifest.version);
+  });
+
+  it("points the registry remote at the endpoint this module serves", () => {
+    const remote = serverManifest.remotes[0];
+    expect(remote.type).toBe("streamable-http");
+    expect(isMcpPath(new URL(remote.url).pathname)).toBe(true);
+  });
+
+  it("completes a full initialize handshake end to end", async () => {
+    const init = await rpc({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {} },
+    });
+    expect(init!.status).toBe(200);
+    expect(init!.headers.get("MCP-Protocol-Version")).toBe(
+      LATEST_PROTOCOL_VERSION
+    );
+
+    const ack = await rpc({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(ack!.status).toBe(202);
+
+    const list = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    const body = (await list!.json()) as {
+      result: { tools: { name: string }[] };
+    };
+    expect(body.result.tools.map(t => t.name)).toContain("verify_record");
   });
 });

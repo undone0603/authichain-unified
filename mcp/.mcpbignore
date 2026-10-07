@@ -1,0 +1,19 @@
+# Source and tooling never ship inside the bundle — dist/ is the entry point.
+src/
+docs/
+tsconfig.json
+.mcpbignore
+*.log
+*.tsbuildinfo
+# Dev tooling must never ship to a user's machine. mcpb packs node_modules
+# verbatim, and without these the bundle carried the TypeScript compiler
+# and tsx — 19 MB of build tools inside a double-click extension.
+node_modules/typescript/
+node_modules/tsx/
+node_modules/@types/
+node_modules/.cache/
+node_modules/.bin/
+node_modules/**/test/
+node_modules/**/tests/
+node_modules/**/*.md
+node_modules/**/*.map
