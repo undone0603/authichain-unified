@@ -31,8 +31,9 @@ describe("genetics routes", () => {
     assert.ok(
       html.includes('href="https://authichain.com/checkout/strainchain_passport"')
     );
-    assert.ok(
-      html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+    assert.equal(
+      html.includes('href="https://authichain.com/checkout/strainchain_farm"'),
+      false
     );
   });
 

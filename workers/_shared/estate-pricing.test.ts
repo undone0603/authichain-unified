@@ -245,7 +245,7 @@ test("strainchain origin lists only the passport catalogue SKUs", () => {
   const ids = listedPlans("strainchain")
     .map(p => p.id)
     .sort();
-  assert.deepEqual(ids, ["strainchain_farm", "strainchain_passport"]);
+  assert.deepEqual(ids, ["strainchain_passport"]);
 });
 
 test("strainchain catalogue plans use live plan checkout on authichain.com", () => {
@@ -263,7 +263,7 @@ test("strainchain catalogue plans use live plan checkout on authichain.com", () 
   );
 });
 
-test("strainchain /pricing HTML cites passport and farm prices", () => {
+test("strainchain /pricing HTML cites the public passport and not farm", () => {
   const html = renderEstatePricingPage("strainchain");
   const passport = listedPlans("strainchain").find(
     p => p.id === "strainchain_passport"
@@ -273,15 +273,14 @@ test("strainchain /pricing HTML cites passport and farm prices", () => {
   assert.equal(hasDeadLink(html), false);
   assert.doesNotMatch(html, /\$199/);
   assert.doesNotMatch(html, /StrainChain Basic/);
-  for (const id of ["strainchain_passport", "strainchain_farm"] as const) {
-    assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
-    assert.ok(html.includes(escHtml(plan(id).cta)), `${id} cta`);
-  }
+  assert.ok(html.includes(`$${plan("strainchain_passport").price}`));
+  assert.ok(html.includes(escHtml(plan("strainchain_passport").cta)));
+  assert.equal(html.includes(escHtml(plan("strainchain_farm").cta)), false);
   assert.match(
     html,
     /https:\/\/authichain\.com\/checkout\/strainchain_passport/
   );
-  assert.match(
+  assert.doesNotMatch(
     html,
     /https:\/\/authichain\.com\/checkout\/strainchain_farm/
   );
@@ -366,11 +365,12 @@ test("tryHandleEstatePricing answers GET /pricing for strainchain.io", async () 
   assert.equal(hit.status, 200);
   assert.match(hit.headers.get("content-type") ?? "", /text\/html/);
   const html = await hit.text();
-  const farm = listedPlans("strainchain").find(
-    p => p.id === "strainchain_farm"
+  const passport = listedPlans("strainchain").find(
+    p => p.id === "strainchain_passport"
   );
-  assert.ok(farm?.stripe_payment_link);
-  assert.ok(html.includes(planPaymentLink(farm!.id)!));
+  assert.ok(passport?.stripe_payment_link);
+  assert.ok(html.includes(planPaymentLink(passport!.id)!));
+  assert.equal(html.includes("checkout/strainchain_farm"), false);
   assert.equal(hasDeadLink(html), false);
 });
 
