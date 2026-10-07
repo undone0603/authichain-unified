@@ -222,10 +222,8 @@ test("HEAD /api/x402 is 204 and other paths are ignored", async () => {
 test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async () => {
   const passport = planPaymentLink("strainchain_passport") ?? "";
   const dpp = planPaymentLink("dpp_readiness") ?? "";
-  const farm = planPaymentLink("strainchain_farm") ?? "";
   assert.equal(new URL(passport).hostname, "authichain.com");
   assert.equal(new URL(dpp).hostname, "authichain.com");
-  assert.equal(new URL(farm).hostname, "authichain.com");
 
   for (const { brand, host } of BRANDS) {
     const res = await tryHandleSisterX402(req(host, "/api/x402/catalog"));
@@ -278,10 +276,14 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       host
     );
     assert.equal(body.humanCheckout.dppUsd, planUsd("dpp_readiness"), host);
-    assert.equal(body.humanCheckout.farmUsd, planUsd("strainchain_farm"), host);
+    assert.equal(
+      body.humanCheckout.farmUsd,
+      planUsd("strainchain_farm"),
+      host
+    );
     assert.equal(body.humanCheckout.passportPaymentLink, passport, host);
     assert.equal(body.humanCheckout.dppPaymentLink, dpp, host);
-    assert.equal(body.humanCheckout.farmPaymentLink, farm, host);
+    assert.equal(body.humanCheckout.farmPaymentLink, undefined, host);
     assert.equal(
       new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
       "authichain.com",
@@ -292,11 +294,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP Payment Links", async 
       "authichain.com",
       host
     );
-    assert.equal(
-      new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-      "authichain.com",
-      host
-    );
+    assert.equal(body.humanCheckout.farmPaymentLink, undefined, host);
 
     const blob = JSON.stringify(body);
     assert.equal(blob.includes("/api/checkout"), false, host);

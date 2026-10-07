@@ -8,7 +8,6 @@ import { x402PriceUsd } from "../../../src/lib/x402.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-const FARM_LINK = planPaymentLink("strainchain_farm") ?? "";
 const X402_USD = x402PriceUsd();
 
 const LLMS_PATHS = new Set([
@@ -52,7 +51,6 @@ export function renderLlmsTxt(): string {
     `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
     `- Made in USA Claim File $${planUsd("musa_claim_file")} per SKU: https://authichain.com/made-in-usa-claim-file`,
     `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
-    `- StrainChain Farm Plan $${planUsd("strainchain_farm")}/mo: ${FARM_LINK}`,
     "- Pricing: https://authichain.com/pricing",
     "",
     "## Positioning",

@@ -168,10 +168,6 @@ function checkoutCard(): string {
       planId: "strainchain_passport",
       label: "Pay $49 on Stripe",
     })}
-    ${catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "Farm Plan $149/mo",
-    })}
     <a class="btn btn-outline" href="https://strainchain.io/onboard">Farm onboard</a>
   </div>
 </div>`;

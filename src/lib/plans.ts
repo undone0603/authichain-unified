@@ -299,8 +299,13 @@ export function isPurchasable(plan: Plan): boolean {
 export function listedPlans(
   brand: "qron" | "strainchain" | "musa" = "qron"
 ): Plan[] {
+  const pub = new Set<string>(PUBLIC_PLAN_IDS);
   return PLANS.filter(
-    p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
+    p =>
+      pub.has(p.id) &&
+      (p.brand ?? "qron") === brand &&
+      isPurchasable(p) &&
+      p.listed !== false
   );
 }
 
