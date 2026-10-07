@@ -35,8 +35,6 @@ const LIVE_MONEY = {
   authichainDppCheck: 'https://authichain.com/dpp-check',
   strainchainPassportCheckout: 'https://authichain.com/checkout/strainchain_passport',
   strainchainPassportPay: 'https://authichain.com/checkout/strainchain_passport',
-  strainchainFarmCheckout: 'https://authichain.com/checkout/strainchain_farm',
-  strainchainFarmPay: 'https://authichain.com/checkout/strainchain_farm',
   // Public sample of the $299 assessment (#1340); shown before checkout on
   // battery pages so a buyer sees what they get before paying.
   batterySampleAudit: 'https://authichain.com/battery-passport/sample-audit',
@@ -127,13 +125,8 @@ function moneyCtaHtml(brandKey, keyword, brand) {
     const extra = secondaryHref
       ? `<p><a href="${secondaryHref}">${esc(secondaryLabel)}</a>. ${esc(brand.price)}</p>`
       : `<p>${esc(brand.price)}</p>`;
-    const farm =
-      cannabis && primaryHref === LIVE_MONEY.strainchainPassportCheckout
-        ? checkoutEmailFormHtml(
-            LIVE_MONEY.strainchainFarmCheckout,
-            'Start Farm Plan $149/mo'
-          ) + `<p><a href="${LIVE_MONEY.strainchainFarmPay}">Pay $149/mo on Stripe</a></p>`
-        : '';
+    // Farm is not a public offer. The generator must not emit its checkout.
+    const farm = '';
     const freeCheck =
       dpp && primaryHref === LIVE_MONEY.authichainDppCheckout
         ? `<p>Not sure what applies to you? <a href="${LIVE_MONEY.authichainDppCheck}">Take the free DPP readiness check</a> first.</p>`
