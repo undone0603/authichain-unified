@@ -679,6 +679,52 @@ def test_circular_actions_stop_without_advancing(tmp_path: Path):
     assert sm.current_stage == LaunchStage.FIRST_REVENUE
 
 
+def test_unverified_claim_stops_before_the_machine_moves(tmp_path: Path):
+    """A non-fact labeled as a verified fact does not get an advance."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    claim = "A buyer already paid"
+    blocked = cycle(
+        _advance_signal(
+            verified_facts=[claim],
+            assumptions=[claim],
+        ),
+        state_machine=sm,
+    )
+    assert blocked["mode"] == "STOP"
+    assert blocked["risks"] == ["unverified_claims"]
+    assert blocked["stopped"] is True
+    assert blocked["verification"]["success"] is False
+    assert blocked["execution"]["status"] == "not_run"
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert blocked["authority_boundary_modified"] is False
+    assert claim not in blocked["fact_separation"]["verified_facts"]
+    assert claim in blocked["fact_separation"]["assumptions"]
+    assert claim not in blocked["decisions"][0]["evidence"]
+    assert blocked["decisions"][0]["decision"] == "stop"
+    assert "unverified" in blocked["decisions"][0]["reason"].lower()
+    assert blocked["state"]["mission_state"]["stage"] == "3_PILOTS"
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    separated = cycle(
+        _advance_signal(
+            decision_id="fact-kept-separate",
+            verified_facts=["The caller checked the pilot gate"],
+            assumptions=["A third pilot is about to pay"],
+        ),
+        state_machine=sm,
+    )
+    assert "unverified_claims" not in separated["risks"]
+    assert separated["verification"]["success"] is True
+    assert separated["decisions"][0]["evidence"] == ["The caller checked the pilot gate"]
+    assert "A third pilot is about to pay" not in separated["decisions"][0]["evidence"]
+    assert separated["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+
 def test_discovery_disagreement_escalates_and_leaves_the_stage(tmp_path: Path):
     """A supplied discovery does not get to move the launch stage, and neither does the left brain."""
     from agentz.core.right_brain import propose

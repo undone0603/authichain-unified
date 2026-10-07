@@ -250,6 +250,8 @@ class LeftBrain:
             risks.append("mission_drift")
         if _circular_execution(data):
             risks.append("circular_execution")
+        if _unverified_claims(data):
+            risks.append("unverified_claims")
         if _authority_requested(data):
             risks.append("authority_violation")
         if data.get("authority_updates"):
@@ -280,6 +282,8 @@ class LeftBrain:
                 reasons.append("The supplied mission stage does not match the launch machine.")
             if "circular_execution" in risks:
                 reasons.append("The supplied actions are circular. The cycle stopped before repeating them.")
+            if "unverified_claims" in risks:
+                reasons.append("An unverified claim was presented as a verified fact. The cycle stopped.")
             if any(name in risks for name in ("authority_violation", "authority_boundary", "repeated_failures")):
                 reasons.append("An authority boundary or repeated failure stopped the cycle.")
             base["decisions"] = [_decision_record(
@@ -553,6 +557,19 @@ def cycle(
     """Shipped entry. ``state_machine`` is the existing launch state machine."""
     engine = brain if brain is not None else LeftBrain(state_machine)
     return engine.cycle(signal)
+
+
+def _unverified_claims(data: Mapping[str, Any]) -> bool:
+    """True when a verified fact is also an observation, assumption, estimate, hypothesis, or unknown."""
+    verified = set(_strings(data.get("verified_facts")))
+    if not verified:
+        return False
+    for kind in FACT_KINDS:
+        if kind == "verified_facts":
+            continue
+        if verified.intersection(_strings(data.get(kind))):
+            return True
+    return False
 
 
 def _circular_execution(data: Mapping[str, Any]) -> bool:
