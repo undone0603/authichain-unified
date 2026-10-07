@@ -6,6 +6,16 @@
       "args": ["-y", "@playwright/mcp@latest", "--headless"],
       "tools": ["*"]
     },
+    "authichain-api": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "tsx", "server/mcp/api.ts"],
+      "env": {
+        "AUTHICHAIN_API_BASE": "https://authichain.com",
+        "AUTHICHAIN_API_KEY": "${AUTHICHAIN_API_KEY}"
+      },
+      "tools": ["*"]
+    },
     "supabase": {
       "type": "local",
       "command": "npx",
