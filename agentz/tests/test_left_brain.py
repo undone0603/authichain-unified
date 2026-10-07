@@ -394,6 +394,54 @@ def test_live_attempt_records_decision_accuracy_without_inventing_cash(tmp_path:
     assert sm.current_stage == LaunchStage.FIRST_REVENUE
 
 
+def test_live_attempt_records_execution_success_without_inventing_cash(tmp_path: Path):
+    """A gate attempt that ran records execution success. Idle does not, and cash stays unknown."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="exec-miss")
+    )
+    assert missed["verification"]["executed"] is True
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["execution_success"] == 1
+    assert missed["optimization"]["verification_rate"] is None
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    verified = brain.cycle(_advance_signal(decision_id="exec-hit"))
+    assert verified["verification"]["executed"] is True
+    assert verified["verification"]["success"] is True
+    assert verified["optimization"]["execution_success"] == 1
+    assert verified["optimization"]["realized_revenue"] is None
+    assert verified["economics"]["cash_realized"] is None
+    assert verified["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["execution_success"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    other = LaunchStateMachine(state_file=tmp_path / "history_state.json")
+    other.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="history-kept",
+            gate_context={"active_pilots": 0},
+            history=[{"executed": False}],
+        ),
+        state_machine=other,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["execution_success"] == 0
+    assert kept["economics"]["cash_realized"] is None
+    assert other.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 
