@@ -547,6 +547,67 @@ def test_live_attempt_records_recovery_rate_without_inventing_cash(tmp_path: Pat
     assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_live_attempt_records_cost_per_useful_outcome_without_inventing_cash(tmp_path: Path):
+    """A verified gate records its own cost once. A miss, idle, cash, and history stay put."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="cost-miss")
+    )
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["cost_per_useful_outcome"] is None
+    assert missed["optimization"]["resource_efficiency"] is None
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    hit_signal = _advance_signal(decision_id="cost-hit")
+    expected_cost = hit_signal["opportunities"][0]["cost"]
+    verified = brain.cycle(hit_signal)
+    assert verified["verification"]["success"] is True
+    assert verified["optimization"]["cost_per_useful_outcome"] == expected_cost
+    assert verified["optimization"]["resource_efficiency"] is None
+    assert verified["optimization"]["realized_revenue"] is None
+    assert verified["economics"]["cash_realized"] is None
+    assert verified["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["cost_per_useful_outcome"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    clean = LaunchStateMachine(state_file=tmp_path / "cost_clean.json")
+    clean.set_stage(LaunchStage.THREE_PILOTS)
+    clean_signal = _advance_signal(decision_id="cost-clean")
+    first = cycle(clean_signal, state_machine=clean)
+    assert first["verification"]["success"] is True
+    assert first["execution"]["recovered"] is False
+    assert first["optimization"]["cost_per_useful_outcome"] == clean_signal["opportunities"][0]["cost"]
+    assert first["optimization"]["resource_efficiency"] is None
+    assert first["economics"]["cash_realized"] is None
+    assert clean.current_stage == LaunchStage.FIRST_REVENUE
+
+    kept_machine = LaunchStateMachine(state_file=tmp_path / "cost_history.json")
+    kept_machine.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="cost-history-kept",
+            gate_context={"active_pilots": 0},
+            history=[{"useful": True, "cost": 4}],
+        ),
+        state_machine=kept_machine,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["cost_per_useful_outcome"] == 4
+    assert kept["verification"]["success"] is False
+    assert kept["economics"]["cash_realized"] is None
+    assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 

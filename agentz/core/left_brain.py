@@ -488,6 +488,7 @@ class LeftBrain:
         _note_verification_rate(base["optimization"], verified)
         recovered_now = bool(verified and self.failures > 0)
         _note_recovery_rate(base["optimization"], recovered_now)
+        _note_cost_per_useful_outcome(base["optimization"], verified, choice.get("cost"))
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -658,6 +659,18 @@ def _note_verification_rate(report: dict[str, Any], verified: bool) -> None:
 
 def _note_recovery_rate(report: dict[str, Any], recovered: bool) -> None:
     _note_live_metric(report, "recovery_rate", 1 if recovered else 0)
+
+
+def _note_cost_per_useful_outcome(report: dict[str, Any], verified: bool, cost: Any) -> None:
+    """One verified outcome costs that attempt. A miss has no useful outcome."""
+    if report.get("source") != "no_supplied_history":
+        return
+    if not verified:
+        return
+    amount = _number(cost)
+    if amount is None:
+        return
+    report["cost_per_useful_outcome"] = round(amount, 6)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
