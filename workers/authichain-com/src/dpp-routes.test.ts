@@ -34,6 +34,41 @@ describe("tryHandleDppRoute", () => {
     );
   });
 
+  it("keeps the DPP copy when plan is absent or dpp_readiness", async () => {
+    for (const path of [
+      "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc",
+      "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc&plan=dpp_readiness",
+    ]) {
+      const html = await (await tryHandleDppRoute(req(path)))!.text();
+      expect(html).toContain("Workspace opened");
+      expect(html).toContain("50 workspace generations");
+      expect(html).toContain("/dpp/activate?");
+    }
+  });
+
+  it("names the right product and credits for a credit-bearing plan", async () => {
+    const html = await (await tryHandleDppRoute(
+      req("/dpp/thanks?session_id=cs_test_1&visit_id=chk_1&plan=qron_launch")
+    ))!.text();
+    // The DPP workspace claim must not reach a non-DPP buyer.
+    expect(html).not.toContain("Workspace opened");
+    expect(html).not.toContain("50 workspace generations");
+    expect(html).not.toContain("/dpp/activate?");
+    expect(html).toContain("100 generations");
+    expect(html).toContain("/generate?paid=1");
+    expect(html).toContain("session_id=cs_test_1");
+  });
+
+  it("confirms payment without claiming a product for an unknown plan", async () => {
+    const html = await (await tryHandleDppRoute(
+      req("/dpp/thanks?session_id=cs_test_1&plan=not_a_real_plan")
+    ))!.text();
+    expect(html).toContain("Payment received");
+    expect(html).not.toContain("Workspace opened");
+    expect(html).not.toContain("/dpp/activate?");
+    expect(html).not.toContain("generations");
+  });
+
   it("serves activate HTML that posts to /api/dpp/activate", async () => {
     const res = await tryHandleDppRoute(
       req("/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc")
