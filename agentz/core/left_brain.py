@@ -246,6 +246,8 @@ class LeftBrain:
             opportunities=data.get("opportunities"),
         )
         risks: list[str] = []
+        if _mission_drift(data, self.sm.current_stage):
+            risks.append("mission_drift")
         if _authority_requested(data):
             risks.append("authority_violation")
         if data.get("authority_updates"):
@@ -271,13 +273,18 @@ class LeftBrain:
             "authority_boundary_modified": False,
         }
         if risks:
+            reasons: list[str] = []
+            if "mission_drift" in risks:
+                reasons.append("The supplied mission stage does not match the launch machine.")
+            if any(name in risks for name in ("authority_violation", "authority_boundary", "repeated_failures")):
+                reasons.append("An authority boundary or repeated failure stopped the cycle.")
             base["decisions"] = [_decision_record(
                 data,
                 facts,
                 None,
                 state,
                 decision="stop",
-                reason="An authority boundary or repeated failure stopped the cycle.",
+                reason=" ".join(reasons) or "The cycle stopped.",
             )]
             base["mode"] = "STOP"
             return base
@@ -542,6 +549,17 @@ def cycle(
     """Shipped entry. ``state_machine`` is the existing launch state machine."""
     engine = brain if brain is not None else LeftBrain(state_machine)
     return engine.cycle(signal)
+
+
+def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
+    """True when the caller names a mission stage other than the machine's stage."""
+    supplied = data.get("mission_state")
+    if not isinstance(supplied, Mapping):
+        return False
+    claimed = supplied.get("stage")
+    if not isinstance(claimed, str) or not claimed.strip():
+        return False
+    return claimed.strip() != stage.value
 
 
 def _other_brain(data: Mapping[str, Any]) -> str | None:

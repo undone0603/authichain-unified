@@ -582,6 +582,43 @@ def test_cycle_rejects_a_substitute_machine():
         LeftBrain(object())
 
 
+def test_mission_drift_stops_before_the_machine_moves(tmp_path: Path):
+    """A supplied mission stage that is not the machine's stage does not get an advance."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    drifted = cycle(
+        _advance_signal(mission_state={"stage": "SCALE"}),
+        state_machine=sm,
+    )
+    assert drifted["mode"] == "STOP"
+    assert drifted["risks"] == ["mission_drift"]
+    assert drifted["stopped"] is True
+    assert drifted["verification"]["success"] is False
+    assert drifted["execution"]["status"] == "not_run"
+    assert drifted["execution"]["attempts"] == 0
+    assert drifted["economics"]["cash_realized"] is None
+    assert drifted["revenue_ledger_written"] is False
+    assert drifted["authority_boundary_modified"] is False
+    assert drifted["state"]["mission_state"]["stage"] == sm.current_stage.value == "3_PILOTS"
+    assert drifted["state"]["mission_state"]["source"] == "LaunchStateMachine"
+    assert drifted["decisions"][0]["decision"] == "stop"
+    assert "mission" in drifted["decisions"][0]["reason"].lower()
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    aligned = cycle(
+        _advance_signal(
+            decision_id="mission-matches",
+            mission_state={"stage": "3_PILOTS"},
+        ),
+        state_machine=sm,
+    )
+    assert "mission_drift" not in aligned["risks"]
+    assert aligned["verification"]["success"] is True
+    assert aligned["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+
 def test_discovery_disagreement_escalates_and_leaves_the_stage(tmp_path: Path):
     """A supplied discovery does not get to move the launch stage, and neither does the left brain."""
     from agentz.core.right_brain import propose
