@@ -166,6 +166,7 @@ def summarize_history(history: list[Any] | None) -> dict[str, Any]:
     rows = [row for row in (history or []) if isinstance(row, Mapping)]
     if not rows:
         empty["source"] = "no_supplied_history"
+        empty["recommendations"] = _blank_recommendations()
         return empty
     total = len(rows)
 
@@ -205,6 +206,7 @@ def summarize_history(history: list[Any] | None) -> dict[str, Any]:
         "unauthorized_actions": sum(1 for row in rows if row.get("unauthorized") is True),
         "source": "caller_supplied_history",
         "idea_count_is_the_metric": False,
+        "recommendations": _recommendations(rows),
     }
     if useful and cost_seen:
         report["cost_per_useful_outcome"] = round(cost_total / len(useful), 6)
@@ -660,6 +662,100 @@ def _next_stage(stage: LaunchStage) -> LaunchStage | None:
     if index >= len(STAGE_ORDER) - 1:
         return None
     return STAGE_ORDER[index + 1]
+
+
+def _blank_recommendations() -> dict[str, Any]:
+    return {
+        "works": None,
+        "does_not_work": None,
+        "costs_too_much": None,
+        "most_value": None,
+        "automate": None,
+        "stop": None,
+        "escalate": None,
+    }
+
+
+def _row_id(row: Mapping[str, Any]) -> str | None:
+    value = row.get("id")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _number(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _unique_ids(ids: list[str]) -> list[str] | None:
+    seen: list[str] = []
+    for item in ids:
+        if item not in seen:
+            seen.append(item)
+    return seen or None
+
+
+def _recommendations(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
+    """Answers from supplied rows. One success is not an automation."""
+    works: list[str] = []
+    does_not: list[str] = []
+    stop: list[str] = []
+    escalate: list[str] = []
+    success_count: dict[str, int] = {}
+    blocked: set[str] = set()
+    useful_costs: list[float] = []
+    best_cash: float | None = None
+    best_id: str | None = None
+    for row in rows:
+        row_id = _row_id(row)
+        if row_id is None:
+            continue
+        useful = row.get("useful") is True
+        verified = row.get("verified") is True
+        executed = row.get("executed") is True
+        if useful and verified and executed:
+            works.append(row_id)
+            success_count[row_id] = success_count.get(row_id, 0) + 1
+        if row.get("useful") is False or row.get("executed") is False:
+            does_not.append(row_id)
+        if row.get("mission_violation") is True or row.get("unauthorized") is True:
+            stop.append(row_id)
+            blocked.add(row_id)
+        if row.get("escalated") is True:
+            escalate.append(row_id)
+        cost = _number(row.get("cost"))
+        if useful and cost is not None:
+            useful_costs.append(cost)
+        cash = _number(row.get("cash_realized"))
+        if cash is not None and (best_cash is None or cash > best_cash):
+            best_cash = cash
+            best_id = row_id
+    too_much: list[str] | None = None
+    if useful_costs:
+        floor = min(useful_costs)
+        costly: list[str] = []
+        for row in rows:
+            row_id = _row_id(row)
+            cost = _number(row.get("cost"))
+            if row_id is None or cost is None or row.get("useful") is True:
+                continue
+            if cost > floor:
+                costly.append(row_id)
+        too_much = _unique_ids(costly)
+    automate = _unique_ids([
+        row_id for row_id, count in success_count.items() if count >= 3 and row_id not in blocked
+    ])
+    return {
+        "works": _unique_ids(works),
+        "does_not_work": _unique_ids(does_not),
+        "costs_too_much": too_much,
+        "most_value": best_id,
+        "automate": automate,
+        "stop": _unique_ids(stop),
+        "escalate": _unique_ids(escalate),
+    }
 
 
 def _unknown_list() -> dict[str, Any]:

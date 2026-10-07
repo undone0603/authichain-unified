@@ -349,6 +349,114 @@ def test_history_metrics_do_not_invent_cash():
     assert supplied["idea_count_is_the_metric"] is False
 
 
+def test_optimization_uses_supplied_history_and_leaves_the_machine(tmp_path: Path):
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    idle = cycle({}, state_machine=sm)
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["recommendations"] == {
+        "works": None,
+        "does_not_work": None,
+        "costs_too_much": None,
+        "most_value": None,
+        "automate": None,
+        "stop": None,
+        "escalate": None,
+    }
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    reviewed = cycle(
+        {
+            "history": [
+                {
+                    "id": "read",
+                    "useful": True,
+                    "verified": True,
+                    "executed": True,
+                    "cost": 1,
+                    "pipeline_value": 499,
+                },
+                {
+                    "id": "guess",
+                    "useful": False,
+                    "verified": False,
+                    "executed": False,
+                    "cost": 5,
+                },
+                {
+                    "id": "mail",
+                    "useful": False,
+                    "executed": True,
+                    "cost": 1,
+                    "mission_violation": True,
+                    "unauthorized": True,
+                    "escalated": True,
+                },
+            ]
+        },
+        state_machine=sm,
+    )
+    rec = reviewed["optimization"]["recommendations"]
+    assert rec["works"] == ["read"]
+    assert rec["does_not_work"] == ["guess", "mail"]
+    assert rec["costs_too_much"] == ["guess"]
+    assert rec["most_value"] is None
+    assert rec["automate"] is None
+    assert rec["stop"] == ["mail"]
+    assert rec["escalate"] == ["mail"]
+    assert reviewed["optimization"]["realized_revenue"] is None
+    assert reviewed["mode"] == "IDLE / MONITOR"
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    paid = cycle(
+        {
+            "history": [
+                {
+                    "id": "read",
+                    "useful": True,
+                    "verified": True,
+                    "executed": True,
+                    "cost": 1,
+                    "cash_realized": 2,
+                },
+                {
+                    "id": "read",
+                    "useful": True,
+                    "verified": True,
+                    "executed": True,
+                    "cost": 1,
+                    "cash_realized": 2,
+                },
+                {
+                    "id": "read",
+                    "useful": True,
+                    "verified": True,
+                    "executed": True,
+                    "cost": 1,
+                    "cash_realized": 2,
+                },
+                {
+                    "id": "pipeline",
+                    "useful": True,
+                    "verified": True,
+                    "executed": True,
+                    "cost": 1,
+                    "pipeline_value": 499,
+                },
+            ]
+        },
+        state_machine=sm,
+    )
+    paid_rec = paid["optimization"]["recommendations"]
+    assert paid_rec["most_value"] == "read"
+    assert paid_rec["automate"] == ["read"]
+    assert "pipeline" not in (paid_rec["automate"] or [])
+    assert paid["optimization"]["realized_revenue"] == 6
+    assert paid["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_value_classes_stay_separate():
     separated = separate_value({
         "pipeline_value": 10,
