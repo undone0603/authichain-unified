@@ -233,8 +233,15 @@ class LeftBrain:
         gate_context = data.get("gate_context") if isinstance(data.get("gate_context"), Mapping) else {}
         gate_context = dict(gate_context)
         facts = classify_facts(data)
-        state = self._read_state(gate_context)
         economics = separate_value(data.get("economics") if isinstance(data.get("economics"), Mapping) else None)
+        resources = self._resource_view(data.get("resources"), None)
+        state = self._read_state(
+            gate_context,
+            economics=economics,
+            approval=data.get("approval"),
+            resources=resources,
+            opportunities=data.get("opportunities"),
+        )
         risks: list[str] = []
         if _authority_requested(data):
             risks.append("authority_violation")
@@ -249,7 +256,7 @@ class LeftBrain:
             "state": state,
             "decisions": [],
             "priorities": [],
-            "resources": self._resource_view(data.get("resources"), None),
+            "resources": resources,
             "economics": economics,
             "authority_denials": dict(AUTHORITY),
             "verification": _verification(False, False, False, [], economics),
@@ -410,7 +417,15 @@ class LeftBrain:
             if self.failures >= _FAILURE_LIMIT:
                 base["risks"] = ["repeated_failures"]
                 base["stopped"] = True
-        base["state"] = self._read_state(gate_context)
+        view = self._resource_view(data.get("resources"), choice)
+        base["resources"] = view
+        base["state"] = self._read_state(
+            gate_context,
+            economics=economics,
+            approval=data.get("approval"),
+            resources=view,
+            opportunities=data.get("opportunities"),
+        )
         base["verification"] = _verification(True, changed, after == self.sm.current_stage, evidence, economics)
         base["verification"]["success"] = verified
         base["economics"] = economics
@@ -421,8 +436,17 @@ class LeftBrain:
         }
         return base
 
-    def _read_state(self, gate_context: Mapping[str, Any]) -> dict[str, Any]:
+    def _read_state(
+        self,
+        gate_context: Mapping[str, Any],
+        *,
+        economics: Mapping[str, Any],
+        approval: Any,
+        resources: Mapping[str, Any],
+        opportunities: Any,
+    ) -> dict[str, Any]:
         assessment = self.sm.assess_stage(context=dict(gate_context))
+        machine = self.sm.to_dict()
         return {
             "source": "LaunchStateMachine",
             "current_stage": self.sm.current_stage.value,
@@ -434,6 +458,23 @@ class LeftBrain:
                 {"id": gate.id, "passed": gate.passed, "evidence": gate.evidence}
                 for gate in assessment.gates
             ],
+            "mission_state": {
+                "stage": self.sm.current_stage.value,
+                "source": "LaunchStateMachine",
+                "history_count": len(machine.get("history") or []),
+            },
+            "dependencies": list(assessment.blocking_gates),
+            "failures": self.failures,
+            "approvals": {"advance": approval is True},
+            "financial_state": dict(economics),
+            "workflows": _unknown_list(),
+            "tasks": _unknown_list(),
+            "deadlines": _unknown_list(),
+            "opportunities": _supplied_ids(opportunities),
+            "resources": {
+                "available": dict(resources.get("available") or {}),
+                "used": dict(resources.get("used") or {}),
+            },
         }
 
     def _resource_view(self, supplied: Any, choice: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -619,6 +660,24 @@ def _next_stage(stage: LaunchStage) -> LaunchStage | None:
     if index >= len(STAGE_ORDER) - 1:
         return None
     return STAGE_ORDER[index + 1]
+
+
+def _unknown_list() -> dict[str, Any]:
+    return {"status": "unknown", "verified": False, "items": []}
+
+
+def _supplied_ids(opportunities: Any) -> dict[str, Any]:
+    """Opportunity ids are caller input. They are not verified facts."""
+    if not isinstance(opportunities, list):
+        return _unknown_list()
+    items = [
+        str(item["id"])
+        for item in opportunities
+        if isinstance(item, Mapping) and item.get("id")
+    ]
+    if not items:
+        return _unknown_list()
+    return {"status": "supplied", "verified": False, "items": items}
 
 
 def _strings(value: Any) -> list[str]:

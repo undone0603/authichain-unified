@@ -78,6 +78,43 @@ def test_empty_signal_idles_and_leaves_the_machine_at_boot(tmp_path: Path):
     assert result["state"]["source"] == "LaunchStateMachine"
 
 
+def test_state_snapshot_follows_the_machine_and_drops_caller_claims(tmp_path: Path):
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    context = {"active_pilots": 2}
+    direct = sm.assess_stage(context=context)
+    result = cycle(
+        {
+            "gate_context": context,
+            "assumptions": ["send_mail is running"],
+            "workflows": ["send_mail"],
+            "tasks": ["email the buyer"],
+            "deadlines": ["2026-11-06"],
+            "mission_state": {"stage": "SCALE"},
+            "economics": {"pipeline_value": 499, "revenue": 499.95},
+            "approval": "yes",
+            "resources": {"human_attention": 1, "money": 0},
+        },
+        state_machine=sm,
+    )
+    state = result["state"]
+    assert state["mission_state"]["stage"] == sm.current_stage.value == "3_PILOTS"
+    assert state["mission_state"]["source"] == "LaunchStateMachine"
+    assert state["mission_state"]["history_count"] == len(sm.to_dict()["history"])
+    assert state["dependencies"] == direct.blocking_gates
+    assert state["failures"] == 0
+    assert state["approvals"]["advance"] is False
+    assert state["financial_state"]["pipeline_value"] == 499
+    assert state["financial_state"]["cash_realized"] is None
+    assert "revenue" not in state["financial_state"]
+    assert state["workflows"] == {"status": "unknown", "verified": False, "items": []}
+    assert state["tasks"] == {"status": "unknown", "verified": False, "items": []}
+    assert state["deadlines"] == {"status": "unknown", "verified": False, "items": []}
+    assert state["opportunities"] == {"status": "unknown", "verified": False, "items": []}
+    assert state["resources"]["available"]["human_attention"] == result["resources"]["available"]["human_attention"]
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_state_read_matches_the_live_machine(tmp_path: Path):
     sm = _machine(tmp_path)
     sm.set_stage(LaunchStage.THREE_PILOTS)
