@@ -312,13 +312,18 @@ class LeftBrain:
 
         if choice is None:
             if any(row["rankable"] for row in ranked):
-                base["risks"] = ["resource_exhaustion"]
+                top = next(row for row in ranked if row["rankable"])
+                if _asks_for_spend(top):
+                    base["risks"] = ["abnormal_spending"]
+                    record["reason"] = "The opportunity asks to spend. Spend is denied."
+                else:
+                    base["risks"] = ["resource_exhaustion"]
+                    record["reason"] = "Rankable work does not fit the resources still available."
                 base["stopped"] = True
                 base["mode"] = "STOP"
                 record["decision"] = "stop"
-                record["reason"] = "Rankable work does not fit the resources still available."
                 base["execution"] = {"status": "stopped", "attempts": self.execution_attempts}
-                base["resources"] = self._resource_view(data.get("resources"), ranked[0] if ranked else None)
+                base["resources"] = self._resource_view(data.get("resources"), top)
                 return base
             record["decision"] = "withhold"
             record["reason"] = "No supplied opportunity is rankable within the resources on hand."

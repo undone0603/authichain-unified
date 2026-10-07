@@ -256,6 +256,44 @@ def test_spend_and_mode_auto_stop_before_the_machine_moves(tmp_path: Path):
     assert sm.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_unfunded_spend_stops_as_abnormal_spending(tmp_path: Path):
+    """A spend the budget cannot cover is still a spend, not a capacity miss."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    blocked = cycle(
+        _advance_signal(
+            decision_id="unfunded-spend",
+            opportunities=[
+                {
+                    "id": "buy",
+                    "action": "advance_if_gates_pass",
+                    "value": 4,
+                    "probability": 0.5,
+                    "urgency": 2,
+                    "cost": 2,
+                    "risk": 2,
+                    "reversibility": 1,
+                    "resources": {"money": 1, "human_attention": 1},
+                }
+            ],
+        ),
+        state_machine=sm,
+    )
+    assert blocked["mode"] == "STOP"
+    assert blocked["risks"] == ["abnormal_spending"]
+    assert "resource_exhaustion" not in blocked["risks"]
+    assert blocked["stopped"] is True
+    assert blocked["verification"]["success"] is False
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert blocked["authority_boundary_modified"] is False
+    assert blocked["decisions"][0]["decision"] == "stop"
+    assert "spend" in blocked["decisions"][0]["reason"].lower()
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_approved_advance_uses_the_real_machine_once(tmp_path: Path):
     sm = _machine(tmp_path)
     sm.set_stage(LaunchStage.THREE_PILOTS)
