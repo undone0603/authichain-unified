@@ -298,6 +298,106 @@ def test_failed_gates_are_not_success_and_a_third_try_stops(tmp_path: Path):
     assert sm.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
+    """Compute, tokens, time, api, and system capacity constrain the live machine.
+
+    A short dimension stops the advance. It is not a spend. A lower-ranked
+    action that fits is the use of what is still available.
+    """
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    pool = {
+        "human_attention": 5,
+        "money": 0,
+        "compute": 5,
+        "tokens": 5,
+        "time": 5,
+        "api": 5,
+        "system_capacity": 5,
+    }
+    for kind in ("compute", "tokens", "time", "api", "system_capacity"):
+        scarce = dict(pool)
+        scarce[kind] = 0
+        result = cycle(
+            _advance_signal(
+                decision_id=f"needs-{kind}",
+                resources=scarce,
+                opportunities=[
+                    {
+                        "id": f"needs-{kind}",
+                        "action": "advance_if_gates_pass",
+                        "value": 4,
+                        "probability": 0.5,
+                        "urgency": 2,
+                        "cost": 2,
+                        "risk": 2,
+                        "reversibility": 1,
+                        "resources": {kind: 1, "human_attention": 1},
+                    }
+                ],
+            ),
+            state_machine=sm,
+        )
+        assert result["mode"] == "STOP"
+        assert result["risks"] == ["resource_exhaustion"]
+        assert "abnormal_spending" not in result["risks"]
+        assert result["verification"]["success"] is False
+        assert result["execution"]["attempts"] == 0
+        assert result["economics"]["cash_realized"] is None
+        assert sm.current_stage == LaunchStage.THREE_PILOTS
+    reread = LaunchStateMachine(state_file=sm.state_file)
+    assert reread.current_stage == LaunchStage.THREE_PILOTS
+
+    short_compute = dict(pool)
+    short_compute["compute"] = 1
+    redirect = cycle(
+        {
+            "bottleneck": "Compute is short",
+            "approval": True,
+            "gate_context": {"active_pilots": 3},
+            "resources": short_compute,
+            "opportunities": [
+                {
+                    "id": "heavy",
+                    "action": "advance_if_gates_pass",
+                    "value": 9,
+                    "probability": 1,
+                    "urgency": 3,
+                    "cost": 1,
+                    "risk": 1,
+                    "reversibility": 1,
+                    "resources": {"compute": 4},
+                },
+                {
+                    "id": "light",
+                    "action": "read_state",
+                    "value": 1,
+                    "probability": 1,
+                    "urgency": 1,
+                    "cost": 1,
+                    "risk": 1,
+                    "reversibility": 1,
+                    "resources": {
+                        "compute": 1,
+                        "tokens": 1,
+                        "time": 1,
+                        "api": 1,
+                        "system_capacity": 1,
+                    },
+                },
+            ],
+        },
+        state_machine=sm,
+    )
+    assert redirect["resources"]["highest_value_use"] == "light"
+    assert redirect["decisions"][0]["decision"] == "read_state"
+    assert redirect["mode"] == "DECIDE"
+    assert redirect["verification"]["success"] is False
+    assert redirect["verification"]["external_state_changed"] is False
+    assert "abnormal_spending" not in redirect["risks"]
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+
 def test_attention_exhaustion_does_not_advance(tmp_path: Path):
     sm = _machine(tmp_path)
     sm.set_stage(LaunchStage.THREE_PILOTS)
@@ -480,3 +580,89 @@ def test_same_input_same_idle_result(tmp_path: Path):
 def test_cycle_rejects_a_substitute_machine():
     with pytest.raises(TypeError):
         LeftBrain(object())
+
+
+def test_discovery_disagreement_escalates_and_leaves_the_stage(tmp_path: Path):
+    """A supplied discovery does not get to move the launch stage, and neither does the left brain."""
+    from agentz.core.right_brain import propose
+
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    discovery = propose({
+        "problem": "Pilot count is the open gate",
+        "why_now": "The caller named this bottleneck",
+        "meaningful_opportunity": True,
+    })
+    assert discovery["stops_before_execution"] is True
+    brain = LeftBrain(sm)
+    blocked = brain.cycle({**_advance_signal(), "discovery": discovery})
+    assert blocked["mode"] == "ESCALATE"
+    assert blocked["risks"] == ["disagreement"]
+    assert blocked["human_decision_required"] is True
+    assert blocked["stopped"] is True
+    assert blocked["verification"]["success"] is False
+    assert blocked["verification"]["external_state_changed"] is False
+    assert blocked["execution"]["status"] == "escalated"
+    assert blocked["execution"]["attempts"] == 0
+    assert blocked["economics"]["cash_realized"] is None
+    assert blocked["revenue_ledger_written"] is False
+    assert blocked["authority_boundary_modified"] is False
+    assert all(value == "denied" for value in blocked["authority_denials"].values())
+    assert blocked["disagreement"] == {
+        "left": "advance_if_gates_pass",
+        "right": "stop_before_execution",
+        "resolved_by": "human_decision_required",
+        "checked": ["evidence", "constraints", "risk", "mission", "authority", "human_decision"],
+    }
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+    assert brain.failures == 0
+    assert brain.execution_attempts == 0
+
+    forged = brain.cycle({
+        **_advance_signal(decision_id="forged-execute"),
+        "discovery": {"stops_before_execution": False, "mode": "EXECUTE"},
+    })
+    assert forged["mode"] == "ESCALATE"
+    assert forged["disagreement"]["right"] == "unverified"
+    assert forged["verification"]["success"] is False
+    assert brain.failures == 0
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    agreed = brain.cycle({
+        **_advance_signal(
+            decision_id="read-with-discovery",
+            opportunities=[
+                {
+                    "id": "read",
+                    "action": "read_state",
+                    "value": 1,
+                    "probability": 1,
+                    "urgency": 1,
+                    "cost": 1,
+                    "risk": 1,
+                    "reversibility": 1,
+                    "resources": {"human_attention": 1},
+                }
+            ],
+        ),
+        "discovery": discovery,
+    })
+    assert agreed["mode"] == "DECIDE"
+    assert agreed["decisions"][0]["decision"] == "read_state"
+    assert "disagreement" not in agreed["risks"]
+    assert agreed.get("human_decision_required") is not True
+    assert agreed["verification"]["success"] is False
+    assert agreed["verification"]["executed"] is True
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    idle = cycle({"discovery": discovery}, state_machine=sm)
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert "disagreement" not in idle["risks"]
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    moved = brain.cycle(_advance_signal(decision_id="after-escalation"))
+    assert moved["verification"]["success"] is True
+    assert moved["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert brain.execution_attempts == 1

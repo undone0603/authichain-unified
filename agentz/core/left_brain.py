@@ -2,9 +2,10 @@
 
 Reads the existing launch state machine, ranks supplied opportunities, and
 records a decision. It advances that machine only when the caller approved
-the advance and the machine's own gates pass. It does not spend, send,
-deploy, set AgentZ auto, rewrite Founder law, change a guardrail, or book
-revenue.
+the advance, the machine's own gates pass, and no supplied discovery
+disagrees. A disagreement escalates. Neither side overrides the other.
+It does not spend, send, deploy, set AgentZ auto, rewrite Founder law,
+change a guardrail, or book revenue.
 """
 
 from __future__ import annotations
@@ -346,6 +347,35 @@ class LeftBrain:
             base["execution"] = {"status": "approval_required", "attempts": self.execution_attempts}
             return base
 
+        other = _other_brain(data)
+        if other is not None:
+            record["decision"] = "escalate"
+            record["reason"] = (
+                "Evidence, constraints, risk, mission, and authority were checked. "
+                "The discovery brain does not agree to a stage change. "
+                "Neither side overrides the other. A human decision is required."
+            )
+            base["mode"] = "ESCALATE"
+            base["stopped"] = True
+            base["risks"] = ["disagreement"]
+            base["human_decision_required"] = True
+            base["disagreement"] = {
+                "left": action,
+                "right": other,
+                "resolved_by": "human_decision_required",
+                "checked": [
+                    "evidence",
+                    "constraints",
+                    "risk",
+                    "mission",
+                    "authority",
+                    "human_decision",
+                ],
+            }
+            base["verification"] = _verification(False, False, False, [], economics)
+            base["execution"] = {"status": "escalated", "attempts": self.execution_attempts}
+            return base
+
         decision_id = _decision_id(data, action, gate_context)
         if decision_id in self.applied:
             record["reason"] = "This decision already ran. It was not repeated."
@@ -512,6 +542,16 @@ def cycle(
     """Shipped entry. ``state_machine`` is the existing launch state machine."""
     engine = brain if brain is not None else LeftBrain(state_machine)
     return engine.cycle(signal)
+
+
+def _other_brain(data: Mapping[str, Any]) -> str | None:
+    """None means no discovery was supplied. A discovery cannot authorize a stage change."""
+    if "discovery" not in data:
+        return None
+    discovery = data.get("discovery")
+    if isinstance(discovery, Mapping) and discovery.get("stops_before_execution") is True:
+        return "stop_before_execution"
+    return "unverified"
 
 
 def _worthwhile(data: Mapping[str, Any]) -> bool:
