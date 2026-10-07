@@ -364,6 +364,36 @@ def test_one_failed_gate_recovers_on_the_next_attempt(tmp_path: Path):
     assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
 
 
+def test_live_attempt_records_decision_accuracy_without_inventing_cash(tmp_path: Path):
+    """A real gate attempt sets decision accuracy. Idle does not, and cash stays unknown."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="accuracy-miss")
+    )
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["decision_accuracy"] == 0
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    verified = brain.cycle(_advance_signal(decision_id="accuracy-hit"))
+    assert verified["verification"]["success"] is True
+    assert verified["optimization"]["decision_accuracy"] == 1
+    assert verified["optimization"]["realized_revenue"] is None
+    assert verified["economics"]["cash_realized"] is None
+    assert verified["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["decision_accuracy"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 

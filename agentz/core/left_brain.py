@@ -483,6 +483,7 @@ class LeftBrain:
         )
         base["verification"] = _verification(True, changed, after == self.sm.current_stage, evidence, economics)
         base["verification"]["success"] = verified
+        _note_decision_accuracy(base["optimization"], verified)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -630,6 +631,13 @@ def _circular_execution(data: Mapping[str, Any]) -> bool:
                 if seen == white:
                     stack.append((nxt, False))
     return False
+
+
+def _note_decision_accuracy(report: dict[str, Any], correct: bool) -> None:
+    """Record this attempt only. Supplied history and cash stay as they were."""
+    if report.get("source") != "no_supplied_history":
+        return
+    report["decision_accuracy"] = 1 if correct else 0
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
