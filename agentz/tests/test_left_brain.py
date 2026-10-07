@@ -336,6 +336,34 @@ def test_failed_gates_are_not_success_and_a_third_try_stops(tmp_path: Path):
     assert sm.current_stage == LaunchStage.THREE_PILOTS
 
 
+def test_one_failed_gate_recovers_on_the_next_attempt(tmp_path: Path):
+    """One missed gate can be recovered. The recovery is labeled and does not book cash."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    failed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="miss-pilots")
+    )
+    assert failed["verification"]["success"] is False
+    assert failed["execution"]["status"] == "failed"
+    assert failed["execution"]["recovered"] is False
+    assert brain.failures == 1
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    recovered = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 3}, decision_id="recover-pilots")
+    )
+    assert recovered["verification"]["success"] is True
+    assert recovered["execution"]["status"] == "advanced"
+    assert recovered["execution"]["recovered"] is True
+    assert recovered["economics"]["cash_realized"] is None
+    assert recovered["revenue_ledger_written"] is False
+    assert brain.failures == 1
+    assert brain.execution_attempts == 2
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):
     """Compute, tokens, time, api, and system capacity constrain the live machine.
 

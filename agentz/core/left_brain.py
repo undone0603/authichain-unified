@@ -460,7 +460,10 @@ class LeftBrain:
             verified = False
         elif verified:
             self.applied.add(decision_id)
-            record["reason"] = "The existing state machine advanced one stage after its gates passed."
+            if self.failures > 0:
+                record["reason"] = "The existing state machine advanced one stage after a bounded failure."
+            else:
+                record["reason"] = "The existing state machine advanced one stage after its gates passed."
             base["mode"] = "VERIFIED"
         else:
             self.failures += 1
@@ -485,6 +488,7 @@ class LeftBrain:
             "status": "advanced" if verified else "failed",
             "attempts": self.execution_attempts,
             "decision_id": decision_id,
+            "recovered": bool(verified and self.failures > 0),
         }
         return base
 
