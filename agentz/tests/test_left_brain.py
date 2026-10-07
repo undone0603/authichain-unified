@@ -619,6 +619,66 @@ def test_mission_drift_stops_before_the_machine_moves(tmp_path: Path):
     assert sm.current_stage == LaunchStage.FIRST_REVENUE
 
 
+def test_circular_actions_stop_without_advancing(tmp_path: Path):
+    """Actions that point at each other, or at themselves, do not get an advance."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+
+    def step(step_id: str, nxt: str, value: int) -> dict:
+        return {
+            "id": step_id,
+            "action": "advance_if_gates_pass",
+            "next": nxt,
+            "value": value,
+            "probability": 1,
+            "urgency": 1,
+            "cost": 1,
+            "risk": 1,
+            "reversibility": 1,
+            "resources": {"human_attention": 1},
+        }
+
+    circled = cycle(
+        _advance_signal(
+            decision_id="circle",
+            opportunities=[step("again", "later", 4), step("later", "again", 3)],
+        ),
+        state_machine=sm,
+    )
+    assert circled["mode"] == "STOP"
+    assert circled["risks"] == ["circular_execution"]
+    assert circled["stopped"] is True
+    assert circled["verification"]["success"] is False
+    assert circled["execution"]["status"] == "not_run"
+    assert circled["execution"]["attempts"] == 0
+    assert circled["economics"]["cash_realized"] is None
+    assert circled["revenue_ledger_written"] is False
+    assert circled["authority_boundary_modified"] is False
+    assert circled["state"]["mission_state"]["stage"] == "3_PILOTS"
+    assert circled["decisions"][0]["decision"] == "stop"
+    assert "circular" in circled["decisions"][0]["reason"].lower()
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.THREE_PILOTS
+
+    repeated = cycle(
+        _advance_signal(
+            decision_id="self-loop",
+            opportunities=[step("again", "again", 4)],
+        ),
+        state_machine=sm,
+    )
+    assert repeated["mode"] == "STOP"
+    assert repeated["risks"] == ["circular_execution"]
+    assert repeated["verification"]["success"] is False
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    plain = cycle(_advance_signal(decision_id="no-circle"), state_machine=sm)
+    assert "circular_execution" not in plain["risks"]
+    assert plain["verification"]["success"] is True
+    assert plain["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+
 def test_discovery_disagreement_escalates_and_leaves_the_stage(tmp_path: Path):
     """A supplied discovery does not get to move the launch stage, and neither does the left brain."""
     from agentz.core.right_brain import propose

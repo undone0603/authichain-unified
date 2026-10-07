@@ -248,6 +248,8 @@ class LeftBrain:
         risks: list[str] = []
         if _mission_drift(data, self.sm.current_stage):
             risks.append("mission_drift")
+        if _circular_execution(data):
+            risks.append("circular_execution")
         if _authority_requested(data):
             risks.append("authority_violation")
         if data.get("authority_updates"):
@@ -276,6 +278,8 @@ class LeftBrain:
             reasons: list[str] = []
             if "mission_drift" in risks:
                 reasons.append("The supplied mission stage does not match the launch machine.")
+            if "circular_execution" in risks:
+                reasons.append("The supplied actions are circular. The cycle stopped before repeating them.")
             if any(name in risks for name in ("authority_violation", "authority_boundary", "repeated_failures")):
                 reasons.append("An authority boundary or repeated failure stopped the cycle.")
             base["decisions"] = [_decision_record(
@@ -549,6 +553,57 @@ def cycle(
     """Shipped entry. ``state_machine`` is the existing launch state machine."""
     engine = brain if brain is not None else LeftBrain(state_machine)
     return engine.cycle(signal)
+
+
+def _circular_execution(data: Mapping[str, Any]) -> bool:
+    """True when supplied actions point at one another, including a step that points at itself."""
+    opportunities = data.get("opportunities")
+    if not isinstance(opportunities, list):
+        return False
+    edges: dict[str, list[str]] = {}
+    for item in opportunities:
+        if not isinstance(item, Mapping):
+            continue
+        node = item.get("id")
+        if not isinstance(node, str) or not node.strip():
+            continue
+        raw = item.get("next")
+        targets: list[str] = []
+        if isinstance(raw, str) and raw.strip():
+            targets.append(raw.strip())
+        elif isinstance(raw, list):
+            targets.extend(piece.strip() for piece in raw if isinstance(piece, str) and piece.strip())
+        if targets:
+            edges[node.strip()] = targets
+    if not edges:
+        return False
+    white = 0
+    gray = 1
+    black = 2
+    color: dict[str, int] = {}
+    for start in edges:
+        if color.get(start, white) != white:
+            continue
+        stack: list[tuple[str, bool]] = [(start, False)]
+        while stack:
+            node, finished = stack.pop()
+            if finished:
+                color[node] = black
+                continue
+            state = color.get(node, white)
+            if state == gray:
+                return True
+            if state == black:
+                continue
+            color[node] = gray
+            stack.append((node, True))
+            for nxt in edges.get(node, []):
+                seen = color.get(nxt, white)
+                if seen == gray:
+                    return True
+                if seen == white:
+                    stack.append((nxt, False))
+    return False
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
