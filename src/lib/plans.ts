@@ -2,8 +2,8 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
-// 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
-// starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
+// 2026-10-06: homepage paid product is starter $29. dpp_readiness stays
+// listed as EU DPP Workspace, not an audit. Price id unchanged.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
@@ -56,7 +56,7 @@ export const PLANS: Plan[] = [
       "5 generations per account",
       "Sign-in required",
       "Lookup verify only (no GPT-4V)",
-      "Then Starter $29 or DPP $299",
+      "Then Starter $29 or DPP workspace $299",
     ],
     cta: "Sign in for 5 credits",
   },
@@ -164,20 +164,23 @@ export const PLANS: Plan[] = [
   },
   {
     id: "dpp_readiness",
-    name: "EU DPP Readiness Audit",
+    name: "EU DPP Workspace",
     price: 299,
-    description: "One-time checkout that opens an AuthiChain workspace",
+    description:
+      "One-time checkout that opens an AuthiChain workspace with 50 generations. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
-    stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripe_payment_link: "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44",
     stripe_mode: "payment",
     tier: "pro",
     features: [
       "AuthiChain workspace",
       "Self-serve activation",
       "50 workspace generations",
+      "Not an audit and not a legal opinion",
+      "Does not register a product in EUDAMED",
     ],
-    cta: "Start DPP Readiness Audit",
+    cta: "Open DPP workspace — $299",
   },
   {
     id: "strainchain_passport",
