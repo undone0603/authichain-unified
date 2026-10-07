@@ -37,8 +37,21 @@ describe("battery passport offer page", () => {
     expect(html).toContain('type="email" required');
   });
 
-  it("lists exactly the plan's real deliverables and makes no invented claims", () => {
-    for (const f of plan.features) expect(html).toContain(f);
+  it("lists the workspace grant and leaves the unbuilt report and credit off the page", () => {
+    for (const line of [
+      "AuthiChain workspace",
+      "Self-serve activation",
+      "50 workspace generations",
+    ])
+      expect(html).toContain(line);
+    expect(html).not.toContain("Written EU DPP readiness assessment");
+    expect(html).not.toContain("written readiness assessment");
+    expect(html).not.toContain("$299 credited toward AuthiChain Basic");
+    expect(html).not.toContain("who in your supply chain holds it");
+    expect(html).not.toMatch(/we reply|we'll reply|will reply/i);
+    expect(html).toContain(
+      "No. The $299 checkout is self-serve. The scoping form on this page is optional. We may email you at the work address in that form to set up a scoping call."
+    );
     expect(html).not.toMatch(
       /testimonial|trusted by|customers love|guarantee/i
     );
@@ -88,6 +101,19 @@ describe("battery passport offer page", () => {
       /fetch\(|XMLHttpRequest|sendBeacon|innerHTML|action=/
     );
     expect(section).toContain("textContent");
+  });
+
+  it("keeps the $299 checkout ahead of the optional scoping form", () => {
+    const hero = html.indexOf('id="hero-checkout"');
+    const form = html.indexOf('id="lead-form"');
+    const bottom = html.indexOf('id="cta-checkout"');
+    expect(hero).toBeGreaterThan(-1);
+    expect(form).toBeGreaterThan(hero);
+    expect(bottom).toBeGreaterThan(form);
+    expect(html).toContain("Get passport-ready");
+    expect(html).toContain("The scoping form on this page is optional");
+    expect(html).not.toMatch(/No sales call/i);
+    expect(html).not.toMatch(/No call booking/i);
   });
 
   it("keeps the $299 dpp_readiness checkout tagged battery-passport", () => {

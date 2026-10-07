@@ -43,9 +43,9 @@ function thanksHtml(sessionId: string, visitId: string): string {
   return pageShell(
     "Payment received | AuthiChain",
     `<p class="kicker">Payment received</p>
-     <h1>DPP audit provisioned</h1>
-     <p>Your workspace access is being granted automatically. Activate now to complete merchant setup — no need to wait for an email reply.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate merchant</a>
+     <h1>Workspace opened</h1>
+     <p>Your payment opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Activate it below. The same link is in the confirmation email.</p>
+     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
      <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
   );
 }
@@ -60,10 +60,10 @@ function activateHtml(sessionId: string, visitId: string): string {
     );
   }
   return pageShell(
-    "Activate DPP audit | AuthiChain",
+    "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
-     <h1>Activate your DPP audit</h1>
-     <p>Complete this once. Humans are only notified for exceptions — routine fulfillment is automatic.</p>
+     <h1>Activate your workspace</h1>
+     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -71,9 +71,7 @@ function activateHtml(sessionId: string, visitId: string): string {
          <textarea name="markets" rows="2" required></textarea></label>
        <label>Current labeling / QR / NFC setup (or "none")
          <textarea name="labeling" rows="2" required></textarea></label>
-       <label>Preferred call windows (optional)
-         <textarea name="call_windows" rows="2" placeholder="Timezone + 2–3 options"></textarea></label>
-       <button class="btn" type="submit">Activate</button>
+       <button class="btn" type="submit">Activate workspace</button>
        <p id="msg" style="margin-top:1rem"></p>
      </form>
      <script>
@@ -91,14 +89,12 @@ function activateHtml(sessionId: string, visitId: string): string {
                visit_id: ${JSON.stringify(visitId)},
                categories: fd.get('categories'),
                markets: fd.get('markets'),
-               labeling: fd.get('labeling'),
-               call_windows: fd.get('call_windows')
+               labeling: fd.get('labeling')
              })
            });
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
-           msg.textContent = 'Activated. Opening dashboard…';
-           location.href = data.next || '/dashboard';
+           msg.textContent = 'Activated. This workspace includes 50 workspace generations.';
          } catch (err) {
            msg.textContent = err.message || 'Activation failed';
          }

@@ -9,6 +9,43 @@ workers_dev = false
 # Apex + www — the wildcard covers all paths including static assets.
 # The separate per-asset routes were redundant (the /* wildcard already
 # matched them) and only added deploy-time registration overhead.
+# More specific than authichain-edge-router's authichain.com/api/x402*.
+# That route wins over authichain.com/*, and the deployed edge router only
+# implements health and catalog, so /api/x402/listing and /api/x402/growth
+# answered {"error":"Not found"}. These paths, including a trailing slash,
+# are implemented here. Health, catalog, and paid POST stay on the edge.
+[[routes]]
+pattern = "authichain.com/api/x402/listing"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/growth"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/listing/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/api/x402/growth/"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/listing"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/growth"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/listing/"
+zone_name = "govchain.us"
+
+[[routes]]
+pattern = "authichain.govchain.us/api/x402/growth/"
+zone_name = "govchain.us"
+
 [[routes]]
 pattern = "authichain.com/*"
 zone_name = "authichain.com"

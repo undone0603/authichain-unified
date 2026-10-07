@@ -44,7 +44,7 @@
     "test:living-identities": "node scripts/validate-living-identities.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.75",
+    "@ai-sdk/openai": "^4.0.83",
     "@anthropic-ai/sdk": "^0.131.0",
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
@@ -117,7 +117,7 @@
     "nanoid": "^6.0.1",
     "next": "^16.3.4",
     "nodemailer": "^10.0.10",
-    "openai": "^7.23.0",
+    "openai": "^7.27.0",
     "oslo": "^1.2.1",
     "pg": "^8.23.0",
     "pino-pretty": "^13.1.3",
@@ -165,7 +165,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.9.1",
     "eslint-config-next": "16.2.10",
-    "hardhat": "^3.18.0",
+    "hardhat": "^3.18.1",
     "husky": "^9.1.7",
     "ioredis": "file:./stubs/empty-redis",
     "jsdom": "^30.1.0",

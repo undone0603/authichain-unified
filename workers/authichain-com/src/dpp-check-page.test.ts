@@ -27,6 +27,7 @@ describe("/dpp-check", () => {
     expect(html).not.toContain("checkout/dpp_readiness");
     expect(html).toContain("/battery-passport/sample-audit");
     expect(html).toContain("$299");
+    expect(html).not.toMatch(/written plan/i);
   });
 
   it("in-scope battery result shows countdown, gaps and the $299 checkout", () => {
@@ -45,6 +46,9 @@ describe("/dpp-check", () => {
     expect(html).toContain('name="utm_campaign" value="dpp-check"');
     expect(html).toContain('name="utm_content" value="battery_passport"');
     expect(html).toContain("Not legal advice");
+    expect(html).toContain("Open a workspace");
+    expect(html).not.toMatch(/written readiness plan/i);
+    expect(html).not.toMatch(/written plan/i);
   });
 
   it("no checkout when there is no EU duty", () => {

@@ -100,6 +100,44 @@ export function isCallOnly(yamlText) {
  * latestRuns: Map(file -> {conclusion, html_url, created_at}) for runs on the default branch.
  * callOnly: Set of files that only run via workflow_call (no run history of their own).
  */
+/**
+ * Newest completed run whose head branch is the default branch.
+ *
+ * Do not ask the Actions API for `?branch=main`, and do not combine
+ * `?status=completed` with `per_page` greater than 1. On this repo both
+ * queries return a stale page: `branch=main` still pointed at August and
+ * September failures on 2026-10-05, and `status=completed&per_page=5`
+ * returned that same old page while `per_page=1` and the unfiltered list
+ * showed a later success on main. Filter the unfiltered page here.
+ */
+/**
+ * `runs` stays untyped on purpose. A PulseRun return makes the existing
+ * caller `picked.html_url` two new errors, and the ratchet is already at
+ * its baseline. Only `skip` is typed, so the test callback is not `any`.
+ *
+ * @param {any} runs
+ * @param {string} [branch]
+ * @param {(run: { id?: number }) => boolean} [skip]
+ */
+export function pickLatestCompletedRun(runs, branch = "main", skip) {
+  let best = null;
+  for (const run of runs ?? []) {
+    if (!run || run.head_branch !== branch || !run.conclusion) continue;
+    if (typeof skip === "function" && skip(run)) continue;
+    if (!best || String(run.created_at) > String(best.created_at)) best = run;
+  }
+  return best;
+}
+
+/** A run whose jobs were all cancelled before any step started. Not a product failure. */
+export function isQueuedCancellation(jobs) {
+  if (!Array.isArray(jobs) || jobs.length === 0) return false;
+  return jobs.every(job => {
+    const steps = job?.steps ?? [];
+    return job?.conclusion === "cancelled" && steps.length === 0;
+  });
+}
+
 export function evaluateWorkflows(
   manifestRows,
   remote,
@@ -121,6 +159,7 @@ export function evaluateWorkflows(
       continue;
     }
     const run = latestRuns.get(r.file);
+    if (run?.queued_cancellation) continue;
     if (
       run &&
       !callOnly.has(r.file) &&
@@ -221,15 +260,38 @@ async function latestRunsFor(repo, token, files) {
     files.map(async f => {
       try {
         const d = await gh(
-          `/repos/${repo}/actions/workflows/${f}/runs?branch=main&status=completed&per_page=1`,
+          `/repos/${repo}/actions/workflows/${f}/runs?per_page=100`,
           { token }
         );
-        const r = d.workflow_runs?.[0];
+        const runs = d.workflow_runs ?? [];
+        const skipped = new Set();
+        for (const candidate of runs) {
+          if (!candidate?.id) continue;
+          if (
+            candidate.conclusion !== "failure" &&
+            candidate.conclusion !== "cancelled"
+          ) {
+            continue;
+          }
+          try {
+            const jobs = await gh(
+              `/repos/${repo}/actions/runs/${candidate.id}/jobs?per_page=100`,
+              { token }
+            );
+            if (isQueuedCancellation(jobs.jobs)) skipped.add(candidate.id);
+          } catch {
+            /* keep the run; a real failure must still page */
+          }
+        }
+        const r = pickLatestCompletedRun(runs, "main", run =>
+          skipped.has(run.id)
+        );
         if (r)
           map.set(f, {
             conclusion: r.conclusion,
             html_url: r.html_url,
             created_at: r.created_at,
+            queued_cancellation: false,
           });
       } catch {
         /* workflow not registered yet */

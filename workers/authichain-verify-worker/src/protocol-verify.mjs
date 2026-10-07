@@ -44,6 +44,8 @@ export function assessChainRead({ tx, receipt, recordHash }) {
     onChain: true,
     status: "tx_contains_record_hash",
     block: receipt.blockNumber ?? null,
+    txFrom: typeof tx.from === "string" ? tx.from : null,
+    txTo: typeof tx.to === "string" ? tx.to : null,
   };
 }
 

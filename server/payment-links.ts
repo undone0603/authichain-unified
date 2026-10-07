@@ -47,7 +47,8 @@ export const PAYMENT_LINKS = {
     starter: offer("dpp_readiness"),
   },
   strainchain: {
-    basic: offer("strainchain_farm"),
+    // Farm is not a public offer. The retired Basic key follows the passport.
+    basic: offer("strainchain_passport"),
   },
 } as const;
 

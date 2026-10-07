@@ -59,16 +59,13 @@ describe("seo-pages loader", () => {
     );
   });
 
-  it("cannabis CoA hub offers Farm $149 as well as Passport $49", () => {
+  it("cannabis CoA hub offers Passport and not Farm checkout", () => {
     const page = getSeoPageBySlug("cannabis-coa-verification-blockchain");
     expect(page).not.toBeNull();
     expect(page?.bodyHtml).toContain(
       'action="https://authichain.com/checkout/strainchain_passport"'
     );
-    expect(page?.bodyHtml).toContain(
-      'action="https://authichain.com/checkout/strainchain_farm"'
-    );
-    expect(page?.bodyHtml).toContain(
+    expect(page?.bodyHtml).not.toContain(
       "https://authichain.com/checkout/strainchain_farm"
     );
   });
@@ -130,6 +127,23 @@ describe("generated SEO money-path CTAs", () => {
       expect(cta).toBeGreaterThan(how);
       // A page with no FAQs (e.g. the noindex QFS explainer) omits the section.
       if (faq !== -1) expect(faq).toBeGreaterThan(cta);
+    }
+  });
+
+  it("does not sell the $299 checkout as a written assessment or a Basic credit", () => {
+    const banned = [
+      "sample $299 battery assessment",
+      "credited toward AuthiChain Basic",
+      "written readiness assessment",
+      "written EU DPP readiness assessment",
+      "written plan for your product line",
+      "Want to see the deliverable first?",
+    ];
+    for (const page of listSeoPages()) {
+      const blob = `${page.bodyHtml}\n${JSON.stringify(page.jsonLd)}`;
+      for (const phrase of banned) {
+        expect(blob, `${page.slug} ${phrase}`).not.toContain(phrase);
+      }
     }
   });
 

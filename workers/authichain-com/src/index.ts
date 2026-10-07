@@ -23,6 +23,8 @@ import { APP_PREFIXES } from "./app-prefixes";
 import { tryHandleGeneticsRoutes } from "./genetics-routes";
 import { findVsPage, renderVsIndex, renderVsPage, vsUrls } from "./vs-pages.ts";
 import { renderContactPage } from "./contact-page.ts";
+import { legalRoute } from "./legal-pages.ts";
+import { seoPassportResponse } from "../../../src/lib/seo-pages";
 import {
   isMadeInAmericaPath,
   isTrumarkPath,
@@ -34,6 +36,8 @@ import {
   tryHandleTelegramMiniApp,
 } from "./telegram-miniapp.ts";
 import { DESK_SITEMAP, tryHandleDesk } from "./desk.ts";
+// Extensionless on purpose. tsconfig.workers.json counts each ".ts" import.
+import { attestationSchemaResponse } from "./attestation-schema";
 import { tryHandleLlmsTxt } from "./llms-txt.ts";
 import { tryHandle402IndexVerify } from "./index402-verify.ts";
 import {
@@ -167,7 +171,7 @@ const SEO = {
     },
     {
       q: 'What is EU DPP Readiness?',
-      a: 'A one-time readiness audit with self-serve activation and 50 workspace generations to publish a first Digital Product Passport. The $299 is credited toward AuthiChain Basic on conversion.',
+      a: 'A one-time checkout that opens an AuthiChain workspace, with self-serve activation and 50 workspace generations to publish a first Digital Product Passport.',
     },
     {
       q: 'What else is live in the estate?',
@@ -2301,7 +2305,7 @@ function foundersVision() {
   <div class="wrap" style="max-width:760px">
     <p class="section-tag">What is live</p>
     <h2>Realized capability, not a pitch deck</h2>
-    <p class="section-sub">AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
+    <p class="section-sub">One founder. Agents draft and check. Money, mail, and deploy wait for the founder. AuthiChain is building seals that bind to products and log every scan against the serial. Public verification is in development. The money path is EU DPP Readiness.</p>
   </div>
 </section>`;
 }
@@ -2337,7 +2341,7 @@ function techStack() {
     "What AuthiChain already does",
     "Claims limited to capabilities that are live on this estate.",
     [
-      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. Credited toward AuthiChain Basic on conversion." },
+      { title: "EU DPP Readiness", body: "Live $299 Stripe Payment Link from the published plan catalogue, or enter a work email for recoverable checkout. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations." },
       { title: "Agent pay (x402)", body: "Secondary money path. Funded agents verify a product for $0.05 USDC on Base. Public docs at /x402." },
     ],
     "technology",
@@ -2371,12 +2375,12 @@ function originMoneySurfaces() {
       </article>
       <article class="estate-card card">
         <h3>Made in America</h3>
-        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or start today with the $299 EU DPP Readiness Audit.</p>
+        <p>Our goal: signed, per-unit origin records behind Made in USA labels. Read the brief, or open the $299 EU DPP Workspace.</p>
         <div class="estate-actions" style="margin-top:1rem">
           <a class="btn btn-primary" href="/made-in-america">Made in USA brief</a>
           ${checkoutEmailFormHtml({
             action: "https://authichain.com/checkout/dpp_readiness",
-            label: "Start EU DPP Readiness Audit — $299",
+            label: "Open EU DPP Workspace — $299",
             inputId: "origin-musa-email",
             formId: "origin-musa-checkout",
           })}
@@ -2414,7 +2418,7 @@ function marketReality() {
   <div class="wrap">
     <p class="section-tag">Regulatory context</p>
     <h2>EU Digital Product Passport</h2>
-    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. AuthiChain issues the certificate and the DPP audit path without claiming another company's logo as a customer.</p>
+    <p class="section-sub">EU ESPR requires a machine-readable product passport for goods sold in Europe, phased in by category. The $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. It does not issue a certificate.</p>
     <div class="estate-actions">
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",
@@ -2458,6 +2462,8 @@ function ecosystemFooter() {
         heading: "Company",
         links: [
           { href: "/contact", label: "Contact" },
+          { href: "/privacy", label: "Privacy" },
+          { href: "/terms", label: "Terms" },
           { href: "/trumark", label: "TruMark" },
           { href: "/made-in-america", label: "Made in America" },
           { href: "/passport", label: "Genetics passport" },
@@ -2953,18 +2959,17 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start Your DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form",
           inputId: "dpp-email",
           buttonClass: "btn btn-outline",
         })}
         <a class="btn btn-outline" href="/battery-passport">See a battery passport example</a>
-        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a sample assessment</a>
+        <a class="btn btn-outline" href="/battery-passport/sample-audit">See a fictional walkthrough</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Pay once → automatic provisioning → self-serve activation → publish your first DPP.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
-        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the gaps the $299 audit covers.
+        Pay once. Self-serve activation opens your workspace.
+        Batteries due 18 Feb 2027: the <a href="/battery-passport">e-bike / LMT example</a> shows the public gaps.
       </p>
     </div>
   </section>
@@ -3135,7 +3140,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
     <div class="container" style="max-width:700px">
       <h2 class="section-title">Start DPP Compliance Today</h2>
-      <p class="section-sub">Start with a written readiness assessment for your product line. Checkout is self-serve.</p>
+      <p class="section-sub">Checkout opens an AuthiChain workspace for your product line. It is self-serve.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
         ${catalogPaymentLinkHtml({
           planId: "dpp_readiness",
@@ -3144,7 +3149,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         })}
         ${checkoutEmailFormHtml({
           action: "/protocol/checkout/dpp",
-          label: "Start DPP Readiness Audit — $299",
+          label: "Open EU DPP Workspace — $299",
           formId: "dpp-checkout-form-footer",
           inputId: "dpp-email-footer",
           buttonClass: "btn btn-outline",
@@ -3248,7 +3253,8 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
- * (/p SEO hubs, /landing/*) until edge-router deploys.
+ * (/p/<serial> and /landing/*). Known SEO hubs are rendered here and
+ * do not pass through this proxy.
  */
 async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   if (!env.APP_WORKER) {
@@ -3398,6 +3404,8 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
         { loc: 'https://authichain.com/contact', freq: 'monthly', pri: '0.7' },
+        { loc: 'https://authichain.com/privacy', freq: 'yearly', pri: '0.4' },
+        { loc: 'https://authichain.com/terms', freq: 'yearly', pri: '0.4' },
       ];
       const vs = vsUrls().map((loc) => ({ loc, freq: 'monthly', pri: '0.8' }));
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticUrls, ...vs]
@@ -3553,6 +3561,13 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (p === '/contact') {
       return new Response(renderContactPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
+    const legal = legalRoute(p);
+    if (legal?.kind === 'redirect') {
+      return Response.redirect(new URL(legal.to, url).toString(), 301);
+    }
+    if (legal?.kind === 'html') {
+      return new Response(legal.html, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
     if (p === '/vs' || p === '/vs/') {
       return new Response(renderVsIndex(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
@@ -3565,11 +3580,26 @@ async function handleAuthichainCom(request: Request, env: Env) {
       // invented slug would answer 200 and the sitemap would be unfalsifiable.
       return notFound(p);
     }
+    // Committed SEO hubs are served here. /p/<serial> that is not a slug still
+    // falls through to APP_WORKER. The deployed edge router is behind
+    // content/seo/pages.json, so those sitemap URLs were 404 "Product Not Found".
+    const seoPassport = seoPassportResponse(p);
+    if (seoPassport) {
+      return new Response(seoPassport.html, {
+        headers: {
+          ...HTML_SECURITY_HEADERS,
+          'Content-Type': 'text/html; charset=utf-8',
+          ...(seoPassport.noindex ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+      });
+    }
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       return proxyAppWorker(request, env);
     }
     const seoRedirect = tryRedirectSeoRootCanonical(request);
     if (seoRedirect) return seoRedirect;
+    const attestationSchema = attestationSchemaResponse(p);
+    if (attestationSchema) return attestationSchema;
     if (p !== '/') return notFound(p);
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 }

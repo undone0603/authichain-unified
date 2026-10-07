@@ -37,6 +37,19 @@ describe("GET /api/x402/health", () => {
     expect(body.facilitator.configured).toBe(false);
   });
 
+  it("GET /api/x402/listing and /api/x402/growth are not 404", async () => {
+    const listing = await app().request("/api/x402/listing");
+    expect(listing.status).toBe(200);
+    const listingBody = (await listing.json()) as { protocol: string; listing: string };
+    expect(listingBody.protocol).toBe("x402");
+    expect(listingBody.listing).toBe("https://authichain.com/api/x402/listing");
+
+    const growth = await app().request("/api/x402/growth");
+    expect(growth.status).toBe(200);
+    const growthBody = (await growth.json()) as { listing: string };
+    expect(growthBody.listing).toBe("/api/x402/listing");
+  });
+
   it("GET /api/x402/catalog lists paid endpoints from the same health config", async () => {
     process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
     const res = await app().request("/api/x402/catalog");

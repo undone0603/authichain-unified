@@ -8,7 +8,6 @@ import { x402PriceUsd } from "../../../src/lib/x402.ts";
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-const FARM_LINK = planPaymentLink("strainchain_farm") ?? "";
 const X402_USD = x402PriceUsd();
 
 const LLMS_PATHS = new Set([
@@ -46,13 +45,12 @@ export function renderLlmsTxt(): string {
     "- EU DPP readiness check (score, gaps, dated obligation): https://authichain.com/dpp-check",
     "- Same check for agents: MCP tools/call dpp_readiness_check on https://authichain.com/mcp",
     "- Battery passport gap map (e-bike / LMT example; passport required from 18 February 2027 under Regulation (EU) 2023/1542): https://authichain.com/battery-passport",
-    "- Sample $299 readiness assessment (fictional e-bike pack): https://authichain.com/battery-passport/sample-audit",
+    "- Fictional e-bike battery walkthrough (not a document the $299 checkout sends): https://authichain.com/battery-passport/sample-audit",
     "",
     "## Human checkout (Stripe Payment Links)",
     `- EU DPP Readiness $${planUsd("dpp_readiness")}: ${DPP_LINK}`,
     `- Made in USA Claim File $${planUsd("musa_claim_file")} per SKU: https://authichain.com/made-in-usa-claim-file`,
     `- StrainChain Passport $${planUsd("strainchain_passport")}: ${PASSPORT_LINK}`,
-    `- StrainChain Farm Plan $${planUsd("strainchain_farm")}/mo: ${FARM_LINK}`,
     "- Pricing: https://authichain.com/pricing",
     "",
     "## Positioning",

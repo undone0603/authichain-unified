@@ -23,6 +23,19 @@ export function marker(runId) {
   return `<!-- gemma-triage:${runId} -->`;
 }
 
+/**
+ * Completed runs on the default branch, in the order the API returned them.
+ *
+ * Pass an unfiltered Actions page. On this repo `?branch=main` and
+ * `?status=completed` with `per_page` greater than 1 return a stale page,
+ * so a triage that uses those queries never sees a failure from today.
+ */
+export function completedOnBranch(runs, branch = "main") {
+  return (runs ?? []).filter(
+    run => run && run.head_branch === branch && run.conclusion
+  );
+}
+
 /** Newest failed run per workflow within the window, at most `max`. */
 export function pickRuns(
   runs,
@@ -84,7 +97,7 @@ async function main() {
     return 0;
   }
   const { workflow_runs: runs = [] } = await gh(
-    `/repos/${cfg.repo}/actions/runs?branch=main&status=completed&per_page=50`,
+    `/repos/${cfg.repo}/actions/runs?per_page=100`,
     { token: cfg.token }
   );
   const comments = await gh(
@@ -94,7 +107,7 @@ async function main() {
   const done = new Set(
     comments.map(c => c.body.match(/gemma-triage:(\d+)/)?.[1]).filter(Boolean)
   );
-  for (const run of pickRuns(runs)) {
+  for (const run of pickRuns(completedOnBranch(runs))) {
     if (done.has(String(run.id))) continue;
     try {
       const { jobs = [] } = await gh(

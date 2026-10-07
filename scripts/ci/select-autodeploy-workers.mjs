@@ -7,12 +7,57 @@
 // testable code instead of shell arithmetic nobody could run without jq.
 import { execFileSync } from "node:child_process";
 
-// A worker earns its place here by having its own local test suite that
-// covers an external judge's checks -- gs1-resolver's is
-// workers/gs1-resolver/src/conformance.test.ts, mirroring GS1's hosted
-// resolver conformance suite -- not just the CI type/lint checks every
-// worker already gets.
-export const AUTO_DEPLOY_ALLOWLIST = ["gs1-resolver"];
+// Same set as the full matrix in deploy-workers.yml, minus
+// authichain-agentz (Cloudflare Containers, Workers Paid, dispatch-only).
+// A push deploys the members of this list that the push actually changed.
+// passport-demo, qron-portfolio, and first-dollar-desk stay off: they are
+// archived and not in the matrix.
+export const AUTO_DEPLOY_ALLOWLIST = [
+  "authichain-api",
+  "authichain-api-gateway",
+  "authichain-automation",
+  "authichain-com",
+  "authichain-dashboard",
+  "qron-automation",
+  "qron-image-gen",
+  "qron-outreach",
+  "qron-space",
+  "resend-relay",
+  "strainchain-io",
+  "govchain-us",
+  "bitcoin-auth",
+  "outreach-queue",
+  "ai-classification",
+  "analytics",
+  "auth",
+  "authichain-autopilot",
+  "authichain-chain-data",
+  "authichain-gateway",
+  "authichain-license-issuer",
+  "authichain-qron-provenance",
+  "authichain-scan-validate",
+  "authichain-telegram",
+  "authichain-verify-worker",
+  "stripe-webhook",
+  "authichain-openclaw",
+  "authichain-infra",
+  "authichain-outreach-engine",
+  "blockchain",
+  "chipchain-io",
+  "dpp-fulfillment",
+  "fanchain-io",
+  "glowchain-io",
+  "gs1-resolver",
+  "harvestchain-io",
+  "luxechain-io",
+  "partchain-io",
+  "provenchain-io",
+  "rxchain-io",
+  "threadchain-io",
+  "watchchain-io",
+  "qfs-adapter",
+  "authichain-bridge",
+];
 
 /**
  * Pure. changedWorkerDirs: the workers/* directory names touched in this

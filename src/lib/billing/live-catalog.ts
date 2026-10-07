@@ -58,7 +58,7 @@ export const LIVE_PRICE_MAP: Record<
     productId: "prod_UwfYVM0TYpdg4J",
     mode: "payment",
     grant: 50,
-    stripeLink: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripeLink: "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44",
   },
   strainchain_passport: {
     priceId: "price_1UHjCZGqTruSqV8T35M6AmoJ",

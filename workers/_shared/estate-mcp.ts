@@ -3,8 +3,8 @@
  * Agents that probe `{origin}/mcp` the way they do on authichain.com get
  * nothing.
  *
- * GET is free discovery: Payment Links from plans.ts (Passport, DPP, Farm;
- * QRON also Starter+Creator) + unpaid POST /api/x402. tools/call verify is
+ * GET is free discovery: Payment Links from plans.ts (Passport, DPP;
+ * QRON also Starter+Creator). Farm is not a public checkout link. tools/call verify is
  * the same unpaid 402 as estate-x402.ts. Catalog stays on authichain.com
  * (#1171 owns sister catalog). Do not tell agents to GET /api/checkout.
  * Do not invent Stripe links. Do not list theater.
@@ -35,7 +35,6 @@ const JSON_HEADERS = {
 
 const PASSPORT_LINK = planPaymentLink("strainchain_passport") ?? "";
 const DPP_LINK = planPaymentLink("dpp_readiness") ?? "";
-const FARM_LINK = planPaymentLink("strainchain_farm") ?? "";
 const STARTER_LINK = planPaymentLink("starter") ?? "";
 const CREATOR_LINK = planPaymentLink("creator") ?? "";
 
@@ -97,8 +96,8 @@ function publishedPayTo(env?: SisterX402Env): string {
 function mcpTools(brand: SisterDiscoveryBrand) {
   const human =
     brand === "qron"
-      ? "StrainChain Passport, Farm, EU DPP, and QRON Starter/Creator Payment Links"
-      : "StrainChain Passport, Farm, and EU DPP Payment Links";
+      ? "StrainChain Passport, EU DPP, and QRON Starter/Creator Payment Links"
+      : "StrainChain Passport and EU DPP Payment Links";
   return [
     {
       name: "get_pricing",
@@ -133,7 +132,6 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
     farmUsd: planUsd("strainchain_farm"),
     passportPaymentLink: PASSPORT_LINK,
     dppPaymentLink: DPP_LINK,
-    farmPaymentLink: FARM_LINK,
     emailCapture: {
       passport: "https://authichain.com/passport",
       dpp: "https://authichain.com/dpp",

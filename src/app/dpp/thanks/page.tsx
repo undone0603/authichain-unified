@@ -21,17 +21,18 @@ function ThanksContent() {
         Payment received
       </p>
       <h1 className="mt-3 text-3xl font-semibold text-white">
-        DPP audit provisioned
+        Workspace opened
       </h1>
       <p className="mt-4 text-zinc-400">
-        Your workspace access is being granted automatically. Activate now to
-        complete merchant setup — no need to wait for an email reply.
+        Your payment opens an AuthiChain workspace with self-serve activation
+        and 50 workspace generations. Activate it below. The same link is in
+        the confirmation email.
       </p>
       <Link
         href={activateHref}
         className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
       >
-        Activate merchant
+        Activate workspace
       </Link>
       <p className="mt-6 text-sm text-zinc-500">
         A confirmation email with the same link is also on the way.

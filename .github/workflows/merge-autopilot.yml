@@ -10,30 +10,19 @@
 name: Merge autopilot
 
 on:
-  # Wake as soon as CI finishes. check_suite covers external apps (Cloudflare
-  # Workers Builds); GitHub does not fire it for Actions suites, so the main
-  # PR workflows are listed under workflow_run.
-  workflow_run:
-    workflows:
-      - CI
-      - CI Main
-      - Lint
-      - Typecheck ratchet
-      - CodeQL
-      - Compliance Audit
-      - Security Scan
-      - Windows path safety
-      - Production Drizzle Audit
-    types: [completed]
-  check_suite:
-    types: [completed]
-  pull_request_target:
-    types: [opened, reopened, ready_for_review, labeled, unlabeled]
+  # Throttled 2026-10-06: this sweep ran ~65x/day (the 20-minute cron plus a
+  # run per completed PR check and per PR event) and helped exhaust the
+  # account's Actions minutes on the now-private repo within six days.
+  # Event-driven triggers removed; the 4-hourly schedule plus post-merge
+  # sweeps still merge green PRs promptly (each merge triggers a follow-up
+  # sweep) and update branches that fall behind. Restore workflow_run /
+  # check_suite / pull_request_target triggers only when a bigger minutes
+  # budget (Pro plan, self-hosted runner, or public repo) exists.
   # A merge to main makes every other PR behind; sweep to update them.
   push:
     branches: [main]
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "0 */4 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
