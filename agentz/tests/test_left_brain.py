@@ -452,7 +452,7 @@ def test_live_attempt_records_verification_rate_without_inventing_cash(tmp_path:
     )
     assert missed["verification"]["success"] is False
     assert missed["optimization"]["verification_rate"] == 0
-    assert missed["optimization"]["recovery_rate"] is None
+    assert missed["optimization"]["recovery_rate"] == 0
     assert missed["optimization"]["realized_revenue"] is None
     assert missed["economics"]["cash_realized"] is None
     assert sm.current_stage == LaunchStage.THREE_PILOTS
@@ -487,6 +487,64 @@ def test_live_attempt_records_verification_rate_without_inventing_cash(tmp_path:
     assert kept["verification"]["success"] is False
     assert kept["economics"]["cash_realized"] is None
     assert other.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_live_attempt_records_recovery_rate_without_inventing_cash(tmp_path: Path):
+    """A gate attempt records whether it recovered. Cash and supplied history stay put."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="recover-miss")
+    )
+    assert missed["verification"]["success"] is False
+    assert missed["execution"]["recovered"] is False
+    assert missed["optimization"]["recovery_rate"] == 0
+    assert missed["optimization"]["cost_per_useful_outcome"] is None
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    recovered = brain.cycle(_advance_signal(decision_id="recover-hit"))
+    assert recovered["verification"]["success"] is True
+    assert recovered["execution"]["recovered"] is True
+    assert recovered["optimization"]["recovery_rate"] == 1
+    assert recovered["optimization"]["realized_revenue"] is None
+    assert recovered["economics"]["cash_realized"] is None
+    assert recovered["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["recovery_rate"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    clean = LaunchStateMachine(state_file=tmp_path / "clean_state.json")
+    clean.set_stage(LaunchStage.THREE_PILOTS)
+    first = cycle(_advance_signal(decision_id="clean-hit"), state_machine=clean)
+    assert first["execution"]["recovered"] is False
+    assert first["verification"]["success"] is True
+    assert first["optimization"]["recovery_rate"] == 0
+    assert first["economics"]["cash_realized"] is None
+    assert clean.current_stage == LaunchStage.FIRST_REVENUE
+
+    kept_machine = LaunchStateMachine(state_file=tmp_path / "recover_history.json")
+    kept_machine.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="recover-history-kept",
+            gate_context={"active_pilots": 0},
+            history=[{"recovered": True}],
+        ),
+        state_machine=kept_machine,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["recovery_rate"] == 1
+    assert kept["execution"]["recovered"] is False
+    assert kept["economics"]["cash_realized"] is None
+    assert kept_machine.current_stage == LaunchStage.THREE_PILOTS
 
 
 def test_non_attention_resources_stop_or_redirect_without_a_spend(tmp_path: Path):

@@ -486,12 +486,14 @@ class LeftBrain:
         _note_decision_accuracy(base["optimization"], verified)
         _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
         _note_verification_rate(base["optimization"], verified)
+        recovered_now = bool(verified and self.failures > 0)
+        _note_recovery_rate(base["optimization"], recovered_now)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
             "attempts": self.execution_attempts,
             "decision_id": decision_id,
-            "recovered": bool(verified and self.failures > 0),
+            "recovered": recovered_now,
         }
         return base
 
@@ -652,6 +654,10 @@ def _note_execution_success(report: dict[str, Any], executed: bool) -> None:
 
 def _note_verification_rate(report: dict[str, Any], verified: bool) -> None:
     _note_live_metric(report, "verification_rate", 1 if verified else 0)
+
+
+def _note_recovery_rate(report: dict[str, Any], recovered: bool) -> None:
+    _note_live_metric(report, "recovery_rate", 1 if recovered else 0)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
