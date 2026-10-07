@@ -1193,3 +1193,111 @@ independence** until the owner confirms.
   crypto-agility; EU vocabulary bridge; §6 no-auth scope; JOSE/COSE position.
 
 ---
+
+## 2026-10-07
+
+General web search. Every primary source I tried to fetch directly (`knowledge.bsigroup.com`,
+`spec-untp-fbb45f.opensource.unicc.org`, `w3c.github.io`) was blocked by the network egress proxy,
+so everything below is read from search-result summaries, not primary documents. Absence of a
+finding means "not found by this search," not "did not happen."
+
+### What actually moved
+
+- **EN 18246 now has a publication date from a standards-body catalogue listing: 30 September
+  2026.** Search results for
+  [BSI's catalogue entry](https://knowledge.bsigroup.com/products/digital-product-passport-data-authentication-reliability-and-integrity)
+  list "BS EN 18246:2026 — Digital product passport. Data authentication, reliability and
+  integrity," published 30 Sep 2026, scope: a framework for trust and interoperability via a
+  secure electronically signed data construct (ESDC). Out of scope per the same summary: DPP system
+  architecture, use cases, secure elements for data carriers, and cryptographic security features
+  for unique product identifiers. This supersedes the 2026-10-01 entry's "likely published," which
+  was based on a 16 September claim I could not corroborate; the two dates conflict (16 Sep in
+  that entry's sources vs. 30 Sep here), and I have not resolved which is the CEN publication date
+  versus a national-adoption date. I have not read the standard and make no claim about how its
+  ESDC model relates to `SPEC.md` §3/§5.
+- **UNTP v1.0: still unconfirmed, and this week's evidence is muddier, not clearer.** The
+  specification now surfaces under a different host,
+  [spec-untp-fbb45f.opensource.unicc.org](https://spec-untp-fbb45f.opensource.unicc.org/docs/governance/meetings/generalUpdates)
+  (blocked on fetch). The search summary says v1.0.0 is "scheduled for release in early July after
+  public review," and also describes 0.6.0 as the latest maintained release. That does not match
+  the 1 September target logged on 2026-09-20 or the v0.7.0 material logged since. I can't tell
+  whether these are stale pages or a real schedule change. Treat UNTP v1.0 as **not confirmed
+  released**, and treat the earlier "1 September" date as unverified too.
+- **W3C Confidence Method: the latest dated Working Draft I found is
+  [2026-07-28](https://www.w3.org/TR/2026/WD-vc-confidence-method-20260728/)**, with a
+  [Verifiable Credentials Overview v1.1 Note dated 2026-08-10](https://www.w3.org/TR/2026/DNOTE-vc-overview-1.1-20260810/).
+  Neither Confidence Method nor Render Method showed Candidate Recommendation or Recommendation
+  status in this week's search. Consistent with the 2026-09-22 correction: in progress. The
+  horizontal-review window (to 2026-10-12, see 2026-10-01) closes in five days.
+- **C2PA paper (IACR 2026/804): a clearer abstract-level description this week, still unread in
+  full.** The [eprint page](https://eprint.iacr.org/2026/804) and
+  [arXiv companion](https://arxiv.org/pdf/2604.24890) appeared in search results (not fetched).
+  Per the summary the paper analyses C2PA specification **v2.2**, selected validators, and
+  conformance program **v0.1**. It reports: conformant validators are not required to check
+  certificate revocation; generators and validators disagree on the trusted timestamp; and
+  validators can give contradictory results because of missing information, liberal policies, and
+  certification that does not check source code. Correction forward: earlier entries (2026-09-11)
+  attributed statements about v2.3/v2.4 and "should not be relied upon" language to summaries; I
+  have not seen those in this week's abstract-level text, so do not repeat them.
+- **W3C Verifiable Supply Chain Community Group:** search again returned the
+  [group page](https://www.w3.org/groups/cg/vsc) and mission text (profiles, certification and
+  conformance criteria, test suites). The independence question raised 2026-10-01 is **still
+  unresolved**; nothing found this week says who chairs it relative to this repository's owner.
+- **Quiet or not found:** no GS1 Digital Link change beyond v1.7.0 (August 2026); no EPCIS 2.1
+  release news (still reported "end of 2026"); no dated Spherity, Transmute, or OriginTrail news;
+  no open comment period on a provenance/credential standard (the UK call closed 2026-09-21, no
+  government response found); no public thread arguing verdict-vs-score for physical-item
+  provenance. A W3C DPP use-cases-and-requirements document
+  ([w3c.github.io/vc-dpp-bw/dpp-ucr](https://w3c.github.io/vc-dpp-bw/dpp-ucr/index.html))
+  surfaced in search; I saw only its title and a one-line description, not its content.
+
+### Differentiated
+
+- **Offline verification, no server dependency** — unchanged. Nothing found contradicts it, and
+  nothing found confirms how EN 18246's ESDC verification behaves offline.
+- **Three verdicts, no score** — unchanged.
+- **Adversarial conformance suite (28 fixtures, `--strict`)** — still no comparable suite found for
+  GS1, EPCIS, the DPP Registry, UNTP, or vendor tooling. The C2PA abstract's point that
+  certification "fails to check source code" and yields contradictory validator results is the
+  failure our suite targets, but it is about a different spec.
+- **Apache-2.0 with patent grant** — unchanged.
+
+### Behind
+
+- **No revocation until v0.2** — unchanged. The C2PA abstract names missing revocation checking as
+  a headline failure; a v0.2 `credentialStatus` that verifiers are not required to check would
+  repeat it.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **EN 18246 is (per a catalogue listing) published and we have not read or mapped it** — still
+  the most material open item; unchanged from 2026-10-01 apart from the date evidence above.
+- **No crypto-agility/post-quantum story, no JOSE/COSE interop position, no access-tiering
+  model** — carried forward unchanged.
+- **We hold no certification and no standards-body recognition.**
+
+### Awareness targets
+
+- **EN 18246 / CEN-CENELEC JTC 24 readers (most actionable, unchanged from 2026-10-01 but now
+  better dated):** buy the text via BSI or another national body, then publish a candid mapping
+  of its ESDC requirements against `SPEC.md` §3/§5. The standard is now (per BSI's catalogue)
+  days old and implementers are starting to ask what it requires; a mapping from an open
+  spec with a runnable verifier is relevant because the standard's subject is verifiable
+  signed data. Source: [BSI catalogue](https://knowledge.bsigroup.com/products/digital-product-passport-data-authentication-reliability-and-integrity).
+- **W3C VC WG horizontal review, closes 2026-10-12:**
+  [privacy-request#225](https://github.com/w3cping/privacy-request/issues/225) — five days left to
+  put on record that `confidenceMethod` must not alter a binary verifier's verdict.
+- **UNTP:** [untp.unece.org](https://untp.unece.org/docs/specification/) — check directly whether
+  v1.0 shipped; sources this week conflict on the schedule.
+- **IACR 2026/804:** [eprint.iacr.org/2026/804](https://eprint.iacr.org/2026/804) — ninth week of
+  not being read directly; a human pasting the abstract and §6 conformance findings would let
+  later entries stop relaying it secondhand.
+- **W3C Verifiable Supply Chain CG:** [w3.org/groups/cg/vsc](https://www.w3.org/groups/cg/vsc) —
+  only as a target once independence from this repository's owner is confirmed.
+
+### Spec gaps
+
+- No new gap this week.
+- Carried, unresolved: `confidenceMethod` must not affect §5.1; name Bitstring Status List for
+  v0.2 and say how verifiers are required to check status; crypto-agility; EU vocabulary bridge
+  and EN 18246 (ESDC) relationship; §6 no-auth scope; JOSE/COSE position.
+
+---
