@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "workers/authichain-com/**"
+      - "src/lib/plans.ts"
+      - "src/lib/checkout-gate.ts"
       - "content/microsites/**"
       - "scripts/sync-microsite-packs.mjs"
       - ".github/workflows/deploy-authichain-com.yml"
