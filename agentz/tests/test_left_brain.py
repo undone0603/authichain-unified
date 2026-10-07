@@ -405,7 +405,7 @@ def test_live_attempt_records_execution_success_without_inventing_cash(tmp_path:
     assert missed["verification"]["executed"] is True
     assert missed["verification"]["success"] is False
     assert missed["optimization"]["execution_success"] == 1
-    assert missed["optimization"]["verification_rate"] is None
+    assert missed["optimization"]["verification_rate"] == 0
     assert missed["optimization"]["realized_revenue"] is None
     assert missed["economics"]["cash_realized"] is None
     assert sm.current_stage == LaunchStage.THREE_PILOTS
@@ -438,6 +438,53 @@ def test_live_attempt_records_execution_success_without_inventing_cash(tmp_path:
     )
     assert kept["optimization"]["source"] == "caller_supplied_history"
     assert kept["optimization"]["execution_success"] == 0
+    assert kept["economics"]["cash_realized"] is None
+    assert other.current_stage == LaunchStage.THREE_PILOTS
+
+
+def test_live_attempt_records_verification_rate_without_inventing_cash(tmp_path: Path):
+    """A gate attempt records whether the outcome was verified. Cash and supplied history stay put."""
+    sm = _machine(tmp_path)
+    sm.set_stage(LaunchStage.THREE_PILOTS)
+    brain = LeftBrain(sm)
+    missed = brain.cycle(
+        _advance_signal(gate_context={"active_pilots": 0}, decision_id="verify-miss")
+    )
+    assert missed["verification"]["success"] is False
+    assert missed["optimization"]["verification_rate"] == 0
+    assert missed["optimization"]["recovery_rate"] is None
+    assert missed["optimization"]["realized_revenue"] is None
+    assert missed["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.THREE_PILOTS
+
+    verified = brain.cycle(_advance_signal(decision_id="verify-hit"))
+    assert verified["verification"]["success"] is True
+    assert verified["optimization"]["verification_rate"] == 1
+    assert verified["optimization"]["realized_revenue"] is None
+    assert verified["economics"]["cash_realized"] is None
+    assert verified["revenue_ledger_written"] is False
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+    assert LaunchStateMachine(state_file=sm.state_file).current_stage == LaunchStage.FIRST_REVENUE
+
+    idle = brain.cycle({})
+    assert idle["mode"] == "IDLE / MONITOR"
+    assert idle["optimization"]["verification_rate"] is None
+    assert idle["economics"]["cash_realized"] is None
+    assert sm.current_stage == LaunchStage.FIRST_REVENUE
+
+    other = LaunchStateMachine(state_file=tmp_path / "verify_history.json")
+    other.set_stage(LaunchStage.THREE_PILOTS)
+    kept = cycle(
+        _advance_signal(
+            decision_id="verify-history-kept",
+            gate_context={"active_pilots": 0},
+            history=[{"verified": True}],
+        ),
+        state_machine=other,
+    )
+    assert kept["optimization"]["source"] == "caller_supplied_history"
+    assert kept["optimization"]["verification_rate"] == 1
+    assert kept["verification"]["success"] is False
     assert kept["economics"]["cash_realized"] is None
     assert other.current_stage == LaunchStage.THREE_PILOTS
 

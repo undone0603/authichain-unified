@@ -485,6 +485,7 @@ class LeftBrain:
         base["verification"]["success"] = verified
         _note_decision_accuracy(base["optimization"], verified)
         _note_execution_success(base["optimization"], base["verification"]["executed"] is True)
+        _note_verification_rate(base["optimization"], verified)
         base["economics"] = economics
         base["execution"] = {
             "status": "advanced" if verified else "failed",
@@ -647,6 +648,10 @@ def _note_decision_accuracy(report: dict[str, Any], correct: bool) -> None:
 
 def _note_execution_success(report: dict[str, Any], executed: bool) -> None:
     _note_live_metric(report, "execution_success", 1 if executed else 0)
+
+
+def _note_verification_rate(report: dict[str, Any], verified: bool) -> None:
+    _note_live_metric(report, "verification_rate", 1 if verified else 0)
 
 
 def _mission_drift(data: Mapping[str, Any], stage: LaunchStage) -> bool:
