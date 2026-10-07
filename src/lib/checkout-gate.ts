@@ -373,14 +373,24 @@ export function buildGatedSessionBody(opts: {
   body.set("line_items[0][price]", plan.stripe_price_id as string);
   body.set("line_items[0][quantity]", "1");
   body.set("payment_method_types[0]", "card");
+  // Each product lands where its buyer can use what they bought.
   // The claim file has its own landing: /dpp/thanks would tell a Made in USA
   // buyer their "DPP audit" was provisioned.
+  // Starter is the same problem: /dpp/thanks is the DPP workspace page, which
+  // names a DPP workspace, promises 50 workspace generations (Starter grants
+  // 100, see PLAN_CREDITS) and offers only /dpp/activate, an EU DPP intake a
+  // Starter buyer cannot answer. Starter lands on /generate, which reads
+  // ?paid=1 and ?cancelled=1 (worker-app/dynamic-pages.ts) and is routed on
+  // both authichain.com and authichain.govchain.us, so ${origin} is safe.
   const isClaimFile = plan.id === "musa_claim_file";
+  const isStarter = plan.id === "starter";
   body.set(
     "success_url",
     isClaimFile
       ? `${origin}/made-in-usa-claim-file/thanks?session_id={CHECKOUT_SESSION_ID}`
-      : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+      : isStarter
+        ? `${origin}/generate?paid=1&session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
+        : `${origin}/dpp/thanks?session_id={CHECKOUT_SESSION_ID}&visit_id=${encodeURIComponent(visitId)}`
   );
   body.set(
     "cancel_url",
@@ -388,7 +398,9 @@ export function buildGatedSessionBody(opts: {
       ? `${origin}/dpp?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
       : isClaimFile
         ? `${origin}/made-in-usa-claim-file?cancelled=1`
-        : `${origin}/pricing?cancelled=1`
+        : isStarter
+          ? `${origin}/generate?cancelled=1&visit_id=${encodeURIComponent(visitId)}`
+          : `${origin}/pricing?cancelled=1`
   );
   body.set("client_reference_id", visitId.slice(0, 200));
   body.set("customer_email", email);
