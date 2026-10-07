@@ -658,10 +658,29 @@ def _narratives(signal: dict, problem: str) -> list[dict]:
     return narratives
 
 
-def _quotable_problem(problem: str, signal: dict) -> str:
+def _echoes_stat_or_sentiment(text: str) -> bool:
+    """True when text cannot be repeated inside a labeled claim.
+
+    Caller-supplied prices, percents, and forbidden phrases stay in the
+    problem field. They are not restated as a supported claim.
+    """
+    lowered = text.lower()
+    if any(phrase in lowered for phrase in FORBIDDEN_PHRASES):
+        return True
+    if _STAT_RE.search(text):
+        return True
+    if _LABEL_WORD_RE.search(text):
+        return True
+    return False
+
+
+def _quotable_problem(problem: str, _signal: dict) -> str:
     candidate = f"The caller-supplied problem is: {problem}"
-    if _forbidden(candidate, signal) or _unsourced_stat(candidate, signal) or _LABEL_WORD_RE.search(candidate):
-        return "The caller supplied a problem statement. This step does not restate it as sentiment or as a market signal."
+    if _echoes_stat_or_sentiment(candidate):
+        return (
+            "The caller supplied a problem statement. "
+            "This step does not restate it as sentiment or as a market signal."
+        )
     return candidate
 
 

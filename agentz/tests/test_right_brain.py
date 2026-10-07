@@ -209,6 +209,41 @@ def test_narratives_are_labeled_and_do_not_invent_sentiment():
     assert all(row["status"] == "hypothesis" for row in result["connections"])
 
 
+def test_priced_or_sentimental_bottleneck_still_hands_off():
+    problems = (
+        "The $299 DPP link is the bottleneck",
+        "converts at 12%",
+        "customers love the old checkout",
+    )
+    for problem in problems:
+        result = propose(
+            {
+                "problem": problem,
+                "failed_method": "retry the same Stripe list",
+                "why_now": "The caller named this bottleneck",
+                "meaningful_opportunity": True,
+            }
+        )
+        assert result["mode"] == "PROPOSE"
+        assert [row["operator"] for row in result["proposals"]] == list(OPERATORS)
+        assert set(result["handoff"]) == set(HANDOFF_FIELDS)
+        assert result["handoff"]["problem"] == problem
+        supported = [
+            claim
+            for narrative in result["narratives"]
+            for claim in narrative["claims"]
+            if claim.startswith("supported:")
+        ]
+        assert supported
+        for claim in supported:
+            reject_untagged_claim(claim)
+            assert problem.lower() not in claim.lower()
+            assert "$" not in claim
+            assert "%" not in claim
+            for phrase in FORBIDDEN:
+                assert phrase not in claim.lower()
+
+
 def test_demonstrated_claim_requires_supplied_text():
     with pytest.raises(UntaggedClaim):
         reject_untagged_claim("the page is fine")
