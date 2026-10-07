@@ -31,6 +31,9 @@ jobs:
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
+      - name: Check every node:test file has a CI runner
+        run: node scripts/ci/check-node-test-runners.mjs
+
       - name: Check openclaw AGENT_SECRET bind skip ($0 Deploy Workers)
         run: pnpm exec vitest run scripts/__tests__/bind-openclaw-agentz-secrets.test.ts
 
@@ -46,17 +49,33 @@ jobs:
       # The root package's suites (src, server, worker-app, packages, scripts,
       # client, workers) are outside `turbo test --filter=!.`, so no other job
       # runs them. node:test files are excluded by vitest.config.ts and run on
-      # their workspace runners.
+      # their workspace runners, or in the next step when they have none.
       - name: Root Vitest suite
         run: pnpm exec vitest run
 
-      - name: Check node:test script suites
-        run: node --test scripts/autonomy/*.test.mjs scripts/ci/*.test.mjs
+      # node:test files that no workspace `test` script runs. Named, not
+      # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
+      # suites, which node --test cannot run.
+      - name: Check node:test suites with no workspace runner
+        run: >-
+          node --experimental-strip-types --test
+          scripts/autonomy/*.test.mjs
+          scripts/ci/*.test.mjs
+          protocol/qfs/envelope.test.mjs
+          scripts/lib/b2b-send-policy.test.ts
+          worker-app/cron-dispatch.test.ts
+          workers/authichain-verify-worker/src/protocol-verify.test.mjs
+          workers/authichain-verify-worker/src/published-record.test.mjs
+
+      # node:test suites outside scripts/autonomy and scripts/ci that no other
+      # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
+      - name: Check other node:test suites
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts
+
+      # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
+      # solc 0.8.19 on first run; no other job ran these.
+      - name: Contract tests (Hardhat)
+        run: pnpm test:contracts
 
       - name: Check wrangler.toml Durable Object migrations
         run: node scripts/check-wrangler-durable-objects.mjs
-
-      # test/ is Hardhat's node:test directory. The build fetches solc 0.8.19
-      # from binaries.soliditylang.org.
-      - name: Contract tests (Hardhat)
-        run: pnpm test:contracts

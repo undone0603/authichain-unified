@@ -246,7 +246,6 @@ export default function StudioPage() {
             { icon: Zap, title: "Instant", desc: "Under 3 seconds" },
             { icon: Shield, title: "Authentic", desc: "Ed25519 sealed" },
             { icon: CheckCircle, title: "Guaranteed", desc: "100% scan rate" },
-            { icon: Lock, title: "Immutable", desc: "Blockchain anchored" },
           ].map(({ icon: Icon, title, desc }) => (
             <div
               key={title}

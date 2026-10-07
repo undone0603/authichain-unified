@@ -2,14 +2,14 @@
  * Live /mcp and /api/mcp 404 today — landing 404s /mcp, APP_WORKER 404s
  * /api/mcp. Agents that probe those paths never see a pay rail.
  *
- * GET is free discovery (Payment Links + unpaid POST /api/x402).
- * tools/call verify is the same unpaid 402 as /api/x402 — not a fake
+ * Verification is free (verify_record, GET /api/verify). Prices are on hold,
+ * so get_pricing and GET discovery list no Payment Links and no x402 price.
+ * tools/call verify is the legacy unpaid 402 as /api/x402 — not a fake
  * "SECURED" JSON. Do not tell agents to GET /api/checkout.
  *
  * Do not import authentic-economy here — that pulls supabase-js into the
  * landing worker. plans.ts + x402.ts are already on this worker.
  */
-import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import {
   BASE_USDC_ASSET,
   X402_PUBLISHED_PAY_TO,
@@ -25,6 +25,12 @@ import {
 } from "../../../src/lib/x402.ts";
 import type { X402Env } from "./x402-routes";
 import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
+import {
+  expectedRecordHash,
+  readAnchorOnChain,
+  verifySubmitted,
+} from "../../authichain-verify-worker/src/protocol-verify.mjs";
+import { publishedRecord } from "../../authichain-verify-worker/src/published-record.mjs";
 import {
   DPP_CATEGORIES,
   DPP_QUESTIONS,
@@ -43,14 +49,14 @@ const TOOLS = [
   {
     name: "get_pricing",
     description:
-      "Live AuthiChain prices: StrainChain Passport, Farm, and EU DPP Payment Links for humans; unpaid POST /api/x402 ($0.05 USDC on Base) for agents.",
+      "Free. AuthiChain verification is free: use the verify_record tool, or GET https://authichain.com/api/verify. Paid plans are on hold, so no prices or Payment Links are listed.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "verify",
     description: x402PaidVerifyStatus().bound
-      ? "Paid AuthiChain verification. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
-      : "Paid AuthiChain verification, not answering yet. Unpaid tools/call returns HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
+      ? "Legacy x402 seal verify. Unpaid tools/call returns HTTP 402. For free verification use verify_record."
+      : "Legacy x402 seal verify, not answering. Unpaid tools/call returns HTTP 402 for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -64,9 +70,7 @@ const TOOLS = [
     name: "query_provenance",
     description:
       "Free public lookup for an assetId / seal / QR token. Never attests. Unknown IDs return status unknown. " +
-      (x402PaidVerifyStatus().bound
-        ? "Paid verify is tools/call verify ($0.05 USDC on Base)."
-        : "Paid tools/call verify ($0.05 USDC on Base) is not answering yet: it refuses before settlement."),
+      "For free signature and anchor verification use verify_record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -76,6 +80,28 @@ const TOOLS = [
         },
       },
       required: ["assetId"],
+    },
+  },
+  {
+    name: "verify_record",
+    description: `Free. Verify an AuthiChain signed provenance record with the open reference verifier, then read its Polygon anchor transaction. Pass id "${"polygon-anchor-1"}" for the published demonstration record, anchored on Polygon mainnet in tx 0x2491…10b7, or pass your own record and anchor JSON. Returns verified, valid-unanchored, or invalid, plus whether the transaction carries the record hash. It does not inspect a physical product.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          description: 'Published record id. Only "polygon-anchor-1" exists.',
+        },
+        record: {
+          type: "object",
+          description: "A signed AuthiChain provenance record (JSON).",
+        },
+        anchor: {
+          type: "object",
+          description:
+            'Anchor JSON: { recordHash, chain: "polygon:137", txHash }. Optional.',
+        },
+      },
     },
   },
   {
@@ -110,6 +136,141 @@ const TOOLS = [
 ];
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
+
+/** The published demonstration record, anchored on Polygon mainnet. */
+export const ANCHOR_EXAMPLE_ID = "polygon-anchor-1";
+export const ANCHOR_EXAMPLE_TX =
+  "0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7";
+
+/**
+ * verify_record says "verified" only for an allowlisted signer AND an anchor
+ * tx that is on chain, carries this record's hash, and was sent by the
+ * AuthiChain anchor wallet (acceptance per RES-45). A valid signature from
+ * any other key, or a tx that merely exists, is not verified.
+ */
+export const DEMONSTRATION_SIGNER_DID =
+  "did:key:z6MkfcH7Xe1bFoos1vr6ogWkV4hmdx2qM2dDXkg3VJ4cpAeS";
+/** sha256 of polygon-anchor-1's signing bytes; the demo key is pinned to it. */
+export const DEMONSTRATION_RECORD_HASH =
+  "5ee3e5e7e8b2c32c8f096b77cc41baece9dd2555d5af24d73f8880484ed6b1e1";
+/**
+ * Production attestation issuer: kid lue84w… published at /protocol/jwks.json
+ * and /.well-known/jwks.json (authichain-edge-router,
+ * AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64). did:key is derived from that JWK's x.
+ * The authichain-api certificate key (kid A_qAn4…) is deliberately not listed.
+ */
+export const PRODUCTION_ISSUER_KID = "lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE";
+export const PRODUCTION_ISSUER_DID =
+  "did:key:z6MkpizPezaS2HsKKWghbcNp8ns7C98fYmypaFHWQyfcVA8G";
+type AllowedSigner =
+  | { role: "demonstration"; kid: null; recordHash: string }
+  | { role: "production_issuer"; kid: string; recordHash: null };
+const ALLOWED_SIGNERS: Record<string, AllowedSigner> = {
+  // Demonstration signer, not the production issuer. Valid for polygon-anchor-1 only.
+  [DEMONSTRATION_SIGNER_DID]: {
+    role: "demonstration",
+    kid: null,
+    recordHash: DEMONSTRATION_RECORD_HASH,
+  },
+  [PRODUCTION_ISSUER_DID]: {
+    role: "production_issuer",
+    kid: PRODUCTION_ISSUER_KID,
+    recordHash: null,
+  },
+};
+/** Sender (and recipient, self-send) of demo anchor tx 0x2491…10b7. */
+export const ANCHOR_WALLET = "0x5db511706FB6317cd23A7655F67450c5AC6e6AA2";
+/** AuthiChainProduct ERC-721 certificate contract on Polygon. */
+export const CERT_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+const ANCHOR_TO = new Set([ANCHOR_WALLET, CERT_CONTRACT].map(a => a.toLowerCase()));
+
+function signerDid(record: unknown): string {
+  const r = record as { issuer?: unknown; proof?: { verificationMethod?: unknown } };
+  const vm = r?.proof?.verificationMethod ?? r?.issuer;
+  return typeof vm === "string" ? vm.split("#")[0] : "";
+}
+
+/**
+ * Free verify_record: the same reference verifier and Polygon read as
+ * GET /api/verify on authichain-verify-worker, run in-process. A Worker's
+ * fetch to its own zone does not reliably reach another Worker's route, so
+ * this imports the modules instead of calling the URL.
+ */
+export async function verifyRecordTool(
+  args: Record<string, unknown>,
+  opts: { rpcUrl?: string; fetchImpl?: typeof fetch } = {}
+): Promise<Record<string, unknown> | { error: string }> {
+  const rawId = typeof args.id === "string" ? args.id.trim() : "";
+  const published = publishedRecord(rawId);
+  if (rawId && !published) {
+    return {
+      error: `Unknown id. The only published record is "${ANCHOR_EXAMPLE_ID}". To check your own, pass record (and anchor) as JSON.`,
+    };
+  }
+  const record = published ? published.record : args.record;
+  const anchor = published ? published.anchor : (args.anchor ?? null);
+  const protocol = verifySubmitted(record, anchor);
+  if (!protocol) {
+    return {
+      error: `Pass id "${ANCHOR_EXAMPLE_ID}", or record as a JSON object.`,
+    };
+  }
+  // Same rule as the verify worker: a configured RPC is for Polygon only.
+  const chainName = String((anchor as { chain?: unknown } | null)?.chain ?? "");
+  const polygon = chainName === "polygon:137" || chainName === "eip155:137";
+  const chain = await readAnchorOnChain(record, anchor, {
+    rpcUrl: polygon ? opts.rpcUrl : undefined,
+    fetchImpl: opts.fetchImpl,
+  });
+  const did = signerDid(record);
+  const entry = ALLOWED_SIGNERS[did];
+  const trustReasons: string[] = [];
+  let allowed: AllowedSigner | undefined = entry;
+  if (!entry) {
+    trustReasons.push("signer_not_allowlisted");
+  } else if (entry.recordHash && expectedRecordHash(record) !== entry.recordHash) {
+    allowed = undefined;
+    trustReasons.push("demonstration_signer_not_valid_for_this_record");
+  }
+  if (anchor) {
+    if (!chain.onChain) trustReasons.push(`anchor_not_on_chain:${chain.status}`);
+    else if (String(chain.txFrom ?? "").toLowerCase() !== ANCHOR_WALLET.toLowerCase()) {
+      trustReasons.push("anchor_tx_not_from_anchor_wallet");
+    } else if (!ANCHOR_TO.has(String(chain.txTo ?? "").toLowerCase())) {
+      trustReasons.push("anchor_tx_not_to_anchor_address");
+    }
+  }
+  let verdict: string = protocol.verdict;
+  if (protocol.verdict === "verified" && trustReasons.length) verdict = "unverified";
+  return {
+    verdict,
+    protocolVerdict: protocol.verdict,
+    reasons:
+      protocol.verdict === "invalid"
+        ? protocol.reasons
+        : [...protocol.reasons, ...trustReasons],
+    checks: protocol.checks,
+    signer: {
+      did: did || null,
+      allowlisted: Boolean(allowed),
+      role: allowed?.role ?? null,
+      kid: allowed?.kid ?? null,
+      productionIssuer: allowed?.role === "production_issuer",
+    },
+    anchorOnChain: chain.onChain,
+    anchorChainStatus: chain.status,
+    anchorBlock: chain.block ?? null,
+    anchorTransaction:
+      anchor && typeof anchor === "object" && "txHash" in anchor
+        ? ((anchor as { txHash?: unknown }).txHash ?? null)
+        : null,
+    source: published ? "published_example" : "submitted",
+    demonstration: Boolean(published),
+    limits:
+      "Checks the Ed25519 signature and that the anchor transaction carries the record hash. It does not inspect a physical product.",
+    verifier: "https://authichain.com/protocol",
+  };
+}
 
 function normalizePath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
@@ -159,39 +320,37 @@ function livePayTo(env?: X402Env): string {
   );
 }
 
-export function mcpPricingDiscovery(env?: X402Env) {
+/**
+ * get_pricing and GET discovery. Verification is free; paid plans are on
+ * hold, so this lists no Payment Links and no per-call price. Text only:
+ * the legacy x402 `verify` path below is unchanged.
+ */
+export function mcpPricingDiscovery(_env?: X402Env) {
+  const legacy = x402PaidVerifyStatus();
   return {
-    agentRail: {
-      endpoint: "POST /api/v1/agent-verify",
-      alias: "POST /api/x402",
-      protocol: "x402",
-      network: "base",
-      chainId: "8453",
-      asset: BASE_USDC_ASSET,
-      publishedPayTo: livePayTo(env),
-      pricePerCall: `$${x402PriceUsd()} USDC`,
-      catalog: "https://authichain.com/api/x402/catalog",
-      wellKnown: "https://authichain.com/.well-known/x402.json",
-      mcp: "https://authichain.com/mcp",
-      docs: "https://authichain.com/x402",
-      note: x402PaidVerifyStatus().bound
-        ? "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT."
-        : "Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
-      paidVerify: x402PaidVerifyStatus(),
+    verify: {
+      price: "free",
+      mcpTool: "verify_record",
+      http: "GET https://authichain.com/api/verify?id=polygon-anchor-1",
+      offline: "npx authichain-verify <record.json> [anchor.json]",
+      docs: "https://authichain.com/protocol",
     },
-    humanCheckout: {
-      rail: "stripe",
-      source: "src/lib/plans.ts",
-      passportUsd: planUsd("strainchain_passport"),
-      dppUsd: planUsd("dpp_readiness"),
-      farmUsd: planUsd("strainchain_farm"),
-      passportPaymentLink: planPaymentLink("strainchain_passport"),
-      dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
-      emailCapture: {
-        passport: "https://authichain.com/passport",
-        dpp: "https://authichain.com/dpp",
-      },
+    freeTools: [
+      "verify_record",
+      "query_provenance",
+      "dpp_readiness_check",
+      "get_pricing",
+    ],
+    paidPlans: {
+      status: "on_hold",
+      note: "Prices are on hold. No Payment Links or per-call prices are offered here.",
+    },
+    legacySealVerify: {
+      tool: "verify",
+      status: legacy.status,
+      note: legacy.bound
+        ? "Legacy x402 seal verify. For free verification use verify_record."
+        : "Legacy x402 seal verify, not answering: a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. For free verification use verify_record.",
     },
   };
 }
@@ -255,7 +414,7 @@ function queryProvenance(assetIdRaw: unknown) {
     jwks: "https://authichain.com/.well-known/jwks.json",
     paidVerify: "POST /mcp tools/call verify",
     compliance:
-      "EU DPP Readiness is a $299 Stripe SKU. It is not a status on this lookup.",
+      "EU DPP readiness is not a status on this lookup. Use dpp_readiness_check (free).",
   };
 }
 
@@ -412,6 +571,16 @@ async function handleRpc(
         ],
       });
     }
+    if (name === "verify_record") {
+      const result = await verifyRecordTool(params.arguments ?? {}, {
+        rpcUrl: (env as { POLYGON_RPC_URL?: string } | undefined)
+          ?.POLYGON_RPC_URL,
+      });
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        ...("error" in result ? { isError: true } : {}),
+      });
+    }
     if (name === "dpp_readiness_check") {
       const args = params.arguments ?? {};
       const input = parseDppReadinessInput(k => args[k]);
@@ -426,10 +595,8 @@ async function handleRpc(
           isError: true,
         });
       }
-      const result = scoreDppReadiness(input, {
-        auditPrice: planUsd("dpp_readiness"),
-        auditUrl: planPaymentLink("dpp_readiness"),
-      });
+      // Paid plans are on hold (see mcpPricingDiscovery): no audit pitch here.
+      const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
           {
@@ -443,7 +610,7 @@ async function handleRpc(
       content: [
         {
           type: "text",
-          text: "Unknown tool. Use get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (unpaid HTTP 402 on POST /mcp, $0.05 USDC on Base).",
+          text: "Unknown tool. Use verify_record (free), get_pricing (free), dpp_readiness_check (free), query_provenance (free, not an attestation), or verify (legacy x402 seal verify).",
         },
       ],
       isError: true,

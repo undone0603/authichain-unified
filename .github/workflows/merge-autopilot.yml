@@ -1,0 +1,69 @@
+# Merge autopilot: merges trusted PRs into main once they are green and clean,
+# and merges main into branches that fall behind so CI re-runs first.
+# Logic and rules: scripts/autonomy/merge-autopilot.mjs
+# Switch: `merge_autopilot.enabled` (and this file's line) in .github/autonomy.json
+# Charter: docs/OPERATING_CHARTER.md, "Merge autopilot"
+#
+# Security: every trigger runs the default-branch copy of this workflow and the
+# script. Nothing checks out or executes PR code; the job only reads PR state
+# through the API. Forks and untrusted authors are skipped by the script.
+name: Merge autopilot
+
+on:
+  # Throttled 2026-10-06: this sweep ran ~65x/day (the 20-minute cron plus a
+  # run per completed PR check and per PR event) and helped exhaust the
+  # account's Actions minutes on the now-private repo within six days.
+  # Event-driven triggers removed; the 4-hourly schedule plus post-merge
+  # sweeps still merge green PRs promptly (each merge triggers a follow-up
+  # sweep) and update branches that fall behind. Restore workflow_run /
+  # check_suite / pull_request_target triggers only when a bigger minutes
+  # budget (Pro plan, self-hosted runner, or public repo) exists.
+  # A merge to main makes every other PR behind; sweep to update them.
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Log decisions without merging or updating"
+        type: boolean
+        default: false
+
+# One sweep at a time. A newer trigger replaces a queued one, and every sweep
+# looks at all open PRs, so nothing is lost.
+concurrency:
+  group: merge-autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+  statuses: read
+
+jobs:
+  sweep:
+    name: Merge autopilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Sweep open PRs
+        env:
+          GITHUB_TOKEN: ${{ secrets.MERGE_AUTOPILOT_TOKEN || secrets.GITHUB_TOKEN }}
+          AUTOPILOT_TOKEN_KIND: ${{ secrets.MERGE_AUTOPILOT_TOKEN != '' && 'pat' || 'default' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        # The script prints the summary to stdout; only this shell step writes
+        # the job summary file.
+        run: |
+          set -o pipefail
+          node scripts/autonomy/merge-autopilot.mjs | tee -a "$GITHUB_STEP_SUMMARY"

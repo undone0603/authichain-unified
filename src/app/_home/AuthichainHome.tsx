@@ -24,7 +24,6 @@ export function AuthichainHome() {
       secondaryCta={{ label: "View pricing", href: "/pricing" }}
       stats={[
         { value: "Ed25519", label: "Signed seals" },
-        { value: "Polygon", label: "On-chain anchor" },
         { value: "$299", label: "EU DPP Readiness" },
         { value: "x402", label: "Agent micropayments" },
       ]}
@@ -32,12 +31,12 @@ export function AuthichainHome() {
         {
           icon: <Award className="h-6 w-6" />,
           title: "EU DPP Readiness",
-          desc: "Live self-serve checkout. Written readiness assessment, merchant activation, and 50 workspace generations. $299 credited toward AuthiChain Basic on conversion.",
+          desc: "Live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
         },
         {
           icon: <ShieldCheck className="h-6 w-6" />,
           title: "Issue a signed seal",
-          desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable — no invented customer logos.",
+          desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable — no invented customer logos.",
         },
         {
           icon: <ScanLine className="h-6 w-6" />,

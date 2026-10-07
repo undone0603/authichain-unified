@@ -53,7 +53,11 @@ import {
   catalogPaymentLinkHtml,
   emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
-import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
+import {
+  getSeoPageBySlug,
+  renderSeoHubDocument,
+  type SeoPage,
+} from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -130,29 +134,10 @@ function htmlDocument(opts: {
 }
 
 function renderSeoHubHtml(page: SeoPage, pathname: string): string {
-  const canonical =
-    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
   // bodyHtml is committed in content/seo/pages.json and stripped of <script>
   // at generation (src/lib/seo-pages.test.ts). Same contract as the Next
-  // /p/[serial] page.
-  return htmlDocument({
-    title: page.title,
-    description: page.metaDescription,
-    canonicalPath: canonical,
-    extraHead:
-      '<script type="application/ld+json">' +
-      JSON.stringify(page.jsonLd) +
-      "</script>\n" +
-      "<style>" +
-      CHECKOUT_EMAIL_FORM_CSS +
-      "</style>\n",
-    bodyHtml:
-      "<main>\n<h1>" +
-      escapeHtml(page.h1) +
-      "</h1>\n" +
-      page.bodyHtml +
-      "\n</main>",
-  });
+  // /p/[serial] page. The apex worker serves this same document.
+  return renderSeoHubDocument(page, pathname);
 }
 
 function htmlResponse(
@@ -305,6 +290,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
 
     const seoPage = getSeoPageBySlug(serial);
     if (seoPage) {
+      if (seoPage.noindex) c.header("X-Robots-Tag", "noindex");
       return htmlResponse(c, renderSeoHubHtml(seoPage, pathname), 200);
     }
 
@@ -429,7 +415,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record. Verification against AuthiChain's Polygon certificate contract <a href=\"https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE\" target=\"_blank\" rel=\"noopener\">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n" +
+      '<p>Enter a product ID to look up its record. Verification against AuthiChain\'s Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -591,7 +577,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🔐",
         title: "Signed seals",
-        desc: "Cryptographically signed seals anchored on Polygon. Tamper-evident and publicly verifiable.",
+        desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
       },
       {
         icon: "📱",
@@ -601,7 +587,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
       },
       {
         icon: "🌍",
@@ -625,7 +611,10 @@ const LANDING_CONTENT: Record<
       { value: "x402", label: "Agent micropayments" },
     ],
     closingLine: "Start EU DPP Readiness on the live checkout path.",
-    primaryCta: { label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" },
+    primaryCta: {
+      label: "Start DPP checkout",
+      href: "https://authichain.com/checkout/dpp_readiness",
+    },
     secondaryCta: { label: "View pricing", href: "/pricing" },
   },
   qron: {
@@ -693,7 +682,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "✅",
         title: "Batch Testing",
-        desc: "Lab results, COA management, potency tracking. Immutable testing records.",
+        desc: "Lab results, COA management, potency tracking.",
       },
       {
         icon: "📱",
@@ -732,7 +721,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "🏛️",
         title: "Public Records",
-        desc: "Government data on blockchain. Immutable, auditable, and publicly verifiable.",
+        desc: "Certificate contract live on Polygon; product certification through verify is in development.",
       },
       {
         icon: "📊",
@@ -763,7 +752,6 @@ const LANDING_CONTENT: Record<
     stats: [
       { value: "100%", label: "Transparent" },
       { value: "Real-Time", label: "Reporting" },
-      { value: "Blockchain", label: "Immutable" },
     ],
     closingLine: "Make government data public. Build trust with blockchain.",
     primaryCta: { label: "Get Started", href: "/dashboard" },
@@ -825,7 +813,9 @@ function renderLanding(c: Context): Response {
     )
     .join("\n");
 
-  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(content.primaryCta.href);
+  const primaryIsCheckout = /\/api\/checkout\/|\/checkout\//.test(
+    content.primaryCta.href
+  );
   const primaryHtml = primaryIsCheckout
     ? emailCheckoutWithPaymentLinkHtml({
         action: content.primaryCta.href,
@@ -937,7 +927,7 @@ function onboardPayNowHtml(): string {
     "\n" +
     catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "EU DPP Readiness Audit — $299",
+      label: "EU DPP Workspace — $299",
     }) +
     "\n" +
     "</p>\n" +
@@ -948,7 +938,10 @@ function onboardPayNowHtml(): string {
 /** Per-site /onboard title. The estate apexes proxy here with X-Forwarded-Host. */
 export function onboardTitle(host: string): string {
   const h = host.toLowerCase().replace(/:\d+$/, "");
-  if (h === "govchain.us" || (h.endsWith(".govchain.us") && h !== "authichain.govchain.us"))
+  if (
+    h === "govchain.us" ||
+    (h.endsWith(".govchain.us") && h !== "authichain.govchain.us")
+  )
     return "Request access | GovChain";
   if (h === "strainchain.io" || h.endsWith(".strainchain.io"))
     return "Request a pilot | StrainChain";
@@ -1080,12 +1073,19 @@ async function handleOnboardPost(c: Context): Promise<Response> {
       .trim()
       .slice(0, 40);
   } catch {
-    return htmlResponse(c, onboardFormHtml("Could not read the form.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Could not read the form.", onboardHost(c)),
+      400
+    );
   }
   if (!company || !contactName || !productName) {
     return htmlResponse(
       c,
-      onboardFormHtml("Company, contact, and first product are required.", onboardHost(c)),
+      onboardFormHtml(
+        "Company, contact, and first product are required.",
+        onboardHost(c)
+      ),
       400
     );
   }
@@ -1099,7 +1099,11 @@ async function handleOnboardPost(c: Context): Promise<Response> {
   if (
     !ONBOARD_VERTICALS.includes(vertical as (typeof ONBOARD_VERTICALS)[number])
   ) {
-    return htmlResponse(c, onboardFormHtml("Unknown vertical.", onboardHost(c)), 400);
+    return htmlResponse(
+      c,
+      onboardFormHtml("Unknown vertical.", onboardHost(c)),
+      400
+    );
   }
   const refBytes = await crypto.subtle.digest(
     "SHA-256",
@@ -1124,7 +1128,10 @@ async function handleOnboardPost(c: Context): Promise<Response> {
     console.error("[onboard] lead_captures insert failed", err);
     return htmlResponse(
       c,
-      onboardFormHtml("Could not record the pilot request. Try again.", onboardHost(c)),
+      onboardFormHtml(
+        "Could not record the pilot request. Try again.",
+        onboardHost(c)
+      ),
       500
     );
   }
@@ -1457,33 +1464,37 @@ function generateCreditLinksHtml(): string {
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>5 free, then 100 for $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Sign in to use account credits. Starter Pack: 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
   );
 }
 
-function generateFormHtml(error?: string, paid = false, cancelled = false): string {
+function generateFormHtml(
+  error?: string,
+  paid = false,
+  cancelled = false
+): string {
   const statusBlock = paid
     ? '<p role="alert" id="generate-paid">Payment received</p>\n'
     : cancelled
       ? '<p role="alert" id="generate-cancelled">Checkout cancelled.</p>\n'
-      : '';
+      : "";
   const errorBlock = error
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
     title: "Generate a Living QR | $QRON",
     description:
-      "Generate a scannable Living QR. Five free, then 100 for $29. A QR is not an authenticity proof.",
+      "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Five generations are free. The next 100 are $29, no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Sign in to use account credits. Starter Pack includes 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +
@@ -1561,7 +1572,7 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/checkout/starter", c.req.url);
+  const dest = new URL("https://authichain.com/checkout/starter");
   dest.searchParams.set("targetUrl", targetUrl);
   if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);
@@ -1574,7 +1585,11 @@ async function renderGenerate(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
   return htmlResponse(
     c,
-    generateFormHtml(undefined, url.searchParams.get("paid") === "1", url.searchParams.get("cancelled") === "1"),
+    generateFormHtml(
+      undefined,
+      url.searchParams.get("paid") === "1",
+      url.searchParams.get("cancelled") === "1"
+    ),
     200
   );
 }
@@ -1620,7 +1635,8 @@ export async function renderDynamicPage(c: Context): Promise<Response> {
     return renderAuthenticate(c);
   }
   if (pathname === "/generate" || pathname.startsWith("/generate/")) {
-    // LOOP-03 top of funnel. GET only: POST is counted as generate_submit_anon.
+    // LOOP-03 top of funnel. GET only; unauthenticated POST attempts are
+    // recorded as generate_submit_anon by the /api/generate handler.
     if (c.req.method === "GET") {
       reportGrowthEvent(c, { event: "generate_view", sku: "starter" });
     }

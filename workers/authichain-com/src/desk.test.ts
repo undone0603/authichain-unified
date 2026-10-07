@@ -176,4 +176,6 @@ test("/desk/pricing sells Farm $149/mo", async () => {
   assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_farm"/);
   assert.ok(html.includes('href="https://authichain.com/checkout/strainchain_farm"'));
   assert.doesNotMatch(html, /href="\/api\/checkout/);
+  assert.doesNotMatch(html, /AuthiChain Basic/);
+  assert.match(html, /50 workspace generations/);
 });

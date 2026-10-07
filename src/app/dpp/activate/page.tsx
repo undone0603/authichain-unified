@@ -12,7 +12,6 @@ function ActivateForm() {
   const [categories, setCategories] = useState("");
   const [markets, setMarkets] = useState("");
   const [labeling, setLabeling] = useState("");
-  const [callWindows, setCallWindows] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">(
     "idle"
   );
@@ -42,7 +41,6 @@ function ActivateForm() {
           categories,
           markets,
           labeling,
-          call_windows: callWindows,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -81,16 +79,16 @@ function ActivateForm() {
     return (
       <div className="mx-auto max-w-xl px-6 py-16 text-center">
         <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">
-          Merchant activated
+          Workspace activated
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-white">
-          You&apos;re live
+          Activation saved
         </h1>
         <p className="mt-4 text-zinc-400">
-          Intake saved. Your workspace is provisioned
-          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. Next:
-          publish your first DPP from the dashboard — no operator handoff
-          required.
+          This workspace includes self-serve activation and 50 workspace
+          generations
+          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does
+          not include a written assessment or a scheduled call.
         </p>
         <Link
           href="/dashboard"
@@ -108,11 +106,12 @@ function ActivateForm() {
         Self-serve activation
       </p>
       <h1 className="mt-3 text-3xl font-semibold text-white">
-        Activate your DPP audit
+        Activate your workspace
       </h1>
       <p className="mt-3 text-zinc-400">
-        Complete this once. Humans are only notified for exceptions — routine
-        fulfillment is automatic.
+        Complete this once. This records merchant activation for this
+        workspace. It includes 50 workspace generations. It does not include a
+        written assessment or a scheduled call.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -146,17 +145,6 @@ function ActivateForm() {
             required
           />
         </label>
-        <label className="block text-left text-sm text-zinc-300">
-          Preferred call windows (optional)
-          <textarea
-            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
-            rows={2}
-            value={callWindows}
-            onChange={e => setCallWindows(e.target.value)}
-            placeholder="Timezone + 2–3 options"
-          />
-        </label>
-
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button
@@ -164,7 +152,7 @@ function ActivateForm() {
           disabled={!canSubmit || status === "saving"}
           className="w-full rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black disabled:opacity-50"
         >
-          {status === "saving" ? "Activating…" : "Activate merchant"}
+          {status === "saving" ? "Activating…" : "Activate workspace"}
         </button>
       </form>
     </div>

@@ -65,4 +65,30 @@ describe("activateDppMerchant", () => {
       expect(result.error).toMatch(/Not a DPP audit session/);
     }
   });
+
+  it("rejects a $0 session that is not a DPP offer", async () => {
+    retrieve.mockResolvedValueOnce({
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 0,
+      metadata: {},
+      line_items: { data: [{}] },
+    });
+    const { activateDppMerchant } = await import("./dpp-activate");
+    const result = await activateDppMerchant({
+      body: {
+        session_id: "cs_zero",
+        categories: "a",
+        markets: "b",
+        labeling: "c",
+      },
+      stripeSecretKey: "sk_test",
+      supabase: { from: vi.fn() },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(400);
+      expect(result.error).toMatch(/Not a DPP audit session/);
+    }
+  });
 });

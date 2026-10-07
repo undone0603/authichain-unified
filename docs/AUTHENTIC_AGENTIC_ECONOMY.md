@@ -24,7 +24,7 @@ A seal proves the record the issuer published has not been altered since it was 
 
 Apex product CTAs stay `/onboard`, `/dapp`, `/verify`. Never a `*.vercel.app` URL.
 
-Footnotes, not heroes: StrainChain Farm $149/mo and AuthiChain Basic $149/mo after the first paid seal.
+StrainChain Farm and AuthiChain Basic are not public offers.
 
 ## Hidden this pass (Stripe products stay live)
 

@@ -5,6 +5,7 @@
  * no runtime LLM or DB dependency. The /p/[slug] route + sitemap read from here.
  */
 import pagesData from "../../content/seo/pages.json";
+import { CHECKOUT_EMAIL_FORM_CSS } from "./checkout-email";
 
 export interface SeoPage {
   slug: string;
@@ -16,6 +17,8 @@ export interface SeoPage {
   h1: string;
   bodyHtml: string;
   jsonLd: Record<string, unknown>;
+  /** Kept out of sitemap-slugs.json; /p/<slug> is served with robots noindex. */
+  noindex?: boolean;
 }
 
 // pages.json is also read directly by worker-app/dynamic-pages.ts,
@@ -33,4 +36,82 @@ export function listSeoSlugs(): string[] {
 
 export function getSeoPageBySlug(slug: string): SeoPage | null {
   return ALL.find(p => p.slug === slug) ?? null;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Same document the edge router renders for a committed `/p/<slug>` hub.
+ * The apex serves it directly: `authichain-edge-router` is the worker that
+ * answers `/p/*` today, and its deployed bundle does not contain every slug
+ * the sitemap lists.
+ */
+export function renderSeoHubDocument(page: SeoPage, pathname: string): string {
+  const canonical =
+    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
+  const extraHead =
+    (page.noindex ? '<meta name="robots" content="noindex">\n' : "") +
+    '<script type="application/ld+json">' +
+    JSON.stringify(page.jsonLd) +
+    "</script>\n" +
+    "<style>" +
+    CHECKOUT_EMAIL_FORM_CSS +
+    "</style>\n";
+  const bodyHtml =
+    "<main>\n<h1>" +
+    escapeHtml(page.h1) +
+    "</h1>\n" +
+    page.bodyHtml +
+    "\n</main>";
+  return (
+    "<!doctype html>\n" +
+    '<html lang="en">\n' +
+    "<head>\n" +
+    '<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+    "<title>" +
+    escapeHtml(page.title) +
+    "</title>\n" +
+    '<meta name="description" content="' +
+    escapeHtml(page.metaDescription) +
+    '">\n' +
+    '<link rel="canonical" href="' +
+    escapeHtml(canonical) +
+    '">\n' +
+    extraHead +
+    "</head>\n" +
+    "<body>\n" +
+    bodyHtml +
+    "\n" +
+    "</body>\n" +
+    "</html>"
+  );
+}
+
+/** HTML for `/p/<slug>` when the slug is a committed SEO hub. Null otherwise. */
+export function seoPassportResponse(pathname: string): {
+  html: string;
+  noindex: boolean;
+} | null {
+  if (pathname !== "/p" && !pathname.startsWith("/p/")) return null;
+  const raw = pathname.replace(/^\/p\/?/, "").replace(/\/+$/, "");
+  if (!raw) return null;
+  let slug: string;
+  try {
+    slug = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  const page = getSeoPageBySlug(slug);
+  if (!page) return null;
+  return {
+    html: renderSeoHubDocument(page, `/p/${slug}`),
+    noindex: Boolean(page.noindex),
+  };
 }

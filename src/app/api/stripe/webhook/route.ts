@@ -14,7 +14,7 @@ import {
   resolveSku,
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
-import { AFFILIATE_BASE_RATE } from "../../../../lib/affiliate-rate";
+import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
@@ -158,6 +158,55 @@ function getSupabase(): AdminSupabase {
   return _supabase;
 }
 
+async function claimStripeEvent(
+  supabase: AdminSupabase,
+  event: Stripe.Event
+): Promise<"claimed" | "duplicate" | "in_progress"> {
+  const { error: insertError } = await supabase.from("stripe_events").insert({
+    event_id: event.id,
+    event_type: event.type,
+    processed_at: new Date().toISOString(),
+    status: "processing",
+  });
+  if (!insertError) return "claimed";
+  if (insertError.code !== "23505") throw insertError;
+
+  const { data: existing, error: readError } = await supabase
+    .from("stripe_events")
+    .select("status, processed_at")
+    .eq("event_id", event.id)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!existing || existing.status === "success" || !existing.status) {
+    return "duplicate";
+  }
+
+  const processedAt = existing.processed_at
+    ? new Date(existing.processed_at).getTime()
+    : 0;
+  const staleProcessing =
+    existing.status === "processing" &&
+    (!Number.isFinite(processedAt) || Date.now() - processedAt > 5 * 60_000);
+  if (existing.status !== "error" && !staleProcessing) return "in_progress";
+
+  let reclaim = supabase
+    .from("stripe_events")
+    .update({
+      status: "processing",
+      processed_at: new Date().toISOString(),
+      error: null,
+    })
+    .eq("event_id", event.id)
+    .eq("status", existing.status);
+  if (existing.processed_at) {
+    reclaim = reclaim.eq("processed_at", existing.processed_at);
+  }
+  const { data: reclaimed, error: reclaimError } =
+    await reclaim.select("event_id");
+  if (reclaimError) throw reclaimError;
+  return reclaimed?.length ? "claimed" : "in_progress";
+}
+
 export async function POST(req: NextRequest) {
   // Single canonical endpoint for the whole (single-account) ecosystem. Accept
   // either signing secret so consolidation doesn't depend on which secret the
@@ -192,19 +241,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Idempotency: Stripe retries deliveries. Skip events we've already recorded
-  // so commission accrual and other side effects run at most once per event.
+  // Atomically claim the event using stripe_events.event_id's primary key.
+  // Never fail open here: concurrent delivery must not run financial side effects twice.
   try {
-    const { data: seen } = await getSupabase()
-      .from("stripe_events")
-      .select("event_id")
-      .eq("event_id", event.id)
-      .maybeSingle();
-    if (seen) {
+    const claim = await claimStripeEvent(getSupabase(), event);
+    if (claim === "duplicate") {
       return NextResponse.json({ received: true, duplicate: true });
     }
-  } catch {
-    // Dedup check unavailable — fall through and process (at-least-once).
+    if (claim === "in_progress") {
+      return NextResponse.json(
+        { error: "Webhook event is already being processed" },
+        { status: 500 }
+      );
+    }
+  } catch (err) {
+    console.error("[webhook] Stripe event claim failed:", err);
+    return NextResponse.json(
+      { error: "Could not claim Stripe event" },
+      { status: 500 }
+    );
   }
 
   try {
@@ -279,7 +334,7 @@ export async function POST(req: NextRequest) {
           if (email) {
             const mail = dppOffer
               ? renderBillingEmail("dpp_audit_provisioned", brand, {
-                  planName: "EU DPP Readiness Audit",
+                  planName: "EU DPP Workspace",
                   activateUrl: dppActivateUrl(
                     session.id,
                     visitId ? String(visitId) : null
@@ -336,35 +391,14 @@ export async function POST(req: NextRequest) {
           typeof session.amount_total === "number" &&
           session.amount_total > 0
         ) {
-          try {
-            const { data: aff } = await getSupabase()
-              .from("affiliates")
-              .select(
-                "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
-              )
-              .eq("affiliatecode", affiliateCode)
-              .maybeSingle();
-
-            if (aff && aff.status === "active") {
-              const gross = session.amount_total / 100;
-              const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-              const commission = Math.round(gross * rate * 100) / 100;
-              if (commission > 0) {
-                await getSupabase()
-                  .from("affiliates")
-                  .update({
-                    pending_payout:
-                      Number(aff.pending_payout ?? 0) + commission,
-                    total_referrals: Number(aff.total_referrals ?? 0) + 1,
-                    total_conversions: Number(aff.total_conversions ?? 0) + 1,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", aff.id)
-                  .eq("pending_payout", aff.pending_payout ?? 0);
-              }
-            }
-          } catch (e) {
-            console.error("[webhook] affiliate accrual failed:", e);
+          const accrual = await accrueAffiliateCommission(getSupabase(), {
+            affiliateCode,
+            amountCents: session.amount_total,
+            conversion: true,
+            eventId: event.id,
+          });
+          if (!accrual.credited) {
+            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
           }
         }
 
@@ -436,34 +470,18 @@ export async function POST(req: NextRequest) {
           subscriptionId &&
           invoice.amount_paid > 0
         ) {
-          try {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId);
-            const affiliateCode = sub.metadata?.affiliate_code;
-            if (affiliateCode) {
-              const { data: aff } = await getSupabase()
-                .from("affiliates")
-                .select("id, pending_payout, commission_rate, status")
-                .eq("affiliatecode", affiliateCode)
-                .maybeSingle();
-              if (aff && aff.status === "active") {
-                const rate = Number(aff.commission_rate ?? AFFILIATE_BASE_RATE);
-                const commission =
-                  Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
-                if (commission > 0) {
-                  await getSupabase()
-                    .from("affiliates")
-                    .update({
-                      pending_payout:
-                        Number(aff.pending_payout ?? 0) + commission,
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq("id", aff.id)
-                    .eq("pending_payout", aff.pending_payout ?? 0);
-                }
-              }
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const affiliateCode = sub.metadata?.affiliate_code;
+          if (affiliateCode) {
+            const accrual = await accrueAffiliateCommission(getSupabase(), {
+              affiliateCode,
+              amountCents: invoice.amount_paid,
+              conversion: false,
+              eventId: event.id,
+            });
+            if (!accrual.credited) {
+              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
             }
-          } catch (e) {
-            console.error("[webhook] recurring affiliate accrual failed:", e);
           }
         }
 
@@ -643,19 +661,33 @@ export async function POST(req: NextRequest) {
         console.log(`Unhandled Stripe event: ${event.type}`);
     }
 
-    // Log all events
-    await getSupabase()
+    const { error: completeError } = await getSupabase()
       .from("stripe_events")
-      .insert({
-        event_id: event.id,
-        event_type: event.type,
+      .update({
+        status: "success",
         processed_at: new Date().toISOString(),
       })
-      .select();
+      .eq("event_id", event.id);
+    if (completeError) throw completeError;
 
     return NextResponse.json({ received: true, type: event.type });
   } catch (err) {
     console.error("Webhook processing error:", err);
+    try {
+      const { error: markError } = await getSupabase()
+        .from("stripe_events")
+        .update({
+          status: "error",
+          processed_at: new Date().toISOString(),
+          error: getErrorMessage(err).slice(0, 1000),
+        })
+        .eq("event_id", event.id);
+      if (markError) {
+        console.error("[webhook] Failed to mark event error:", markError);
+      }
+    } catch (markError) {
+      console.error("[webhook] Failed to mark event error:", markError);
+    }
     return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

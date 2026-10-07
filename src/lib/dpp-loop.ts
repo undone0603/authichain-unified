@@ -713,6 +713,31 @@ export function isDppSmokePromo(value: string | null | undefined): boolean {
   return (value || "").trim().toUpperCase() === DPP_SMOKE_PROMO;
 }
 
+const DPP_SMOKE_SECRET_MIN = 16;
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+/**
+ * True only when `configured` is a real secret and `provided` matches it.
+ * Fail closed when the secret is missing or shorter than 16 characters.
+ * Callers pass the `x-dpp-smoke-secret` header, never a query parameter.
+ */
+export function dppSmokeRequestAuthorized(
+  provided: string | null | undefined,
+  configured: string | null | undefined
+): boolean {
+  const secret = (configured ?? "").trim();
+  if (secret.length < DPP_SMOKE_SECRET_MIN) return false;
+  return timingSafeEqual((provided ?? "").trim(), secret);
+}
+
 /**
  * Stripe metadata flag for DPP-SMOKE / $0 checkout. Demo may skip Resend
  * and customer-funnel counts. It must never skip fulfill or access grant.

@@ -17,6 +17,10 @@
  */
 import { applyHostedCheckoutRecovery } from "./checkout-recovery";
 import {
+  claimCheckoutAttempt,
+  recordCheckoutSession,
+} from "./checkout-protection";
+import {
   checkoutViewEvent,
   isDeclaredFor,
   isGrowthSku,
@@ -164,6 +168,42 @@ export function isAllowedPostOrigin(request: Request): boolean {
   );
 }
 
+const CHECKOUT_RETURN_FALLBACK = "https://authichain.com";
+
+function allowedHttpsOrigin(value: string | null | undefined): string | null {
+  const raw = (value || "").trim();
+  if (!raw || raw === "null") return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  const ok = ALLOWED_POST_ORIGIN_HOSTS.some(
+    allowed => host === allowed || host.endsWith(`.${allowed}`)
+  );
+  return ok ? url.origin : null;
+}
+
+/**
+ * Origin embedded in Stripe success_url and cancel_url.
+ * An allowlisted https Origin wins, then the request URL's own origin.
+ * A missing or foreign Origin is not treated as allowed.
+ */
+export function checkoutReturnOrigin(request: Request): string {
+  const fromHeader = allowedHttpsOrigin(request.headers.get("origin"));
+  if (fromHeader) return fromHeader;
+  let requestOrigin: string | null = null;
+  try {
+    requestOrigin = new URL(request.url).origin;
+  } catch {
+    requestOrigin = null;
+  }
+  return allowedHttpsOrigin(requestOrigin) || CHECKOUT_RETURN_FALLBACK;
+}
+
 // ─── HTML ───────────────────────────────────────────────────────────────────
 
 function esc(value: unknown): string {
@@ -193,7 +233,7 @@ function priceLabel(plan: Plan): string {
   return `$${plan.price.toLocaleString("en-US")}${suffix}`;
 }
 
-const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}`;
+const PAGE_CSS = `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#0b0b10;color:#f4f4f5;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}main{width:100%;max-width:30rem;background:#111118;border:1px solid #27272a;border-radius:16px;padding:28px}h1{font-size:1.35rem;margin-bottom:.25rem}.price{font-size:1.9rem;font-weight:800;color:#00ffd1;margin:.5rem 0}.desc{color:#a1a1aa;font-size:.95rem;margin-bottom:1rem}label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;color:#d4d4d8}input[type=email]{padding:11px 12px;border:1px solid #3f3f46;border-radius:8px;background:#09090b;color:#fff;font:inherit}button{margin-top:14px;width:100%;padding:13px 18px;border:0;border-radius:10px;background:#00ffd1;color:#000;font:inherit;font-weight:800;cursor:pointer}.hint{font-size:.8rem;color:#a1a1aa;margin-top:8px}.err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:8px 10px;border-radius:8px;font-size:.85rem;margin-bottom:10px}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}ul.plans{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:1rem}ul.plans a{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #27272a;border-radius:10px;color:#fff;text-decoration:none}ul.plans a:hover{border-color:#00ffd1}.links{margin-top:18px;font-size:.85rem}.links a{color:#a1a1aa;margin-right:12px}.hint a{color:#00ffd1}`;
 
 function pageShell(title: string, body: string): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="https://authichain.com/favicon.svg"><style>${PAGE_CSS}</style></head><body><main>${body}</main></body></html>`;
@@ -207,12 +247,18 @@ export function renderCheckoutConfirmPage(opts: {
   const { plan } = opts;
   const params = opts.params ?? new URLSearchParams();
   const email = pickCheckoutEmail(params.get("email"));
+  const submittedCheckoutKey = params.get("checkout_key") || "";
+  const checkoutKey = /^[\w-]{36}$/.test(submittedCheckoutKey)
+    ? submittedCheckoutKey
+    : crypto.randomUUID();
   const hidden = CHECKOUT_CARRY_KEYS.map(key => {
     const v = (params.get(key) || "").trim().slice(0, 256);
     return v ? `<input type="hidden" name="${key}" value="${esc(v)}">` : "";
   }).join("");
   const action = `/checkout/${plan.id}`;
-  const err = opts.error ? `<div class="err" role="alert">${esc(opts.error)}</div>` : "";
+  const err = opts.error
+    ? `<div class="err" role="alert">${esc(opts.error)}</div>`
+    : "";
   return pageShell(
     `Confirm ${plan.name} — AuthiChain checkout`,
     `<h1>${esc(plan.name)}</h1>
@@ -222,14 +268,17 @@ ${err}<form method="post" action="${esc(action)}" id="checkout-confirm">
 <label for="checkout-confirm-email">Work email
 <input id="checkout-confirm-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@company.com" value="${esc(email)}"></label>
 <div class="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-${hidden}<button type="submit">Continue to secure Stripe checkout</button>
+${hidden}<input type="hidden" name="checkout_key" value="${esc(checkoutKey)}"><button type="submit">Continue to secure Stripe checkout</button>
 <p class="hint">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter. You will review the total on Stripe before paying.</p>
+<p class="hint">By continuing you agree to the <a href="/terms">Terms of Service</a> and the <a href="/privacy">Privacy Policy</a>.</p>
 </form>
-<div class="links"><a href="/checkout">All plans</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a></div>`
+<div class="links"><a href="/checkout">All plans</a><a href="/pricing">Pricing</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>`
   );
 }
 
-export function renderCheckoutChooserPage(params?: URLSearchParams | null): string {
+export function renderCheckoutChooserPage(
+  params?: URLSearchParams | null
+): string {
   const carry = new URLSearchParams();
   if (params) {
     const email = pickCheckoutEmail(params.get("email"));
@@ -246,7 +295,7 @@ export function renderCheckoutChooserPage(params?: URLSearchParams | null): stri
     ...listedPlans("strainchain"),
     ...listedPlans("musa"),
   ].filter(
-    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode),
+    p => publicIds.has(p.id) && Boolean(p.stripe_price_id && p.stripe_mode)
   );
   const items = plans
     .map(
@@ -256,7 +305,7 @@ export function renderCheckoutChooserPage(params?: URLSearchParams | null): stri
     .join("");
   return pageShell(
     "Checkout — AuthiChain",
-    `<h1>Choose a plan</h1><p class="desc">Pick a plan, confirm your work email, then pay on Stripe. Prices come from the published AuthiChain catalogue.</p><ul class="plans">${items}</ul><div class="links"><a href="/pricing">Compare plans</a><a href="/contact">Contact</a></div>`
+    `<h1>Choose a plan</h1><p class="desc">Pick a plan, confirm your work email, then pay on Stripe. Prices come from the published AuthiChain catalogue.</p><ul class="plans">${items}</ul><p class="hint">Checkout is covered by the <a href="/terms">Terms of Service</a> and the <a href="/privacy">Privacy Policy</a>.</p><div class="links"><a href="/pricing">Compare plans</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>`
   );
 }
 
@@ -301,7 +350,8 @@ export function buildGatedSessionBody(opts: {
 }): URLSearchParams {
   const { plan, email, fields } = opts;
   const origin = opts.successOrigin || CHECKOUT_SUCCESS_ORIGIN;
-  const f = (k: string, max = 128) => (fields.get(k) || "").trim().slice(0, max);
+  const f = (k: string, max = 128) =>
+    (fields.get(k) || "").trim().slice(0, max);
   const isDpp = plan.id === "dpp_readiness";
   const visitId =
     f("visit_id") || f("prospect_id") || newVisitId(isDpp ? "dpp" : "chk");
@@ -316,8 +366,7 @@ export function buildGatedSessionBody(opts: {
   const refCode = readCookie(cookieHeader, "ref_code").slice(0, 64);
   const mode = plan.stripe_mode as "payment" | "subscription";
   // "musa" only groups the pricing page; Made in USA checkouts stay AuthiChain.
-  const brand =
-    plan.brand && plan.brand !== "musa" ? plan.brand : "authichain";
+  const brand = plan.brand && plan.brand !== "musa" ? plan.brand : "authichain";
 
   const body = new URLSearchParams();
   body.set("mode", mode);
@@ -353,7 +402,13 @@ export function buildGatedSessionBody(opts: {
     checkout_gate: "confirm_post",
   };
   if (isDpp) meta.offer = DPP_OFFER_KEY;
-  for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+  for (const k of [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+  ]) {
     const v = f(k, k === "utm_source" || k === "utm_medium" ? 64 : 128);
     if (v) meta[k] = v;
   }
@@ -377,20 +432,52 @@ export async function createGatedCheckoutSession(opts: {
   fields: URLSearchParams;
   stripeSecretKey: string;
   cookieHeader?: string;
+  request: Request;
+  claimCheckout?: typeof claimCheckoutAttempt;
+  recordSession?: typeof recordCheckoutSession;
   fetchImpl?: typeof fetch;
 }): Promise<GatedSessionResult> {
   const key = (opts.stripeSecretKey || "").trim();
-  if (!key) return { ok: false, status: 500, error: "Stripe is not configured" };
+  if (!key)
+    return { ok: false, status: 500, error: "Stripe is not configured" };
   const body = buildGatedSessionBody(opts);
   const doFetch = opts.fetchImpl ?? fetch;
-  const res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
+  const submittedKey = opts.fields.get("checkout_key") || "";
+  const idempotencyKey = /^[\w-]{36}$/.test(submittedKey)
+    ? submittedKey
+    : crypto.randomUUID();
+  const claim = await (opts.claimCheckout ?? claimCheckoutAttempt)({
+    checkoutKey: idempotencyKey,
+    email: opts.email,
+    planId: opts.plan.id,
+    request: opts.request,
   });
+  if (!claim.allowed) {
+    return {
+      ok: false,
+      status: claim.reason.includes("already") ? 409 : 503,
+      error: claim.reason,
+    };
+  }
+  let res: Response;
+  try {
+    res = await doFetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body,
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 502,
+      error: "Stripe checkout timed out or could not be reached",
+    };
+  }
   let data: { url?: string; error?: { message?: string } } = {};
   try {
     data = (await res.json()) as typeof data;
@@ -403,6 +490,17 @@ export async function createGatedCheckoutSession(opts: {
       status: 502,
       error: "Failed to start checkout",
       detail: data.error?.message || `stripe ${res.status}`,
+    };
+  }
+  const recorded = await (opts.recordSession ?? recordCheckoutSession)(
+    idempotencyKey,
+    data.url
+  );
+  if (!recorded) {
+    return {
+      ok: false,
+      status: 502,
+      error: "Checkout session could not be safely recorded",
     };
   }
   return { ok: true, url: data.url };
@@ -426,6 +524,8 @@ export type CheckoutGateEvent = {
 
 export type GatedCheckoutDeps = {
   fetchImpl?: typeof fetch;
+  claimCheckout?: typeof claimCheckoutAttempt;
+  recordSession?: typeof recordCheckoutSession;
   /** Optional sink. Exceptions from it are swallowed — analytics never breaks checkout. */
   onEvent?: (event: CheckoutGateEvent) => void;
 };
@@ -501,7 +601,8 @@ export async function tryHandleGatedCheckout(
   // no loop, and LOOP-02 captures email as dpp_check_email_captured instead.
   const report = (event: GrowthEvent, email?: string): void => {
     const sink = deps.onEvent;
-    if (!sink || !isGrowthSku(plan.id) || !isDeclaredFor(event, plan.id)) return;
+    if (!sink || !isGrowthSku(plan.id) || !isDeclaredFor(event, plan.id))
+      return;
     try {
       sink({ event, sku: plan.id, email });
     } catch {
@@ -514,7 +615,9 @@ export async function tryHandleGatedCheckout(
       return new Response(null, { status: 200, headers: HTML_HEADERS });
     }
     if (isGrowthSku(plan.id)) report(checkoutViewEvent(plan.id));
-    return htmlResponse(renderCheckoutConfirmPage({ plan, params: url.searchParams }));
+    return htmlResponse(
+      renderCheckoutConfirmPage({ plan, params: url.searchParams })
+    );
   }
 
   if (method !== "POST") {
@@ -538,7 +641,10 @@ export async function tryHandleGatedCheckout(
   }
   if ((fields.get("website") || "").trim()) {
     // Honeypot filled — silently show the page again, no Stripe call.
-    return htmlResponse(renderCheckoutConfirmPage({ plan, params: fields }), 400);
+    return htmlResponse(
+      renderCheckoutConfirmPage({ plan, params: fields }),
+      400
+    );
   }
   const email = pickCheckoutEmail(fields.get("email"));
   if (!email) {
@@ -559,6 +665,9 @@ export async function tryHandleGatedCheckout(
     fields,
     stripeSecretKey: env.STRIPE_SECRET_KEY || "",
     cookieHeader: request.headers.get("cookie") || "",
+    request,
+    claimCheckout: deps.claimCheckout,
+    recordSession: deps.recordSession,
     fetchImpl: deps.fetchImpl,
   });
   if (!result.ok) {
@@ -566,7 +675,8 @@ export async function tryHandleGatedCheckout(
       renderCheckoutConfirmPage({
         plan,
         params: fields,
-        error: "Stripe checkout could not start. Please try again in a minute or use /contact.",
+        error:
+          "Stripe checkout could not start. Please try again in a minute or use /contact.",
       }),
       result.status
     );

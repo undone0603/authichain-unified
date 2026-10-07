@@ -53,6 +53,7 @@ const {
       filters: Array<[string, unknown]>;
     }>,
     eventInserts: [] as Array<Record<string, unknown>>,
+    rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   };
 
   // Minimal thenable query builder: select chains end in a terminal
@@ -123,6 +124,13 @@ const {
   const fakeClient = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     from: (table: string): any => builderFor(table),
+    rpc: async (fn: string, args: unknown) => {
+      calls.rpcCalls.push({ fn, args });
+      return {
+        data: { credited: true, affiliate_id: "aff_1", commission: 14.9 },
+        error: null,
+      };
+    },
   };
 
   return {
@@ -329,13 +337,17 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
 
     expect(res.body).toMatchObject({ received: true });
     expect(mockRetrieve).toHaveBeenCalledWith("sub_123");
-    // $149.00 x 10% = $14.90 onto the active affiliate.
-    expect(calls.affiliateSelects).toBe(1);
-    expect(calls.affiliateUpdates).toHaveLength(1);
-    expect(calls.affiliateUpdates[0].payload).toMatchObject({
-      pending_payout: 14.9,
-    });
-    // Renewal anchored under the invoice id.
+    expect(calls.rpcCalls).toEqual([
+      {
+        fn: "accrue_affiliate_commission",
+        args: {
+          p_event_id: "evt_inv_cycle_001",
+          p_affiliate_code: "AFF-TEST",
+          p_amount_cents: 14900,
+          p_conversion: false,
+        },
+      },
+    ]);
     expect(mockAnchorSale).toHaveBeenCalledTimes(1);
     expect(mockAnchorSale).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -117,15 +117,12 @@ test("theater stays in the catalogue and off public pricing HTML", () => {
   assert.equal(qronHtml.includes("theater_3"), false);
 });
 
-test("starter and creator link the gated confirm page, not the raw Payment Link", () => {
+test("creator and starter link the gated confirm page", () => {
   const starter = listedPlans("qron").find(p => p.id === "starter");
   const creator = listedPlans("qron").find(p => p.id === "creator");
-  assert.ok(starter?.stripe_payment_link);
+  assert.ok(starter);
+  assert.equal(plan("starter").listed, true);
   assert.ok(creator?.stripe_payment_link);
-  assert.equal(
-    planCheckoutCta(starter, "qron").href,
-    "https://authichain.com/checkout/starter"
-  );
   assert.equal(
     planCheckoutCta(creator, "authichain").href,
     "https://authichain.com/checkout/creator"
@@ -163,6 +160,7 @@ test("authichain /pricing HTML cites catalogue prices and money paths", () => {
   for (const id of ["dpp_readiness", "starter", "creator"] as const) {
     assert.ok(html.includes(`$${plan(id).price}`), `${id} price`);
   }
+  assert.equal(html.includes("/checkout/starter"), true);
   assert.match(html, /href="\/x402"/);
   assert.ok(html.includes(escHtml(plan("dpp_readiness").cta)));
   assert.match(html, /name="email"/);
@@ -386,7 +384,7 @@ test("authichain pricing uses buyer copy and QRON titles; held strings unchanged
   assert.doesNotMatch(html, /Theater 1/);
   assert.doesNotMatch(html, /Theater 3/);
   assert.doesNotMatch(html, /\$499/);
-  assert.match(html, />Start audit</);
+  assert.match(html, />Open workspace</);
   assert.match(html, /AuthiChain, QRON, GovChain and StrainChain\./);
   assert.doesNotMatch(html, /Prices from the published AuthiChain plan catalogue/);
   // Free and DPP card wording comes from plans.ts (see the catalogue test

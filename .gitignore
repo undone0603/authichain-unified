@@ -55,6 +55,7 @@ agentz/runs.jsonl
 # Shared Claude Code config (SessionStart hook); settings.local.json stays ignored.
 !.claude/settings.json
 !.claude/hooks/
+!.claude/commands/
 Thumbs.db
 
 # TypeScript

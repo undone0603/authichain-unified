@@ -2,8 +2,8 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
-// 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
-// starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
+// 2026-10-06: homepage paid product is starter $29. dpp_readiness stays
+// listed as EU DPP Workspace, not an audit. Price id unchanged.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
@@ -46,13 +46,19 @@ export const PLANS: Plan[] = [
     id: "free",
     name: "Free",
     price: 0,
-    description: "5 signed generations. Lookup verify only. No card.",
+    description:
+      "5 account-based generations. Sign-in required. Lookup verify only.",
     generations: 5,
     stripe_price_id: null,
     stripe_mode: null,
     tier: "free",
-    features: ["5 generations", "Lookup verify only (no GPT-4V)", "Then Starter $29 or DPP $299"],
-    cta: "Start with 5 free",
+    features: [
+      "5 generations per account",
+      "Sign-in required",
+      "Lookup verify only (no GPT-4V)",
+      "Then Starter $29 or DPP workspace $299",
+    ],
+    cta: "Sign in for 5 credits",
   },
   {
     id: "starter",
@@ -64,8 +70,14 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["100 generations (one-time)", "All free modes", "Holographic & Memory modes", "Designed for AuthiChain signed verification (in development)"],
+    features: [
+      "100 generations (one-time)",
+      "All free modes",
+      "Holographic & Memory modes",
+      "Designed for AuthiChain signed verification (in development)",
+    ],
     cta: "Buy Starter Pack",
+    listed: true,
   },
   {
     id: "qron_launch",
@@ -97,7 +109,13 @@ export const PLANS: Plan[] = [
     stripe_payment_link: "https://buy.stripe.com/aFa8wP0EV2l08um8rq1ND3F",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["500 generations (one-time)", "All Pro modes", "Premium styles", "Priority generation queue", "Designed for AuthiChain signed verification (in development)"],
+    features: [
+      "500 generations (one-time)",
+      "All Pro modes",
+      "Premium styles",
+      "Priority generation queue",
+      "Designed for AuthiChain signed verification (in development)",
+    ],
     cta: "Buy Creator Pack",
     highlighted: true,
   },
@@ -113,7 +131,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: ["5,000 Industrial generations / mo", "Full DPP Data Integration", "StrainChain Genetic Mapping", "On our roadmap: supply-chain watchdog alerts", "On our roadmap: geo-fencing alerts for unexpected scan locations"],
+    features: [
+      "5,000 Industrial generations / mo",
+      "Full DPP Data Integration",
+      "StrainChain Genetic Mapping",
+      "On our roadmap: supply-chain watchdog alerts",
+      "On our roadmap: geo-fencing alerts for unexpected scan locations",
+    ],
     cta: "Initialize Theater 1",
   },
   {
@@ -128,35 +152,54 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "enterprise",
     listed: false,
-    features: ["Unlimited Industrial Artifacts", "Custom AI Model Training", "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)", "Real-time Security Webhooks", "24/7 AuthiChain Core Support"],
+    features: [
+      "Unlimited Industrial Artifacts",
+      "Custom AI Model Training",
+      "On-chain product narratives (Polygon contract https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; issuance in development)",
+      "Real-time Security Webhooks",
+      "24/7 AuthiChain Core Support",
+    ],
     cta: "Contact for Theater 3",
     highlighted: true,
   },
   {
     id: "dpp_readiness",
-    name: "EU DPP Readiness Audit",
+    name: "EU DPP Workspace",
     price: 299,
-    description: "One-time EU DPP readiness audit with self-serve activation",
+    description:
+      "One-time checkout that opens an AuthiChain workspace with 50 generations. Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
-    stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripe_payment_link: "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44",
     stripe_mode: "payment",
     tier: "pro",
-    features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299 credited toward AuthiChain Basic on conversion"],
-    cta: "Start DPP Readiness Audit",
+    features: [
+      "AuthiChain workspace",
+      "Self-serve activation",
+      "50 workspace generations",
+      "Not an audit and not a legal opinion",
+      "Does not register a product in EUDAMED",
+    ],
+    cta: "Open DPP workspace — $299",
   },
   {
     id: "strainchain_passport",
     name: "Passport — Per Cultivar",
     price: 49,
-    description: "One published genetics passport, built from your existing CoAs",
+    description:
+      "One published genetics passport, built from your existing CoAs",
     generations: 0,
     stripe_price_id: "price_1UHjCZGqTruSqV8T35M6AmoJ",
     stripe_payment_link: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
     stripe_mode: "payment",
     tier: "pro",
     brand: "strainchain",
-    features: ["One passport, one cultivar", "Full cannabinoid and terpene panel from your certificates", "Every total recomputed from the source panel, not transcribed", "QR code and shareable link"],
+    features: [
+      "One passport, one cultivar",
+      "Full cannabinoid and terpene panel from your certificates",
+      "Every total recomputed from the source panel, not transcribed",
+      "QR code and shareable link",
+    ],
     cta: "Publish one passport",
   },
   {
@@ -171,7 +214,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
-    features: ["Unlimited cultivars and passports", "Auto-updates on every new CoA", "Lineage and batch history across the full library", "Discrepancies surfaced rather than smoothed over", "Export or withdraw your record at any time"],
+    features: [
+      "Unlimited cultivars and passports",
+      "Auto-updates on every new CoA",
+      "Lineage and batch history across the full library",
+      "Discrepancies surfaced rather than smoothed over",
+      "Export or withdraw your record at any time",
+    ],
     cta: "Start a Farm Plan",
   },
   {
@@ -185,14 +234,20 @@ export const PLANS: Plan[] = [
     name: "Made in USA Claim File",
     price: 299,
     price_suffix: " per SKU",
-    description: "Substantiation support for one product's Made in USA claim. Not legal advice.",
+    description:
+      "Substantiation support for one product's Made in USA claim. Not legal advice.",
     generations: 0,
     stripe_price_id: "price_1UL0vVGqTruSqV8T5WYjrq6i",
     stripe_payment_link: "https://buy.stripe.com/9B68wPgDTcZE8umgXW1ND3H",
     stripe_mode: "payment",
     tier: "pro",
     listed: true,
-    features: ["Origin records for one SKU", "Bill-of-materials origin attestations from your suppliers", "A signed attestation anyone can verify", "Substantiation support, not legal advice"],
+    features: [
+      "Origin records for one SKU",
+      "Bill-of-materials origin attestations from your suppliers",
+      "A signed attestation anyone can verify",
+      "Substantiation support, not legal advice",
+    ],
     cta: "Start my claim file",
   },
   {
@@ -205,14 +260,20 @@ export const PLANS: Plan[] = [
     name: "Made in USA Claim File — Audit Bundle",
     price: 2500,
     price_suffix: " per engagement",
-    description: "Claim files for up to 10 SKUs in one engagement. Larger scopes quoted separately. Not legal advice.",
+    description:
+      "Claim files for up to 10 SKUs in one engagement. Larger scopes quoted separately. Not legal advice.",
     generations: 0,
     stripe_price_id: "price_1UL15AGqTruSqV8TQHP3yNiR",
     stripe_payment_link: "https://buy.stripe.com/fZucN52N35xcaCufTS1ND3I",
     stripe_mode: "payment",
     tier: "pro",
     listed: true,
-    features: ["Claim files for up to 10 SKUs", "One engagement, invoiced to your company", "Larger scopes quoted separately", "Substantiation support, not legal advice"],
+    features: [
+      "Claim files for up to 10 SKUs",
+      "One engagement, invoiced to your company",
+      "Larger scopes quoted separately",
+      "Substantiation support, not legal advice",
+    ],
     cta: "Buy the audit bundle",
   },
 ];
@@ -229,10 +290,15 @@ export const PUBLIC_PLAN_IDS = [
 ] as const;
 
 export function isPurchasable(plan: Plan): boolean {
-  return plan.price === 0 || Boolean(plan.stripe_price_id || plan.stripe_payment_link);
+  return (
+    plan.price === 0 ||
+    Boolean(plan.stripe_price_id || plan.stripe_payment_link)
+  );
 }
 
-export function listedPlans(brand: "qron" | "strainchain" | "musa" = "qron"): Plan[] {
+export function listedPlans(
+  brand: "qron" | "strainchain" | "musa" = "qron"
+): Plan[] {
   return PLANS.filter(
     p => (p.brand ?? "qron") === brand && isPurchasable(p) && p.listed !== false
   );
@@ -252,7 +318,8 @@ export function gatedCheckoutUrl(id: PlanId): string {
 
 export function planPaymentLink(id: PlanId): string | undefined {
   const plan = planById(id);
-  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link)) return undefined;
+  if (!plan || !(plan.stripe_price_id || plan.stripe_payment_link))
+    return undefined;
   return gatedCheckoutUrl(id);
 }
 
@@ -266,12 +333,16 @@ export function planUsd(id: PlanId): number {
   return plan.price;
 }
 
-export function planByStripePriceId(priceId: string | null | undefined): Plan | undefined {
+export function planByStripePriceId(
+  priceId: string | null | undefined
+): Plan | undefined {
   if (!priceId) return undefined;
   return PLANS.find(p => p.stripe_price_id === priceId);
 }
 
-export function planByAmountCents(amountCents: number | null | undefined): Plan | undefined {
+export function planByAmountCents(
+  amountCents: number | null | undefined
+): Plan | undefined {
   if (amountCents == null || !Number.isFinite(amountCents)) return undefined;
   const dollars = amountCents / 100;
   const matches = PLANS.filter(p => p.stripe_price_id && p.price === dollars);

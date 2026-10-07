@@ -4,7 +4,7 @@ import { BrandLanding } from '../_home/BrandLanding';
 
 export const metadata: Metadata = {
   title: 'AI QR Art | QRON',
-  description: 'Generate cryptographically-signed, scannable AI QR art in seconds — 11 illusion-diffusion styles, Ed25519-signed and Polygon-anchored.',
+  description: 'Generate cryptographically-signed, scannable AI QR art in seconds — 11 illusion-diffusion styles, Ed25519-signed.',
 };
 
 export default function QrCodesPage() {
@@ -37,7 +37,7 @@ export default function QrCodesPage() {
         {
           icon: <ShieldCheck className="h-6 w-6" />,
           title: 'Cryptographically Signed',
-          desc: 'Each QRON is Ed25519-signed and anchored on Polygon, so the destination is verifiable and tamper-evident.',
+          desc: 'Each QRON is Ed25519-signed, so the destination is verifiable and tamper-evident.',
         },
         {
           icon: <Sparkles className="h-6 w-6" />,

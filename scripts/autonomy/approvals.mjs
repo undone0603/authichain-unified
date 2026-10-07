@@ -129,10 +129,22 @@ export async function gate({ repo, token, owner, key, title, body }) {
   return d;
 }
 
+/**
+ * Open latch issues for this prefix.
+ *
+ * Do not require `label:approval-needed`. The owner answers by adding
+ * `approved` or `denied`, and GitHub's label edit often removes
+ * `approval-needed` in the same change. Issue #1333 was left open with only
+ * `approved`. A search that still required `approval-needed` returned zero
+ * hits, so the latch treated that as "nothing waiting" and would release
+ * even if the decision had been `denied`.
+ */
+export function latchSearchQuery(repo, prefix) {
+  return `repo:${repo} is:issue is:open in:body "approval-key:${prefix}"`;
+}
+
 export async function openRequests({ repo, token, prefix }) {
-  const q = encodeURIComponent(
-    `repo:${repo} is:issue is:open label:${LABEL} in:body "approval-key:${prefix}"`
-  );
+  const q = encodeURIComponent(latchSearchQuery(repo, prefix));
   const found = await gh(`/search/issues?q=${q}&per_page=20`, { token });
   return (found.items ?? []).filter(i =>
     (i.body ?? "").includes(`approval-key:${prefix}`)
