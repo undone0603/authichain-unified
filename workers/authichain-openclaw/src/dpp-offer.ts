@@ -1,4 +1,4 @@
-import { gatedCheckoutUrl, planById } from "../../../src/lib/plans.ts";
+import { gatedCheckoutUrl, planById } from "../../../src/lib/plans";
 
 const DPP_PLAN_ID = "dpp_readiness";
 
