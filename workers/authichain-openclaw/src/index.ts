@@ -36,6 +36,7 @@ import {
   resolveAgentzMode,
   withModeQuery,
 } from "./agentz-mode";
+import { inboundDppOffer } from "./dpp-offer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -252,6 +253,19 @@ app.post("/webhook/openclaw", async c => {
   const msg = await c.req.json<OpenClawMessage>().catch(() => null);
   if (!msg || !msg.text) {
     return c.json({ error: "invalid message payload" }, 400);
+  }
+
+  const dpp = inboundDppOffer(msg.text);
+  if (dpp) {
+    return c.json({
+      response: dpp.text,
+      session_id: msg.session_id,
+      channel: msg.channel,
+      plan_id: dpp.plan_id,
+      checkout_url: dpp.checkout_url,
+      sends_mail: dpp.sends_mail,
+      opens_checkout_session: dpp.opens_checkout_session,
+    });
   }
 
   // Parse the message to determine intent
@@ -477,6 +491,17 @@ app.post("/command", async c => {
 
   if (!command) return c.json({ error: "command required" }, 400);
 
+  const dpp = inboundDppOffer(`${command} ${args || ""}`);
+  if (dpp) {
+    return c.json({
+      response: dpp.text,
+      plan_id: dpp.plan_id,
+      checkout_url: dpp.checkout_url,
+      sends_mail: false,
+      opens_checkout_session: false,
+    });
+  }
+
   const intent = parseIntent(`${command} ${args || ""}`);
 
   switch (intent.type) {
@@ -587,6 +612,7 @@ function formatHelp(): string {
     "                    — Run a workflow. Default dry-run. Architect / *email*",
     "                      stay dry-run unless --live is explicit.",
     "  architect [--live] — Architect cycle (dry-run unless --live)",
+    "  dpp               — Public EU DPP confirm link. No email. No Checkout Session.",
     "",
     "Messages from any connected channel (WhatsApp, Telegram, Slack, etc.)",
     "are routed here by the OpenClaw gateway.",
