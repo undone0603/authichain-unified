@@ -130,14 +130,14 @@ export default async function FarmIndex({
 
       <div className="note note-teal">
         <strong style={{ color: "var(--ink)" }}>
-          Keep this library current — Farm Plan, $149/mo.
+          Publish one cultivar — Passport, $49.
         </strong>{" "}
-        Unlimited cultivars and passports, updated on every new certificate.{" "}
+        One published passport, built from the certificates already on file.{" "}
         <a
-          href="https://authichain.com/checkout/strainchain_farm"
+          href="https://authichain.com/checkout/strainchain_passport"
           style={{ color: "var(--teal)", fontWeight: 600 }}
         >
-          Start a Farm Plan →
+          Publish one passport →
         </a>
       </div>
 

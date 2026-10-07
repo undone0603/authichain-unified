@@ -1051,7 +1051,6 @@ export async function x402Catalog(
       farmUsd: planUsd("strainchain_farm"),
       passportPaymentLink: planPaymentLink("strainchain_passport"),
       dppPaymentLink: planPaymentLink("dpp_readiness"),
-      farmPaymentLink: planPaymentLink("strainchain_farm"),
       source: "src/lib/plans.ts",
     },
     discovery: {
