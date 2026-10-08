@@ -269,8 +269,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1
       react-day-picker:
-        specifier: ^10.0.1
-        version: 10.0.1(@types/react@18.3.31)(react@18.3.1)
+        specifier: ^10.0.2
+        version: 10.0.2(@types/react@18.3.31)(react@18.3.1)
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
@@ -11364,8 +11364,8 @@ packages:
   rc9@3.1.0:
     resolution: {integrity: sha512-ufjkNVzbRHKcCOmTahZkmVsyc3W+MSk3jY03m+a7tGHkIsdVMG9l10/3HvFbWkkKzY5VFp3pkRsIo/UYgmFL7Q==}
 
-  react-day-picker@10.0.1:
-    resolution: {integrity: sha512-eNh6BlwcYInWaJtRv18mXQ06Ys/H6rdTZAnTaSdOYJuTpwP1JMCHNd1FDRadA+gbeinq+psdULN5Xnowy9mV8w==}
+  react-day-picker@10.0.2:
+    resolution: {integrity: sha512-QetiKtZWE9Uaw/pM/SYNv6WPYOTRnSJ2puL0GgwkmUFMIwiY0dtjH1W4B7DOVXVNQM0ZOClGpH/heOfBSzWeiA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/react': '>=16.8.0'
@@ -16559,7 +16559,7 @@ snapshots:
     dependencies:
       '@ethereumjs/tx': 4.2.0
       '@metamask/superstruct': 3.4.1
-      '@noble/hashes': 1.8.0
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
       '@types/debug': 4.1.13
       debug: 4.4.3
@@ -26711,7 +26711,7 @@ snapshots:
       defu: 6.1.7
       destr: 2.0.5
 
-  react-day-picker@10.0.1(@types/react@18.3.31)(react@18.3.1):
+  react-day-picker@10.0.2(@types/react@18.3.31)(react@18.3.1):
     dependencies:
       '@date-fns/tz': 1.5.0
       date-fns: 4.4.0
