@@ -8,7 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "inspect": "npx @modelcontextprotocol/inspector"
+    "inspect": "npx @modelcontextprotocol/inspector",
+    "bundle": "pnpm run build && npx -y @anthropic-ai/mcpb pack . authichain-registry.mcpb",
+    "bundle:validate": "npx -y @anthropic-ai/mcpb validate manifest.json"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.1",
