@@ -114,9 +114,10 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
   });
 
   it("computes deterministic digest", async () => {
-    const a = { payload: { z: 1, a: 2 } };
-    const b = { payload: { a: 2, z: 1 } };
-    expect(await agentMessageDigest(a as never)).toBe(await agentMessageDigest(b as never));
+    const { message } = await signedFixtures();
+    const a = { ...message, payload: { z: 1, a: 2 } };
+    const b = { ...message, payload: { a: 2, z: 1 } };
+    expect(await agentMessageDigest(a)).toBe(await agentMessageDigest(b));
   });
 
   it("accepts a valid issuer-signed, agent-signed message", async () => {
@@ -252,11 +253,15 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
       now: fixture.now,
     });
     expect(result.valid).toBe(false);
-    const valid = await verifyAgentMessage({ ...fixture.message, message_id: "msg:1002" }, {
-      resolver: fixture.resolver,
-      replayStore: store,
-      now: fixture.now,
-    });
+    const validBase = { ...fixture.message, message_id: "msg:1002" };
+    const valid = await verifyAgentMessage(
+      { ...validBase, signature: await sign(canonicalizeAgentMessage(validBase), fixture.agent.pair.privateKey) },
+      {
+        resolver: fixture.resolver,
+        replayStore: store,
+        now: fixture.now,
+      },
+    );
     expect(valid.valid).toBe(true);
   });
 
