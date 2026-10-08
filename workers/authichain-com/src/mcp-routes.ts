@@ -22,7 +22,9 @@ import {
   x402PaidVerifyStatus,
   type X402EnvVars,
   type X402VerifyBinding,
-} from "../../../src/lib/x402.ts";
+  // Extensionless on purpose: tsconfig.workers.json counts each ".ts"
+  // import as a TS5097 error. Same convention as index.ts.
+} from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
 import { resolvePaidSealVerify } from "../../../src/lib/paid-seal-verify";
 import {
@@ -36,7 +38,7 @@ import {
   DPP_QUESTIONS,
   parseDppReadinessInput,
   scoreDppReadiness,
-} from "../../../src/lib/dpp-readiness.ts";
+} from "../../../src/lib/dpp-readiness";
 import {
   PACK_LIMIT,
   PUBLISHED_PACKS,
