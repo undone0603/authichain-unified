@@ -71,6 +71,7 @@ jobs:
           worker-app/cron-dispatch.test.ts
           workers/authichain-verify-worker/src/protocol-verify.test.mjs
           workers/authichain-verify-worker/src/published-record.test.mjs
+          workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
 
       # node:test suites outside scripts/autonomy and scripts/ci that no other
       # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
