@@ -59,9 +59,15 @@ describe("sample battery readiness assessment", () => {
     expect(request).toMatch(/chemistry/);
   });
 
-  it("sells the existing $299 plan through the gated checkout, tagged by campaign", () => {
+  it("sells the workspace grant through the gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
-    for (const f of plan.features) expect(html).toContain(f);
+    expect(html).toContain("AuthiChain workspace");
+    expect(html).toContain("Self-serve activation");
+    expect(html).toContain("50 workspace generations");
+    expect(html).not.toContain("Written EU DPP readiness assessment");
+    expect(html).not.toContain("$299 credited toward AuthiChain Basic");
+    expect(html).not.toMatch(/written document/i);
+    expect(html).not.toMatch(/No call/i);
     expect(html).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'
     );

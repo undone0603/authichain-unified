@@ -78,7 +78,13 @@ jobs:
       # google/loader.js:122 on Public_Sans). Same layout just passed on
       # sibling PRs; one retry is cheaper than a red required gate.
       # Second `pnpm build` keeps the step's exit code — do not `set +e`.
+      # After the test step, V8 caps this process near 2 GB and
+      # `next build --webpack` aborts during "Creating an optimized
+      # production build" (exit 134) on both attempts. 4096 MB overrides
+      # that cap on the 7 GB runner.
       - name: Production build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           if pnpm build; then
             exit 0

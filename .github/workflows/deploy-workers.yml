@@ -30,9 +30,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Scan the tree being deployed
         run: |
-          # security-scan.yml still reads full git history. This job only
-          # refuses to ship a tree that contains a secret. Removed keys in
-          # old commits were failing this scan and skipping every deploy.
+          # Tree scan only. Removed keys in old commits were failing a
+          # history scan and skipping every deploy.
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
           tar --no-same-owner -xzf gitleaks.tgz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
@@ -161,7 +160,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [secret-scan, deploy-matrix]
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    # GitHub fails the whole workflow when `strategy.matrix` expands to an
+    # empty array, even if the job is then shown as skipped. The selector
+    # prints `[]` on a plain push that changed no allow-listed worker
+    # (CLOUDFLARE_DEPLOY_ENABLED stays off). Skip this job before strategy
+    # expansion in that case. A non-empty list still deploys.
+    if: ${{ needs.deploy-matrix.outputs.workers != '[]' && needs.deploy-matrix.outputs.workers != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +238,10 @@ jobs:
           else
             CONFIG=wrangler.toml
           fi
-          npx wrangler deploy --minify --config "$CONFIG"
+          # --keep-vars leaves dashboard vars in place. Without it, a full
+          # matrix deploy replaces them with the file and drops Stripe and
+          # x402 vars that are not in wrangler.toml.
+          npx wrangler deploy --minify --keep-vars --config "$CONFIG"
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

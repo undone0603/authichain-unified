@@ -2133,6 +2133,34 @@ function stripTrailingSlashes(value: string): string {
   return value.slice(0, end);
 }
 
+async function redirectAnonymousGenerate(request: Request): Promise<Response> {
+  let targetUrl = "";
+  let prompt = "";
+  try {
+    const form = await request.formData();
+    targetUrl = String(form.get("targetUrl") || "").trim();
+    prompt = String(form.get("prompt") || "").trim().slice(0, 200);
+  } catch {
+    return new Response("Could not read the form.", {
+      status: 400,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (!/^https?:\/\//i.test(targetUrl) || targetUrl.length > 500) {
+    return new Response("A valid http(s) URL is required.", {
+      status: 400,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  const dest = new URL("https://authichain.com/checkout/starter");
+  dest.searchParams.set("targetUrl", targetUrl);
+  if (prompt) dest.searchParams.set("prompt", prompt);
+  return new Response(null, {
+    status: 303,
+    headers: { location: dest.toString(), "cache-control": "no-store" },
+  });
+}
+
 async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
   const upstream = new URL(`${stripTrailingSlashes(origin)}${url.pathname}${url.search}`);
   const init: RequestInit = {
@@ -2160,6 +2188,11 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
+    }
+    if (request.method === "POST" && /^\/generate\/?$/.test(url.pathname)) {
+      // The app behind APP_ORIGIN still answers this POST with /onboard.
+      // Loop 2 is the $29 Starter checkout on authichain.com.
+      return redirectAnonymousGenerate(request);
     }
     if (
       // /onboard is linked from /generate ("Request a free pilot"); it used

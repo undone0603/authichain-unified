@@ -53,17 +53,16 @@ Subhead: Four public offers. A signed record you can verify at /verify. Not a la
 - Name: EU Battery / DPP Readiness
 - Price: $299 one-time
 - Features:
-  - Written readiness assessment for your battery line
-  - Self-serve workspace activation
-  - 50 generations to publish the first QR-linked passport
-  - $299 credited toward AuthiChain Basic if you continue
+  - AuthiChain workspace
+  - Self-serve activation
+  - 50 workspace generations
 - CTA: Start my battery passport — $299 → /battery-passport
 - Link: https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c
 - Legal: Not legal advice. Not a notified-body certification.
 
 ### Footnote
 
-Cannabis cultivar passport $49 lives on strainchain.io. Farm / AuthiChain Basic $149/mo after the first paid seal.
+Cannabis cultivar passport $49 lives on strainchain.io. AuthiChain Basic is not a public offer.
 
 Theater, Enterprise, and StorePilot are not sold on this page.
 
@@ -73,7 +72,7 @@ Q: Does a paid seal prove the physical item is genuine?
 A: It proves the digital record matches the issuer signature. It does not by itself prove the physical item was not swapped after sealing.
 
 Q: Is the $299 a legal certification?
-A: No. It is a readiness assessment and a working passport you control. Confirm obligations against the Regulation and your counsel.
+A: No. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Confirm obligations against the Regulation and your counsel.
 
 Q: Where did Theater / Enterprise go?
 A: Those Stripe prices still exist. They are not public offers until a customer has published a paid seal.

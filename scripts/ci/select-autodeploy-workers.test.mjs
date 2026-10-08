@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { selectAutoDeployWorkers } from "./select-autodeploy-workers.mjs";
+import { selectAutoDeployWorkers, AUTO_DEPLOY_ALLOWLIST } from "./select-autodeploy-workers.mjs";
 
 // This is the Review Focus case from
 // docs/superpowers/plans/2026-09-30-gs1-resolver-autonomous-ops.md: a push
@@ -49,4 +49,27 @@ test("selectAutoDeployWorkers preserves allowlist order, not changed-dirs order"
     ["worker-a", "worker-b"]
   );
   assert.deepEqual(result, ["worker-a", "worker-b"]);
+});
+
+test("the production allowlist ships the public workers and not paid or archived ones", () => {
+  for (const worker of [
+    "authichain-com",
+    "authichain-api",
+    "authichain-api-gateway",
+    "qron-space",
+    "strainchain-io",
+    "govchain-us",
+    "gs1-resolver",
+    "dpp-fulfillment",
+    "authichain-verify-worker",
+  ]) {
+    assert.equal(AUTO_DEPLOY_ALLOWLIST.includes(worker), true, worker);
+  }
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("authichain-agentz"), false);
+  assert.equal(AUTO_DEPLOY_ALLOWLIST.includes("passport-demo"), false);
+  const shipped = selectAutoDeployWorkers(
+    ["authichain-com", "passport-demo", "gs1-resolver"],
+    AUTO_DEPLOY_ALLOWLIST
+  );
+  assert.deepEqual(shipped, ["authichain-com", "gs1-resolver"]);
 });

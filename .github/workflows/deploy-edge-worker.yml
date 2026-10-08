@@ -20,19 +20,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_CONFIG: .gitleaks.toml
+      - name: Scan the tree being deployed
+        run: |
+          # Same tree scan as deploy-workers.yml. gitleaks-action@v3 fails
+          # the job when its license lookup is rate-limited.
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz -o gitleaks.tgz
+          tar --no-same-owner -xzf gitleaks.tgz gitleaks
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
   deploy:
     needs: secret-scan
     runs-on: ubuntu-latest
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 20
 
     env:
@@ -147,6 +145,6 @@ jobs:
           APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
           CRM_BASE_URL: ${{ vars.CRM_BASE_URL }}
         run: |
-          pnpm exec wrangler deploy --minify --config api/wrangler.toml \
+          pnpm exec wrangler deploy --minify --keep-vars --config api/wrangler.toml \
             --var "NEXT_PUBLIC_APP_URL:$APP_URL" \
             --var "CRM_BASE_URL:$CRM_BASE_URL"

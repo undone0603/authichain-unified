@@ -3,6 +3,9 @@
  * Keep in lockstep with src/lib/plans.ts PLAN_CREDITS + live-catalog.ts.
  * The apex rail (src/app/api/stripe/webhook) already calls provisionPurchase.
  * This Worker must grant the same thing or a paid session is lost.
+ *
+ * humanHold: payment is recorded, no generations, no certificate.
+ * A hold is not delivery. Founder still has to produce the file.
  */
 
 export type Grant = {
@@ -10,6 +13,7 @@ export type Grant = {
   brand: "qron" | "strainchain" | "authichain";
   generations: number;
   refillOnInvoicePaid: boolean;
+  humanHold?: boolean;
 };
 
 export const GRANT_BY_PRICE: Record<string, Grant> = {
@@ -34,20 +38,37 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
   price_1TwmD8GqTruSqV8TpAF8dfyA: {
     plan: "dpp_readiness",
     brand: "authichain",
-    generations: 50,
+    generations: 0,
     refillOnInvoicePaid: false,
+    humanHold: true,
   },
   price_1UHjCZGqTruSqV8T35M6AmoJ: {
     plan: "strainchain_passport",
     brand: "strainchain",
     generations: 0,
     refillOnInvoicePaid: false,
+    humanHold: true,
   },
   price_1UHjJWGqTruSqV8TePctYzO5: {
     plan: "strainchain_farm",
     brand: "strainchain",
     generations: 0,
-    refillOnInvoicePaid: true,
+    refillOnInvoicePaid: false,
+    humanHold: true,
+  },
+  price_1UL0vVGqTruSqV8T5WYjrq6i: {
+    plan: "musa_claim_file",
+    brand: "authichain",
+    generations: 0,
+    refillOnInvoicePaid: false,
+    humanHold: true,
+  },
+  price_1UL15AGqTruSqV8TQHP3yNiR: {
+    plan: "musa_audit_bundle",
+    brand: "authichain",
+    generations: 0,
+    refillOnInvoicePaid: false,
+    humanHold: true,
   },
 };
 

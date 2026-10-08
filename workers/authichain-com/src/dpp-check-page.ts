@@ -60,7 +60,7 @@ function checkoutForm(id: string, label: string, category?: string): string {
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
   ${hidden}
-  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and your readiness assessment. Not a newsletter.</p>
+  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and workspace activation. Not a newsletter.</p>
   <button class="btn btn-primary" type="submit">${esc(label)}</button>
 </form>`;
 }
@@ -103,8 +103,8 @@ function resultHtml(r: DppReadinessResult, price: number): string {
         ? "Expected"
         : "Not scheduled";
   const cta = r.inScope
-    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Get the written readiness plan — $${price}`, r.category.id)}</div>
-    <p class="bp-note"><a href="/battery-passport/sample-audit">See what the written plan looks like</a> (a sample on a fictional e-bike battery).</p>`
+    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Open a workspace — $${price}`, r.category.id)}</div>
+    <p class="bp-note"><a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>. The checkout does not send that page as a document.</p>`
     : "";
   return `<section class="estate-section dc-result" id="result" aria-live="polite">
   <div class="wrap">
@@ -204,7 +204,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
       <p class="estate-badge hero-badge">Free tool · EU Digital Product Passport</p>
       <h1>How ready are your products for the EU Digital Product Passport?</h1>
       <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, no sign-up, nothing stored.</p>
-      <p class="bp-note">The written plan is $299. <a href="/battery-passport/sample-audit">See a sample assessment</a> on a fictional e-bike battery.</p>
+      <p class="bp-note">The $299 checkout opens a workspace. <a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>.</p>
       ${formHtml(input)}
     </div>
   </header>

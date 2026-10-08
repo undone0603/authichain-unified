@@ -1,0 +1,18 @@
+{
+  "linkedin": "Every provenance event in a federal supply chain can carry a signature from the party that made it.\n\nGovChain records supply-chain provenance events as signed attestations. Each event, such as a lot received, an inspection passed or a handoff between suppliers, is signed by the party that made it, so a downstream buyer or auditor can verify the signature and the signer's identity without asking the source to confirm by email.\n\nIt runs on the same Ed25519 signing model as the AuthiChain protocol. Signed records support your own supply-chain risk management work; they are not a substitute for it, and they do not make anyone CMMC certified. Which controls apply to your contracts is something to evaluate with your contracting officer and assessor.\n\nIf you manage sub-tier suppliers and provenance still lives in spreadsheets, see what a signed chain of custody looks like.\n\nhttps://govchain.us/?utm_source=linkedin&utm_medium=social&utm_campaign=govchain-part-provenance&utm_content=b\n\n#GovCon #SupplyChainRiskManagement #DefenseIndustrialBase",
+  "reddit": {
+    "subreddit": "govcon",
+    "title": "Has anyone tried signed attestations for sub-tier supplier provenance records?",
+    "body": "GovChain records provenance events (lot received, inspection passed, handoff between suppliers) as signed attestations, so each event carries a signature from the party that made it. A downstream buyer or auditor can verify the signature and the signer's identity without asking the source to confirm. It uses the same Ed25519 signing model as the rest of the AuthiChain protocol.\n\nTo be clear about scope: signed records are one input to supply-chain risk management. They don't make anyone CMMC certified, and which controls apply is a question for your contracting officer and assessor.\n\nCurious how primes and subs here handle this today, and whether anyone has tried signed records instead of spreadsheets.\n\nhttps://govchain.us/?utm_source=reddit&utm_medium=social&utm_campaign=govchain-part-provenance&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "Every provenance event in a federal supply chain can carry a signature from the party that made it.",
+    "GovChain records provenance events (lot received, inspection passed, handoff between suppliers) as signed attestations. Each is signed by the party that made it, so a downstream buyer can verify the signer without asking the source to confirm.",
+    "Same Ed25519 signing model as the AuthiChain protocol. It supports supply-chain risk management work; it does not make anyone CMMC certified. https://govchain.us/?utm_source=twitter&utm_medium=social&utm_campaign=govchain-part-provenance&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "govchain-part-provenance",
+    "variant": "b",
+    "hypothesis": "a signed-attestation-capability-led hook (every provenance event carries its maker's signature) drives more click-through to govchain.us than variant a's editable-paperwork problem hook; body, CTA and framing are unchanged"
+  }
+}

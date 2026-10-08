@@ -387,3 +387,27 @@ describe("authichain-api keys", () => {
     expect(res.status).toBe(503);
   });
 });
+
+describe("authichain-api public pricing", () => {
+  it("lists only the free meter and the live product page", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/pricing");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const text = JSON.stringify(body);
+    expect(body.plans).toEqual([
+      { id: "free", name: "Free", price: "$0", requests: "10/hour" },
+    ]);
+    expect(body.products).toBe("https://authichain.com/pricing");
+    expect(text).not.toMatch(/\$9|\$29|\$99|Basic|Ultra|rapidapi\.com/);
+  });
+
+  it("does not send a missing key to a RapidAPI checkout", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/verify", { method: "POST" });
+    expect(res.status).toBe(401);
+    const text = JSON.stringify(await res.json());
+    expect(text).not.toMatch(/rapidapi\.com|\$9\/mo/);
+    expect(text).toContain("https://authichain.com/pricing");
+  });
+});

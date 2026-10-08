@@ -3,7 +3,7 @@
   "name": "io.github.undone0603/authichain",
   "title": "AuthiChain",
   "description": "Free verification of signed records anchored on Polygon mainnet, plus a free EU DPP check.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "websiteUrl": "https://authichain.com",
   "repository": {
     "url": "https://github.com/undone0603/authichain-unified",

@@ -86,7 +86,7 @@ function getLandingContent(brandId: BrandId): LandingContent {
         {
           icon: "📊",
           title: "EU DPP Readiness",
-          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+          desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
         },
         {
           icon: "🌍",

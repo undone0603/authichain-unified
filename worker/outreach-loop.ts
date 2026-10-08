@@ -255,7 +255,7 @@ function renderTemplate(lead: OutreachLead): { subject: string; body: string } {
     ``,
     `I'm Zac, founder of AuthiChain, a small company that builds product-authentication and Digital Product Passport tools.`,
     ``,
-    `If ${company} sells into the EU, or sells to brands that do, we offer a one-time EU DPP Readiness Audit for $299: a written readiness assessment and a self-serve AuthiChain workspace to publish a first passport. The $299 is credited toward AuthiChain Basic if you continue.`,
+    `If ${company} sells into the EU, or sells to brands that do, the $299 checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.`,
     ``,
     `Details: https://authichain.com/dpp?utm_source=email&utm_medium=autonomous&utm_campaign=dpp_outreach`,
     ``,

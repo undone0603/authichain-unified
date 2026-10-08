@@ -10,6 +10,8 @@ export function verifySubmitted(
   anchorTransactionQueried: false;
 } | null;
 
+export function expectedRecordHash(record: unknown): string;
+
 export function readAnchorOnChain(
   record: unknown,
   anchor: unknown,
@@ -19,4 +21,6 @@ export function readAnchorOnChain(
   onChain: boolean;
   status: string;
   block?: string | null;
+  txFrom?: string | null;
+  txTo?: string | null;
 }>;

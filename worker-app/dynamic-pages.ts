@@ -53,7 +53,11 @@ import {
   catalogPaymentLinkHtml,
   emailCheckoutWithPaymentLinkHtml,
 } from "../src/lib/checkout-email";
-import { getSeoPageBySlug, type SeoPage } from "../src/lib/seo-pages";
+import {
+  getSeoPageBySlug,
+  renderSeoHubDocument,
+  type SeoPage,
+} from "../src/lib/seo-pages";
 
 // --- Shared helpers --------------------------------------------------------
 
@@ -130,30 +134,10 @@ function htmlDocument(opts: {
 }
 
 function renderSeoHubHtml(page: SeoPage, pathname: string): string {
-  const canonical =
-    typeof page.jsonLd.url === "string" ? page.jsonLd.url : pathname;
   // bodyHtml is committed in content/seo/pages.json and stripped of <script>
   // at generation (src/lib/seo-pages.test.ts). Same contract as the Next
-  // /p/[serial] page.
-  return htmlDocument({
-    title: page.title,
-    description: page.metaDescription,
-    canonicalPath: canonical,
-    extraHead:
-      (page.noindex ? '<meta name="robots" content="noindex">\n' : "") +
-      '<script type="application/ld+json">' +
-      JSON.stringify(page.jsonLd) +
-      "</script>\n" +
-      "<style>" +
-      CHECKOUT_EMAIL_FORM_CSS +
-      "</style>\n",
-    bodyHtml:
-      "<main>\n<h1>" +
-      escapeHtml(page.h1) +
-      "</h1>\n" +
-      page.bodyHtml +
-      "\n</main>",
-  });
+  // /p/[serial] page. The apex worker serves this same document.
+  return renderSeoHubDocument(page, pathname);
 }
 
 function htmlResponse(
@@ -603,7 +587,7 @@ const LANDING_CONTENT: Record<
       {
         icon: "📊",
         title: "EU DPP Readiness",
-        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. Credited toward AuthiChain Basic on conversion.",
+        desc: "Live $299 Stripe Payment Link from the published catalogue, or email-gated checkout so Stripe can recover the cart. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
       },
       {
         icon: "🌍",
@@ -937,13 +921,8 @@ function onboardPayNowHtml(): string {
     }) +
     "\n" +
     catalogPaymentLinkHtml({
-      planId: "strainchain_farm",
-      label: "StrainChain Farm Plan — $149/mo",
-    }) +
-    "\n" +
-    catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "EU DPP Readiness Audit — $299",
+      label: "EU DPP Workspace — $299",
     }) +
     "\n" +
     "</p>\n" +
@@ -978,7 +957,7 @@ function onboardFormHtml(error?: string, host = ""): string {
   return htmlDocument({
     title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 / Farm $149 / DPP $299 / Basic $199.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 or EU DPP Workspace $299.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +
@@ -1588,7 +1567,7 @@ async function handleGeneratePost(c: Context): Promise<Response> {
       400
     );
   }
-  const dest = new URL("/checkout/starter", c.req.url);
+  const dest = new URL("https://authichain.com/checkout/starter");
   dest.searchParams.set("targetUrl", targetUrl);
   if (prompt) dest.searchParams.set("prompt", prompt);
   return c.redirect(dest.pathname + dest.search, 303);

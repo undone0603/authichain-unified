@@ -34,8 +34,9 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.ok(
     html.includes('href="https://authichain.com/checkout/strainchain_passport"')
   );
-  assert.ok(
-    html.includes('href="https://authichain.com/checkout/strainchain_farm"')
+  assert.equal(
+    html.includes('href="https://authichain.com/checkout/strainchain_farm"'),
+    false
   );
   // Retired StrainChain Basic link (no live Stripe account) must not return.
   assert.equal(html.includes("9B6cN59br5xcaCuazy1Nu1o"), false);
@@ -169,11 +170,16 @@ test("/desk/verify?id=GC-MIA-DLA-0005 is not a government mint", async () => {
   assert.match(html, /govchain\.us\/gift/);
 });
 
-test("/desk/pricing sells Farm $149/mo", async () => {
+test("/desk/pricing sells the passport and DPP, not Farm", async () => {
   const res = await get("/desk/pricing");
   const html = await res.text();
-  assert.match(html, /\$149/);
-  assert.match(html, /action="https:\/\/authichain\.com\/checkout\/strainchain_farm"/);
-  assert.ok(html.includes('href="https://authichain.com/checkout/strainchain_farm"'));
+  assert.match(html, /\$49/);
+  assert.match(html, /\$299/);
+  assert.equal(
+    html.includes("https://authichain.com/checkout/strainchain_farm"),
+    false
+  );
   assert.doesNotMatch(html, /href="\/api\/checkout/);
+  assert.doesNotMatch(html, /AuthiChain Basic/);
+  assert.match(html, /50 workspace generations/);
 });

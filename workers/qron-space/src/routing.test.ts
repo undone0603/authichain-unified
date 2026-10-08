@@ -212,7 +212,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
     );
     assert.equal(
       body.pricing.humanCheckout.farmPaymentLink,
-      planPaymentLink("strainchain_farm"),
+      undefined,
       path
     );
     assert.equal(
@@ -248,7 +248,7 @@ test("/mcp and /api/mcp discover Payment Links instead of 404", async () => {
   assert.equal(required.accepts[0].payTo, X402_PUBLISHED_PAY_TO);
 });
 
-test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", async () => {
+test("GET /api/x402/catalog publishes Passport, DPP, and QRON links, not Farm", async () => {
   const res = await get("/api/x402/catalog");
   assert.equal(res.status, 200);
   const body = (await res.json()) as {
@@ -262,10 +262,7 @@ test("GET /api/x402/catalog is 200 with Farm+Passport+DPP+QRON Payment Links", a
     };
   };
   assert.equal(body.catalog, "/api/x402/catalog");
-  assert.equal(
-    new URL(body.humanCheckout.farmPaymentLink ?? "").hostname,
-    "authichain.com"
-  );
+  assert.equal(body.humanCheckout.farmPaymentLink, undefined);
   assert.equal(
     new URL(body.humanCheckout.passportPaymentLink ?? "").hostname,
     "authichain.com"
@@ -331,6 +328,33 @@ test("robots and sitemap still answer after the IndexNow route", async () => {
   const sitemap = await get("/sitemap.xml");
   assert.equal(sitemap.status, 200);
   assert.match(await sitemap.text(), /<urlset/);
+});
+
+test("POST /generate sends an anonymous submit to the $29 Starter checkout", async () => {
+  const real = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    return new Response("should not proxy", { status: 500 });
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/generate", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "targetUrl=https%3A%2F%2Fexample.com%2Fsku&prompt=neon",
+      }),
+      { APP_ORIGIN: "https://app.example.com" }
+    );
+    assert.equal(res.status, 303);
+    assert.equal(called, false);
+    const location = new URL(res.headers.get("location") || "");
+    assert.equal(location.origin + location.pathname, "https://authichain.com/checkout/starter");
+    assert.equal(location.searchParams.get("targetUrl"), "https://example.com/sku");
+    assert.equal(location.searchParams.get("prompt"), "neon");
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("/generate is proxied to the app, not answered with a 404", async () => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { cell, decide, loadConfig } from "./merge-autopilot.mjs";
+import { cell, decide, isGitHubRateLimit, loadConfig } from "./merge-autopilot.mjs";
 
 const cfg = loadConfig({
   owner: "undone0603",
@@ -151,5 +151,17 @@ describe("merge autopilot summary", () => {
   it("keeps API text inside one table cell", () => {
     assert.equal(cell("a|b\nc"), "a\\|b c");
     assert.equal(cell("x\\|y"), "x\\\\\\|y");
+  });
+});
+
+describe("merge autopilot rate limit", () => {
+  it("recognizes a primary or secondary limit and ignores other 403s", () => {
+    assert.equal(
+      isGitHubRateLimit(403, "API rate limit exceeded for installation"),
+      true
+    );
+    assert.equal(isGitHubRateLimit(429, "You have exceeded a secondary rate limit"), true);
+    assert.equal(isGitHubRateLimit(403, "Resource not accessible by integration"), false);
+    assert.equal(isGitHubRateLimit(404, "rate limit"), false);
   });
 });

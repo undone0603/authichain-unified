@@ -21,6 +21,11 @@ test("rendered docs HTML passes the claim guard", () => {
   assert.ok(hub.includes("LMT"));
   const architecture = renderDocsPage("/docs/dpp-architecture");
   assert.ok(architecture.includes("/checkout/dpp_readiness?utm_source=docs"));
+  assert.equal(architecture.includes("written assessment"), false);
+  assert.equal(architecture.includes("written readiness assessment"), false);
+  assert.equal(architecture.includes("AuthiChain Basic"), false);
+  assert.ok(architecture.includes("50 workspace generations"));
+  assert.ok(architecture.includes("Not legal advice"));
 });
 
 test("an unknown docs slug is not a rendered article", () => {

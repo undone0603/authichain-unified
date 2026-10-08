@@ -1,13 +1,28 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { planPaymentLink } from "../../../src/lib/plans.ts";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
+import {
+  publicKeyFromDidKey,
+  sha256Hex,
+  signingBytes,
+} from "../../../protocol/verifier.mjs";
 import {
   ANCHOR_EXAMPLE_TX,
+  ANCHOR_WALLET,
+  CERT_CONTRACT,
+  DEMONSTRATION_RECORD_HASH,
+  DEMONSTRATION_SIGNER_DID,
+  LATEST_PROTOCOL_VERSION,
+  SERVER_VERSION,
+  PRODUCTION_ISSUER_DID,
+  PRODUCTION_ISSUER_KID,
   isMcpPath,
   tryHandleMcp,
   verifyRecordTool,
 } from "./mcp-routes";
 import anchorJson from "../../../protocol/examples/polygon-anchor-1.anchor.json" with { type: "json" };
 import recordJson from "../../../protocol/examples/polygon-anchor-1.record.json" with { type: "json" };
+import serverManifest from "../../../server.json" with { type: "json" };
 
 function req(path: string, init?: RequestInit): Request {
   return new Request(`https://authichain.govchain.us${path}`, init);
@@ -550,15 +565,67 @@ describe("mcp paid verify with the VERIFY_APP binding", () => {
 
 describe("mcp verify_record (free, open verifier + Polygon read)", () => {
   const hash = anchorJson.recordHash.replace(/^sha256:/, "");
-  function rpcStub(input: string, status = "0x1"): typeof fetch {
+  function rpcStub(
+    input: string,
+    status = "0x1",
+    from = ANCHOR_WALLET,
+    to = ANCHOR_WALLET
+  ): typeof fetch {
     return (async (_url: RequestInfo | URL, init?: RequestInit) => {
       const { method } = JSON.parse(String(init?.body)) as { method: string };
       const result =
         method === "eth_getTransactionByHash"
-          ? { hash: ANCHOR_EXAMPLE_TX, input }
+          ? { hash: ANCHOR_EXAMPLE_TX, input, from, to }
           : { status, blockNumber: "0x5a4b714" };
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
     }) as typeof fetch;
+  }
+  /** Tx not found (Research's RES-42 forged-record repro). */
+  const txMissing = (async () =>
+    new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: null })
+    )) as typeof fetch;
+
+  /** A record signed by a fresh random Ed25519 key (not allowlisted). */
+  function forgedRecord() {
+    const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    const b58 = (b: Buffer) => {
+      let n = BigInt("0x" + (b.toString("hex") || "0"));
+      let out = "";
+      while (n > 0n) {
+        out = B58[Number(n % 58n)] + out;
+        n /= 58n;
+      }
+      for (const x of b) {
+        if (x !== 0) break;
+        out = "1" + out;
+      }
+      return out;
+    };
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+    const raw = publicKey.export({ format: "der", type: "spki" }).subarray(12);
+    const did =
+      "did:key:z" + b58(Buffer.concat([Buffer.from([0xed, 0x01]), raw]));
+    const record: Record<string, any> = {
+      "@context": [
+        "https://www.w3.org/ns/credentials/v2",
+        "https://authichain.com/protocol/v1",
+      ],
+      type: ["VerifiableCredential", "ProvenanceRecord"],
+      issuer: did,
+      validFrom: "2026-10-01T00:00:00Z",
+      credentialSubject: { id: "https://example.test/not-authichain" },
+      proof: {
+        type: "Ed25519Signature2020",
+        created: "2026-10-01T00:00:00Z",
+        verificationMethod: did + "#" + did.slice(8),
+        proofPurpose: "assertionMethod",
+      },
+    };
+    record.proof.proofValue =
+      "z" + b58(sign(null, signingBytes(record), privateKey));
+    const recordHash = sha256Hex(signingBytes(record));
+    return { record, recordHash, did };
   }
 
   it("is listed as a free tool", async () => {
@@ -584,6 +651,15 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     );
     expect(result).toMatchObject({
       verdict: "verified",
+      protocolVerdict: "verified",
+      reasons: [],
+      signer: {
+        did: DEMONSTRATION_SIGNER_DID,
+        allowlisted: true,
+        role: "demonstration",
+        kid: null,
+        productionIssuer: false,
+      },
       anchorOnChain: true,
       anchorChainStatus: "tx_contains_record_hash",
       anchorBlock: "0x5a4b714",
@@ -593,14 +669,127 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     });
   });
 
-  it("reports the anchor as not on chain when the tx lacks the hash", async () => {
+  it("allowlisted key + a tx that does not carry the hash is not verified", async () => {
     const result = await verifyRecordTool(
       { id: "polygon-anchor-1" },
       { fetchImpl: rpcStub("0xdeadbeef") }
     );
     expect(result).toMatchObject({
+      verdict: "unverified",
+      protocolVerdict: "verified",
+      reasons: ["anchor_not_on_chain:hash_not_in_tx"],
       anchorOnChain: false,
       anchorChainStatus: "hash_not_in_tx",
+    });
+  });
+
+  it.each([
+    ["the cert contract", CERT_CONTRACT],
+    ["the anchor wallet", ANCHOR_WALLET],
+  ])(
+    "third-party wallet anchoring the correct hash to %s is not verified",
+    async (_label, to) => {
+      const thirdParty = "0x1111111111111111111111111111111111111111";
+      const result = await verifyRecordTool(
+        { record: recordJson, anchor: anchorJson },
+        { fetchImpl: rpcStub("0x" + hash, "0x1", thirdParty, to) }
+      );
+      expect(result).toMatchObject({
+        verdict: "unverified",
+        reasons: ["anchor_tx_not_from_anchor_wallet"],
+        anchorOnChain: true,
+      });
+    }
+  );
+
+  it("anchor-wallet tx to an unrelated address is not verified", async () => {
+    const result = await verifyRecordTool(
+      { record: recordJson, anchor: anchorJson },
+      {
+        fetchImpl: rpcStub(
+          "0x" + hash,
+          "0x1",
+          ANCHOR_WALLET,
+          "0x3333333333333333333333333333333333333333"
+        ),
+      }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["anchor_tx_not_to_anchor_address"],
+    });
+  });
+
+  it("demo key is pinned to the published record's hash", () => {
+    expect(DEMONSTRATION_RECORD_HASH).toBe(hash);
+    expect(sha256Hex(signingBytes(recordJson))).toBe(DEMONSTRATION_RECORD_HASH);
+  });
+
+  it("production issuer did:key matches JWKS kid lue84w… (RFC 7638)", () => {
+    const jwk = publicKeyFromDidKey(PRODUCTION_ISSUER_DID).export({
+      format: "jwk",
+    }) as { crv: string; kty: string; x: string };
+    const thumb = createHash("sha256")
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x }))
+      .digest("base64url");
+    expect(thumb).toBe(PRODUCTION_ISSUER_KID);
+  });
+
+  it("RES-42 repro: random key + made-up tx is not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: "0x" + "cd".repeat(32),
+    };
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: txMissing }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      protocolVerdict: "verified",
+      reasons: ["signer_not_allowlisted", "anchor_not_on_chain:tx_missing"],
+      signer: { allowlisted: false, role: null },
+      anchorOnChain: false,
+    });
+  });
+
+  it("random key + a real, unrelated AuthiChain tx is not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: ANCHOR_EXAMPLE_TX,
+    };
+    // The real demo tx: on chain, from the anchor wallet, but it carries the
+    // demo record's hash, not this one.
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: rpcStub("0x" + hash) }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["signer_not_allowlisted", "anchor_not_on_chain:hash_not_in_tx"],
+      anchorOnChain: false,
+    });
+  });
+
+  it("random key + its own hash-carrying tx is still not verified", async () => {
+    const { record, recordHash } = forgedRecord();
+    const attacker = "0x2222222222222222222222222222222222222222";
+    const anchor = {
+      recordHash: "sha256:" + recordHash,
+      chain: "polygon:137",
+      txHash: "0x" + "ef".repeat(32),
+    };
+    const result = await verifyRecordTool(
+      { record, anchor },
+      { fetchImpl: rpcStub("0x" + recordHash, "0x1", attacker, ANCHOR_WALLET) }
+    );
+    expect(result).toMatchObject({
+      verdict: "unverified",
+      reasons: ["signer_not_allowlisted", "anchor_tx_not_from_anchor_wallet"],
     });
   });
 
@@ -641,5 +830,153 @@ describe("mcp verify_record (free, open verifier + Polygon read)", () => {
     };
     expect(body.result.isError).toBe(true);
     expect(body.result.content[0].text).toMatch(/only published record/);
+  });
+});
+
+/**
+ * Transport conformance. Before this, /mcp answered notifications with a
+ * full result object, hardcoded protocolVersion 2024-11-05 into every
+ * reply, and had no `ping` — each of which can stall a strict client's
+ * handshake.
+ */
+describe("mcp streamable http conformance", () => {
+  function rpc(body: unknown, headers: Record<string, string> = {}) {
+    return tryHandleMcp(
+      req("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      })
+    );
+  }
+
+  it("answers a notification with 202 and no body", async () => {
+    const res = await rpc({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(res!.status).toBe(202);
+    expect(await res!.text()).toBe("");
+  });
+
+  it("treats any id-less message as a notification", async () => {
+    const res = await rpc({ jsonrpc: "2.0", method: "tools/list" });
+    expect(res!.status).toBe(202);
+  });
+
+  it("still answers a request whose id is literally null", async () => {
+    const res = await rpc({ jsonrpc: "2.0", id: null, method: "tools/list" });
+    expect(res!.status).toBe(200);
+    const body = (await res!.json()) as { result: { tools: unknown[] } };
+    expect(body.result.tools.length).toBeGreaterThan(0);
+  });
+
+  it("echoes a protocol version it supports", async () => {
+    for (const version of ["2024-11-05", "2025-03-26", "2025-06-18"]) {
+      const res = await rpc({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: version, capabilities: {} },
+      });
+      const body = (await res!.json()) as {
+        result: { protocolVersion: string; serverInfo: { name: string } };
+      };
+      expect(body.result.protocolVersion, version).toBe(version);
+      expect(body.result.serverInfo.name).toBe("authichain");
+    }
+  });
+
+  it("falls back to the newest version for an unknown one", async () => {
+    const res = await rpc({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "1999-01-01" },
+    });
+    const body = (await res!.json()) as {
+      result: { protocolVersion: string };
+    };
+    expect(body.result.protocolVersion).toBe(LATEST_PROTOCOL_VERSION);
+  });
+
+  it("answers ping with an empty result", async () => {
+    const res = await rpc({ jsonrpc: "2.0", id: 9, method: "ping" });
+    const body = (await res!.json()) as { id: number; result: object };
+    expect(body.id).toBe(9);
+    expect(body.result).toEqual({});
+  });
+
+  it("returns 405 for a GET that wants an SSE stream", async () => {
+    const res = await tryHandleMcp(
+      req("/mcp", { headers: { Accept: "text/event-stream" } })
+    );
+    expect(res!.status).toBe(405);
+    const body = (await res!.json()) as { error: string };
+    expect(body.error).toBe("sse_stream_not_supported");
+  });
+
+  it("still serves discovery JSON to a plain GET", async () => {
+    const res = await tryHandleMcp(req("/mcp"));
+    expect(res!.status).toBe(200);
+    expect(((await res!.json()) as { protocol: string }).protocol).toBe("mcp");
+  });
+
+  it("preflights the headers a spec client actually sends", async () => {
+    const res = await tryHandleMcp(req("/mcp", { method: "OPTIONS" }));
+    expect(res!.status).toBe(204);
+    const allow = res!.headers.get("Access-Control-Allow-Headers") ?? "";
+    for (const h of ["Accept", "MCP-Protocol-Version", "Mcp-Session-Id"]) {
+      expect(allow, h).toContain(h);
+    }
+    expect(res!.headers.get("Access-Control-Expose-Headers")).toContain(
+      "MCP-Protocol-Version"
+    );
+  });
+
+  /**
+   * server.json is what the MCP registry publishes. A client that reads
+   * the registry and then connects must see the same version in both
+   * places; before this they were 1.2.0 and 1.0.0.
+   */
+  it("reports the same version the registry publishes", async () => {
+    expect(SERVER_VERSION).toBe(serverManifest.version);
+
+    const res = await rpc({ jsonrpc: "2.0", id: 1, method: "initialize" });
+    const body = (await res!.json()) as {
+      result: { serverInfo: { version: string } };
+    };
+    expect(body.result.serverInfo.version).toBe(serverManifest.version);
+  });
+
+  it("points the registry remote at the endpoint this module serves", () => {
+    const remote = serverManifest.remotes[0];
+    expect(remote.type).toBe("streamable-http");
+    expect(isMcpPath(new URL(remote.url).pathname)).toBe(true);
+  });
+
+  it("completes a full initialize handshake end to end", async () => {
+    const init = await rpc({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {} },
+    });
+    expect(init!.status).toBe(200);
+    expect(init!.headers.get("MCP-Protocol-Version")).toBe(
+      LATEST_PROTOCOL_VERSION
+    );
+
+    const ack = await rpc({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(ack!.status).toBe(202);
+
+    const list = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    const body = (await list!.json()) as {
+      result: { tools: { name: string }[] };
+    };
+    expect(body.result.tools.map(t => t.name)).toContain("verify_record");
   });
 });

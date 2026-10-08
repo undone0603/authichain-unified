@@ -114,7 +114,6 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
       );
       stripeLink(body.pricing.humanCheckout.passportPaymentLink);
       stripeLink(body.pricing.humanCheckout.dppPaymentLink);
-      stripeLink(body.pricing.humanCheckout.farmPaymentLink);
       assert.equal(
         body.pricing.humanCheckout.passportPaymentLink,
         PASSPORT,
@@ -127,7 +126,7 @@ test("GET discovery lists Payment Links and unpaid POST x402, not GET checkout",
       );
       assert.equal(
         body.pricing.humanCheckout.farmPaymentLink,
-        FARM,
+        undefined,
         `${host} ${path}`
       );
       assert.equal(
@@ -215,7 +214,8 @@ test("JSON-RPC tools/list and get_pricing are public", async () => {
   };
   assert.ok(priced.result.content[0].text.includes("POST /api/x402"));
   assert.ok(priced.result.content[0].text.includes(PASSPORT));
-  assert.ok(priced.result.content[0].text.includes(FARM));
+  assert.ok(priced.result.content[0].text.includes(DPP));
+  assert.equal(priced.result.content[0].text.includes(FARM), false);
   assert.equal(priced.result.content[0].text.includes("/api/checkout"), false);
 });
 
