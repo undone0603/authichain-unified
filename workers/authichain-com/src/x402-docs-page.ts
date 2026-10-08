@@ -378,7 +378,6 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       <p>Stripe is for people. x402 is for machines. They do not share a wallet, a SKU, or a receipt.</p>
       <ul>
         <li>StrainChain Passport — <strong>$${planUsd("strainchain_passport")}</strong> one-time. Enter a work email so Stripe can recover the cart.</li>
-        <li>StrainChain Farm — <strong>$${planUsd("strainchain_farm")}</strong>/month. Unlimited cultivars; same Payment Link as /pricing.</li>
         <li>EU DPP Readiness — <strong>$${planUsd("dpp_readiness")}</strong> one-time. Same recovery path.</li>
         <li>Agent verification — <strong>${esc(p.priceUsd)} USDC</strong> per call on this rail, daily cap ${esc(p.dailyCapUsd)}. <strong>$QRON is not this rail.</strong></li>
       </ul>
@@ -391,16 +390,6 @@ ${CHECKOUT_EMAIL_FORM_CSS}
       ${catalogPaymentLinkHtml({
         planId: "strainchain_passport",
         label: `Pay $${planUsd("strainchain_passport")} on Stripe`,
-      })}
-      ${catalogPaymentLinkHtml({
-        planId: "strainchain_farm",
-        label: `Pay $${planUsd("strainchain_farm")} on Stripe`,
-      })}
-      ${checkoutEmailFormHtml({
-        action: "https://authichain.com/checkout/strainchain_farm",
-        label: `Farm checkout — $${planUsd("strainchain_farm")}/mo`,
-        inputId: "x402-farm-email",
-        formId: "x402-farm-checkout",
       })}
       ${checkoutEmailFormHtml({
         action: "https://authichain.com/checkout/dpp_readiness",

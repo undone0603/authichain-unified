@@ -71,7 +71,7 @@
     "title": "Cannabis Blockchain Provenance | StrainChain",
     "metaDescription": "Consumer-facing blockchain provenance for cannabis. Integrates with METRC & BioTrack; lab certs linked to signed records; QR-verified chain of custody.",
     "h1": "Consumer-Facing Blockchain Provenance for Cannabis",
-    "bodyHtml": "<p>StrainChain turns compliance data into consumer trust. It integrates directly with METRC and BioTrack — no duplicate entry — and links lab certificates to signed records for a tamper-evident chain of custody.</p><h2>What you get</h2><ul><li>State auditors check chain of custody by QR scan</li><li>Dispensaries show customers verified lab results at point of sale</li><li>MSOs get unified provenance across jurisdictions</li></ul><p>It runs alongside your existing compliance — a brand and trust asset, not another compliance tool. Plans start at $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
+    "bodyHtml": "<p>StrainChain turns compliance data into consumer trust. It integrates directly with METRC and BioTrack — no duplicate entry — and links lab certificates to signed records for a tamper-evident chain of custody.</p><h2>What you get</h2><ul><li>State auditors check chain of custody by QR scan</li><li>Dispensaries show customers verified lab results at point of sale</li><li>MSOs get unified provenance across jurisdictions</li></ul><p>It runs alongside your existing compliance — a brand and trust asset, not another compliance tool. Plans start at $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -92,7 +92,7 @@
     "title": "METRC Compliance on the Blockchain | StrainChain",
     "metaDescription": "Layer blockchain provenance on your METRC compliance. Cultivation-to-dispensary events on-chain; lab certs linked to signed records. From $199/mo.",
     "h1": "Turn METRC Compliance Into Consumer Trust",
-    "bodyHtml": "<p>METRC keeps you compliant; StrainChain makes that provenance visible to customers. It integrates directly with your METRC setup and records every stage — cultivation, processing, dispensary — as an on-chain event.</p><h2>Why operators choose StrainChain</h2><ul><li>No re-entry — it reads your existing METRC and BioTrack data</li><li>Lab certificates linked to signed, verifiable records</li><li>A QR scan proves authenticity at the shelf</li></ul><p>Start on StrainChain Basic at $199/mo, scoped to one banner, and measure scan-through before scaling.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
+    "bodyHtml": "<p>METRC keeps you compliant; StrainChain makes that provenance visible to customers. It integrates directly with your METRC setup and records every stage — cultivation, processing, dispensary — as an on-chain event.</p><h2>Why operators choose StrainChain</h2><ul><li>No re-entry — it reads your existing METRC and BioTrack data</li><li>Lab certificates linked to signed, verifiable records</li><li>A QR scan proves authenticity at the shelf</li></ul><p>Start on StrainChain Basic at $199/mo, scoped to one banner, and measure scan-through before scaling.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -273,7 +273,7 @@
     "title": "Cannabis COA Verification on Blockchain | StrainChain",
     "metaDescription": "Link cannabis lab certificates (COAs) to signed records so a QR scan shows a verified, tamper-evident chain of custody.",
     "h1": "Blockchain-Verified Cannabis Certificates of Analysis",
-    "bodyHtml": "<p>StrainChain gives dispensaries and MSOs consumer-facing provenance for cannabis. Lab certificates of analysis (COAs) are linked to signed records, so a shopper can scan a QR code and see a verified chain of custody rather than a printout that could be edited.</p><h2>What a scan shows</h2><ul><li>The product’s verified chain of custody.</li><li>Lab certificates linked to signed records.</li><li>Integration with METRC and BioTrack track-and-trace.</li></ul><p>Built for dispensaries and MSOs, from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
+    "bodyHtml": "<p>StrainChain gives dispensaries and MSOs consumer-facing provenance for cannabis. Lab certificates of analysis (COAs) are linked to signed records, so a shopper can scan a QR code and see a verified chain of custody rather than a printout that could be edited.</p><h2>What a scan shows</h2><ul><li>The product’s verified chain of custody.</li><li>Lab certificates linked to signed records.</li><li>Integration with METRC and BioTrack track-and-trace.</li></ul><p>Built for dispensaries and MSOs, from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -294,7 +294,7 @@
     "title": "BioTrack Blockchain Provenance | StrainChain",
     "metaDescription": "StrainChain integrates with BioTrack and METRC to add consumer-facing, signed provenance to your existing cannabis track-and-trace.",
     "h1": "BioTrack + Blockchain Provenance for Cannabis",
-    "bodyHtml": "<p>StrainChain layers consumer-facing provenance on top of the track-and-trace systems dispensaries already run. It integrates with both BioTrack and METRC, linking lab certificates to signed records so the chain of custody is verifiable from a QR scan.</p><h2>Fits your existing stack</h2><ul><li>Works with BioTrack and METRC.</li><li>Lab certs linked to signed records.</li><li>QR scan reveals a verified chain of custody.</li></ul><p>For dispensaries and MSOs, from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
+    "bodyHtml": "<p>StrainChain layers consumer-facing provenance on top of the track-and-trace systems dispensaries already run. It integrates with both BioTrack and METRC, linking lab certificates to signed records so the chain of custody is verifiable from a QR scan.</p><h2>Fits your existing stack</h2><ul><li>Works with BioTrack and METRC.</li><li>Lab certs linked to signed records.</li><li>QR scan reveals a verified chain of custody.</li></ul><p>For dispensaries and MSOs, from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -315,7 +315,7 @@
     "title": "Dispensary QR Provenance Scanning | StrainChain",
     "metaDescription": "Give cannabis shoppers a QR scan that proves provenance — lab certs linked to signed records, integrated with METRC and BioTrack.",
     "h1": "QR Provenance Scanning for Dispensaries",
-    "bodyHtml": "<p>StrainChain turns a QR code on cannabis packaging into consumer-facing proof of provenance. A scan shows a verified chain of custody, with lab certificates linked to signed records and data drawn from METRC and BioTrack.</p><h2>For dispensaries and MSOs</h2><ul><li>Build shopper trust at the shelf with a verifiable scan.</li><li>Tamper-evident, signed lab certs.</li><li>Integrates with existing METRC and BioTrack workflows.</li></ul><p>Plans from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
+    "bodyHtml": "<p>StrainChain turns a QR code on cannabis packaging into consumer-facing proof of provenance. A scan shows a verified chain of custody, with lab certificates linked to signed records and data drawn from METRC and BioTrack.</p><h2>For dispensaries and MSOs</h2><ul><li>Build shopper trust at the shelf with a verifiable scan.</li><li>Tamper-evident, signed lab certs.</li><li>Integrates with existing METRC and BioTrack workflows.</li></ul><p>Plans from $199/mo.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -1466,7 +1466,7 @@
     "title": "Cannabis Product Recall Traceability | StrainChain",
     "metaDescription": "When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its.",
     "h1": "Cannabis Product Recall Traceability",
-    "bodyHtml": "<p>When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.</p><h2>Why StrainChain</h2><ul><li>Unit-level recall targeting instead of a blanket pull across every dispensary carrying the SKU</li><li>Lab retest results attach to the same on-chain record consumers already scan for COAs</li><li>Chain-of-custody events are tamper-evident, so a recall trace does not depend on trusting one dispensary’s paperwork</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace our METRC recall workflow?</h3><p>No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report.</p><h3>Can dispensaries check recall status by scan?</h3><p>Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged.</p>",
+    "bodyHtml": "<p>When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.</p><h2>Why StrainChain</h2><ul><li>Unit-level recall targeting instead of a blanket pull across every dispensary carrying the SKU</li><li>Lab retest results attach to the same on-chain record consumers already scan for COAs</li><li>Chain-of-custody events are tamper-evident, so a recall trace does not depend on trusting one dispensary’s paperwork</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace our METRC recall workflow?</h3><p>No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report.</p><h3>Can dispensaries check recall status by scan?</h3><p>Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5214,7 +5214,7 @@
     "title": "Cannabis Schedule 3 Rescheduling Interstate | StrainChain",
     "metaDescription": "DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June.",
     "h1": "Cannabis Schedule 3 Rescheduling Interstate Commerce Compliance",
-    "bodyHtml": "<p>DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June 29, 2026 — but the order does not authorize interstate shipment, and every unit sold still has to prove which state’s track-and-trace program cleared it.</p><h2>Why StrainChain</h2><ul><li>Rescheduling changes which CSA schedule a product sits under; it does not legalize crossing a state line — that still requires separate congressional action, and recreational-use cannabis remains Schedule I regardless of the medical-use order</li><li>A state-by-state compliance patchwork means a batch record has to carry which program — METRC, BioTrack, or another state system — cleared it, not just that federal scheduling changed underneath it</li><li>A signed, per-batch chain-of-custody record answers a question rescheduling doesn’t: which state’s rules a specific unit was grown, tested, and sold under, checkable by a regulator without a call to the operator</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does the Schedule III move let cannabis cross state lines now?</h3><p>No — DOJ’s April 23, 2026 order reschedules FDA-approved drug products and state-licensed medical marijuana, and a June 29, 2026 hearing is considering broader rescheduling, but neither authorizes interstate commerce. That requires separate congressional action, and interstate shipment remains illegal today.</p><h3>Does rescheduling change what a batch record needs to show?</h3><p>No — a batch still needs the same per-state chain-of-custody and lab-result record regardless of CSA schedule. Rescheduling changes federal drug classification; it doesn’t change any state’s own track-and-trace requirements.</p>",
+    "bodyHtml": "<p>DOJ moved FDA-approved and state-licensed medical marijuana from Schedule I to Schedule III on April 23, 2026, and a broader Schedule III hearing opened June 29, 2026 — but the order does not authorize interstate shipment, and every unit sold still has to prove which state’s track-and-trace program cleared it.</p><h2>Why StrainChain</h2><ul><li>Rescheduling changes which CSA schedule a product sits under; it does not legalize crossing a state line — that still requires separate congressional action, and recreational-use cannabis remains Schedule I regardless of the medical-use order</li><li>A state-by-state compliance patchwork means a batch record has to carry which program — METRC, BioTrack, or another state system — cleared it, not just that federal scheduling changed underneath it</li><li>A signed, per-batch chain-of-custody record answers a question rescheduling doesn’t: which state’s rules a specific unit was grown, tested, and sold under, checkable by a regulator without a call to the operator</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does the Schedule III move let cannabis cross state lines now?</h3><p>No — DOJ’s April 23, 2026 order reschedules FDA-approved drug products and state-licensed medical marijuana, and a June 29, 2026 hearing is considering broader rescheduling, but neither authorizes interstate commerce. That requires separate congressional action, and interstate shipment remains illegal today.</p><h3>Does rescheduling change what a batch record needs to show?</h3><p>No — a batch still needs the same per-state chain-of-custody and lab-result record regardless of CSA schedule. Rescheduling changes federal drug classification; it doesn’t change any state’s own track-and-trace requirements.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -5918,7 +5918,7 @@
     "title": "Blockchain QR Code For Cannabis | StrainChain",
     "metaDescription": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.",
     "h1": "Blockchain QR Code For Cannabis",
-    "bodyHtml": "<p>Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.</p><h2>Why StrainChain</h2><ul><li>METRC and BioTrack sync — no duplicate data entry</li><li>Lab certificates linked to a signed record</li><li>State auditors check chain of custody by scan</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does it replace METRC?</h3><p>No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.</p><h3>What does the consumer see?</h3><p>A scan opens verified lab results, strain provenance, and chain of custody.</p>",
+    "bodyHtml": "<p>Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof record of that product’s journey from seed to sale.</p><h2>Why StrainChain</h2><ul><li>METRC and BioTrack sync — no duplicate data entry</li><li>Lab certificates linked to a signed record</li><li>State auditors check chain of custody by scan</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does it replace METRC?</h3><p>No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.</p><h3>What does the consumer see?</h3><p>A scan opens verified lab results, strain provenance, and chain of custody.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -6580,7 +6580,7 @@
     "title": "Product Authentication For Cannabis Dispensary | StrainChain",
     "metaDescription": "Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust.",
     "h1": "Product Authentication For Cannabis Dispensary",
-    "bodyHtml": "<p>Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust signal.</p><h2>Why StrainChain</h2><ul><li>Verified COAs displayed at point of sale</li><li>METRC/BioTrack-synced provenance</li><li>Builds customer trust and repeat purchase</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Do budtenders need training?</h3><p>No — customers self-scan, and staff can pull the same verified record by scan.</p><h3>Does it integrate with my POS?</h3><p>It runs alongside existing compliance and POS systems without duplicate entry.</p>",
+    "bodyHtml": "<p>Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust signal.</p><h2>Why StrainChain</h2><ul><li>Verified COAs displayed at point of sale</li><li>METRC/BioTrack-synced provenance</li><li>Builds customer trust and repeat purchase</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Do budtenders need training?</h3><p>No — customers self-scan, and staff can pull the same verified record by scan.</p><h3>Does it integrate with my POS?</h3><p>It runs alongside existing compliance and POS systems without duplicate entry.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -9510,7 +9510,7 @@
     "title": "Metrc Consumer QR Code Vs Verifiable | StrainChain",
     "metaDescription": "Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports.",
     "h1": "Metrc Consumer QR Code Vs Verifiable Credential",
-    "bodyHtml": "<p>Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports — a signed StrainChain record is a Verifiable Credential a customer’s own device can check without trusting that server to stay honest or stay up.</p><h2>Why StrainChain</h2><ul><li>A Metrc consumer QR code resolves through Metrc’s own systems; a StrainChain record verifies offline with Ed25519, the same distinction protocol/SPEC.md draws between attestation and verification</li><li>State track-and-trace answers a regulatory question — was this batch logged correctly; a signed COA record answers a different one — has this specific result been altered since the lab issued it</li><li>StrainChain runs alongside Metrc rather than replacing it: the batch and package IDs Metrc already assigns are what a StrainChain record signs over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace Metrc’s consumer QR code?</h3><p>No — it runs alongside it. Metrc’s code shows the state-mandated track-and-trace data; a StrainChain record adds a signature over the lab result that a customer’s device checks independently, without calling any server.</p><h3>If I have to ask a vendor to confirm a result, is that verification?</h3><p>No — that is attestation. Verification you don’t have to request is the distinction that matters: a StrainChain record verifies against a public key with an offline verifier, not by phoning in to ask if it’s real.</p>",
+    "bodyHtml": "<p>Metrc’s 2026 platform update adds consumer-facing QR codes on top of state track-and-trace data, but scanning one shows what Metrc’s server currently reports — a signed StrainChain record is a Verifiable Credential a customer’s own device can check without trusting that server to stay honest or stay up.</p><h2>Why StrainChain</h2><ul><li>A Metrc consumer QR code resolves through Metrc’s own systems; a StrainChain record verifies offline with Ed25519, the same distinction protocol/SPEC.md draws between attestation and verification</li><li>State track-and-trace answers a regulatory question — was this batch logged correctly; a signed COA record answers a different one — has this specific result been altered since the lab issued it</li><li>StrainChain runs alongside Metrc rather than replacing it: the batch and package IDs Metrc already assigns are what a StrainChain record signs over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Does this replace Metrc’s consumer QR code?</h3><p>No — it runs alongside it. Metrc’s code shows the state-mandated track-and-trace data; a StrainChain record adds a signature over the lab result that a customer’s device checks independently, without calling any server.</p><h3>If I have to ask a vendor to confirm a result, is that verification?</h3><p>No — that is attestation. Verification you don’t have to request is the distinction that matters: a StrainChain record verifies against a public key with an offline verifier, not by phoning in to ask if it’s real.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10397,9 +10397,9 @@
     "brand": "StrainChain",
     "domain": "strainchain.io",
     "title": "Cannabis Coa Passport Pricing Per Cultivar | StrainChain",
-    "metaDescription": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each.",
+    "metaDescription": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment. Farm is not a public offer.",
     "h1": "Cannabis Coa Passport Pricing Per Cultivar",
-    "bodyHtml": "<p>A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each passport when a new certificate of analysis arrives.</p><h2>Why StrainChain</h2><ul><li>Passport, $49 once: one published passport for one cultivar, with the full cannabinoid and terpene panel taken from your existing certificates and a QR code and shareable link</li><li>Farm Plan, $149 a month: unlimited cultivars and passports, automatic updates on every new CoA, and lineage and batch history across the library</li><li>On both plans every THC and THCV total is recomputed from the raw panel rather than copied from the certificate, and discrepancies are shown rather than smoothed over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_farm\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start Farm Plan $149/mo</button></form><p><a href=\"https://authichain.com/checkout/strainchain_farm\">Pay $149/mo on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Is a StrainChain passport a lab result?</h3><p>No. It is a published record built from the certificates you supply. The lab that issued the CoA remains the source of the test result.</p><h3>When does the Farm Plan make more sense than single passports?</h3><p>When you publish several cultivars or re-test often. The Farm Plan updates every passport on each new CoA, where single passports mean buying a new $49 passport for each cultivar.</p>",
+    "bodyHtml": "<p>A StrainChain genetics passport costs $49 per cultivar as a one-time payment. Farm is not a public offer.</p><h2>Why StrainChain</h2><ul><li>Passport, $49 once: one published passport for one cultivar, with the full cannabinoid and terpene panel taken from your existing certificates and a QR code and shareable link</li><li>On the passport every THC and THCV total is recomputed from the raw panel rather than copied from the certificate, and discrepancies are shown rather than smoothed over</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. Genetics passport is $49 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/strainchain_passport\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start StrainChain passport checkout</button></form><p><a href=\"https://authichain.com/checkout/strainchain_passport\">Pay $49 on Stripe</a></p><p><a href=\"https://strainchain.io/pricing\">View StrainChain pricing</a>. Genetics passport is $49 one-time.</p><h2>FAQ</h2><h3>Is a StrainChain passport a lab result?</h3><p>No. It is a published record built from the certificates you supply. The lab that issued the CoA remains the source of the test result.</p><h3>Is Farm a public offer?</h3><p>No. The public StrainChain offer is the $49 genetics passport. Farm stays off the public catalogue.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10410,7 +10410,7 @@
             "@type": "Brand",
             "name": "StrainChain"
           },
-          "description": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment, and the Farm Plan at $149 a month covers unlimited cultivars and updates each passport when a new certificate of analysis arrives.",
+          "description": "A StrainChain genetics passport costs $49 per cultivar as a one-time payment. Farm is not a public offer.",
           "url": "https://strainchain.io/p/cannabis-coa-passport-pricing-per-cultivar"
         },
         {
@@ -10443,10 +10443,10 @@
             },
             {
               "@type": "Question",
-              "name": "When does the Farm Plan make more sense than single passports?",
+              "name": "Is Farm a public offer?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "When you publish several cultivars or re-test often. The Farm Plan updates every passport on each new CoA, where single passports mean buying a new $49 passport for each cultivar."
+                "text": "No. The public StrainChain offer is the $49 genetics passport. Farm stays off the public catalogue."
               }
             }
           ]
@@ -10588,7 +10588,7 @@
     "brand": "AuthiChain",
     "domain": "authichain.com",
     "title": "Battery Passport Readiness Assessment Cost | AuthiChain",
-    "metaDescription": "AuthiChain’s EU DPP Readiness assessment costs $299 as a one-time payment and gives a battery maker a written check of its datasheet figures, an Annex XIII.",
+    "metaDescription": "AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation and 50 workspace generations. AuthiChain.",
     "h1": "Battery Passport Readiness Assessment Cost",
     "bodyHtml": "<p>AuthiChain’s EU DPP Readiness checkout is $299 one-time and opens an AuthiChain workspace with self-serve activation and 50 workspace generations. A fictional e-bike walkthrough of the free figure check and Annex XIII gap table is at https://authichain.com/battery-passport/sample-audit. That page is not a document the checkout sends.</p><h2>Why AuthiChain</h2><ul><li>You can read a fictional walkthrough first at https://authichain.com/battery-passport/sample-audit, worked through on a fictional 48 V e-bike pack, including a datasheet figure check and the gap table</li><li>The purchase opens an AuthiChain workspace with self-serve activation and 50 workspace generations to publish a first passport record</li><li>The checkout opens a workspace for that passport work. It is not a certification or legal opinion, and EU DPP export from AuthiChain is still in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is the $299 a subscription?</h3><p>No. It is a single payment through Stripe with no recurring charge.</p><h3>Will my assessment look like the sample?</h3><p>Yes. The sample shows the same structure: a summary with the days left before the deadline, the datasheet check, the Annex XIII table and the action plan, built from your battery’s own figures.</p>",
     "jsonLd": {
@@ -11150,6 +11150,262 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Anchor the SHA-256 of its canonical bytes on a mainnet chain and supply that anchor alongside the record. The anchor must match the recomputed hash."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-anchor-gdpr-personal-data-hash-on-chain",
+    "keyword": "blockchain anchor gdpr personal data hash on chain",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain Anchor Gdpr Personal Data Hash On | AuthiChain",
+    "metaDescription": "An AuthiChain anchor puts one SHA-256 hash and a chain identifier on a public ledger, and the record itself stays off-chain, so a ledger entry carries no.",
+    "h1": "Blockchain Anchor Gdpr Personal Data Hash On Chain",
+    "bodyHtml": "<p>An AuthiChain anchor puts one SHA-256 hash and a chain identifier on a public ledger, and the record itself stays off-chain, so a ledger entry carries no product data and no names.</p><h2>Why AuthiChain</h2><ul><li>The anchor object holds a record hash, a CAIP-2 chain identifier, a transaction hash and a timestamp, and nothing else</li><li>The record is a signed document you store and serve yourself, so correcting or deleting a copy is an ordinary storage operation</li><li>A hash of personal data can itself count as personal data under data-protection rules, so keep names and contact details out of records you anchor</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does anchoring make personal data immutable?</h3><p>Only the hash is immutable. It cannot be reversed into the record, but a ledger entry cannot be erased either, which is why records should describe items and not people. Confirm the position for your own data with your data-protection adviser.</p><h3>What does the hash let a third party check?</h3><p>Anyone holding the record can recompute SHA-256 over its canonical bytes and compare it with the anchored value. A match shows the record existed unchanged no later than the anchor time.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Blockchain Anchor Gdpr Personal Data Hash On Chain",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "An AuthiChain anchor puts one SHA-256 hash and a chain identifier on a public ledger, and the record itself stays off-chain, so a ledger entry carries no product data and no names.",
+          "url": "https://authichain.com/p/blockchain-anchor-gdpr-personal-data-hash-on-chain"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain Anchor Gdpr Personal Data Hash On Chain",
+              "item": "https://authichain.com/p/blockchain-anchor-gdpr-personal-data-hash-on-chain"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does anchoring make personal data immutable?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only the hash is immutable. It cannot be reversed into the record, but a ledger entry cannot be erased either, which is why records should describe items and not people. Confirm the position for your own data with your data-protection adviser."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the hash let a third party check?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Anyone holding the record can recompute SHA-256 over its canonical bytes and compare it with the anchored value. A match shows the record existed unchanged no later than the anchor time."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ed25519-vs-ecdsa-p-256-for-verifiable-credentials",
+    "keyword": "ed25519 vs ecdsa p-256 for verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Ed25519 Vs Ecdsa P-256 For Verifiable | AuthiChain",
+    "metaDescription": "Both Ed25519 and ECDSA over P-256 are approved signature schemes in FIPS 186-5; AuthiChain records use Ed25519, which RFC 8032 defines with deterministic.",
+    "h1": "Ed25519 Vs Ecdsa P-256 For Verifiable Credentials",
+    "bodyHtml": "<p>Both Ed25519 and ECDSA over P-256 are approved signature schemes in FIPS 186-5; AuthiChain records use Ed25519, which RFC 8032 defines with deterministic signatures, so signing the same bytes with the same key gives the same signature.</p><h2>Why AuthiChain</h2><ul><li>The did:key identifier for an Ed25519 key embeds the public key, so the verifier resolves the issuer with no network call</li><li>The reference verifier is Apache-2.0 with no dependencies, and the signed bytes are JCS-canonicalised JSON, so any RFC 8032 library can recheck a signature</li><li>Both algorithms are elliptic-curve schemes and neither is post-quantum secure; ML-DSA (FIPS 204) support is planned and not yet implemented</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Which curve should an issuer pick?</h3><p>Pick the one your verifiers and key-management hardware support. If your hardware security module only offers P-256, that constraint decides it. The AuthiChain v0.1 specification defines Ed25519 only.</p><h3>Is Ed25519 less secure than P-256?</h3><p>Neither is known to be broken by classical computers. Both fall to a sufficiently large quantum computer running Shor's algorithm.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Ed25519 Vs Ecdsa P-256 For Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Both Ed25519 and ECDSA over P-256 are approved signature schemes in FIPS 186-5; AuthiChain records use Ed25519, which RFC 8032 defines with deterministic signatures, so signing the same bytes with the same key gives the same signature.",
+          "url": "https://authichain.com/p/ed25519-vs-ecdsa-p-256-for-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Ed25519 Vs Ecdsa P-256 For Verifiable Credentials",
+              "item": "https://authichain.com/p/ed25519-vs-ecdsa-p-256-for-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which curve should an issuer pick?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Pick the one your verifiers and key-management hardware support. If your hardware security module only offers P-256, that constraint decides it. The AuthiChain v0.1 specification defines Ed25519 only."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Ed25519 less secure than P-256?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Neither is known to be broken by classical computers. Both fall to a sufficiently large quantum computer running Shor's algorithm."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-validfrom-validuntil-expiry-check",
+    "keyword": "verifiable credential validfrom validuntil expiry check",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Validfrom Validuntil | AuthiChain",
+    "metaDescription": "A verifier checks validFrom and validUntil against a clock: the AuthiChain specification rejects a record whose validFrom is in the future or whose.",
+    "h1": "Verifiable Credential Validfrom Validuntil Expiry Check",
+    "bodyHtml": "<p>A verifier checks validFrom and validUntil against a clock: the AuthiChain specification rejects a record whose validFrom is in the future or whose validUntil, if present, is in the past.</p><h2>Why AuthiChain</h2><ul><li>The date check runs offline, in the same step as the signature check, and needs no call to the issuer</li><li>validFrom is a required field, and a record without it is rejected rather than downgraded to a warning</li><li>The reference verifier accepts a `now` option, so you can test a record against any date and see the verdict change</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does an expired record fail the signature check?</h3><p>No. The signature can be valid while the validity window has passed; the verifier reports invalid because the date check failed. The two checks are separate.</p><h3>Can validUntil stand in for revocation?</h3><p>No. It limits when a record is accepted, but it cannot withdraw a record before its end date. The v0.1 specification has no revocation; credentialStatus is planned for v0.2.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Validfrom Validuntil Expiry Check",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A verifier checks validFrom and validUntil against a clock: the AuthiChain specification rejects a record whose validFrom is in the future or whose validUntil, if present, is in the past.",
+          "url": "https://authichain.com/p/verifiable-credential-validfrom-validuntil-expiry-check"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Validfrom Validuntil Expiry Check",
+              "item": "https://authichain.com/p/verifiable-credential-validfrom-validuntil-expiry-check"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does an expired record fail the signature check?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The signature can be valid while the validity window has passed; the verifier reports invalid because the date check failed. The two checks are separate."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can validUntil stand in for revocation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It limits when a record is accepted, but it cannot withdraw a record before its end date. The v0.1 specification has no revocation; credentialStatus is planned for v0.2."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gs1-digital-link-uri-gtin-lot-serial-structure",
+    "keyword": "gs1 digital link uri gtin lot serial structure",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "GS1 Digital Link Uri Gtin Lot Serial Structure | AuthiChain",
+    "metaDescription": "A GS1 Digital Link URI puts GS1 application identifiers in the path: /01/ for the GTIN, optionally /10/ for the lot and /21/ for the serial number, so.",
+    "h1": "GS1 Digital Link Uri Gtin Lot Serial Structure",
+    "bodyHtml": "<p>A GS1 Digital Link URI puts GS1 application identifiers in the path: /01/ for the GTIN, optionally /10/ for the lot and /21/ for the serial number, so https://id.gs1.org/01/09506000134352/21/SERIAL123 names one item.</p><h2>Why AuthiChain</h2><ul><li>An AuthiChain record uses that URI as its credentialSubject.id, and also carries gtin, serial and batch as plain fields you can read</li><li>The spec asks a registry to serve the record at a permanent URL that stays the same when the item changes hands, without authentication</li><li>GTIN alone identifies a model, GTIN with lot a batch, and GTIN with serial a single item</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the URI have to point at AuthiChain?</h3><p>No. The spec says records should be resolvable from the item's GS1 Digital Link URL; which resolver serves them is your choice, and the signed record verifies the same wherever it is hosted.</p><h3>Does a Digital Link URI prove the item is genuine?</h3><p>No. It identifies an item, and anyone can print one on a label. The signature on the linked record shows who made the statements about it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — GS1 Digital Link Uri Gtin Lot Serial Structure",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A GS1 Digital Link URI puts GS1 application identifiers in the path: /01/ for the GTIN, optionally /10/ for the lot and /21/ for the serial number, so https://id.gs1.org/01/09506000134352/21/SERIAL123 names one item.",
+          "url": "https://authichain.com/p/gs1-digital-link-uri-gtin-lot-serial-structure"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "GS1 Digital Link Uri Gtin Lot Serial Structure",
+              "item": "https://authichain.com/p/gs1-digital-link-uri-gtin-lot-serial-structure"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the URI have to point at AuthiChain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The spec says records should be resolvable from the item's GS1 Digital Link URL; which resolver serves them is your choice, and the signed record verifies the same wherever it is hosted."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a Digital Link URI prove the item is genuine?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It identifies an item, and anyone can print one on a label. The signature on the linked record shows who made the statements about it."
               }
             }
           ]

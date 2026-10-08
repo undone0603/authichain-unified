@@ -1,0 +1,52 @@
+{
+  "manifest_version": "0.2",
+  "name": "authichain-registry",
+  "display_name": "AuthiChain Registry (operator)",
+  "version": "1.0.0",
+  "description": "Direct read-only access to the AuthiChain QRON registry over a Postgres connection. Operator tool.",
+  "long_description": "This bundle runs the stdio MCP server in `mcp/` against the AuthiChain Postgres registry and exposes two read-only tools: verify_product (look a QRON id up) and list_qrons (the 50 most recent registrations).\n\nIt needs a Supabase/Postgres connection string with read access to the registry, so it is for operators who already hold those credentials — not a general-purpose install.\n\n**If you just want to verify records, do not use this bundle.** Add the free hosted server instead: https://authichain.com/mcp — no key, no database, no account. Install instructions at https://authichain.com/mcp/install.",
+  "author": {
+    "name": "AuthiChain",
+    "url": "https://authichain.com"
+  },
+  "homepage": "https://authichain.com/mcp/install",
+  "documentation": "https://github.com/undone0603/authichain-unified/blob/main/mcp/docs/README.md",
+  "support": "https://github.com/undone0603/authichain-unified/issues",
+  "license": "UNLICENSED",
+  "keywords": ["authichain", "provenance", "registry", "qron"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "${user_config.database_url}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "verify_product",
+      "description": "Look a QRON id up in the registry. A row proves the id was registered; it does not inspect a physical product."
+    },
+    {
+      "name": "list_qrons",
+      "description": "The 50 most recent QRON registrations."
+    }
+  ],
+  "user_config": {
+    "database_url": {
+      "type": "string",
+      "title": "Registry connection string",
+      "description": "Postgres/Supabase URL with read access to the AuthiChain registry. Use the session pooler on port 6543. Stored by Claude Desktop in the OS keychain, never in this bundle.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=20"
+    }
+  }
+}
