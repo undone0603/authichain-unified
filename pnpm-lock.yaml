@@ -284,8 +284,8 @@ importers:
         specifier: ^3.10.1
         version: 3.10.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-is@19.3.0)(react@18.3.1)(redux@5.0.1)
       resend:
-        specifier: ^6.31.0
-        version: 6.31.0
+        specifier: ^6.32.0
+        version: 6.32.0
       sanitize-html:
         specifier: ^2.18.0
         version: 2.18.0
@@ -7275,6 +7275,11 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  acorn@8.19.0:
+    resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   adm-zip@0.6.1:
     resolution: {integrity: sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ==}
     engines: {node: '>=14.0'}
@@ -11594,8 +11599,8 @@ packages:
   reselect@5.2.0:
     resolution: {integrity: sha512-AgZ3UOZm3YndfrJ4OYjgrT7bmCm/1iqkjvEfH/oYjzh6PD2qw4QuT3jjnXIrpdt4MTpMXclMT3lXbmRY+XRakw==}
 
-  resend@6.31.0:
-    resolution: {integrity: sha512-E9Ekrm888UKKCIY61UmDkgRVd2Q9OwihimgStrWJ4olNsjFYM25F4X8QbzrLuZz6W9iS7eLMS7MLbRBNqnlI/Q==}
+  resend@6.32.0:
+    resolution: {integrity: sha512-bZZUeKlpKINFT+zGG2iIzfDewkyEHRaE7Xk1haseVz3Gfw6ekkizN6KdKgZSMjt5ywE8vMwr3wTdenlF8P475Q==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -16552,7 +16557,7 @@ snapshots:
       '@ethereumjs/tx': 4.2.0
       '@metamask/scure-bip39': 2.1.1
       '@metamask/superstruct': 3.4.1
-      '@noble/hashes': 1.8.0
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
       '@types/debug': 4.1.13
       '@types/lodash': 4.17.25
@@ -22043,6 +22048,8 @@ snapshots:
 
   acorn@8.18.0: {}
 
+  acorn@8.19.0: {}
+
   adm-zip@0.6.1: {}
 
   aes-js@4.0.0-beta.5: {}
@@ -27003,7 +27010,7 @@ snapshots:
 
   reselect@5.2.0: {}
 
-  resend@6.31.0:
+  resend@6.32.0:
     dependencies:
       postal-mime: 2.7.6
       standardwebhooks: 1.1.1
@@ -28824,7 +28831,7 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1
       '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.18.0
+      acorn: 8.19.0
       browserslist: 4.29.1
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.26.0
