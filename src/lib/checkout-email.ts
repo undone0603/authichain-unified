@@ -43,6 +43,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 const RETIRED_PAYMENT_LINKS: Record<string, PlanId> = {
   "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c": "dpp_readiness",
+  // Deactivated in Stripe (found by the checkout watchdog, 2026-10-08).
+  "https://buy.stripe.com/cNi4gzgDTf7McKCePO1ND44": "dpp_readiness",
 };
 
 export function looksLikeCheckoutEmail(value: string): boolean {
