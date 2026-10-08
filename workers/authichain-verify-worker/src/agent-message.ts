@@ -22,6 +22,9 @@ function assertJsonString(value: string, context: string): void {
   for (let i = 0; i < value.length; i++) {
     const code = value.charCodeAt(i);
     if (code >= 0xd800 && code <= 0xdbff) {
+      if (i + 1 >= value.length) {
+        throw new TypeError(`Lone high surrogate in ${context}`);
+      }
       const next = value.charCodeAt(i + 1);
       if (next < 0xdc00 || next > 0xdfff) {
         throw new TypeError(`Lone high surrogate in ${context}`);
