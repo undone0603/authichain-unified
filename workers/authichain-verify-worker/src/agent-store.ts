@@ -46,7 +46,11 @@ export class MemoryAgentReplayStore implements AgentReplayStore {
 }
 
 export class D1AgentReplayStore implements AgentReplayStore {
-  constructor(private readonly db: D1DatabaseLike) {}
+  private readonly db: D1DatabaseLike;
+
+  constructor(db: D1DatabaseLike) {
+    this.db = db;
+  }
 
   async recordMessageNonce(params: AgentReplayRecordParams) {
     const result = await this.db
@@ -96,7 +100,11 @@ export class D1AgentReplayStore implements AgentReplayStore {
 }
 
 export class D1AgentIdentityResolver implements AgentIdentityResolver {
-  constructor(private readonly db: D1DatabaseLike) {}
+  private readonly db: D1DatabaseLike;
+
+  constructor(db: D1DatabaseLike) {
+    this.db = db;
+  }
 
   async resolve(agentId: string, attestationId: string): Promise<AgentIdentityAttestation | null> {
     const row = await this.db
