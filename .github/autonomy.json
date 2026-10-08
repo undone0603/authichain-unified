@@ -180,6 +180,7 @@
         "guardrail-digest.yml": "manual",
         "outreach-trigger.yml": "manual",
         "purge-cloudflare-cache.yml": "manual",
+        "repo-audit-integrate.yml": "manual",
         "set-agentz-claw-secrets.yml": "manual",
         "set-authichain-resend-txt.yml": "manual",
         "set-github-secrets.yml": "manual",
