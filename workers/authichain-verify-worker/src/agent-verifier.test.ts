@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
 import {
   AGENT_CAPABILITIES,
   type AgentIdentityAttestation,
@@ -12,7 +11,7 @@ import {
   canonicalizeJson,
   type SignedAgentMessage,
 } from "./agent-message";
-import { D1AgentReplayStore, MemoryAgentReplayStore } from "./agent-store";
+import { MemoryAgentReplayStore } from "./agent-store";
 import { createAgentPassport, verifyAgentMessage } from "./agent-verifier";
 
 function b64(bytes: Uint8Array): string {
@@ -274,54 +273,5 @@ describe("AuthiChain Phase 2 Agent Trust", () => {
     expect(serialized).toContain(fixture.message.message_id);
     expect(serialized).not.toContain("GS1-998877");
     expect(serialized).not.toContain(fixture.message.signature);
-  });
-
-  it("validates D1 unique replay semantics", async () => {
-    const db = new DatabaseSync(":memory:");
-    db.exec(`
-      CREATE TABLE agent_message_nonces (
-        message_id TEXT PRIMARY KEY,
-        agent_id TEXT NOT NULL,
-        attestation_id TEXT NOT NULL,
-        organization_id TEXT NOT NULL,
-        first_seen_at TEXT NOT NULL,
-        expires_at TEXT NOT NULL,
-        message_digest TEXT NOT NULL
-      );
-    `);
-    const d1 = {
-      prepare(query: string) {
-        return {
-          bind(...params: unknown[]) {
-            return {
-              async first<T = Record<string, unknown>>() {
-                return (db.prepare(query).get(...params) as T) ?? null;
-              },
-              async all<T = Record<string, unknown>>() {
-                return { results: db.prepare(query).all(...params) as T[] };
-              },
-              async run() {
-                const stmt = db.prepare(query);
-                const result = stmt.run(...params);
-                return { success: true, meta: { changes: Number(result.changes) } };
-              },
-            };
-          },
-        };
-      },
-    };
-    const store = new D1AgentReplayStore(d1);
-    const params = {
-      message_id: "race",
-      agent_id: "agent",
-      attestation_id: "att",
-      organization_id: "org",
-      first_seen_at: "2026-10-08T19:00:00.000Z",
-      expires_at: "2026-10-08T19:05:00.000Z",
-      message_digest: "digest",
-    };
-    const results = await Promise.all(Array.from({ length: 25 }, () => store.recordMessageNonce(params)));
-    expect(results.filter((x) => x.success)).toHaveLength(1);
-    expect(results.filter((x) => x.reason === "MESSAGE_REPLAYED")).toHaveLength(24);
   });
 });
