@@ -16,9 +16,7 @@ export interface AgentReplayRecordParams {
 }
 
 export interface AgentReplayStore {
-  recordMessageNonce(
-    params: AgentReplayRecordParams
-  ): Promise<{
+  recordMessageNonce(params: AgentReplayRecordParams): Promise<{
     success: boolean;
     reason?: "MESSAGE_REPLAYED" | "MESSAGE_ID_CONFLICT";
   }>;
@@ -28,9 +26,7 @@ export interface AgentReplayStore {
 export class MemoryAgentReplayStore implements AgentReplayStore {
   private nonces = new Map<string, AgentReplayRecordParams>();
 
-  async recordMessageNonce(
-    params: AgentReplayRecordParams
-  ): Promise<{
+  async recordMessageNonce(params: AgentReplayRecordParams): Promise<{
     success: boolean;
     reason?: "MESSAGE_REPLAYED" | "MESSAGE_ID_CONFLICT";
   }> {
@@ -71,9 +67,7 @@ export interface D1DatabaseLike {
 export class D1AgentReplayStore implements AgentReplayStore {
   constructor(private db: D1DatabaseLike) {}
 
-  async recordMessageNonce(
-    params: AgentReplayRecordParams
-  ): Promise<{
+  async recordMessageNonce(params: AgentReplayRecordParams): Promise<{
     success: boolean;
     reason?: "MESSAGE_REPLAYED" | "MESSAGE_ID_CONFLICT";
   }> {
@@ -82,7 +76,7 @@ export class D1AgentReplayStore implements AgentReplayStore {
         .prepare(
           `INSERT INTO agent_message_nonces (
             message_id, agent_id, attestation_id, organization_id, first_seen_at, expires_at, message_digest
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`
         )
         .bind(
           params.message_id,
