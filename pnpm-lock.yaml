@@ -30,10 +30,10 @@ importers:
         version: 0.131.0(zod@3.25.76)
       '@auth/core':
         specifier: ^0.41.3
-        version: 0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.10)
+        version: 0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.15)
       '@auth/drizzle-adapter':
         specifier: ^1.11.3
-        version: 1.11.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.10)
+        version: 1.11.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.15)
       '@clerk/nextjs':
         specifier: ^7.9.7
         version: 7.9.7(next@16.3.6(@babel/core@7.29.7)(@types/node@26.6.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -239,8 +239,8 @@ importers:
         specifier: ^16.3.4
         version: 16.3.6(@babel/core@7.29.7)(@types/node@26.6.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       nodemailer:
-        specifier: ^10.0.10
-        version: 10.0.10
+        specifier: ^10.0.15
+        version: 10.0.15
       openai:
         specifier: ^7.27.0
         version: 7.27.0(@aws-sdk/credential-provider-node@3.972.83)(@smithy/hash-node@4.5.2)(@smithy/signature-v4@5.7.3)(undici@8.11.2)(ws@8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@3.25.76)
@@ -544,8 +544,8 @@ importers:
         specifier: ^5.6.0
         version: 5.6.0(@babel/core@7.29.7)(@types/babel__core@7.20.5)(esbuild@0.28.2)(lightningcss@1.32.0)(next@15.5.26(@babel/core@7.29.7)(@types/node@26.6.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postcss@8.5.26)(webpack@5.110.3(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26))
       nodemailer:
-        specifier: ^10.0.10
-        version: 10.0.10
+        specifier: ^10.0.15
+        version: 10.0.15
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
@@ -7275,6 +7275,11 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  acorn@8.19.0:
+    resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   adm-zip@0.6.1:
     resolution: {integrity: sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ==}
     engines: {node: '>=14.0'}
@@ -10610,8 +10615,8 @@ packages:
     resolution: {integrity: sha512-R3idBf67XKFa5eAax2S0pmyDzRQVHn77XwJhivpi8dp75mOYDTijzPWsH50couuA9dPkDBZPKSeTyt6vmg5EUw==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
 
-  nodemailer@10.0.10:
-    resolution: {integrity: sha512-He9XskOFms62SyAKkLu8CcGcYHAo+BSHSsORI8s4PJH8qZgZY4L4lDfvyN0twvmbpyG+eGrxpyBlskj9d9rJ8A==}
+  nodemailer@10.0.15:
+    resolution: {integrity: sha512-EUqp5PhtcsYXs9Fq/lS7s/8zlTrnBqmzZWzFFROrNikMiz+om/YRKMwqN907t+0A1KKyT8jd39CBUbFZmaZmcA==}
     engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
@@ -13564,7 +13569,7 @@ snapshots:
       '@ast-grep/napi-win32-ia32-msvc': 0.40.5
       '@ast-grep/napi-win32-x64-msvc': 0.40.5
 
-  '@auth/core@0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.10)':
+  '@auth/core@0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.15)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.12
@@ -13573,11 +13578,11 @@ snapshots:
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
       '@simplewebauthn/browser': 14.0.0
-      nodemailer: 10.0.10
+      nodemailer: 10.0.15
 
-  '@auth/drizzle-adapter@1.11.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.10)':
+  '@auth/drizzle-adapter@1.11.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.15)':
     dependencies:
-      '@auth/core': 0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.10)
+      '@auth/core': 0.41.3(@simplewebauthn/browser@14.0.0)(nodemailer@10.0.15)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -16552,7 +16557,7 @@ snapshots:
       '@ethereumjs/tx': 4.2.0
       '@metamask/scure-bip39': 2.1.1
       '@metamask/superstruct': 3.4.1
-      '@noble/hashes': 1.8.0
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
       '@types/debug': 4.1.13
       '@types/lodash': 4.17.25
@@ -22043,6 +22048,8 @@ snapshots:
 
   acorn@8.18.0: {}
 
+  acorn@8.19.0: {}
+
   adm-zip@0.6.1: {}
 
   aes-js@4.0.0-beta.5: {}
@@ -25908,7 +25915,7 @@ snapshots:
       teen_process: 4.2.1
       which: 6.0.1
 
-  nodemailer@10.0.10: {}
+  nodemailer@10.0.15: {}
 
   normalize-path@3.0.0: {}
 
@@ -28824,7 +28831,7 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1
       '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.18.0
+      acorn: 8.19.0
       browserslist: 4.29.1
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.26.0
