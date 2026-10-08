@@ -19,6 +19,11 @@ vi.mock("./checkout-protection", () => ({
 const HUMAN_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
+const protection = {
+  claimCheckout: vi.fn(async () => ({ allowed: true as const })),
+  recordSession: vi.fn(async () => true),
+};
+
 function stripeOk() {
   return vi
     .fn<typeof fetch>()
@@ -197,7 +202,7 @@ describe("tryHandleGatedCheckout — POST", () => {
         checkout_key: "12345678-1234-4234-8234-123456789abc",
       }),
       { STRIPE_SECRET_KEY: "sk_test_x" },
-      { fetchImpl }
+      { fetchImpl, ...protection }
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toBe(
@@ -244,11 +249,17 @@ describe("tryHandleGatedCheckout — POST", () => {
     const request = () =>
       post("/checkout/creator", { email: "a@b.co", checkout_key: checkoutKey });
     const env = { STRIPE_SECRET_KEY: "sk_test_x" };
-    const first = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const first = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(first!.status).toBe(502);
     expect(await first!.text()).toContain(checkoutKey);
 
-    const retry = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const retry = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(retry!.status).toBe(303);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     for (const [, init] of fetchImpl.mock.calls) {
