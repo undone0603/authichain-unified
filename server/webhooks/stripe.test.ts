@@ -57,7 +57,7 @@ vi.mock("../stripe-products.js", () => ({
 }));
 
 vi.mock("../email-service.js", () => ({
-  sendEmail: vi.fn().mockResolvedValue(undefined),
+  sendEmail: vi.fn().mockResolvedValue({ status: "sent", provider: "resend" }),
 }));
 
 vi.mock("../services/order-payment-handler.js", () => ({
@@ -1073,5 +1073,213 @@ describe("handleStripeWebhook — affiliate accrual", () => {
       conversion: false,
       eventId: "evt_aff_004",
     });
+  });
+});
+
+// ─── CFD-251 F3 / F2: recovery email template + honest "sent" log ────────────
+
+describe("handleStripeWebhook — recovery email for the one-time $299 DPP checkout", () => {
+  it("uses the DPP template with the one-time $299 price and no monthly Starter copy", async () => {
+    const { sendEmail } = await import("../email-service.js");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_dpp", {
+        id: "cs_expired_dpp",
+        mode: "payment",
+        customer_email: "dpp@example.com",
+        metadata: { plan: "dpp_readiness" },
+        amount_total: 29900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    const call = vi.mocked(sendEmail).mock.calls.at(-1)?.[0] as {
+      subject: string;
+      body: string;
+    };
+    expect(call.body).toContain("one-time payment of $299");
+    expect(call.body).toContain("not a subscription");
+    expect(call.body).not.toMatch(/\/mo\b/);
+    expect(call.body).not.toContain("Starter");
+    expect(call.subject).not.toContain("Starter");
+    expect(call.body).toContain("https://authichain.com/dpp");
+  });
+
+  it("detects the DPP checkout by its offer key when plan metadata is absent", async () => {
+    const { buildCheckoutRecoveryEmail } = await import("./stripe.js");
+    const msg = buildCheckoutRecoveryEmail(
+      {
+        id: "cs_x",
+        mode: "payment",
+        amount_total: 29900,
+        metadata: { offer: "dpp_readiness_2026" },
+      } as never,
+      "starter",
+      "there",
+      "https://example.com/continue"
+    );
+    expect(msg.template).toBe("dpp_readiness");
+    expect(msg.body).not.toMatch(/\/mo\b/);
+  });
+
+  it("keeps the monthly template for a Starter checkout", async () => {
+    const { buildCheckoutRecoveryEmail } = await import("./stripe.js");
+    const msg = buildCheckoutRecoveryEmail(
+      {
+        id: "cs_y",
+        mode: "payment",
+        amount_total: 2900,
+        metadata: { plan: "starter" },
+      } as never,
+      "starter",
+      "there",
+      "https://example.com/continue"
+    );
+    expect(msg.template).toBe("subscription");
+    expect(msg.body).toContain("/mo");
+  });
+});
+
+describe("handleStripeWebhook — recovery email logging (F2)", () => {
+  it("logs FAILED with the status, not 'sent', when sendEmail did not send", async () => {
+    const { sendEmail } = await import("../email-service.js");
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      status: "skipped",
+      reason: "gmail_send_failed:403:forbidden dpp@example.com",
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_fail", {
+        id: "cs_expired_fail",
+        mode: "payment",
+        customer_email: "dpp@example.com",
+        metadata: { plan: "starter" },
+        amount_total: 2900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    const logged = log.mock.calls.flat().join("\n");
+    const warned = warn.mock.calls.flat().join("\n");
+    expect(logged).not.toContain("recovery email sent");
+    expect(warned).toContain(
+      "recovery email FAILED (status=skipped reason=gmail_send_failed:403"
+    );
+    expect(warned + logged).not.toContain("dpp@example.com");
+    expect(warned + logged).not.toContain("d***@example.com");
+    log.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("logs FAILED when sendEmail throws", async () => {
+    const { sendEmail } = await import("../email-service.js");
+    vi.mocked(sendEmail).mockRejectedValueOnce(new TypeError("network"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_throw", {
+        id: "cs_expired_throw",
+        mode: "payment",
+        customer_email: "x@example.com",
+        metadata: { plan: "starter" },
+        amount_total: 2900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(result.received).toBe(true);
+    expect(warn.mock.calls.flat().join("\n")).toContain(
+      "recovery email FAILED (status=error reason=TypeError"
+    );
+    warn.mockRestore();
+  });
+
+  it("logs 'sent' only when the provider accepted it", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_expired_ok", {
+        id: "cs_expired_ok",
+        mode: "payment",
+        customer_email: "ok@example.com",
+        metadata: { plan: "starter" },
+        amount_total: 2900,
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(log.mock.calls.flat().join("\n")).toContain(
+      "Checkout recovery email sent (template=subscription)"
+    );
+    log.mockRestore();
+  });
+});
+
+// ─── CFD-251 F1: stripe_events claim when Drizzle/DATABASE_URL is absent ─────
+
+describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_URL)", () => {
+  it("processes the first delivery and skips the second as a duplicate", async () => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const client = vi.mocked(createClient)("", "") as unknown as {
+      from: ReturnType<typeof vi.fn>;
+    };
+    const ids = new Set<string>();
+    client.from.mockImplementation((table: string) => {
+      if (table !== "stripe_events") return {};
+      return {
+        upsert: (row: { event_id: string }) => ({
+          select: async () => {
+            if (ids.has(row.event_id)) return { data: [], error: null };
+            ids.add(row.event_id);
+            return { data: [{ event_id: row.event_id }], error: null };
+          },
+        }),
+        update: () => {
+          const chain = {
+            eq: () => chain,
+            or: () => chain,
+            select: async () => ({ data: [], error: null }),
+          };
+          return chain;
+        },
+      };
+    });
+    const db = await import("../db.js");
+    vi.mocked(db.hasWebhookEventProcessed).mockRejectedValue(
+      new Error("DATABASE_URL environment variable is not set")
+    );
+    const { sendEmail } = await import("../email-service.js");
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.expired", "evt_claim_once", {
+        id: "cs_claim_once",
+        mode: "payment",
+        customer_email: "claim@example.com",
+        metadata: { plan: "starter" },
+        amount_total: 2900,
+      })
+    );
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { handleStripeWebhook } = await import("./stripe.js");
+
+    const first = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(first.duplicate).toBeUndefined();
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+
+    const second = await handleStripeWebhook(RAW_BODY, SIG);
+    expect(second.duplicate).toBe(true);
+    // Claim happens before any email: the retry must not re-send.
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls.flat().join("\n")).toContain(
+      "Duplicate event ignored: evt_claim_once"
+    );
+    expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventId: "evt_claim_once",
+        status: "duplicate",
+      })
+    );
+
+    log.mockRestore();
+    client.from.mockReset();
+    vi.mocked(db.hasWebhookEventProcessed).mockResolvedValue(false);
   });
 });

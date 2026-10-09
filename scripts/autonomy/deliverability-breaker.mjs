@@ -10,6 +10,10 @@
 //
 // Env: RESEND_API_KEY and/or RESEND_API_KEY2 (both are read and pooled),
 //      OUTREACH_SENDERS (optional, comma-separated from-addresses to count).
+//      When OUTREACH_SENDERS is unset, the per-segment outreach from-addresses
+//      (OUTREACH_FROM_GOVCHAIN / _STRAINCHAIN / _QRON, the same secrets
+//      b2b-cold-outreach.ts sends from) are used, so only outreach is counted.
+//      Sender addresses are never printed.
 // Output: prints a verdict; writes tripped=true|false and reason=... to
 //         $GITHUB_OUTPUT when present. Exit code is always 0 unless the
 //         script itself crashes; callers act on the output.
@@ -19,11 +23,47 @@ import { loadManifest } from "./reconcile.mjs";
 
 const BAD_EVENTS = { bounced: "bounce", complained: "complaint" };
 
-/** Pure: compute the verdict from a list of {created_at, last_event, from}. */
+/**
+ * Both Resend keys can belong to the same account, so the pooled list can hold
+ * the same email twice. Count each Resend email id once (CFD-251 follow-up);
+ * rows without an id are kept as-is.
+ */
+export function dedupeById(emails) {
+  const seen = new Set();
+  return emails.filter(e => {
+    const id = e?.id;
+    if (!id) return true;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+/**
+ * Sender list: OUTREACH_SENDERS, else the per-segment outreach from-secrets.
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {string[]}
+ */
+export function outreachSenders(env = process.env) {
+  const explicit = String(env.OUTREACH_SENDERS ?? "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (explicit.length) return explicit;
+  return [
+    env.OUTREACH_FROM_GOVCHAIN,
+    env.OUTREACH_FROM_STRAINCHAIN,
+    env.OUTREACH_FROM_QRON,
+  ]
+    .map(s => String(s ?? "").trim())
+    .filter(Boolean);
+}
+
+/** Pure: compute the verdict from a list of {id, created_at, last_event, from}. */
 export function evaluate(emails, cfg, { now = Date.now(), senders = [] } = {}) {
   const windowMs = (cfg.window_days ?? 7) * 86_400_000;
   const want = senders.map(s => s.toLowerCase().trim()).filter(Boolean);
-  const inWindow = emails.filter(e => {
+  const inWindow = dedupeById(emails).filter(e => {
     const t = Date.parse(e.created_at);
     if (!Number.isFinite(t) || now - t > windowMs) return false;
     if (!want.length) return true;
@@ -122,8 +162,10 @@ async function main() {
       reason: `cannot read Resend (${e.message}) - failing closed`,
     });
   }
-  const senders = (process.env.OUTREACH_SENDERS ?? "").split(",");
-  emit(evaluate(emails, cfg, { senders }));
+  const senders = outreachSenders();
+  const verdict = evaluate(emails, cfg, { senders });
+  verdict.stats = { ...verdict.stats, sender_filters: senders.length };
+  emit(verdict);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

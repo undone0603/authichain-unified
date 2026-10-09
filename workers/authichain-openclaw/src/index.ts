@@ -36,6 +36,7 @@ import {
   resolveAgentzMode,
   withModeQuery,
 } from "./agentz-mode";
+import { cloudflareAccessHeaders } from "./access-headers";
 import { inboundDppOffer } from "./dpp-offer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -45,6 +46,9 @@ interface Bindings {
   OPENCLAW_API_KEY: string;
   AGENTZ_API_URL: string;
   AGENTZ_API_KEY: string;
+  /** Cloudflare Access service token. Both must be set or neither is sent. */
+  CF_ACCESS_CLIENT_ID?: string;
+  CF_ACCESS_CLIENT_SECRET?: string;
   SLACK_SIGNING_SECRET?: string;
   OPENCLAW_API_VERSION: string;
   AGENTZ_TIMEOUT_MS: string;
@@ -160,6 +164,7 @@ async function agentzFetch(
         "Content-Type": "application/json",
         Authorization: `Bearer ${env.AGENTZ_API_KEY}`,
         ...(options.headers as Record<string, string> | undefined),
+        ...cloudflareAccessHeaders(env),
       },
       signal: controller.signal,
     });

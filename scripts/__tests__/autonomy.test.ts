@@ -3,10 +3,14 @@ import {
   flatten,
   listWorkflowFiles,
   loadManifest,
+  operatorHold,
   planReconcile,
   validateManifest,
 } from "../autonomy/reconcile.mjs";
-import { evaluate } from "../autonomy/deliverability-breaker.mjs";
+import {
+  evaluate,
+  outreachSenders,
+} from "../autonomy/deliverability-breaker.mjs";
 import {
   MAX_WINDOW_DAYS,
   launchMode,
@@ -170,6 +174,18 @@ describe("launch mode", () => {
   it("the real manifest's launch window is within bounds", () => {
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
+
+  it("holds the 2026-10-08 manual disables and still classifies every file", () => {
+    const manifest = loadManifest();
+    expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual([
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml",
+    ]);
+    expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
+  });
 });
 
 describe("planReconcile", () => {
@@ -194,6 +210,14 @@ describe("planReconcile", () => {
       { file: "b.yml", id: 3, lane: "growth", from: "active", to: "disable" },
     ]);
     expect(unknownRemote).toEqual(["ghost.yml"]);
+  });
+
+  it("does not re-enable a workflow on the operator hold", () => {
+    const manifest = { ...mini(), operator_hold: { workflows: ["a.yml"] } };
+    const held = remote.map(w =>
+      w.id === 3 ? { ...w, state: "disabled_manually" } : w
+    );
+    expect(planReconcile(manifest, held).changes).toEqual([]);
   });
 
   it("is a no-op when GitHub already matches", () => {
@@ -269,6 +293,35 @@ describe("deliverability breaker", () => {
     expect(v.stats.sent).toBe(12);
     expect(v.tripped).toBe(false);
   });
+
+  it("counts each Resend email id once when both keys return it", () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `em_${i}`,
+      created_at: new Date(now - 86_400_000).toISOString(),
+      last_event: i === 0 ? "bounced" : "delivered",
+      from: "hello@authichain.com",
+    }));
+    const v = evaluate([...rows, ...rows], cfg, { now });
+    expect(v.stats.sent).toBe(10);
+    expect(v.stats.bounces).toBe(1);
+  });
+
+  it("uses OUTREACH_SENDERS, else the per-segment outreach from-addresses", () => {
+    expect(
+      outreachSenders({
+        OUTREACH_SENDERS: " a@x.test , ",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["a@x.test"]);
+    expect(
+      outreachSenders({
+        OUTREACH_FROM_GOVCHAIN: "g@x.test",
+        OUTREACH_FROM_STRAINCHAIN: "",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["g@x.test", "q@x.test"]);
+    expect(outreachSenders({})).toEqual([]);
+  });
 });
 
 describe("ops pulse", () => {
@@ -292,6 +345,18 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+    expect(
+      evaluateWorkflows(
+        rows,
+        disabled,
+        new Map(),
+        new Set(),
+        new Set(["a.yml"])
+      )
+    ).toEqual([]);
+    expect(operatorHold({ operator_hold: { workflows: ["a.yml"] } })).toEqual(
+      new Set(["a.yml"])
+    );
   });
 
   it("keeps the newest completed run on main when the branch query is stale", () => {
@@ -510,9 +575,8 @@ describe("fulfilment watchdog", async () => {
 });
 
 describe("approval queue", async () => {
-  const { decide, latchHeld, latchSearchQuery } = await import(
-    "../autonomy/approvals.mjs"
-  );
+  const { decide, latchHeld, latchSearchQuery } =
+    await import("../autonomy/approvals.mjs");
   const issue = (labels: string[]) => ({
     labels: labels.map(name => ({ name })),
   });
