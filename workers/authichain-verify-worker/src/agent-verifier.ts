@@ -13,6 +13,7 @@ import {
   canonicalizeAgentIdentityAttestation,
   canonicalizeAgentMessage,
   agentMessageDigest,
+  sha256Base64Url,
   type SignedAgentMessage,
 } from "./agent-message";
 
@@ -256,8 +257,10 @@ export async function verifyAgentMessage(
   }
 
   let digest: string | undefined;
+  let signatureDigest: string | undefined;
   try {
     digest = await agentMessageDigest(message);
+    signatureDigest = await sha256Base64Url(message.signature);
   } catch {
     reasons.push("MALFORMED_MESSAGE");
   }
@@ -275,7 +278,7 @@ export async function verifyAgentMessage(
     reasons.push("SIGNATURE_INVALID");
   }
 
-  if (reasons.length !== 0 || !digest) {
+  if (reasons.length !== 0 || !digest || !signatureDigest) {
     await emitAudit(options.auditSink, {
       event_type: reasons.includes("CAPABILITY_NOT_GRANTED")
         ? "CAPABILITY_DENIED"
@@ -390,6 +393,7 @@ export async function verifyAgentMessage(
     capabilities: normalizedMessageCaps,
     policy_version: message.policy_version,
     message_digest: digest,
+    signature_digest: signatureDigest,
     verified_at: verifiedAt,
   };
 }
