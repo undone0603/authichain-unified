@@ -32,9 +32,11 @@ on:
 
 # One sweep at a time. A newer trigger replaces a queued one, and every sweep
 # looks at all open PRs, so nothing is lost.
+# cancel-in-progress must stay true: a ghost queued run (no job, API 409 on
+# cancel) otherwise pins this group and stalls every later sweep.
 concurrency:
   group: merge-autopilot
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
