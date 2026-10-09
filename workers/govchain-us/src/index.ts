@@ -2518,6 +2518,8 @@ ${estateFooter(
     },
   ],
   "Powered by AuthiChain · onboard is the conversion path",
+  undefined,
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.",
 )}
 <script>
 (function(){

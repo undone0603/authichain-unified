@@ -532,8 +532,19 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain("Public Records on Blockchain.");
+    expect(body).toContain("GovChain: federal contracting tools for US small businesses, in development.");
     expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
+  it("RES-208/209: /landing/govchain drops the eSign card and old H1, carries the non-affiliation footer", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i, /anchored on Polygon/i]) {
+      expect(body).not.toMatch(banned);
+    }
+    expect(body).toContain("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.");
   });
 
   it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {

@@ -64,8 +64,8 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
 // /mcp/install make no "certificate contract live/deployed on Polygon" claim
 // and show no 0x4da4 contract address until wallet ownership is proven.
 // RES-167: also no "Polygon mainnet" anchored-record card and no
-// "Certificate contract on Polygon" footer. "anchored on Polygon" stays
-// allowed: vs-pages.ts states it as a goal and names no contract.
+// "Certificate contract on Polygon" footer. RES-209: "anchored on Polygon"
+// is now cut from /vs/vechain too and banned on every /vs/* page.
 test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async () => {
   const paths = ["/vs", "/mcp/install", ...VS_PAGES.map((d) => `/vs/${d.slug}`)];
   assert.ok(paths.length > 2, "expected at least one /vs/* page");
@@ -83,6 +83,8 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
       /class="eyebrow">\s*Polygon mainnet/i,
       // RES-172: the /mcp/install meta now uses the registry line.
       /Polygon-anchored/i,
+      // RES-209
+      /anchored on Polygon/i,
     ]) {
       assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
     }

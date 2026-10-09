@@ -103,6 +103,17 @@ test("the apex still renders the marketing page", async () => {
   assert.match(html, /--bg: #ffffff/);
 });
 
+test("RES-209: the apex footer carries the non-affiliation line", async () => {
+  const html = await (await get("/")).text();
+  assert.ok(
+    html.includes("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."),
+    "govchain.us footer must carry the non-affiliation line"
+  );
+  for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i]) {
+    assert.doesNotMatch(html, banned);
+  }
+});
+
 test("the sitemap lists only real URLs and no fragments", async () => {
   const res = await get("/sitemap.xml");
   const xml = await res.text();
