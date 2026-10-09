@@ -106,7 +106,7 @@ async function importVerificationKey(publicKey: string): Promise<CryptoKey> {
     if (typeof jwk.d === "string") throw new TypeError("Private JWK material is not accepted");
     return crypto.subtle.importKey(
       "jwk",
-      jwk,
+      jwk as JsonWebKey,
       { name: "ECDSA", namedCurve: "P-256" },
       false,
       ["verify"],
