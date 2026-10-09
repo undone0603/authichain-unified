@@ -23,6 +23,7 @@ import { type BrandId } from "@shared/brands";
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  rpc?: (fn: string, args: Record<string, unknown>) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
 /** Subscription-mode catalogue plan (kept over a one-time buy). */
@@ -31,15 +32,16 @@ function isSubscriptionPlan(plan: string): boolean {
 }
 
 /**
- * Grant credits at most once per Stripe Checkout Session (ADM-174).
- * Inserts `credit_grants(stripe_session_id PRIMARY KEY)`, ON CONFLICT DO
- * NOTHING. stripe_events (#1639) is keyed by event id and re-claims errored
- * or stale deliveries, so it cannot stop a second add for the same session
- * (completed + async_payment_succeeded, DPP replays, Resend after an error).
- * Fails closed: if the row cannot be written the purchase throws, so Stripe
- * retries instead of granting without a guard.
+ * Grant one-time pack credits at most once per Stripe Checkout Session
+ * (ADM-174, PM-463, RES-201) through public.grant_pack_credits (migration
+ * 20261009150000). In one transaction it inserts credit_grants
+ * (stripe_session_id PRIMARY KEY, ON CONFLICT DO NOTHING) and, only if a row
+ * was inserted, runs generations_limit = generations_limit + credits. Either
+ * both commit or neither does, and the add is atomic in the database.
+ * Fails closed: any rpc error (function missing, profile missing) throws so
+ * Stripe retries; a rolled-back attempt leaves no dedupe row behind.
  */
-async function claimCreditGrant(
+async function grantPackCredits(
   supabase: SupabaseLike,
   input: ProvisionInput,
   profileId: string,
@@ -50,24 +52,21 @@ async function claimCreditGrant(
       "credit grant needs stripeSessionId (one-time pack, ADM-174 dedupe)"
     );
   }
-  const { data, error } = await supabase
-    .from("credit_grants")
-    .upsert(
-      {
-        stripe_session_id: input.stripeSessionId,
-        profile_id: profileId,
-        plan: input.plan ?? null,
-        credits,
-      },
-      { onConflict: "stripe_session_id", ignoreDuplicates: true }
-    )
-    .select("stripe_session_id");
+  if (typeof supabase.rpc !== "function") {
+    throw new Error("credit grant needs a Supabase client with rpc");
+  }
+  const { data, error } = await supabase.rpc("grant_pack_credits", {
+    p_session_id: input.stripeSessionId,
+    p_profile_id: profileId,
+    p_credits: credits,
+    p_plan: input.plan ?? null,
+  });
   if (error) {
     throw new Error(
-      `credit_grants claim failed: ${error.message || String(error)}`
+      `grant_pack_credits failed: ${error.message || String(error)}`
     );
   }
-  return Array.isArray(data) && data.length > 0 ? "granted" : "duplicate";
+  return data === true ? "granted" : "duplicate";
 }
 
 /** One-time (Stripe mode "payment") catalogue plan. */
@@ -190,50 +189,51 @@ export async function provisionPurchase(
   if (input.stripeSubscriptionId)
     update.stripe_subscription_id = input.stripeSubscriptionId;
 
+  let packCredits = 0;
   if (grant !== undefined && !oneTime) {
     // Subscription / unpriced plans: unchanged. The period starts clean.
     update.generations_limit = grant;
     update.generations_used = 0;
-  } else if (grant !== undefined && oneTime && created) {
-    // New guest: the pack is their whole balance (0 for the passport).
-    // A brand-new profile cannot have been granted by an earlier delivery,
-    // but claim the session anyway so a replay never adds on top.
-    if (grant > 0) {
-      const claim = await claimCreditGrant(supabase, input, profileId, grant);
-      if (claim === "duplicate")
-        return { profileId, created, status: "provisioned" };
-    }
-    update.generations_limit = grant;
-    update.generations_used = 0;
   } else if (grant !== undefined && oneTime) {
-    // ADM-172 / ADM-174: one-time packs on an existing profile ADD to the
-    // limit, never reset usage, and never downgrade a subscription plan.
-    // A 0-credit product (the StrainChain passport) leaves limit, used and
-    // plan unchanged.
-    const { data: current } = await supabase
-      .from("profiles")
-      .select("generations_limit, subscription_plan")
-      .eq("id", profileId)
-      .maybeSingle();
-    const currentPlan =
-      typeof current?.subscription_plan === "string"
-        ? current.subscription_plan
-        : null;
-    if (grant === 0 || (currentPlan && isSubscriptionPlan(currentPlan))) {
-      delete update.subscription_plan;
-    }
-    if (grant > 0) {
-      const claim = await claimCreditGrant(supabase, input, profileId, grant);
-      if (claim === "granted") {
-        const existing = Number(current?.generations_limit);
-        update.generations_limit =
-          (Number.isFinite(existing) ? existing : 0) + grant;
+    // ADM-172 / ADM-174: one-time packs ADD to the limit (in the database,
+    // via grant_pack_credits), never reset usage, and never downgrade a
+    // subscription plan. A 0-credit product (the StrainChain passport)
+    // leaves limit, used and plan unchanged.
+    if (created) {
+      update.generations_limit = 0; // new guest: the pack is the balance
+      update.generations_used = 0;
+    } else {
+      const { data: current } = await supabase
+        .from("profiles")
+        .select("subscription_plan")
+        .eq("id", profileId)
+        .maybeSingle();
+      const currentPlan =
+        typeof current?.subscription_plan === "string"
+          ? current.subscription_plan
+          : null;
+      if (grant === 0 || (currentPlan && isSubscriptionPlan(currentPlan))) {
+        delete update.subscription_plan;
       }
-      // "duplicate": this session already credited; record nothing new.
     }
+    packCredits = grant;
+  }
+
+  if (packCredits > 0 && !input.stripeSessionId) {
+    // Fail closed before writing anything: no unguarded credit grant.
+    throw new Error(
+      "credit grant needs stripeSessionId (one-time pack, ADM-174 dedupe)"
+    );
   }
 
   await supabase.from("profiles").update(update).eq("id", profileId);
+
+  // After the profile write, so a fresh guest's limit (0) is in place and
+  // the database add lands on top of it. A retry replays the profile write
+  // harmlessly; the rpc dedupes on the session id.
+  if (packCredits > 0) {
+    await grantPackCredits(supabase, input, profileId, packCredits);
+  }
 
   return { profileId, created, status: "provisioned" };
 }

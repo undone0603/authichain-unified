@@ -46,16 +46,6 @@ function fakeSupabase(opts?: {
         }
         return Promise.resolve({ error: null });
       },
-      // credit_grants (ADM-174): once per stripe_session_id.
-      upsert: (row: { stripe_session_id: string }) => ({
-        select: async () => {
-          if (grantedSessions.has(row.stripe_session_id)) {
-            return { data: [], error: null };
-          }
-          grantedSessions.add(row.stripe_session_id);
-          return { data: [row], error: null };
-        },
-      }),
       update: () => builder,
       select: () => builder,
       eq: (col: string, val: unknown) => {
@@ -78,7 +68,14 @@ function fakeSupabase(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, rows };
+  // grant_pack_credits (ADM-174 / RES-201): once per session id.
+  const rpc = async (_fn: string, args: Record<string, unknown>) => {
+    const sid = String(args.p_session_id);
+    if (grantedSessions.has(sid)) return { data: false, error: null };
+    grantedSessions.add(sid);
+    return { data: true, error: null };
+  };
+  return { supabase: { from, rpc }, rows };
 }
 
 const paidSession = {
