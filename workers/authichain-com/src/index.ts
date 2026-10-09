@@ -12,6 +12,7 @@ import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
 import { isX402DocsPath, renderX402DocsPage } from "./x402-docs-page";
+import { isMcpInstallPath, renderMcpInstallPage } from "./mcp-install-page";
 import { docsRedirect, isDocsHub, isDocsPage } from "./docs-pages";
 import { docsCtaClickEvent, docsViewEvent } from "./docs-events";
 import { renderDocsPage } from "./docs-render";
@@ -3400,6 +3401,7 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/authentic-agentic-economy', freq: 'weekly', pri: '0.85' },
         { loc: 'https://authichain.com/llms.txt', freq: 'weekly', pri: '0.7' },
         { loc: 'https://authichain.com/mcp', freq: 'weekly', pri: '0.7' },
+        { loc: 'https://authichain.com/mcp/install', freq: 'weekly', pri: '0.8' },
         { loc: 'https://authichain.com/openapi.json', freq: 'weekly', pri: '0.65' },
         { loc: MINIAPP_CANONICAL, freq: 'weekly', pri: '0.8' },
         ...DESK_SITEMAP.map((path) => ({ loc: `https://authichain.com${path}`, freq: 'weekly' as const, pri: '0.8' })),
@@ -3500,6 +3502,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // the editor. Page markup is semantic; tokens live in x402-docs-page.ts.
     if (isX402DocsPath(p)) {
       return new Response(renderX402DocsPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    // /mcp/install is the human install surface. It must be checked before
+    // tryHandleMcp, which owns the agent-facing /mcp JSON-RPC endpoint.
+    if (isMcpInstallPath(p)) {
+      return new Response(renderMcpInstallPage(), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     const docsDest = docsRedirect(p);
     if (docsDest) return Response.redirect(new URL(docsDest, url.origin).href, 301);

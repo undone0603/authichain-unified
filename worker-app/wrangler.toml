@@ -2,6 +2,12 @@ name = "authichain-edge-router"
 main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
+# PM-330: no public *.workers.dev address. This Worker serves authichain.com
+# through the routes below; wrangler 4 already resolves a missing value to
+# false when routes exist (live check Oct 9 2026: 404), so this is explicit,
+# not a behaviour change. scripts/ci/check-deploy-invariants.mjs enforces it.
+# Rollback: delete this line.
+workers_dev = false
 
 # Secrets (wrangler secret put --name authichain-edge-router, not committed):
 # STRIPE_SECRET_KEY is required for an authorized DPP smoke checkout.

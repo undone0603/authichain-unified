@@ -15,10 +15,25 @@ on:
   # start runs. production-proof stays push-only (its `if:` is unchanged).
   workflow_dispatch:
 
+concurrency:
+  # PRs: one active CI Main run per source branch; a newer commit supersedes
+  # an older run even when GitHub opened a new PR for the same feature branch.
+  # Pushes to main: one group PER COMMIT (CFA-123). GitHub keeps at most one
+  # pending run per group and cancels the older pending one when a newer run
+  # queues, whatever cancel-in-progress says; with a shared main group that
+  # cancelled the 5cd3f6de run at 9:22 AM ET on Oct 9 before it started.
+  # Rollback: restore `group: ci-main-${{ github.head_ref || github.ref }}`.
+  group: ci-main-${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). With per-commit push groups, main runs
+  # never queue behind or cancel each other.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     name: Main quality gate
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -36,6 +36,8 @@ jobs:
     timeout-minutes: 20
     env:
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       WORKFLOW_ID: ${{ inputs.workflow_id }}
       LIVE: ${{ inputs.live }}
       PAYLOAD: ${{ inputs.payload }}
@@ -74,10 +76,18 @@ jobs:
 
           URL="https://agentz.authichain.com/workflows/${WORKFLOW_ID}/run?live=${LIVE_Q}&mode=${MODE_Q}"
           echo "POST ${URL}"
+          ACCESS_HEADERS=()
+          if [ -n "${CF_ACCESS_CLIENT_ID:-}" ] && [ -n "${CF_ACCESS_CLIENT_SECRET:-}" ]; then
+            ACCESS_HEADERS+=(
+              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+            )
+          fi
           HTTP=$(curl -sS -o /tmp/agentz-manual-post.json -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer ${AGENT_SECRET}" \
             -H "Content-Type: application/json" \
+            "${ACCESS_HEADERS[@]}" \
             --data-binary @/tmp/agentz-payload.json \
             "${URL}") || true
 

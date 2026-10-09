@@ -1166,3 +1166,24 @@ workflows:
     reputational_impact: low
     requires_human_approval: false
     max_runs_per_day: 1
+
+  - id: repo_audit_integrate
+    title: "Audit the unified repo and refresh the network map"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.repo_audit_integrate
+    type: shell
+    estimated_minutes: 2
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Read-only audit of the network map, Wrangler identities, and deploy
+      workflows. Outside dry-run, rewrites only the canonical banner in
+      docs/NETWORK.md and docs/operations/REPO-INTEGRATION-AUDIT.md.
+      Does not deploy, delete Workers, disable workflows, rotate tokens,
+      publish, or merge.

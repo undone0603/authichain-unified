@@ -5,6 +5,8 @@
  * activate POST are not handled here — they fall through to APP_PREFIXES.
  */
 
+import { PLANS, PLAN_CREDITS } from "../../../src/lib/plans";
+
 const HTML_HEADERS: Record<string, string> = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
   "CDN-Cache-Control": "no-store",
@@ -37,9 +39,65 @@ function pageShell(title: string, body: string): string {
 </html>`;
 }
 
-function thanksHtml(sessionId: string, visitId: string): string {
+function esc(value: unknown): string {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    c =>
+      (({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }) as Record<string, string>)[c] as string
+  );
+}
+
+/**
+ * The thanks page names a product, so it has to know which one was bought.
+ * `plan` comes from the checkout success_url; it only selects copy (the real
+ * entitlement is granted by the Stripe webhook), so a tampered value cannot
+ * grant anything. No `plan` means a link issued before this param existed:
+ * those keep the original DPP copy unchanged.
+ */
+function thanksHtml(
+  sessionId: string,
+  visitId: string,
+  planId: string
+): string {
   const qs = new URLSearchParams({ session_id: sessionId });
   if (visitId) qs.set("visit_id", visitId);
+
+  if (planId && planId !== "dpp_readiness") {
+    const plan = PLANS.find(p => p.id === planId);
+    const credits = plan ? PLAN_CREDITS[plan.id] : 0;
+    const name = plan ? plan.name : "";
+
+    if (plan && credits > 0) {
+      const generateQs = new URLSearchParams({ paid: "1" });
+      if (sessionId) generateQs.set("session_id", sessionId);
+      if (visitId) generateQs.set("visit_id", visitId);
+      return pageShell(
+        `Payment received | AuthiChain`,
+        `<p class="kicker">Payment received</p>
+     <h1>${esc(name)} is ready</h1>
+     <p>Your payment added ${credits} generations to this account. Open the generator to use them.</p>
+     <a class="btn" href="/generate?${generateQs.toString()}">Open the generator</a>
+     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email is also on the way.</p>`
+      );
+    }
+
+    // Known plan with no generation credits, or an id this worker does not
+    // recognise. Confirm the payment without claiming a product.
+    return pageShell(
+      "Payment received | AuthiChain",
+      `<p class="kicker">Payment received</p>
+     <h1>Payment received</h1>
+     <p>${name ? `Your ${esc(name)} purchase is confirmed. ` : ""}A confirmation email with your next steps is on the way.</p>
+     <a class="btn" href="/">Back to AuthiChain</a>`
+    );
+  }
+
   return pageShell(
     "Payment received | AuthiChain",
     `<p class="kicker">Payment received</p>
@@ -123,7 +181,8 @@ export function tryHandleDppRoute(request: Request): Response | null {
     return html(
       thanksHtml(
         url.searchParams.get("session_id") || "",
-        url.searchParams.get("visit_id") || ""
+        url.searchParams.get("visit_id") || "",
+        url.searchParams.get("plan") || ""
       )
     );
   }

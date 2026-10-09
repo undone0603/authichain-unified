@@ -19,6 +19,11 @@ vi.mock("./checkout-protection", () => ({
 const HUMAN_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
+const protection = {
+  claimCheckout: vi.fn(async () => ({ allowed: true as const })),
+  recordSession: vi.fn(async () => true),
+};
+
 function stripeOk() {
   return vi
     .fn<typeof fetch>()
@@ -197,7 +202,7 @@ describe("tryHandleGatedCheckout — POST", () => {
         checkout_key: "12345678-1234-4234-8234-123456789abc",
       }),
       { STRIPE_SECRET_KEY: "sk_test_x" },
-      { fetchImpl }
+      { fetchImpl, ...protection }
     );
     expect(res!.status).toBe(303);
     expect(res!.headers.get("location")).toBe(
@@ -244,11 +249,17 @@ describe("tryHandleGatedCheckout — POST", () => {
     const request = () =>
       post("/checkout/creator", { email: "a@b.co", checkout_key: checkoutKey });
     const env = { STRIPE_SECRET_KEY: "sk_test_x" };
-    const first = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const first = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(first!.status).toBe(502);
     expect(await first!.text()).toContain(checkoutKey);
 
-    const retry = await tryHandleGatedCheckout(request(), env, { fetchImpl });
+    const retry = await tryHandleGatedCheckout(request(), env, {
+      fetchImpl,
+      ...protection,
+    });
     expect(retry!.status).toBe(303);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     for (const [, init] of fetchImpl.mock.calls) {
@@ -267,6 +278,46 @@ describe("tryHandleGatedCheckout — POST", () => {
     expect(body.get("mode")).toBe("payment");
     expect(body.get("metadata[offer]")).toBe("dpp_readiness_2026");
     expect(body.get("customer_creation")).toBe("always");
+  });
+
+  it("Starter lands on /generate, not the DPP workspace page", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("starter")!,
+      email: "a@b.co",
+      fields: new URLSearchParams({ visit_id: "chk_starter_1" }),
+      successOrigin: "https://authichain.com",
+    });
+    const success = body.get("success_url") || "";
+    const cancel = body.get("cancel_url") || "";
+
+    // /dpp/thanks names a DPP workspace and 50 generations; Starter grants 100.
+    expect(success).not.toContain("/dpp/thanks");
+    expect(success).toContain("https://authichain.com/generate?paid=1");
+    expect(cancel).toContain("https://authichain.com/generate?cancelled=1");
+
+    // Attribution must survive the redirect, as it does on every other path.
+    expect(success).toContain("visit_id=chk_starter_1");
+    expect(cancel).toContain("visit_id=chk_starter_1");
+    expect(success).toContain("session_id={CHECKOUT_SESSION_ID}");
+  });
+
+  it("keeps every non-Starter plan on its existing landing", () => {
+    const dpp = buildGatedSessionBody({
+      plan: planById("dpp_readiness")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+      successOrigin: "https://authichain.com",
+    });
+    expect(dpp.get("success_url")).toContain("/dpp/thanks");
+    expect(dpp.get("cancel_url")).toContain("/dpp?cancelled=1");
+
+    const claim = buildGatedSessionBody({
+      plan: planById("musa_claim_file")!,
+      email: "a@b.co",
+      fields: new URLSearchParams(),
+      successOrigin: "https://authichain.com",
+    });
+    expect(claim.get("success_url")).toContain("/made-in-usa-claim-file/thanks");
   });
 
   it("refuses bots, prefetch, foreign origins, honeypot and missing email without calling Stripe", async () => {

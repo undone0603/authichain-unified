@@ -19,6 +19,12 @@ The `agentz/` directory contains the control-plane layer for autonomous operatio
 
 `run` defaults to `--mode confirm` and goes through the registry runner (credential preflight + audit log). `run --all --mode auto` is refused.
 
+Repo integration audit (writes nothing in dry-run; `auto` refreshes only `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`):
+
+```bash
+python -m agentz.cli run repo_audit_integrate --mode dry-run
+```
+
 See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and workflow details.
 
 ## Running the API

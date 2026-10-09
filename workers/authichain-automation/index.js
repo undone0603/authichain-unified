@@ -193,14 +193,20 @@ async function handleStripeWebhook(request, env) {
   const origin = request.headers.get("Origin") || env.ALLOWED_ORIGINS || "*";
   if (!env.DB) return errorResponse("Database not configured", 503, origin);
 
+  // Fail closed (PM-321): nothing is processed unless the request carries a
+  // Stripe-Signature header AND it verifies against STRIPE_WEBHOOK_SECRET.
+  // Previously a missing header (or missing secret) skipped verification, so
+  // an unsigned POST could write manufacturer/subscription rows.
+  if (request.method !== "POST") return errorResponse("Method not allowed", 405, origin);
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) return errorResponse("Missing stripe-signature header", 400, origin);
+  if (!env.STRIPE_WEBHOOK_SECRET) return errorResponse("Webhook secret not configured", 401, origin);
+
   let event;
   try {
     const body = await request.text();
-    const signature = request.headers.get("stripe-signature");
-    if (env.STRIPE_WEBHOOK_SECRET && signature) {
-      const isValid = await verifyStripeSignature(body, signature, env.STRIPE_WEBHOOK_SECRET);
-      if (!isValid) return errorResponse("Invalid webhook signature", 401, origin);
-    }
+    const isValid = await verifyStripeSignature(body, signature, env.STRIPE_WEBHOOK_SECRET);
+    if (!isValid) return errorResponse("Invalid webhook signature", 401, origin);
     event = JSON.parse(body);
   } catch (e) {
     return errorResponse("Invalid JSON body", 400, origin);
@@ -461,7 +467,7 @@ async function handleRequest(request, env) {
   }
 }
 
-export { RateLimiter };
+export { RateLimiter, handleStripeWebhook };
 export default {
   async fetch(request, env) { return handleRequest(request, env); },
   async scheduled(event, env) { console.log("Cron trigger fired at:", new Date(event.scheduledTime).toISOString()); }

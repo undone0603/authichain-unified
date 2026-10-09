@@ -16,6 +16,13 @@ on:
         required: false
         type: boolean
         default: false
+concurrency:
+  # Prevent overlapping worker deployments from concurrent pushes/dispatches.
+  group: deploy-workers-${{ github.head_ref || github.ref }}
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   id-token: write
@@ -159,6 +166,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
     # empty array, even if the job is then shown as skipped. The selector
@@ -406,3 +414,26 @@ jobs:
           printf '%s' "$FACILITATOR" | npx wrangler secret put X402_FACILITATOR_URL --name "$NAME"
           printf '%s' "$USDC_ASSET" | npx wrangler secret put X402_USDC_ASSET --name "$NAME"
           echo "bound X402_PAY_TO + X402_FACILITATOR_URL + X402_USDC_ASSET on ${NAME} (values not logged)"
+
+  # PM-330 item 6: blocking post-deploy smoke, AFTER the deploy job. Fails the
+  # run if a public money/protocol surface is down, answers the wrong code
+  # (unsigned Stripe webhook must 400, unpaid /api/x402 must 402), or redirects
+  # to cloudflareaccess.com. Read-only: HEAD on checkout, nothing signed.
+  # Rollback: delete this job.
+  post-deploy-smoke:
+    name: Post-deploy smoke (blocking)
+    needs: [deploy]
+    if: ${{ needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Smoke public surfaces after deploy
+        run: node scripts/ci/post-deploy-smoke.mjs
