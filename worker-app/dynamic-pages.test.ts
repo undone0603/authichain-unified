@@ -375,9 +375,13 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(body).toContain("&lt;script&gt;");
   });
 
-  it("treats a numeric id rejected by the uuid products.id as 'No record found', not 'try again'", async () => {
+  it("treats Postgres 22P02 (numeric id vs uuid products.id) as 'No record found', not 'try again'", async () => {
+    const pgErr = Object.assign(
+      new Error('invalid input syntax for type uuid: "1"'),
+      { code: "22P02" }
+    );
     (getProductById as any).mockRejectedValueOnce(
-      new Error('invalid input syntax for type uuid: "1"')
+      Object.assign(new Error("Failed query"), { cause: pgErr })
     );
     const res = await app.request("/verify?id=1", {}, makeEnv() as any);
     const body = await res.text();
@@ -386,6 +390,17 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(body).toContain("<h1>No record found</h1>");
     expect(body).toContain("No record was found on the AuthiChain registry");
     expect(body).not.toContain("try again in a minute");
+  });
+
+  it("keeps the retry page for other numeric-id lookup errors", async () => {
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("connection reset"), { code: "ECONNRESET" })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("try again in a minute");
   });
 
   it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {

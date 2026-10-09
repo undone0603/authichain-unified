@@ -516,10 +516,12 @@ async function renderVerify(c: Context): Promise<Response> {
       try {
         product = await withVerifyTimeout(getProductById(db, numericId));
       } catch (err) {
-        // products.id is a uuid, so Postgres rejects a numeric id outright
-        // (invalid input syntax for type uuid). That means "no such record",
-        // not "lookup failed". Timeouts still fall through to the retry page.
-        if ((err as Error)?.message === "VERIFY_LOOKUP_TIMEOUT") throw err;
+        // products.id is a uuid, so Postgres rejects a numeric id with
+        // 22P02 (invalid_text_representation). That means "no such record",
+        // not "lookup failed". Anything else (timeouts, connection errors)
+        // still goes to the retry page. drizzle may wrap the pg error in .cause.
+        const e = err as { code?: string; cause?: { code?: string } };
+        if (e?.code !== "22P02" && e?.cause?.code !== "22P02") throw err;
         product = null;
       }
     } else {
