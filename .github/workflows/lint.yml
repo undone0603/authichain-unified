@@ -36,6 +36,12 @@ jobs:
       - name: Check for structural cannot-fail patterns in workflows
         run: node scripts/check-workflow-cannot-fail.mjs
 
+      # PM-330: workers_dev must be an explicit false on authichain-automation
+      # and authichain-edge-router, and no push-to-main deploy workflow may set
+      # cancel-in-progress: true. Read-only, offline.
+      - name: Check deploy invariants (workers_dev off, no deploy cancels)
+        run: node scripts/ci/check-deploy-invariants.mjs
+
       - name: Check every node:test file has a CI runner
         run: node scripts/ci/check-node-test-runners.mjs
 
