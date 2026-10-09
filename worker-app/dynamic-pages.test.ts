@@ -4,9 +4,21 @@ import { Hono } from "hono";
 // Node-safe mocking (mirrors worker-app/routes.test.ts's pattern): mock
 // getHyperdriveDb + the specific db helpers dynamic-pages.ts calls, so this
 // suite never touches a real Postgres/Hyperdrive connection or workerd.
-vi.mock("../server/db", () => ({
-  getHyperdriveDb: vi.fn().mockReturnValue({}),
-}));
+vi.mock("../server/db", () => {
+  const getHyperdriveDb = vi.fn().mockReturnValue({});
+  return {
+    getHyperdriveDb,
+    // /verify uses the per-request pg.Client handle. Its db is whatever
+    // getHyperdriveDb is stubbed to return, so existing stubs keep working.
+    createHyperdriveRequestDb: vi.fn(() => ({
+      db: getHyperdriveDb(),
+      connect: verifyDbConnect,
+      close: verifyDbClose,
+    })),
+  };
+});
+const verifyDbConnect = vi.fn();
+const verifyDbClose = vi.fn();
 
 vi.mock("../server/content-db-helpers", () => ({
   getCertificateByNumber: vi.fn(),
@@ -23,7 +35,8 @@ vi.mock("./onboard-notify", () => ({
 
 const { renderDynamicPage } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
-const { getHyperdriveDb } = await import("../server/db");
+const { getHyperdriveDb, createHyperdriveRequestDb } =
+  await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
 const { getQronById } = await import("../server/identity-db-helpers");
@@ -90,6 +103,8 @@ function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
 beforeEach(() => {
   vi.clearAllMocks();
   (getHyperdriveDb as any).mockReturnValue({});
+  verifyDbConnect.mockReset().mockResolvedValue(undefined);
+  verifyDbClose.mockReset().mockResolvedValue(undefined);
 });
 
 describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
@@ -423,6 +438,76 @@ describe("renderDynamicPage: /verify verification landing", () => {
       const body = await res.text();
       expect(res.status).toBe(404);
       expect(body).toContain("No record found");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens one Hyperdrive client per request and closes it after a found record", async () => {
+    (getProductById as any).mockResolvedValue({ id: 7, name: "Sneaker" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=7", {}, makeEnv() as any);
+
+    expect(res.status).toBe(200);
+    expect(createHyperdriveRequestDb).toHaveBeenCalledTimes(1);
+    expect(verifyDbConnect).toHaveBeenCalledTimes(1);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the client when the lookup fails", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+
+    expect(res.status).toBe(404);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open a client for the bare prompt", async () => {
+    await app.request("/verify", {}, makeEnv() as any);
+    expect(createHyperdriveRequestDb).not.toHaveBeenCalled();
+  });
+
+  it("answers the retry 404 when connecting through Hyperdrive hangs", async () => {
+    vi.useFakeTimers();
+    try {
+      verifyDbConnect.mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(2600);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("try again in a minute");
+      expect(getCertificateByNumber).not.toHaveBeenCalled();
+      expect(verifyDbClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses one 2.5s budget for the whole lookup, not 2.5s per step", async () => {
+    vi.useFakeTimers();
+    try {
+      // Certificate lookup takes 2s, then the product lookup hangs. With a
+      // per-step timer this would answer at ~4.5s, past the apex's 4s budget.
+      (getCertificateByNumber as any).mockReturnValue(
+        new Promise(resolve =>
+          setTimeout(() => resolve({ productId: "p-1" }), 2000)
+        )
+      );
+      (getProductById as any).mockReturnValue(new Promise(() => {}));
+      let settled = false;
+      const pending = app
+        .request("/verify?id=CERT-1", {}, makeEnv() as any)
+        .then(r => {
+          settled = true;
+          return r;
+        });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(settled).toBe(true);
+      const res = await pending;
+      expect(res.status).toBe(404);
+      expect(await res.text()).toContain("try again in a minute");
     } finally {
       vi.useRealTimers();
     }
