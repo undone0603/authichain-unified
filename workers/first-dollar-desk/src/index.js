@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
@@ -1967,33 +1968,101 @@ async function acceptFiatDockGateway(request, env, rawBody, resourceUrl) {
   };
 }
 __name(acceptFiatDockGateway, "acceptFiatDockGateway");
-async function verifyStripeSignature(payload, header, secret) {
-  if (!header || !secret) return false;
-  const parts = Object.fromEntries(
-    header.split(",").map((piece) => {
-      const [key2, ...rest] = piece.split("=");
-      return [key2.trim(), rest.join("=")];
-    })
+// PM-330: official Stripe library instead of the hand-rolled HMAC. The old
+// check had no timestamp window (a captured delivery verified forever), only
+// compared the first v1 entry, and used a non-constant-time compare.
+// constructEventAsync + the SubtleCrypto provider is the Workers-safe path;
+// 300s is Stripe's default tolerance, pinned here.
+var STRIPE_TOLERANCE_SECONDS = 300;
+var stripeCryptoProvider = Stripe.createSubtleCryptoProvider();
+async function constructStripeEvent(payload, header, secret) {
+  if (!header || !secret || !String(secret).trim()) {
+    throw new Error("missing signature or secret");
+  }
+  return Stripe.webhooks.constructEventAsync(
+    payload,
+    header,
+    String(secret).trim(),
+    STRIPE_TOLERANCE_SECONDS,
+    stripeCryptoProvider
   );
-  const timestamp = parts.t;
-  const expected = parts.v1;
-  if (!timestamp || !expected) return false;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${timestamp}.${payload}`)
-  );
-  const digest = [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  return digest === expected;
 }
-__name(verifyStripeSignature, "verifyStripeSignature");
+__name(constructStripeEvent, "constructStripeEvent");
+// Once-only claim on the LEDGER KV (the only store this Worker has). KV is
+// eventually consistent, so two deliveries landing within ~1s on different
+// edges could both pass; Stripe retries are minutes apart, and writeReceipt()
+// also dedupes by checkout session id, so a double receipt still can't land.
+var STRIPE_EVENT_CLAIM_TTL = 60 * 60 * 24 * 30;
+async function claimStripeEvent(env, eventId) {
+  const key = `stripe_evt:${eventId}`;
+  if (await env.LEDGER.get(key)) return false;
+  await env.LEDGER.put(key, (/* @__PURE__ */ new Date()).toISOString(), {
+    expirationTtl: STRIPE_EVENT_CLAIM_TTL
+  });
+  return true;
+}
+__name(claimStripeEvent, "claimStripeEvent");
+async function releaseStripeEvent(env, eventId) {
+  try {
+    await env.LEDGER.delete(`stripe_evt:${eventId}`);
+  } catch {
+  }
+}
+__name(releaseStripeEvent, "releaseStripeEvent");
+async function handleStripeWebhook(request, env) {
+  const header = request.headers.get("stripe-signature");
+  if (!header) {
+    return Response.json({ error: "missing_signature" }, { status: 400 });
+  }
+  const payload = await request.text();
+  let event;
+  try {
+    event = await constructStripeEvent(payload, header, env.STRIPE_WEBHOOK_SECRET);
+  } catch {
+    return Response.json({ error: "invalid_signature" }, { status: 400 });
+  }
+  if (!await claimStripeEvent(env, event.id)) {
+    return Response.json({ received: true, duplicate: true });
+  }
+  // CFA-121: if processing fails, release the claim (same as
+  // authichain-automation) and answer 500 so Stripe's retry can run it again.
+  try {
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      const session = event.data.object;
+      if (session.payment_status === "paid") {
+        const classified = classify(receiptFromSession(session), env);
+        const ledger = await writeReceipt(env, classified);
+        await env.LEDGER.put(
+          "stripe_webhook_last",
+          JSON.stringify({
+            at: (/* @__PURE__ */ new Date()).toISOString(),
+            type: event.type,
+            sessionId: session.id,
+            amountCents: session.amount_total ?? 0,
+            paymentLink: session.payment_link ?? null,
+            receiptStatus: classified.status,
+            receiptId: classified.id
+          })
+        );
+        return Response.json({ received: true, receipt: classified, goal: goalState(ledger) });
+      }
+    }
+    await env.LEDGER.put(
+      "stripe_webhook_last",
+      JSON.stringify({
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        type: event.type,
+        ignored: true
+      })
+    );
+    return Response.json({ received: true, ignored: event.type });
+  } catch (err) {
+    await releaseStripeEvent(env, event.id);
+    console.error("[first-dollar-desk] stripe webhook processing failed", err instanceof Error ? err.message : String(err));
+    return Response.json({ error: "processing_failed" }, { status: 500 });
+  }
+}
+__name(handleStripeWebhook, "handleStripeWebhook");
 function authorizeStripeSessionPush(request, env) {
   const auth = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!auth) return false;
@@ -2591,45 +2660,7 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
       return Response.json({ received: true, receipt: classified, goal: goalState(ledger) });
     }
     if (path === "/api/stripe/webhook" && request.method === "POST") {
-      const payload = await request.text();
-      const ok = await verifyStripeSignature(
-        payload,
-        request.headers.get("stripe-signature"),
-        env.STRIPE_WEBHOOK_SECRET
-      );
-      if (!ok) {
-        return Response.json({ error: "invalid_signature" }, { status: 400 });
-      }
-      const event = JSON.parse(payload);
-      if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-        const session = event.data.object;
-        if (session.payment_status === "paid") {
-          const classified = classify(receiptFromSession(session), env);
-          const ledger = await writeReceipt(env, classified);
-          await env.LEDGER.put(
-            "stripe_webhook_last",
-            JSON.stringify({
-              at: (/* @__PURE__ */ new Date()).toISOString(),
-              type: event.type,
-              sessionId: session.id,
-              amountCents: session.amount_total ?? 0,
-              paymentLink: session.payment_link ?? null,
-              receiptStatus: classified.status,
-              receiptId: classified.id
-            })
-          );
-          return Response.json({ received: true, receipt: classified, goal: goalState(ledger) });
-        }
-      }
-      await env.LEDGER.put(
-        "stripe_webhook_last",
-        JSON.stringify({
-          at: (/* @__PURE__ */ new Date()).toISOString(),
-          type: event.type,
-          ignored: true
-        })
-      );
-      return Response.json({ received: true, ignored: event.type });
+      return handleStripeWebhook(request, env);
     }
     return new Response("Not found", { status: 404 });
   }
@@ -2637,4 +2668,3 @@ ${urls.map((href) => `  <url><loc>${href}</loc></url>`).join("\n")}
 export {
   index_default as default
 };
-//# sourceMappingURL=index.js.map
