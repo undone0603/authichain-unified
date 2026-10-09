@@ -39,7 +39,10 @@ import {
   planByStripePriceId,
 } from "../../src/lib/plans";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
-import { claimStripeEvent } from "../../src/lib/stripe-webhook-claim";
+import {
+  claimStripeEvent,
+  StripeEventClaimUnavailableError,
+} from "../../src/lib/stripe-webhook-claim";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -602,6 +605,14 @@ export async function handleStripeWebhook(
   // apex Worker, so this is the only duplicate check that works there.
   // A duplicate still lets a paid DPP checkout replay its fulfill below.
   const claim = await claimStripeEvent(supabase, event.id, event.type);
+
+  // PM-338: fail closed. Without a working claim there is no duplicate guard
+  // on this Worker, so refuse (route -> 500) and let Stripe retry later.
+  // Thrown before logDelivery("received") so the retry is not mistaken for
+  // an in-flight duplicate. Stripe dashboard test events stay exempt.
+  if (claim === "unavailable" && !event.id.startsWith("evt_test_")) {
+    throw new StripeEventClaimUnavailableError(event.id);
+  }
 
   // Persist before side effects so a later throw is still queryable.
   // Skipped for a duplicate: re-marking it "received" would hide the

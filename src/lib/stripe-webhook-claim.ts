@@ -13,7 +13,12 @@
  *                                       ended status=error, or is stuck at
  *                                       status=received for >10 min (crashed
  *                                       Worker); otherwise "duplicate"
- *   - any other error / no client    -> "unavailable" (fail open, as before)
+ *   - any other error / no client    -> "unavailable". The edge handler
+ *                                       now FAILS CLOSED on this (PM-338):
+ *                                       it throws StripeEventClaimUnavailableError
+ *                                       and the route answers 500 so Stripe
+ *                                       retries later instead of the event
+ *                                       running without a duplicate guard.
  *
  * The handler's existing delivery log then upserts status=success / error on
  * the same row, so no separate finish step is needed.
@@ -27,6 +32,21 @@ type SupabaseError = { code?: string; message?: string } | null;
 type SupabaseLike = { from: (table: string) => any };
 
 export type StripeEventClaim = "claimed" | "duplicate" | "unavailable";
+
+/**
+ * Thrown by the edge Stripe webhook handler when the once-only claim could
+ * not be made (no Supabase client, or Supabase errored). Routes map it to
+ * HTTP 500 so Stripe retries the delivery with backoff (PM-338).
+ */
+export class StripeEventClaimUnavailableError extends Error {
+  readonly httpStatus = 500;
+  constructor(eventId: string) {
+    super(
+      `[stripe-webhook] stripe_events claim unavailable for ${eventId}; refusing to process without a duplicate guard (Stripe will retry)`
+    );
+    this.name = "StripeEventClaimUnavailableError";
+  }
+}
 
 export const STRIPE_CLAIM_STALE_MS = 10 * 60 * 1000;
 
