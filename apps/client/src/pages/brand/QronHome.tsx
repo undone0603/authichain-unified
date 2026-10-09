@@ -63,7 +63,7 @@ const steps = [
 
 const ecosystem = [
   { name: "AuthiChain", href: "https://authichain.com", desc: "The truth layer. Blockchain-verified product authentication with AI-powered image analysis.", live: true },
-  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance. Seed-to-sale verification with NFT certificates and $QRON rewards.", live: true },
+  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance. Seed-to-sale verification with NFT certificates.", live: true },
   { name: "GovChain", href: "https://govchain.us", desc: "Sovereign verification. Made in USA manufacturer authentication for government and defense.", live: true },
 ];
 

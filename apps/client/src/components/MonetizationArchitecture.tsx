@@ -48,7 +48,7 @@ const B: Record<string, Brand> = {
     role: "AI + CREATIVE", 
     color: "#00CCFF", // Keeping specific site colors
     icon: <Smartphone className="h-5 w-5" />,
-    desc: "FLUX.1 AI-powered cryptographic QR art generation, consumer scanner PWA, $QRON Scan-to-Earn rewards, and creative tools for brands.",
+    desc: "FLUX.1 AI-powered cryptographic QR art generation, consumer scanner PWA, and creative tools for brands.",
     sells: "The art. The scan. The reward. The consumer experience." 
   },
   sc: { 
@@ -86,14 +86,14 @@ const AC_TIERS: Tier[] = [
 ];
 
 const QR_TIERS: Tier[] = [
-  { name: "Scan", price: 0, period: "free", badge: "FREE", color: "#888", cta: "Start Scanning", features: ["Unlimited QR scanning (consumer)", "Earn $QRON on every scan", "Basic verification results"] },
+  { name: "Scan", price: 0, period: "free", badge: "FREE", color: "#888", cta: "Start Scanning", features: ["Unlimited QR scanning (consumer)", "Basic verification results"] },
   { name: "Brand Pack", price: 199, period: "one-time", badge: "POPULAR", color: "#00CCFF", cta: "Buy 10 Art Codes", features: ["10 Custom FLUX.1 Art Codes", "Permanent hosting on Base", "High-res download", "Basic scan analytics"] },
-  { name: "Studio", price: 449, period: "/mo", badge: "STUDIO", color: "#00CCFF", cta: "Open Studio", features: ["100 cryptographic QR arts/month", "Custom AI style training", "Batch generation (CSV upload)", "Embeddable scanner widget", "$QRON reward customization"] },
+  { name: "Studio", price: 449, period: "/mo", badge: "STUDIO", color: "#00CCFF", cta: "Open Studio", features: ["100 cryptographic QR arts/month", "Custom AI style training", "Batch generation (CSV upload)", "Embeddable scanner widget"] },
   { name: "Agency", price: 1499, period: "/mo", badge: "AGENCY", color: "#00FFE5", cta: "Contact Sales", features: ["Unlimited QR art generation", "White-label scanner", "Multi-client management", "API access (generation + scan)", "Custom ControlNet models"] },
 ];
 
 const SC_TIERS: Tier[] = [
-  { name: "Leaf", price: 0, period: "free", badge: "FREE", color: "#888", cta: "Verify Free", features: ["Verify any StrainChain product", "View lab results + provenance", "Earn $QRON on cannabis scans"] },
+  { name: "Leaf", price: 0, period: "free", badge: "FREE", color: "#888", cta: "Verify Free", features: ["Verify any StrainChain product", "View lab results + provenance"] },
   { name: "Dispensary", price: 149, period: "/mo", badge: "DISPENSARY", color: "#00C853", cta: "Onboard Dispensary", features: ["100 product certifications/month", "QR label generation for products", "Consumer scan dashboard", "Lab result integration", "Basic compliance reports"] },
   { name: "Cultivator", price: 699, period: "/mo", badge: "CULTIVATOR", color: "#00C853", cta: "Scale Operations", features: ["1,000 certifications/month", "Seed-to-sale chain of custody", "METRC integration", "Custom strain QR art (FLUX.1)", "Multi-location support"] },
   { name: "Enterprise", price: 2999, period: "/mo", badge: "MSO", color: "#69F0AE", cta: "Contact Sales", features: ["Unlimited certifications", "Multi-state compliance engine", "Full METRC/BioTrack integration", "White-label consumer app", "NFT marketplace for strains"] },
@@ -132,7 +132,7 @@ const BUNDLES = [
     price: 499,
     period: "/mo",
     savings: "$149/mo",
-    desc: "AI art + cannabis SaaS. Custom FLUX.1 strain art for every product, consumer scanner with $QRON rewards.",
+    desc: "AI art + cannabis SaaS. Custom FLUX.1 strain art for every product, consumer scanner.",
     includes: ["QRON Studio tier", "StrainChain Cultivator tier", "Strain-specific QR art", "Consumer engagement + rewards"],
     best_for: "Cannabis brands investing in premium consumer experience",
   },
@@ -281,7 +281,7 @@ export default function MonetizationArchitecture() {
                 </div>
                 <div className="grid md:grid-cols-3 gap-8 text-sm text-muted-foreground leading-relaxed">
                   <p><strong className="text-foreground">AuthiChain</strong> is the legal & cryptographic backbone. Verification, compliance, and AI consensus.</p>
-                  <p><strong className="text-foreground">QRON</strong> is the creative & consumer layer. AI QR art, scan-to-earn rewards, and cinematic storytelling.</p>
+                  <p><strong className="text-foreground">QRON</strong> is the creative & consumer layer. AI QR art and cinematic storytelling.</p>
                   <p><strong className="text-foreground">StrainChain</strong> is the industry-specific application. A vertical blueprint for cannabis, luxury, or pharma.</p>
                 </div>
               </CardContent>
