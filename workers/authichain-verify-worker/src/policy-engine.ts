@@ -11,7 +11,7 @@ import {
   type EconomicAuthorizationReasonCode,
   type EconomicOperation,
 } from "./economic-action";
-import { canonicalizeJson, sha256Base64Url, type SignedAgentMessage } from "./agent-message";
+import { agentMessageDigest, canonicalizeJson, sha256Base64Url, type SignedAgentMessage } from "./agent-message";
 import type { AgentCapability, AgentMessageVerificationResult } from "./agent-types";
 import { economicActionDigest } from "./crypto-message";
 
@@ -186,6 +186,23 @@ export async function authorizeEconomicAction(
 
   if (!verification || verification.valid !== true || !Array.isArray(verification.reasons) || verification.reasons.length !== 0) {
     reasons.push("MESSAGE_NOT_VERIFIED");
+  } else {
+    // Bind the policy evaluation to the exact envelope the verifier evaluated.
+    // A previously valid result must not be reusable after payload mutation.
+    try {
+      const currentMessageDigest = await agentMessageDigest(envelope);
+      if (currentMessageDigest !== verification.message_digest) {
+        reasons.push("MESSAGE_NOT_VERIFIED");
+      }
+    } catch {
+      reasons.push("MESSAGE_NOT_VERIFIED");
+    }
+    if (
+      !Array.isArray(verification.capabilities) ||
+      !sameStringArray(envelope.capabilities, verification.capabilities)
+    ) {
+      reasons.push("IDENTITY_BINDING_MISMATCH");
+    }
   }
 
   if (
