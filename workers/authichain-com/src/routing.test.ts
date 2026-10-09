@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
+import { VS_PAGES } from "./vs-pages.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
 
@@ -57,6 +58,39 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
     /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
   assert.match(html, /name="robots" content="noindex"/);
+});
+
+// RES-162 (sibling of CFA-147 in #1706): the /vs/* comparison pages and
+// /mcp/install make no "certificate contract live/deployed on Polygon" claim
+// and show no 0x4da4 contract address until wallet ownership is proven.
+// RES-167: also no "Polygon mainnet" anchored-record card and no
+// "Certificate contract on Polygon" footer. "anchored on Polygon" stays
+// allowed: vs-pages.ts states it as a goal and names no contract.
+test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async () => {
+  const paths = ["/vs", "/mcp/install", ...VS_PAGES.map((d) => `/vs/${d.slug}`)];
+  assert.ok(paths.length > 2, "expected at least one /vs/* page");
+  for (const path of paths) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [
+      /live on Polygon/i,
+      /deployed on Polygon/i,
+      /0x4da4/i,
+      // RES-167
+      /Certificate contract on Polygon/i,
+      // The cut "Polygon mainnet" anchored-record showcase card.
+      /class="eyebrow">\s*Polygon mainnet/i,
+      // RES-172: the /mcp/install meta now uses the registry line.
+      /Polygon-anchored/i,
+    ]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+    // RES-171: the verify_record tool description and the /mcp/install
+    // opening no longer name Polygon mainnet, so the bare phrase is banned
+    // on /mcp/install as well as /vs/*.
+    assert.doesNotMatch(body, /Polygon\s+mainnet/i, `${path} must not contain Polygon mainnet`);
+  }
 });
 
 test("the apex still renders the homepage", async () => {
