@@ -6,6 +6,8 @@
 export interface Env {
   KV: KVNamespace;
   STRIPE_WEBHOOK_SECRET: string;
+  /** Bearer token for POST /admin/report. Separate from the webhook secret; unset = endpoint refuses (401). */
+  DPP_ADMIN_TOKEN?: string;
   RESEND_API_KEY: string;
   HUBSPOT_TOKEN?: string;
   OFFER_KEY: string;
@@ -33,6 +35,34 @@ async function verifyStripeSignature(body: string, header: string | null, secret
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
   const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
   return signatures.some(s => s === expected);
+}
+
+/**
+ * Constant-time string compare. Both sides are SHA-256 hashed first so the
+ * loop always runs over 32 bytes and length differences don't leak timing.
+ */
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha);
+  const y = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+/**
+ * Auth for POST /admin/report. Uses DPP_ADMIN_TOKEN only (never the Stripe
+ * webhook secret). Fails closed: unset/empty token rejects every request.
+ */
+export async function isAdminAuthorized(authorization: string | null, adminToken: string | undefined): Promise<boolean> {
+  if (!adminToken) return false;
+  const header = authorization ?? "";
+  if (!header.startsWith("Bearer ")) return false;
+  return timingSafeEqual(header.slice("Bearer ".length), adminToken);
 }
 
 async function isPaused(env: Env): Promise<boolean> {
@@ -195,7 +225,7 @@ export default {
     if (path === "/health" || path === "/") return Response.json({ ok: true, service: "dpp-fulfillment", offer: env.OFFER_KEY || OFFER });
     if (path === "/webhook" && request.method === "POST") return handleWebhook(request, env, ctx);
     if (path === "/admin/report" && request.method === "POST") {
-      if ((request.headers.get("Authorization") ?? "") !== `Bearer ${env.STRIPE_WEBHOOK_SECRET}`) return new Response("Unauthorized", { status: 401 });
+      if (!(await isAdminAuthorized(request.headers.get("Authorization"), env.DPP_ADMIN_TOKEN))) return new Response("Unauthorized", { status: 401 });
       await dailyReport(env);
       return Response.json({ ok: true });
     }
