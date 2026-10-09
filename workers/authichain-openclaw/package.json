@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "hono": "^4.13.7"
+    "hono": "^4.13.13"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test src/agentz-paths.test.ts src/access-headers.test.ts && npx tsx --test src/dpp-offer.test.ts"
