@@ -75,6 +75,20 @@ describe("qron-platform /api/mcp placeholder tools are not billed", () => {
     }
   );
 
+  it("authichain_get_pricing lists no per-call price for the placeholder tools (PM-362)", async () => {
+    const res = await call("authichain_get_pricing", {});
+    expect(res.status).toBe(200);
+    const text: string = res.body.content[0].text;
+    const pricing = JSON.parse(text);
+    for (const key of ["verify_product", "register_product", "check_eu_dpp"]) {
+      expect(pricing).not.toHaveProperty(key);
+    }
+    expect(text).not.toMatch(/\$\d/);
+    // Cut only: the remaining fields are unchanged.
+    expect(Object.keys(pricing).sort()).toEqual(["contract", "network", "token"]);
+    expect(pricing.network).toBe("Polygon POS");
+  });
+
   it("route source does not import or call reportAgentUsage", () => {
     const src = readFileSync(ROUTE, "utf8");
     expect(src).not.toMatch(/import[^;]*reportAgentUsage/);

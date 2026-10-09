@@ -97,9 +97,6 @@ export async function POST(req: NextRequest) {
             content: [{
               type: "text",
               text: JSON.stringify({
-                verify_product: "$0.05",
-                register_product: "$0.50",
-                check_eu_dpp: "$5.00",
                 network: "Polygon POS",
                 contract: AUTHICHAIN_CONTRACT,
                 token: QRON_TOKEN
