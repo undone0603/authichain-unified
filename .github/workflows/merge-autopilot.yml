@@ -44,6 +44,7 @@ permissions:
   issues: write
   checks: read
   statuses: read
+  actions: write
 
 jobs:
   sweep:
@@ -60,8 +61,8 @@ jobs:
           node-version: 22
       - name: Sweep open PRs
         env:
-          GITHUB_TOKEN: ${{ secrets.MERGE_AUTOPILOT_TOKEN || secrets.GITHUB_TOKEN }}
-          AUTOPILOT_TOKEN_KIND: ${{ secrets.MERGE_AUTOPILOT_TOKEN != '' && 'pat' || 'default' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTOPILOT_TOKEN_KIND: default
           GITHUB_REPOSITORY: ${{ github.repository }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         # The script prints the summary to stdout; only this shell step writes
