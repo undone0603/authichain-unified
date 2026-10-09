@@ -141,7 +141,7 @@
     "thirdweb": "^5.121.1",
     "ts-command-line-args": "^2.5.1",
     "vaul": "^1.1.2",
-    "wouter": "^3.10.0",
+    "wouter": "^3.13.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
