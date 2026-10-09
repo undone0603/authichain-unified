@@ -23,11 +23,11 @@
 //      DRY_RUN=1 to log decisions without acting.
 // Output: the run summary (markdown) on stdout, progress on stderr.
 //
-// Token: with the default Actions token, GitHub does not start workflows for
-// the commits it creates. A merge would not trigger the push-to-main deploys,
-// and an update-branch commit would never get CI. So in "default" mode the
-// autopilot never updates branches (behind PRs wait) and says so in the
-// summary. Give it a PAT as MERGE_AUTOPILOT_TOKEN for the full loop.
+// Token: the default Actions token can update-branch and merge, but GitHub
+// does not start pull_request or push workflows for those commits. workflow_dispatch
+// from GITHUB_TOKEN does start runs. In default mode the sweep updates the
+// branch, then dispatches CI Main on the head, and after a merge dispatches
+// Deploy to Cloudflare on main. A PAT is not required.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -182,7 +182,8 @@ async function main() {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPOSITORY;
   const dry = process.env.DRY_RUN === "1";
-  const canUpdate = process.env.AUTOPILOT_TOKEN_KIND === "pat";
+  const tokenKind = process.env.AUTOPILOT_TOKEN_KIND === "pat" ? "pat" : "default";
+  const canUpdate = true;
   const lines = ["## Merge autopilot", ""];
 
   if (!cfg.enabled) {
@@ -193,9 +194,9 @@ async function main() {
   }
   if (!token || !repo)
     throw new Error("GITHUB_TOKEN and GITHUB_REPOSITORY are required");
-  if (!canUpdate)
+  if (tokenKind !== "pat")
     lines.push(
-      "> Running on the default Actions token. Behind branches are not updated, and merges made with it do not trigger push-to-main deploys. Add a `MERGE_AUTOPILOT_TOKEN` secret (fine-grained PAT: contents + pull requests read/write on this repo).",
+      "> Default Actions token. Behind branches are updated, then CI Main is dispatched on the head. A merge dispatches Deploy to Cloudflare on main. No PAT.",
       ""
     );
 
@@ -258,18 +259,32 @@ async function main() {
           token,
         });
 
-      if (!dry && decision.action === "update")
+      if (!dry && decision.action === "update") {
         await gh(`/repos/${repo}/pulls/${n}/update-branch`, {
           method: "PUT",
           token,
           body: { expected_head_sha: sha },
         });
-      if (!dry && decision.action === "merge")
+        if (tokenKind !== "pat")
+          await gh(`/repos/${repo}/actions/workflows/main.yml/dispatches`, {
+            method: "POST",
+            token,
+            body: { ref: pr.head.ref },
+          });
+      }
+      if (!dry && decision.action === "merge") {
         await gh(`/repos/${repo}/pulls/${n}/merge`, {
           method: "PUT",
           token,
           body: { merge_method: MERGE_METHOD, sha },
         });
+        if (tokenKind !== "pat")
+          await gh(`/repos/${repo}/actions/workflows/deploy-cloudflare.yml/dispatches`, {
+            method: "POST",
+            token,
+            body: { ref: BASE_BRANCH },
+          });
+      }
     } catch (err) {
       if (err instanceof RateLimitError) {
         lines.push(
