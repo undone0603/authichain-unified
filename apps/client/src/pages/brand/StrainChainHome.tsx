@@ -54,7 +54,7 @@ const features = [
   { icon: Gem, title: "Royalties That Route", desc: "Secondary-sale royalties split automatically between artist, platform, and community treasury via Solidity splitter contracts." },
   { icon: FlaskConical, title: "Lab Verification", desc: "Cryptographically signed lab results anchored to the blockchain. Consumers scan once and see the full COA instantly." },
   { icon: Scan, title: "QRON Authentication", desc: "Every product gets a unique AI-generated QRON code \u2014 beautiful enough for shelf display, powerful enough for forensic verification." },
-  { icon: Shield, title: "Anti-Counterfeit", desc: "Blockchain-anchored provenance eliminates gray-market diversion. Each scan event is logged immutably for compliance auditing." },
+  { icon: Shield, title: "Anti-Counterfeit", desc: "Provenance eliminates gray-market diversion. Each scan event is logged immutably for compliance auditing." },
   { icon: BarChart3, title: "Analytics Dashboard", desc: "Real-time scan analytics, geographic heatmaps, consumer engagement metrics, and compliance reporting in one pane." },
 ];
 
@@ -154,7 +154,7 @@ export default function StrainChainHome() {
               <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>On-Chain</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Blockchain-anchored provenance for every gram. METRC-compliant tracking, strain NFTs, and cryptographic lab verification \u2014 built for the legal cannabis industry.
+              Provenance for every gram. METRC-compliant tracking, strain NFTs, and cryptographic lab verification \u2014 built for the legal cannabis industry.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
@@ -320,7 +320,7 @@ export default function StrainChainHome() {
               Every Gram,{" "}
               <span className="strain-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(142 71% 45%), hsl(40 60% 55%), hsl(160 60% 40%), hsl(142 71% 45%))", backgroundSize: "200% 200%" }}>Verified.</span>
             </h2>
-            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Blockchain-anchored provenance for the legal cannabis industry. Start verifying today.</p>
+            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Provenance for the legal cannabis industry. Start verifying today.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black strain-pulse" onClick={() => go("/supply-chain")}>
                 Launch StrainChain <Leaf className="ml-2 h-5 w-5" />

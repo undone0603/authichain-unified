@@ -23,7 +23,7 @@ const CORS_HEADERS = {
 };
 
 const JWKS_URL = "https://authichain.com/.well-known/jwks.json";
-const POLYGON_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+// polygon.contract is null: no one has shown AuthiChain controls that address (RES-145).
 
 function json(body: unknown, status = 200, extra?: Record<string, string>): Response {
   return Response.json(body, {
@@ -113,7 +113,7 @@ function kernelEnvelope(
     qron_id: identifier,
     anchored,
     polygon: {
-      contract: POLYGON_CONTRACT,
+      contract: null,
       queried: false,
       status: anchored ? "hash_accepted_tx_not_queried" : "in_development",
     },
@@ -211,7 +211,7 @@ async function handleVerify(request: Request, env: Env, url: URL): Promise<Respo
         anchorOnChain: chain.onChain,
         anchorChainStatus: chain.status,
         polygon: {
-          contract: POLYGON_CONTRACT,
+          contract: null,
           queried: chain.queried,
           status: chain.status,
           block: chain.block ?? null,
