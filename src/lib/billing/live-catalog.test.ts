@@ -26,11 +26,12 @@ describe("catalog freeze 2026-09-28", () => {
       "creator",
       "dpp_readiness",
       "strainchain_passport",
+      "strainchain_farm",
       "musa_claim_file",
       "musa_audit_bundle",
     ]);
     for (const id of PUBLIC_PLAN_IDS) expect(isPublicPlanId(id)).toBe(true);
-    expect(isPublicPlanId("strainchain_farm")).toBe(false);
+    expect(isPublicPlanId("strainchain_farm")).toBe(true);
     expect(isPublicPlanId("studio")).toBe(false);
   });
 
@@ -39,7 +40,7 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(UNLISTED_SMOKE.seal_monthly)).toBeNull();
   });
 
-  it("grants starter 100 and launch 100", () => {
+  it("grants starter 100, launch 100, and Farm 0", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.starter.priceId)).toEqual({
       planId: "starter",
       grant: 100,
@@ -47,6 +48,10 @@ describe("catalog freeze 2026-09-28", () => {
     expect(grantForPriceId(LIVE_PRICE_MAP.qron_launch.priceId)).toEqual({
       planId: "qron_launch",
       grant: 100,
+    });
+    expect(grantForPriceId(LIVE_PRICE_MAP.strainchain_farm.priceId)).toEqual({
+      planId: "strainchain_farm",
+      grant: 0,
     });
   });
 

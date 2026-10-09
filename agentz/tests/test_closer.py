@@ -31,8 +31,7 @@ async def test_send_closing_package_uses_the_agreements_own_recipient_not_deal_d
     agreement = tmp_path / "acme.md"
     agreement.write_text("recipient: real.contact@acme.com\n\nAgreement body.\n", encoding="utf-8")
 
-    with patch("agentz.core.closer.create_stripe_payment_link", new=AsyncMock(return_value={"url": "https://stripe.test/pay"})), \
-         patch("agentz.core.closer.create_envelope_from_markdown", new=AsyncMock(return_value={"envelope_id": "env_123"})) as mock_envelope:
+    with patch("agentz.core.closer.create_envelope_from_markdown", new=AsyncMock(return_value={"envelope_id": "env_123"})) as mock_envelope:
         result = await closer.send_closing_package(
             supabase=None,
             deal_data={"id": "42", "name": "Acme Corp", "email": "wrong-guessed@acme-corp-guessed.com"},
@@ -41,6 +40,8 @@ async def test_send_closing_package_uses_the_agreements_own_recipient_not_deal_d
 
     mock_envelope.assert_awaited_once_with(str(agreement), "real.contact@acme.com")
     assert result["package_sent"] is True
+    assert result["plan_id"] == "starter"
+    assert result["payment_url"] == "https://authichain.com/checkout/starter"
 
 
 @pytest.mark.asyncio
@@ -48,17 +49,32 @@ async def test_send_closing_package_skips_when_agreement_has_no_recipient(tmp_pa
     agreement = tmp_path / "no_recipient.md"
     agreement.write_text("No frontmatter here.\n", encoding="utf-8")
 
-    with patch("agentz.core.closer.create_stripe_payment_link", new=AsyncMock()) as mock_stripe, \
-         patch("agentz.core.closer.create_envelope_from_markdown", new=AsyncMock()) as mock_envelope:
+    with patch("agentz.core.closer.create_envelope_from_markdown", new=AsyncMock()) as mock_envelope:
         result = await closer.send_closing_package(
             supabase=None,
             deal_data={"id": "42", "name": "Acme Corp"},
             agreement_path=str(agreement),
         )
 
-    mock_stripe.assert_not_awaited()
     mock_envelope.assert_not_awaited()
     assert result["package_sent"] is False
+    assert result["payment_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_send_closing_package_uses_farm_gated_checkout_not_minted_price(tmp_path):
+    agreement = tmp_path / "farm.md"
+    agreement.write_text("recipient: mike@farm.example\n\nFarm agreement.\n", encoding="utf-8")
+
+    with patch("agentz.core.closer.create_envelope_from_markdown", new=AsyncMock(return_value={"envelope_id": "env_farm"})):
+        result = await closer.send_closing_package(
+            supabase=None,
+            deal_data={"id": "7", "name": "Mendo", "industry": "cannabis", "problem": "farm plan library"},
+            agreement_path=str(agreement),
+        )
+
+    assert result["plan_id"] == "strainchain_farm"
+    assert result["payment_url"] == "https://authichain.com/checkout/strainchain_farm"
 
 
 @pytest.mark.asyncio

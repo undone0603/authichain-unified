@@ -1,6 +1,7 @@
 /**
  * Public catalog freeze — 2026-09-28, widened 2026-09-29 to eight SKUs with
- * musa_claim_file ($299/SKU) and musa_audit_bundle ($2,500/engagement).
+ * musa_claim_file ($299/SKU) and musa_audit_bundle ($2,500/engagement),
+ * then 2026-10-02 to nine SKUs with strainchain_farm ($149/mo).
  * Only these SKUs may appear on /pricing, /onboard, /generate, /checkout.
  * First stranger SKU is QRON Starter $29. Do not list $1 or Seal $99.
  *
@@ -67,6 +68,13 @@ export const LIVE_PRICE_MAP: Record<
     grant: 0,
     stripeLink: "https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y",
   },
+  strainchain_farm: {
+    priceId: "price_1UHjJWGqTruSqV8TePctYzO5",
+    productId: "prod_VIJxYUXwNWQzh4",
+    mode: "subscription",
+    grant: 0,
+    stripeLink: "https://buy.stripe.com/00waEXafv2l03a2bDC1ND3z",
+  },
   musa_claim_file: {
     priceId: "price_1UL0vVGqTruSqV8T5WYjrq6i",
     productId: "prod_VLiM8xIrFVFa1M",
@@ -111,16 +119,14 @@ export function isUnlistedSmokePrice(priceId: string | null | undefined): boolea
 }
 
 /**
- * Grant table for both webhook rails. Farm is live Stripe but not public;
- * still grant so a paid Farm session is not lost. Unlisted smoke = ignore.
+ * Grant table for both webhook rails. Unlisted smoke = ignore.
  */
 export function grantForPriceId(
   priceId: string | null | undefined,
 ): { planId: PlanId; grant: number } | null {
   if (!priceId || isUnlistedSmokePrice(priceId)) return null;
   const plan = planByStripePriceId(priceId);
-  if (!plan) return null;
-  if (!isPublicPlanId(plan.id) && plan.id !== "strainchain_farm") return null;
+  if (!plan || !isPublicPlanId(plan.id)) return null;
   return { planId: plan.id, grant: PLAN_CREDITS[plan.id] };
 }
 

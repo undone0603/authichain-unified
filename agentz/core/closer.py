@@ -9,8 +9,13 @@ import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, Optional
+from agentz.core.commercial_catalog import (
+    founder_queue_reason,
+    gated_checkout_url,
+    select_checkout_url,
+    select_public_checkout_plan,
+)
 from agentz.core.docusign import create_envelope_from_markdown
-from agentz.workflows.handlers.qron_stripe import create_stripe_payment_link
 
 logger = logging.getLogger("agentz.closer")
 
@@ -80,15 +85,28 @@ async def send_closing_package(
         )
         return {
             "deal_id": deal_id,
+            "plan_id": None,
             "payment_url": None,
             "envelope_id": None,
             "envelope_status": "skipped_no_recipient",
             "package_sent": False,
         }
 
-    # 1. Generate Stripe Checkout Link ($2,500 Setup)
-    stripe_res = await create_stripe_payment_link(2500)
-    payment_url = stripe_res.get("url")
+    # 1. Gated catalogue URL only. Never mint a one-off Stripe price
+    # (the old create_stripe_payment_link(2500) charged $25, not $2,500).
+    industry = str(deal_data.get("industry") or "")
+    problem = str(deal_data.get("problem") or deal_data.get("name") or "")
+    plan_id = select_public_checkout_plan(industry, problem) or "starter"
+    payment_url = select_checkout_url(industry, problem) or gated_checkout_url(
+        "starter"
+    )
+    queue_reason = founder_queue_reason(
+        {"industry": industry, "problem": problem}
+    )
+    if queue_reason and not select_public_checkout_plan(industry, problem):
+        # Packaged family: still default the human to Starter rather than
+        # inventing a price. Founder queue is logged, not a new SKU.
+        logger.info("Closer founder-queue note for %s: %s", deal_name, queue_reason)
 
     # 2. Dispatch DocuSign Agreement to the agreement's own recipient
     ds_res = await create_envelope_from_markdown(agreement_path, recipient)
@@ -104,14 +122,15 @@ async def send_closing_package(
         )
     else:
         logger.warning(
-            "Closing package for %s NOT fully dispatched -- payment link %s was "
-            "created, but the agreement was not sent (docusign status: %s).",
+            "Closing package for %s NOT fully dispatched -- checkout %s was "
+            "selected, but the agreement was not sent (docusign status: %s).",
             deal_name, payment_url, ds_res.get("status"),
         )
 
     return {
         "deal_id": deal_id,
         "recipient": recipient,
+        "plan_id": plan_id,
         "payment_url": payment_url,
         "envelope_id": ds_res.get("envelope_id"),
         "envelope_status": ds_res.get("status"),

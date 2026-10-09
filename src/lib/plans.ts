@@ -2,8 +2,9 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 //
-// 2026-09-25: public listed SKUs are free(5), qron_launch $19/mo,
-// starter $29, creator $99, dpp_readiness $299, strainchain_passport $49.
+// 2026-10-02: public listed SKUs are free(5), qron_launch $19/mo,
+// starter $29, creator $99, dpp_readiness $299, strainchain_passport $49,
+// strainchain_farm $149/mo, musa_claim_file $299/SKU, musa_audit_bundle $2,500.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
@@ -170,6 +171,7 @@ export const PLANS: Plan[] = [
     stripe_mode: "subscription",
     tier: "pro",
     brand: "strainchain",
+    listed: true,
     features: ["Unlimited cultivars and passports", "Auto-updates on every new CoA", "Lineage and batch history across the full library", "Discrepancies surfaced rather than smoothed over", "Export or withdraw your record at any time"],
     cta: "Start a Farm Plan",
   },
@@ -223,6 +225,7 @@ export const PUBLIC_PLAN_IDS = [
   "creator",
   "dpp_readiness",
   "strainchain_passport",
+  "strainchain_farm",
   "musa_claim_file",
   "musa_audit_bundle",
 ] as const;
