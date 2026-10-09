@@ -682,3 +682,18 @@ test("RES-224: govchain home pages drop 'weeks to hours' and 'certifications'", 
     assert.doesNotMatch(next, re);
   }
 });
+
+// GB-20 / RES-225: the trust-trail block is gone from both govchain homes,
+// and the worker home keeps the #1719 non-affiliation footer.
+const GOVCHAIN_NON_AFFILIATION =
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.";
+
+test("RES-225: no trust trail on either govchain home; footer present on worker home", async () => {
+  const { readFileSync } = await import("node:fs");
+  const html = await (await worker.fetch(new Request("https://govchain.us/"), ENV as never)).text();
+  const next = readFileSync(new URL("../../../src/app/_home/GovchainHome.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /trust trail/i);
+  assert.doesNotMatch(next, /trust trail/i);
+  assert.doesNotMatch(html, /id="audit"/);
+  assert.ok(html.includes(GOVCHAIN_NON_AFFILIATION), "worker home must carry the non-affiliation footer");
+});

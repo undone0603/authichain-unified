@@ -2445,16 +2445,6 @@ ${estateFeatures(
   "pros",
 )}
 
-<section class="estate-section" id="audit">
-  <div class="wrap">
-    <h2>Public trust trail</h2>
-    <p class="section-sub">From operational record to chain anchor (in development).</p>
-    <div class="audit-pipeline">
-      <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
-    </div>
-  </div>
-</section>
-
 <section class="estate-section" id="start">
   <div class="wrap">
     <h2>Start on the live path</h2>
