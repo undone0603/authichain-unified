@@ -40,7 +40,7 @@ This repository is the canonical build/deploy surface for:
               │ status / revocation   │
               │ provenance / policy   │
               │ scan-risk signals     │
-              └──────────┬───────────┘
+              └──────────┬──────────┘
                          │
               ┌──────────┼──────────┐
               ▼          ▼          ▼
@@ -143,6 +143,16 @@ See:
 - `docs/NETWORK.md`
 
 ## Security
+
+### Deploy invariant
+
+A push to `main`, including a docs-only commit, runs `deploy-cloudflare.yml` and `deploy-edge-worker.yml`. Do not add `paths` or `paths-ignore`.
+
+Secret scan (gitleaks 8.28.0, `--no-git`) runs first and must fail closed. Deploy permissions stay `contents: read`. No token values in Git.
+
+A green Wrangler deploy means that commit's bundle was published. It is not a SOC 2, FedRAMP, FDA, government, or cannabis COA certificate. A verifier pass is the checks this checkout ran.
+
+`authichain-consensus-engine` is an identity collision. Confirm it in Cloudflare before any retirement. This file does not retire it.
 
 Security is part of the protocol presentation, not an afterthought.
 
