@@ -566,7 +566,7 @@ export function estateNav(
 
 export function estateHero(opts: {
   eyebrow: string;
-  title: string;
+  title?: string;
   lede: string;
   lead?: EstateCta;
   actions: EstateCta[];
@@ -595,7 +595,7 @@ export function estateHero(opts: {
   return `<header class="estate-hero hero" id="hero">
   <div class="wrap hero-content">
     <p class="estate-badge hero-badge">${esc(opts.eyebrow)}</p>
-    <h1>${opts.title}</h1>
+    ${opts.title ? `<h1>${opts.title}</h1>` : ""}
     <p class="estate-lede hero-sub">${opts.lede}</p>
     <div class="estate-actions hero-cta">${lead}${emailForm}${actions}</div>
   </div>

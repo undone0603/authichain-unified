@@ -2516,7 +2516,6 @@ const HTML = `<!DOCTYPE html>
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
-    title: "Signed QR seals for real products.",
     lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
