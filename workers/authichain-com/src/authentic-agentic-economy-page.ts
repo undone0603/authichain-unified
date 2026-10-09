@@ -32,7 +32,7 @@ export const AUTHENTIC_AGENTIC_ECONOMY = {
   canonicalUrl: "https://authichain.com/authentic-agentic-economy",
   title: "The authentic agentic economy — AuthiChain",
   description:
-    "AuthiChain is the authentic agentic economy: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call so agents can trust physical products.",
+    "",
 } as const;
 
 export function isAuthenticAgenticEconomyPath(pathname: string): boolean {
@@ -95,7 +95,7 @@ const JSON_LD = {
           name: "What is the authentic agentic economy?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Agents can already pay and call tools. They still need a machine-verifiable check that a physical product, passport, or claim is real. AuthiChain is that check: signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.",
+            text: "Agents can already pay and call tools. They still need a machine-verifiable check that a physical product, passport, or claim is real.",
           },
         },
         {
@@ -208,7 +208,7 @@ ${estateNav(
 ${estateHero({
   eyebrow: "The authentic agentic economy",
   title: "Agents can pay. They still need to know if it is real.",
-  lede: "AuthiChain is the authenticity layer for the agentic economy: signed seals on Polygon, 5-agent consensus, MCP tools, and x402 pay-per-call verification. The human money path is EU DPP Readiness — live Stripe checkout at $299.",
+  lede: "The human money path is EU DPP Readiness — live Stripe checkout at $299.",
   emailCheckout: {
     action: "https://authichain.com/checkout/dpp_readiness",
     label: "Start DPP checkout — $299",
