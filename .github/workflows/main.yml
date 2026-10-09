@@ -19,7 +19,9 @@ concurrency:
   # One active CI Main run per source branch. A newer commit supersedes an
   # older run even when GitHub opened a new PR for the same feature branch.
   group: ci-main-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ci:
