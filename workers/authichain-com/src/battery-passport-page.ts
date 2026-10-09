@@ -129,7 +129,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Is this legal advice or a certification?",
-    a: "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice.",
+    a: "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542.",
   },
   {
     q: "Do I have to book a call?",
@@ -285,7 +285,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       {
         "@type": "Service",
         name: "EU Battery Passport Readiness",
-        serviceType: "EU Digital Battery Passport readiness assessment",
+        serviceType: "Workspace for EU Digital Battery Passport figures",
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
