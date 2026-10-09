@@ -14,8 +14,6 @@ Traditional QR codes are ugly. Standard AI QR codes are unreliable and break und
 
 We built **QRON** (qron.space) — a "Living Portal" generator that uses Hugging Face ControlNet combined with Quantitative Colorimetry to ensure 100% scannability without sacrificing the artistic aesthetic.
 
-Every QRON is cryptographically signed via Ed25519 and anchored to Polygon, so brands can verify authenticity at scan time.
-
 We've pushed error-correction to L4 across artistic styles (Cyber Neon, Technical Blueprint, Watercolor, Steampunk, Mandala) — curious what thresholds this community thinks are realistic.
 
 Live Demo: https://qron.space
@@ -32,7 +30,7 @@ We've been pushing the boundaries of functional generative art. Our new engine, 
 
 The most interesting part: we're applying autostereography to hide the functional QR anchors completely within the noise pattern. Look past the image, and the scannable TrueMark emerges.
 
-Tech stack: FLUX.1 → ControlNet conditioning → Ed25519 signature → Polygon mint
+Tech stack: FLUX.1 → ControlNet conditioning
 
 Every generated code is unique, 4K resolution, and permanently anchored on-chain. The artistic element lives in the negative space around the QR grid — not through it — which is how we maintain L4 error correction.
 

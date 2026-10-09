@@ -361,9 +361,8 @@ ${ESTATE_FONTS_LINK}
 <header class="hero"><div class="wrap">
   <span class="pill">Model Context Protocol</span>
   <h1>Give your agent a way to check what's real.</h1>
-  <p class="lede">AuthiChain verifies Ed25519-signed provenance records against their Polygon
-  mainnet anchor, and scores EU Digital Product Passport readiness against the dated
-  obligations. Both are free over MCP — no key, no account, no payment header.</p>
+  <p class="lede">AuthiChain scores EU Digital Product Passport readiness against the dated
+  obligations. Free over MCP — no key, no account, no payment header.</p>
   <div class="btns">
     <a class="btn primary" href="${esc(CURSOR_DEEPLINK)}">Add to Cursor</a>
     <a class="btn" href="#install">Claude, VS Code &amp; everything else</a>

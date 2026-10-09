@@ -74,8 +74,6 @@ export default function DPPPage() {
              <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
                 <span>Polygon Anchored</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>Ed25519 Secured</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
                 <span>EU 2024/1789 Compliant</span>
              </div>
              <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">

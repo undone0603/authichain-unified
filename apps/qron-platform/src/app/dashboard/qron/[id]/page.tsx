@@ -363,7 +363,7 @@ export default function QronManagementPage({
               ) : (
                 <div className="space-y-6">
                   <p className="text-sm text-zinc-500 leading-relaxed max-w-lg">
-                    Anchor this creation&apos;s Ed25519 Edge hash to the Polygon blockchain to create an immutable, publicly verifiable proof of authenticity.
+                    Anchor this creation&apos;s hash to the Polygon blockchain.
                   </p>
                   <button 
                     onClick={handleAnchor}

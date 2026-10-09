@@ -368,11 +368,6 @@ export default function DPPPage() {
                 exclusive: false,
               },
               {
-                label: "Verifiable",
-                desc: "Ed25519 cryptographic signature on every data record — mathematically provable, no central trust required.",
-                exclusive: false,
-              },
-              {
                 label: "Tamper-evident (goal)",
                 desc: "Our goal: every passport hashed and anchored on Polygon, so any alteration shows up on-chain.",
                 exclusive: false,

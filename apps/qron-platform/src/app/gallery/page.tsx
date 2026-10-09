@@ -203,12 +203,6 @@ export default async function MarketplacePage() {
                     className="object-contain p-12 transition-transform duration-700 group-hover:scale-110 drop-shadow-[0_0_30px_rgba(201,162,39,0.2)]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent flex flex-col justify-end p-8">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="p-1 rounded bg-gold/10 text-gold border border-gold/20">
-                            <Shield className="w-3 h-3" />
-                        </span>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Signed Ed25519</span>
-                    </div>
                   </div>
                 </div>
 

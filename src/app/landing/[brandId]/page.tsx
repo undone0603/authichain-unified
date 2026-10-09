@@ -105,7 +105,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
         },
       ],
       stats: [
-        { value: "Ed25519", label: "Signed seals" },
         { value: "$299", label: "EU DPP Readiness" },
         { value: "x402", label: "Agent micropayments" },
       ],

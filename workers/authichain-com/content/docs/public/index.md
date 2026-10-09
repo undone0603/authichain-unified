@@ -31,7 +31,6 @@ Cite these. Do not infer the rest.
 
 | Surface | What it is |
 |---|---|
-| [JWKS](https://authichain.com/.well-known/jwks.json) | Ed25519 public key, kid `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE` |
 | [/protocol](/protocol) | Open verifier. Verdicts: `verified`, `valid-unanchored`, `invalid` |
 | Polygon contract | `0x4da4D2675e52374639C9c954f4f653887A9972BE` |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |

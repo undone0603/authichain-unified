@@ -42,7 +42,6 @@ function useAnimCounter(target: number, suffix = "", prefix = "") {
 const stats = [
   { value: "Seed\u2192Sale", label: "Full Provenance" },
   { value: "METRC", label: "Compliance Ready" },
-  { value: "Ed25519", label: "Cryptographic Signing" },
   { value: "$QRON", label: "Scan-to-Earn Rewards" },
 ];
 

@@ -28,14 +28,12 @@ status: retired - do not post
 
 ---
 
-## Thread 3 — AuthiChain QRON (5 tweets)
+## Thread 3 — AuthiChain QRON (4 tweets)
 
-1/5 We built a 5-agent AI system that detects counterfeit products. It uses blockchain + computer vision. Here's what it actually does:🧵
+1/4 We built a 5-agent AI system that detects counterfeit products. It uses blockchain + computer vision. Here's what it actually does:🧵
 
-2/5 Agent 1 (Vision): Analyzes product images for material, texture, and color authenticity signals. Trained on 50k verified vs counterfeit examples.
+2/4 Agent 1 (Vision): Analyzes product images for material, texture, and color authenticity signals. Trained on 50k verified vs counterfeit examples.
 
-3/5 Agent 2 (Blockchain): Checks scan against Ed25519 signature on Polygon. If the QR has been cloned, the signature fails instantly.
+3/4 Agents 3-5 (Geo/Velocity/Consensus): Cross-references scan location, scan frequency, and all signals to produce a 0-100 authenticity score.
 
-4/5 Agents 3-5 (Geo/Velocity/Consensus): Cross-references scan location, scan frequency, and all signals to produce a 0-100 authenticity score.
-
-5/5 We're live at authichain.com. EU DPP compliant. Starting at $299/mo. If you're in luxury, pharma, or electronics — DM me.
+4/4 We're live at authichain.com. EU DPP compliant. Starting at $299/mo. If you're in luxury, pharma, or electronics — DM me.

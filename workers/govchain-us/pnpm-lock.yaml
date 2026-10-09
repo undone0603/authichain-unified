@@ -6,9 +6,4 @@ settings:
 
 importers:
 
-  .:
-    {}
-
-packages:
-
-snapshots:
+  .: {}

@@ -59,7 +59,6 @@ That stack can satisfy a human. It fails an agent, a customs integration, and an
 
 Live and citeable:
 
-- W3C Verifiable Credential-shaped records, Ed25519 signatures, public JWKS at [/.well-known/jwks.json](https://authichain.com/.well-known/jwks.json).
 - Polygon certificate contract [`0x4da4D2675e52374639C9c954f4f653887A9972BE`](https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE).
 - Open verification protocol at [/protocol](/protocol) (v0.1.0 draft).
 - Free readiness tool at [/dpp-check](/dpp-check).
