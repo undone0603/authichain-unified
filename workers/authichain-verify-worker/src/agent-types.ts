@@ -4,6 +4,10 @@ export const AGENT_CAPABILITIES = [
   "CREATE_AUDIT_RECORD",
   "PROPOSE_LIFECYCLE_ACTION",
   "RESOLVE_IDENTIFIER",
+  // These capabilities permit proposing an economic action, never executing it.
+  "PROPOSE_TRANSFER",
+  "PROPOSE_DEDUCT",
+  "PROPOSE_MINT",
 ] as const;
 
 export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
