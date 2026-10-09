@@ -410,12 +410,12 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain-registered product or certificate to check its authenticity status.",
+      "Look up an AuthiChain record. On-chain verification is in development.",
     canonicalPath: "/verify",
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record.</p>\n" +
+      "<p>Enter a product ID to look up its record. On-chain verification is in development.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
