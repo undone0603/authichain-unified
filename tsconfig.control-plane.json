@@ -1,0 +1,10 @@
+{
+  "extends": "./workers/authichain-verify-worker/tsconfig.json",
+  "include": [
+    "workers/authichain-verify-worker/src/agent-types.ts",
+    "workers/authichain-verify-worker/src/agent-message.ts",
+    "workers/authichain-verify-worker/src/economic-action.ts",
+    "workers/authichain-verify-worker/src/crypto-message.ts",
+    "workers/authichain-verify-worker/src/policy-engine.ts"
+  ]
+}
