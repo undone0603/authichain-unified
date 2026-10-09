@@ -17,8 +17,8 @@
       "id": "batteries",
       "date": "2027-02-18",
       "precision": "day",
-      "label": "Industrial & EV Batteries (≥2 kWh)",
-      "detail": "Mandatory DPP for EV, industrial storage and LMT batteries. Carbon footprint, material declaration and recycled content required.",
+      "label": "LMT, EV and industrial (>2 kWh) batteries",
+      "detail": "Mandatory passport for LMT, EV and industrial (>2 kWh) batteries. Carbon footprint, recycled content and due diligence fields apply later, on their own dates (Commission FAQ Q7.2).",
       "source": "https://eur-lex.europa.eu/eli/reg/2023/1542/oj",
       "urgent": true
     },
@@ -27,30 +27,33 @@
       "date": "2027-07-01",
       "endDate": "2027-12-31",
       "precision": "quarter",
-      "label": "Electronics & ICT Products",
-      "detail": "Smartphones, tablets and laptops. Repairability scores, spare parts availability and recycled material content.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "label": "Electronics & ICT Products (indicative)",
+      "detail": "Indicative (ESPR working plan, delegated act not adopted). No adopted act sets a DPP date for smartphones, tablets or laptops; see the Ecodesign Working Plan 2025-2030, COM(2025) 187.",
+      "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
+      "urgent": false,
+      "hideStatus": true
     },
     {
       "id": "textiles",
       "date": "2028-01-01",
       "endDate": "2029-12-31",
       "precision": "year",
-      "label": "Textiles, Apparel & Footwear",
-      "detail": "Fibre composition, recycled content, country of origin and care instructions via DPP.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "label": "Textiles, Apparel & Footwear (indicative)",
+      "detail": "Indicative (ESPR working plan, delegated act not adopted). COM(2025) 187 lists textiles/apparel with an indicative 2027 adoption year; the delegated act will set the application date.",
+      "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
+      "urgent": false,
+      "hideStatus": true
     },
     {
       "id": "construction",
       "date": "2029-01-01",
       "endDate": "2030-12-31",
       "precision": "year",
-      "label": "Construction Products & Furniture",
-      "detail": "Structural products, insulation and furniture enter scope under the ESPR working plan.",
-      "source": "https://eur-lex.europa.eu/eli/reg/2024/1781/oj",
-      "urgent": false
+      "label": "Furniture (indicative)",
+      "detail": "Indicative (ESPR working plan, delegated act not adopted). COM(2025) 187 lists furniture with an indicative 2028 adoption year; the delegated act will set the application date.",
+      "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
+      "urgent": false,
+      "hideStatus": true
     }
   ]
 }
