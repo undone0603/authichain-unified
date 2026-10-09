@@ -6,9 +6,14 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: lint-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -70,7 +75,7 @@ jobs:
       # node:test suites outside scripts/autonomy and scripts/ci that no other
       # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
       - name: Check other node:test suites
-        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts
+        run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
 
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.

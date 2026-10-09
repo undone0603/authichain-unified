@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: false
+concurrency:
+  # Prevent overlapping worker deployments from concurrent pushes/dispatches.
+  group: deploy-workers-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   id-token: write
@@ -159,6 +164,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: [secret-scan, deploy-matrix]
     # GitHub fails the whole workflow when `strategy.matrix` expands to an
     # empty array, even if the job is then shown as skipped. The selector
