@@ -142,25 +142,7 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-type AgentId = "guardian" | "sentinel" | "archivist" | "scout" | "arbiter";
-type AgentVote = "pass" | "fail" | "unknown";
 type SealStatus = "verified" | "failed" | "unknown";
-
-const AGENTS: { id: AgentId; name: string; role: string }[] = [
-  { id: "guardian", name: "Guardian", role: "Seal integrity" },
-  { id: "sentinel", name: "Sentinel", role: "Clone / anomaly" },
-  { id: "archivist", name: "Archivist", role: "Registry record" },
-  { id: "scout", name: "Scout", role: "Custody graph" },
-  { id: "arbiter", name: "Arbiter", role: "Consensus" },
-];
-
-const ALL_PASS: Record<AgentId, AgentVote> = {
-  guardian: "pass",
-  sentinel: "pass",
-  archivist: "pass",
-  scout: "pass",
-  arbiter: "pass",
-};
 
 const SAMPLE_NOTE =
   "Desk sample. query_provenance never attests an unknown ID, and it labels this row a sample — not a live registry write.";
@@ -177,7 +159,6 @@ type DeskSeal = {
   plan?: "dpp_readiness" | "strainchain_passport";
   gift?: string;
   fields: { label: string; value: string }[];
-  votes: Record<AgentId, AgentVote>;
 };
 
 const DESK_SEALS: DeskSeal[] = [
@@ -197,7 +178,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Protocol", value: "AuthiChain attestation 0.1" },
       { label: "MCP", value: "query_provenance status desk_sample, verified false" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "AC-DPP-BATT-8841",
@@ -217,7 +197,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "ESPR gate", value: "18 Feb 2027 · batteries ≥2 kWh" },
       { label: "DPP class", value: "Industrial / LMT battery" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "SC-FARM-SAMPLE-0912",
@@ -236,7 +215,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Pack", value: "Jar + CoA, not a dispensary license" },
       { label: "SKU", value: "Passport $49. Farm is not a public offer." },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "GC-MIA-DLA-0005",
@@ -257,7 +235,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Origin brief", value: "FTC 16 CFR Part 323 · EO 14392 context" },
       { label: "Packet", value: "govchain.us/gift · free DoD packet" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "AC-DPP-BATT-8841X",
@@ -267,7 +244,7 @@ const DESK_SEALS: DeskSeal[] = [
     holder: "Unknown presenter",
     origin: "Claimed Grand Rapids, MI",
     finding:
-      "Sentinel rejected a copied QR. The original pack still verifies. This mark does not.",
+      "The original pack still verifies. This mark does not.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -275,13 +252,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Signature", value: "Does not verify against JWKS" },
       { label: "Registry", value: "No matching tokenURI" },
     ],
-    votes: {
-      guardian: "fail",
-      sentinel: "fail",
-      archivist: "fail",
-      scout: "unknown",
-      arbiter: "fail",
-    },
   },
 ];
 
@@ -315,13 +285,6 @@ function lookupDeskSeal(raw: string): DeskSeal {
       { label: "Lookup", value: "Public query_provenance" },
       { label: "Attestation", value: "None — unknown stays unknown" },
     ],
-    votes: {
-      guardian: "unknown",
-      sentinel: "unknown",
-      archivist: "unknown",
-      scout: "unknown",
-      arbiter: "unknown",
-    },
   };
 }
 
@@ -407,7 +370,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Classification",
         title: "The signature breaks",
-        body: "The signature does not verify against JWKS. There is no matching tokenURI. Sentinel fails the copy.",
+        body: "The signature does not verify against JWKS. There is no matching tokenURI.",
       },
       {
         phase: "Refusal",
@@ -441,19 +404,6 @@ function renderStory(seal: DeskSeal): string {
     <ol class="grid" style="margin-top:1rem;list-style:none;padding:0">${items}</ol>
     <p class="muted">End of this tag's story. Another ID does not play these chapters.</p>
   </section>`;
-}
-
-function voteLabel(vote: AgentVote): string {
-  if (vote === "pass") return "Pass";
-  if (vote === "fail") return "Fail";
-  return "Unknown";
-}
-
-function agentRail(votes: Record<AgentId, AgentVote>): string {
-  return `<ol class="agents">${AGENTS.map(
-    a =>
-      `<li class="agent"><p class="kicker">${esc(a.role)}</p><p style="margin:.35rem 0 0;font-family:Newsreader,serif;font-size:1.15rem">${esc(a.name)}</p><p class="vote-${votes[a.id]}">${voteLabel(votes[a.id])}</p></li>`
-  ).join("")}</ol>`;
 }
 
 function sealCta(seal: DeskSeal): string {
@@ -500,8 +450,7 @@ function renderCertificate(seal: DeskSeal): string {
   <section style="margin-top:2rem">
     <p class="kicker">Verification · ${esc(seal.id)}</p>
     <h2 style="margin:.4rem 0 0">${esc(headline)}</h2>
-    <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. No agent may upgrade an unknown ID to verified.</p>
-    ${agentRail(seal.votes)}
+    <p class="muted">No agent may upgrade an unknown ID to verified.</p>
     <article class="card" style="margin-top:1.25rem">
       <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""}</p>
       <h3 style="margin:.6rem 0 .35rem">${esc(seal.product)}</h3>
@@ -558,14 +507,6 @@ footer .bar{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between
 input,select{height:2.75rem;width:100%;padding:0 .75rem;border:1px solid var(--line);border-radius:10px;background:var(--char);color:var(--paper);font:inherit}
 label{display:block;margin:.75rem 0 .35rem;font-size:.85rem}
 .row{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}
-.agents{display:grid;gap:.5rem;margin:1.25rem 0 0}
-@media(min-width:640px){.agents{grid-template-columns:repeat(5,1fr)}}
-.agent{border:1px solid var(--line);border-radius:12px;padding:.75rem;background:var(--ink);animation:rise .45s ease both}
-.agent:nth-child(1){animation-delay:.32s}.agent:nth-child(2){animation-delay:.64s}.agent:nth-child(3){animation-delay:.96s}.agent:nth-child(4){animation-delay:1.28s}.agent:nth-child(5){animation-delay:1.6s}
-@keyframes rise{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.agent{animation:none}}
-.vote-pass,.vote-fail,.vote-unknown{font-family:IBM Plex Mono,ui-monospace,Menlo,monospace;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;margin:.65rem 0 0}
-.vote-pass{color:var(--ok)}.vote-fail{color:#c45c5c}.vote-unknown{color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
 .chip{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;font-size:.8rem;color:var(--paper)}
 .fields{display:grid;gap:1px;background:var(--line);margin-top:1rem;border-radius:12px;overflow:hidden}
@@ -725,11 +666,11 @@ function verify(request: Request): string {
     "/desk/verify",
     `<p class="kicker"></p>
      <h1>Verify</h1>
-     <p class="muted">Guardian, Sentinel, Archivist, Scout, Arbiter. Desk samples are labeled. query_provenance never attests an unknown ID.</p>
+     <p class="muted">Desk samples are labeled. query_provenance never attests an unknown ID.</p>
      <form id="vf" class="card" style="max-width:28rem" method="get" action="/desk/verify">
        <label for="cert">Certificate ID</label>
        <input id="cert" name="id" value="${inputValue}" autocomplete="off" maxlength="64">
-       <div class="row"><button class="btn" type="submit"></button>
+       <div class="row"><button class="btn" type="submit">Check</button>
        <a class="btn ghost" href="/protocol">Open Verification Protocol</a></div>
      </form>
      <p class="muted" style="margin-top:1rem">Scan stays on this desk. Samples first:</p>
