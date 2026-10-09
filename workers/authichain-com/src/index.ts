@@ -3251,6 +3251,34 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 }
 
 /**
+ * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
+ * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
+ * a plain 404 "No record found" page instead; it never implies a record exists.
+ */
+function verifyLookupTimeoutResponse(): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>No record found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
+</style></head><body><main>
+<h1>No record found</h1>
+<p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
+<a class="btn" href="/verify">Look up another ID</a>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
@@ -3278,6 +3306,9 @@ async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     if (pathname === "/p" || pathname.startsWith("/p/")) {
       return passportLookupTimeoutResponse(pathname);
+    }
+    if (pathname === "/verify" || pathname.startsWith("/verify/")) {
+      return verifyLookupTimeoutResponse();
     }
     throw err;
   } finally {

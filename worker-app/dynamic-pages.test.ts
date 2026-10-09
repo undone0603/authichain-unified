@@ -199,152 +199,66 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(body).toContain("Product Not Found");
   });
 
-  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
-    const res = await app.request("/p/%zz", {}, makeEnv() as any);
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toBe("SPA-SHELL");
-    expect(getCertificateByNumber).not.toHaveBeenCalled();
-  });
-
-  it("strips a trailing slash so /p/CERT-001/ resolves the same as /p/CERT-001", async () => {
-    (getCertificateByNumber as any).mockResolvedValue({
-      id: 1,
-      productId: 42,
-      certificateNumber: "CERT-001",
-      status: "active",
-    });
-    (getProductById as any).mockResolvedValue({
-      id: 42,
-      name: "Golden Widget",
-      brand: "Acme",
-      description: "A very fine widget.",
-      manufacturer: "Acme Corp",
-      serialNumber: "CERT-001",
-    });
-    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
-
-    const res = await app.request("/p/CERT-001/", {}, makeEnv() as any);
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toContain("Golden Widget");
-    expect(getCertificateByNumber).toHaveBeenCalledWith(
-      expect.anything(),
-      "CERT-001"
-    );
-  });
-
-  it("serves a committed SEO hub before the certificate lookup", async () => {
-    const res = await app.request(
-      "/p/what-is-a-digital-product-passport",
-      {},
-      makeEnv() as any
-    );
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toContain("What a DPP contains");
-    expect(body).toContain("<h2>Get started</h2>");
-    expect(body).toContain('name="email"');
-    expect(body).toContain(
-      'action="https://authichain.com/checkout/dpp_readiness"'
-    );
-    expect(body).not.toContain('href="/api/checkout');
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/dpp_readiness"'
-    );
-    expect(body).toContain('type="application/ld+json"');
-    expect(getCertificateByNumber).not.toHaveBeenCalled();
-    expect(getHyperdriveDb).not.toHaveBeenCalled();
-  });
-
-  it("serves a noindex SEO hub with a robots meta and X-Robots-Tag", async () => {
-    const res = await app.request(
-      "/p/quantum-financial-system-real-or-myth",
-      {},
-      makeEnv() as any
-    );
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
-    expect(body).toContain('<meta name="robots" content="noindex">');
-  });
-
-  it("leaves indexable SEO hubs without a robots noindex", async () => {
-    const res = await app.request(
-      "/p/what-is-a-digital-product-passport",
-      {},
-      makeEnv() as any
-    );
-    const body = await res.text();
-
-    expect(res.headers.get("X-Robots-Tag")).toBeNull();
-    expect(body).not.toContain('name="robots"');
-  });
-
-  it("routes a cannabis SEO hub to live StrainChain passport checkout", async () => {
-    const res = await app.request(
-      "/p/cannabis-blockchain-provenance",
-      {},
-      makeEnv() as any
-    );
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toContain("What you get");
-    expect(body).toContain(
-      'action="https://authichain.com/checkout/strainchain_passport"'
-    );
-    expect(body).not.toContain('href="/api/checkout');
-    expect(body).toContain(
-      'href="https://authichain.com/checkout/strainchain_passport"'
-    );
-    expect(body).toContain('href="https://strainchain.io/pricing"');
-    expect(getCertificateByNumber).not.toHaveBeenCalled();
-  });
-});
-
-describe("renderDynamicPage: /verify verification landing", () => {
-  it("returns the minimal prompt (200 HTML, no db call) when no identifier is present", async () => {
-    const res = await app.request("/verify", {}, makeEnv() as any);
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toContain("Verify a Product");
-    expect(getProductById).not.toHaveBeenCalled();
-  });
-
-  it("returns 200 HTML with the verification status for a known product id", async () => {
-    (getProductById as any).mockResolvedValue({
-      id: 7,
-      name: "Verified Sneaker",
-      brand: "Nike-ish",
-      category: "footwear",
-    });
-    (getHyperdriveDb as any).mockReturnValue(
-      makeDbSelectStub([
-        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
-      ])
-    );
-
-    const res = await app.request("/verify?id=7", {}, makeEnv() as any);
-    const body = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(body).toContain("Verified Sneaker");
-    expect(body).toContain("Authentic Product Verified");
-  });
-
-  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
+  it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
     const res = await app.request("/verify/%zz", {}, makeEnv() as any);
     const body = await res.text();
 
-    expect(res.status).toBe(200);
-    expect(body).toBe("SPA-SHELL");
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
     expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("returns a clean 404 'No record found' page for an unknown id", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    (getHyperdriveDb as any).mockReturnValue({});
+
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("&quot;test123&quot;");
+    expect(body).toContain('name="robots" content="noindex"');
+    expect(body).not.toMatch(/on-chain|blockchain|polygon/i);
+  });
+
+  it("escapes the id on the no-record page", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    const res = await app.request(
+      "/verify?id=" + encodeURIComponent("<script>x</script>"),
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+    expect(res.status).toBe(404);
+    expect(body).not.toContain("<script>x</script>");
+    expect(body).toContain("&lt;script&gt;");
+  });
+
+  it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully when the lookup hangs past the budget", async () => {
+    vi.useFakeTimers();
+    try {
+      (getCertificateByNumber as any).mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(3000);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("No record found");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

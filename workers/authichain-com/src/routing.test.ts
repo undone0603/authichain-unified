@@ -969,6 +969,22 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
+  const env = {
+    APP_WORKER_TIMEOUT_MS: "40",
+    APP_WORKER: { fetch: () => new Promise(() => {}) },
+  } as unknown as Env;
+  for (const path of ["/verify?id=test123", "/verify/CERT-001"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 404);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+    const html = await res.text();
+    assert.match(html, /No record found/);
+    assert.match(html, /name="robots" content="noindex"/);
+    assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
+  }
+});
+
 test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const passport = planPaymentLink("strainchain_passport") ?? "";
