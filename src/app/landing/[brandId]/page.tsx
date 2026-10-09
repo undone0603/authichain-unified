@@ -74,11 +74,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
         "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
       features: [
         {
-          icon: "🔐",
-          title: "Signed seals",
-          desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
-        },
-        {
           icon: "📱",
           title: "Issue → Bind → Verify",
           desc: "Issue a seal, bind it to the product, verify from any camera. Agents can pay per call on /x402.",

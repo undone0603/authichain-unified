@@ -1,5 +1,4 @@
 import {
-  ShieldCheck,
   ScanLine,
   Award,
   QrCode,
@@ -32,11 +31,6 @@ export function AuthichainHome() {
           icon: <Award className="h-6 w-6" />,
           title: "EU DPP Readiness",
           desc: "Live self-serve checkout. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.",
-        },
-        {
-          icon: <ShieldCheck className="h-6 w-6" />,
-          title: "Issue a signed seal",
-          desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable — no invented customer logos.",
         },
         {
           icon: <ScanLine className="h-6 w-6" />,

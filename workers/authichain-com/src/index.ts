@@ -159,7 +159,7 @@ const SEO = {
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Agents can pay. They still need to know if it is real. Signed seals, MCP tools, x402 at $0.05 USDC, and EU DPP Readiness on live Stripe checkout.',
+    'Agents can pay. They still need to know if it is real.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
     'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
@@ -180,7 +180,7 @@ const SEO = {
     },
     {
       q: 'What is the authentic agentic economy?',
-      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real.',
     },
   ],
 };

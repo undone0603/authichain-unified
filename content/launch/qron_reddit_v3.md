@@ -1,7 +1,7 @@
 ---
 platform: reddit
 subreddits: [r/QRcode, r/generative]
-status: ready
+status: retired
 ---
 
 ## r/QRcode Post
@@ -34,6 +34,6 @@ The most interesting part: we're applying autostereography to hide the functiona
 
 Tech stack: FLUX.1 → ControlNet conditioning → Ed25519 signature → Polygon mint
 
-Every generated code is unique, 4K resolution, and permanently anchored on-chain. The artistic element lives in the negative space around the QR grid — not through it — which is how we maintain L4 error correction.
+The artistic element lives in the negative space around the QR grid — not through it — which is how we maintain L4 error correction.
 
 Try generating a few presets: https://qron.space

@@ -575,11 +575,6 @@ const LANDING_CONTENT: Record<
       "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
     features: [
       {
-        icon: "🔐",
-        title: "Signed seals",
-        desc: "Cryptographically signed seals. Tamper-evident and publicly verifiable.",
-      },
-      {
         icon: "📱",
         title: "Issue → Bind → Verify",
         desc: "Issue a seal, bind it to the product, verify from any camera. Agents can pay per call on /x402.",
@@ -606,7 +601,6 @@ const LANDING_CONTENT: Record<
       },
     ],
     stats: [
-      { value: "Ed25519", label: "Signed seals" },
       { value: "$299", label: "EU DPP Readiness" },
       { value: "x402", label: "Agent micropayments" },
     ],

@@ -332,6 +332,15 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("PM-384: no page claims Ed25519-signed output or signed seals", () => {
+    // RES-143 / PM-384: these phrases described signing that is not live. True
+    // signing wording can return only after DOGFOOD signing is live and Research gates it.
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(/Ed25519-signed|signed seal/i);
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");

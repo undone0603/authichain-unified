@@ -24,7 +24,7 @@ export function isLlmsTxtPath(pathname: string): boolean {
 export function renderLlmsTxt(): string {
   return [
     "# AuthiChain",
-    "> The authentic agentic economy. Signed seals, MCP verify, x402 pay-per-call.",
+    "> The authentic agentic economy.",
     "",
     "## Agent pay (x402)",
     `- Unpaid POST https://authichain.com/api/x402 returns HTTP 402 ($${X402_USD} USDC on Base)`,
