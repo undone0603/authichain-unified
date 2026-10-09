@@ -15,13 +15,11 @@ describe("tryHandleDppRoute", () => {
       expect(res).not.toBeNull();
       const html = await res!.text();
       expect(html).toContain("Payment received");
-      expect(html).toContain(
-        "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
-      );
+      expect(html).toContain("use the link in your confirmation email");
     }
   });
 
-  it("serves thanks HTML at the edge with the activate query string", async () => {
+  it("serves thanks HTML at the edge, pointing to the emailed link", async () => {
     const res = await tryHandleDppRoute(
       req("/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc")
     );
@@ -29,9 +27,7 @@ describe("tryHandleDppRoute", () => {
     expect(res!.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res!.text();
     expect(html).toContain("Payment received");
-    expect(html).toContain(
-      "/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc"
-    );
+    expect(html).toContain("use the link in your confirmation email");
   });
 
   it("keeps the DPP copy when plan is absent or dpp_readiness", async () => {
@@ -40,10 +36,31 @@ describe("tryHandleDppRoute", () => {
       "/dpp/thanks?session_id=cs_test_1&visit_id=dpp_abc&plan=dpp_readiness",
     ]) {
       const html = await (await tryHandleDppRoute(req(path)))!.text();
-      expect(html).toContain("Workspace opened");
-      expect(html).toContain("50 workspace generations");
-      expect(html).toContain("/dpp/activate?");
+      expect(html).toContain(
+        "Thanks. This confirms your $299 payment. Next, use the link in your confirmation email to fill in the short onboarding form. The readiness work itself is in development."
+      );
+      expect(html).toContain(
+        "If you'd rather not wait, email support@authichain.com and we'll refund the full $299."
+      );
+      expect(html).not.toMatch(/workspace is ready/i);
+      expect(html).not.toMatch(/50 (workspace )?generations/i);
+      expect(html).not.toMatch(/AuthiChain workspace/i);
+      expect(html).not.toMatch(/Workspace opened/i);
+      expect(html).not.toMatch(/email you before anything is delivered/i);
+      expect(html).not.toMatch(/reply to your confirmation email/i);
+      expect(html).not.toMatch(/onboarding form below/i);
     }
+  });
+
+  it("serves activate HTML with no workspace or generations claim (ADM-180)", async () => {
+    const html = await (await tryHandleDppRoute(
+      req("/dpp/activate?session_id=cs_test_1&visit_id=dpp_abc")
+    ))!.text();
+    expect(html).toContain("Onboarding form");
+    expect(html).toContain("The readiness work is in development.");
+    expect(html).not.toMatch(/workspace is ready/i);
+    expect(html).not.toMatch(/50 (workspace )?generations/i);
+    expect(html).not.toMatch(/AuthiChain workspace/i);
   });
 
   it("names the right product and credits for a credit-bearing plan", async () => {

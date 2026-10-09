@@ -65,9 +65,6 @@ function thanksHtml(
   visitId: string,
   planId: string
 ): string {
-  const qs = new URLSearchParams({ session_id: sessionId });
-  if (visitId) qs.set("visit_id", visitId);
-
   if (planId && planId !== "dpp_readiness") {
     const plan = PLANS.find(p => p.id === planId);
     const credits = plan ? PLAN_CREDITS[plan.id] : 0;
@@ -101,10 +98,9 @@ function thanksHtml(
   return pageShell(
     "Payment received | AuthiChain",
     `<p class="kicker">Payment received</p>
-     <h1>Workspace opened</h1>
-     <p>Your payment opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Activate it below. The same link is in the confirmation email.</p>
-     <a class="btn" href="/dpp/activate?${qs.toString()}">Activate workspace</a>
-     <p style="margin-top:1.5rem;font-size:.875rem">A confirmation email with the same link is also on the way.</p>`
+     <h1>Payment received</h1>
+     <p>Thanks. This confirms your $299 payment. Next, use the link in your confirmation email to fill in the short onboarding form. The readiness work itself is in development.</p>
+     <p>If you'd rather not wait, email support@authichain.com and we'll refund the full $299.</p>`
   );
 }
 
@@ -118,10 +114,10 @@ function activateHtml(sessionId: string, visitId: string): string {
     );
   }
   return pageShell(
-    "Activate workspace | AuthiChain",
-    `<p class="kicker">Self-serve activation</p>
-     <h1>Activate your workspace</h1>
-     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call.</p>
+    "Onboarding form | AuthiChain",
+    `<p class="kicker">Onboarding form</p>
+     <h1>Onboarding form</h1>
+     <p>Complete this once. The readiness work is in development. This form does not include a written assessment or a scheduled call.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -129,7 +125,7 @@ function activateHtml(sessionId: string, visitId: string): string {
          <textarea name="markets" rows="2" required></textarea></label>
        <label>Current labeling / QR / NFC setup (or "none")
          <textarea name="labeling" rows="2" required></textarea></label>
-       <button class="btn" type="submit">Activate workspace</button>
+       <button class="btn" type="submit">Submit onboarding form</button>
        <p id="msg" style="margin-top:1rem"></p>
      </form>
      <script>
@@ -152,7 +148,7 @@ function activateHtml(sessionId: string, visitId: string): string {
            });
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
-           msg.textContent = 'Activated. This workspace includes 50 workspace generations.';
+           msg.textContent = 'Saved. Thanks, we have your onboarding details.';
          } catch (err) {
            msg.textContent = err.message || 'Activation failed';
          }

@@ -93,18 +93,22 @@ export function renderBillingEmail(
       };
     }
     case "dpp_audit_provisioned": {
+      // $299 DPP Readiness buyer copy (MKT-109, gated RES-216, ruling ADM-180).
+      // No workspace, assessment or generations claim. The From address has
+      // no Reply-To, so the refund line names support@ rather than "reply".
       const activateUrl = ctx.activateUrl || `${appUrl}/dpp/activate`;
-      const subject = `Your AuthiChain workspace is ready — activate now`;
+      const subject = `Your AuthiChain payment confirmation`;
       const body = `<p>${hi}</p>
-        <p>Payment received. The checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>
-        <p>Activate it here. This does not include a written assessment or a scheduled call.</p>
-        ${button(brandId, activateUrl, "Activate workspace")}
-        <p style="font-size:13px;color:#9ca3af;">The activation link records merchant activation for this workspace.</p>`;
+        <p>Thanks for your $299 payment. This email confirms it.</p>
+        <p>Your next step is the onboarding form:</p>
+        ${button(brandId, activateUrl, "Open onboarding form")}
+        <p>The readiness work is in development.</p>
+        <p>If you'd rather not wait, email support@authichain.com and we'll refund the full $299.</p>`;
       return {
         from: emailFrom,
         subject,
         html: shell(brandId, body),
-        text: `${hi}\n\nThe checkout opens an AuthiChain workspace with self-serve activation and 50 workspace generations. Activate here: ${activateUrl}\n\nThis does not include a written assessment or a scheduled call.`,
+        text: `${hi}\n\nThanks for your $299 payment. This email confirms it.\n\nYour next step is the onboarding form: ${activateUrl}\n\nThe readiness work is in development.\n\nIf you'd rather not wait, email support@authichain.com and we'll refund the full $299.`,
       };
     }
     case "payment_failed": {

@@ -1,41 +1,24 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 function ThanksContent() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id") || "";
-  const visitId = searchParams.get("visit_id") || "";
-
-  const activateHref = sessionId
-    ? `/dpp/activate?session_id=${encodeURIComponent(sessionId)}${
-        visitId ? `&visit_id=${encodeURIComponent(visitId)}` : ""
-      }`
-    : "/dpp/activate";
-
   return (
     <div className="mx-auto max-w-xl px-6 py-16 text-center">
       <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">
         Payment received
       </p>
       <h1 className="mt-3 text-3xl font-semibold text-white">
-        Workspace opened
+        Payment received
       </h1>
       <p className="mt-4 text-zinc-400">
-        Your payment opens an AuthiChain workspace with self-serve activation
-        and 50 workspace generations. Activate it below. The same link is in
-        the confirmation email.
+        Thanks. This confirms your $299 payment. Next, use the link in your
+        confirmation email to fill in the short onboarding form. The readiness
+        work itself is in development.
       </p>
-      <Link
-        href={activateHref}
-        className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
-      >
-        Activate workspace
-      </Link>
       <p className="mt-6 text-sm text-zinc-500">
-        A confirmation email with the same link is also on the way.
+        If you&apos;d rather not wait, email support@authichain.com and
+        we&apos;ll refund the full $299.
       </p>
     </div>
   );

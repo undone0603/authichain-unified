@@ -79,16 +79,15 @@ function ActivateForm() {
     return (
       <div className="mx-auto max-w-xl px-6 py-16 text-center">
         <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">
-          Workspace activated
+          Onboarding form
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-white">
-          Activation saved
+          Onboarding saved
         </h1>
         <p className="mt-4 text-zinc-400">
-          This workspace includes self-serve activation and 50 workspace
-          generations
-          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does
-          not include a written assessment or a scheduled call.
+          Saved. Thanks, we have your onboarding details
+          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. The
+          readiness work is in development.
         </p>
         <Link
           href="/dashboard"
@@ -103,15 +102,14 @@ function ActivateForm() {
   return (
     <div className="mx-auto max-w-xl px-6 py-16">
       <p className="text-sm uppercase tracking-[0.2em] text-cyan-300">
-        Self-serve activation
+        Onboarding form
       </p>
       <h1 className="mt-3 text-3xl font-semibold text-white">
-        Activate your workspace
+        Onboarding form
       </h1>
       <p className="mt-3 text-zinc-400">
-        Complete this once. This records merchant activation for this
-        workspace. It includes 50 workspace generations. It does not include a
-        written assessment or a scheduled call.
+        Complete this once. The readiness work is in development. This form
+        does not include a written assessment or a scheduled call.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -152,7 +150,7 @@ function ActivateForm() {
           disabled={!canSubmit || status === "saving"}
           className="w-full rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black disabled:opacity-50"
         >
-          {status === "saving" ? "Activating…" : "Activate workspace"}
+          {status === "saving" ? "Saving…" : "Submit onboarding form"}
         </button>
       </form>
     </div>
