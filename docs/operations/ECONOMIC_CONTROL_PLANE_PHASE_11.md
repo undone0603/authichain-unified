@@ -4,7 +4,7 @@
 
 This change establishes domain contracts and a pure pre-reservation policy decision. It does **not** connect economic execution to a Worker route.
 
-The existing Agent Trust Phase 2 code verifies a signed agent message, issuer/attestation trust, lifecycle, capabilities, and replay. This phase defines what an authenticated agent may *propose* economically.
+The Agent Trust Phase 2 library provides functions for signed-message verification, issuer/attestation trust, lifecycle, capabilities, and replay handling. Those functions are not yet connected to an economic HTTP route. This phase defines what an authenticated agent may *propose* economically.
 
 ## Control flow
 
@@ -53,10 +53,12 @@ Existing attestations do not acquire these new capabilities automatically; issue
 
 1. A valid signature authenticates the bytes, not the economic legitimacy of the request.
 2. Policy eligibility is not balance availability and is not a reservation.
-3. The D1 nonce table prevents duplicate signed-message presentation, but does not reserve budget or make the economic side effect atomic.
-4. The signed audit helper detects payload/signature tampering, but does not itself provide durable storage, an append-only log, key revocation, prior-record chaining, or a commit proof.
+3. The D1 replay-store implementation is designed to prevent duplicate signed-message presentation, but it is not wired to an economic reservation table and is not proof of a deployed D1 runtime guarantee. It does not reserve budget or make an economic side effect atomic.
+4. The signed audit helper detects payload/signature tampering for a well-formed audit payload, but does not itself provide durable storage, an append-only log, key revocation, prior-record chaining, or a commit proof.
+5. Evidence IDs are syntax-checked and policy-counted only; this phase does not resolve them to external evidence, prove provenance, or verify their contents.
+6. The amount ceiling is per action only; there is no aggregate/day budget, account balance read, reservation, or race-free budget enforcement.
 5. No HTTP route is added. The production `/verify` route and its response contract remain unchanged.
-6. No D1 migration is applied. The current `schema/agent-trust.sql` is a schema artifact; it is not evidence of a deployed economic ledger.
+8. No D1 migration is applied. The current `schema/agent-trust.sql` is a schema artifact; it is not evidence of a deployed economic ledger.
 
 ## Next gates before any execution adapter
 
