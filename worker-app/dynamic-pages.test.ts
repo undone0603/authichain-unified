@@ -326,7 +326,13 @@ describe("renderDynamicPage: /verify verification landing", () => {
     });
     (getHyperdriveDb as any).mockReturnValue(
       makeDbSelectStub([
-        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
+        {
+          id: 99,
+          productId: 7,
+          status: "active",
+          certificateNumber: "C-99",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
       ])
     );
 
@@ -335,7 +341,32 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verified Sneaker");
-    expect(body).toContain("Authentic Product Verified");
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain on October 1, 2026. On-chain verification is in development."
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Certificate on record: Verified Sneaker by Nike-ish\. Issued by AuthiChain on October 1, 2026\. On-chain verification is in development\."/
+    );
+    expect(body).not.toContain("Authentic Product Verified");
+  });
+
+  it("leaves out the date clause when the certificate row has no usable date", async () => {
+    (getProductById as any).mockResolvedValue({ id: 8, name: "Undated Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        { id: 100, productId: 8, status: "active", certificateNumber: "C-100" },
+      ])
+    );
+
+    const res = await app.request("/verify?id=8", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain. On-chain verification is in development."
+    );
   });
 
   it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {

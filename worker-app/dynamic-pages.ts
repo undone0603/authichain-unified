@@ -425,6 +425,29 @@ function verifyPromptHtml(): string {
   });
 }
 
+function certificateIssuedLine(cert: {
+  issuedAt?: Date | string | null;
+  createdAt?: Date | string | null;
+}): string {
+  const raw = cert?.issuedAt ?? cert?.createdAt ?? null;
+  const when = raw ? new Date(raw) : null;
+  const dateClause =
+    when && !Number.isNaN(when.getTime())
+      ? " on " +
+        when.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : "";
+  return (
+    "Issued by AuthiChain" +
+    dateClause +
+    ". On-chain verification is in development."
+  );
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
 
@@ -481,15 +504,20 @@ async function renderVerify(c: Context): Promise<Response> {
       .limit(1);
     const verified = !!cert;
     const status = verified
-      ? "Authentic Product Verified"
+      ? "Certificate on record"
       : "Product Found -- No Certificate on Record";
+    // RES-97: a certificate row is a record, not an authenticity verdict.
+    // The date comes from the row itself (issued_at, else created_at); if
+    // neither parses, the date clause is left out rather than guessed.
+    const issuedLine = verified ? certificateIssuedLine(cert) : "";
     const title = product.name + " -- Verification | AuthiChain";
     const description =
       status +
       ": " +
       product.name +
       (product.brand ? " by " + product.brand : "") +
-      ".";
+      "." +
+      (issuedLine ? " " + issuedLine : "");
 
     const body =
       "<main>\n" +
@@ -498,6 +526,9 @@ async function renderVerify(c: Context): Promise<Response> {
       '">' +
       escapeHtml(status) +
       "</p>\n" +
+      (issuedLine
+        ? '<p data-certificate-issued="true">' + escapeHtml(issuedLine) + "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
