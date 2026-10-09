@@ -1,112 +1,67 @@
 # AuthiChain Unified
 
-**The canonical implementation of AuthiChain's physical-world trust layer.**
+Production wrangler deploy is not optional. A docs-only commit on `main` still deploys.
 
-AuthiChain turns a physical product or asset into a verifiable digital identity: a standards-aware identifier resolves to a signed claim, policy and provenance data are evaluated, and an independent verifier returns an auditable result.
+`deploy-cloudflare.yml` and `deploy-edge-worker.yml` run on every push to `main`. They have no `paths` filter and no `paths-ignore`. Do not add one. `workflow_dispatch` is a manual rerun, not a substitute for the push trigger.
 
-This repository is the canonical build/deploy surface for:
+This file is the security README. It does not certify a product, a government document, or a cannabis COA.
 
-- **AuthiChain** — verification, attestations, product identity, API and billing
-- **QRON** — beautiful, programmable verification experiences and QR studio
-- **GovChain** — government/contractor trust workflows and seals
-- **StrainChain** — provenance and product verification for regulated physical goods
-- **AgentZ / MCP** — agentic orchestration and machine-facing access to the same trust primitives
+## Absolute rules
 
-> **Core thesis:** one verification protocol, many commercial surfaces. The vertical products should not fork the trust model.
+These are fail-closed. A convenience exception is a defect.
 
-## Architecture at a glance
+1. Do not path-filter `deploy-cloudflare.yml` or `deploy-edge-worker.yml`. A README change on `main` redeploys the production Workers those workflows publish.
+2. Do not put a credential in Git. No `CLOUDFLARE_API_TOKEN`, Stripe secret, webhook secret, database URL with a password, or private key. Placeholders only.
+3. A secret that reached Git history is compromised until the provider confirms rotation. Deleting the file does not revoke it. This README does not rotate tokens.
+4. Secret scan stays on. A failed gitleaks check blocks the merge. Do not skip it to ship docs.
+5. The two deploy workflows stay enabled. This README does not disable workflows, delete Workers, npm-publish, merge #1481, or move the repo.
+6. Resolution is not verification. A scan result is the checks this verifier ran. It is not a legal certificate, a government authentication, or a certificate of analysis.
+7. `repo_audit_integrate` may refresh `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md` only. It does not authorize a delete. Its Action is `workflow_dispatch` and dry-run. Do not schedule it.
+8. Customer paths are `https://authichain.com/onboard`, `https://authichain.com/dapp`, and `https://authichain.com/verify`. Never a `*.vercel.app` URL.
 
-```text
-                    PHYSICAL WORLD
-                          │
-                 product / asset / unit
-                          │
-                          ▼
-                 GS1 Digital Link
-              GTIN + serial / lot / qualifiers
-                          │
-                          ▼
-                  ┌───────────────┐
-                  │   RESOLUTION  │
-                  │ identifier →  │
-                  │ representation│
-                  └───────┬───────┘
-                          │
-                          ▼
-              ┌──────────────────────┐
-              │ AUTHICHAIN VERIFY    │
-              │ signed claims        │
-              │ issuer / JWKS         │
-              │ status / revocation   │
-              │ provenance / policy   │
-              │ scan-risk signals     │
-              └──────────┬───────────┘
-                         │
-              ┌──────────┼──────────┐
-              ▼          ▼          ▼
-           Humans      Agents     Enterprise
-           /verify     MCP/API    integrations
-              │          │          │
-              └──────────┼──────────┘
-                         ▼
-              QRON · GovChain · StrainChain
-                         │
-                         ▼
-                billing / onboarding /
-                audit / operational data
-```
+## What a deploy proves
 
-### Trust boundary
+A green production wrangler deploy proves the Worker bundle from that commit was published by the workflow. It does not prove the bundle is free of defects, that a seal is genuine, or that a third party audited it.
 
-**Resolution is not verification.** A resolver answers *what identifier/resource is being addressed*. AuthiChain verification evaluates *whether a signed claim is valid, current, attributable and consistent with the evidence available to the verifier*.
-
-A positive status is therefore scoped to the evidence and policy being evaluated. For example, a registered product identifier does not by itself prove manufacturing quality, and a missing identifier is not by itself proof of counterfeiting.
-
-## Repository map
-
-| Layer | Location | Responsibility |
+| Workflow | Trigger | Must stay |
 |---|---|---|
-| Web / customer surfaces | `client/`, `workers/` | QRON and vertical user experiences at the public domains |
-| Verification protocol | `protocol/` | Open-source protocol/reference implementation |
-| Agentic operations | `agentz/` | Workflow orchestration, pilots, operational automation |
-| Machine interface | `mcp/` | MCP access to AuthiChain capabilities |
-| Edge/API | `workers/*` | Cloudflare Workers, routing, verification and integrations |
-| Persistence | Supabase/Postgres + D1 | Operational state, attestations, events and application data |
-| Architecture docs | `docs/ESTATE.md`, `docs/NETWORK.md` | System inventory and deployment topology |
+| `deploy-cloudflare.yml` | every push to `main`, plus `workflow_dispatch` | no path filter |
+| `deploy-edge-worker.yml` | every push to `main`, plus `workflow_dispatch` | no path filter |
+
+`authichain-consensus-engine` is an identity collision. Confirm it in Cloudflare before any retirement. This README does not retire it.
+
+## Trust boundary
+
+AuthiChain turns a physical product or asset into a verifiable digital identity: an identifier resolves to a signed claim, policy and provenance data are evaluated, and an independent verifier returns an auditable result.
+
+A positive status is scoped to the evidence and policy the verifier evaluated. A registered identifier does not prove manufacturing quality. A missing identifier is not proof of counterfeiting.
+
+Surfaces on this trust model: AuthiChain, QRON, GovChain, StrainChain, AgentZ / MCP. The verticals do not fork the trust model.
 
 ## Public surfaces
 
-- **authichain.com** — protocol, verification, certificates, API and billing
-- **qron.space** — QRON creation and programmable experiences
-- **govchain.us** — government/contractor trust workflows
-- **strainchain.io** — provenance and product verification workflows
+- authichain.com — verification, API, billing
+- qron.space — QRON
+- govchain.us — government and contractor workflows
+- strainchain.io — regulated-goods provenance workflows
 
-The domains are commercial and presentation surfaces over the same underlying trust architecture. The canonical customer paths are `/onboard`, `/dapp`, and `/verify`.
+Canonical customer paths: `/onboard`, `/dapp`, `/verify`.
 
-## Standards and verification flow
+## Map
 
-1. **Identify** — a physical unit is represented with a stable identifier; where applicable, use GS1 Digital Link syntax such as `/01/{gtin}/21/{serial}`.
-2. **Resolve** — the identifier resolves to the appropriate representation or linkset.
-3. **Attest** — an issuer signs claims about the identified object.
-4. **Verify** — the verifier checks signatures, issuer keys, status/revocation and applicable policy.
-5. **Interpret** — the system reports the evidence-backed state and any risk signals without conflating registration with physical inspection.
-6. **Act** — humans, agents or enterprise systems consume the result through web, API or MCP interfaces.
+| Layer | Location |
+|---|---|
+| Web | `client/`, `workers/` |
+| Protocol | `protocol/` |
+| AgentZ | `agentz/` |
+| MCP | `mcp/` |
+| Edge | `workers/*` |
+| Data | Supabase Postgres, Drizzle. D1 is not a second product schema. |
+| Topology | `docs/NETWORK.md`, `docs/ESTATE.md` |
 
-## Deployment model
+Runtime authority is Cloudflare Workers. The July 2026 Vercel section in `docs/NETWORK.md` is historical. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step.
 
-**Cloudflare-first.** The production edge is Cloudflare Workers and the repository's worker deployment configuration. Legacy framework code may remain in the repository where it supports compatibility or migration, but it is not the architectural center of gravity.
-
-- Edge/runtime: Cloudflare Workers + Wrangler
-- Web: Vite + React
-- Data: Supabase/Postgres and Cloudflare D1
-- ORM: Drizzle
-- Package manager: pnpm
-- Agent runtime: Python / AgentZ
-- Protocol/API components: TypeScript, Hono and standard cryptographic libraries
-
-See `docs/NETWORK.md` for deployment topology and `docs/ESTATE.md` for the system inventory.
-
-## Getting started
+## Commands
 
 ```bash
 cp .env.example .env
@@ -114,51 +69,16 @@ pnpm install
 pnpm dev
 ```
 
-For database-backed scripts, **never put credentials in source code**. Set `DATABASE_URL` in the local environment or the deployment secret store.
-
-Example:
-
 ```bash
-export DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require'
+python -m agentz.cli run repo_audit_integrate --mode dry-run
+python -m agentz.cli run repo_audit_integrate --mode auto
 ```
 
-## AgentZ
+`dry-run` prints and writes nothing. `auto` rewrites only the banner in `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`.
 
-```bash
-python -m agentz.cli list
-python -m agentz.cli run authichain_pilot_deploy --mode dry-run
-```
+## Report a vulnerability
 
-## Pilot readiness
-
-The canonical readiness path is:
-
-`install → typecheck → lint → tests → production build → deploy smoke test → real product scan`
-
-See:
-
-- `docs/operations/PILOT-READY-BASELINE.md`
-- `docs/attestation/v0.1.md`
-- `docs/ESTATE.md`
-- `docs/NETWORK.md`
-
-## Security
-
-Security is part of the protocol presentation, not an afterthought.
-
-- **No credentials in Git.** Runtime secrets belong in environment/deployment secret stores.
-- **No live secrets in examples.** Use placeholders such as `sk_live_…`, `whsec_…`, or `postgresql://USER:PASSWORD@HOST/DB`.
-- **Rotate exposed credentials immediately.** Removing a secret from the current tree does not invalidate a credential that may already exist in Git history, caches or logs.
-- **Verify before release.** Run secret scanning before merging and keep the existing security checks enabled.
-- **Least privilege.** Prefer narrowly scoped credentials and service bindings over broad account tokens.
-
-If a credential has ever been committed, treat it as compromised until the provider confirms rotation/revocation.
-
-## Project principle
-
-AuthiChain is not fundamentally a blockchain UI. The durable product is the **verification layer**: standardized identity → resolution → signed attestation → independent verification → evidence-backed decision.
-
-Blockchain anchoring, NFTs, QR art, AI agents and vertical applications can extend that layer; they should not redefine its trust boundary.
+Do not open a public issue. Use GitHub private vulnerability reporting. Policy: `docs/project/SECURITY.md`.
 
 ## License
 
