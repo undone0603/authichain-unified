@@ -2316,7 +2316,7 @@ function howItWorks() {
     "How it works",
     "Three steps that already exist on this estate. No new product surface.",
     [
-      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. In development: Ed25519-signed certificates anchored to that contract." },
+      { title: "Issue", body: "Issue a seal for the product. In development: Ed25519-signed certificates." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
       { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
