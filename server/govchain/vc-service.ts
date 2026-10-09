@@ -43,15 +43,9 @@ export async function issueSovereignPassport(data: {
     }
   };
 
-  // Proof generation would happen here using the FIPS-compliant crypto module
-  // For now, we simulate the proof metadata
-  vc.proof = {
-    type: "Ed25519Signature2020",
-    created: new Date().toISOString(),
-    proofPurpose: "assertionMethod",
-    verificationMethod: `${data.issuerDid}#key-1`,
-    jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..simulated_signature"
-  };
+  // No proof is attached. There is no issuer signing key yet, so the
+  // credential is returned unsigned rather than with a placeholder jws that
+  // could be mistaken for a real signature.
 
   return vc;
 }
