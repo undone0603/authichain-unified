@@ -1250,3 +1250,16 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
   );
   assert.match(html, /verify_record/);
 });
+
+// CFA-147 / PM-349 / PM-393: no "certificate contract live/deployed on Polygon"
+// claim and no 0x4da4 contract link until wallet ownership is proven.
+test("home, /anchor, /dpp and the OG image make no Polygon contract claim (CFA-147)", async () => {
+  for (const path of ["/", "/anchor", "/dpp", "/digital-product-passport", "/og-image.svg"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [/live on Polygon/i, /deployed on Polygon/i, /0x4da4/i]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+  }
+});

@@ -2429,7 +2429,7 @@ ${estateTrust([
       <div class="step"><div class="step-num">01</div><h3>SAM.gov ingestion</h3><p>Live ingestion of federal and state notices by NAICS, agency, and keyword.</p></div>
       <div class="step"><div class="step-num">02</div><h3>AI fit-scoring</h3><p>Each opportunity scored 0–100 against your capabilities with a pursue / monitor / skip call.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Capability drafting</h3><p>High-fit opportunities get an AI-drafted capability statement ready for review.</p></div>
-      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring (in development)</h3><p>Contract deployed on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>; hash-anchoring of claims is in development.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>On-chain anchoring (in development)</h3><p>Hash-anchoring of claims is in development.</p></div>
     </div>
   </div>
 </section>

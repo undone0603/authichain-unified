@@ -612,3 +612,15 @@ test("reads go through the public views, never the base tables", async () => {
     f.restore();
   }
 });
+
+// CFA-147 / PM-349 / PM-393: no "Contract deployed on Polygon" claim and no
+// 0x4da4 contract link until wallet ownership is proven.
+test("the apex makes no Polygon contract claim (CFA-147)", async () => {
+  const res = await get("/");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  for (const banned of [/live on Polygon/i, /deployed on Polygon/i, /0x4da4/i]) {
+    assert.doesNotMatch(html, banned, `/ must not contain ${banned}`);
+  }
+  assert.match(html, /Hash-anchoring of claims is in development\./);
+});
