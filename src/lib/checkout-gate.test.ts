@@ -25,16 +25,14 @@ const protection = {
 };
 
 function stripeOk() {
-  return vi
-    .fn<typeof fetch>()
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          url: "https://checkout.stripe.com/c/pay/cs_test_gate",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
-    );
+  return vi.fn<typeof fetch>().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        url: "https://checkout.stripe.com/c/pay/cs_test_gate",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  );
 }
 
 function post(
@@ -317,7 +315,28 @@ describe("tryHandleGatedCheckout — POST", () => {
       fields: new URLSearchParams(),
       successOrigin: "https://authichain.com",
     });
-    expect(claim.get("success_url")).toContain("/made-in-usa-claim-file/thanks");
+    expect(claim.get("success_url")).toContain(
+      "/made-in-usa-claim-file/thanks"
+    );
+  });
+
+  it("lands the StrainChain passport on its own thank-you page, not /dpp/thanks (ADM-172)", () => {
+    const body = buildGatedSessionBody({
+      plan: planById("strainchain_passport")!,
+      email: "a@b.co",
+      fields: new URLSearchParams("visit_id=chk_pass_1"),
+      successOrigin: "https://authichain.com",
+    });
+    const success = body.get("success_url") || "";
+    expect(success).toContain(
+      "https://authichain.com/strainchain-passport/thanks?session_id={CHECKOUT_SESSION_ID}"
+    );
+    expect(success).toContain("visit_id=chk_pass_1");
+    expect(success).not.toContain("/dpp/thanks");
+    expect(body.get("cancel_url")).toContain("/pricing?cancelled=1");
+    expect(body.get("line_items[0][price]")).toBe(
+      "price_1UHjCZGqTruSqV8T35M6AmoJ"
+    );
   });
 
   it("refuses bots, prefetch, foreign origins, honeypot and missing email without calling Stripe", async () => {

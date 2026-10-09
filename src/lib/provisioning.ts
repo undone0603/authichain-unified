@@ -17,13 +17,19 @@
  * dunning status. See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation.
  */
 
-import { PLAN_CREDITS, type PlanId } from "./plans";
+import { PLAN_CREDITS, planById, type PlanId } from "./plans";
 import { type BrandId } from "@shared/brands";
 
 // The webhook passes its existing service-role Supabase client (loosely typed).
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
+
+/** One-time (Stripe mode "payment") catalogue plan. */
+function isOneTimePlan(plan: string | null | undefined): boolean {
+  if (!plan) return false;
+  return planById(plan as PlanId)?.stripe_mode === "payment";
+}
 
 export interface ProvisionInput {
   email?: string | null;
@@ -123,9 +129,26 @@ export async function provisionPurchase(
 
   // 2. Apply entitlements. Reset usage so the new period starts clean.
   const grant = grantFor(input.plan, input.generationsGrant);
+
+  // ADM-172: a one-time buy that grants fewer credits than the profile
+  // already has (e.g. the 0-credit StrainChain passport bought by a Starter
+  // customer) must not wipe those credits or downgrade the existing plan.
+  let keepExisting = false;
+  if (!created && grant !== undefined && isOneTimePlan(input.plan)) {
+    const { data: current } = await supabase
+      .from("profiles")
+      .select("generations_limit, subscription_plan")
+      .eq("id", profileId)
+      .maybeSingle();
+    const existingLimit = Number(current?.generations_limit);
+    if (Number.isFinite(existingLimit) && grant < existingLimit) {
+      keepExisting = true;
+    }
+  }
+
   const update: Record<string, unknown> = {
     brand: input.brand,
-    subscription_plan: input.plan ?? undefined,
+    subscription_plan: keepExisting ? undefined : (input.plan ?? undefined),
     subscription_status: input.isTrial ? "trialing" : "active",
     subscribed_at: new Date().toISOString(),
     last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
@@ -134,7 +157,7 @@ export async function provisionPurchase(
     update.stripe_customer_id = input.stripeCustomerId;
   if (input.stripeSubscriptionId)
     update.stripe_subscription_id = input.stripeSubscriptionId;
-  if (grant !== undefined) {
+  if (grant !== undefined && !keepExisting) {
     update.generations_limit = grant;
     update.generations_used = 0;
   }
