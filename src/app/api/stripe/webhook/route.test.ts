@@ -22,6 +22,9 @@ const {
   mockAnchorSale,
   mockAnchorReversal,
   mockConstructEvent,
+  mockRetrieveCheckoutSession,
+  mockValidateServiceOrderSession,
+  mockAppendServiceOrder,
   db,
   calls,
   fakeClient,
@@ -31,6 +34,12 @@ const {
   const mockAnchorSale = vi.fn().mockResolvedValue(undefined);
   const mockAnchorReversal = vi.fn().mockResolvedValue(undefined);
   const mockConstructEvent = vi.fn();
+  const mockRetrieveCheckoutSession = vi.fn();
+  const mockValidateServiceOrderSession = vi.fn();
+  const mockAppendServiceOrder = vi.fn().mockResolvedValue({
+    recorded: true,
+    orderKey: "service_order:strainchain_passport:cs_service_1",
+  });
   const db = {
     seenEvent: null as null | { event_id: string },
     profile: { id: "prof_1" } as Record<string, unknown> | null,
@@ -139,6 +148,9 @@ const {
     mockAnchorSale,
     mockAnchorReversal,
     mockConstructEvent,
+    mockRetrieveCheckoutSession,
+    mockValidateServiceOrderSession,
+    mockAppendServiceOrder,
     db,
     calls,
     fakeClient,
@@ -176,7 +188,12 @@ vi.mock("next/server", () => ({
 vi.mock("stripe", () => ({
   default: class MockStripe {
     subscriptions = { retrieve: mockRetrieve };
-    checkout = { sessions: { list: vi.fn().mockResolvedValue({ data: [] }) } };
+    checkout = {
+      sessions: {
+        list: vi.fn().mockResolvedValue({ data: [] }),
+        retrieve: mockRetrieveCheckoutSession,
+      },
+    };
     constructor(..._args: unknown[]) {}
   },
 }));
@@ -222,10 +239,18 @@ vi.mock("@/lib/dpp-fulfill-checkout", () => ({
     .fn()
     .mockResolvedValue({ handled: false, profileId: null }),
 }));
+vi.mock("@/lib/service-order", () => ({
+  isServiceOrderPlanId: (value: unknown) =>
+    value === "strainchain_passport" ||
+    value === "strainchain_farm" ||
+    value === "musa_claim_file" ||
+    value === "musa_audit_bundle",
+  validateServiceOrderSession: mockValidateServiceOrderSession,
+  appendServiceOrderEventOnce: mockAppendServiceOrder,
+}));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function invoiceEvent(
   billingReason: string,
   ids: { event: string; invoice: string }
@@ -278,6 +303,17 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAfterCalls.length = 0;
+    mockAppendServiceOrder.mockResolvedValue({
+      recorded: true,
+      orderKey: "service_order:strainchain_passport:cs_service_1",
+    });
+    mockRetrieveCheckoutSession.mockResolvedValue({
+      id: "cs_service_1",
+      metadata: { plan: "strainchain_passport" },
+      line_items: {
+        data: [{ price: { id: "price_1UHjCZGqTruSqV8T35M6AmoJ" } }],
+      },
+    });
     calls.profileUpdates.length = 0;
     calls.paymentInserts.length = 0;
     calls.affiliateSelects = 0;
@@ -355,6 +391,66 @@ describe("POST /api/stripe/webhook invoice.paid branching", () => {
         objectId: "in_cycle_001",
         amountCents: 14900,
         invoiceId: "in_cycle_001",
+      })
+    );
+  });
+
+  it("retrieves the authoritative service Session before lifecycle validation", async () => {
+    const { provisionPurchase } = await import("@/lib/provisioning");
+    vi.mocked(provisionPurchase).mockResolvedValueOnce({
+      profileId: "prof_service",
+      created: false,
+      status: "provisioned",
+    });
+    mockConstructEvent.mockResolvedValueOnce({
+      id: "evt_service_1",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: "cs_service_1",
+          metadata: { plan: "strainchain_passport" },
+          customer_email: "buyer@example.com",
+          amount_total: 4900,
+          currency: "usd",
+          payment_status: "paid",
+        },
+      },
+    });
+    const res = await POST({
+      text: async () => "{}",
+      headers: { get: () => "sig_test" },
+    } as unknown as NextRequest);
+
+    expect((await res.json()).received).toBe(true);
+    expect(mockRetrieveCheckoutSession).toHaveBeenCalledWith("cs_service_1", {
+      expand: ["line_items"],
+    });
+    expect(mockValidateServiceOrderSession).toHaveBeenCalledWith(
+      "strainchain_passport",
+      expect.objectContaining({
+        id: "cs_service_1",
+        line_items: {
+          data: [{ price: { id: "price_1UHjCZGqTruSqV8T35M6AmoJ" } }],
+        },
+      })
+    );
+    expect(mockAppendServiceOrder).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        plan: "strainchain_passport",
+        stage: "payment_succeeded",
+        sessionId: "cs_service_1",
+      })
+    );
+    expect(mockAppendServiceOrder).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({
+        plan: "strainchain_passport",
+        stage: "provisioned",
+        profileId: "prof_service",
       })
     );
   });
