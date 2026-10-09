@@ -1,4 +1,4 @@
-import { Landmark, FileSearch, Sparkles, FileText, Trophy, Bell } from 'lucide-react';
+import { FileSearch, Sparkles, FileText, Trophy } from 'lucide-react';
 import { BrandLanding } from './BrandLanding';
 
 /**
@@ -38,16 +38,6 @@ export function GovchainHome() {
           icon: <Trophy className="h-6 w-6" />,
           title: 'Public datalog',
           desc: 'Intake records stay on the /onboard path. This page does not promise a live government mint or cold outbound.',
-        },
-        {
-          icon: <Bell className="h-6 w-6" />,
-          title: 'Real-Time Alerts',
-          desc: 'Get notified the moment a matching opportunity, amendment, or deadline change is posted — never miss a cutoff.',
-        },
-        {
-          icon: <Landmark className="h-6 w-6" />,
-          title: 'Compliance Built In',
-          desc: 'Every action is recorded, giving you an audit trail for contracting-officer scrutiny.',
         },
       ]}
       closingLine="Pursue Smarter. Prove Everything."
