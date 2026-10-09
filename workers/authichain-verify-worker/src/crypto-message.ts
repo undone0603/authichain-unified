@@ -111,6 +111,12 @@ function isAuditPayload(value: unknown): value is EconomicAuditPayload {
   ) {
     return false;
   }
+  if (
+    (payload.decision === "DENY" && payload.reason_codes.length === 0) ||
+    (payload.decision === "ELIGIBLE_FOR_RESERVATION" && payload.reason_codes.length !== 0)
+  ) {
+    return false;
+  }
   if (parseEconomicTimestamp(payload.decided_at) === null) return false;
   return payload.reservation_state === "NOT_RESERVED" &&
     payload.execution_state === "NOT_EXECUTED";
