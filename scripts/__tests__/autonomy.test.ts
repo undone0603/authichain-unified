@@ -6,7 +6,10 @@ import {
   planReconcile,
   validateManifest,
 } from "../autonomy/reconcile.mjs";
-import { evaluate } from "../autonomy/deliverability-breaker.mjs";
+import {
+  evaluate,
+  outreachSenders,
+} from "../autonomy/deliverability-breaker.mjs";
 import {
   MAX_WINDOW_DAYS,
   launchMode,
@@ -269,6 +272,35 @@ describe("deliverability breaker", () => {
     expect(v.stats.sent).toBe(12);
     expect(v.tripped).toBe(false);
   });
+
+  it("counts each Resend email id once when both keys return it", () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `em_${i}`,
+      created_at: new Date(now - 86_400_000).toISOString(),
+      last_event: i === 0 ? "bounced" : "delivered",
+      from: "hello@authichain.com",
+    }));
+    const v = evaluate([...rows, ...rows], cfg, { now });
+    expect(v.stats.sent).toBe(10);
+    expect(v.stats.bounces).toBe(1);
+  });
+
+  it("uses OUTREACH_SENDERS, else the per-segment outreach from-addresses", () => {
+    expect(
+      outreachSenders({
+        OUTREACH_SENDERS: " a@x.test , ",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["a@x.test"]);
+    expect(
+      outreachSenders({
+        OUTREACH_FROM_GOVCHAIN: "g@x.test",
+        OUTREACH_FROM_STRAINCHAIN: "",
+        OUTREACH_FROM_QRON: "q@x.test",
+      })
+    ).toEqual(["g@x.test", "q@x.test"]);
+    expect(outreachSenders({})).toEqual([]);
+  });
 });
 
 describe("ops pulse", () => {
@@ -510,9 +542,8 @@ describe("fulfilment watchdog", async () => {
 });
 
 describe("approval queue", async () => {
-  const { decide, latchHeld, latchSearchQuery } = await import(
-    "../autonomy/approvals.mjs"
-  );
+  const { decide, latchHeld, latchSearchQuery } =
+    await import("../autonomy/approvals.mjs");
   const issue = (labels: string[]) => ({
     labels: labels.map(name => ({ name })),
   });
