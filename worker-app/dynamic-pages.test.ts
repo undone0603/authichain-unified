@@ -442,6 +442,25 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(body).toContain('rel="canonical"');
   });
 
+  it("RES-177: /landing/govchain does not claim a certificate contract live on Polygon", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Public Records on Blockchain.");
+    expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
+  it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(import.meta.dirname, "dynamic-pages.ts"),
+      "utf8"
+    );
+    expect(src).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
   it("returns 404 HTML for an unconfigured brand id", async () => {
     const res = await app.request("/landing/not-a-brand", {}, makeEnv() as any);
     const body = await res.text();

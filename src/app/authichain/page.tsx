@@ -5,14 +5,12 @@ import Link from 'next/link';
 import { 
   Shield, 
   Server, 
-  Database, 
   Lock, 
   Zap, 
   Globe, 
   ArrowRight,
   Code,
   CheckCircle,
-  Activity,
   Terminal
 } from 'lucide-react';
 
@@ -64,19 +62,6 @@ export default function AuthichainEnterprise() {
               API Documentation
             </Link>
           </div>
-
-          {/* Trust row: architecture facts only. The ISO 27001 / NIST SP 800-131A /
-              SOC2 Type II badges that were here had no substantiating record in this
-              repo, matching the DFARS and SBIR badges removed from TrustRail in
-              b31b2c2. Do not re-add a certification badge without the report. */}
-          <div className="mt-20 flex flex-col items-center">
-             <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">
-                <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                   <Activity className="w-4 h-4 text-green-500" />
-                   certificate contract live on Polygon; product certification through verify is in development
-                </div>
-             </div>
-          </div>
         </div>
       </section>
 
@@ -109,13 +94,6 @@ export default function AuthichainEnterprise() {
             <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">Ed25519 Signing</h3>
             <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter">
               Every asset is signed with Ed25519 elliptic curve cryptography, ensuring non-repudiation and global verifiability without a central authority.
-            </p>
-          </div>
-          <div className="protocol-card p-10 group hover:border-gold/40 transition-all">
-            <Database className="w-10 h-10 text-gold mb-8 group-hover:scale-110 transition-transform" />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">Anchor</h3>
-            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter">
-              Certificate contract live on Polygon; product certification through verify is in development.
             </p>
           </div>
           <div className="protocol-card p-10 group hover:border-gold/40 transition-all">
