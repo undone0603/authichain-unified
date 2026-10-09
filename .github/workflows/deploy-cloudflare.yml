@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# Serialize production deploys so an older commit can never land after a newer one.
+# Never cancel a running deploy (a cancelled deploy can leave a Worker half-bound).
+concurrency:
+  group: deploy-cloudflare-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   secret-scan:
     name: Secret scan
