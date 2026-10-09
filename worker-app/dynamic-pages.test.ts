@@ -338,13 +338,94 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(body).toContain("Authentic Product Verified");
   });
 
-  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
+  it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
     const res = await app.request("/verify/%zz", {}, makeEnv() as any);
     const body = await res.text();
 
-    expect(res.status).toBe(200);
-    expect(body).toBe("SPA-SHELL");
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
     expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("returns a clean 404 'No record found' page for an unknown id", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    (getHyperdriveDb as any).mockReturnValue({});
+
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("&quot;test123&quot;");
+    expect(body).toContain('name="robots" content="noindex"');
+    expect(body).not.toMatch(/on-chain|blockchain|polygon/i);
+  });
+
+  it("escapes the id on the no-record page", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    const res = await app.request(
+      "/verify?id=" + encodeURIComponent("<script>x</script>"),
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+    expect(res.status).toBe(404);
+    expect(body).not.toContain("<script>x</script>");
+    expect(body).toContain("&lt;script&gt;");
+  });
+
+  it("treats Postgres 22P02 (numeric id vs uuid products.id) as 'No record found', not 'try again'", async () => {
+    const pgErr = Object.assign(
+      new Error('invalid input syntax for type uuid: "1"'),
+      { code: "22P02" }
+    );
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("Failed query"), { cause: pgErr })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("No record was found on the AuthiChain registry");
+    expect(body).not.toContain("try again in a minute");
+  });
+
+  it("keeps the retry page for other numeric-id lookup errors", async () => {
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("connection reset"), { code: "ECONNRESET" })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully when the lookup hangs past the budget", async () => {
+    vi.useFakeTimers();
+    try {
+      (getCertificateByNumber as any).mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(3000);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("No record found");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
