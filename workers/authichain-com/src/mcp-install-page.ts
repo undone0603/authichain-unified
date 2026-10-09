@@ -33,7 +33,6 @@ import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
 import {
   ANCHOR_EXAMPLE_ID,
   ANCHOR_EXAMPLE_TX,
-  CERT_CONTRACT,
   TOOLS,
 } from "./mcp-routes";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
@@ -450,8 +449,7 @@ ${ESTATE_FONTS_LINK}
 </div></section>
 
 <footer><div class="wrap">
-  <p>Certificates are ERC-721 on Polygon at <code>${esc(CERT_CONTRACT)}</code>.
-  Verification is free and always will be: <a href="https://authichain.com/protocol">read the open
+  <p>Verification is free and always will be: <a href="https://authichain.com/protocol">read the open
   verifier</a>, or run it offline with <code>npx authichain-verify</code>.</p>
   <p style="margin:0"><a href="${esc(MCP_ENDPOINT)}">MCP discovery</a> ·
   <a href="https://authichain.com/protocol">Protocol</a> ·
