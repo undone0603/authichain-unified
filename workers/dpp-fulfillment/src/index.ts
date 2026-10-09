@@ -3,6 +3,8 @@
  * Not an audit. Price id is unchanged.
  */
 
+import Stripe from "stripe";
+
 export interface Env {
   KV: KVNamespace;
   STRIPE_WEBHOOK_SECRET: string;
@@ -18,21 +20,17 @@ export interface Env {
 const OFFER = "dpp_readiness_2026";
 const PRODUCT_NAME = "EU DPP Workspace";
 
-async function verifyStripeSignature(body: string, header: string | null, secret: string): Promise<boolean> {
-  if (!header || !secret) return false;
-  const parts = Object.fromEntries(header.split(",").map(p => {
-    const i = p.indexOf("=");
-    return [p.slice(0, i), p.slice(i + 1)] as [string, string];
-  }));
-  const timestamp = parts["t"];
-  const signatures = header.match(/v1=([a-f0-9]+)/g)?.map(s => s.slice(3)) ?? [];
-  if (!timestamp || signatures.length === 0) return false;
-  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
-  const payload = `${timestamp}.${body}`;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
-  return signatures.some(s => s === expected);
+/** Stripe's default replay window; signatures older than this are rejected. */
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+const subtleCrypto = Stripe.createSubtleCryptoProvider();
+
+/**
+ * PM-338: official Stripe verification (constant-time compare, timestamp
+ * window, multiple v1 signatures) instead of the hand-rolled HMAC. Throws on
+ * any missing/invalid/stale signature so the caller fails closed.
+ */
+async function constructStripeEvent(body: string, header: string, secret: string): Promise<Stripe.Event> {
+  return Stripe.webhooks.constructEventAsync(body, header, secret, STRIPE_WEBHOOK_TOLERANCE_SECONDS, subtleCrypto);
 }
 
 async function isPaused(env: Env): Promise<boolean> {
@@ -170,11 +168,16 @@ async function dailyReport(env: Env): Promise<void> {
 }
 async function handleWebhook(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const body = await request.text();
-  if (!(await verifyStripeSignature(body, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET))) {
+  // Fail closed: no secret configured means nothing is accepted (500 so Stripe retries once fixed).
+  if (!env.STRIPE_WEBHOOK_SECRET) return new Response("Webhook not configured", { status: 500 });
+  const header = request.headers.get("Stripe-Signature");
+  if (!header) return new Response("Missing Stripe-Signature", { status: 400 });
+  let event: any;
+  try {
+    event = await constructStripeEvent(body, header, env.STRIPE_WEBHOOK_SECRET);
+  } catch {
     return new Response("Unauthorized", { status: 401 });
   }
-  let event: any;
-  try { event = JSON.parse(body); } catch { return new Response("Bad request", { status: 400 }); }
   const evtKey = `evt:${event.id}`;
   if (await alreadyDone(env, evtKey)) return Response.json({ status: "already_processed" });
   ctx.waitUntil((async () => {
