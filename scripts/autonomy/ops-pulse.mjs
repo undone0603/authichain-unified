@@ -13,7 +13,12 @@
 //      PULSE_DRY_RUN=true to print instead of touching issues.
 
 import { appendFileSync, readFileSync } from "node:fs";
-import { loadManifest, flatten, fetchRemoteWorkflows } from "./reconcile.mjs";
+import {
+  loadManifest,
+  flatten,
+  fetchRemoteWorkflows,
+  operatorHold,
+} from "./reconcile.mjs";
 import { checkFulfilment } from "./revenue-watch.mjs";
 
 export const PROBES = [
@@ -142,12 +147,14 @@ export function evaluateWorkflows(
   manifestRows,
   remote,
   latestRuns,
-  callOnly = new Set()
+  callOnly = new Set(),
+  hold = new Set()
 ) {
   const byFile = new Map(remote.map(w => [w.path.split("/").pop(), w]));
   const problems = [];
   for (const r of manifestRows) {
     if (!r.managed || r.desired !== "on" || r.lane === "ship") continue;
+    if (hold.has(r.file)) continue;
     const w = byFile.get(r.file);
     if (w && w.state !== "active") {
       problems.push({
@@ -339,7 +346,8 @@ async function main() {
       rows,
       remote,
       await latestRunsFor(repo, token, files),
-      callOnly
+      callOnly,
+      operatorHold(manifest)
     );
   }
 

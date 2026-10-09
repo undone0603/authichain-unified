@@ -3,6 +3,7 @@ import {
   flatten,
   listWorkflowFiles,
   loadManifest,
+  operatorHold,
   planReconcile,
   validateManifest,
 } from "../autonomy/reconcile.mjs";
@@ -173,6 +174,18 @@ describe("launch mode", () => {
   it("the real manifest's launch window is within bounds", () => {
     expect(validateLaunchMode(loadManifest())).toEqual([]);
   });
+
+  it("holds the 2026-10-08 manual disables and still classifies every file", () => {
+    const manifest = loadManifest();
+    expect([...(manifest.operator_hold?.workflows ?? [])].sort()).toEqual([
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml",
+    ]);
+    expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
+  });
 });
 
 describe("planReconcile", () => {
@@ -197,6 +210,14 @@ describe("planReconcile", () => {
       { file: "b.yml", id: 3, lane: "growth", from: "active", to: "disable" },
     ]);
     expect(unknownRemote).toEqual(["ghost.yml"]);
+  });
+
+  it("does not re-enable a workflow on the operator hold", () => {
+    const manifest = { ...mini(), operator_hold: { workflows: ["a.yml"] } };
+    const held = remote.map(w =>
+      w.id === 3 ? { ...w, state: "disabled_manually" } : w
+    );
+    expect(planReconcile(manifest, held).changes).toEqual([]);
   });
 
   it("is a no-op when GitHub already matches", () => {
@@ -324,6 +345,18 @@ describe("ops pulse", () => {
     expect(
       evaluateWorkflows(rows, disabled, new Map()).map(p => p.kind)
     ).toEqual(["disabled"]);
+    expect(
+      evaluateWorkflows(
+        rows,
+        disabled,
+        new Map(),
+        new Set(),
+        new Set(["a.yml"])
+      )
+    ).toEqual([]);
+    expect(operatorHold({ operator_hold: { workflows: ["a.yml"] } })).toEqual(
+      new Set(["a.yml"])
+    );
   });
 
   it("keeps the newest completed run on main when the branch query is stale", () => {
