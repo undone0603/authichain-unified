@@ -14,7 +14,7 @@
     },
     {
       "name": "mint_certificate",
-      "description": ""
+      "description": "In development. Does not mint a certificate yet; returns a placeholder message."
     },
     {
       "name": "classify_product",

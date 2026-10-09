@@ -4,7 +4,8 @@
  * Folded from the Grok App Builder preview. Command tokens (ink / paper /
  * steel). Not a second homepage — existing /verify /pricing /dpp stay.
  * Checkout is a confirm page (#1255). GET does not call Stripe. POST starts
- * the session. $QRON is not a payment rail (#1143). Theater SKUs are not listed.
+ * the session. Theater SKUs are not listed. /desk is internal: noindex and
+ * not in the public sitemap (RES-47 #8).
  */
 import {
   catalogPaymentLinkHtml,
@@ -30,7 +31,6 @@ const PAYTO = X402_PUBLISHED_PAY_TO;
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const SMART = "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
 const POLYGON_NFT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const QRON = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const SEED = "AC-7C2A91E4";
 
@@ -56,11 +56,6 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "x402 agent pay",
     state: "live",
     detail: "$0.05 USDC on Base. PayTo is the tokenomics EOA. Do not rebind.",
-  },
-  {
-    surface: "$QRON",
-    state: "live",
-    detail: "Polygon ERC-20. Not a payment rail. Staking UI is theater.",
   },
   {
     surface: "SEO hubs /p",
@@ -124,7 +119,8 @@ const HUBS = [
   },
 ];
 
-export const DESK_SITEMAP = [
+/** Every /desk page the handler serves (tests walk these). */
+export const DESK_PATHS = [
   "/desk",
   "/desk/status",
   "/desk/pricing",
@@ -132,6 +128,9 @@ export const DESK_SITEMAP = [
   "/desk/token",
   "/desk/hubs",
 ] as const;
+
+/** /desk is an internal ops desk; keep it out of the public sitemap (RES-47 #8). */
+export const DESK_SITEMAP: readonly string[] = [];
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -534,6 +533,7 @@ function shell(
     .join("");
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="https://authichain.com${esc(path)}">
@@ -566,7 +566,7 @@ function home(): string {
     "/desk",
     `<p class="kicker">Self-serve desk</p>
      <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:.4rem 0 1rem">Issue. Bind. Verify.</h1>
-     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base. $QRON is not a payment rail.</p>
+     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base.</p>
      <div class="row">${dppForm}
        <p style="align-self:end">${catalogPaymentLinkHtml({
          planId: "dpp_readiness",
@@ -610,8 +610,8 @@ function status(): string {
      <p class="muted">As of ${DESK_AS_OF}. SAM legal entity is ZACHARY KIETZMAN. AuthiChain is the brand. Cloudflare is the deploy authority.</p>
      <div class="grid" style="margin-top:1.5rem">${rows}</div>
      <div class="card" style="margin-top:1rem">
-       <p class="kicker">Three rails — do not mix</p>
-       <p>Stripe (humans) · x402 USDC on Base (agents) · $QRON on Polygon (not settlement).</p>
+       <p class="kicker">Two rails — do not mix</p>
+       <p>Stripe (humans) · x402 USDC on Base (agents).</p>
        <p class="mono">payTo / tokenomics ${PAYTO}</p>
        <p class="mono">NFT deployer ${DEPLOYER}</p>
        <p class="mono">Coinbase Smart Wallet ${SMART}</p>
@@ -682,15 +682,13 @@ function verify(request: Request): string {
 function token(): string {
   return shell(
     "Rails — AuthiChain desk",
-    "Stripe, x402 USDC, and $QRON are three rails. Do not mix them.",
+    "Stripe and x402 USDC are separate rails. Do not mix them.",
     "/desk/token",
-    `<h1>$QRON is not a payment rail.</h1>
+    `<h1>Payment rails</h1>
      <div class="grid" style="margin-top:1rem">
        <div class="card"><p class="kicker">Stripe · humans</p><p>Passport $49 · DPP $299 · QRON packs. Stripe acct, not these wallets.</p></div>
        <div class="card"><p class="kicker">x402 · agents</p><p>$0.05 Circle USDC on Base 8453. Health ready. Do not rebind PayTo.</p>
          <p class="mono">${PAYTO}</p><p class="mono">USDC ${USDC}</p><a href="/x402">authichain.com/x402</a></div>
-       <div class="card"><p class="kicker">$QRON · Polygon</p><p>1,000,000,000 supply. Held almost entirely by the tokenomics EOA. Staking UI is theater — not live tokenomics.</p>
-         <p class="mono">${QRON}</p></div>
      </div>
      <div class="card" style="margin-top:1rem">
        <p class="kicker">Do not call two keys ops</p>

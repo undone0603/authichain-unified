@@ -129,7 +129,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Is this legal advice or a certification?",
-    a: "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice.",
+    a: "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542.",
   },
   {
     q: "Do I have to book a call?",
@@ -285,7 +285,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       {
         "@type": "Service",
         name: "EU Battery Passport Readiness",
-        serviceType: "EU Digital Battery Passport readiness assessment",
+        serviceType: "Workspace for EU Digital Battery Passport figures",
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
@@ -393,7 +393,6 @@ ${gapMapSection()}
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
       <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This page supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
-      <p class="section-sub">The only published demonstration record has both of those checks. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a> and the <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">Polygon transaction</a>.</p>
     </div>
   </section>
 

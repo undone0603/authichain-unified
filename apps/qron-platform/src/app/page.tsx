@@ -9,9 +9,7 @@ import {
   CheckCircle,
   Shield,
   Zap,
-  Lock,
   Package,
-  Vote,
   ArrowRight,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -362,11 +360,6 @@ export default function Home() {
                 icon: <Zap className="w-4 h-4" />,
                 stat: '~25%',
                 label: 'scan lift vs plain QR',
-              },
-              {
-                icon: <Lock className="w-4 h-4" />,
-                stat: 'Ed25519',
-                label: 'cryptographic signature',
               },
               {
                 icon: <Shield className="w-4 h-4" />,
@@ -940,7 +933,6 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-4 mb-12 text-center">
           {[
             { stat: '100%', label: 'Scan guarantee' },
-            { stat: 'Ed25519', label: 'Cryptographic signing' },
             { stat: '< 3s', label: 'Generation time' },
           ].map(({ stat, label }) => (
             <div key={label} className="protocol-card p-4">
@@ -1183,15 +1175,6 @@ export default function Home() {
                         link: 'https://strainchain.io'
                     },
                     {
-                        name: 'GovChain.us',
-                        role: 'Ecosystem Governance',
-                        feature: 'DAO Staking Yield',
-                        desc: 'The economic heart. Stake $QRON to govern the protocol and earn yield.',
-                        icon: Vote,
-                        color: 'text-purple-400',
-                        link: 'https://govchain.us'
-                    },
-                    {
                         name: 'AuthiChain.com',
                         role: 'Foundational Layer',
                         feature: 'Ed25519 Verified',
@@ -1238,8 +1221,8 @@ export default function Home() {
               className="text-base max-w-2xl mx-auto"
               style={{ color: '#6b6b6b' }}
             >
-              Every QRON is an Ed25519-signed cryptographic payload — scannable
-              by anyone, verifiable by the AuthiChain Protocol.
+              Every QRON is scannable
+              by anyone.
             </p>
           </div>
           <div className="flex flex-col items-center gap-6">
@@ -1299,7 +1282,7 @@ export default function Home() {
                   />
                 </div>
                 <p className="text-[10px] uppercase tracking-widest text-zinc-400 mt-4 leading-relaxed font-medium">
-                  Ed25519-signed art. Eyes lock on. ~25% scan lift, every time.
+                  Eyes lock on. ~25% scan lift, every time.
                 </p>
               </div>
             </div>
@@ -1358,10 +1341,6 @@ export default function Home() {
                 a: 'Yes. Every QRON works with any standard camera app — no special app required.',
               },
               {
-                q: 'What is AuthiChain verification?',
-                a: 'Each QR is Ed25519-signed and anchored on the AuthiChain blockchain. Anyone who scans it can verify its authenticity instantly.',
-              },
-              {
                 q: 'What if I need more than 2,000 generations?',
                 a: 'The Business plan gives you unlimited generations for $49/month, or contact us for a custom enterprise contract.',
               },
@@ -1400,8 +1379,7 @@ export default function Home() {
           </div>
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>
-              ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic
-              signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
+              ◆ 100% scannable guarantee
             </p>
             <p className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
               Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol

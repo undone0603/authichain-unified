@@ -958,7 +958,8 @@ var init_env = __esm({
       paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
       paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
       qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
-      defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "0xc3143254997d48fdc9983d618fb2e10067673eb5",
+      // No default: unset means no NFT contract is configured (PM-349).
+      defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "",
       // ── Autonomous Revenue Pipeline ──────────────────────────────────────────
       autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
       requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",

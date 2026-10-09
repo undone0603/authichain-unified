@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'AuthiChain | Enterprise Authentication Protocol',
-  description: 'Industrial-grade Ed25519 cryptographic signing and blockchain anchoring for the visual internet.',
   openGraph: {
     title: 'AuthiChain Protocol',
     description: 'The global standard for cryptographically-verified product identity.',

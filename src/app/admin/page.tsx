@@ -10,8 +10,6 @@ import {
   Users,
   Package,
   ShieldCheck,
-  Zap,
-  Flame,
   ChevronRight,
   Loader2,
   ArrowUpRight,
@@ -102,18 +100,6 @@ export default function AdminDashboard() {
               icon: Package,
               color: "text-blue-400",
             },
-            {
-              label: "$QRON Staked",
-              val: stats?.governance?.total_staked_qron?.toLocaleString(),
-              icon: Zap,
-              color: "text-purple-400",
-            },
-            {
-              label: "Protocol Burn",
-              val: stats?.governance?.total_burned_qron?.toFixed(2),
-              icon: Flame,
-              color: "text-red-500",
-            },
           ].map(m => (
             <div
               key={m.label}
@@ -196,29 +182,6 @@ export default function AdminDashboard() {
                   </div>
                   <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
                     <div className="bg-blue-400 h-full w-[45%]" />
-                  </div>
-                </div>
-
-                {/* Governance */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
-                        GovChain.us{" "}
-                        <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[8px] font-black uppercase">
-                          Yield: 12.4%
-                        </span>
-                      </h3>
-                      <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">
-                        Ecosystem Governance & DAO Rewards
-                      </p>
-                    </div>
-                    <p className="text-sm font-black text-purple-400">
-                      {stats?.governance?.active_brands} Registered Brands
-                    </p>
-                  </div>
-                  <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
-                    <div className="bg-purple-400 h-full w-[65%]" />
                   </div>
                 </div>
               </div>

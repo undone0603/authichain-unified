@@ -33,7 +33,7 @@ const reasons = [
   },
   {
     title: 'AI + Multi-Chain Assurance',
-    desc: 'Our goal: multi-agent AI verification before each certificate is anchored on Polygon.',
+    desc: 'On-chain anchoring is in development.',
   },
 ];
 

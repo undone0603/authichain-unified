@@ -11,7 +11,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Technology | AuthiChain Protocol',
-  description: 'Deep dive into the Ed25519 signatures, Polygon anchoring, and the API powering AuthiChain.',
+  description: 'Deep dive into the API powering AuthiChain.',
 };
 
 export default function AuthichainTechnology() {

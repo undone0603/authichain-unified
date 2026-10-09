@@ -182,7 +182,7 @@ export function BrandLanding({
             </Link>
           </div>
           <ul className="mt-10 flex flex-wrap gap-x-8 gap-y-3">
-            {['Polygon-anchored', 'Stripe checkout', 'No invented customer logos'].map((t) => (
+            {['Stripe checkout', 'No invented customer logos'].map((t) => (
               <li key={t} className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-slate-500">
                 <Check className="w-4 h-4" style={{ color: accent }} />
                 {t}

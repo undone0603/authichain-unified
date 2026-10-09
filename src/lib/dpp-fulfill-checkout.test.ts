@@ -3,7 +3,7 @@ import { DPP_OFFER_KEY } from "./plans";
 import { DPP_PRICE_ID } from "./dpp-loop";
 
 vi.mock("./email", () => ({
-  sendEmail: vi.fn().mockResolvedValue(undefined),
+  sendEmail: vi.fn().mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
 }));
 vi.mock("./billing-emails", () => ({
   renderBillingEmail: vi.fn().mockReturnValue({
@@ -15,7 +15,8 @@ vi.mock("./billing-emails", () => ({
 }));
 
 const { sendEmail } = await import("./email");
-const { fulfillDppPaidSession } = await import("./dpp-fulfill-checkout");
+const { fulfillDppPaidSession, redactForLog } = await import("./dpp-fulfill-checkout");
+const { stageOf } = await import("./dpp-loop");
 
 function fakeSupabase(opts?: {
   profileId?: string | null;
@@ -88,13 +89,75 @@ describe("fulfillDppPaidSession", () => {
     vi.mocked(sendEmail).mockClear();
   });
 
+  it("records a failed status and logs no address when the provider rejects the send", async () => {
+    vi.mocked(sendEmail).mockResolvedValueOnce({
+      ok: false,
+      provider: "resend",
+      status: 422,
+      error: "Invalid `to` field: buyer@example.com",
+    } as never);
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const logged = errSpy.mock.calls.map(c => c.map(String).join(" ")).join("\n");
+    errSpy.mockRestore();
+
+    expect(result).toEqual({ handled: true, profileId: "prof_1", activationEmail: "failed" });
+    expect(logged).toContain("[dpp-fulfill] activation email failed");
+    expect(logged).toContain("session=cs_live_smoke_check");
+    expect(logged).toContain("status=422");
+    expect(logged).not.toContain("buyer@example.com");
+    expect(logged).not.toMatch(/[^\s@]+@[^\s@]+\.[a-z]{2,}/i);
+
+    const failed = rows.filter(r => r.event_type === "dpp_activation_email:failed");
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({ prospect_id: "smoke_check_1", stage: "complete_checkout" });
+    expect(failed[0].metadata).toMatchObject({
+      activation_email_status: "failed",
+      stripe_session_id: "cs_live_smoke_check",
+      profile_id: "prof_1",
+      provider: "resend",
+      http_status: 422,
+    });
+    expect(JSON.stringify(failed[0])).not.toContain("buyer@example.com");
+    // Not a loop event: loop reconstruction and stall reports are unchanged.
+    expect(stageOf(failed[0] as never)).toBeNull();
+  });
+
+  it("records a failed status when the send throws instead of swallowing it", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("connect ETIMEDOUT for buyer@example.com"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    const logged = errSpy.mock.calls.map(c => c.map(String).join(" ")).join("\n");
+    errSpy.mockRestore();
+
+    expect(result.activationEmail).toBe("failed");
+    expect(logged).toContain("ETIMEDOUT");
+    expect(logged).not.toContain("buyer@example.com");
+    expect(rows.filter(r => r.event_type === "dpp_activation_email:failed")).toHaveLength(1);
+  });
+
+  it("writes no failure row when the send succeeds", async () => {
+    const { supabase, rows } = fakeSupabase();
+    const result = await fulfillDppPaidSession(supabase, paidSession);
+    expect(result.activationEmail).toBe("sent");
+    expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(false);
+  });
+
+  it("redactForLog strips addresses and caps length", () => {
+    expect(redactForLog("bad to: a.b+c@sub.example.co.uk, retry")).toBe("bad to: [redacted], retry");
+    expect(redactForLog(undefined)).toBe("unknown");
+    expect(redactForLog("x".repeat(500))).toHaveLength(200);
+  });
+
   it("no-ops when the session is not a DPP offer", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, {
       id: "cs_other",
       metadata: { plan: "starter" },
     });
-    expect(result).toEqual({ handled: false, profileId: null });
+    expect(result).toEqual({ handled: false, profileId: null, activationEmail: "skipped" });
     expect(rows).toHaveLength(0);
   });
 
@@ -154,7 +217,7 @@ describe("fulfillDppPaidSession", () => {
   it("writes payment_succeeded before provision on a $0 promo session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
-    expect(result).toEqual({ handled: true, profileId: "prof_1" });
+    expect(result).toEqual({ handled: true, profileId: "prof_1", activationEmail: "sent" });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
       prospect_id: "smoke_check_1",
@@ -174,7 +237,7 @@ describe("fulfillDppPaidSession", () => {
       customer_email: null,
       metadata: { ...paidSession.metadata, user_id: undefined },
     });
-    expect(result).toEqual({ handled: true, profileId: null });
+    expect(result).toEqual({ handled: true, profileId: null, activationEmail: "skipped" });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
@@ -230,7 +293,7 @@ describe("fulfillDppPaidSession", () => {
         promo: "DPP-SMOKE-E2E",
       },
     });
-    expect(result).toEqual({ handled: true, profileId: "prof_guest" });
+    expect(result).toEqual({ handled: true, profileId: "prof_guest", activationEmail: "skipped" });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",

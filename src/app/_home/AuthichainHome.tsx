@@ -23,7 +23,6 @@ export function AuthichainHome() {
       primaryCta={{ label: "Start DPP checkout", href: "https://authichain.com/checkout/dpp_readiness" }}
       secondaryCta={{ label: "View pricing", href: "/pricing" }}
       stats={[
-        { value: "Ed25519", label: "Signed seals" },
         { value: "$299", label: "EU DPP Readiness" },
         { value: "x402", label: "Agent micropayments" },
       ]}
