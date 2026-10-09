@@ -656,3 +656,18 @@ test("GB-20: govchain pages never link to /seals or /tools", async () => {
     assert.doesNotMatch(html, /href="(https:\/\/[^"]*govchain\.us)?\/(seals|tools)(["\/?#])/i, path);
   }
 });
+
+// GB-20 / RES-224: no "weeks to hours" speed claim and no "certifications"
+// on either govchain home (worker HTML and the Next app GovchainHome source).
+const RES224_RETIRED = [/weeks to hours/i, /certifications/i];
+
+test("RES-224: govchain home pages drop 'weeks to hours' and 'certifications'", async () => {
+  const { readFileSync } = await import("node:fs");
+  const res = await worker.fetch(new Request("https://govchain.us/"), ENV as never);
+  const html = await res.text();
+  const next = readFileSync(new URL("../../../src/app/_home/GovchainHome.tsx", import.meta.url), "utf8");
+  for (const re of RES224_RETIRED) {
+    assert.doesNotMatch(html, re);
+    assert.doesNotMatch(next, re);
+  }
+});

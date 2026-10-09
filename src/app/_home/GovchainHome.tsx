@@ -32,7 +32,7 @@ export function GovchainHome() {
         {
           icon: <FileText className="h-6 w-6" />,
           title: 'Proposal Drafting',
-          desc: 'Generate compliant first-draft responses mapped to the RFP requirements, cutting capture time from weeks to hours.',
+          desc: 'Proposal first drafts: in development.',
         },
         {
           icon: <Trophy className="h-6 w-6" />,

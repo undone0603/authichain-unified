@@ -2451,7 +2451,6 @@ ${estateFeatures(
     <p class="section-sub">From operational record to chain anchor (in development).</p>
     <div class="audit-pipeline">
       <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
-      <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Scored opportunities, proposals, and certifications</div></div>
     </div>
   </div>
 </section>
