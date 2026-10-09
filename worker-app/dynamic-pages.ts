@@ -598,32 +598,51 @@ async function renderVerify(c: Context): Promise<Response> {
         .where(eq(certificates.productId, product.id))
         .limit(1)
     );
-    const verified = !!cert;
-    const status = verified
-      ? "Certificate on record"
-      : "Product Found -- No Certificate on Record";
+    // A revoked row is not "on record": say it was revoked and nothing else
+    // (no issued line, no verdict). certificates.status is the only revoked
+    // state in the data.
+    const revoked = !!cert && cert.status === "revoked";
+    const onRecord = !!cert && !revoked;
+    const certificateState = revoked
+      ? "revoked"
+      : onRecord
+        ? "on-record"
+        : "none";
+    const status = revoked
+      ? "This certificate has been revoked."
+      : onRecord
+        ? "Certificate on record"
+        : "Product Found -- No Certificate on Record";
     // RES-97: a certificate row is a record, not an authenticity verdict.
     // The date comes from the row itself (issued_at, else created_at); if
     // neither parses, the date clause is left out rather than guessed.
-    const issuedLine = verified ? certificateIssuedLine(cert) : "";
+    const issuedLine = onRecord ? certificateIssuedLine(cert) : "";
     const title = product.name + " -- Verification | AuthiChain";
-    const description =
-      status +
-      ": " +
-      product.name +
-      (product.brand ? " by " + product.brand : "") +
-      "." +
-      (issuedLine ? " " + issuedLine : "");
+    const description = revoked
+      ? product.name +
+        (product.brand ? " by " + product.brand : "") +
+        ": " +
+        status
+      : status +
+        ": " +
+        product.name +
+        (product.brand ? " by " + product.brand : "") +
+        "." +
+        (issuedLine ? " " + issuedLine : "");
 
+    // No data-verified attribute: this page states what is on record, not a
+    // verification verdict.
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
+      '<p data-certificate-state="' +
+      certificateState +
       '">' +
       escapeHtml(status) +
       "</p>\n" +
       (issuedLine
-        ? '<p data-certificate-issued="true">' + escapeHtml(issuedLine) + "</p>\n"
+        ? '<p data-certificate-issued="true">' +
+          escapeHtml(issuedLine) +
+          "</p>\n"
         : "") +
       "<h1>" +
       escapeHtml(product.name) +
@@ -843,7 +862,8 @@ const LANDING_CONTENT: Record<
   },
   govchain: {
     eyebrow: "Government Blockchain",
-    headline: "GovChain: federal contracting tools for US small businesses, in development.",
+    headline:
+      "GovChain: federal contracting tools for US small businesses, in development.",
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
@@ -998,7 +1018,9 @@ function renderLanding(c: Context): Response {
     "<p>&copy; 2026 " +
     escapeHtml(brand.displayName) +
     " &middot; part of the AuthiChain Protocol</p>\n" +
-    (brandId === "govchain" ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n" : "") +
+    (brandId === "govchain"
+      ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n"
+      : "") +
     "</footer>\n" +
     "</main>";
 
