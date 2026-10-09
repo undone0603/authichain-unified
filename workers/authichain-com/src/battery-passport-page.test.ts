@@ -39,7 +39,6 @@ describe("battery passport offer page", () => {
 
   it("lists the workspace grant and leaves the unbuilt report and credit off the page", () => {
     for (const line of [
-      "AuthiChain workspace",
       "Self-serve activation",
     ])
       expect(html).toContain(line);
@@ -151,5 +150,6 @@ describe("battery passport offer page", () => {
 
   it("RES-214: never calls the offer a readiness assessment", () => {
     expect(html).not.toMatch(/readiness assessment/i);
+    expect(html).not.toMatch(/AuthiChain workspace/i);
   });
 });

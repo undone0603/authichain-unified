@@ -109,7 +109,6 @@ const CHECKLIST: Array<{ tier: string; who: string; items: string[] }> = [
 
 /** What paid checkout on this page grants. Not the full plan.features list. */
 export const PAGE_DELIVERABLES = [
-  "AuthiChain workspace",
   "Self-serve activation",
 ] as const;
 
@@ -124,7 +123,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "Self-serve activation of your AuthiChain workspace.",
+    a: "Self-serve activation: a short onboarding form.",
   },
   {
     q: "Is this legal advice or a certification?",
@@ -263,7 +262,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   const price = plan?.price ?? 299;
   const days = daysUntilDeadline(now);
   const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation, for $${price}.`;
+  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve activation: a short onboarding form, for $${price}.`;
   const checklist = CHECKLIST.map(
     g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
