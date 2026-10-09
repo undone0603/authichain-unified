@@ -126,7 +126,7 @@ describe("battery passport offer page", () => {
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
     expect(html).toContain(
-      "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
+      "No. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
     );
     expect(html).not.toContain("working passport you control");
     expect(html).not.toContain("signed and publicly verifiable");
@@ -147,5 +147,9 @@ describe("battery passport offer page", () => {
   it("GB-17: never promises 50 workspace generations", () => {
     for (const re of [/50 workspace generations/i, /50 generations/i, /fifty (workspace )?generations/i])
       expect(html).not.toMatch(re);
+  });
+
+  it("RES-214: never calls the offer a readiness assessment", () => {
+    expect(html).not.toMatch(/readiness assessment/i);
   });
 });

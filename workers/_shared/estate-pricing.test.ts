@@ -425,3 +425,11 @@ test("GB-17: /pricing never promises 50 workspace generations", () => {
     for (const f of dpp.features) assert.doesNotMatch(f, re);
   }
 });
+
+test("RES-214: dpp_readiness copy drops the workspace clause and readiness assessment", () => {
+  const dpp = plan("dpp_readiness");
+  for (const text of [dpp.description, ...dpp.features]) {
+    assert.doesNotMatch(text, /opens an AuthiChain workspace/i);
+    assert.doesNotMatch(text, /readiness assessment/i);
+  }
+});

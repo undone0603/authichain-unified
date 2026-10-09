@@ -167,7 +167,7 @@ export const PLANS: Plan[] = [
     name: "EU DPP Workspace",
     price: 299,
     description:
-      "One-time checkout that opens an AuthiChain workspace. Not an audit, not a certification, not legal advice.",
+      "Not an audit, not a certification, not legal advice.",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
     stripe_mode: "payment",
