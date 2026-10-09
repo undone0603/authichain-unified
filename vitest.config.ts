@@ -108,7 +108,7 @@ export default defineConfig({
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts|service-order|service-order-activate)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
       },
       {

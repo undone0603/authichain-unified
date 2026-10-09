@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+import MissionMilestoneTracker from './components/MissionMilestoneTracker';
   verifyAttestationJws,
   AuthiChainAttestationV01,
 } from "../../../packages/verifier/src/index";
@@ -39,6 +40,7 @@ const VerifierApp = () => {
         margin: "0 auto",
       }}
     >
+      <MissionMilestoneTracker />
       <h1>AuthiChain Verifier</h1>
       <textarea
         value={jws}

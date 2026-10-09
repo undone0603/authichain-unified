@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
+import MissionMilestoneTracker from './components/MissionMilestoneTracker';
 
 const Home = lazy(() => import("./pages/brand/AuthiChainHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -51,6 +52,7 @@ const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
+      <MissionMilestoneTracker />
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
