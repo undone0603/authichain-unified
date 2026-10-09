@@ -1,6 +1,5 @@
 import { canonicalizeJson, sha256Base64Url } from "./agent-message";
 import {
-  ECONOMIC_ACTION_PROTOCOL,
   ECONOMIC_AUTHORIZATION_REASONS,
   isEconomicAction,
   isSafeEconomicId,
