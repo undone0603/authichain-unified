@@ -375,6 +375,19 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(body).toContain("&lt;script&gt;");
   });
 
+  it("treats a numeric id rejected by the uuid products.id as 'No record found', not 'try again'", async () => {
+    (getProductById as any).mockRejectedValueOnce(
+      new Error('invalid input syntax for type uuid: "1"')
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("No record was found on the AuthiChain registry");
+    expect(body).not.toContain("try again in a minute");
+  });
+
   it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {
     (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
     const res = await app.request("/verify?id=test123", {}, makeEnv() as any);

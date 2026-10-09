@@ -513,7 +513,15 @@ async function renderVerify(c: Context): Promise<Response> {
       Number.isFinite(numericId) &&
       String(numericId) === idParam
     ) {
-      product = await withVerifyTimeout(getProductById(db, numericId));
+      try {
+        product = await withVerifyTimeout(getProductById(db, numericId));
+      } catch (err) {
+        // products.id is a uuid, so Postgres rejects a numeric id outright
+        // (invalid input syntax for type uuid). That means "no such record",
+        // not "lookup failed". Timeouts still fall through to the retry page.
+        if ((err as Error)?.message === "VERIFY_LOOKUP_TIMEOUT") throw err;
+        product = null;
+      }
     } else {
       const lookupId: string = identifier;
       const cert = await withVerifyTimeout(getCertificateByNumber(db, lookupId));
