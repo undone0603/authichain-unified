@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { 
   Shield, 
   Server, 
-  Database, 
-  Lock, 
   Zap, 
   Globe, 
   ArrowRight,
@@ -77,7 +75,7 @@ export default function AuthichainEnterprise() {
                 </div>
                 <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <Activity className="w-4 h-4 text-green-500" />
-                   certificate contract live on Polygon; product certification through verify is in development
+                   product certification through verify is in development
                 </div>
              </div>
           </div>
@@ -108,20 +106,6 @@ export default function AuthichainEnterprise() {
       {/* Capabilities */}
       <section className="max-w-6xl mx-auto px-6 py-24">
         <div className="grid md:grid-cols-3 gap-12">
-          <div className="protocol-card p-10 group hover:border-gold/40 transition-all">
-            <Lock className="w-10 h-10 text-gold mb-8 group-hover:scale-110 transition-transform" />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">Ed25519 Signing</h3>
-            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter">
-              Every asset is signed with Ed25519 elliptic curve cryptography, ensuring non-repudiation and global verifiability without a central authority.
-            </p>
-          </div>
-          <div className="protocol-card p-10 group hover:border-gold/40 transition-all">
-            <Database className="w-10 h-10 text-gold mb-8 group-hover:scale-110 transition-transform" />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">Anchor</h3>
-            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter">
-              Certificate contract live on Polygon; product certification through verify is in development.
-            </p>
-          </div>
           <div className="protocol-card p-10 group hover:border-gold/40 transition-all">
             <Server className="w-10 h-10 text-gold mb-8 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">High-Throughput API</h3>

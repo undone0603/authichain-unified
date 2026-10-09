@@ -108,7 +108,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       summary: "Medtronic recalled the Bravo delivery system due to a defect in the adhesive that causes capsules to prematurely detach, leading to risk of aspiration or esophageal perforation. 33 serious injuries reported.",
       incidentDate: "January 8, 2026",
       whyAuthiChainFixesThis: "AuthiChain's Bitcoin L1 Truth Layer would have provided an immutable manufacturing record of the faulty adhesive batches, enabling Medtronic to perform a surgical recall of specific affected SKUs instead of a global device quarantine.",
-      technicalAngle: "Cryptographic batch-ancestry tracking isolates component-level failures in under 2 seconds."
+      technicalAngle: ""
     };
 
     const prBody = `Roscommon, MI — AuthiChain (SAM: ZACHARY KIETZMAN, CAGE 1PUJ6) has released a technical analysis in response to the FDA Class I designation of the Medtronic Bravo Esophageal pH Monitoring Capsules recall.

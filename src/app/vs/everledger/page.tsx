@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 
 const rows: ComparisonRow[] = [
   { feature: "Public verifier + JWKS", authichain: "Live at /.well-known/jwks.json", competitor: "\u2014" },
-  { feature: "Certificate contract on Polygon", authichain: "Contract live; issuance in development", competitor: "\u2014" },
   { feature: "Self-serve issue a seal", authichain: "In development", competitor: "\u2014" },
   { feature: "EU DPP export", authichain: "In development", competitor: "\u2014" },
   { feature: "Starts at", authichain: "Contact / onboard", competitor: "\u2014" },

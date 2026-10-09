@@ -47,12 +47,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
       "Scantrust is an established secure-QR and brand-protection platform focused on enterprise anti-counterfeiting.",
     rows: [
       {
-        feature: "On-chain cryptographic anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor:
-          "Has shipped blockchain integrations (Cardano, Hyperledger)",
-      },
-      {
         feature: "EU Digital Product Passport export",
         authichain: "In development",
         competitor: true,
@@ -81,7 +75,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
     reasons: [
       {
         title: "Tamper-Proof by Design",
-        desc: "AuthiChain's certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.",
+        desc: "Signed, publicly verifiable certificates are in development.",
       },
       {
         title: "Live in a Day, Not a Quarter",
@@ -163,11 +157,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
         feature: "Turnkey product (no dev team required)",
         authichain: true,
         competitor: "Via ToolChain or partners",
-      },
-      {
-        feature: "On-chain anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor: true,
       },
       {
         feature: "EU Digital Product Passport export",

@@ -505,12 +505,10 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
     html,
     /does not store anything, issue a certificate, or write to a blockchain/
   );
-  // The real Polygon anchor is cited, not hidden.
-  assert.ok(
-    urlsIn(html).some(
-      u => u.hostname === "polygonscan.com" && u.pathname === `/tx/${ANCHOR_TX}`
-    )
-  );
+  // PM-372: wallet ownership of the Polygon anchor is not proven, so the page
+  // must not cite a polygonscan link or the anchor transaction.
+  assert.ok(!urlsIn(html).some(u => u.hostname === "polygonscan.com"));
+  assert.ok(!html.includes(ANCHOR_TX));
   assert.match(html, /Self-serve anchoring from this page is not live yet/);
 });
 

@@ -7,7 +7,6 @@ import Link from "next/link";
 import { CHECKOUT_EMAIL_FORM_CSS } from "@/lib/checkout-email";
 import { getSeoPageBySlug, listSeoSlugs } from "@/lib/seo-pages";
 import {
-  ShieldCheck,
   ShieldAlert,
   Clock,
   Package,
@@ -99,7 +98,6 @@ export default async function CertificationPage({ params }: PageProps) {
     .eq("certification_id", cert.id)
     .single();
 
-  const isValid = cert.status === "approved";
   const isRevoked = cert.status === "revoked";
   const isPending = cert.status === "pending";
 
@@ -108,12 +106,6 @@ export default async function CertificationPage({ params }: PageProps) {
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Status Header */}
         <div className="text-center mb-12">
-          {isValid && (
-            <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
-              <ShieldCheck className="w-6 h-6" />
-              Verified Authentic
-            </div>
-          )}
           {isRevoked && (
             <div className="inline-flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest">
               <ShieldAlert className="w-6 h-6" />

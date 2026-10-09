@@ -26,7 +26,7 @@ const TOOLS = [
   },
   {
     name: "authichain_register_product",
-    description: "Registers a new product in the registry and mints a corresponding NFT certificate on Polygon.",
+    description: "Registers a new product in the registry.",
     inputSchema: {
       type: "object",
       properties: {

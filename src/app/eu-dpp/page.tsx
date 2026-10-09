@@ -8,7 +8,6 @@ import {
   Leaf,
   FileText,
   Zap,
-  Lock,
   CheckCircle,
   Sparkles,
 } from 'lucide-react';
@@ -38,11 +37,6 @@ const FEATURES = [
     icon: ShieldCheck,
     title: 'Built on Regulation (EU) 2024/1781',
     desc: 'Data model maps directly to the EU DPP framework — unique identifier, carbon footprint, material composition, and repairability scores in our data model.',
-  },
-  {
-    icon: Lock,
-    title: 'Integrity',
-    desc: 'Certificate contract live on Polygon; product certification through verify is in development.',
   },
   {
     icon: Zap,

@@ -16,7 +16,6 @@ export const metadata: Metadata = {
 };
 
 const rows: ComparisonRow[] = [
-  { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: 'Has shipped blockchain integrations (Cardano, Hyperledger)' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: 'Yes (self-serve signup)' },
   { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
@@ -27,7 +26,7 @@ const rows: ComparisonRow[] = [
 const reasons = [
   {
     title: 'Tamper-Proof by Design',
-    desc: 'AuthiChain\'s certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.',
+    desc: 'Signed, publicly verifiable certificates are in development.',
   },
   {
     title: 'Live in a Day, Not a Quarter',
