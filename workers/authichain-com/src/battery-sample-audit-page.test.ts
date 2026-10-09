@@ -63,6 +63,8 @@ describe("sample battery readiness assessment", () => {
   it("sells the workspace grant through the gated checkout, tagged by campaign", () => {
     expect(html).toContain(`$${plan.price}`);
     expect(html).not.toMatch(/AuthiChain workspace/i);
+    expect(html).toMatch(/No written assessment is included/i);
+    expect(html).toContain("This page is a sample. No written assessment is included with the $299 purchase.");
     expect(html).toContain("Self-serve activation");
     expect(html).not.toMatch(/50 (workspace )?generations/i);
     expect(html).not.toContain("Written EU DPP readiness assessment");

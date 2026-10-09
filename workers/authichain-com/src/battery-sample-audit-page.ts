@@ -294,7 +294,7 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
     <div class="wrap hero-content">
       <p class="sa-sample">${esc(SAMPLE_LABEL)}</p>
       <h1>A fictional walkthrough of one e-bike battery line.</h1>
-      <p class="estate-lede hero-sub">We ran the free figure check and gap table on a fictional 48 V e-bike pack from a brand that sells into the EU through a distributor.</p>
+      <p class="estate-lede hero-sub">We ran the free figure check and gap table on a fictional 48 V e-bike pack from a brand that sells into the EU through a distributor. This page is a sample. No written assessment is included with the $${price} purchase.</p>
       <div class="estate-actions hero-cta"><a class="btn btn-primary" href="#get-started">Get ready — $${price}</a> <a class="btn btn-outline" href="${BATTERY_PASSPORT_PATH}#gap-map">Try the free gap map first</a></div>
     </div>
   </header>
