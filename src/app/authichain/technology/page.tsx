@@ -37,7 +37,7 @@ export default function AuthichainTechnology() {
               <Lock className="w-8 h-8 text-gold mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">Ed25519 Cryptography</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                It verifies in well under a millisecond on commodity hardware, which is what makes offline field verification practical. Like all elliptic-curve signatures it is not post-quantum secure; migration is tracked in the protocol spec.
+                Like all elliptic-curve signatures it is not post-quantum secure; migration is tracked in the protocol spec.
               </p>
             </div>
             

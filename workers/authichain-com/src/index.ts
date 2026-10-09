@@ -2582,7 +2582,7 @@ const HTML = `<!DOCTYPE html>
     "The authentic agentic economy",
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
-      { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
+      { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -3089,7 +3089,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">🔗</div>
           <div class="feature-title">ERC-721 certificates (in development)</div>
-          <div class="feature-desc">The certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
+          <div class="feature-desc">We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
