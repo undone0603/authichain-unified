@@ -1544,7 +1544,7 @@ function generateFormHtml(
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
-    title: "Generate a Living QR | $QRON",
+    title: "Generate a Living QR",
     description:
       "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
     canonicalPath: "/generate",

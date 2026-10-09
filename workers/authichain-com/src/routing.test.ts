@@ -133,7 +133,7 @@ test("the apex still renders the homepage", async () => {
   assert.equal(orgSlice.includes(`"url":"${creatorPay}"`), true);
   assert.equal(orgSlice.includes("/api/checkout"), false);
   assert.match(html, /href="\/authentic-agentic-economy"/);
-  assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /\$QRON token|Speculative utility/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(
     html,

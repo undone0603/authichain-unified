@@ -45,7 +45,7 @@ export default function CharacterDashboard() {
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter uppercase italic mb-6">Deploy Your <span className="text-yellow-500">Agent.</span></h1>
           <p className="text-slate-400 text-lg font-light mb-8 max-w-xl mx-auto">
-            You don't have an active protocol agent yet. Deploy a specialized AI character to automate your authentications and earn $QRON rewards.
+            You don't have an active protocol agent yet. Deploy a specialized AI character to automate your authentications.
           </p>
           <Button asChild size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-16 px-10 rounded-xl shadow-2xl shadow-yellow-500/20">
             <Link href="/character/create">Start Generation Protocol</Link>
@@ -84,10 +84,6 @@ export default function CharacterDashboard() {
            <Card className="bg-white/5 border-white/5 px-6 py-3 rounded-2xl flex flex-col items-center justify-center">
               <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">REPUTATION</span>
               <span className="text-xl font-bold text-blue-400">{agent.reputationScore ?? 0}</span>
-           </Card>
-           <Card className="bg-yellow-500/10 border-yellow-500/20 px-6 py-3 rounded-2xl flex flex-col items-center justify-center">
-              <span className="text-[10px] font-mono text-yellow-500 uppercase tracking-widest mb-1">$QRON EARNED</span>
-              <span className="text-xl font-bold text-yellow-500">12.45</span>
            </Card>
         </div>
       </div>
@@ -171,7 +167,7 @@ export default function CharacterDashboard() {
           <Star className="w-12 h-12 text-yellow-500 mb-6 animate-pulse" />
           <h3 className="text-2xl font-bold mb-3 italic uppercase tracking-tight">Protocol Advancement</h3>
           <p className="text-slate-400 text-sm mb-8 max-w-xs mx-auto">
-            Your agent is performing in the top 5% of the network. Stake an additional 100 $QRON to unlock **Multi-ControlNet Artistry**.
+            Your agent is performing in the top 5% of the network.
           </p>
           <Button className="w-full bg-white text-black font-bold h-12 uppercase italic text-xs tracking-widest rounded-xl hover:bg-slate-200 transition-all">
             Upgrade Agent Matrix

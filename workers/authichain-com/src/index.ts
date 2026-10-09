@@ -2292,7 +2292,6 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "Ecosystem utilities",
     "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
-      { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "On our roadmap: Bitcoin Ordinals inscriptions for certificates." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],

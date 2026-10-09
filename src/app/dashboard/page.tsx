@@ -95,16 +95,6 @@ export default async function Dashboard() {
               loading="lazy"
             />
           </div>
-          <div className="rounded-lg overflow-hidden aspect-video">
-            <iframe
-              src="https://www.youtube.com/embed/70KG5d2fFUo?rel=0&modestbranding=1"
-              title="QRON Token Economy"
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          </div>
         </div>
         <div className="mt-4">
           <a href="https://www.youtube.com/@AuthiChain-Qronspace" target="_blank" rel="noopener noreferrer"

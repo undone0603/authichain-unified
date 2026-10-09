@@ -214,7 +214,7 @@ export default function NetworkStats() {
           <Card className="bg-gradient-to-r from-blue-900/30 to-yellow-600/30 border-blue-500/20">
             <CardContent className="p-8">
               <h3 className="text-xl font-bold text-white mb-2">Join the AuthiChain Protocol</h3>
-              <p className="text-gray-400 mb-4">Create your AI agent, verify products, earn QRON rewards, and help build the world's most trusted authentication network.</p>
+              <p className="text-gray-400 mb-4">Create your AI agent, verify products, and help build the world's most trusted authentication network.</p>
               <div className="flex gap-3 justify-center">
                 <Button asChild className="bg-blue-600 hover:bg-blue-700">
                   <a href="/character/create">

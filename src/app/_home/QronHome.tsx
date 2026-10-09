@@ -11,7 +11,6 @@ import {
   Zap,
   Lock,
   Package,
-  Vote,
   ArrowRight,
   Palette,
   Eye,
@@ -1076,21 +1075,17 @@ export function QronHome() {
               </p>
             </div>
 
-            {/* Living Portals & $QRON */}
+            {/* Living Portals */}
             <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left relative overflow-hidden">
               <div className="absolute inset-0 bg-gold/5 blur-2xl rounded-full" />
               <div className="relative z-10">
                 <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-4">
                   <Coins className="w-5 h-5 text-gold" />
                 </div>
-                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile.
                 </p>
-                <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
-                  <span className="text-zinc-500">Contract:</span>
-                  <span className="text-gold">0xAebf...E437</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1334,15 +1329,6 @@ export function QronHome() {
                         link: 'https://strainchain.io'
                     },
                     {
-                        name: 'GovChain.us',
-                        role: 'Ecosystem Governance',
-                        feature: 'DAO Staking Yield',
-                        desc: 'The economic heart. Stake $QRON to govern the protocol and earn yield.',
-                        icon: Vote,
-                        color: 'text-purple-400',
-                        link: 'https://govchain.us'
-                    },
-                    {
                         name: 'AuthiChain.com',
                         role: 'Foundational Layer',
                         feature: 'Ed25519 Verified',
@@ -1565,7 +1551,6 @@ export function QronHome() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
               {[
                 { id: 'PdCibPadCxE', label: 'Food & Beverage', title: 'Validating Origin with QRON' },
-                { id: '70KG5d2fFUo', label: 'Token Economy', title: 'The $QRON Token Economy' },
                 { id: 'bAI14tPQFF4', label: 'Ecosystem', title: 'Use Cases for Trust' },
               ].map(({ id, label, title }) => (
                 <a key={id} href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer"
