@@ -2700,9 +2700,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. See the
-      <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
-      <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
+      This fingerprint is not stored and not anchored. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>
