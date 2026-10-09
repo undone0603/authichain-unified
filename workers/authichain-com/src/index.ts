@@ -2533,7 +2533,6 @@ const HTML = `<!DOCTYPE html>
   })}
   ${estateTrust([
     { value: "Ed25519", label: "Signed seals" },
-    { value: "Polygon", label: "Contract deployed" },
     { value: "$299", label: "EU DPP Readiness" },
     { value: "x402", label: "Agent micropayments" },
   ])}

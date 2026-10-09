@@ -2307,7 +2307,6 @@ ${estateHero({
 ${estateTrust([
   { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
-  { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
 ${estateFeatures(

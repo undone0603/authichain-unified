@@ -432,8 +432,6 @@ export function QronHome() {
           {/* New Trust Row */}
           <div className="mt-16 flex flex-col items-center">
              <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
-                <span>Polygon PoS</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
                 <span>Ed25519 Signed</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
                 <span>Editable Redirects</span>

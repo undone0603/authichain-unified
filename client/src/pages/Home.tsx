@@ -284,10 +284,6 @@ export default function Home() {
                 </div>
                 <div className="space-y-4 font-mono text-[11px]">
                   <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Blockchain Anchor</span>
-                    <span className="text-primary">Polygon PoS (Mainnet)</span>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Encryption Algorithm</span>
                     <span className="text-primary">Ed25519 / Curve25519</span>
                   </div>

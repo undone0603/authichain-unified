@@ -406,10 +406,6 @@ export default async function CertificationPage({ params }: PageProps) {
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-zinc-500 font-bold">Network</span>
-                  <span className="font-mono text-zinc-200">Polygon POS</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-500 font-bold">Standard</span>
                   <span className="font-mono text-zinc-200">ERC-721</span>
                 </div>
