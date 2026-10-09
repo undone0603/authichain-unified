@@ -126,6 +126,52 @@ function validatePolicy(value: unknown): value is EconomicPolicy {
   return true;
 }
 
+function isAgentVerificationResult(value: unknown): value is AgentMessageVerificationResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  const result = value as Record<string, unknown>;
+  const allowed = new Set([
+    "valid",
+    "agent_id",
+    "organization_id",
+    "attestation_id",
+    "reasons",
+    "capabilities",
+    "policy_version",
+    "message_digest",
+    "signature_digest",
+    "verified_at",
+  ]);
+  if (Object.keys(result).some((key) => !allowed.has(key))) return false;
+  if (
+    typeof result.valid !== "boolean" ||
+    !Array.isArray(result.reasons) ||
+    !result.reasons.every((reason) => typeof reason === "string") ||
+    typeof result.verified_at !== "string"
+  ) {
+    return false;
+  }
+  for (const key of [
+    "agent_id",
+    "organization_id",
+    "attestation_id",
+    "policy_version",
+    "message_digest",
+    "signature_digest",
+  ] as const) {
+    if (result[key] !== undefined && typeof result[key] !== "string") return false;
+  }
+  if (
+    result.capabilities !== undefined &&
+    (!Array.isArray(result.capabilities) ||
+      !result.capabilities.every((capability) => typeof capability === "string"))
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function uniqueReasons(
   reasons: EconomicAuthorizationReasonCode[],
 ): EconomicAuthorizationReasonCode[] {
@@ -184,12 +230,13 @@ async function buildDecision(
  */
 export async function authorizeEconomicAction(
   message: unknown,
-  verification: AgentMessageVerificationResult,
+  verificationInput: unknown,
   policy: unknown,
   now = new Date(),
 ): Promise<AuthorizationDecision> {
   const safeNow = Number.isFinite(now.getTime()) ? now : new Date(0);
   const reasons: EconomicAuthorizationReasonCode[] = [];
+  const verification = isAgentVerificationResult(verificationInput) ? verificationInput : undefined;
 
   if (!isStrictAgentEnvelope(message)) {
     return buildDecision({ now: safeNow, reasons: ["MESSAGE_ACTION_BINDING_MISMATCH"] });
