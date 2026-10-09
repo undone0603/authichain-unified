@@ -281,6 +281,24 @@ describe("adversarial authorization gate", () => {
     expect(attestationResult.reason_codes).toContain("ATTESTATION_REVOKED");
   });
 
+  it("fails closed when revocation flags or identity fields are missing", async () => {
+    const fixture = await signedFixture();
+    const context = policyContext(fixture.action);
+    (context.identity as unknown as Record<string, unknown>).issuer_revoked = undefined;
+    const result = evaluateEconomicAction(fixture.verified, context);
+    expect(result.decision).toBe("DENY");
+    expect(result.reason_codes).toContain("IDENTITY_CONTEXT_INVALID");
+  });
+
+  it("fails closed on malformed optional policy allowlists", async () => {
+    const fixture = await signedFixture();
+    const context = policyContext(fixture.action);
+    (context.policy as unknown as Record<string, unknown>).allowed_agent_ids = "";
+    const result = evaluateEconomicAction(fixture.verified, context);
+    expect(result.decision).toBe("DENY");
+    expect(result.reason_codes).toContain("POLICY_CONFIGURATION_INVALID");
+  });
+
   it("denies policy-version, action-type, asset, and amount-limit mismatches", async () => {
     const fixture = await signedFixture();
     const wrongVersion = policyContext(fixture.action);
