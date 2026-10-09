@@ -341,7 +341,13 @@ describe("renderDynamicPage: /verify verification landing", () => {
     });
     (getHyperdriveDb as any).mockReturnValue(
       makeDbSelectStub([
-        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
+        {
+          id: 99,
+          productId: 7,
+          status: "active",
+          certificateNumber: "C-99",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
       ])
     );
 
@@ -350,7 +356,106 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verified Sneaker");
-    expect(body).toContain("Authentic Product Verified");
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain on October 1, 2026. On-chain verification is in development."
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Certificate on record: Verified Sneaker by Nike-ish\. Issued by AuthiChain on October 1, 2026\. On-chain verification is in development\."/
+    );
+    expect(body).not.toContain("Authentic Product Verified");
+  });
+
+  it("leaves out the date clause when the certificate row has no usable date", async () => {
+    (getProductById as any).mockResolvedValue({ id: 8, name: "Undated Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        { id: 100, productId: 8, status: "active", certificateNumber: "C-100" },
+      ])
+    );
+
+    const res = await app.request("/verify?id=8", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain. On-chain verification is in development."
+    );
+  });
+
+  it("says only that a revoked certificate was revoked (no 'on record', no issued line, no data-verified)", async () => {
+    (getProductById as any).mockResolvedValue({
+      id: 9,
+      name: "Revoked Bag",
+      brand: "Brandco",
+    });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 101,
+          productId: 9,
+          status: "revoked",
+          certificateNumber: "C-101",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=9", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Revoked Bag");
+    expect(body).toContain(
+      '<p data-certificate-state="revoked">This certificate has been revoked.</p>'
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Revoked Bag by Brandco: This certificate has been revoked\."/
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("Issued by AuthiChain");
+    expect(body).not.toContain("data-certificate-issued");
+    expect(body).not.toContain("data-verified");
+    expect(body).not.toMatch(/Verified|Authentic/);
+  });
+
+  it("marks an active certificate as on record without a data-verified attribute", async () => {
+    (getProductById as any).mockResolvedValue({ id: 10, name: "Active Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 102,
+          productId: 10,
+          status: "active",
+          certificateNumber: "C-102",
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=10", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="on-record">Certificate on record</p>'
+    );
+    expect(body).not.toContain("data-verified");
+  });
+
+  it("shows 'No Certificate on Record' with no data-verified attribute when the product has no certificate", async () => {
+    (getProductById as any).mockResolvedValue({ id: 11, name: "Bare Item" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=11", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="none">Product Found -- No Certificate on Record</p>'
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("data-verified");
   });
 
   it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
@@ -532,7 +637,9 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain("GovChain: federal contracting tools for US small businesses, in development.");
+    expect(body).toContain(
+      "GovChain: federal contracting tools for US small businesses, in development."
+    );
     expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
   });
 
@@ -541,10 +648,17 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i, /anchored on Polygon/i]) {
+    for (const banned of [
+      /eSign Act/i,
+      /legally binding/i,
+      /Public Records on Blockchain/i,
+      /anchored on Polygon/i,
+    ]) {
       expect(body).not.toMatch(banned);
     }
-    expect(body).toContain("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.");
+    expect(body).toContain(
+      "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."
+    );
   });
 
   it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {
