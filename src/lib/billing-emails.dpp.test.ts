@@ -10,6 +10,7 @@ const ABSENT = [
   /AuthiChain workspace/i,
   /email you before anything is delivered/i,
   /reply to (this|your confirmation) email/i,
+  /rather not wait/i,
 ];
 
 describe("dpp_audit_provisioned email", () => {
@@ -24,7 +25,7 @@ describe("dpp_audit_provisioned email", () => {
       expect(part).toContain("Your next step is the onboarding form:");
       expect(part).toContain("The readiness work is in development.");
       expect(part).toContain(
-        "If you'd rather not wait, email support@authichain.com and we'll refund the full $299."
+        "Prefer a refund? Email support@authichain.com and we'll refund the full $299 to your original payment method."
       );
       expect(part).toContain("https://authichain.com/dpp/activate?session_id=cs_1");
     }
@@ -44,7 +45,7 @@ describe("Next.js DPP thanks/activate pages", () => {
 
   it("thanks page carries the gated wording", () => {
     expect(thanks).toContain("Thanks. This confirms your $299 payment. Next, use the link in your confirmation email to fill in the short onboarding form. The readiness work itself is in development.");
-    expect(thanks).toContain("email support@authichain.com and we&apos;ll refund the full $299.");
+    expect(thanks).toContain("Prefer a refund? Email support@authichain.com and we&apos;ll refund the full $299 to your original payment method.");
     expect(thanks).not.toMatch(/onboarding form below/i);
   });
 

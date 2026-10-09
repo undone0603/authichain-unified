@@ -103,12 +103,12 @@ export function renderBillingEmail(
         <p>Your next step is the onboarding form:</p>
         ${button(brandId, activateUrl, "Open onboarding form")}
         <p>The readiness work is in development.</p>
-        <p>If you'd rather not wait, email support@authichain.com and we'll refund the full $299.</p>`;
+        <p>Prefer a refund? Email support@authichain.com and we'll refund the full $299 to your original payment method.</p>`;
       return {
         from: emailFrom,
         subject,
         html: shell(brandId, body),
-        text: `${hi}\n\nThanks for your $299 payment. This email confirms it.\n\nYour next step is the onboarding form: ${activateUrl}\n\nThe readiness work is in development.\n\nIf you'd rather not wait, email support@authichain.com and we'll refund the full $299.`,
+        text: `${hi}\n\nThanks for your $299 payment. This email confirms it.\n\nYour next step is the onboarding form: ${activateUrl}\n\nThe readiness work is in development.\n\nPrefer a refund? Email support@authichain.com and we'll refund the full $299 to your original payment method.`,
       };
     }
     case "payment_failed": {

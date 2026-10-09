@@ -40,7 +40,7 @@ describe("tryHandleDppRoute", () => {
         "Thanks. This confirms your $299 payment. Next, use the link in your confirmation email to fill in the short onboarding form. The readiness work itself is in development."
       );
       expect(html).toContain(
-        "If you'd rather not wait, email support@authichain.com and we'll refund the full $299."
+        "Prefer a refund? Email support@authichain.com and we'll refund the full $299 to your original payment method."
       );
       expect(html).not.toMatch(/workspace is ready/i);
       expect(html).not.toMatch(/50 (workspace )?generations/i);

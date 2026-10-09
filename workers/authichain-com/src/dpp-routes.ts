@@ -100,7 +100,7 @@ function thanksHtml(
     `<p class="kicker">Payment received</p>
      <h1>Payment received</h1>
      <p>Thanks. This confirms your $299 payment. Next, use the link in your confirmation email to fill in the short onboarding form. The readiness work itself is in development.</p>
-     <p>If you'd rather not wait, email support@authichain.com and we'll refund the full $299.</p>`
+     <p>Prefer a refund? Email support@authichain.com and we'll refund the full $299 to your original payment method.</p>`
   );
 }
 

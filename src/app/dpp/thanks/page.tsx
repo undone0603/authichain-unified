@@ -17,8 +17,8 @@ function ThanksContent() {
         work itself is in development.
       </p>
       <p className="mt-6 text-sm text-zinc-500">
-        If you&apos;d rather not wait, email support@authichain.com and
-        we&apos;ll refund the full $299.
+        Prefer a refund? Email support@authichain.com and we&apos;ll refund
+        the full $299 to your original payment method.
       </p>
     </div>
   );
