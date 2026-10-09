@@ -26,6 +26,18 @@ export interface EconomicPolicy {
   max_evidence_ids: number;
 }
 
+const POLICY_KEYS = new Set([
+  "policy_version",
+  "organization_id",
+  "enabled",
+  "allowed_operations",
+  "allowed_asset_ids",
+  "max_single_action_minor_units",
+  "max_action_lifetime_seconds",
+  "require_evidence",
+  "max_evidence_ids",
+]);
+
 const ENVELOPE_KEYS = new Set([
   "protocol",
   "message_id",
@@ -78,7 +90,16 @@ function isStrictAgentEnvelope(value: unknown): value is SignedAgentMessage<Econ
 
 function validatePolicy(value: unknown): value is EconomicPolicy {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
   const p = value as Record<string, unknown>;
+  const keys = Object.keys(p);
+  if (
+    keys.length !== POLICY_KEYS.size ||
+    keys.some((key) => !POLICY_KEYS.has(key))
+  ) {
+    return false;
+  }
   if (
     !isSafeEconomicId(p.policy_version) ||
     !isSafeEconomicId(p.organization_id) ||
@@ -190,7 +211,11 @@ export async function authorizeEconomicAction(
     // A previously valid result must not be reusable after payload mutation.
     try {
       const currentMessageDigest = await agentMessageDigest(envelope);
-      if (currentMessageDigest !== verification.message_digest) {
+      const currentSignatureDigest = await sha256Base64Url(envelope.signature);
+      if (
+        currentMessageDigest !== verification.message_digest ||
+        currentSignatureDigest !== verification.signature_digest
+      ) {
         reasons.push("MESSAGE_NOT_VERIFIED");
       }
     } catch {
