@@ -1,6 +1,6 @@
 import ARHousingViewer from '@/components/ARHousingViewer';
 import AgenticCloser from '@/components/AgenticCloser';
-import { ShieldCheck, Cpu, Link as LinkIcon } from 'lucide-react';
+import { ShieldCheck, Cpu } from 'lucide-react';
 
 export default function SandboxPage() {
   return (
@@ -28,11 +28,6 @@ export default function SandboxPage() {
               <Cpu className="w-6 h-6 text-zinc-400 mb-2" />
               <h4 className="text-white font-bold mb-1">WebXR Native</h4>
               <p className="text-sm text-zinc-500">Built on @react-three/fiber. Ready for Zapbox physical tracking.</p>
-            </div>
-            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-              <LinkIcon className="w-6 h-6 text-zinc-400 mb-2" />
-              <h4 className="text-white font-bold mb-1">On-Chain Data</h4>
-              <p className="text-sm text-zinc-500">Certificate contract live on Polygon; product certification through verify is in development.</p>
             </div>
           </div>
         </div>

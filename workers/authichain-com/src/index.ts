@@ -237,7 +237,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="110" y="385" font-family="'Bebas Neue','Helvetica Neue',Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="6" fill="#f8fafc">AUTHICHAIN</text>
   <line x1="110" y1="412" x2="280" y2="412" stroke="#d4af37" stroke-width="3"/>
   <text x="110" y="468" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="300" fill="#94a3b8">The authentic agentic economy</text>
-  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Certificate contract live on Polygon · Multi-agent verification on our roadmap</text>
+  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Multi-agent verification on our roadmap</text>
   <text x="1160" y="595" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="20" letter-spacing="3" fill="#d4af37">AUTHICHAIN.COM</text>
 </svg>`;
 
@@ -2583,7 +2583,6 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -2701,7 +2700,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. Certificate contract live on Polygon; product certification through verify is in development. See the
+      This fingerprint is not stored and not anchored. See the
       <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
       <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
     </div>

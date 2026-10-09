@@ -295,8 +295,9 @@ function buildEntry(d) {
   const h1 = kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
-    `<h2>Why ${esc(b.name)}</h2>` +
-    `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
+    (d.bullets.length
+      ? `<h2>Why ${esc(b.name)}</h2>` + `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
+      : '') +
     `<h2>How it works</h2>` +
     `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +

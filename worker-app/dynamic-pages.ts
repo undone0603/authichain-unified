@@ -258,7 +258,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
   if (cert.status === "active")
-    return { label: "Verified Authentic", verified: true };
+    return { label: "", verified: true };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
@@ -332,19 +332,16 @@ async function renderProductPassport(c: Context): Promise<Response> {
     const { label, verified } = certStatusLabel(cert);
     const title = product.name + " -- Product Passport | AuthiChain";
     const description =
-      label +
-      ": " +
+      (label ? label + ": " : "") +
       product.name +
       (product.brand ? " by " + product.brand : "") +
       ". AuthiChain digital product passport and certification status.";
 
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
-      '">' +
-      escapeHtml(label) +
-      "</p>\n" +
+      (label
+        ? '<p data-verified="' + verified + '">' + escapeHtml(label) + "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -366,9 +363,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
           escapeHtml(cert.certificateNumber) +
           "</dd>\n"
         : "") +
-      "<dt>Status</dt><dd>" +
-      escapeHtml(label) +
-      "</dd>\n" +
+      (label ? "<dt>Status</dt><dd>" + escapeHtml(label) + "</dd>\n" : "") +
       "</dl>\n" +
       "</main>";
 
@@ -718,11 +713,6 @@ const LANDING_CONTENT: Record<
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
-      {
-        icon: "🏛️",
-        title: "Public Records",
-        desc: "Certificate contract live on Polygon; product certification through verify is in development.",
-      },
       {
         icon: "📊",
         title: "Procurement Tracking",
