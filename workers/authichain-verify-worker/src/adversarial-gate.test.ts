@@ -232,6 +232,20 @@ describe("Economic control-plane adversarial gate", () => {
     expect(decision.reason_codes).toContain("MESSAGE_NOT_VERIFIED");
   });
 
+  it("rejects signature-string mutation after verification", async () => {
+    const fixture = await createFixture();
+    const first = fixture.message.signature.startsWith("A") ? "B" : "A";
+    const mutated = { ...fixture.message, signature: first + fixture.message.signature.slice(1) };
+    const decision = await authorizeEconomicAction(
+      mutated,
+      fixture.verification,
+      fixture.policy,
+      NOW,
+    );
+    expect(decision.decision).toBe("DENY");
+    expect(decision.reason_codes).toContain("MESSAGE_NOT_VERIFIED");
+  });
+
   it("rejects unrecognized message envelope fields instead of ignoring them", async () => {
     const fixture = await createFixture();
     const extended = { ...fixture.message, bypass_policy: true };
@@ -243,6 +257,19 @@ describe("Economic control-plane adversarial gate", () => {
     );
     expect(decision.decision).toBe("DENY");
     expect(decision.reason_codes).toContain("MESSAGE_ACTION_BINDING_MISMATCH");
+  });
+
+  it("rejects unknown policy fields instead of silently ignoring them", async () => {
+    const fixture = await createFixture();
+    const extendedPolicy = { ...fixture.policy, hidden_admin_override: true };
+    const decision = await authorizeEconomicAction(
+      fixture.message,
+      fixture.verification,
+      extendedPolicy,
+      NOW,
+    );
+    expect(decision.decision).toBe("DENY");
+    expect(decision.reason_codes).toContain("MALFORMED_POLICY");
   });
 
   it("requires the operation-specific capability as well as proposal capability", async () => {
