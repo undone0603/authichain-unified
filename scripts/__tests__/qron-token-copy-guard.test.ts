@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 
-const BANNED = /\$QRON|[Ss]tak(?:e|ed|ing)\b|[Yy]ield:|[Tt]reasury|DAO Rewards|[Ss]can-to-[Ee]arn|QRON [Rr]ewards|QRON EARNED/;
+const BANNED = /\$QRON|[Ss]tak(?:e|ed|ing)\b|[Yy]ield:|[Tt]reasury|DAO Rewards|[Ss]can-to-[Ee]arn|QRON [Rr]ewards|QRON EARNED|<span>DAO<\/span>/;
 
 const SURFACES = [
   "src/app/_home/QronHome.tsx",
@@ -19,6 +19,8 @@ const SURFACES = [
   "src/app/creators/page.tsx",
   "apps/qron-platform/src/app/creators/page.tsx",
   "workers/watchchain-io/src/index.ts",
+  "src/app/demo/page.tsx",
+  "apps/qron-platform/src/app/demo/page.tsx",
   ...["client/src", "apps/client/src"].flatMap((r) => [
     `${r}/components/MonetizationArchitecture.tsx`,
     `${r}/pages/Home.tsx`,
