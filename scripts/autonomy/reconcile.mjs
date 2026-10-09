@@ -31,6 +31,12 @@ export function listWorkflowFiles(dir = WORKFLOW_DIR) {
     .sort();
 }
 
+/** Workflows an operator left disabled. Reconcile must not turn them back on. */
+export function operatorHold(manifest) {
+  const list = manifest?.operator_hold?.workflows ?? [];
+  return new Set(Array.isArray(list) ? list : []);
+}
+
 /** Flatten lanes into [{file, lane, desired, managed}]. */
 export function flatten(manifest) {
   const rows = [];
@@ -84,6 +90,24 @@ export function validateManifest(manifest, workflowFiles) {
         `${f} is in .github/autonomy.json but no such workflow file exists`
       );
   }
+  const holdList = manifest.operator_hold?.workflows ?? [];
+  if (manifest.operator_hold && !Array.isArray(holdList)) {
+    errors.push("operator_hold.workflows must be an array");
+  }
+  for (const f of holdList) {
+    if (!seen.has(f)) {
+      errors.push(
+        `${f} is in operator_hold but is not classified in .github/autonomy.json`
+      );
+      continue;
+    }
+    const row = rows.find(r => r.file === f);
+    if (row && !row.managed) {
+      errors.push(
+        `${f} is in an unmanaged lane; operator_hold is only for managed workflows`
+      );
+    }
+  }
   const co = manifest.cold_outreach;
   if (co) {
     if (typeof co.enabled !== "boolean")
@@ -112,9 +136,10 @@ export function validateManifest(manifest, workflowFiles) {
  */
 export function planReconcile(manifest, remote) {
   const byFile = new Map(remote.map(w => [w.path.split("/").pop(), w]));
+  const hold = operatorHold(manifest);
   const changes = [];
   for (const r of flatten(manifest)) {
-    if (!r.managed) continue;
+    if (!r.managed || hold.has(r.file)) continue;
     const w = byFile.get(r.file);
     if (!w) continue; // not registered on GitHub yet (e.g. file just added); next run picks it up
     const isActive = w.state === "active";

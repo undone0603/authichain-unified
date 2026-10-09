@@ -50,6 +50,16 @@
       "$comment": "Re-added after audit writes became fail-open (the 400s that caused the 2026-09-23 pause)."
     }
   ],
+  "operator_hold": {
+    "$comment": "Left disabled_manually on 2026-10-08. Ops pulse does not page these, and autonomy-reconcile does not re-enable them. Remove a name here before turning that loop back on. Cold outreach, social publish, gov mint, and the direct pipeline tick stay off.",
+    "workflows": [
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml"
+    ]
+  },
   "merge_autopilot": {
     "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02: covers every path, including security, revenue, schema and the charter. Set enabled=false, or add the label 'hold' to one PR, to stop it. Script: scripts/autonomy/merge-autopilot.mjs.",
     "enabled": true,
