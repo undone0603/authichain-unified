@@ -149,9 +149,11 @@ export default function RoscommonPilotPage() {
               <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 mt-2">
                 {s.theme}
               </p>
-              <p className="text-[9px] font-medium text-zinc-500 mt-1 leading-snug">
-                {s.sub}
-              </p>
+              {s.sub && (
+                <p className="text-[9px] font-medium text-zinc-500 mt-1 leading-snug">
+                  {s.sub}
+                </p>
+              )}
             </div>
           ))}
         </div>
