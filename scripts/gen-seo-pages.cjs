@@ -292,9 +292,13 @@ function buildEntry(d) {
   // d.meta (optional) pins the meta description to the lead's first sentence
   // without the price suffix. Used where a claims removal (RES-13) shortened
   // a lead and the template would otherwise pull a new $ clause into meta.
+  // A lead that already says an offer is not public must keep that sentence.
+  // The price suffix would replace it ("Farm is not a public offer.").
   const metaDescription = d.meta
     ? clampMeta(d.meta, 158)
-    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+    : /not a public offer/i.test(d.lead)
+      ? clampMeta(d.lead, 158)
+      : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = d.h1 || kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
