@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import {
   buildPayload, payloadSigningBytes, verifyBotOutput, validateRegistry, checkLiveBytes,
   makeLedgerLine, checkLedger, checkAppendOnly, qualify, jwkThumbprint, botKeySecretName,
-  PINNED_JWKS_URL,
+  PINNED_JWKS_URL, checkDryRunEvidence, POSTAL_ADDRESS, EU_PRIVACY_URL, sha256Hex,
 } from './bot-output.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -189,48 +189,199 @@ describe('ledger', () => {
 describe('qualify (Advisor ruling Oct 9)', () => {
   const DAY = 86_400_000;
   const start = Date.parse('2026-10-10T12:00:00.000Z');
-  function ledger(kinds) {
+  // Every dry run gets its own bytes, a stored piece, and a claims-gate PASS on its hash.
+  function ledger(kinds, channel = 'x', over = () => ({})) {
     let prev = null;
     const out = [];
+    const pieces = new Map();
     kinds.forEach(([kind, verdict, dayOffset], i) => {
+      const body = `piece ${i + 1}\n`;
+      const sha = sha256Hex(body);
+      const ref = `ops/dogfood/pieces/${sha}-${i + 1}`;
+      pieces.set(ref, body);
       const l = makeLedgerLine(prev, i + 1, {
-        ts: new Date(start + dayOffset * DAY).toISOString(), bot: 'grok-bot', channel: 'x', kind, kid: 'k',
-        content_sha256: 'a'.repeat(64), envelope_sha256: 'b'.repeat(64), verdict, reasons: [],
-        verifier_sha256: 'c'.repeat(64), ref: 'r',
+        ts: new Date(start + dayOffset * DAY).toISOString(), bot: 'grok-bot', channel, kind, kid: 'k',
+        content_sha256: sha, envelope_sha256: 'b'.repeat(64), verdict, reasons: [],
+        verifier_sha256: 'c'.repeat(64), ref,
+        claims_gate: { id: 'AE-20261009-RES-154', verdict: 'PASS', content_sha256: sha },
+        ...over(i + 1, sha),
       });
       out.push(l);
       prev = l;
     });
-    return out.join('\n') + '\n';
+    return { text: out.join('\n') + '\n', readPiece: (e) => pieces.get(e.ref), pieces };
   }
+  const q = (l, channel = 'x') => qualify(l.text, 'grok-bot', channel, { readPiece: l.readPiece });
   const passes = (n, days) => Array.from({ length: n }, (_, i) => ['dry-run', 'pass', (days * i) / (n - 1)]);
 
   it('20 passes over 7 days + a failed tamper copy = eligible for Auditor, never unlocked', () => {
-    const r = qualify(ledger([...passes(20, 7), ['tamper-test', 'fail', 7]]), 'grok-bot', 'x');
-    expect(r).toMatchObject({ eligible_for_auditor: true, unlocked: false, streak: 20, mode: 'initial' });
+    const r = q(ledger([...passes(20, 7), ['tamper-test', 'fail', 7]]));
+    expect(r).toMatchObject({ eligible_for_auditor: true, unlocked: false, streak: 20, mode: 'initial', rejected_dry_runs: [] });
   });
 
   it('19 passes is not enough; 20 in 6 days is not enough', () => {
-    expect(qualify(ledger([...passes(19, 7), ['tamper-test', 'fail', 7]]), 'grok-bot', 'x').eligible_for_auditor).toBe(false);
-    expect(qualify(ledger([...passes(20, 6), ['tamper-test', 'fail', 6]]), 'grok-bot', 'x').eligible_for_auditor).toBe(false);
+    expect(q(ledger([...passes(19, 7), ['tamper-test', 'fail', 7]])).eligible_for_auditor).toBe(false);
+    expect(q(ledger([...passes(20, 6), ['tamper-test', 'fail', 6]])).eligible_for_auditor).toBe(false);
   });
 
   it('one failure resets the streak', () => {
-    const r = qualify(ledger([...passes(19, 6), ['dry-run', 'fail', 6.5], ['dry-run', 'pass', 7], ['tamper-test', 'fail', 7]]), 'grok-bot', 'x');
+    const r = q(ledger([...passes(19, 6), ['dry-run', 'fail', 6.5], ['dry-run', 'pass', 7], ['tamper-test', 'fail', 7]]));
     expect(r.streak).toBe(1);
     expect(r.eligible_for_auditor).toBe(false);
   });
 
   it('missing tamper test, or a tamper copy that PASSED, blocks', () => {
-    expect(qualify(ledger(passes(20, 7)), 'grok-bot', 'x').reasons).toContain('tamper_test_missing');
-    expect(qualify(ledger([...passes(20, 7), ['tamper-test', 'pass', 7]]), 'grok-bot', 'x').reasons).toContain('tamper_copy_passed');
+    expect(q(ledger(passes(20, 7))).reasons).toContain('tamper_test_missing');
+    expect(q(ledger([...passes(20, 7), ['tamper-test', 'pass', 7]])).reasons).toContain('tamper_copy_passed');
   });
 
   it('a live failure re-locks: requalify needs 10 over 3 days after it', () => {
     const rows = [...passes(20, 7), ['tamper-test', 'fail', 7], ['live', 'pass', 8], ['live', 'fail', 9]];
-    expect(qualify(ledger(rows), 'grok-bot', 'x')).toMatchObject({ mode: 'requalify', eligible_for_auditor: false });
+    expect(q(ledger(rows))).toMatchObject({ mode: 'requalify', eligible_for_auditor: false });
     const re = Array.from({ length: 10 }, (_, i) => ['dry-run', 'pass', 9.1 + (3 * i) / 9]);
-    const r = qualify(ledger([...rows, ...re, ['tamper-test', 'fail', 12.2]]), 'grok-bot', 'x');
+    const r = q(ledger([...rows, ...re, ['tamper-test', 'fail', 12.2]]));
     expect(r).toMatchObject({ mode: 'requalify', streak: 10, eligible_for_auditor: true });
+  });
+
+  // ── Evidence (ADM-144, MKT-93, RES-154) ────────────────────────────────────
+  const ok20 = [...passes(20, 7), ['tamper-test', 'fail', 7]];
+
+  it('fails closed with no piece reader: no dry run counts', () => {
+    const l = ledger(ok20);
+    const r = qualify(l.text, 'grok-bot', 'x');
+    expect(r.eligible_for_auditor).toBe(false);
+    expect(r.streak).toBe(0);
+    expect(r.rejected_dry_runs[0].reasons).toContain('piece_missing');
+  });
+
+  it('a dry run with NO claims-gate PASS fails and resets the streak (posts)', () => {
+    const r = q(ledger(ok20, 'x', (seq) => (seq === 10 ? { claims_gate: undefined } : {})));
+    expect(r.eligible_for_auditor).toBe(false);
+    expect(r.streak).toBe(10);
+    expect(r.rejected_dry_runs).toEqual([{ seq: 10, reasons: ['claims_gate_missing'] }]);
+  });
+
+  it('a claims-gate PASS on a MISMATCHED hash does not count', () => {
+    const r = q(ledger(ok20, 'x', (seq) => (seq === 20
+      ? { claims_gate: { id: 'AE-20261009-RES-154', verdict: 'PASS', content_sha256: 'd'.repeat(64) } }
+      : {})));
+    expect(r.eligible_for_auditor).toBe(false);
+    expect(r.rejected_dry_runs).toEqual([{ seq: 20, reasons: ['claims_gate_hash_mismatch'] }]);
+  });
+
+  it('a non-PASS verdict or a malformed gate id does not count', () => {
+    const r = q(ledger(ok20, 'x', (seq, sha) => (seq === 5
+      ? { claims_gate: { id: 'RES-154', verdict: 'FAIL', content_sha256: sha } }
+      : {})));
+    expect(r.rejected_dry_runs[0].reasons).toEqual(expect.arrayContaining(['claims_gate_id', 'claims_gate_not_pass']));
+    expect(r.eligible_for_auditor).toBe(false);
+  });
+
+  it('a TAMPERED stored copy (bytes no longer match the logged hash) fails', () => {
+    const l = ledger(ok20);
+    const ref = [...l.pieces.keys()][14];
+    l.pieces.set(ref, l.pieces.get(ref).replace('piece', 'p1ece'));
+    const r = q(l);
+    expect(r.eligible_for_auditor).toBe(false);
+    expect(r.rejected_dry_runs).toEqual([{ seq: 15, reasons: ['piece_hash_mismatch'] }]);
+  });
+
+  it('a gate copied from another piece (gate hash = other content) fails even with valid bytes', () => {
+    const other = sha256Hex('some other gated copy\n');
+    const r = q(ledger(ok20, 'x', (seq) => (seq === 1
+      ? { claims_gate: { id: 'AE-20261009-RES-154', verdict: 'PASS', content_sha256: other } }
+      : {})));
+    expect(r.rejected_dry_runs[0]).toEqual({ seq: 1, reasons: ['claims_gate_hash_mismatch'] });
+  });
+
+  describe('email musts', () => {
+    const OPT = 'https://authichain.com/unsubscribe?t=abc123';
+    const goodBody = (eu) => `Hi,\nShort note.\n\n${POSTAL_ADDRESS}\nUnsubscribe: ${OPT}\n${eu ? `Privacy (EU/UK): ${EU_PRIVACY_URL}\n` : ''}`;
+    const checks = (over = {}) => ({
+      dnc: { list: '/workspace/reports/legal/DO-NOT-CONTACT.md', list_sha256: 'e'.repeat(64), recipient_sha256: 'f'.repeat(64), listed: false },
+      opt_out: { url: OPT, http_status: 200 },
+      eu_recipient: false,
+      ...over,
+    });
+    const entry = (body, ec, gateSha) => {
+      const sha = sha256Hex(body);
+      return {
+        channel: 'email', content_sha256: sha,
+        claims_gate: { id: 'AE-20261009-RES-154', verdict: 'PASS', content_sha256: gateSha ?? sha },
+        ...(ec === undefined ? {} : { email_checks: ec }),
+      };
+    };
+
+    it('a complete email passes (non-EU and EU)', () => {
+      expect(checkDryRunEvidence(entry(goodBody(false), checks()), goodBody(false))).toEqual([]);
+      expect(checkDryRunEvidence(entry(goodBody(true), checks({ eu_recipient: true })), goodBody(true))).toEqual([]);
+    });
+
+    it('repo copy of the DNC list is accepted; any other path is not', () => {
+      const b = goodBody(false);
+      expect(checkDryRunEvidence(entry(b, checks({ dnc: { ...checks().dnc, list: 'ops/legal/DO-NOT-CONTACT.md' } })), b)).toEqual([]);
+      expect(checkDryRunEvidence(entry(b, checks({ dnc: { ...checks().dnc, list: '/tmp/dnc.md' } })), b)).toContain('dnc_list_path');
+    });
+
+    it('no DNC check, or a listed recipient, fails', () => {
+      const b = goodBody(false);
+      expect(checkDryRunEvidence(entry(b, checks({ dnc: undefined })), b)).toContain('dnc_check_missing');
+      expect(checkDryRunEvidence(entry(b, checks({ dnc: { ...checks().dnc, listed: true } })), b)).toContain('dnc_listed_or_unknown');
+      expect(checkDryRunEvidence(entry(b, undefined), b)).toContain('email_checks_missing');
+    });
+
+    it('no footer postal address fails', () => {
+      const b = goodBody(false).replace(POSTAL_ADDRESS, 'Roscommon, MI');
+      expect(checkDryRunEvidence(entry(b, checks()), b)).toContain('postal_address_missing');
+    });
+
+    it('no opt-out link, or one that did not return 2xx, fails', () => {
+      const b = goodBody(false).replace(`Unsubscribe: ${OPT}\n`, '');
+      expect(checkDryRunEvidence(entry(b, checks()), b)).toEqual(expect.arrayContaining(['opt_out_link_missing']));
+      const b2 = goodBody(false);
+      expect(checkDryRunEvidence(entry(b2, checks({ opt_out: { url: OPT, http_status: 404 } })), b2)).toContain('opt_out_not_working');
+      expect(checkDryRunEvidence(entry(b2, checks({ opt_out: undefined })), b2)).toContain('opt_out_missing');
+      expect(checkDryRunEvidence(entry(b2, checks({ opt_out: { url: 'https://authichain.com/unsubscribe?t=other', http_status: 200 } })), b2))
+        .toContain('opt_out_link_not_checked');
+    });
+
+    it('EU recipient without the /privacy#eu-uk link fails; unknown EU status fails', () => {
+      const b = goodBody(false);
+      expect(checkDryRunEvidence(entry(b, checks({ eu_recipient: true })), b)).toContain('eu_privacy_link_missing');
+      expect(checkDryRunEvidence(entry(b, checks({ eu_recipient: undefined })), b)).toContain('eu_recipient_unknown');
+    });
+
+    it('email still needs the claims gate on the exact hash; a tampered copy fails', () => {
+      const b = goodBody(false);
+      expect(checkDryRunEvidence(entry(b, checks(), 'a'.repeat(64)), b)).toContain('claims_gate_hash_mismatch');
+      expect(checkDryRunEvidence(entry(b, checks()), b.replace('Short', 'Sh0rt'))).toContain('piece_hash_mismatch');
+    });
+
+    it('qualify on the email channel: one email missing its footer breaks the streak', () => {
+      const body = goodBody(false);
+      // Every line logs the same complete email body, so only the stored bytes differ.
+      const text = (() => {
+        let prev = null;
+        return ok20.map(([kind, verdict, d], i) => {
+          const sha = sha256Hex(body);
+          const line = makeLedgerLine(prev, i + 1, {
+            ts: new Date(start + d * DAY).toISOString(), bot: 'grok-bot', channel: 'email', kind, kid: 'k',
+            content_sha256: sha, envelope_sha256: 'b'.repeat(64), verdict, reasons: [], verifier_sha256: 'c'.repeat(64),
+            ref: `ops/dogfood/pieces/p${i + 1}`,
+            claims_gate: { id: 'AE-20261009-RES-154', verdict: 'PASS', content_sha256: sha },
+            email_checks: checks(),
+          });
+          prev = line;
+          return line;
+        }).join('\n') + '\n';
+      })();
+      const good = qualify(text, 'grok-bot', 'email', { readPiece: () => body });
+      expect(good).toMatchObject({ eligible_for_auditor: true, streak: 20 });
+      // Same ledger, but piece 12's stored bytes lack the postal address (tampered copy).
+      const noFooter = body.replace(POSTAL_ADDRESS, '');
+      const bad = qualify(text, 'grok-bot', 'email', { readPiece: (e) => (e.seq === 12 ? noFooter : body) });
+      expect(bad.eligible_for_auditor).toBe(false);
+      expect(bad.rejected_dry_runs).toEqual([{ seq: 12, reasons: ['piece_hash_mismatch'] }]);
+    });
   });
 });

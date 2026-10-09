@@ -5,8 +5,14 @@
  *   node protocol/dogfood/cli.mjs verify   --content F --envelope F [--ledger-ts ISO] [--registry F]
  *   node protocol/dogfood/cli.mjs live     --content F --envelope F
  *   node protocol/dogfood/cli.mjs append   --kind dry-run|tamper-test|live --content F --envelope F [--ledger F]
+ *                                           [--claims-gate-id AE-YYYYMMDD-RES-N --claims-gate-sha256 HEX]
+ *                                           [--email-checks F.json]
  *   node protocol/dogfood/cli.mjs ledger-check [--ledger F] [--base F]
  *   node protocol/dogfood/cli.mjs qualify  --bot B --channel C [--ledger F]
+ *
+ * qualify reads each dry run's stored bytes from ops/dogfood/pieces/ (via the
+ * ledger line's ref) and fails any dry run without a Research claims-gate PASS
+ * on that exact sha256, or (email) without DNC/postal/opt-out/EU-link evidence.
  *
  * Every verify first checks that bot-output.mjs matches PIN.json, so a bot
  * cannot pass by editing the verifier it is checked by.
@@ -83,7 +89,14 @@ function main(argv) {
     if (cmd === 'qualify') {
       if (!a.bot || !a.channel) throw new Error('usage');
       const ledger = a.ledger ?? DEFAULT_LEDGER;
-      const r = qualify(existsSync(ledger) ? readFileSync(ledger, 'utf8') : '', a.bot, a.channel);
+      const piecesDir = resolve(dirname(resolve(ledger)), 'pieces');
+      const readPiece = (e) => {
+        if (typeof e.ref !== 'string') return undefined;
+        const f = resolve(ROOT, `${e.ref}.txt`);
+        if (!f.startsWith(piecesDir + '/') || !existsSync(f)) return undefined;
+        return readFileSync(f);
+      };
+      const r = qualify(existsSync(ledger) ? readFileSync(ledger, 'utf8') : '', a.bot, a.channel, { readPiece });
       return print(r, r.eligible_for_auditor);
     }
     if (cmd === 'append') {
@@ -112,6 +125,10 @@ function main(argv) {
         reasons: r.reasons,
         verifier_sha256: verifierSha256(),
         ref: relative(ROOT, stem),
+        ...(a['claims-gate-id'] || a['claims-gate-sha256']
+          ? { claims_gate: { id: a['claims-gate-id'] ?? '', verdict: 'PASS', content_sha256: a['claims-gate-sha256'] ?? '' } }
+          : {}),
+        ...(a['email-checks'] ? { email_checks: JSON.parse(readFileSync(a['email-checks'], 'utf8')) } : {}),
       });
       appendFileSync(ledger, line + '\n');
       // A tamper-test is SUPPOSED to fail; the command succeeds when it does.

@@ -12,3 +12,10 @@ the Auditor can re-verify any 5 at random:
 Add lines only with `node protocol/dogfood/cli.mjs append ...`. Never hand-edit.
 `qualify` reports eligibility for the Auditor check; unlock is PM's written
 call, never a ledger state.
+
+A dry run only counts toward `qualify` if its ledger line cites a Research
+claims-gate PASS on that exact `content_sha256` (`--claims-gate-id`,
+`--claims-gate-sha256`) and its stored bytes in `pieces/` still hash to it.
+Email dry runs also need `--email-checks` (DNC list check, a 2xx opt-out probe,
+EU flag), and the bytes must carry the footer postal address, that opt-out
+link and, for EU/UK recipients, `https://authichain.com/privacy#eu-uk`.

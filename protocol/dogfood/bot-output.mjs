@@ -39,6 +39,24 @@ export const MAX_CONTENT_BYTES = 100_000;
 export const QUALIFY_INITIAL = { count: 20, days: 7 };
 export const QUALIFY_RELOCK = { count: 10, days: 3 };
 
+/**
+ * Evidence every dry run must carry before it counts toward qualification
+ * (ADM-144, MKT-93, RES-154). A signature proves who sent something, not that
+ * it is true or lawful, so these are checked separately.
+ */
+/** Research claims-gate ids look like AE-20261009-RES-154. */
+export const CLAIMS_GATE_ID = /^AE-\d{8}-RES-\d+$/;
+/** Allowed do-not-contact list locations (box file, or a repo copy). */
+export const DNC_LISTS = new Set([
+  '/workspace/reports/legal/DO-NOT-CONTACT.md',
+  'ops/legal/DO-NOT-CONTACT.md',
+]);
+/** CAN-SPAM footer postal address (Zac, per MKT-86). Matched with whitespace collapsed. */
+export const POSTAL_ADDRESS = '109 N. 4th St., Roscommon, MI 48653';
+/** Art. 14 notice link required in email to EU/UK recipients (RES-151 condition 2). */
+export const EU_PRIVACY_URL = 'https://authichain.com/privacy#eu-uk';
+const OPT_OUT_URL = /https:\/\/[^\s"'<>]*(?:unsubscribe|opt-?out)[^\s"'<>]*/gi;
+
 const BOT_ID = /^[a-z0-9][a-z0-9-]{1,39}$/;
 const HEX64 = /^[0-9a-f]{64}$/;
 const B64URL = /^[A-Za-z0-9_-]+$/;
@@ -241,6 +259,7 @@ export function makeLedgerLine(prevRaw, seq, fields) {
 const LEDGER_FIELDS = [
   'v', 'seq', 'prev', 'ts', 'bot', 'channel', 'kind', 'kid', 'content_sha256',
   'envelope_sha256', 'verdict', 'reasons', 'verifier_sha256', 'ref',
+  'claims_gate', 'email_checks',
 ];
 
 /** Check chain integrity and field shape. Returns reasons[] (empty = ok). */
@@ -283,6 +302,86 @@ export function checkAppendOnly(baseText, headText) {
 }
 
 /**
+ * Evidence check for ONE passing dry run. Returns reasons[] (empty = it counts).
+ *
+ * (a) Every channel: entry.claims_gate = { id: 'AE-YYYYMMDD-RES-N', verdict: 'PASS',
+ *     content_sha256 } citing THIS piece's exact content hash. A PASS on any other
+ *     hash does not count.
+ * (b) Email only: entry.email_checks = {
+ *       dnc: { list: <DNC_LISTS path>, list_sha256: hex64, recipient_sha256: hex64, listed: false },
+ *       opt_out: { url, http_status: 2xx },   // url must appear in the email bytes
+ *       eu_recipient: boolean,
+ *     }
+ *     and the email bytes must contain POSTAL_ADDRESS, and EU_PRIVACY_URL when
+ *     eu_recipient is true.
+ * The piece bytes themselves (pieceBytes) must hash to entry.content_sha256, so a
+ * tampered stored copy fails. Missing bytes fail.
+ */
+export function checkDryRunEvidence(entry, pieceBytes) {
+  const reasons = [];
+  const sha = entry?.content_sha256;
+
+  // Exact bytes of the logged piece.
+  let text = null;
+  if (pieceBytes === undefined || pieceBytes === null) {
+    reasons.push('piece_missing');
+  } else {
+    try {
+      const bytes = toBytes(pieceBytes);
+      if (sha256Hex(bytes) !== sha) reasons.push('piece_hash_mismatch');
+      else text = bytes.toString('utf8');
+    } catch {
+      reasons.push('piece_unreadable');
+    }
+  }
+
+  // (a) Research claims-gate PASS on this exact hash.
+  const g = entry?.claims_gate;
+  if (!g || typeof g !== 'object' || Array.isArray(g)) {
+    reasons.push('claims_gate_missing');
+  } else {
+    if (typeof g.id !== 'string' || !CLAIMS_GATE_ID.test(g.id)) reasons.push('claims_gate_id');
+    if (g.verdict !== 'PASS') reasons.push('claims_gate_not_pass');
+    if (typeof g.content_sha256 !== 'string' || !HEX64.test(g.content_sha256)) reasons.push('claims_gate_sha256');
+    else if (g.content_sha256 !== sha) reasons.push('claims_gate_hash_mismatch');
+    for (const k of Object.keys(g)) if (!['id', 'verdict', 'content_sha256'].includes(k)) reasons.push(`claims_gate_unknown_field:${k}`);
+  }
+
+  // (b) Email musts (CAN-SPAM + GDPR Art. 14).
+  if (entry?.channel === 'email') {
+    const e = entry.email_checks;
+    if (!e || typeof e !== 'object' || Array.isArray(e)) {
+      reasons.push('email_checks_missing');
+    } else {
+      const d = e.dnc;
+      if (!d || typeof d !== 'object') reasons.push('dnc_check_missing');
+      else {
+        if (!DNC_LISTS.has(d.list)) reasons.push('dnc_list_path');
+        if (typeof d.list_sha256 !== 'string' || !HEX64.test(d.list_sha256)) reasons.push('dnc_list_sha256');
+        if (typeof d.recipient_sha256 !== 'string' || !HEX64.test(d.recipient_sha256)) reasons.push('dnc_recipient_sha256');
+        if (d.listed !== false) reasons.push('dnc_listed_or_unknown');
+      }
+      if (typeof e.eu_recipient !== 'boolean') reasons.push('eu_recipient_unknown');
+      const o = e.opt_out;
+      if (!o || typeof o !== 'object' || typeof o.url !== 'string' || !/^https:\/\//.test(o.url)) {
+        reasons.push('opt_out_missing');
+      } else if (!Number.isInteger(o.http_status) || o.http_status < 200 || o.http_status > 299) {
+        reasons.push('opt_out_not_working');
+      }
+      if (text !== null) {
+        const flat = text.replace(/\s+/g, ' ');
+        if (!flat.includes(POSTAL_ADDRESS)) reasons.push('postal_address_missing');
+        const links = text.match(OPT_OUT_URL) ?? [];
+        if (links.length === 0) reasons.push('opt_out_link_missing');
+        else if (o && typeof o.url === 'string' && !links.includes(o.url)) reasons.push('opt_out_link_not_checked');
+        if (e.eu_recipient === true && !text.includes(EU_PRIVACY_URL)) reasons.push('eu_privacy_link_missing');
+      }
+    }
+  }
+  return reasons;
+}
+
+/**
  * Qualification status for one bot on one channel (Advisor ruling, Oct 9).
  * This only says whether a bot is ELIGIBLE for the Auditor's 5-random
  * re-verify; unlock itself is PM's written call, never this function.
@@ -292,19 +391,41 @@ export function checkAppendOnly(baseText, headText) {
  * failure (relock): >=10 spanning >=3 days. A tamper-test line with verdict
  * 'fail' must exist after the streak started; a tamper-test that PASSED means
  * the verifier is broken and blocks everything.
+ *
+ * A dry run whose verdict is 'pass' but which fails checkDryRunEvidence (no
+ * claims-gate PASS on its exact hash, tampered/missing piece bytes, or for
+ * email a missing DNC check, postal address, working opt-out, or EU privacy
+ * link) is treated as a FAILED dry run: it does not count and resets the streak.
+ *
+ * readPiece(entry) returns the exact stored bytes for that ledger entry (or
+ * undefined). Without it every dry run fails evidence, i.e. fail closed.
  */
-export function qualify(ledgerText, bot, channel) {
+export function qualify(ledgerText, bot, channel, opts = {}) {
+  const readPiece = typeof opts.readPiece === 'function' ? opts.readPiece : () => undefined;
   const rows = parseLedger(ledgerText).map((r) => r.entry).filter((e) => e.bot === bot && e.channel === channel);
   const relocked = rows.some((e) => e.kind === 'live' && e.verdict === 'fail');
   const rule = relocked ? QUALIFY_RELOCK : QUALIFY_INITIAL;
   const reasons = [];
+  const rejected = [];
 
   if (rows.some((e) => e.kind === 'tamper-test' && e.verdict === 'pass')) reasons.push('tamper_copy_passed');
 
   let streak = [];
   for (const e of rows) {
     if ((e.kind === 'dry-run' || e.kind === 'live') && e.verdict === 'fail') streak = [];
-    else if (e.kind === 'dry-run' && e.verdict === 'pass') streak.push(e);
+    else if (e.kind === 'dry-run' && e.verdict === 'pass') {
+      let bytes;
+      try {
+        bytes = readPiece(e);
+      } catch {
+        bytes = undefined;
+      }
+      const why = checkDryRunEvidence(e, bytes);
+      if (why.length) {
+        rejected.push({ seq: e.seq, reasons: why });
+        streak = [];
+      } else streak.push(e);
+    }
   }
   const spanDays = streak.length > 1
     ? (Date.parse(streak[streak.length - 1].ts) - Date.parse(streak[0].ts)) / DAY_MS
@@ -325,5 +446,6 @@ export function qualify(ledgerText, bot, channel) {
     eligible_for_auditor: reasons.length === 0,
     unlocked: false, // only PM, in writing
     reasons,
+    rejected_dry_runs: rejected,
   };
 }

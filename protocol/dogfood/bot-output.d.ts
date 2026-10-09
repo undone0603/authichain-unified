@@ -51,7 +51,17 @@ export function parseLedger(text: string): Array<{ raw: string; entry: Record<st
 export function makeLedgerLine(prevRaw: string | null, seq: number, fields: Record<string, unknown>): string;
 export function checkLedger(text: string): string[];
 export function checkAppendOnly(baseText: string, headText: string): string[];
-export function qualify(ledgerText: string, bot: string, channel: string): {
+export const CLAIMS_GATE_ID: RegExp;
+export const DNC_LISTS: Set<string>;
+export const POSTAL_ADDRESS: string;
+export const EU_PRIVACY_URL: string;
+export function checkDryRunEvidence(entry: Record<string, unknown>, pieceBytes: string | Uint8Array | undefined | null): string[];
+export function qualify(
+  ledgerText: string,
+  bot: string,
+  channel: string,
+  opts?: { readPiece?: (entry: Record<string, unknown>) => string | Uint8Array | undefined },
+): {
   bot: string;
   channel: string;
   mode: 'initial' | 'requalify';
@@ -60,4 +70,5 @@ export function qualify(ledgerText: string, bot: string, channel: string): {
   eligible_for_auditor: boolean;
   unlocked: false;
   reasons: string[];
+  rejected_dry_runs: Array<{ seq: number; reasons: string[] }>;
 };
