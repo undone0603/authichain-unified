@@ -12,6 +12,12 @@ import { logAutomation } from '@/lib/automation';
 const AUTHICHAIN_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const QRON_TOKEN = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 
+// verify / check_eu_dpp / register are in development. Their replies must not
+// read as a verdict (no SECURED status, no consensus count, no compliance
+// status or emissions figures, no on-chain claim). PM-348, ADM-114, RES-106.
+const STUB_TOOL_REPLY =
+  "Not available yet: this tool returns no verification result.";
+
 const TOOLS = [
   {
     name: "authichain_verify_product",
@@ -113,7 +119,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `Verification initiated for ${args.serial}. Consensus nodes: 5/5. Status: SECURED.`
+              text: STUB_TOOL_REPLY
             }]
           });
 
@@ -128,7 +134,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `EU DPP Compliance Audit initiated for cert: ${args.certification_id}. Lifecycle emissions: 2.4kg. Circularity score: 8/10. Status: COMPLIANT.`
+              text: STUB_TOOL_REPLY
             }]
           });
 
@@ -143,7 +149,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `Registration protocol activated for ${args.name} by ${args.manufacturer}. Certificate pending on-chain anchor.`
+              text: STUB_TOOL_REPLY
             }]
           });
 
