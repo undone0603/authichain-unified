@@ -132,7 +132,7 @@ function requireId(value: unknown, field: string): string {
 function requireUtcTimestamp(value: unknown, field: string): string {
   if (
     typeof value !== "string" ||
-    !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value)
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
   ) {
     throw new EconomicActionValidationError(`Invalid ${field}: expected canonical UTC timestamp`);
   }
