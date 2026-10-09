@@ -81,6 +81,8 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
       /Certificate contract on Polygon/i,
       // The cut "Polygon mainnet" anchored-record showcase card.
       /class="eyebrow">\s*Polygon mainnet/i,
+      // RES-172: the /mcp/install meta now uses the registry line.
+      /Polygon-anchored/i,
     ]) {
       assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
     }

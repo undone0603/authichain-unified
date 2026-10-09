@@ -636,7 +636,7 @@ async function handleRpc(
       serverInfo: { name: "authichain", version: SERVER_VERSION },
       instructions:
         "AuthiChain verification is free. verify_record checks an Ed25519 " +
-        "signed provenance record and its Polygon anchor. dpp_readiness_check " +
+        "signed provenance record. dpp_readiness_check " +
         "scores EU Digital Product Passport readiness. Neither inspects a " +
         "physical product, and neither is legal advice.",
     });

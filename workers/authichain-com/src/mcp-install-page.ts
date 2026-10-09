@@ -249,6 +249,8 @@ section:first-of-type{border-top:0}
 .grid{display:grid;gap:14px}
 @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
 @media(min-width:900px){.grid.three{grid-template-columns:repeat(3,1fr)}}
+/* 720-899px: two columns, so an odd last card spans both (no blank slot). */
+@media(min-width:720px) and (max-width:899px){.grid.two.three>:last-child:nth-child(odd){grid-column:1/-1}}
 .card{background:var(--ac-card);border:1px solid var(--ac-line);
   border-radius:var(--ac-radius);padding:var(--ac-pad)}
 .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
@@ -332,7 +334,7 @@ export function renderMcpInstallPage(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the AuthiChain MCP server | AuthiChain</title>
-<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Free verification of Polygon-anchored signed records and EU Digital Product Passport readiness, over MCP.">
+<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. x402 paid verification and on-chain anchoring in development.">
 <link rel="canonical" href="${MCP_INSTALL_CANONICAL}">
 ${ESTATE_FONTS_LINK}
 <style>${CSS}</style>
