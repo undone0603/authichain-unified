@@ -28,6 +28,7 @@ export interface EconomicPolicy {
   evidence_required_for: EconomicActionType[];
   allowed_agent_ids?: string[];
   allowed_roles?: string[];
+  allowed_organization_ids?: string[];
 }
 
 export interface EconomicIdentitySnapshot {
@@ -172,11 +173,16 @@ export function evaluateEconomicAction(
 
   const policy = context?.policy;
   if (!policy || policy.enabled !== true) reasons.push("POLICY_DISABLED");
+  if (!policy || policy.policy_version !== action.policy_version) {
+    reasons.push("POLICY_VERSION_MISMATCH");
+  }
   if (
     !policy ||
-    policy.policy_version !== action.policy_version ||
-    policy.organization_id !== action.organization_id
-  ) reasons.push("POLICY_VERSION_MISMATCH");
+    policy.organization_id !== action.organization_id ||
+    (policy.allowed_organization_ids &&
+      (!Array.isArray(policy.allowed_organization_ids) ||
+        !policy.allowed_organization_ids.includes(action.organization_id)))
+  ) reasons.push("ORGANIZATION_NOT_ALLOWED");
 
   const allowedActions = policy?.allowed_action_types;
   if (!Array.isArray(allowedActions) || !allowedActions.includes(action.action_type)) {
@@ -189,11 +195,11 @@ export function evaluateEconomicAction(
   if (
     policy?.allowed_agent_ids &&
     (!Array.isArray(policy.allowed_agent_ids) || !policy.allowed_agent_ids.includes(action.agent_id))
-  ) reasons.push("ORGANIZATION_NOT_ALLOWED");
+  ) reasons.push("AGENT_NOT_ALLOWED");
   if (
     policy?.allowed_roles &&
     (!Array.isArray(policy.allowed_roles) || !policy.allowed_roles.includes(identity?.role ?? ""))
-  ) reasons.push("ORGANIZATION_NOT_ALLOWED");
+  ) reasons.push("ROLE_NOT_ALLOWED");
 
   const maxAmount = policy?.max_amount_minor_by_action?.[action.action_type];
   if (!isSafeNonNegativeInteger(maxAmount) || maxAmount === 0) {
@@ -213,7 +219,7 @@ export function evaluateEconomicAction(
   }
 
   const nowMs = now.getTime();
-  if (Date.parse(action.created_at) > nowMs + 30_000) reasons.push("ACTION_NOT_YET_VALID" as AuthorizationReasonCode);
+  if (Date.parse(action.created_at) > nowMs + 30_000) reasons.push("ACTION_NOT_YET_VALID");
   if (Date.parse(action.expires_at) <= nowMs) reasons.push("ACTION_EXPIRED");
 
   const budget = context?.budget;
@@ -243,7 +249,12 @@ export function evaluateEconomicAction(
   }
 
   const evidence = Array.isArray(context?.evidence) ? context.evidence : [];
-  const evidenceById = new Map(evidence.map((item) => [item.evidence_id, item]));
+  const evidenceById = new Map<string, (typeof evidence)[number]>();
+  for (const item of evidence) {
+    if (item && typeof item === "object" && validId(item.evidence_id)) {
+      evidenceById.set(item.evidence_id, item);
+    }
+  }
   const evidenceRequired = Array.isArray(policy?.evidence_required_for) &&
     policy.evidence_required_for.includes(action.action_type);
   if (evidenceRequired && action.evidence_ids.length === 0) {
