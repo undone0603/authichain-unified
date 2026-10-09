@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
-import { reportAgentUsage } from '@/lib/industrial/billing';
 import { logAutomation } from '@/lib/automation';
 
 /**
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ tools: TOOLS });
     }
 
-    // 2. Handle callTool (Requires Authentication for Billing)
+    // 2. Handle callTool (requires authentication; placeholder tools are not billed)
     if (method === "tools/call") {
       if (!apiKey) {
         return NextResponse.json({ error: "X-API-Key required for tool execution" }, { status: 401 });
@@ -109,13 +108,8 @@ export async function POST(req: NextRequest) {
           });
 
         case "authichain_verify_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'verify_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(verify_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'verify_product' }, msg);
-          });
-
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
@@ -124,13 +118,8 @@ export async function POST(req: NextRequest) {
           });
 
         case "authichain_check_eu_dpp":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'check_eu_dpp').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(check_eu_dpp) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'check_eu_dpp' }, msg);
-          });
-
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
@@ -139,13 +128,8 @@ export async function POST(req: NextRequest) {
           });
 
         case "authichain_register_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'register_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(register_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'register_product' }, msg);
-          });
-          
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
