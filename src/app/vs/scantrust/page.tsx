@@ -17,7 +17,6 @@ export const metadata: Metadata = {
 
 const rows: ComparisonRow[] = [
   { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: 'Has shipped blockchain integrations (Cardano, Hyperledger)' },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: 'Yes (self-serve signup)' },
   { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },

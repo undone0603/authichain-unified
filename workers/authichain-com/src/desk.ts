@@ -189,14 +189,13 @@ const DESK_SEALS: DeskSeal[] = [
     holder: "Self-serve desk seed",
     origin: "Michigan",
     finding:
-      "Five-agent consensus on the published desk seed. Not a live METRC filing and not a cryptographic attestation.",
+      "Not a live METRC filing and not a cryptographic attestation.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
       { label: "Source", value: "Desk seed · AC-7C2A91E4" },
       { label: "Protocol", value: "AuthiChain attestation 0.1" },
       { label: "MCP", value: "query_provenance status desk_sample, verified false" },
-      { label: "Scan", value: "2.1s · Guardian → Arbiter" },
     ],
     votes: ALL_PASS,
   },
@@ -207,7 +206,7 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Harbor-3 LFP industrial pack · 3.2 kWh",
     holder: "Great Lakes Energy Works",
     origin: "Grand Rapids, MI",
-    finding: "Five-agent consensus. Seal matches the sample DPP for this pack.",
+    finding: "Seal matches the sample DPP for this pack.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -340,7 +339,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Classification",
         title: "Labeled, not attested",
-        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false. The scan is Guardian through Arbiter in about 2.1 seconds.",
+        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false.",
       },
       {
         phase: "Sealing",
@@ -487,7 +486,7 @@ function renderCertificate(seal: DeskSeal): string {
         : "Unknown";
   const headline =
     seal.status === "verified"
-      ? "Consensus reached."
+      ? ""
       : seal.status === "failed"
         ? "The mark does not hold."
         : "Unknown. Not attested.";
@@ -501,10 +500,10 @@ function renderCertificate(seal: DeskSeal): string {
   <section style="margin-top:2rem">
     <p class="kicker">Verification · ${esc(seal.id)}</p>
     <h2 style="margin:.4rem 0 0">${esc(headline)}</h2>
-    <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. Target 2.1 seconds. No agent may upgrade an unknown ID to verified.</p>
+    <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. No agent may upgrade an unknown ID to verified.</p>
     ${agentRail(seal.votes)}
     <article class="card" style="margin-top:1.25rem">
-      <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""} <span class="muted">2.1s consensus</span></p>
+      <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""}</p>
       <h3 style="margin:.6rem 0 .35rem">${esc(seal.product)}</h3>
       <p class="mono">${esc(seal.id)}</p>
       <p>${esc(seal.finding)}</p>
@@ -722,15 +721,15 @@ function verify(request: Request): string {
   const result = seal ? renderCertificate(seal) : "";
   return shell(
     "Verify — AuthiChain desk",
-    "Five-agent consensus on this desk. Typical scan is 2.1 seconds. Unknown IDs stay unknown.",
+    "Unknown IDs stay unknown.",
     "/desk/verify",
-    `<p class="kicker">Five-agent consensus</p>
+    `<p class="kicker"></p>
      <h1>Verify</h1>
      <p class="muted">Guardian, Sentinel, Archivist, Scout, Arbiter. Desk samples are labeled. query_provenance never attests an unknown ID.</p>
      <form id="vf" class="card" style="max-width:28rem" method="get" action="/desk/verify">
        <label for="cert">Certificate ID</label>
        <input id="cert" name="id" value="${inputValue}" autocomplete="off" maxlength="64">
-       <div class="row"><button class="btn" type="submit">Run 2.1s consensus</button>
+       <div class="row"><button class="btn" type="submit"></button>
        <a class="btn ghost" href="/protocol">Open Verification Protocol</a></div>
      </form>
      <p class="muted" style="margin-top:1rem">Scan stays on this desk. Samples first:</p>

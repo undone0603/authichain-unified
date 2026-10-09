@@ -14,7 +14,7 @@
     },
     {
       "name": "mint_certificate",
-      "description": "Initiate a trust certificate mint (5-agent consensus)."
+      "description": ""
     },
     {
       "name": "classify_product",

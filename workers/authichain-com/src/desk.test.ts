@@ -130,7 +130,7 @@ test("/desk/verify?id=AC-7C2A91E4 shows labeled sample consensus", async () => {
   assert.match(html, /Guardian/);
   assert.match(html, /Michigan METRC/);
   assert.match(html, /Desk sample/);
-  assert.match(html, /Consensus reached/);
+  assert.doesNotMatch(html, /Consensus reached/);
   assert.match(html, /query_provenance status desk_sample, verified false/);
   assert.doesNotMatch(html, /location\.href = '\/verify'/);
 });

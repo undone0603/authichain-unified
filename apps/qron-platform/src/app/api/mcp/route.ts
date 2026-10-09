@@ -15,7 +15,7 @@ const QRON_TOKEN = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 const TOOLS = [
   {
     name: "authichain_verify_product",
-    description: "Verifies product authenticity using a 5-agent AI consensus mechanism. Requires a serial number.",
+    description: "Requires a serial number.",
     inputSchema: {
       type: "object",
       properties: {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `Verification initiated for ${args.serial}. Consensus nodes: 5/5. Status: SECURED.`
+              text: `Verification initiated for ${args.serial}. Status: SECURED.`
             }]
           });
 

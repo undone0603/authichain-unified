@@ -63,7 +63,6 @@ Include:
 - The "Atomic Action" of truth.
 - Ed25519 signature verification.
 - Bitcoin L1 anchoring.
-- 5-Agent AI Consensus.
 
 Return JSON: { "prTitle": "...", "prBody": "..." }
     `;
@@ -116,7 +115,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
 
 The recall, cited for detachment risks linked to adhesive failure, highlights a critical 'Provenance Gap' in medical device supply chains. AuthiChain's protocol addresses this by anchoring component-level metadata—including adhesive batch IDs and curing timestamps—directly to the Bitcoin L1 blockchain.
 
-By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical recalls of specific faulty units within minutes, rather than months. AuthiChain's 5-Agent AI Consensus engine further identifies supply chain anomalies before they result in the 33 serious injuries cited in the Medtronic report. 
+By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical recalls of specific faulty units within minutes, rather than months. 
 
 As the FDA DSCSA 2027 mandates approach, AuthiChain provides the only fips-compliant Truth Layer capable of securing life-critical hardware provenance.`;
 

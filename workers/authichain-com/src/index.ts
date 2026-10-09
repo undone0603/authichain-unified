@@ -154,7 +154,7 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. In development: signed, publicly verifiable certificates and 5-agent consensus verification.',
+    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
@@ -180,7 +180,7 @@ const SEO = {
     },
     {
       q: 'What is the authentic agentic economy?',
-      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real.',
     },
   ],
 };
@@ -2580,10 +2580,10 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. In development: 5-agent consensus verification.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "Our goal: five agents reach weighted consensus in under 2.1 seconds. MCP tools will expose that check to any model that can call AuthiChain." },
+      { title: "Verification", body: "MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -3112,7 +3112,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
           <div class="feature-title">AI provenance verification (in development)</div>
-          <div class="feature-desc">Our goal: 5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) that will verify authenticity in under 2.1 seconds. Goal: counterfeit detection built into every verification.</div>
+          <div class="feature-desc">Goal: counterfeit detection built into every verification.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>

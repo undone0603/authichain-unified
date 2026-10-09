@@ -65,7 +65,7 @@ server.tool(
       content: [
         {
           type: "text",
-          text: `Minting process initiated for Product ID: ${productId}. Awaiting 5-agent consensus.`,
+          text: `Minting process initiated for Product ID: ${productId}.`,
         },
       ],
     };

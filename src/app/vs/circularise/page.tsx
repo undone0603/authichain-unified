@@ -19,7 +19,6 @@ const rows: ComparisonRow[] = [
   { feature: 'Product authentication (anti-counterfeit)', authichain: true, competitor: '—' },
   { feature: 'EU Digital Product Passport export', authichain: 'In development', competitor: true },
   { feature: 'On-chain cryptographic anchoring', authichain: 'Certificate contract live on Polygon', competitor: true },
-  { feature: 'AI image analysis (5-agent consensus)', authichain: 'In development', competitor: '—' },
   { feature: 'Self-serve onboarding < 1 day', authichain: 'In development', competitor: false },
   { feature: 'Serves SMB + enterprise', authichain: true, competitor: '—' },
   { feature: 'NFT certificates of authenticity', authichain: 'In development', competitor: '—' },
@@ -37,7 +36,7 @@ const reasons = [
   },
   {
     title: 'Strongest Proof Layer',
-    desc: 'Our goal: AI consensus plus on-chain anchoring, so customs, auditors, and customers can verify provenance in a single scan.',
+    desc: '',
   },
 ];
 
