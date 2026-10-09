@@ -20,4 +20,14 @@ describe('authichain enterprise page copy (RES-177)', () => {
     );
     expect(src).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
   });
+
+  it('does not claim per-asset Ed25519 signing or W3C VC conformance (RES-179)', () => {
+    const src = readFileSync(
+      join(import.meta.dirname, 'authichain', 'page.tsx'),
+      'utf8',
+    );
+    expect(src).not.toMatch(/W3C Verifiable Credentials/i);
+    expect(src).not.toMatch(/>\s*Signing\s*</);
+    expect(src).not.toMatch(/Ed25519\s*<span/);
+  });
 });

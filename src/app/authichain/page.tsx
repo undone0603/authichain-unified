@@ -62,19 +62,6 @@ export default function AuthichainEnterprise() {
               API Documentation
             </Link>
           </div>
-
-          {/* Trust row: architecture facts only. The ISO 27001 / NIST SP 800-131A /
-              SOC2 Type II badges that were here had no substantiating record in this
-              repo, matching the DFARS and SBIR badges removed from TrustRail in
-              b31b2c2. Do not re-add a certification badge without the report. */}
-          <div className="mt-20 flex flex-col items-center">
-             <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">
-                <div className="text-left border-r border-zinc-900 pr-10">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Signing</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">Ed25519 <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">W3C Verifiable Credentials</span></p>
-                </div>
-             </div>
-          </div>
         </div>
       </section>
 
