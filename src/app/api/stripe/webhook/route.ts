@@ -307,6 +307,7 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: subscriptionId,
           isTrial,
           generationsGrant,
+          stripeSessionId: session.id,
         });
 
         if (prov.profileId) {
@@ -398,7 +399,9 @@ export async function POST(req: NextRequest) {
             eventId: event.id,
           });
           if (!accrual.credited) {
-            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+            throw new Error(
+              `Affiliate commission not recorded: ${accrual.reason}`
+            );
           }
         }
 
@@ -480,7 +483,9 @@ export async function POST(req: NextRequest) {
               eventId: event.id,
             });
             if (!accrual.credited) {
-              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+              throw new Error(
+                `Affiliate commission not recorded: ${accrual.reason}`
+              );
             }
           }
         }

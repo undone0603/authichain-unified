@@ -23,6 +23,7 @@ function fakeSupabase(opts?: {
   insertError?: { message: string } | null;
 }) {
   const rows: Array<Record<string, unknown>> = [];
+  const grantedSessions = new Set<string>();
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
   const existingProfile = opts?.existingProfile ?? profileId != null;
   const from = (table: string) => {
@@ -45,6 +46,16 @@ function fakeSupabase(opts?: {
         }
         return Promise.resolve({ error: null });
       },
+      // credit_grants (ADM-174): once per stripe_session_id.
+      upsert: (row: { stripe_session_id: string }) => ({
+        select: async () => {
+          if (grantedSessions.has(row.stripe_session_id)) {
+            return { data: [], error: null };
+          }
+          grantedSessions.add(row.stripe_session_id);
+          return { data: [row], error: null };
+        },
+      }),
       update: () => builder,
       select: () => builder,
       eq: (col: string, val: unknown) => {

@@ -10,7 +10,8 @@ describe("StrainChain passport thank-you copy (ADM-172)", () => {
     expect(src).toContain("mailto:support@authichain.com");
     expect(src).toContain("refund you in full");
   });
-  it("makes no delivery-date promise", () => {
+  it("makes no follow-up or delivery-date promise (RES-198)", () => {
+    expect(src).not.toMatch(/be in touch|next steps/i);
     expect(src).not.toMatch(/within \d|business days|\bhours\b/i);
   });
 });

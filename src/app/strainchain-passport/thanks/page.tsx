@@ -3,7 +3,7 @@ import Link from "next/link";
 
 // ADM-172: StrainChain Passport (Per Cultivar) checkout lands here instead of
 // /dpp/thanks. Copy is deliberately limited: payment received, product in
-// development, we'll be in touch. No claims about what the passport contains.
+// development, refund offer. No follow-up promise and no claims about what the passport contains.
 export const metadata: Metadata = {
   title: "Payment received | StrainChain Passport",
   robots: { index: false, follow: false },
@@ -21,8 +21,7 @@ export default function StrainchainPassportThanksPage() {
         </h1>
         <p className="mt-4 text-zinc-400">
           We received your payment for the StrainChain Passport — Per Cultivar.
-          The passport is still in development. We&apos;ll be in touch by email
-          about next steps.
+          The passport is still in development.
         </p>
         <p className="mt-4 text-zinc-400">
           Want your money back instead? Email{" "}

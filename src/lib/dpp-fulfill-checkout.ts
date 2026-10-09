@@ -100,6 +100,7 @@ export async function fulfillDppPaidSession(
     brand,
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
+    stripeSessionId: session.id,
   });
 
   if (visitId && prov.profileId) {
