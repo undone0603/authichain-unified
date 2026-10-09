@@ -1247,7 +1247,6 @@ function launchProofStoryHtml(): string {
       "<main>\n" +
       "<p>StoryMode</p>\n" +
       "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
-      '<p data-verified="true">Production issuer signing</p>\n' +
       "<dl>\n" +
       "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
       "<dt>kid</dt><dd><code>" +
