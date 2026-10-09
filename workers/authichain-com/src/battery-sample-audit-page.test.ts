@@ -64,7 +64,7 @@ describe("sample battery readiness assessment", () => {
     expect(html).toContain(`$${plan.price}`);
     expect(html).toContain("AuthiChain workspace");
     expect(html).toContain("Self-serve activation");
-    expect(html).toContain("50 workspace generations");
+    expect(html).not.toMatch(/50 (workspace )?generations/i);
     expect(html).not.toContain("Written EU DPP readiness assessment");
     expect(html).not.toContain("$299 credited toward AuthiChain Basic");
     expect(html).not.toMatch(/written document/i);

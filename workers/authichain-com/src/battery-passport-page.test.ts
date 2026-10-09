@@ -41,7 +41,6 @@ describe("battery passport offer page", () => {
     for (const line of [
       "AuthiChain workspace",
       "Self-serve activation",
-      "50 workspace generations",
     ])
       expect(html).toContain(line);
     expect(html).not.toContain("Written EU DPP readiness assessment");
@@ -143,5 +142,10 @@ describe("battery passport offer page", () => {
       /gets your first passport published|publish your first passport/i
     );
     expect(html).toContain("gets you ready for your first passport");
+  });
+
+  it("GB-17: never promises 50 workspace generations", () => {
+    for (const re of [/50 workspace generations/i, /50 generations/i, /fifty (workspace )?generations/i])
+      expect(html).not.toMatch(re);
   });
 });
