@@ -152,6 +152,7 @@ describe("economic action domain contracts", () => {
       ...ACTION_BASE,
       action_type: "MINT",
       source_account_id: undefined,
+      destination_account_id: undefined,
     })).toThrow(/MINT requires only a destination account/);
   });
 
