@@ -8,6 +8,7 @@ import {
   checkCancelInProgress,
   checkCiGateWorkflows,
   checkWorkersDev,
+  stripJsonc,
   topLevelConcurrencyGroup,
   topLevelTomlValue,
   triggersOnPushToMain,
@@ -61,7 +62,30 @@ test("a renamed Worker is reported, not silently passed", () => {
   assert.match(checkWorkersDev(root, TARGET)[0], /expected w/);
 });
 
-test("the real repo: both Workers have workers_dev = false", () => {
+const JTARGET = [{ name: "w", file: "w/wrangler.jsonc" }];
+
+test("jsonc: \"workers_dev\": false passes, comments and trailing commas ok", () => {
+  const root = repo({
+    "w/wrangler.jsonc":
+      '// c\n{\n  "name": "w", // x\n  /* "workers_dev": true */\n  "url": "https://a//b",\n  "workers_dev": false,\n}\n',
+  });
+  assert.deepEqual(checkWorkersDev(root, JTARGET), []);
+});
+
+test("jsonc: workers_dev true or missing fails", () => {
+  const t = repo({ "w/wrangler.jsonc": '{ "name": "w", "workers_dev": true }' });
+  assert.match(checkWorkersDev(t, JTARGET)[0], /must be false/);
+  const m = repo({
+    "w/wrangler.jsonc": '{ "name": "w", // "workers_dev": false\n "env": { "x": { "workers_dev": false } } }',
+  });
+  assert.match(checkWorkersDev(m, JTARGET)[0], /missing/);
+});
+
+test("stripJsonc keeps // inside strings", () => {
+  assert.deepEqual(JSON.parse(stripJsonc('{"a":"x//y", // z\n}')), { a: "x//y" });
+});
+
+test("the real repo: every WORKERS_DEV_OFF Worker has workers_dev = false", () => {
   assert.deepEqual(checkWorkersDev(), []);
 });
 
