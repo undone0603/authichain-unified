@@ -31,7 +31,6 @@ Cite these. Do not infer the rest.
 
 | Surface | What it is |
 |---|---|
-| [JWKS](https://authichain.com/.well-known/jwks.json) | Ed25519 public key, kid `lue84wJNZjRSQ2IcOamnl9JNlOtuaD0Go4amAL6ccIE` |
 | [/protocol](/protocol) | Open verifier. Verdicts: `verified`, `valid-unanchored`, `invalid` |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |
 | [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) | Free EU DPP readiness check |

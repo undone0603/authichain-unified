@@ -59,7 +59,6 @@ That stack can satisfy a human. It fails an agent, a customs integration, and an
 
 Live and citeable:
 
-- W3C Verifiable Credential-shaped records, Ed25519 signatures, public JWKS at [/.well-known/jwks.json](https://authichain.com/.well-known/jwks.json).
 - Open verification protocol at [/protocol](/protocol) (v0.1.0 draft).
 - Free readiness tool at [/dpp-check](/dpp-check).
 - Battery gap map at [/battery-passport](/battery-passport).

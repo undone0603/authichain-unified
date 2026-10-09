@@ -52,7 +52,7 @@ export default function QronAbout() {
             QRON is where industrial-grade security meets generative AI art. We believe that product authentication shouldn&apos;t be a generic, hidden barcode—it should be a beautiful, engaging brand asset.
           </p>
           <p>
-            Powered by the AuthiChain Protocol, every QRON is a &ldquo;Living QR.&rdquo; It combines a highly scannable, error-corrected QR matrix with a ControlNet-augmented Stable Diffusion pipeline. The result is a unique piece of digital art that also functions as an Ed25519-signed data carrier.
+            Powered by the AuthiChain Protocol, every QRON is a &ldquo;Living QR.&rdquo; It combines a highly scannable, error-corrected QR matrix with a ControlNet-augmented Stable Diffusion pipeline. The result is a unique piece of digital art that also functions as a data carrier.
           </p>
           <p>
             Whether you are a luxury fashion house looking to secure your latest collection or an independent creator dropping a new NFT, QRON turns your provenance into a masterpiece.

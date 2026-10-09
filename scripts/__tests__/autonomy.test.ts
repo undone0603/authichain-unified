@@ -186,6 +186,23 @@ describe("launch mode", () => {
     ]);
     expect(validateManifest(manifest, listWorkflowFiles())).toEqual([]);
   });
+
+  it("keeps the CFA-150 containment set off in the manifest, not only via operator_hold", () => {
+    const desired = new Map(
+      flatten(loadManifest()).map(r => [r.file, r.desired])
+    );
+    for (const f of [
+      "autonomy-reconcile.yml",
+      "content-routine-pr.yml",
+      "b2b-outreach.yml",
+      "content-publish.yml",
+      "gov-mint.yml",
+      "marketing-autonomous.yml",
+      "pipeline-tick.yml",
+    ]) {
+      expect([f, desired.get(f)]).toEqual([f, "off"]);
+    }
+  });
 });
 
 describe("planReconcile", () => {
