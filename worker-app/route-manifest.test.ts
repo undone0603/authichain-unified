@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   SPA_OWNED_PREFIXES,
   DYNAMIC_HANDLER_PATHS,
+  prefixesLongestFirst,
   resolveOwner,
 } from "./route-manifest";
 
@@ -119,6 +120,17 @@ describe("resolveOwner", () => {
     for (const dynamicPath of DYNAMIC_HANDLER_PATHS) {
       expect(SPA_OWNED_PREFIXES).not.toContain(dynamicPath);
     }
+  });
+
+  it("checks longer prefixes before shorter ones", () => {
+    expect(prefixesLongestFirst(["/s", "/status", "/brand/qron/artwork"])).toEqual([
+      "/brand/qron/artwork",
+      "/status",
+      "/s",
+    ]);
+    expect(resolveOwner("/brand/qron/artwork/piece", marketingRoutes)).toBe("dynamic");
+    expect(resolveOwner("/service-orders/1", marketingRoutes)).toBe("spa");
+    expect(resolveOwner("/services", marketingRoutes)).toBe("spa");
   });
 
   it("keeps the SPA's own /qr-gallery route distinct from the dynamic /gallery route", () => {
