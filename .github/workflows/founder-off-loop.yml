@@ -1,0 +1,44 @@
+name: Founder off loop
+
+# Read-only morning digest. Does not merge, deploy, comment, or touch secrets
+# other than the default GITHUB_TOKEN (pulls: read).
+# Cost: $0/month (existing Actions minutes). Eliminates ~1-2 h/week of
+# clicking open PRs and re-checking public smoke while the founder is asleep.
+# Rollback: delete this file.
+# Does not add a Cloudflare cron (free plan is already at the 5-trigger cap).
+
+on:
+  schedule:
+    # 12:40 UTC = 08:40 America/Detroit during EDT. One run, not stacked crons.
+    - cron: "40 12 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: founder-off-loop
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    name: PR digest + public smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Classify open PRs and probe public surfaces
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SMOKE_RETRIES: "2"
+          SMOKE_DELAY_MS: "4000"
+        run: node scripts/ci/founder-off-loop.mjs
