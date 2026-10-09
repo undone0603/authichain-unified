@@ -20,15 +20,21 @@ export interface PaymentLinkOffer {
 
 function offer(id: PlanId): PaymentLinkOffer {
   const plan = planById(id);
-  if (!plan?.stripe_payment_link) {
-    throw new Error(`plans.ts ${id} has no Stripe Payment Link`);
+  // A plan is sellable if it has a Stripe price (gated checkout creates the
+  // session) or a raw Payment Link. A plan may lose its raw link when Stripe
+  // deactivates it (EU DPP Workspace, 2026-10-08) and still sell by price ID.
+  const url = plan
+    ? (planPaymentLink(id) ?? plan.stripe_payment_link)
+    : undefined;
+  if (!plan || !url) {
+    throw new Error(`plans.ts ${id} has no Stripe price or Payment Link`);
   }
   const suffix = plan.price_suffix === "/month" ? "/mo" : "";
   return {
     name: plan.name,
     price: `$${plan.price.toLocaleString("en-US")}${suffix}`,
     // Gated authichain.com/checkout/<plan> (GET = confirm page, no session).
-    url: planPaymentLink(id) ?? plan.stripe_payment_link,
+    url,
   };
 }
 

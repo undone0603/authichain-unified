@@ -139,7 +139,10 @@ export const PLANS: Plan[] = [
     description: "One-time EU DPP readiness audit with self-serve activation",
     generations: 50,
     stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+<<<<<<< HEAD
     stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+=======
+>>>>>>> cb063b7e (fix(pricing): take dead Stripe plans off the pricing cards (#1622))
     stripe_mode: "payment",
     tier: "pro",
     features: ["Written EU DPP readiness assessment", "Self-serve merchant activation", "50 workspace generations to publish first DPP", "$299 credited toward AuthiChain Basic on conversion"],

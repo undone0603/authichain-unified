@@ -58,7 +58,10 @@ export const LIVE_PRICE_MAP: Record<
     productId: "prod_UwfYVM0TYpdg4J",
     mode: "payment",
     grant: 50,
+<<<<<<< HEAD
     stripeLink: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+=======
+>>>>>>> cb063b7e (fix(pricing): take dead Stripe plans off the pricing cards (#1622))
   },
   strainchain_passport: {
     priceId: "price_1UHjCZGqTruSqV8T35M6AmoJ",

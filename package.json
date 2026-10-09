@@ -5,7 +5,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.28.2",
   "engines": {
-    "node": ">=22.9.0",
+    "node": ">=24.0.0",
     "npm": ">=11.3.0"
   },
   "scripts": {
@@ -192,5 +192,10 @@
     "postcss@<8.5.10": "8.5.10",
     "ioredis": "file:./stubs/empty-redis",
     "redis": "file:./stubs/empty-redis"
+  },
+  "pnpm": {
+    "overrides": {
+      "ws": ">=8.20.1"
+    }
   }
 }
