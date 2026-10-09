@@ -47,7 +47,7 @@ const stats = [
 ];
 
 const features = [
-  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with blockchain-anchored provenance. Every component traced from foundry to final assembly." },
+  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with provenance. Every component traced from foundry to final assembly." },
   { icon: FileCheck2, title: "Document Authentication", desc: "Cryptographically sign government documents, permits, and certificates. Tamper-proof verification accessible to any authorized scanner." },
   { icon: Building2, title: "Manufacturer Registry", desc: "Sovereign registry of verified domestic manufacturers with real-time compliance status, facility audits, and supply chain mapping." },
   { icon: Lock, title: "ITAR Compliance", desc: "International Traffic in Arms Regulations compliance tracking with automated export control screening and audit trail generation." },
@@ -154,7 +154,7 @@ export default function GovChainHome() {
               <span className="gov-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(220 60% 55%), hsl(40 60% 55%), hsl(210 50% 45%), hsl(220 60% 55%))", backgroundSize: "200% 200%" }}>Made in USA.</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Blockchain-anchored verification for government procurement, defense manufacturing, and domestic origin authentication &mdash; built on zero-trust architecture with Ed25519 cryptographic signing.
+              Verification for government procurement, defense manufacturing, and domestic origin authentication &mdash; built on zero-trust architecture with Ed25519 cryptographic signing.
             </p>
             <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="text-base px-8 h-12 bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white gov-pulse" onClick={() => go("/supply-chain")}>

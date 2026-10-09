@@ -2309,7 +2309,6 @@ ${estateHero({
 ${estateTrust([
   { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
-  { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
 ${estateFeatures(
@@ -2318,7 +2317,7 @@ ${estateFeatures(
   [
     { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Estate verification (in development)", body: "QRON codes will link to an AuthiChain certificate on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Scan-to-verify is in development." },
+    { title: "Estate verification (in development)", body: "Scan-to-verify is in development." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
   ],
   "features",

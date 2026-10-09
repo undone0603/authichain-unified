@@ -1237,14 +1237,9 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
   const links = [...html.matchAll(/href="([^"]+)"/g)].map(
     m => new URL(m[1], "https://authichain.com")
   );
-  assert.ok(
-    links.some(
-      u =>
-        u.hostname === "polygonscan.com" &&
-        u.pathname ===
-          "/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"
-    )
-  );
+  // PM-374: wallet ownership of the anchor is not proven, so /protocol must
+  // not link the anchor transaction on polygonscan.
+  assert.ok(!links.some(u => u.hostname === "polygonscan.com"));
   assert.ok(
     links.some(
       u =>
