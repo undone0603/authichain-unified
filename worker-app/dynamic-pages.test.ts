@@ -661,6 +661,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain("Generate a Living QR");
+    expect(body).not.toContain("$QRON");
     expect(body).toContain(
       '<form id="generate-form" action="/generate" method="post">'
     );

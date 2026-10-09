@@ -11,7 +11,6 @@ import {
   Zap,
   Lock,
   Package,
-  Vote,
   ArrowRight,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -1181,15 +1180,6 @@ export default function Home() {
                         icon: Package,
                         color: 'text-blue-400',
                         link: 'https://strainchain.io'
-                    },
-                    {
-                        name: 'GovChain.us',
-                        role: 'Ecosystem Governance',
-                        feature: 'DAO Staking Yield',
-                        desc: 'The economic heart. Stake $QRON to govern the protocol and earn yield.',
-                        icon: Vote,
-                        color: 'text-purple-400',
-                        link: 'https://govchain.us'
                     },
                     {
                         name: 'AuthiChain.com',
