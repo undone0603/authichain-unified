@@ -231,10 +231,6 @@ ${estateFeatures(
       body: "Ed25519-signed records, checkable offline with the open verifier at /protocol.",
     },
     {
-      title: "5-agent consensus",
-      body: "Guardian, Archivist, Sentinel, Scout, and Arbiter reach weighted consensus in 2.1 seconds. A single compromised reading does not stand alone.",
-    },
-    {
       title: "MCP tools",
       body: "The in-repo AuthiChain MCP server lets an agent verify authenticity, classify a product, and request a paid verification. Distribution is the MCP surface, not a new product.",
     },
