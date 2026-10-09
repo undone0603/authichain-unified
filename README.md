@@ -1,67 +1,104 @@
 # AuthiChain Unified
 
-Production wrangler deploy is not optional. A docs-only commit on `main` still deploys.
+**The canonical implementation of AuthiChain's physical-world trust layer.**
 
-`deploy-cloudflare.yml` and `deploy-edge-worker.yml` run on every push to `main`. They have no `paths` filter and no `paths-ignore`. Do not add one. `workflow_dispatch` is a manual rerun, not a substitute for the push trigger.
+This README is the security contract for the repository. A docs-only change does not skip production deploy.
 
-This file is the security README. It does not certify a product, a government document, or a cannabis COA.
+## Absolute security
 
-## Absolute rules
+Absolute security here means the controls below are fail-closed and must not be weakened. It is not a SOC 2, FedRAMP, FDA, EUDAMED, or cannabis COA certificate. A scan is not a legal certificate, a manufacturing inspection, or proof that a government record is authentic.
 
-These are fail-closed. A convenience exception is a defect.
+### Production deploy stays on
 
-1. Do not path-filter `deploy-cloudflare.yml` or `deploy-edge-worker.yml`. A README change on `main` redeploys the production Workers those workflows publish.
-2. Do not put a credential in Git. No `CLOUDFLARE_API_TOKEN`, Stripe secret, webhook secret, database URL with a password, or private key. Placeholders only.
-3. A secret that reached Git history is compromised until the provider confirms rotation. Deleting the file does not revoke it. This README does not rotate tokens.
-4. Secret scan stays on. A failed gitleaks check blocks the merge. Do not skip it to ship docs.
-5. The two deploy workflows stay enabled. This README does not disable workflows, delete Workers, npm-publish, merge #1481, or move the repo.
-6. Resolution is not verification. A scan result is the checks this verifier ran. It is not a legal certificate, a government authentication, or a certificate of analysis.
-7. `repo_audit_integrate` may refresh `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md` only. It does not authorize a delete. Its Action is `workflow_dispatch` and dry-run. Do not schedule it.
-8. Customer paths are `https://authichain.com/onboard`, `https://authichain.com/dapp`, and `https://authichain.com/verify`. Never a `*.vercel.app` URL.
+`deploy-cloudflare.yml` and `deploy-edge-worker.yml` run on every push to `main`, including a commit that only changes this README. Do not add `paths` or `paths-ignore` to either workflow. Do not disable them. `workflow_dispatch` is a manual rerun, not a replacement for the push trigger.
 
-## What a deploy proves
+Those workflows publish:
 
-A green production wrangler deploy proves the Worker bundle from that commit was published by the workflow. It does not prove the bundle is free of defects, that a seal is genuine, or that a third party audited it.
-
-| Workflow | Trigger | Must stay |
+| Workflow | Worker | Config |
 |---|---|---|
-| `deploy-cloudflare.yml` | every push to `main`, plus `workflow_dispatch` | no path filter |
-| `deploy-edge-worker.yml` | every push to `main`, plus `workflow_dispatch` | no path filter |
+| `deploy-cloudflare.yml` | `authichain-edge-router` | `worker-app/wrangler.toml` |
+| `deploy-cloudflare.yml` | `authichain-scan-validate` | `workers/authichain-scan-validate/wrangler.toml` |
+| `deploy-edge-worker.yml` | `authichain-revenue-worker` | `api/wrangler.toml` |
 
-`authichain-consensus-engine` is an identity collision. Confirm it in Cloudflare before any retirement. This README does not retire it.
+A README commit still runs both. That is intentional.
 
-## Trust boundary
+### Fail closed before Wrangler
 
-AuthiChain turns a physical product or asset into a verifiable digital identity: an identifier resolves to a signed claim, policy and provenance data are evaluated, and an independent verifier returns an auditable result.
+Each of those workflows secret-scans the tree with gitleaks before deploy. Deploy `needs` the scan. A scan failure must not publish. Do not remove the scan, do not mark it `continue-on-error`, and do not swap it for a check that skips on rate limits.
 
-A positive status is scoped to the evidence and policy the verifier evaluated. A registered identifier does not prove manufacturing quality. A missing identifier is not proof of counterfeiting.
+Permissions on both workflows stay `contents: read`. Do not grant `contents: write`, `id-token`, or secret-admin scopes to make a docs commit "faster."
 
-Surfaces on this trust model: AuthiChain, QRON, GovChain, StrainChain, AgentZ / MCP. The verticals do not fork the trust model.
+Deploy uses `wrangler deploy --minify --keep-vars`. `--keep-vars` is required so a redeploy does not wipe existing Worker vars. Do not drop it.
+
+### Secrets
+
+- No credentials in Git, this README, issues, or logs.
+- Runtime secrets live in GitHub encrypted secrets and Wrangler secrets. Names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Never print, request, or hardcode a secret value. Placeholders only: `sk_live_…`, `whsec_…`, `postgresql://USER:PASSWORD@HOST/DB`.
+- Removing a secret from HEAD does not un-leak it. Treat a committed credential as compromised until the provider confirms rotation.
+- This README does not rotate tokens. Rotation is an owner action.
+
+### What this agent must not do
+
+`repo_audit_integrate` may refresh `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`. It must not delete Workers, disable workflows, rotate tokens, npm-publish, merge the verify-package publish, move the repo to an organization, or send email, charges, or posts.
+
+Do not retire `authichain-consensus-engine` from an audit note. The ledger marks an identity collision. Confirm it in the Cloudflare dashboard before any retirement.
+
+### Trust boundary
+
+Resolution is not verification. A registered identifier does not prove manufacturing quality. A missing identifier is not by itself proof of counterfeiting. Customer paths stay on the apex domains (`https://authichain.com/verify`, `https://qron.space/generate`, `https://govchain.us/onboard`, `https://strainchain.io/onboard`), never a `*.vercel.app` host.
+
+## What this repository is
+
+AuthiChain turns a physical product or asset into a verifiable digital identity: a standards-aware identifier resolves to a signed claim, policy and provenance data are evaluated, and an independent verifier returns an auditable result.
+
+- **AuthiChain** — verification, attestations, product identity, API and billing
+- **QRON** — programmable verification experiences and QR studio
+- **GovChain** — government and contractor trust workflows
+- **StrainChain** — provenance for regulated physical goods
+- **AgentZ / MCP** — agentic orchestration over the same trust primitives
+
+One verification protocol. Vertical products must not fork the trust model.
+
+## Repository map
+
+| Layer | Location | Responsibility |
+|---|---|---|
+| Web / customer surfaces | `client/`, `workers/` | Public domains |
+| Verification protocol | `protocol/` | Reference implementation |
+| Agentic operations | `agentz/` | Workflow orchestration |
+| Machine interface | `mcp/` | MCP access |
+| Edge / API | `workers/*`, `worker-app/`, `api/` | Cloudflare Workers |
+| Persistence | Supabase/Postgres + D1 | Operational state. D1 is not a second product schema. |
+| Estate | `docs/ESTATE.md`, `docs/NETWORK.md`, `config/cloudflare-estate.json` | Inventory. July 2026 Vercel section in `docs/NETWORK.md` is historical. |
 
 ## Public surfaces
 
-- authichain.com — verification, API, billing
-- qron.space — QRON
-- govchain.us — government and contractor workflows
-- strainchain.io — regulated-goods provenance workflows
+- `authichain.com` — protocol, verify, certificates, billing
+- `qron.space` — generate
+- `govchain.us` — contractor pursue and seals
+- `strainchain.io` — cannabis jar pack
 
-Canonical customer paths: `/onboard`, `/dapp`, `/verify`.
+Canonical paths: `/verify`, `/dapp`, `/onboard`.
 
-## Map
+## Deployment model
 
-| Layer | Location |
-|---|---|
-| Web | `client/`, `workers/` |
-| Protocol | `protocol/` |
-| AgentZ | `agentz/` |
-| MCP | `mcp/` |
-| Edge | `workers/*` |
-| Data | Supabase Postgres, Drizzle. D1 is not a second product schema. |
-| Topology | `docs/NETWORK.md`, `docs/ESTATE.md` |
+Cloudflare-first. Vercel is not a deploy. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step.
 
-Runtime authority is Cloudflare Workers. The July 2026 Vercel section in `docs/NETWORK.md` is historical. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step.
+- Edge: Cloudflare Workers + Wrangler 4
+- Web: Vite + React
+- Data: Drizzle into Supabase Postgres
+- Package manager: pnpm
+- Agent runtime: `python -m agentz.cli`
 
-## Commands
+```bash
+python -m agentz.cli run repo_audit_integrate --mode dry-run
+python -m agentz.cli run repo_audit_integrate --mode auto
+```
+
+`dry-run` prints and writes nothing. `auto` rewrites only the banner in `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`. The GitHub Action **Repo audit integrate** is `workflow_dispatch` and dry-run only. It is not on a schedule.
+
+## Getting started
 
 ```bash
 cp .env.example .env
@@ -69,16 +106,17 @@ pnpm install
 pnpm dev
 ```
 
+Never put credentials in source. Set `DATABASE_URL` in the local environment or the deployment secret store.
+
 ```bash
-python -m agentz.cli run repo_audit_integrate --mode dry-run
-python -m agentz.cli run repo_audit_integrate --mode auto
+export DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require'
 ```
 
-`dry-run` prints and writes nothing. `auto` rewrites only the banner in `docs/NETWORK.md` and `docs/operations/REPO-INTEGRATION-AUDIT.md`.
+## Pilot readiness
 
-## Report a vulnerability
+`install → typecheck → lint → tests → production build → deploy smoke test → real product scan`
 
-Do not open a public issue. Use GitHub private vulnerability reporting. Policy: `docs/project/SECURITY.md`.
+See `docs/operations/PILOT-READY-BASELINE.md`, `docs/attestation/v0.1.md`, `docs/ESTATE.md`, and `docs/NETWORK.md`.
 
 ## License
 
