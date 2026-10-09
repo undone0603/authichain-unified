@@ -39,7 +39,11 @@ export function dedupeById(emails) {
   });
 }
 
-/** Sender list: OUTREACH_SENDERS, else the per-segment outreach from-secrets. */
+/**
+ * Sender list: OUTREACH_SENDERS, else the per-segment outreach from-secrets.
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {string[]}
+ */
 export function outreachSenders(env = process.env) {
   const explicit = String(env.OUTREACH_SENDERS ?? "")
     .split(",")
