@@ -286,7 +286,7 @@ function shell(
 <style>${VS_CSS}</style></head><body>
 <div class="nav"><a href="/" class="logo">AuthiChain</a><a href="/vs">All comparisons</a></div>
 ${body}
-<footer>AuthiChain &middot; Product Authentication &middot; EU DPP Readiness &middot; Certificate contract on Polygon</footer>
+<footer>AuthiChain &middot; Product Authentication &middot; EU DPP Readiness</footer>
 </body></html>`;
 }
 

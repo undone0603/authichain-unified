@@ -30,11 +30,7 @@ import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 // Extensionless on purpose: tsconfig.workers.json charges one TS5097 per
 // ".ts" import and the ratchet fails on any increase.
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
-import {
-  ANCHOR_EXAMPLE_ID,
-  ANCHOR_EXAMPLE_TX,
-  TOOLS,
-} from "./mcp-routes";
+import { TOOLS } from "./mcp-routes";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
 
 export const MCP_INSTALL_PATHS = [
@@ -152,22 +148,6 @@ export type Showcase = {
  * is already published. Nothing here is a mock-up of a future feature.
  */
 export const SHOWCASES: readonly Showcase[] = [
-  {
-    slug: "anchor",
-    eyebrow: "Polygon mainnet",
-    title: "Verify a signed record against its on-chain anchor",
-    call: { tool: "verify_record", args: { id: ANCHOR_EXAMPLE_ID } },
-    returns:
-      "Checks the Ed25519 signature, confirms the signer is allowlisted, then reads Polygon transaction " +
-      `${ANCHOR_EXAMPLE_TX.slice(0, 10)}…${ANCHOR_EXAMPLE_TX.slice(-4)} and confirms it carries this record's hash. ` +
-      "Returns verified, valid-unanchored or invalid, with the reason list.",
-    limit:
-      "This is the protocol demonstration record. Its own credentialSubject says it is not a product and not a battery passport.",
-    evidence: {
-      label: "protocol/examples/polygon-anchor-1",
-      href: "https://authichain.com/protocol",
-    },
-  },
   {
     slug: "battery",
     eyebrow: BATTERY ? `Law from ${BATTERY.date}` : "EU battery regulation",
@@ -419,7 +399,7 @@ ${ESTATE_FONTS_LINK}
 
 <section><div class="wrap">
   <h2>Showcases</h2>
-  <p class="sub">Four calls you can paste and run right now. Every one of them hits a record that is
+  <p class="sub">Calls you can paste and run right now. Every one of them hits a record that is
   already published — none of this is a mock-up, and each card states what the call does
   <em>not</em> prove.</p>
   <div class="grid two">${SHOWCASES.map(showcaseCard).join("")}</div>
