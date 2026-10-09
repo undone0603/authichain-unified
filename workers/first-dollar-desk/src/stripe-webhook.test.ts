@@ -18,6 +18,9 @@ function fakeKv() {
     put: async (k: string, v: string) => {
       store.set(k, v);
     },
+    delete: async (k: string) => {
+      store.delete(k);
+    },
   };
 }
 
@@ -112,5 +115,37 @@ describe("first-dollar-desk /api/stripe/webhook (PM-330)", () => {
     expect(await second.res.json()).toMatchObject({ duplicate: true });
     // The duplicate did not act: no new stripe_webhook_last write.
     expect(LEDGER.store.has("stripe_webhook_last")).toBe(false);
+  });
+
+  it("releases the event claim and answers 500 when processing fails, so Stripe's retry runs it (CFA-121)", async () => {
+    const LEDGER = fakeKv();
+    const realPut = LEDGER.put;
+    let failWrites = true;
+    LEDGER.put = async (k: string, v: string) => {
+      if (failWrites && !k.startsWith("stripe_evt:")) {
+        throw new Error("KV write failed");
+      }
+      return realPut(k, v);
+    };
+
+    const first = await call(
+      post(ignoredEvent, { "stripe-signature": sign(ignoredEvent) }),
+      LEDGER
+    );
+    expect(first.res.status).toBe(500);
+    expect(LEDGER.store.has("stripe_evt:evt_fdd_once")).toBe(false);
+
+    failWrites = false;
+    const retry = await call(
+      post(ignoredEvent, { "stripe-signature": sign(ignoredEvent) }),
+      LEDGER
+    );
+    expect(retry.res.status).toBe(200);
+    expect(await retry.res.json()).toMatchObject({
+      received: true,
+      ignored: "payment_intent.created",
+    });
+    expect(LEDGER.store.has("stripe_evt:evt_fdd_once")).toBe(true);
+    expect(LEDGER.store.has("stripe_webhook_last")).toBe(true);
   });
 });

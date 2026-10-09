@@ -2002,6 +2002,13 @@ async function claimStripeEvent(env, eventId) {
   return true;
 }
 __name(claimStripeEvent, "claimStripeEvent");
+async function releaseStripeEvent(env, eventId) {
+  try {
+    await env.LEDGER.delete(`stripe_evt:${eventId}`);
+  } catch {
+  }
+}
+__name(releaseStripeEvent, "releaseStripeEvent");
 async function handleStripeWebhook(request, env) {
   const header = request.headers.get("stripe-signature");
   if (!header) {
@@ -2017,35 +2024,43 @@ async function handleStripeWebhook(request, env) {
   if (!await claimStripeEvent(env, event.id)) {
     return Response.json({ received: true, duplicate: true });
   }
-  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-    const session = event.data.object;
-    if (session.payment_status === "paid") {
-      const classified = classify(receiptFromSession(session), env);
-      const ledger = await writeReceipt(env, classified);
-      await env.LEDGER.put(
-        "stripe_webhook_last",
-        JSON.stringify({
-          at: (/* @__PURE__ */ new Date()).toISOString(),
-          type: event.type,
-          sessionId: session.id,
-          amountCents: session.amount_total ?? 0,
-          paymentLink: session.payment_link ?? null,
-          receiptStatus: classified.status,
-          receiptId: classified.id
-        })
-      );
-      return Response.json({ received: true, receipt: classified, goal: goalState(ledger) });
+  // CFA-121: if processing fails, release the claim (same as
+  // authichain-automation) and answer 500 so Stripe's retry can run it again.
+  try {
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      const session = event.data.object;
+      if (session.payment_status === "paid") {
+        const classified = classify(receiptFromSession(session), env);
+        const ledger = await writeReceipt(env, classified);
+        await env.LEDGER.put(
+          "stripe_webhook_last",
+          JSON.stringify({
+            at: (/* @__PURE__ */ new Date()).toISOString(),
+            type: event.type,
+            sessionId: session.id,
+            amountCents: session.amount_total ?? 0,
+            paymentLink: session.payment_link ?? null,
+            receiptStatus: classified.status,
+            receiptId: classified.id
+          })
+        );
+        return Response.json({ received: true, receipt: classified, goal: goalState(ledger) });
+      }
     }
+    await env.LEDGER.put(
+      "stripe_webhook_last",
+      JSON.stringify({
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        type: event.type,
+        ignored: true
+      })
+    );
+    return Response.json({ received: true, ignored: event.type });
+  } catch (err) {
+    await releaseStripeEvent(env, event.id);
+    console.error("[first-dollar-desk] stripe webhook processing failed", err instanceof Error ? err.message : String(err));
+    return Response.json({ error: "processing_failed" }, { status: 500 });
   }
-  await env.LEDGER.put(
-    "stripe_webhook_last",
-    JSON.stringify({
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      type: event.type,
-      ignored: true
-    })
-  );
-  return Response.json({ received: true, ignored: event.type });
 }
 __name(handleStripeWebhook, "handleStripeWebhook");
 function authorizeStripeSessionPush(request, env) {
