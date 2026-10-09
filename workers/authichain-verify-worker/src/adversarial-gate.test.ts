@@ -48,7 +48,7 @@ async function signedFixture(
     { name: "ECDSA", namedCurve: "P-256" },
     true,
     ["sign", "verify"],
-  );
+  ) as CryptoKeyPair;
   const publicKey = JSON.stringify(await crypto.subtle.exportKey("jwk", keyPair.publicKey));
   const action: EconomicAction = { ...ACTION_BASE, ...actionOverrides };
   const unsigned = {
@@ -229,7 +229,7 @@ describe("signed economic control-plane envelope", () => {
       { name: "ECDSA", namedCurve: "P-256" },
       true,
       ["sign", "verify"],
-    );
+    ) as CryptoKeyPair;
     const wrongKey = JSON.stringify(await crypto.subtle.exportKey("jwk", wrongPair.publicKey));
     const result = await verifyControlPlaneMessage(fixture.message, wrongKey, { now: NOW });
     expect(result.valid).toBe(false);
