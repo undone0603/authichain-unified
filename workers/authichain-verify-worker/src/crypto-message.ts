@@ -77,7 +77,7 @@ function isId(value: unknown): value is string {
 function isCanonicalUtcTimestamp(value: unknown): value is string {
   if (
     typeof value !== "string" ||
-    !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value)
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
   ) return false;
   const ms = Date.parse(value);
   return Number.isFinite(ms) && new Date(ms).toISOString() === value;
