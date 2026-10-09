@@ -57,7 +57,7 @@ Existing attestations do not acquire these new capabilities automatically; issue
 4. The signed audit helper detects payload/signature tampering for a well-formed audit payload, but does not itself provide durable storage, an append-only log, key revocation, prior-record chaining, or a commit proof.
 5. Evidence IDs are syntax-checked and policy-counted only; this phase does not resolve them to external evidence, prove provenance, or verify their contents.
 6. The amount ceiling is per action only; there is no aggregate/day budget, account balance read, reservation, or race-free budget enforcement.
-5. No HTTP route is added. The production `/verify` route and its response contract remain unchanged.
+7. No HTTP route is added. The production `/verify` route and its response contract remain unchanged.
 8. No D1 migration is applied. The current `schema/agent-trust.sql` is a schema artifact; it is not evidence of a deployed economic ledger.
 
 ## Next gates before any execution adapter
