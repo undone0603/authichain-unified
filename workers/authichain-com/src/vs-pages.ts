@@ -85,7 +85,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
     ],
     reasons: [
       {
-        title: "Tamper-Proof by Design",
+        title: "",
         desc: "AuthiChain's certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.",
       },
       {

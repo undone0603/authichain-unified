@@ -75,8 +75,8 @@ async function runSmokeTest() {
       subjectDid: "did:authichain:test",
       claims: { purpose: "Smoke Test" }
     });
-    if (testVc.proof) {
-      console.log("✅ GovChain W3C VC generation is operational.");
+    if (testVc.id) {
+      console.log("✅ GovChain W3C VC generation runs (unsigned: no proof attached).");
     }
   } catch (err: unknown) {
     console.error("❌ GovChain VC Service Failed:", getErrorMessage(err));

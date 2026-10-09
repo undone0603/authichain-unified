@@ -48,30 +48,28 @@ export const govchainRouter = router({
       vc: z.any(),
     }))
     .query(async ({ input }) => {
-      const result = await verifySovereignPassport(input.vc);
-      
-      if (result.valid) {
-        await db.logActivity({
-          userId: null,
-          action: "govchain_passport_verified",
-          entityType: "passport",
-          entityId: 0,
-          details: { issuer: result.issuer, vcId: input.vc.id }
-        });
-      }
-
-      return result;
+      // Fails closed (vc-service): always valid:false until a real issuer key
+      // can be resolved and checked. Nothing is written to the activity log,
+      // so a made-up credential leaves no "verified" record behind.
+      return verifySovereignPassport(input.vc);
     }),
 
   /**
-   * GovChain Stats: Real-time metrics for the government vertical
+   * GovChain Stats: no figures are published. The previous values were hard-coded,
+   * not measured. Same keys as before, all null, so existing callers keep a
+   * safe shape.
    */
-  stats: publicProcedure.query(async () => {
+  stats: publicProcedure.query(async (): Promise<{
+    activeAgencies: number | null;
+    passportsIssued: number | null;
+    complianceScore: number | null;
+    network: string | null;
+  }> => {
     return {
-      activeAgencies: 12,
-      passportsIssued: 1420,
-      complianceScore: 99.9,
-      network: "GovChain Federal Hub (Ed25519 / FIPS 186-5)"
+      activeAgencies: null,
+      passportsIssued: null,
+      complianceScore: null,
+      network: null,
     };
   }),
 });

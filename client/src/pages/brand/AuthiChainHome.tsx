@@ -65,7 +65,7 @@ const features = [
 
 const ecosystem = [
   { name: "QRON Studio", href: "https://qron.space", desc: "AI-powered QR code art generator. Create cryptographically signed, brand-level scannable art in seconds.", live: true },
-  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale verification with NFT certificates and $QRON rewards.", live: true },
+  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale verification with NFT certificates.", live: true },
   { name: "GovChain", href: "https://govchain.us", desc: "Sovereign document verification for government and defense. Made-in-USA manufacturer tracking with military-grade QRON authentication.", live: true },
   { name: "Enterprise API", href: "#", desc: "White-label authentication infrastructure for any industry vertical. Full REST API with Ed25519 signing and compliance tooling.", live: false },
 ];
@@ -156,10 +156,6 @@ export default function AuthiChainHome() {
 
         <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="hero-enter inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-medium tracking-wide uppercase mb-8">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
-              Live on Polygon Mainnet
-            </div>
             <h1 className="hero-enter hero-enter-delay-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
               The Truth Layer for the{' '}
               <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Global Economy</span>

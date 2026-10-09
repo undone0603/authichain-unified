@@ -2456,7 +2456,6 @@ ${estateFeatures(
       <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Scored opportunities, proposals, and certifications</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS</div><div class="audit-desc">Content-addressed evidence storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>

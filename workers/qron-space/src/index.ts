@@ -49,10 +49,9 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <rect x="0" y="624" width="1200" height="6" fill="#06b6d4"/>
   <polygon points="120,80 170,108 170,164 120,192 70,164 70,108" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.6"/>
   <text x="120" y="148" text-anchor="middle" font-family="monospace" font-size="56" font-weight="700" fill="#06b6d4">Q</text>
-  <text x="240" y="390" font-family="Arial,sans-serif" font-size="108" font-weight="800" letter-spacing="4" fill="#e2e8f0">$QRON</text>
+  <text x="240" y="390" font-family="Arial,sans-serif" font-size="108" font-weight="800" letter-spacing="4" fill="#e2e8f0">QRON</text>
   <line x1="240" y1="416" x2="460" y2="416" stroke="#06b6d4" stroke-width="3"/>
-  <text x="240" y="472" font-family="Arial,sans-serif" font-size="36" font-weight="300" fill="#94a3b8">Stake · Govern · Bridge</text>
-  <text x="240" y="516" font-family="Arial,sans-serif" font-size="22" fill="#64748b">ERC-20 on Polygon PoS · not a payment rail</text>
+  <text x="240" y="472" font-family="Arial,sans-serif" font-size="36" font-weight="300" fill="#94a3b8">Living QR generation</text>
   <text x="1160" y="598" text-anchor="end" font-family="monospace" font-size="20" letter-spacing="3" fill="#06b6d4">QRON.SPACE</text>
 </svg>`;
 
@@ -2019,6 +2018,9 @@ function decodeXml(s: string): string {
     .replace(/&amp;/g, '&');
 }
 
+// RES-47 #4 / MKT-78 X16: keep token-economy videos off qron.space.
+const HIDDEN_VIDEO_IDS = new Set(['70KG5d2fFUo']);
+
 async function fetchLatestVideos(limit = 6): Promise<YtVideo[]> {
   try {
     const res = await fetch(
@@ -2033,7 +2035,7 @@ async function fetchLatestVideos(limit = 6): Promise<YtVideo[]> {
       const id = e.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
       const title = decodeXml(e.match(/<title>([^<]*)<\/title>/)?.[1] ?? '');
       const published = e.match(/<published>([^<]+)<\/published>/)?.[1] ?? '';
-      if (id) out.push({ id, title, published });
+      if (id && !HIDDEN_VIDEO_IDS.has(id)) out.push({ id, title, published });
     }
     return out;
   } catch {
@@ -2088,7 +2090,7 @@ function notFound(pathname: string): Response {
   const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>404 — Not Found · $QRON</title>
+<title>404 — Not Found</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -2307,7 +2309,6 @@ ${estateHero({
 ${estateTrust([
   { value: "Ed25519", label: "Signed payload (in development)" },
   { value: "Scannable", label: "Any camera app" },
-  { value: "Polygon", label: "Contract deployed" },
   { value: "Editable", label: "Redirects, no reprint" },
 ])}
 ${estateFeatures(
@@ -2316,10 +2317,8 @@ ${estateFeatures(
   [
     { title: "Living QR generation", body: "Create a signed QR that can change its destination later, so packaging does not need a reprint when a campaign URL changes." },
     { title: "Scannable AI art", body: "Illusion-diffusion styles that remain readable by a standard phone camera. Art is the surface; the payload is the product." },
-    { title: "Estate verification (in development)", body: "QRON codes will link to an AuthiChain certificate on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. Scan-to-verify is in development." },
+    { title: "Estate verification (in development)", body: "Scan-to-verify is in development." },
     { title: "Packaging and labels", body: "Export print-ready art for jars, cards, and cartons. The generate path is the same one production already proxies." },
-    { title: "Utility token, not the CTA", body: "$QRON is the estate utility token on Polygon. Staking and governance are secondary; generation is how you start." },
-    { title: "Public contract", body: "Staking contract 0xAebf…E437 is published on Polygonscan. Inspect it there — we do not invent vote counts or APY theater on this page." },
   ],
   "features",
 )}
@@ -2358,12 +2357,6 @@ ${estateFooter(
         { href: "https://authichain.com/dashboard", label: "AuthiChain dashboard" },
         { href: "https://govchain.us/onboard", label: "GovChain onboard" },
         { href: "https://strainchain.io/onboard", label: "StrainChain onboard" },
-      ],
-    },
-    {
-      heading: "Contract",
-      links: [
-        { href: "https://polygonscan.com/address/0xAebfA6b08fb25b59748c93273aB8880e20FfE437", label: "Polygonscan" },
       ],
     },
   ],

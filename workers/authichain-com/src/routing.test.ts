@@ -133,7 +133,7 @@ test("the apex still renders the homepage", async () => {
   assert.equal(orgSlice.includes(`"url":"${creatorPay}"`), true);
   assert.equal(orgSlice.includes("/api/checkout"), false);
   assert.match(html, /href="\/authentic-agentic-economy"/);
-  assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /\$QRON token|Speculative utility/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(
     html,
@@ -969,6 +969,22 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
+  const env = {
+    APP_WORKER_TIMEOUT_MS: "40",
+    APP_WORKER: { fetch: () => new Promise(() => {}) },
+  } as unknown as Env;
+  for (const path of ["/verify?id=test123", "/verify/CERT-001"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 404);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+    const html = await res.text();
+    assert.match(html, /No record found/);
+    assert.match(html, /name="robots" content="noindex"/);
+    assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
+  }
+});
+
 test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const passport = planPaymentLink("strainchain_passport") ?? "";
@@ -1221,14 +1237,9 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
   const links = [...html.matchAll(/href="([^"]+)"/g)].map(
     m => new URL(m[1], "https://authichain.com")
   );
-  assert.ok(
-    links.some(
-      u =>
-        u.hostname === "polygonscan.com" &&
-        u.pathname ===
-          "/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"
-    )
-  );
+  // PM-374: wallet ownership of the anchor is not proven, so /protocol must
+  // not link the anchor transaction on polygonscan.
+  assert.ok(!links.some(u => u.hostname === "polygonscan.com"));
   assert.ok(
     links.some(
       u =>

@@ -2057,7 +2057,7 @@ fetch('https://strainchain.io/api/strainchain/stats')
     <h2>From seed to shelf</h2>
     <p class="section-sub">Every touch-point recorded. No gaps, no tampering, regulator-ready access.</p>
     <div class="steps">
-      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport. Minting to AuthiChain's ERC-721 contract on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p></div>
+      <div class="step"><div class="step-num">01</div><h3>Seed registration</h3><p>Cultivar data recorded in a genetics passport.</p></div>
       <div class="step"><div class="step-num">02</div><h3>Cultivation tracking</h3><p>Custody events linked to the batch record. On our roadmap: anchoring sensor and custody events to the batch on-chain.</p></div>
       <div class="step"><div class="step-num">03</div><h3>Lab testing</h3><p>The COA panel is linked to the passport, and discrepancies are surfaced, not smoothed over. Hashing COAs on-chain is in development.</p></div>
       <div class="step"><div class="step-num">04</div><h3>Retail verification</h3><p>A QR code on packaging opens the passport. Our goal: consumers and regulators can verify it against the on-chain record in under a second.</p></div>
@@ -2101,7 +2101,6 @@ ${estateFeatures(
       <div class="audit-layer"><div class="audit-name">Airtable</div><div class="audit-desc">Operational records and staff-facing data entry</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Structured store and real-time subscriptions</div></div>
       <div class="audit-layer"><div class="audit-name">IPFS / Pinata</div><div class="audit-desc">Content-addressed file storage</div></div>
-      <div class="audit-layer"><div class="audit-name">Polygon</div><div class="audit-desc">Contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · anchoring in development</div></div>
     </div>
   </div>
 </section>

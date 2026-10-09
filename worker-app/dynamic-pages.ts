@@ -415,7 +415,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      '<p>Enter a product ID to look up its record. Verification against AuthiChain\'s Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n' +
+      '<p>Enter a product ID to look up its record.</p>\n' +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -425,21 +425,80 @@ function verifyPromptHtml(): string {
   });
 }
 
+// Lookups must finish inside the apex worker's 4s APP_WORKER budget
+// (workers/authichain-com proxyAppWorker); otherwise the apex throws and the
+// visitor sees Cloudflare error 1101. Unknown certificate numbers were
+// observed hanging on Hyperdrive (2026-10-09, /verify?id=test123), same as
+// unknown /p/<serial> lookups did.
+const VERIFY_LOOKUP_TIMEOUT_MS = 2500;
+
+function withVerifyTimeout<T>(work: PromiseLike<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    Promise.resolve(work),
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("VERIFY_LOOKUP_TIMEOUT")),
+        VERIFY_LOOKUP_TIMEOUT_MS
+      );
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+// One page for "no record" and for "lookup failed": both answer 404 HTML so
+// nothing crashes and nothing gets indexed. The failure variant only adds a
+// retry hint; it never implies a record exists.
+function verifyNoRecordResponse(
+  c: Context,
+  identifier: string,
+  lookupFailed: boolean
+): Response {
+  const message = lookupFailed
+    ? 'We could not complete the lookup for "' +
+      identifier +
+      '" just now, so no record can be shown. Please try again in a minute.'
+    : 'No record was found on the AuthiChain registry for "' +
+      identifier +
+      '". Check the ID and try again.';
+  return htmlResponse(
+    c,
+    htmlDocument({
+      title: "No record found | AuthiChain",
+      description: message,
+      canonicalPath: "/verify",
+      extraHead: '<meta name="robots" content="noindex">\n',
+      bodyHtml:
+        "<main>\n" +
+        "<h1>No record found</h1>\n" +
+        "<p>" +
+        escapeHtml(message) +
+        "</p>\n" +
+        '<p><a href="/verify">Look up another ID</a></p>\n' +
+        "</main>",
+    }),
+    404
+  );
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
+  const idParam = url.searchParams.get("id");
+  const rawPathSegment = url.pathname
+    .replace(/^\/verify\/?/, "")
+    .replace(/\/+$/, "");
+  // Fallback label for the error page if decoding below throws.
+  let identifier: string | null = idParam || rawPathSegment || null;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
     // URIError on malformed percent-encoding (e.g. /verify/%zz), and that
-    // should degrade like any other lookup failure (caught below -> SPA
-    // shell) rather than 500. Also strip a trailing slash (e.g.
+    // should degrade like any other lookup failure (caught below -> the
+    // 404 "No record found" page) rather than 500. Also strip a trailing slash (e.g.
     // /verify/CERT-001/) so it resolves the same as the non-slash form.
-    const idParam = url.searchParams.get("id");
-    const rawPathSegment = url.pathname
-      .replace(/^\/verify\/?/, "")
-      .replace(/\/+$/, "");
     const pathSegment = decodeURIComponent(rawPathSegment);
-    const identifier = idParam || pathSegment || null;
+    identifier = idParam || pathSegment || null;
 
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
@@ -454,31 +513,36 @@ async function renderVerify(c: Context): Promise<Response> {
       Number.isFinite(numericId) &&
       String(numericId) === idParam
     ) {
-      product = await getProductById(db, numericId);
+      try {
+        product = await withVerifyTimeout(getProductById(db, numericId));
+      } catch (err) {
+        // products.id is a uuid, so Postgres rejects a numeric id with
+        // 22P02 (invalid_text_representation). That means "no such record",
+        // not "lookup failed". Anything else (timeouts, connection errors)
+        // still goes to the retry page. drizzle may wrap the pg error in .cause.
+        const e = err as { code?: string; cause?: { code?: string } };
+        if (e?.code !== "22P02" && e?.cause?.code !== "22P02") throw err;
+        product = null;
+      }
     } else {
-      const cert = await getCertificateByNumber(db, identifier);
-      if (cert) product = await getProductById(db, cert.productId);
+      const lookupId: string = identifier;
+      const cert = await withVerifyTimeout(getCertificateByNumber(db, lookupId));
+      if (cert) {
+        product = await withVerifyTimeout(getProductById(db, cert.productId));
+      }
     }
 
     if (!product) {
-      return htmlResponse(
-        c,
-        notFoundHtml(
-          "Verification Failed",
-          'No product was found on the AuthiChain registry for "' +
-            identifier +
-            '".',
-          "/verify"
-        ),
-        404
-      );
+      return verifyNoRecordResponse(c, identifier, false);
     }
 
-    const [cert] = await db
-      .select()
-      .from(certificates)
-      .where(eq(certificates.productId, product.id))
-      .limit(1);
+    const [cert] = await withVerifyTimeout(
+      db
+        .select()
+        .from(certificates)
+        .where(eq(certificates.productId, product.id))
+        .limit(1)
+    );
     const verified = !!cert;
     const status = verified
       ? "Authentic Product Verified"
@@ -534,7 +598,7 @@ async function renderVerify(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /verify lookup failed", err);
-    return serveSpaShell(c);
+    return verifyNoRecordResponse(c, identifier ?? "", true);
   }
 }
 
@@ -1480,7 +1544,7 @@ function generateFormHtml(
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
-    title: "Generate a Living QR | $QRON",
+    title: "Generate a Living QR",
     description:
       "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
     canonicalPath: "/generate",

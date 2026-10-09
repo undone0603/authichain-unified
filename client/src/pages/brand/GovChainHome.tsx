@@ -46,7 +46,7 @@ const stats = [
 ];
 
 const features = [
-  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with blockchain-anchored provenance. Every component traced from foundry to final assembly." },
+  { icon: Flag, title: "Made in USA Verification", desc: "Authenticate domestic manufacturers with provenance. Every component traced from foundry to final assembly." },
   { icon: FileCheck2, title: "Document Authentication", desc: "Cryptographically sign government documents, permits, and certificates. Tamper-proof verification accessible to any authorized scanner." },
   { icon: Building2, title: "Manufacturer Registry", desc: "Sovereign registry of verified domestic manufacturers with real-time compliance status, facility audits, and supply chain mapping." },
   { icon: Lock, title: "ITAR Compliance", desc: "International Traffic in Arms Regulations compliance tracking with automated export control screening and audit trail generation." },

@@ -16,13 +16,11 @@ import {
   Film,
   Sparkles,
   Link as LinkIcon,
-  Loader2,
   CheckCircle2,
 } from 'lucide-react';
 import { QRONEntry } from '@/lib/types';
 import { RedirectRulesManager } from '@/components/RedirectRulesManager';
-import { anchorQRONAction } from '@/app/actions/anchoring';
-import { ethers } from 'ethers';
+import { ANCHORING_UNAVAILABLE } from '@/lib/anchoring-status';
 
 export default function QronManagementPage({
   params,
@@ -35,7 +33,6 @@ export default function QronManagementPage({
   const [loading, setLoading] = useState(true);
   const [targetUrl, setTargetUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isAnchoring, setIsAnchoring] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -86,31 +83,6 @@ export default function QronManagementPage({
       setQron({ ...qron, target_url: targetUrl });
     }
     setIsSaving(false);
-  };
-
-  const handleAnchor = async () => {
-    if (!qron) return;
-    setIsAnchoring(true);
-    // In a real scenario, the edgeHash would be part of the QRON data from the worker
-    // For this pilot, we generate a mock Ed25519-style hash based on the ID if missing
-    const mockEdgeHash = qron.qr_content || ethers.id(qron.id);
-    
-    const result = await anchorQRONAction(qron.id, mockEdgeHash);
-    if (result.success && result.txHash) {
-      // Update local state to show anchored status
-      setQron({
-        ...qron,
-        metadata: {
-          ...qron.metadata,
-          blockchain: 'polygon',
-          tx_hash: result.txHash,
-          anchored_at: new Date().toISOString()
-        }
-      });
-    } else {
-      alert('Anchoring failed: ' + result.error);
-    }
-    setIsAnchoring(false);
   };
 
   if (loading) {
@@ -362,26 +334,16 @@ export default function QronManagementPage({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <button 
-                    onClick={handleAnchor}
-                    disabled={isAnchoring}
-                    className="btn-gold px-10 py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-3 shadow-gold disabled:opacity-50"
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    data-testid="anchor-disabled"
+                    className="btn-gold px-10 py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-3 opacity-50 cursor-not-allowed"
                   >
-                    {isAnchoring ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Securing Protocol...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="w-4 h-4" />
-                        Anchor to Polygon
-                      </>
-                    )}
+                    <Shield className="w-4 h-4" />
+                    {ANCHORING_UNAVAILABLE}
                   </button>
-                  <p className="text-[9px] font-bold text-zinc-700 uppercase">
-                    Requires Protocol Credits &bull; Estimated gas: ~0.002 MATIC
-                  </p>
                 </div>
               )}
             </section>

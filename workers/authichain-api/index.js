@@ -7,7 +7,9 @@
  *
  * Public catalog is the free meter plus https://authichain.com/pricing.
  * basic/pro/ultra/enterprise below are rate-limit buckets, not products for sale.
- * Auth: X-RapidAPI-Key, X-API-Key, or Authorization Bearer
+ * Auth: X-API-Key or Authorization Bearer (looked up in Supabase), or a
+ *       RapidAPI proxy request whose X-RapidAPI-Proxy-Secret matches
+ *       RAPIDAPI_PROXY_SECRET. Anything else gets 401 (fail closed).
  *
  * Routes:
  *   GET  /health, /api/v1/health          → status
@@ -38,6 +40,11 @@
  *   ANCHOR_CONTRACT_ADDRESSES   (optional) comma list; default the AuthiChain contract
  *   ALLOW_UNREGISTERED_SELF_SERVE_KEYS ("true" to keep accepting unsaved
  *                               ac_live_ keys issued before key persistence)
+ *   RAPIDAPI_PROXY_SECRET       (secret, optional) the RapidAPI provider proxy
+ *                               secret. Requests carrying X-RapidAPI-Key are
+ *                               accepted only when X-RapidAPI-Proxy-Secret
+ *                               matches it (constant-time). Unset = every
+ *                               X-RapidAPI-Key request is rejected.
  */
 
 const SUPA_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co";
@@ -52,11 +59,6 @@ const PLANS = {
   enterprise: { name: "API", dailyLimit: 999999, hourlyLimit: 999999 },
 };
 const PRODUCTS_URL = "https://authichain.com/pricing";
-
-const DEMO_KEYS = {
-  demo_test_key_2026: { plan: "free", name: "Demo User", isDemo: true },
-  rapidapi_test_2026: { plan: "basic", name: "RapidAPI Test", isDemo: true },
-};
 
 const INDUSTRIES = {
   cannabis: {
@@ -640,13 +642,53 @@ function pickMatch(rows, candidates) {
 }
 
 // ── Auth & Tenant Resolution ──────────────────────────────────────────────────
+// Fail closed: no hard-coded keys, and X-RapidAPI-Key is never trusted on its
+// own (any value used to be accepted as the basic plan). A RapidAPI request is
+// accepted only when the proxy secret RapidAPI adds on its side matches the
+// RAPIDAPI_PROXY_SECRET secret; if that secret is not bound, it is rejected.
+
+// Constant-time string compare: hash both sides to a fixed 32 bytes, then
+// compare every byte, so neither length nor the first mismatch leaks.
+async function timingSafeEqualStr(a, b) {
+  const enc = new TextEncoder();
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(String(a))),
+    crypto.subtle.digest("SHA-256", enc.encode(String(b))),
+  ]);
+  const x = new Uint8Array(da);
+  const y = new Uint8Array(db);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+async function isVerifiedRapidApiRequest(req) {
+  const expected = envVar("RAPIDAPI_PROXY_SECRET");
+  if (!expected) return false;
+  const got = req.headers.get("X-RapidAPI-Proxy-Secret");
+  if (!got) return false;
+  return timingSafeEqualStr(got, expected);
+}
+
 async function resolveKey(req) {
+  // RapidAPI path: only a verified proxy request counts. An unverified
+  // X-RapidAPI-Key is rejected outright rather than falling through.
+  if (req.headers.get("X-RapidAPI-Key")) {
+    if (!(await isVerifiedRapidApiRequest(req))) return null;
+    return {
+      valid: true,
+      plan: "basic",
+      limit: 100,
+      name: "RapidAPI User",
+      isDemo: false,
+      rapidapi: true,
+    };
+  }
+
   const key =
-    req.headers.get("X-RapidAPI-Key") ||
     req.headers.get("X-API-Key") ||
     (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
   if (!key) return null;
-  if (DEMO_KEYS[key]) return { valid: true, ...DEMO_KEYS[key] };
 
   // Provisioned tenants and self-serve keys both live in white_label_clients.
   // That table has RLS enabled with no anon policies, so a direct anon SELECT
@@ -689,17 +731,6 @@ async function resolveKey(req) {
       name: "Self-Serve User",
       isDemo: false,
       degraded: true,
-    };
-  }
-
-  // RapidAPI keys pass through — trust the proxy
-  if (req.headers.get("X-RapidAPI-Key")) {
-    return {
-      valid: true,
-      plan: "basic",
-      limit: 100,
-      name: "RapidAPI User",
-      isDemo: false,
     };
   }
 
@@ -899,9 +930,9 @@ async function handleRequest(req) {
   if (!kd) {
     return j(
       {
-        error: "Missing API key",
+        error: "Invalid or missing API key",
         message:
-          "Include your key in X-RapidAPI-Key, X-API-Key, or Authorization Bearer header.",
+          "Include a valid key in the X-API-Key or Authorization Bearer header.",
         get_free_key:
           'POST /api/v1/keys/create with {"email":"you@example.com"}',
         products: PRODUCTS_URL,

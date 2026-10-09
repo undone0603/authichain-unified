@@ -74,7 +74,6 @@ export default async function MarketplacePage() {
             </div>
             <nav className="hidden md:flex items-center gap-8">
                 <Link href="/explorers" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">Network Status</Link>
-                <Link href="/governance" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">DAO Registry</Link>
                 <div className="p-2 px-4 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                     <Shield className="w-3 h-3 text-gold" />
                     Base Mainnet

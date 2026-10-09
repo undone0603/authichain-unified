@@ -32,7 +32,6 @@ Cite these. Do not infer the rest.
 | Surface | What it is |
 |---|---|
 | [/protocol](/protocol) | Open verifier. Verdicts: `verified`, `valid-unanchored`, `invalid` |
-| Polygon contract | `0x4da4D2675e52374639C9c954f4f653887A9972BE` |
 | [/x402](/x402) | Agent micropayments. Unpaid `POST /api/x402` returns HTTP 402 |
 | [/dpp-check](/dpp-check?utm_source=docs&utm_medium=authority&utm_campaign=docs-hub) | Free EU DPP readiness check |
 | [/battery-passport](/battery-passport) | E-bike / LMT gap map. Battery passport from 18 February 2027. |

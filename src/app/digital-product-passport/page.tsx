@@ -156,8 +156,6 @@ export default function DPPPage() {
                  check. "Aligned with" rather than "compliant": conformance is
                  assessed per product, not asserted by a vendor. */}
             <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
-              <span>Polygon contract live</span>
-              <div className="w-1 h-1 rounded-full bg-zinc-800" />
               <span>Ed25519 signing in development</span>
               <div className="w-1 h-1 rounded-full bg-zinc-800" />
               <a

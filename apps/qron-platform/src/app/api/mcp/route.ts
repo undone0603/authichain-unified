@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
-import { reportAgentUsage } from '@/lib/industrial/billing';
 import { logAutomation } from '@/lib/automation';
 
 /**
@@ -11,6 +10,12 @@ import { logAutomation } from '@/lib/automation';
 
 const AUTHICHAIN_CONTRACT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
 const QRON_TOKEN = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
+
+// verify / check_eu_dpp / register are in development. Their replies must not
+// read as a verdict (no SECURED status, no consensus count, no compliance
+// status or emissions figures, no on-chain claim). PM-348, ADM-114, RES-106.
+const STUB_TOOL_REPLY =
+  "Not available yet: this tool returns no verification result.";
 
 const TOOLS = [
   {
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ tools: TOOLS });
     }
 
-    // 2. Handle callTool (Requires Authentication for Billing)
+    // 2. Handle callTool (requires authentication; placeholder tools are not billed)
     if (method === "tools/call") {
       if (!apiKey) {
         return NextResponse.json({ error: "X-API-Key required for tool execution" }, { status: 401 });
@@ -92,9 +97,6 @@ export async function POST(req: NextRequest) {
             content: [{
               type: "text",
               text: JSON.stringify({
-                verify_product: "$0.05",
-                register_product: "$0.50",
-                check_eu_dpp: "$5.00",
                 network: "Polygon POS",
                 contract: AUTHICHAIN_CONTRACT,
                 token: QRON_TOKEN
@@ -103,47 +105,32 @@ export async function POST(req: NextRequest) {
           });
 
         case "authichain_verify_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'verify_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(verify_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'verify_product' }, msg);
-          });
-
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `Verification initiated for ${args.serial}. Consensus nodes: 5/5. Status: SECURED.`
+              text: STUB_TOOL_REPLY
             }]
           });
 
         case "authichain_check_eu_dpp":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'check_eu_dpp').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(check_eu_dpp) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'check_eu_dpp' }, msg);
-          });
-
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `EU DPP Compliance Audit initiated for cert: ${args.certification_id}. Lifecycle emissions: 2.4kg. Circularity score: 8/10. Status: COMPLIANT.`
+              text: STUB_TOOL_REPLY
             }]
           });
 
         case "authichain_register_product":
-          // Autonomous Revenue Event
-          reportAgentUsage(userId, 'register_product').catch((err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('[MCP] reportAgentUsage(register_product) failed:', err);
-            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'register_product' }, msg);
-          });
-          
+          // No billing: this tool is a placeholder and returns no result
+          // (PM-348). Do not call reportAgentUsage until it does real work.
           return NextResponse.json({
             content: [{
               type: "text",
-              text: `Registration protocol activated for ${args.name} by ${args.manufacturer}. Certificate pending on-chain anchor.`
+              text: STUB_TOOL_REPLY
             }]
           });
 

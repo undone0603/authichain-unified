@@ -2292,7 +2292,6 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "Ecosystem utilities",
     "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
-      { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "On our roadmap: Bitcoin Ordinals inscriptions for certificates." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],
@@ -2477,7 +2476,7 @@ function ecosystemFooter() {
         ],
       },
     ],
-    'Polygon · ERC-721 contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · EU DPP',
+    'EU DPP',
   );
 }
 
@@ -2532,7 +2531,6 @@ const HTML = `<!DOCTYPE html>
     ],
   })}
   ${estateTrust([
-    { value: "Polygon", label: "Contract deployed" },
     { value: "$299", label: "EU DPP Readiness" },
     { value: "x402", label: "Agent micropayments" },
   ])}
@@ -2837,8 +2835,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
   <h2>One record, anchored on Polygon mainnet</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
-    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
+  <p>The published demonstration record is signed by the live issuer and its hash is committed in a Polygon transaction (block 94,680,852).
     It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
@@ -3250,6 +3247,34 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 }
 
 /**
+ * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
+ * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
+ * a plain 404 "No record found" page instead; it never implies a record exists.
+ */
+function verifyLookupTimeoutResponse(): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>No record found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
+</style></head><body><main>
+<h1>No record found</h1>
+<p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
+<a class="btn" href="/verify">Look up another ID</a>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
@@ -3277,6 +3302,9 @@ async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     if (pathname === "/p" || pathname.startsWith("/p/")) {
       return passportLookupTimeoutResponse(pathname);
+    }
+    if (pathname === "/verify" || pathname.startsWith("/verify/")) {
+      return verifyLookupTimeoutResponse();
     }
     throw err;
   } finally {

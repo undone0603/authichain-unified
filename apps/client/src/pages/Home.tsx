@@ -313,8 +313,8 @@ export default function Home() {
                 <div className="protocol-badge mb-4">The AI Security Council</div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6">Deploy Your Protocol Agents</h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Join the network by creating your own Protocol Agent. Guardians, Archivists, and Sentinels 
-                  work together to reach consensus on authenticity, earning <strong>$QRON</strong> rewards for every scan.
+                  Join the network by creating your own Protocol Agent. Guardians, Archivists, and Sentinels
+                  work together to reach consensus on authenticity.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"].map(a => (

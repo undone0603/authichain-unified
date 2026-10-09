@@ -82,7 +82,6 @@ export default function ExplorersPage() {
                 Distributed Consensus · 2026 AuthiChain Inc.
             </p>
             <div className="flex justify-center gap-8 text-zinc-600 text-[9px] font-black uppercase tracking-widest">
-                <Link href="/governance" className="hover:text-gold transition-colors">Governance</Link>
                 <Link href="/docs" className="hover:text-gold transition-colors">SDKs</Link>
                 <Link href="/legal" className="hover:text-gold transition-colors">Legal</Link>
             </div>

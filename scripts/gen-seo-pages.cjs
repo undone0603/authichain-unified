@@ -284,15 +284,22 @@ function buildEntry(d) {
   const kwTitle = titleCase(d.keyword);
   const slug = slugify(d.keyword);
   const url = `https://${b.origin || b.domain}/p/${slug}`;
-  const title = clampTitle(kwTitle, b.name);
+  // d.title / d.h1 (optional) override the keyword-derived title and h1 without
+  // moving the slug. Used where the keyword reads as an offering the page says
+  // does not exist (RES pq-page check, item 9). d.title is the full <title>.
+  const title = d.title || clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
   // d.meta (optional) pins the meta description to the lead's first sentence
   // without the price suffix. Used where a claims removal (RES-13) shortened
   // a lead and the template would otherwise pull a new $ clause into meta.
+  // A lead that already says an offer is not public must keep that sentence.
+  // The price suffix would replace it ("Farm is not a public offer.").
   const metaDescription = d.meta
     ? clampMeta(d.meta, 158)
-    : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
-  const h1 = kwTitle;
+    : /not a public offer/i.test(d.lead)
+      ? clampMeta(d.lead, 158)
+      : clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
+  const h1 = d.h1 || kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
     `<h2>Why ${esc(b.name)}</h2>` +
@@ -306,10 +313,12 @@ function buildEntry(d) {
     '@graph': [
       {
         '@type': d.schemaType,
-        name: `${b.name} — ${kwTitle}`,
+        ...(d.schemaType === 'Article' ? { headline: h1, name: h1 } : { name: `${b.name} — ${kwTitle}` }),
         ...(d.schemaType === 'Product'
           ? { brand: { '@type': 'Brand', name: b.name } }
-          : { provider: { '@type': 'Organization', name: b.name, url: `https://${b.origin || b.domain}` } }),
+          : d.schemaType === 'Article'
+            ? { publisher: { '@type': 'Organization', name: b.name, url: `https://${b.origin || b.domain}` } }
+            : { provider: { '@type': 'Organization', name: b.name, url: `https://${b.origin || b.domain}` } }),
         description: d.lead,
         url,
       },
@@ -317,7 +326,7 @@ function buildEntry(d) {
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: b.name, item: `https://${b.origin || b.domain}` },
-          { '@type': 'ListItem', position: 2, name: kwTitle, item: url },
+          { '@type': 'ListItem', position: 2, name: h1, item: url },
         ],
       },
       ...(d.faqs.length
