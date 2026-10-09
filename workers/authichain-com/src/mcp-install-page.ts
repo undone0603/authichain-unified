@@ -248,6 +248,7 @@ section:first-of-type{border-top:0}
 .sub{color:var(--ac-muted);max-width:62ch;margin-bottom:22px}
 .grid{display:grid;gap:14px}
 @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
+@media(min-width:900px){.grid.three{grid-template-columns:repeat(3,1fr)}}
 .card{background:var(--ac-card);border:1px solid var(--ac-line);
   border-radius:var(--ac-radius);padding:var(--ac-pad)}
 .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
@@ -340,8 +341,7 @@ ${ESTATE_FONTS_LINK}
 <header class="hero"><div class="wrap">
   <span class="pill">Model Context Protocol</span>
   <h1>Give your agent a way to check what's real.</h1>
-  <p class="lede">AuthiChain verifies Ed25519-signed provenance records against their Polygon
-  mainnet anchor, and scores EU Digital Product Passport readiness against the dated
+  <p class="lede">AuthiChain verifies Ed25519-signed provenance records and scores EU Digital Product Passport readiness against the dated
   obligations. Both are free over MCP — no key, no account, no payment header.</p>
   <div class="btns">
     <a class="btn primary" href="${esc(CURSOR_DEEPLINK)}">Add to Cursor</a>
@@ -402,7 +402,7 @@ ${ESTATE_FONTS_LINK}
   <p class="sub">Calls you can paste and run right now. Every one of them hits a record that is
   already published — none of this is a mock-up, and each card states what the call does
   <em>not</em> prove.</p>
-  <div class="grid two">${SHOWCASES.map(showcaseCard).join("")}</div>
+  <div class="grid two three">${SHOWCASES.map(showcaseCard).join("")}</div>
 </div></section>
 
 <section><div class="wrap">

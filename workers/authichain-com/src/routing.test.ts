@@ -84,12 +84,10 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
     ]) {
       assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
     }
-    // RES-167: /mcp/install still renders the verify_record tool description
-    // (mcp-routes.ts), which names Polygon mainnet; that text is an owner
-    // call, so the bare phrase is banned on /vs/* only for now.
-    if (path.startsWith("/vs")) {
-      assert.doesNotMatch(body, /Polygon\s+mainnet/i, `${path} must not contain Polygon mainnet`);
-    }
+    // RES-171: the verify_record tool description and the /mcp/install
+    // opening no longer name Polygon mainnet, so the bare phrase is banned
+    // on /mcp/install as well as /vs/*.
+    assert.doesNotMatch(body, /Polygon\s+mainnet/i, `${path} must not contain Polygon mainnet`);
   }
 });
 
