@@ -11,6 +11,7 @@ import {
   type SignedAgentMessage,
 } from "./agent-message";
 import { MemoryAgentReplayStore } from "./agent-store";
+import { verifyAgentMessage } from "./agent-verifier";
 import {
   ECONOMIC_ACTION_PROTOCOL,
   isEconomicAction,
@@ -148,7 +149,7 @@ async function createFixture(options: {
     isIssuerRevoked: async () => false,
   };
 
-  const verification = await (await import("./agent-verifier")).verifyAgentMessage(
+  const verification = await verifyAgentMessage(
     message,
     {
       resolver,
