@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import { claimEmailSend, releaseEmailSend, type EmailSendClaim } from "../src/lib/email-send-ledger";
 import nodemailer from "nodemailer";
 
 type JsonRecord = Record<string, unknown>;
@@ -100,8 +101,9 @@ export type SendEmailInput = {
    * Sent to Resend as the `Idempotency-Key` header. Resend returns the first
    * result for a repeated key for 24h instead of sending again, so a webhook
    * retry can't double-send. Build it from the triggering event id plus the
-   * template name (see stripeEmailIdempotencyKey). The Gmail SMTP fallback has
-   * no equivalent; the webhook's event claim is what guards that path.
+   * template name (see stripeEmailIdempotencyKey). The Gmail fallbacks have no
+   * equivalent, so a keyed send is also claimed once in the email send ledger
+   * (src/lib/email-send-ledger.ts) before any provider is tried.
    */
   idempotencyKey?: string;
 };
@@ -218,6 +220,25 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "dry_run", reason: "recorded, not sent" };
   }
 
+  // PM-338 (c): once-only send ledger for keyed (webhook) emails, checked
+  // before ANY provider so a Resend outage + Gmail fallback + recovered
+  // Resend on the retry cannot send two copies.
+  const ledger = await claimEmailSend(input.idempotencyKey);
+  if (ledger === "duplicate") {
+    return { status: "skipped", reason: "duplicate_idempotency_key" };
+  }
+  const result = await dispatchEmail(input, to, ledger);
+  if (ledger === "claimed" && result.status !== "sent") {
+    await releaseEmailSend(input.idempotencyKey);
+  }
+  return result;
+}
+
+async function dispatchEmail(
+  input: SendEmailInput,
+  to: string,
+  ledger: EmailSendClaim,
+): Promise<SendEmailResult> {
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
@@ -250,6 +271,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     } catch (resendErr: unknown) {
       console.warn("[email-service] Resend error, falling back:", getErrorMessage(resendErr));
     }
+  }
+
+  // PM-338 (c): the Gmail fallbacks have no idempotency of their own. With a
+  // key but no working send ledger, do not risk a second copy: skip.
+  if (ledger === "unavailable") {
+    return { status: "skipped", reason: "send_ledger_unavailable", provider: "gmail" };
   }
 
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { claimEmailSend, releaseEmailSend } from './email-send-ledger';
 
 type SendArgs = {
   to: string;
@@ -18,6 +19,8 @@ type SendResult = {
   provider: 'gmail' | 'resend' | 'brevo' | 'sendgrid' | 'none';
   status?: number;
   error?: string;
+  /** PM-338 (c): this idempotency key was already sent; nothing was sent now. */
+  duplicate?: boolean;
 };
 
 function parseFrom(from: string): { email: string; name?: string } {
@@ -112,11 +115,25 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     [process.env.SENDGRID_API_KEY, viaSendGrid],
   ];
 
+  // PM-338 (c): keyed sends are claimed once in the email send ledger before
+  // any provider runs. Gmail (first in this chain) has no idempotency of its
+  // own, so with a key but no working ledger it is skipped (fail closed);
+  // Resend still dedupes on its Idempotency-Key header.
+  const ledger = await claimEmailSend(args.idempotencyKey);
+  if (ledger === 'duplicate') {
+    return { ok: true, provider: 'none', duplicate: true, error: 'duplicate_idempotency_key' };
+  }
+
   let last: SendResult = { ok: false, provider: 'none', error: 'no provider configured' };
   for (const [key, fn] of providers) {
     if (!key) continue;
+    if (fn === viaGmail && ledger === 'unavailable') {
+      last = { ok: false, provider: 'gmail', error: 'send_ledger_unavailable' };
+      continue;
+    }
     last = await fn(args, key);
     if (last.ok) return last;
   }
+  if (ledger === 'claimed') await releaseEmailSend(args.idempotencyKey);
   return last;
 }

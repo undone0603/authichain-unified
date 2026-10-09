@@ -40,6 +40,10 @@ function lastBody(): Record<string, unknown> {
 
 beforeEach(() => {
   fetchSpy.mockClear();
+  // No send-ledger creds here: these tests pin the Resend header only.
+  delete process.env.SUPABASE_URL;
+  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 });
 
 describe("stripeEmailIdempotencyKey", () => {
