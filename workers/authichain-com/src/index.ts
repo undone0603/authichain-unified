@@ -2836,8 +2836,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
   <h2>One demonstration record</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in a Polygon transaction (block 94,680,852).
-    It is a demonstration, not a product.</p>
+  <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
     <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
