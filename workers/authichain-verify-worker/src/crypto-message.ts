@@ -121,7 +121,7 @@ async function importVerificationKey(publicKey: string): Promise<CryptoKey> {
   );
 }
 
-function parseSignedMessage(input: unknown): SignedControlPlaneMessage {
+function parseSignedMessage(input: unknown, requireSignature = true): SignedControlPlaneMessage {
   if (!isRecord(input)) throw new TypeError("Message must be a plain object");
   for (const key of Object.keys(input)) {
     if (!MESSAGE_KEYS.has(key)) throw new TypeError(`Unknown message field: ${key}`);
@@ -137,8 +137,8 @@ function parseSignedMessage(input: unknown): SignedControlPlaneMessage {
     !isId(input.policy_version) ||
     !isCanonicalUtcTimestamp(input.issued_at) ||
     !isCanonicalUtcTimestamp(input.expires_at) ||
-    typeof input.signature !== "string" ||
-    input.signature.length === 0
+    (input.signature !== undefined && typeof input.signature !== "string") ||
+    (requireSignature && (typeof input.signature !== "string" || input.signature.length === 0))
   ) throw new TypeError("Malformed control-plane message");
 
   const action = parseEconomicAction(input.action);
@@ -168,13 +168,13 @@ function parseSignedMessage(input: unknown): SignedControlPlaneMessage {
     issued_at: input.issued_at,
     expires_at: input.expires_at,
     action,
-    signature: input.signature,
+    signature: typeof input.signature === "string" ? input.signature : "",
   };
 }
 
 /** Build canonical signing bytes from a strict, fully bound action message. */
 export function canonicalizeControlPlaneMessage(input: unknown): string {
-  const message = parseSignedMessage(input);
+  const message = parseSignedMessage(input, false);
   return canonicalizeJson({
     domain_separator: "authichain-control-plane-message/1",
     protocol: message.protocol,
