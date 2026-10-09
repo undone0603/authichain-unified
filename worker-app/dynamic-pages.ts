@@ -36,7 +36,7 @@
 
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
-import { getHyperdriveDb } from "../server/db";
+import { createHyperdriveRequestDb, getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
   getProductById,
@@ -415,7 +415,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      '<p>Enter a product ID to look up its record.</p>\n' +
+      "<p>Enter a product ID to look up its record.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -432,19 +432,43 @@ function verifyPromptHtml(): string {
 // unknown /p/<serial> lookups did.
 const VERIFY_LOOKUP_TIMEOUT_MS = 2500;
 
-function withVerifyTimeout<T>(work: PromiseLike<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return Promise.race([
-    Promise.resolve(work),
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("VERIFY_LOOKUP_TIMEOUT")),
-        VERIFY_LOOKUP_TIMEOUT_MS
-      );
-    }),
-  ]).finally(() => {
-    if (timer) clearTimeout(timer);
+// One 2.5s deadline for the whole lookup (connect + every query), not 2.5s
+// per step: three sequential steps at 2.5s each could add up to 7.5s and
+// still blow the apex's 4s budget.
+function makeVerifyDeadline(): <T>(work: PromiseLike<T>) => Promise<T> {
+  const deadline = Date.now() + VERIFY_LOOKUP_TIMEOUT_MS;
+  return function withVerifyTimeout<T>(work: PromiseLike<T>): Promise<T> {
+    const remaining = Math.max(0, deadline - Date.now());
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+      Promise.resolve(work),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("VERIFY_LOOKUP_TIMEOUT")),
+          remaining
+        );
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  };
+}
+
+// Release the per-request pg.Client after the response without delaying it.
+// waitUntil keeps the isolate alive for the socket close; c.executionCtx
+// throws when there is no ExecutionContext (tests), so fall back to void.
+function closeVerifyDb(
+  c: Context,
+  handle: { close: () => Promise<void> }
+): void {
+  const work = handle.close().catch(err => {
+    console.warn("[dynamic-pages] /verify db close failed", err);
   });
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    void work;
+  }
 }
 
 // One page for "no record" and for "lookup failed": both answer 404 HTML so
@@ -490,6 +514,7 @@ async function renderVerify(c: Context): Promise<Response> {
     .replace(/\/+$/, "");
   // Fallback label for the error page if decoding below throws.
   let identifier: string | null = idParam || rawPathSegment || null;
+  let dbHandle: ReturnType<typeof createHyperdriveRequestDb> | undefined;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
@@ -504,7 +529,12 @@ async function renderVerify(c: Context): Promise<Response> {
       return htmlResponse(c, verifyPromptHtml(), 200);
     }
 
-    const db = getHyperdriveDb(c.env as any);
+    // Hyperdrive-recommended pattern: one pg.Client for this request,
+    // connected inside the lookup budget, closed after the response.
+    const withVerifyTimeout = makeVerifyDeadline();
+    dbHandle = createHyperdriveRequestDb(c.env as any);
+    await withVerifyTimeout(dbHandle.connect());
+    const db = dbHandle.db;
 
     let product: any = null;
     const numericId = Number(idParam);
@@ -526,7 +556,9 @@ async function renderVerify(c: Context): Promise<Response> {
       }
     } else {
       const lookupId: string = identifier;
-      const cert = await withVerifyTimeout(getCertificateByNumber(db, lookupId));
+      const cert = await withVerifyTimeout(
+        getCertificateByNumber(db, lookupId)
+      );
       if (cert) {
         product = await withVerifyTimeout(getProductById(db, cert.productId));
       }
@@ -599,6 +631,8 @@ async function renderVerify(c: Context): Promise<Response> {
   } catch (err) {
     console.error("[dynamic-pages] /verify lookup failed", err);
     return verifyNoRecordResponse(c, identifier ?? "", true);
+  } finally {
+    if (dbHandle) closeVerifyDb(c, dbHandle);
   }
 }
 
