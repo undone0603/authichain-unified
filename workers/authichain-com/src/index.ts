@@ -2517,7 +2517,7 @@ const HTML = `<!DOCTYPE html>
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Agents can pay. They still need to know if it is real.",
-    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lede: "The first checkout on this page is the $29 pack.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",

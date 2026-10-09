@@ -101,6 +101,14 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Buy a QRON Starter Pack — \$29/);
   // Held pending decision: the $29 banner stays as it is.
   assert.match(html, /The first checkout is the \$29 signed pack\./);
+  // RES-184: the hero lede under the h1 must not claim a "signed" pack.
+  // Scoped to the hero because the banner above is held pending decision.
+  const hero = html.slice(html.indexOf('<header class="estate-hero'), html.indexOf("</header>", html.indexOf('<header class="estate-hero')));
+  assert.ok(hero.length > 0, "hero header must render");
+  assert.doesNotMatch(hero, /\$29 signed pack/i);
+  assert.match(hero, /The first checkout on this page is the \$29 pack\./);
+  // PM-435: the lede is only the $29 sentence; the $299 form line is cut.
+  assert.doesNotMatch(html, /remains \$299 on the form below/i);
   assert.match(html, /name="email"/);
   assert.match(
     html,
