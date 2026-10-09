@@ -45,7 +45,7 @@ const stats = [
 ];
 
 const stack = [
-  { icon: Fingerprint, num: "01", title: "TrueMark Seal", desc: "Ed25519-signed digital seal anchored to the blockchain. Each product receives a unique TrueMark ID that cannot be forged or duplicated." },
+  { icon: Fingerprint, num: "01", title: "TrueMark Seal", desc: "Each product receives a unique TrueMark ID." },
   { icon: QrCode, num: "02", title: "QRON Identity", desc: "AI-generated QR art fused with cryptographic payload. Beautiful enough for packaging, powerful enough for forensic verification." },
   { icon: Cpu, num: "03", title: "AutoFlow Engine", desc: "Cloudflare-native workflow engine that processes authentication events at edge speed. Real-time verification with zero cold starts." },
   { icon: BarChart3, num: "04", title: "Operator Console", desc: "Enterprise dashboard for managing product registrations, monitoring scan activity, and generating compliance reports at scale." },

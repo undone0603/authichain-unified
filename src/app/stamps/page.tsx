@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Shield, Zap, Globe } from 'lucide-react';
+import { ArrowRight, Zap, Globe } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'QRON Stamps | Collectible Authenticated QR Art',
@@ -61,11 +61,6 @@ const COLLECTIONS = [
 ];
 
 const WHY = [
-  {
-    icon: <Shield className="w-5 h-5" />,
-    title: 'Cryptographically Signed',
-    desc: 'Every stamp carries an Ed25519 signature anchored to Polygon. Counterfeit-proof by design.',
-  },
   {
     icon: <Zap className="w-5 h-5" />,
     title: 'Scan-to-Verify',

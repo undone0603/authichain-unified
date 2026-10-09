@@ -98,7 +98,6 @@
     </g>
     <text x="96" y="398" font-family="monospace" font-size="10" fill="#666">QRON Verified</text>
     <text x="96" y="414" font-family="monospace" font-size="10" fill="#555">qron.space/v/lx7</text>
-    <text x="96" y="430" font-family="monospace" font-size="10" fill="#444">Ed25519 Signed</text>
   </g>
   <rect x="140" y="610" width="440" height="56" rx="12" fill="#c9a227" filter="url(#glow4)"/>
   <text x="360" y="645" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#0a0a0a">Add to Cart - $285</text>
@@ -106,6 +105,6 @@
   <rect x="0" y="880" width="1080" height="1" fill="#c9a22744"/>
   <text x="540" y="928" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#c9a227">Authenticated by QRON</text>
   <text x="540" y="960" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#555">Every product verified on the AuthiChain blockchain</text>
-  <text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#444" letter-spacing="2">qron.space | AuthiChain Protocol | Ed25519 Cryptographic Signing</text>
+  <text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#444" letter-spacing="2">qron.space | AuthiChain Protocol</text>
   <text x="540" y="1048" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#c9a227">QRON | AI Living QR Art</text>
 </svg>

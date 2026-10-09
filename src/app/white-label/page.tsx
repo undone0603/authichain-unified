@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { 
-  ShieldCheck, 
   Printer,
   Code,
   DollarSign,
@@ -56,7 +55,7 @@ export default function WhiteLabelPage() {
             { 
               icon: Code, 
               title: 'Drop-In SDK', 
-              desc: 'Integrate our REST API into your print management software in hours. Generate unique Ed25519-signed QRONs in bulk.' 
+              desc: 'Integrate our REST API into your print management software in hours.' 
             },
             { 
               icon: Layers, 
@@ -67,11 +66,6 @@ export default function WhiteLabelPage() {
               icon: DollarSign,
               title: 'New Revenue Streams',
               desc: 'Charge your clients a premium for "Smart Labels." You pay fractions of a cent per scan, you keep the margin.'
-            },
-            {
-              icon: ShieldCheck,
-              title: 'Compliance Built-In',
-              desc: 'Ed25519 signatures give your clients audit-ready proof for FTC MUSA, EU DPP, and ISO traceability claims.'
             },
             {
               icon: Zap,
