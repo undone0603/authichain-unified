@@ -23,37 +23,35 @@
       "urgent": true
     },
     {
-      "id": "electronics",
-      "date": "2027-07-01",
-      "endDate": "2027-12-31",
-      "precision": "quarter",
-      "label": "Electronics & ICT Products (indicative)",
-      "detail": "Indicative (ESPR working plan, delegated act not adopted). No adopted act sets a DPP date for smartphones, tablets or laptops; see the Ecodesign Working Plan 2025-2030, COM(2025) 187.",
-      "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
-      "urgent": false,
-      "hideStatus": true
-    },
-    {
       "id": "textiles",
-      "date": "2028-01-01",
-      "endDate": "2029-12-31",
+      "date": "2027-01-01",
       "precision": "year",
       "label": "Textiles, Apparel & Footwear (indicative)",
       "detail": "Indicative (ESPR working plan, delegated act not adopted). COM(2025) 187 lists textiles/apparel with an indicative 2027 adoption year; the delegated act will set the application date.",
       "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
       "urgent": false,
-      "hideStatus": true
+      "hideStatus": true,
+      "indicative": true
     },
     {
       "id": "construction",
-      "date": "2029-01-01",
-      "endDate": "2030-12-31",
+      "date": "2028-01-01",
       "precision": "year",
       "label": "Furniture (indicative)",
       "detail": "Indicative (ESPR working plan, delegated act not adopted). COM(2025) 187 lists furniture with an indicative 2028 adoption year; the delegated act will set the application date.",
       "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
       "urgent": false,
-      "hideStatus": true
+      "hideStatus": true,
+      "indicative": true
+    },
+    {
+      "id": "electronics",
+      "label": "Electronics & ICT Products (indicative)",
+      "detail": "Indicative (ESPR working plan, delegated act not adopted). No adopted act sets a DPP date for smartphones, tablets or laptops; see the Ecodesign Working Plan 2025-2030, COM(2025) 187.",
+      "source": "https://environment.ec.europa.eu/document/download/5f7ff5e2-ebe9-4bd4-a139-db881bd6398f_en",
+      "urgent": false,
+      "hideStatus": true,
+      "indicative": true
     }
   ]
 }

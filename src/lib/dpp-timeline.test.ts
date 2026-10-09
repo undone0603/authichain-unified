@@ -8,6 +8,7 @@ import {
   countdownLabel,
   nextDeadline,
   mostRecentInForce,
+  isIndicative,
   type Milestone,
 } from './dpp-timeline';
 
@@ -28,17 +29,34 @@ describe('data integrity', () => {
     const milestones = listMilestones();
     expect(milestones.length).toBeGreaterThan(0);
     for (const m of milestones) {
-      expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // Only an indicative entry may omit its date; it must never invent one.
+      if (!m.date) expect(m.indicative, m.id).toBe(true);
+      else expect(m.date, m.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(m.label, m.id).toBeTruthy();
       expect(m.detail, m.id).toBeTruthy();
       expect(m.source, m.id).toMatch(/^https:\/\//);
-      if (m.endDate) expect(m.endDate.localeCompare(m.date)).toBeGreaterThan(0);
+      if (m.endDate) expect(m.endDate.localeCompare(m.date!)).toBeGreaterThan(0);
     }
   });
 
-  it('is sorted chronologically', () => {
-    const dates = listMilestones().map((m) => m.date);
+  it('is sorted chronologically, undated indicative entries last', () => {
+    const list = listMilestones();
+    const dates = list.filter((m) => m.date).map((m) => m.date!);
     expect(dates).toEqual([...dates].sort());
+    const firstUndated = list.findIndex((m) => !m.date);
+    if (firstUndated !== -1) expect(list.slice(firstUndated).every((m) => !m.date)).toBe(true);
+  });
+
+  it('dates indicative ESPR entries only by their cited adoption year (COM(2025) 187)', () => {
+    const byId = (id: string) => listMilestones().find((m) => m.id === id)!;
+    expect(byId('textiles')).toMatchObject({ date: '2027-01-01', precision: 'year', indicative: true });
+    expect(byId('textiles').endDate).toBeUndefined();
+    expect(byId('construction')).toMatchObject({ date: '2028-01-01', precision: 'year', indicative: true });
+    expect(byId('construction').endDate).toBeUndefined();
+    // Electronics: no adopted act and no source year, so no date at all.
+    expect(byId('electronics').date).toBeUndefined();
+    expect(byId('electronics').endDate).toBeUndefined();
+    expect(byId('electronics').indicative).toBe(true);
   });
 
   it('has unique ids', () => {
@@ -86,8 +104,16 @@ describe('milestoneStatus', () => {
   });
 
   it('marks a distant milestone upcoming', () => {
-    const textiles = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(milestoneStatus(textiles, AUG_2026)).toBe('upcoming');
+    const distant: Milestone = { id: 'x', date: '2029-06-01', precision: 'day', label: 'x', detail: 'x', source: 'https://example.org' };
+    expect(milestoneStatus(distant, AUG_2026)).toBe('upcoming');
+  });
+
+  it('never marks an indicative entry in force or imminent, even after its year', () => {
+    for (const m of listMilestones().filter(isIndicative)) {
+      for (const now of [AUG_2026, MAR_2027, new Date(Date.UTC(2027, 6, 2)), new Date(Date.UTC(2031, 0, 1))]) {
+        expect(milestoneStatus(m, now), m.id).toBe('upcoming');
+      }
+    }
   });
 
   it('flips to in-force on the day the deadline lands', () => {
@@ -106,13 +132,20 @@ describe('formatMilestoneDate', () => {
   });
 
   it('renders a quarter range', () => {
-    const electronics = listMilestones().find((m) => m.id === 'electronics')!;
-    expect(formatMilestoneDate(electronics)).toBe('Q3–Q4 2027');
+    const q: Milestone = { id: 'q', date: '2027-07-01', endDate: '2027-12-31', precision: 'quarter', label: 'q', detail: 'q', source: 'https://example.org' };
+    expect(formatMilestoneDate(q)).toBe('Q3–Q4 2027');
   });
 
   it('renders a year range', () => {
-    const textiles = listMilestones().find((m) => m.id === 'textiles')!;
-    expect(formatMilestoneDate(textiles)).toBe('2028–2029');
+    const y: Milestone = { id: 'y', date: '2028-01-01', endDate: '2029-12-31', precision: 'year', label: 'y', detail: 'y', source: 'https://example.org' };
+    expect(formatMilestoneDate(y)).toBe('2028–2029');
+  });
+
+  it('renders indicative entries as an adoption year, or no date', () => {
+    const byId = (id: string) => listMilestones().find((m) => m.id === id)!;
+    expect(formatMilestoneDate(byId('textiles'))).toBe('2027 (indicative adoption)');
+    expect(formatMilestoneDate(byId('construction'))).toBe('2028 (indicative adoption)');
+    expect(formatMilestoneDate(byId('electronics'))).toBe('No date set (indicative)');
   });
 });
 
@@ -135,8 +168,15 @@ describe('countdownLabel', () => {
   });
 
   it('summarises distant milestones in years', () => {
-    const construction = listMilestones().find((m) => m.id === 'construction')!;
-    expect(countdownLabel(construction, AUG_2026)).toMatch(/years out/);
+    const distant: Milestone = { id: 'd', date: '2029-06-01', precision: 'year', label: 'd', detail: 'd', source: 'https://example.org' };
+    expect(countdownLabel(distant, AUG_2026)).toMatch(/years out/);
+  });
+
+  it('never counts down to an indicative entry', () => {
+    for (const m of listMilestones().filter(isIndicative)) {
+      expect(countdownLabel(m, AUG_2026), m.id).toBe('Indicative, no deadline set');
+      expect(countdownLabel(m, new Date(Date.UTC(2028, 5, 1))), m.id).not.toMatch(/to comply|In force/);
+    }
   });
 });
 
@@ -145,9 +185,36 @@ describe('nextDeadline / mostRecentInForce', () => {
     expect(nextDeadline(AUG_2026)?.id).toBe('batteries');
   });
 
-  it('moves on once the battery mandate lands', () => {
-    expect(nextDeadline(MAR_2027)?.id).toBe('electronics');
+  it('moves on once the battery mandate lands, never to an indicative entry', () => {
+    // Indicative ESPR entries are not deadlines: once batteries are in force
+    // there is no next legal deadline in the data, so callers show their
+    // "no deadline" fallback instead of "N months to comply".
+    const next = nextDeadline(MAR_2027);
+    expect(next === null || !isIndicative(next)).toBe(true);
+    expect(next).toBeNull();
     expect(mostRecentInForce(MAR_2027)?.id).toBe('batteries');
+  });
+
+  it('runs past 18 Feb 2027 and 1 Jul 2027 without an indicative deadline or in-force badge', () => {
+    const days = [
+      new Date(Date.UTC(2027, 1, 18)), // battery mandate day
+      new Date(Date.UTC(2027, 1, 19)),
+      new Date(Date.UTC(2027, 6, 1)), // old electronics start date
+      new Date(Date.UTC(2027, 6, 2)),
+      new Date(Date.UTC(2028, 0, 2)),
+      new Date(Date.UTC(2030, 11, 31)),
+    ];
+    for (const now of days) {
+      const next = nextDeadline(now);
+      if (next) expect(isIndicative(next), now.toISOString()).toBe(false);
+      const live = mostRecentInForce(now);
+      expect(live?.id, now.toISOString()).toBe('batteries');
+      for (const m of listMilestones().filter(isIndicative)) {
+        expect(milestoneStatus(m, now)).not.toBe('in-force');
+      }
+    }
+    // The day before the mandate, batteries is still the next deadline.
+    expect(nextDeadline(new Date(Date.UTC(2027, 1, 17)))?.id).toBe('batteries');
   });
 
   it('reports the registry as the live milestone in Aug 2026', () => {

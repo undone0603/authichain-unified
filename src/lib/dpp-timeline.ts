@@ -18,11 +18,14 @@ export type Precision = 'day' | 'month' | 'quarter' | 'year';
 
 export type Milestone = {
   id: string;
-  /** ISO yyyy-mm-dd. For ranged entries this is the start. */
-  date: string;
+  /**
+   * ISO yyyy-mm-dd. For ranged entries this is the start. May be omitted only
+   * on an `indicative` entry that no adopted act or cited source dates.
+   */
+  date?: string;
   /** ISO yyyy-mm-dd. Present only for ranged entries. */
   endDate?: string;
-  precision: Precision;
+  precision?: Precision;
   label: string;
   detail: string;
   /** A URL a reader can check. Every milestone must carry one. */
@@ -32,6 +35,13 @@ export type Milestone = {
   badge?: string;
   /** Hide the live countdown/status line for this milestone. */
   hideStatus?: boolean;
+  /**
+   * Not a legal deadline: an indicative planning entry (e.g. an ESPR working
+   * plan adoption year with no delegated act adopted). Never counted down,
+   * never "in force", never the next deadline. Its date, if any, is the
+   * indicative adoption year, not an application date.
+   */
+  indicative?: boolean;
 };
 
 /** `in-force` once the date has passed; `imminent` within a year; else `upcoming`. */
@@ -39,8 +49,17 @@ export type MilestoneStatus = 'in-force' | 'imminent' | 'upcoming';
 
 export const IMMINENT_MONTHS = 12;
 
+/** Dated entries in date order; undated (indicative) entries last. */
 export function listMilestones(): Milestone[] {
-  return [...(timeline.milestones as Milestone[])].sort((a, b) => a.date.localeCompare(b.date));
+  return [...(timeline.milestones as Milestone[])].sort((a, b) => {
+    if (!a.date || !b.date) return (a.date ? 0 : 1) - (b.date ? 0 : 1);
+    return a.date.localeCompare(b.date);
+  });
+}
+
+/** True for a planning entry that must never be shown as a deadline. */
+export function isIndicative(m: Milestone): boolean {
+  return m.indicative === true || !m.date;
 }
 
 export function timelineUpdatedAt(): string {
@@ -73,6 +92,8 @@ export function daysUntil(iso: string, now: Date): number {
 }
 
 export function milestoneStatus(m: Milestone, now: Date): MilestoneStatus {
+  // An indicative entry has no legal deadline, so it is never in force or imminent.
+  if (isIndicative(m) || !m.date) return 'upcoming';
   const days = daysUntil(m.date, now);
   if (days <= 0) return 'in-force';
   return monthsUntil(m.date, now) < IMMINENT_MONTHS ? 'imminent' : 'upcoming';
@@ -82,9 +103,11 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /** Renders at the precision the regulation actually specifies — never invents a day. */
 export function formatMilestoneDate(m: Milestone): string {
+  if (!m.date) return 'No date set (indicative)';
   const d = parseISO(m.date);
   const year = d.getUTCFullYear();
-  switch (m.precision) {
+  if (isIndicative(m)) return `${year} (indicative adoption)`;
+  switch (m.precision ?? 'day') {
     case 'day':
       return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${year}`;
     case 'month':
@@ -107,6 +130,7 @@ export function formatMilestoneDate(m: Milestone): string {
  * the page stops advertising a deadline it has already crossed.
  */
 export function countdownLabel(m: Milestone, now: Date): string {
+  if (isIndicative(m) || !m.date) return 'Indicative, no deadline set';
   const status = milestoneStatus(m, now);
   if (status === 'in-force') return `In force since ${formatMilestoneDate(m)}`;
 
@@ -122,11 +146,19 @@ export function countdownLabel(m: Milestone, now: Date): string {
 
 /** The next milestone still ahead — what the page should lead its urgency with. */
 export function nextDeadline(now: Date): Milestone | null {
-  return listMilestones().find((m) => milestoneStatus(m, now) !== 'in-force') ?? null;
+  return (
+    listMilestones().find(
+      (m) => !isIndicative(m) && !m.hideStatus && milestoneStatus(m, now) !== 'in-force'
+    ) ?? null
+  );
 }
 
 /** The most recent milestone already in force, for "registry is live" messaging. */
 export function mostRecentInForce(now: Date): Milestone | null {
-  const past = listMilestones().filter((m) => milestoneStatus(m, now) === 'in-force');
+  // Indicative entries are never in force. hideStatus entries are kept: the
+  // registry milestone uses hideStatus + badge and is today's live badge.
+  const past = listMilestones().filter(
+    (m) => !isIndicative(m) && milestoneStatus(m, now) === 'in-force'
+  );
   return past.length ? past[past.length - 1] : null;
 }
