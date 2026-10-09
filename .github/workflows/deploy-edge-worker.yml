@@ -11,7 +11,9 @@ permissions:
 
 concurrency:
   group: deploy-edge-worker-${{ github.ref }}
-  cancel-in-progress: true
+  # Only PR runs are superseded; a push to main must never cancel a running
+  # deploy/check mid-way (PM-328). Newer main runs queue behind it instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   secret-scan:
