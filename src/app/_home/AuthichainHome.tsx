@@ -67,7 +67,6 @@ export function AuthichainHome() {
             {
               n: "01",
               t: "Issue",
-              d: "Issue a cryptographically signed seal for the product.",
             },
             {
               n: "02",
@@ -90,7 +89,7 @@ export function AuthichainHome() {
               <h3 className="text-base font-semibold text-slate-950 mb-2">
                 {s.t}
               </h3>
-              <p className="text-sm text-slate-600">{s.d}</p>
+              {s.d && <p className="text-sm text-slate-600">{s.d}</p>}
             </article>
           ))}
         </div>

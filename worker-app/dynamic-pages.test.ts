@@ -382,7 +382,7 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).toContain("Signed QR seals for real products.");
+    expect(body).not.toContain("Signed QR seals for real products.");
     expect(body).toContain('name="email"');
     expect(body).toContain(
       'action="https://authichain.com/checkout/dpp_readiness"'

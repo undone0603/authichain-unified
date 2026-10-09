@@ -559,7 +559,7 @@ const LANDING_CONTENT: Record<
   BrandId,
   {
     eyebrow: string;
-    headline: string;
+    headline?: string;
     subhead: string;
     features: Array<{ icon: string; title: string; desc: string }>;
     stats: Array<{ value: string; label: string }>;
@@ -570,7 +570,6 @@ const LANDING_CONTENT: Record<
 > = {
   authichain: {
     eyebrow: "Product Authentication",
-    headline: "Signed QR seals for real products.",
     subhead:
       "The primary money path is EU DPP Readiness — live Stripe checkout at $299 from the published plan catalogue.",
     features: [
@@ -831,9 +830,9 @@ function renderLanding(c: Context): Response {
     " &middot; " +
     escapeHtml(content.eyebrow) +
     "</p>\n" +
-    "<h1>" +
-    escapeHtml(content.headline) +
-    "</h1>\n" +
+    (content.headline
+      ? "<h1>" + escapeHtml(content.headline) + "</h1>\n"
+      : "") +
     "<p>" +
     escapeHtml(content.subhead) +
     "</p>\n" +
