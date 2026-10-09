@@ -3,6 +3,8 @@
 # vendored pnpm project; a selector that matches nothing in a given project
 # is simply inert.
 overrides:
+  # GHSA critical (Dependabot #1872, PM-324): proxy-addr <2.0.8.
+  'proxy-addr@<2.0.8': 2.0.8
   # GHSA: @babel/core arbitrary code exec via crafted plugin config.
   '@babel/core@<=7.29.0': 7.29.6
   # GHSA: @hono/node-server header-handling bug (covers both 1.x and 2.x advisories).
