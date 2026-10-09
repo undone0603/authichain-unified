@@ -142,7 +142,11 @@ export function evaluateEconomicAction(
       policyVersionHint, now, ["MALFORMED_ACTION"]);
   }
 
-  if (!message?.valid) reasons.push("MESSAGE_NOT_VERIFIED");
+  if (
+    message?.valid !== true ||
+    !Array.isArray(message.reasons) ||
+    message.reasons.length !== 0
+  ) reasons.push("MESSAGE_NOT_VERIFIED");
 
   const identity = context?.identity;
   if (
@@ -167,7 +171,11 @@ export function evaluateEconomicAction(
   ) reasons.push("IDENTITY_BINDING_MISMATCH");
 
   const requiredCapability = CAPABILITY_BY_ACTION[action.action_type];
-  if (!identity?.capabilities?.includes(requiredCapability)) {
+  if (
+    !identity ||
+    !Array.isArray(identity.capabilities) ||
+    !identity.capabilities.includes(requiredCapability)
+  ) {
     reasons.push("CAPABILITY_NOT_GRANTED");
   }
 
@@ -203,14 +211,19 @@ export function evaluateEconomicAction(
 
   const maxAmount = policy?.max_amount_minor_by_action?.[action.action_type];
   if (!isSafeNonNegativeInteger(maxAmount) || maxAmount === 0) {
-    reasons.push("POLICY_DISABLED");
+    reasons.push("POLICY_CONFIGURATION_INVALID");
   } else if (action.amount_minor > maxAmount) {
     reasons.push("AMOUNT_LIMIT_EXCEEDED");
   }
 
   const maxLifetime = policy?.max_action_lifetime_seconds;
+  if (
+    !Array.isArray(policy?.evidence_required_for) ||
+    !Array.isArray(policy?.allowed_action_types) ||
+    !Array.isArray(policy?.allowed_asset_ids)
+  ) reasons.push("POLICY_CONFIGURATION_INVALID");
   if (!isSafeNonNegativeInteger(maxLifetime) || maxLifetime === 0) {
-    reasons.push("POLICY_DISABLED");
+    reasons.push("POLICY_CONFIGURATION_INVALID");
   } else {
     const lifetime = (Date.parse(action.expires_at) - Date.parse(action.created_at)) / 1000;
     if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > maxLifetime) {
