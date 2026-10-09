@@ -213,8 +213,7 @@ describe("planReconcile", () => {
   });
 
   it("does not re-enable a workflow on the operator hold", () => {
-    const manifest = mini();
-    manifest.operator_hold = { workflows: ["a.yml"] };
+    const manifest = { ...mini(), operator_hold: { workflows: ["a.yml"] } };
     const held = remote.map(w =>
       w.id === 3 ? { ...w, state: "disabled_manually" } : w
     );
