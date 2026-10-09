@@ -76,7 +76,7 @@ async function createFixture(options: {
 } = {}): Promise<Fixture> {
   const agentKeys = await keys();
   const issuerKeys = await keys();
-  const caps = options.capabilities ?? ["PROPOSE_ECONOMIC_ACTION", "TRANSFER_VALUE"];
+  const caps: AgentCapability[] = options.capabilities ?? ["PROPOSE_ECONOMIC_ACTION", "TRANSFER_VALUE"];
 
   const attestationBase: Omit<AgentIdentityAttestation, "signature"> = {
     agent_id: "agent:treasury:worker-01",
@@ -100,7 +100,7 @@ async function createFixture(options: {
     ),
   };
 
-  const action: EconomicAction = {
+  const action: EconomicAction = Object.assign({
     protocol: ECONOMIC_ACTION_PROTOCOL,
     action_id: "act:treasury:0001",
     idempotency_key: "idem:treasury:0001",
@@ -116,8 +116,7 @@ async function createFixture(options: {
     evidence_ids: ["evidence:invoice-1001"],
     created_at: ACTION_CREATED,
     expires_at: ACTION_EXPIRES,
-    ...options.actionOverrides,
-  };
+  } satisfies EconomicAction, options.actionOverrides ?? {});
 
   const unsigned: Omit<SignedAgentMessage<EconomicAction>, "signature"> = {
     protocol: "authichain-agent/1",
