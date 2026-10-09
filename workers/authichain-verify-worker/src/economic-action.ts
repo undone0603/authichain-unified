@@ -171,7 +171,7 @@ export function isEconomicAction(value: unknown): value is EconomicAction {
     if (!isSafeEconomicId(item[key])) return false;
   }
 
-  if (!POSITIVE_MINOR_UNITS.test(String(item.amount_minor_units))) return false;
+  if (typeof item.amount_minor_units !== "string" || !POSITIVE_MINOR_UNITS.test(item.amount_minor_units)) return false;
   if (!Array.isArray(item.evidence_ids) || item.evidence_ids.length > 32) return false;
   if (!item.evidence_ids.every(isSafeEconomicId)) return false;
   if (new Set(item.evidence_ids).size !== item.evidence_ids.length) return false;
