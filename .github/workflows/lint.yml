@@ -64,7 +64,7 @@ jobs:
       # runs them. node:test files are excluded by vitest.config.ts and run on
       # their workspace runners, or in the next step when they have none.
       - name: Type-check verification worker contracts
-        run: pnpm exec tsc --noEmit --pretty false -p workers/authichain-verify-worker/tsconfig.json
+        run: pnpm exec tsc --noEmit --pretty false -p tsconfig.control-plane.json
 
       - name: Root Vitest suite
         run: pnpm exec vitest run
