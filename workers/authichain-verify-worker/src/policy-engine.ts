@@ -149,12 +149,22 @@ export function evaluateEconomicAction(
   ) reasons.push("MESSAGE_NOT_VERIFIED");
 
   const identity = context?.identity;
+  if (!identity || identity.status !== "ACTIVE") {
+    reasons.push("IDENTITY_NOT_TRUSTED");
+  }
   if (
     !identity ||
-    identity.status !== "ACTIVE"
-  ) reasons.push("IDENTITY_NOT_TRUSTED");
-  if (identity?.issuer_revoked) reasons.push("ISSUER_REVOKED");
-  if (identity?.attestation_revoked || identity?.status === "REVOKED") {
+    !validId(identity.agent_id) ||
+    !validId(identity.organization_id) ||
+    !validId(identity.attestation_id) ||
+    !validId(identity.role) ||
+    !validId(identity.policy_version) ||
+    typeof identity.issuer_revoked !== "boolean" ||
+    typeof identity.attestation_revoked !== "boolean" ||
+    !Array.isArray(identity.capabilities)
+  ) reasons.push("IDENTITY_CONTEXT_INVALID");
+  if (identity?.issuer_revoked !== false) reasons.push("ISSUER_REVOKED");
+  if (identity?.attestation_revoked !== false || identity?.status === "REVOKED") {
     reasons.push("ATTESTATION_REVOKED");
   }
 
@@ -184,13 +194,16 @@ export function evaluateEconomicAction(
   if (!policy || policy.policy_version !== action.policy_version) {
     reasons.push("POLICY_VERSION_MISMATCH");
   }
-  if (
-    !policy ||
-    policy.organization_id !== action.organization_id ||
-    (policy.allowed_organization_ids &&
-      (!Array.isArray(policy.allowed_organization_ids) ||
-        !policy.allowed_organization_ids.includes(action.organization_id)))
-  ) reasons.push("ORGANIZATION_NOT_ALLOWED");
+  if (!policy || policy.organization_id !== action.organization_id) {
+    reasons.push("ORGANIZATION_NOT_ALLOWED");
+  }
+  if (policy?.allowed_organization_ids !== undefined) {
+    if (!Array.isArray(policy.allowed_organization_ids)) {
+      reasons.push("POLICY_CONFIGURATION_INVALID");
+    } else if (!policy.allowed_organization_ids.includes(action.organization_id)) {
+      reasons.push("ORGANIZATION_NOT_ALLOWED");
+    }
+  }
 
   const allowedActions = policy?.allowed_action_types;
   if (!Array.isArray(allowedActions) || !allowedActions.includes(action.action_type)) {
@@ -200,14 +213,20 @@ export function evaluateEconomicAction(
   if (!Array.isArray(allowedAssets) || !allowedAssets.includes(action.asset_id)) {
     reasons.push("ASSET_NOT_ALLOWED");
   }
-  if (
-    policy?.allowed_agent_ids &&
-    (!Array.isArray(policy.allowed_agent_ids) || !policy.allowed_agent_ids.includes(action.agent_id))
-  ) reasons.push("AGENT_NOT_ALLOWED");
-  if (
-    policy?.allowed_roles &&
-    (!Array.isArray(policy.allowed_roles) || !policy.allowed_roles.includes(identity?.role ?? ""))
-  ) reasons.push("ROLE_NOT_ALLOWED");
+  if (policy?.allowed_agent_ids !== undefined) {
+    if (!Array.isArray(policy.allowed_agent_ids)) {
+      reasons.push("POLICY_CONFIGURATION_INVALID");
+    } else if (!policy.allowed_agent_ids.includes(action.agent_id)) {
+      reasons.push("AGENT_NOT_ALLOWED");
+    }
+  }
+  if (policy?.allowed_roles !== undefined) {
+    if (!Array.isArray(policy.allowed_roles)) {
+      reasons.push("POLICY_CONFIGURATION_INVALID");
+    } else if (!policy.allowed_roles.includes(identity?.role ?? "")) {
+      reasons.push("ROLE_NOT_ALLOWED");
+    }
+  }
 
   const maxAmount = policy?.max_amount_minor_by_action?.[action.action_type];
   if (!isSafeNonNegativeInteger(maxAmount) || maxAmount === 0) {
