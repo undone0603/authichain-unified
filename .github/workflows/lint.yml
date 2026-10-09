@@ -75,6 +75,7 @@ jobs:
           scripts/autonomy/*.test.mjs
           scripts/ci/*.test.mjs
           protocol/qfs/envelope.test.mjs
+          protocol/samples/samples.test.mjs
           scripts/lib/b2b-send-policy.test.ts
           worker-app/cron-dispatch.test.ts
           workers/authichain-verify-worker/src/protocol-verify.test.mjs

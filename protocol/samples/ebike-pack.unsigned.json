@@ -1,0 +1,18 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://authichain.com/protocol/v1"
+  ],
+  "type": ["VerifiableCredential", "ProvenanceRecord"],
+  "validFrom": "2026-10-09T00:00:00Z",
+  "credentialSubject": {
+    "id": "urn:authichain:sample:fictional-pack:EXAMPLE-LMT-48V-14Ah:0001",
+    "label": "Sample, fictional pack, not an issued passport",
+    "model": "EXAMPLE-LMT-48V-14Ah",
+    "nominalV": 48,
+    "ah": 14,
+    "statedWh": 700,
+    "cyclesLow": 800,
+    "cyclesHigh": 1000
+  }
+}
