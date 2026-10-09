@@ -522,6 +522,92 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).not.toHaveBeenCalled();
   });
 
+  it("ADM-167: 100% coupon session with plan=starter still grants starter", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_free", {
+        id: "cs_starter_free",
+        mode: "payment",
+        status: "complete",
+        payment_status: "no_payment_required",
+        amount_subtotal: 2900,
+        amount_total: 0,
+        total_details: { amount_discount: 2900, amount_shipping: 0, amount_tax: 0 },
+        customer_details: { email: "free@example.com" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ plan: "starter", email: "free@example.com" })
+    );
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+  });
+
+  it("ADM-167: no_payment_required without a discount does not provision", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_nopay", {
+        id: "cs_starter_nopay",
+        mode: "payment",
+        status: "complete",
+        payment_status: "no_payment_required",
+        amount_subtotal: 0,
+        amount_total: 0,
+        total_details: { amount_discount: 0, amount_shipping: 0, amount_tax: 0 },
+        customer_details: { email: "free@example.com" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(provisionPurchase).not.toHaveBeenCalled();
+  });
+
+  it("ADM-167: discounted total equal to another plan's price keeps plan=starter", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_1900", {
+        id: "cs_starter_1900",
+        mode: "payment",
+        payment_status: "paid",
+        amount_subtotal: 2900,
+        amount_total: 1900,
+        total_details: { amount_discount: 1000, amount_shipping: 0, amount_tax: 0 },
+        customer_details: { email: "promo@example.com" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ plan: "starter" })
+    );
+    expect(provisionPurchase).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ plan: "qron_launch" })
+    );
+  });
+
+  it("ADM-167: unchanged paid 2900 session with no metadata still grants starter", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_plain", {
+        id: "cs_starter_plain",
+        mode: "payment",
+        payment_status: "paid",
+        amount_total: 2900,
+        customer_details: { email: "plain@example.com" },
+        metadata: {},
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ plan: "starter", email: "plain@example.com" })
+    );
+  });
+
   it("does not fail a fulfilled Starter checkout when growth recording fails", async () => {
     growthRecordRpc.mockResolvedValue({
       error: { message: "growth store unavailable" },

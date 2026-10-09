@@ -147,10 +147,32 @@ async function getWebhookSupabase() {
   return createClient(url, key);
 }
 
+/**
+ * ADM-167: a one-time catalogue checkout fully covered by a 100% coupon
+ * completes with payment_status "no_payment_required" (never "paid").
+ * Provision it only when Stripe reports the session complete, it is a
+ * one-time payment, the subtotal was positive and a discount brought the
+ * total to exactly 0. The plan must then come from the price id or the
+ * server-set metadata.plan (Payment Link / API metadata, not buyer input).
+ */
+function isCouponZeroedCatalogSession(
+  session: Stripe.Checkout.Session
+): boolean {
+  return (
+    session.payment_status === "no_payment_required" &&
+    session.status === "complete" &&
+    session.mode === "payment" &&
+    session.amount_total === 0 &&
+    (session.amount_subtotal ?? 0) > 0 &&
+    (session.total_details?.amount_discount ?? 0) > 0
+  );
+}
+
 async function fulfillCatalogCreditsIfPaid(
   session: Stripe.Checkout.Session
 ): Promise<boolean> {
-  if (session.payment_status !== "paid") return false;
+  const couponZeroed = isCouponZeroedCatalogSession(session);
+  if (session.payment_status !== "paid" && !couponZeroed) return false;
   const linePriceId = checkoutLinePriceId(session);
   const { isDppOffer } = await import("../../src/lib/dpp-loop");
   if (isDppOffer(session.metadata || {}, linePriceId)) return false;
@@ -163,10 +185,10 @@ async function fulfillCatalogCreditsIfPaid(
   // by amount. Only an explicit PLANS price ID (or explicit metadata below)
   // may provision a subscription-mode checkout.
   const recurring = isRecurringCheckoutSession(session);
+  // ADM-167 resolution order: line price id -> metadata.plan -> amount.
+  // A promo code changes amount_total, never the price id or the Payment
+  // Link's metadata, so the amount is only a last-resort fallback.
   let catalog = planByStripePriceId(linePriceId)?.id;
-  if (!catalog && !recurring) {
-    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
-  }
   if (
     !catalog &&
     metaPlan &&
@@ -177,6 +199,11 @@ async function fulfillCatalogCreditsIfPaid(
   }
   if (!catalog && metaPlan === "starter" && session.mode === "payment") {
     catalog = "starter";
+  }
+  // A coupon-zeroed session has amount_total 0, which says nothing about
+  // the plan: never resolve it by amount.
+  if (!catalog && !recurring && !couponZeroed) {
+    catalog = planByAmountCents(session.amount_total ?? undefined)?.id;
   }
   if (!catalog) {
     if (recurring) {
@@ -256,10 +283,11 @@ function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
   const linePrice = planByStripePriceId(checkoutLinePriceId(session));
   if (linePrice) return linePrice.id === "starter";
 
-  const amountPlan = planByAmountCents(session.amount_total);
-  if (amountPlan) return amountPlan.id === "starter";
+  const metaPlan = session.metadata?.plan;
+  if (typeof metaPlan === "string" && metaPlan) return metaPlan === "starter";
 
-  return session.metadata?.plan === "starter";
+  const amountPlan = planByAmountCents(session.amount_total);
+  return amountPlan?.id === "starter";
 }
 
 /**
