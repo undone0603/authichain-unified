@@ -55,14 +55,21 @@ export const govchainRouter = router({
     }),
 
   /**
-   * GovChain Stats: Real-time metrics for the government vertical
+   * GovChain Stats: no figures are published. The previous values were hard-coded,
+   * not measured. Same keys as before, all null, so existing callers keep a
+   * safe shape.
    */
-  stats: publicProcedure.query(async () => {
+  stats: publicProcedure.query(async (): Promise<{
+    activeAgencies: number | null;
+    passportsIssued: number | null;
+    complianceScore: number | null;
+    network: string | null;
+  }> => {
     return {
-      activeAgencies: 12,
-      passportsIssued: 1420,
-      complianceScore: 99.9,
-      network: "GovChain Federal Hub (Ed25519 / FIPS 186-5)"
+      activeAgencies: null,
+      passportsIssued: null,
+      complianceScore: null,
+      network: null,
     };
   }),
 });
