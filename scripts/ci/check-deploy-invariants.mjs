@@ -4,8 +4,9 @@
  *
  * Fails the build when either of these regresses:
  *
- *  1. `workers_dev` for the two Workers that serve Stripe webhooks / private
- *     data is anything but an explicit top-level `workers_dev = false`.
+ *  1. `workers_dev` for the Workers listed in WORKERS_DEV_OFF is anything but
+ *     an explicit top-level `workers_dev = false` (TOML) or
+ *     `"workers_dev": false` (JSON/JSONC wrangler configs).
  *     Missing counts as a failure: wrangler then picks a default (true when the
  *     Worker has no routes), and authichain-automation's public workers.dev
  *     address exposed /manufacturers until it was turned off on Oct 9 2026
@@ -35,6 +36,9 @@ export const WORKERS_DEV_OFF = [
     file: "workers/authichain-automation/wrangler.toml",
   },
   { name: "authichain-edge-router", file: "worker-app/wrangler.toml" },
+  // CFA-142: its workers.dev address served stale /governance token and
+  // treasury pages until it was turned off live on Oct 9 2026 (PR #1703).
+  { name: "authichain-app", file: "wrangler.app.jsonc" },
 ];
 
 function stripTomlComment(line) {
@@ -64,6 +68,53 @@ export function topLevelTomlValue(text, key) {
   return undefined;
 }
 
+/** Strip line and block comments and trailing commas from JSONC, string-aware. */
+export function stripJsonc(text) {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === "\\") {
+        out += text[i + 1] ?? "";
+        i += 1;
+      } else if (ch === '"') {
+        inString = false;
+      }
+    } else if (ch === '"') {
+      inString = true;
+      out += ch;
+    } else if (ch === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") i += 1;
+      out += "\n";
+    } else if (ch === "/" && text[i + 1] === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+      i += 1;
+    } else {
+      out += ch;
+    }
+  }
+  return out.replace(/,(\s*[}\]])/g, "$1");
+}
+
+/**
+ * Raw top-level value of `key` in a wrangler config, as a TOML-style string
+ * (`"false"`, `"\"name\""`), or undefined. Handles .toml, .json and .jsonc.
+ */
+export function topLevelConfigValue(file, text, key) {
+  if (!/\.jsonc?$/.test(file)) return topLevelTomlValue(text, key);
+  let obj;
+  try {
+    obj = JSON.parse(stripJsonc(text));
+  } catch {
+    return undefined;
+  }
+  if (!obj || typeof obj !== "object" || !(key in obj)) return undefined;
+  return JSON.stringify(obj[key]);
+}
+
 function unquote(value) {
   return value?.replace(/^["']|["']$/g, "");
 }
@@ -78,14 +129,14 @@ export function checkWorkersDev(root = ROOT, targets = WORKERS_DEV_OFF) {
       errors.push(`${file}: missing (expected wrangler config for ${name})`);
       continue;
     }
-    const actualName = unquote(topLevelTomlValue(text, "name"));
+    const actualName = unquote(topLevelConfigValue(file, text, "name"));
     if (actualName !== name) {
       errors.push(
         `${file}: name is ${actualName ?? "missing"}, expected ${name}`
       );
       continue;
     }
-    const value = topLevelTomlValue(text, "workers_dev");
+    const value = topLevelConfigValue(file, text, "workers_dev");
     if (value === undefined) {
       errors.push(
         `${file} (${name}): workers_dev is missing; wrangler would choose a default. Set top-level workers_dev = false.`
