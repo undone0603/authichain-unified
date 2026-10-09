@@ -215,6 +215,19 @@ describe("Economic control-plane adversarial gate", () => {
     expect(decision.execution_permitted).toBe(false);
   });
 
+  it("rejects unexpected fields on the verifier result", async () => {
+    const fixture = await createFixture();
+    const extended = { ...fixture.verification, trusted_by_admin: true };
+    const decision = await authorizeEconomicAction(
+      fixture.message,
+      extended,
+      fixture.policy,
+      NOW,
+    );
+    expect(decision.decision).toBe("DENY");
+    expect(decision.reason_codes).toContain("MESSAGE_NOT_VERIFIED");
+  });
+
   it("rejects post-verification payload mutation (TOCTOU)", async () => {
     const fixture = await createFixture();
     const mutated = {
