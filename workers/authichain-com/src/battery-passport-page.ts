@@ -393,7 +393,6 @@ ${gapMapSection()}
       <p class="bp-price">$${price} <span class="bp-note">one-time</span></p>
       <ul class="bp-list">${deliverables}</ul>
       <p class="section-sub">A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out. Until then, a scan is not an Article 77 passport. This page supports, and does not replace, the passport issued by the operator placing the battery on the EU market.</p>
-      <p class="section-sub">The only published demonstration record has both of those checks. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a>.</p>
     </div>
   </section>
 

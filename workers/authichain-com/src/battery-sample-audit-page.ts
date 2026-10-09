@@ -353,7 +353,6 @@ export function renderSampleAuditPage(now: Date = new Date()): string {
     <div class="wrap">
       <h2>6. What this is not</h2>
       <p>It is not a battery passport, not a notified-body opinion and not legal advice. No identifier on this page is live. Confirm obligations against Regulation (EU) 2023/1542 with your counsel. AuthiChain does not operate the EU passport registry.</p>
-      <p>The only published demonstration record has a signature and a mined Polygon anchor. It is not a battery and not a passport. <a href="https://authichain.com/api/verify?id=polygon-anchor-1">Read the verdict</a>.</p>
     </div>
   </section>
 
