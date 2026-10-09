@@ -48,19 +48,10 @@ export const govchainRouter = router({
       vc: z.any(),
     }))
     .query(async ({ input }) => {
-      const result = await verifySovereignPassport(input.vc);
-      
-      if (result.valid) {
-        await db.logActivity({
-          userId: null,
-          action: "govchain_passport_verified",
-          entityType: "passport",
-          entityId: 0,
-          details: { issuer: result.issuer, vcId: input.vc.id }
-        });
-      }
-
-      return result;
+      // Fails closed (vc-service): always valid:false until a real issuer key
+      // can be resolved and checked. Nothing is written to the activity log,
+      // so a made-up credential leaves no "verified" record behind.
+      return verifySovereignPassport(input.vc);
     }),
 
   /**
