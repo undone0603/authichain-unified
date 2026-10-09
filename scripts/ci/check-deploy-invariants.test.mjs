@@ -1,17 +1,28 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   cancelInProgressTrueLines,
   checkCancelInProgress,
   checkCiGateWorkflows,
+  checkPreviewUrls,
   checkWorkersDev,
+  PREVIEW_URLS_OFF,
+  WORKERS_DEV_OFF,
+  stripJsonc,
   topLevelConcurrencyGroup,
   topLevelTomlValue,
   triggersOnPushToMain,
 } from "./check-deploy-invariants.mjs";
+
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  ".."
+);
 
 function repo(files) {
   const root = mkdtempSync(path.join(tmpdir(), "deploy-inv-"));
@@ -61,7 +72,140 @@ test("a renamed Worker is reported, not silently passed", () => {
   assert.match(checkWorkersDev(root, TARGET)[0], /expected w/);
 });
 
-test("the real repo: both Workers have workers_dev = false", () => {
+const JTARGET = [{ name: "w", file: "w/wrangler.jsonc" }];
+
+test("jsonc: \"workers_dev\": false passes, comments and trailing commas ok", () => {
+  const root = repo({
+    "w/wrangler.jsonc":
+      '// c\n{\n  "name": "w", // x\n  /* "workers_dev": true */\n  "url": "https://a//b",\n  "workers_dev": false,\n}\n',
+  });
+  assert.deepEqual(checkWorkersDev(root, JTARGET), []);
+});
+
+test("jsonc: workers_dev true or missing fails", () => {
+  const t = repo({ "w/wrangler.jsonc": '{ "name": "w", "workers_dev": true }' });
+  assert.match(checkWorkersDev(t, JTARGET)[0], /must be false/);
+  const m = repo({
+    "w/wrangler.jsonc": '{ "name": "w", // "workers_dev": false\n "env": { "x": { "workers_dev": false } } }',
+  });
+  assert.match(checkWorkersDev(m, JTARGET)[0], /missing/);
+});
+
+test("stripJsonc keeps // inside strings", () => {
+  assert.deepEqual(JSON.parse(stripJsonc('{"a":"x//y", // z\n}')), { a: "x//y" });
+});
+
+test("stripJsonc removes // line comments", () => {
+  const text = '// head\n{\n  "a": 1, // tail\n  // "b": 2,\n  "c": 3\n}\n';
+  assert.deepEqual(JSON.parse(stripJsonc(text)), { a: 1, c: 3 });
+});
+
+test("stripJsonc removes /* block */ comments, single- and multi-line", () => {
+  const text =
+    '/* head\n * more\n */{"a": /* inline */ 1,\n /* "b": 2,\n "c": 3, */ "d": 4}';
+  assert.deepEqual(JSON.parse(stripJsonc(text)), { a: 1, d: 4 });
+  // A block comment between tokens doesn't glue them together.
+  assert.deepEqual(JSON.parse(stripJsonc('[1,/*x*/2]')), [1, 2]);
+});
+
+test("stripJsonc removes trailing commas in objects and arrays", () => {
+  const text =
+    '{\n  "a": [1, 2, ],\n  "b": { "c": true, },\n  "d": [ { "e": 1 }, ],\n}\n';
+  assert.deepEqual(JSON.parse(stripJsonc(text)), {
+    a: [1, 2],
+    b: { c: true },
+    d: [{ e: 1 }],
+  });
+});
+
+test("stripJsonc removes trailing commas followed by comments", () => {
+  const text = '{\n  "a": 1, // last\n  /* gone */\n}\n';
+  assert.deepEqual(JSON.parse(stripJsonc(text)), { a: 1 });
+});
+
+test("stripJsonc keeps comment markers and ',}' inside strings", () => {
+  const text = '{"a": "x/*y*/z", "b": "p,}q", "c": "r,]", "d": "e\\"//f",}';
+  assert.deepEqual(JSON.parse(stripJsonc(text)), {
+    a: "x/*y*/z",
+    b: "p,}q",
+    c: "r,]",
+    d: 'e"//f',
+  });
+});
+
+const PTARGET = [{ name: "w", file: "w/wrangler.jsonc" }];
+const APP = (extra) =>
+  `// app\n{\n  "name": "w",\n  "workers_dev": false,\n${extra}  "main": "x.ts", // trailing\n}\n`;
+
+test("preview_urls: explicit false passes (with comments and trailing commas)", () => {
+  const root = repo({
+    "w/wrangler.jsonc": APP('  /* CFA-144 */ "preview_urls": false,\n'),
+  });
+  assert.deepEqual(checkPreviewUrls(root, PTARGET), []);
+});
+
+test("preview_urls: missing fails", () => {
+  const root = repo({ "w/wrangler.jsonc": APP("") });
+  const errors = checkPreviewUrls(root, PTARGET);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /preview_urls is missing/);
+});
+
+test("preview_urls: only commented out fails as missing", () => {
+  const root = repo({
+    "w/wrangler.jsonc": APP('  // "preview_urls": false,\n  /* "preview_urls": false, */\n'),
+  });
+  assert.match(checkPreviewUrls(root, PTARGET)[0], /preview_urls is missing/);
+});
+
+test("preview_urls: only inside env.* fails as missing", () => {
+  const root = repo({
+    "w/wrangler.jsonc": APP('  "env": { "dev": { "preview_urls": false } },\n'),
+  });
+  assert.match(checkPreviewUrls(root, PTARGET)[0], /preview_urls is missing/);
+});
+
+test("preview_urls: true (or non-boolean) fails", () => {
+  const t = repo({ "w/wrangler.jsonc": APP('  "preview_urls": true,\n') });
+  const errors = checkPreviewUrls(t, PTARGET);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /preview_urls = true; must be false/);
+  const s = repo({ "w/wrangler.jsonc": APP('  "preview_urls": "false",\n') });
+  assert.match(checkPreviewUrls(s, PTARGET)[0], /must be false/);
+});
+
+test("authichain-app: the real wrangler.app.jsonc fails if preview_urls is removed or true", () => {
+  const real = readFileSync(path.join(REPO_ROOT, "wrangler.app.jsonc"), "utf8");
+  assert.match(real, /^\s*"preview_urls":\s*false,/m);
+  const target = PREVIEW_URLS_OFF.filter(t => t.name === "authichain-app");
+  assert.equal(target.length, 1);
+  const removed = repo({
+    "wrangler.app.jsonc": real.replace(/^\s*"preview_urls":\s*false,\n/m, ""),
+  });
+  assert.match(checkPreviewUrls(removed, target)[0], /authichain-app\): preview_urls is missing/);
+  const on = repo({
+    "wrangler.app.jsonc": real.replace(/"preview_urls":\s*false/, '"preview_urls": true'),
+  });
+  assert.match(checkPreviewUrls(on, target)[0], /authichain-app\): preview_urls = true; must be false/);
+  // Unmodified copy passes.
+  assert.deepEqual(checkPreviewUrls(repo({ "wrangler.app.jsonc": real }), target), []);
+});
+
+test("WORKERS_DEV_OFF covers dpp-fulfillment but not first-dollar-desk (CFA-153)", () => {
+  const names = WORKERS_DEV_OFF.map(t => t.name);
+  assert.ok(names.includes("dpp-fulfillment"));
+  assert.ok(!names.includes("first-dollar-desk"));
+  assert.equal(
+    WORKERS_DEV_OFF.find(t => t.name === "dpp-fulfillment").file,
+    "workers/dpp-fulfillment/wrangler.toml"
+  );
+});
+
+test("the real repo: every PREVIEW_URLS_OFF Worker has preview_urls = false", () => {
+  assert.deepEqual(checkPreviewUrls(), []);
+});
+
+test("the real repo: every WORKERS_DEV_OFF Worker has workers_dev = false", () => {
   assert.deepEqual(checkWorkersDev(), []);
 });
 
