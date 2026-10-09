@@ -589,6 +589,27 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     );
   });
 
+  it("ADM-167: literal 99%-off coupon (total 29) with plan=starter grants starter", async () => {
+    mockConstructEvent.mockReturnValue(
+      makeEvent("checkout.session.completed", "evt_starter_99off", {
+        id: "cs_starter_99off",
+        mode: "payment",
+        payment_status: "paid",
+        amount_subtotal: 2900,
+        amount_total: 29,
+        total_details: { amount_discount: 2871, amount_shipping: 0, amount_tax: 0 },
+        customer_details: { email: "promo99@example.com" },
+        metadata: { plan: "starter" },
+      })
+    );
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await handleStripeWebhook(RAW_BODY, SIG);
+    expect(provisionPurchase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ plan: "starter", email: "promo99@example.com" })
+    );
+  });
+
   it("ADM-167: unchanged paid 2900 session with no metadata still grants starter", async () => {
     mockConstructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", "evt_starter_plain", {
