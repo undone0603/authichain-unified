@@ -40,6 +40,7 @@ import {
 } from "../../src/lib/plans";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 import { claimStripeEvent } from "../../src/lib/stripe-webhook-claim";
+import { stripeEmailIdempotencyKey } from "../../src/lib/stripe-email-idempotency";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -345,7 +346,8 @@ async function recordStarterGrowthEvent(
 }
 
 async function fulfillDppCheckoutIfPaid(
-  session: Stripe.Checkout.Session
+  session: Stripe.Checkout.Session,
+  eventId: string
 ): Promise<void> {
   // $0 DPP-SMOKE sessions still arrive as payment_status=paid. Do not
   // gate on amount_total > 0 or is_demo — that was not the live miss,
@@ -395,7 +397,7 @@ async function fulfillDppCheckoutIfPaid(
 
   const { fulfillDppPaidSession } =
     await import("../../src/lib/dpp-fulfill-checkout");
-  await fulfillDppPaidSession(supabase, session, linePriceId);
+  await fulfillDppPaidSession(supabase, session, linePriceId, eventId);
 }
 
 /**
@@ -639,7 +641,7 @@ export async function handleStripeWebhook(
     );
     const session = event.data.object as Stripe.Checkout.Session;
     try {
-      await fulfillDppCheckoutIfPaid(session);
+      await fulfillDppCheckoutIfPaid(session, event.id);
       await logDelivery("success", { httpStatus: 200 });
       return {
         received: true,
@@ -750,6 +752,10 @@ export async function handleStripeWebhook(
                 await sendEmail({
                   to: email,
                   subject: `Welcome to AuthiChain ${product.name}`,
+                  idempotencyKey: stripeEmailIdempotencyKey(
+                    event.id,
+                    "subscription_welcome"
+                  ),
                   body: `Hi ${name},\n\nYour AuthiChain ${product.name} subscription is now active.\n\nHere's what you get:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nGet started at https://authichain.com/dashboard\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
                   fromName: "AuthiChain",
                 });
@@ -1002,7 +1008,7 @@ export async function handleStripeWebhook(
         // Fulfill before Drizzle audit: a paid DPP session must provision even
         // when DATABASE_URL / activity_log is unavailable on the edge Worker.
         try {
-          await fulfillDppCheckoutIfPaid(session);
+          await fulfillDppCheckoutIfPaid(session, event.id);
           const catalogFulfilled = await fulfillCatalogCreditsIfPaid(session);
           if (
             catalogFulfilled &&
@@ -1118,6 +1124,10 @@ export async function handleStripeWebhook(
               subject: message.subject,
               body: message.body,
               fromName: "AuthiChain",
+              idempotencyKey: stripeEmailIdempotencyKey(
+                event.id,
+                `checkout_recovery_${message.template}`
+              ),
             });
             sendStatus = result?.status ?? "unknown";
             sendReason = (result?.reason ?? "")

@@ -10,6 +10,7 @@ import { provisionPurchase } from "./provisioning";
 import { renderBillingEmail } from "./billing-emails";
 import { getBrandIdFromMetadata } from "./brand-billing";
 import { sendEmail } from "./email";
+import { stripeEmailIdempotencyKey } from "./stripe-email-idempotency";
 import {
   dppActivateUrl,
   isDppDemoSession,
@@ -44,7 +45,9 @@ function toId(
 export async function fulfillDppPaidSession(
   supabase: SupabaseLike,
   session: DppCheckoutSessionLike,
-  priceId?: string | null
+  priceId?: string | null,
+  /** Stripe event id; keys the provisioned email so a retry can't re-send. */
+  eventId?: string | null
 ): Promise<{ handled: boolean; profileId: string | null }> {
   const md = session.metadata || {};
   const linePriceId =
@@ -148,6 +151,13 @@ export async function fulfillDppPaidSession(
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
+      // A paid DPP event is replayed through this function on every Stripe
+      // retry/Resend (by design, so fulfilment can't be lost). Key the email
+      // on the event, or the session when no event id is passed.
+      idempotencyKey: stripeEmailIdempotencyKey(
+        eventId || session.id,
+        "dpp_audit_provisioned"
+      ),
     }).catch(() => {});
   }
 

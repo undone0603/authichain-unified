@@ -96,6 +96,14 @@ export type SendEmailInput = {
   subject: string;
   body: string;
   fromName?: string;
+  /**
+   * Sent to Resend as the `Idempotency-Key` header. Resend returns the first
+   * result for a repeated key for 24h instead of sending again, so a webhook
+   * retry can't double-send. Build it from the triggering event id plus the
+   * template name (see stripeEmailIdempotencyKey). The Gmail SMTP fallback has
+   * no equivalent; the webhook's event claim is what guards that path.
+   */
+  idempotencyKey?: string;
 };
 
 export type SendEmailResult = {
@@ -218,12 +226,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const resendApiKey = ENV.resendApiKey || process.env.RESEND_API_KEY || "";
   if (resendApiKey) {
     try {
+      const headers: Record<string, string> = {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      };
+      if (input.idempotencyKey) headers["Idempotency-Key"] = input.idempotencyKey;
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           from: `${fromName} <${ENV.resendFromEmail}>`,
           to,

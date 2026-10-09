@@ -15,6 +15,13 @@ import type Stripe from "stripe";
  * Secrets are trimmed: `echo | wrangler secret put` stores a trailing
  * newline that otherwise fails every Dashboard signature.
  */
+/**
+ * Stripe's own default, pinned here so a library change can't widen it. A
+ * signed delivery whose `t=` timestamp is older than this is rejected, which
+ * is what stops a captured request from being replayed later (PM-330).
+ */
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+
 export function normalizeWebhookSecrets(
   secrets: readonly string[]
 ): string[] {
@@ -39,6 +46,9 @@ export async function constructStripeEventAsync(
   signature: string,
   secrets: readonly string[]
 ): Promise<Stripe.Event> {
+  if (!signature || !signature.trim()) {
+    throw new Error("[stripe-webhook] Missing stripe-signature header");
+  }
   const candidates = normalizeWebhookSecrets(secrets);
   if (candidates.length === 0) {
     throw new Error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
@@ -51,7 +61,8 @@ export async function constructStripeEventAsync(
       return await stripe.webhooks.constructEventAsync(
         raw,
         signature,
-        secret
+        secret,
+        STRIPE_WEBHOOK_TOLERANCE_SECONDS
       );
     } catch (err) {
       lastError = err;

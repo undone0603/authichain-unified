@@ -14,6 +14,7 @@ import {
   resolveSku,
 } from "@/lib/ledger-service";
 import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
+import { stripeEmailIdempotencyKey } from "../../../../lib/stripe-email-idempotency";
 import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
 
 // Never anchor test-mode objects from a production deployment.
@@ -291,7 +292,12 @@ export async function POST(req: NextRequest) {
           md.visit_id || md.prospect_id || session.client_reference_id || null;
 
         if (dppOffer) {
-          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
+          await fulfillDppPaidSession(
+            getSupabase(),
+            session,
+            linePriceId,
+            event.id
+          );
           break;
         }
 
@@ -349,6 +355,7 @@ export async function POST(req: NextRequest) {
               subject: mail.subject,
               html: mail.html,
               text: mail.text,
+              idempotencyKey: stripeEmailIdempotencyKey(event.id, "checkout_confirmation"),
             }).catch(() => {});
           }
         }
@@ -549,6 +556,7 @@ export async function POST(req: NextRequest) {
               subject: mail.subject,
               html: mail.html,
               text: mail.text,
+              idempotencyKey: stripeEmailIdempotencyKey(event.id, "payment_failed"),
             }).catch(() => {});
           }
         }
@@ -609,6 +617,7 @@ export async function POST(req: NextRequest) {
             subject: mail.subject,
             html: mail.html,
             text: mail.text,
+            idempotencyKey: stripeEmailIdempotencyKey(event.id, "trial_expiring"),
           }).catch(() => {});
         }
         break;

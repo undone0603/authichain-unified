@@ -6,6 +6,11 @@ type SendArgs = {
   subject: string;
   text?: string;
   html?: string;
+  /**
+   * Resend `Idempotency-Key` header (see stripeEmailIdempotencyKey). Only
+   * Resend honours it; it is never sent as part of the message body.
+   */
+  idempotencyKey?: string;
 };
 
 type SendResult = {
@@ -21,7 +26,8 @@ function parseFrom(from: string): { email: string; name?: string } {
   return { email: from.trim() };
 }
 
-async function viaGmail(args: SendArgs, key: string): Promise<SendResult> {
+async function viaGmail(input: SendArgs, key: string): Promise<SendResult> {
+  const { idempotencyKey: _ignored, ...args } = input;
   const user = process.env.GMAIL_USER;
   if (!user) return { ok: false, provider: 'gmail', error: 'GMAIL_USER not set' };
   try {
@@ -44,10 +50,16 @@ async function viaGmail(args: SendArgs, key: string): Promise<SendResult> {
   }
 }
 
-async function viaResend(args: SendArgs, key: string): Promise<SendResult> {
+async function viaResend(input: SendArgs, key: string): Promise<SendResult> {
+  const { idempotencyKey, ...args } = input;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(args),
   });
   return { ok: res.ok, provider: 'resend', status: res.status, error: res.ok ? undefined : await res.text() };

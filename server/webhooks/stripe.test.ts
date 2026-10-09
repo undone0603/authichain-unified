@@ -203,7 +203,12 @@ describe("handleStripeWebhook — signature verification", () => {
     );
     const { handleStripeWebhook } = await import("./stripe.js");
     await handleStripeWebhook(RAW_BODY, SIG);
-    expect(mockConstructEvent).toHaveBeenCalledWith("{}", SIG, "whsec_test");
+    expect(mockConstructEvent).toHaveBeenCalledWith(
+      "{}",
+      SIG,
+      "whsec_test",
+      300
+    );
   });
 });
 
@@ -432,7 +437,8 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_smoke_check" }),
-      null
+      null,
+      expect.stringMatching(/^evt_/)
     );
   });
 
@@ -463,7 +469,8 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         id: "cs_live_a1y4Tu_smoke",
         amount_total: 0,
       }),
-      null
+      null,
+      expect.stringMatching(/^evt_/)
     );
   });
 
@@ -616,7 +623,8 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_async_paid" }),
-      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+      "price_1TwmD8GqTruSqV8TpAF8dfyA",
+      expect.stringMatching(/^evt_/)
     );
   });
 
@@ -648,7 +656,8 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_live_a1y4Tu_replay" }),
-      null
+      null,
+      expect.stringMatching(/^evt_/)
     );
     expect(vi.mocked(upsertStripeSubscription)).not.toHaveBeenCalled();
     expect(recordStripeWebhookDelivery).toHaveBeenCalledWith(
@@ -1003,7 +1012,8 @@ describe("handleStripeWebhook — fulfillment collision guard ($299 recurring vs
     expect(fulfillDppPaidSession).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cs_dpp_legit" }),
-      "price_1TwmD8GqTruSqV8TpAF8dfyA"
+      "price_1TwmD8GqTruSqV8TpAF8dfyA",
+      expect.stringMatching(/^evt_/)
     );
   });
 });
