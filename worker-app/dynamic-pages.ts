@@ -812,7 +812,7 @@ const LANDING_CONTENT: Record<
   },
   govchain: {
     eyebrow: "Government Blockchain",
-    headline: "Public Records on Blockchain. Transparent & Auditable.",
+    headline: "GovChain: federal contracting tools for US small businesses, in development.",
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
@@ -825,11 +825,6 @@ const LANDING_CONTENT: Record<
         icon: "✅",
         title: "Compliance Exports",
         desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-      },
-      {
-        icon: "🔐",
-        title: "Digital Signatures",
-        desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
       },
       {
         icon: "📈",
@@ -851,6 +846,10 @@ const LANDING_CONTENT: Record<
     secondaryCta: { label: "Contact Us", href: "mailto:hello@govchain.us" },
   },
 };
+
+/** RES-209: non-affiliation line from the Oct 3 Research review. */
+const GOVCHAIN_NON_AFFILIATION =
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.";
 
 function landingNotFoundHtml(brandId: string): string {
   return notFoundHtml(
@@ -968,6 +967,7 @@ function renderLanding(c: Context): Response {
     "<p>&copy; 2026 " +
     escapeHtml(brand.displayName) +
     " &middot; part of the AuthiChain Protocol</p>\n" +
+    (brandId === "govchain" ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n" : "") +
     "</footer>\n" +
     "</main>";
 

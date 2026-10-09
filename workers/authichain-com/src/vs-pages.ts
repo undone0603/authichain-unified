@@ -200,7 +200,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "AI + Multi-Chain Assurance",
-        desc: "Our goal: multi-agent AI verification before each certificate is anchored on Polygon.",
+        desc: "On-chain anchoring is in development.",
       },
     ],
   },
