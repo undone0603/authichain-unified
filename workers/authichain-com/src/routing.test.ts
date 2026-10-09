@@ -87,6 +87,8 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /Start DPP checkout/);
   assert.doesNotMatch(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /<h1>\s*<\/h1>/);
+  assert.match(html, /<h1>Agents can pay\. They still need to know if it is real\.<\/h1>/);
+  assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1);
   assert.doesNotMatch(html, /Agent consensus/);
   assert.match(html, /Public certificate registry: in development\./);
   const starterFirst = planPaymentLink("starter") ?? "";
