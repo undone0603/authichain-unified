@@ -131,7 +131,7 @@ export default async function ComplianceDashboard() {
         />
         <Tile
           label="Next EU milestone"
-          value={milestone ? formatMilestoneDate(milestone) : "None scheduled"}
+          value={milestone ? formatMilestoneDate(milestone) : "None on this timeline"}
           note={
             milestone
               ? `${milestone.label} · ${countdownLabel(milestone, now)}`

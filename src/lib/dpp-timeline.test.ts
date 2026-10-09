@@ -59,6 +59,14 @@ describe('data integrity', () => {
     expect(byId('electronics').indicative).toBe(true);
   });
 
+  it('flags every entry whose label says indicative as indicative', () => {
+    // A label reading "(indicative)" without indicative: true would be counted
+    // down and later badged "In force" once its date passes.
+    for (const m of listMilestones()) {
+      if (/indicative/i.test(m.label)) expect(m.indicative, m.id).toBe(true);
+    }
+  });
+
   it('has unique ids', () => {
     const ids = listMilestones().map((m) => m.id);
     expect(new Set(ids).size).toBe(ids.length);
