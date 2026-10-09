@@ -67,6 +67,15 @@ jobs:
       - name: Validate living identity rights boundaries
         run: pnpm run test:living-identities
 
+      # DOGFOOD-IDENTITY-V1: ops/dogfood/ledger.jsonl is append-only and
+      # hash-chained. Fails if any line on the base branch was edited,
+      # reordered or removed. Rollback: delete this step.
+      - name: Dogfood ledger append-only
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}"
+          git show FETCH_HEAD:ops/dogfood/ledger.jsonl > "$RUNNER_TEMP/ledger-base.jsonl" 2>/dev/null || : > "$RUNNER_TEMP/ledger-base.jsonl"
+          node protocol/dogfood/cli.mjs ledger-check --base "$RUNNER_TEMP/ledger-base.jsonl"
+
       - name: Set up Python (AgentZ)
         if: hashFiles('requirements-agentz.txt') != ''
         uses: actions/setup-python@v7

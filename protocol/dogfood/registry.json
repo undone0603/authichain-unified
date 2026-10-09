@@ -1,0 +1,37 @@
+{
+  "v": "aco-bot-registry/1",
+  "note": "Public keys only. Private keys live only in Worker secrets named by secret_name (set by Zac). A bot is 'pending' until Zac binds its key; only 'active' keys verify.",
+  "jwks_url": "https://authichain.com/api/v1/.well-known/bot-jwks.json",
+  "bots": [
+    {
+      "bot": "authichain-marketing",
+      "channels": ["internal-dryrun", "x", "linkedin", "email"],
+      "status": "pending",
+      "kid": null,
+      "publicJwk": null,
+      "secret_name": "DOGFOOD_BOT_KEY_AUTHICHAIN_MARKETING",
+      "added": "2026-10-09",
+      "revoked_at": null
+    },
+    {
+      "bot": "grok-bot",
+      "channels": ["internal-dryrun", "x", "email"],
+      "status": "pending",
+      "kid": null,
+      "publicJwk": null,
+      "secret_name": "DOGFOOD_BOT_KEY_GROK_BOT",
+      "added": "2026-10-09",
+      "revoked_at": null
+    },
+    {
+      "bot": "agentz",
+      "channels": ["internal-dryrun", "x", "linkedin"],
+      "status": "pending",
+      "kid": null,
+      "publicJwk": null,
+      "secret_name": "DOGFOOD_BOT_KEY_AGENTZ",
+      "added": "2026-10-09",
+      "revoked_at": null
+    }
+  ]
+}

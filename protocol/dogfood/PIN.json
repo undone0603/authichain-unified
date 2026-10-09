@@ -1,0 +1,6 @@
+{
+  "v": 1,
+  "file": "protocol/dogfood/bot-output.mjs",
+  "verifier_sha256": "b0a2fc93c86c2d40175404959c67f400192ff3419303cba00939cd9af9a7c621",
+  "note": "Change bot-output.mjs and this pin together in one reviewed PR. cli.mjs refuses to verify on mismatch."
+}
