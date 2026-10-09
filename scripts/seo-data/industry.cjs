@@ -57,7 +57,7 @@ module.exports = [
     faqs: [{ q: 'Do budtenders need training?', a: 'No — customers self-scan, and staff can pull the same verified record by scan.' }, { q: 'Does it integrate with my POS?', a: 'It runs alongside existing compliance and POS systems without duplicate entry.' }] },
   { keyword: 'product authentication for government supply chain', brand: 'govchain', schemaType: 'Service',
     lead: 'Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.',
-    bullets: ['On-chain proof of custody and delivery', 'FAR / SAM.gov-aligned records', 'Auditor self-service verification'],
+    bullets: ['FAR / SAM.gov-aligned records', 'Auditor self-service verification'],
     faqs: [{ q: 'Can auditors verify independently?', a: 'Yes — verification is self-service against the public record, no vendor gatekeeping.' }, { q: 'Is it procurement-ready?', a: 'GovChain is designed around federal procurement and traceability requirements.' }] },
   { keyword: 'product authentication for medical devices', brand: 'authichain', schemaType: 'Product',
     lead: 'Authenticate medical devices with UDI-aligned serialization and blockchain provenance to stop counterfeits and speed recalls.',
