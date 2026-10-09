@@ -4,6 +4,10 @@ export const AGENT_CAPABILITIES = [
   "CREATE_AUDIT_RECORD",
   "PROPOSE_LIFECYCLE_ACTION",
   "RESOLVE_IDENTIFIER",
+  "PROPOSE_ECONOMIC_ACTION",
+  "TRANSFER_VALUE",
+  "DEDUCT_VALUE",
+  "MINT_VALUE",
 ] as const;
 
 export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
