@@ -75,7 +75,7 @@ export default function AuthichainEnterprise() {
                 </div>
                 <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <Activity className="w-4 h-4 text-green-500" />
-                   certificate contract live on Polygon; product certification through verify is in development
+                   product certification through verify is in development
                 </div>
              </div>
           </div>
