@@ -27,6 +27,15 @@ import {
 import { attestSeal } from "@/lib/seal-attestation";
 // Relative, not "@/lib/…": tsconfig.worker.json maps "@/*" to client/src only.
 import { parseSealRequest, registryAnswer } from "../../../../lib/agent-verify";
+import {
+  claimX402Proof,
+  releaseX402Proof,
+  x402ProofExpired,
+  x402ProofIdentity,
+  X402_PROOF_ALREADY_USED,
+  X402_PROOF_EXPIRED,
+  X402_REPLAY_GUARD_UNAVAILABLE,
+} from "../../../../lib/x402-replay";
 import { onVerificationEvent } from "../../../../../server/revenue-engine/loop";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +159,29 @@ export async function POST(request: Request) {
     );
   }
 
+  // 4b. PM-330: single-use proof. Claimed in x402_payment_proofs (PRIMARY
+  // KEY) right before settlement; a resubmitted proof is 409, an expired one
+  // 402, and an unreachable ledger fails closed before any payment.
+  const proofIdentity = await x402ProofIdentity(paymentHeader ?? "", proof);
+  if (x402ProofExpired(proofIdentity)) {
+    return NextResponse.json(
+      { ...required.v2, ...X402_PROOF_EXPIRED },
+      { status: 402, headers: required.headers }
+    );
+  }
+  const ledgerCreds = {
+    url: supabaseUrl.trim().replace(/\/$/, ""),
+    key: serviceKey,
+    role: "service" as const,
+  };
+  const proofClaim = await claimX402Proof(ledgerCreds, proofIdentity, resource);
+  if (proofClaim === "duplicate") {
+    return NextResponse.json(X402_PROOF_ALREADY_USED, { status: 409 });
+  }
+  if (proofClaim !== "claimed") {
+    return NextResponse.json(X402_REPLAY_GUARD_UNAVAILABLE, { status: 503 });
+  }
+
   // 5. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
   // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
   // configured) is refused in production so a fake proof can never pass.
@@ -161,6 +193,7 @@ export async function POST(request: Request) {
     !settlement.settled ||
     (!settlement.trustless && process.env.NODE_ENV === "production")
   ) {
+    await releaseX402Proof(ledgerCreds, proofIdentity);
     return NextResponse.json(
       { ...required.v2, error: settlement.reason ?? "payment_not_settled" },
       { status: 402, headers: required.headers }

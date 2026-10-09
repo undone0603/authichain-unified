@@ -13,6 +13,15 @@ import {
   verifyPaymentProof,
   wouldExceedCap,
 } from "./x402";
+import {
+  claimX402Proof,
+  releaseX402Proof,
+  x402ProofExpired,
+  x402ProofIdentity,
+  X402_PROOF_ALREADY_USED,
+  X402_PROOF_EXPIRED,
+  X402_REPLAY_GUARD_UNAVAILABLE,
+} from "./x402-replay";
 
 const SEAL_SELECT = "id,product_id,batch_id,brand,created_at";
 
@@ -205,6 +214,17 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
+  // PM-330: a proof past its EIP-3009 validBefore is refused outright.
+  const identity = await x402ProofIdentity(input.proofHeader, proof);
+  if (x402ProofExpired(identity)) {
+    return {
+      action: "answer",
+      status: 402,
+      body: { ...required.v2, ...X402_PROOF_EXPIRED },
+      headers: required.headers,
+    };
+  }
+
   let parsedBody: Record<string, unknown> = {};
   if (input.bodyText.trim()) {
     try {
@@ -253,6 +273,26 @@ export async function resolvePaidSealVerify(input: {
     };
   }
 
+  // PM-330: claim the proof once (PRIMARY KEY in x402_payment_proofs)
+  // immediately before settlement. A resubmitted proof is 409, never a second
+  // verification; an unreachable ledger fails closed before any payment.
+  const claim = await claimX402Proof(
+    creds,
+    identity,
+    input.resource,
+    fetchImpl
+  );
+  if (claim === "duplicate") {
+    return { action: "answer", status: 409, body: X402_PROOF_ALREADY_USED };
+  }
+  if (claim !== "claimed") {
+    return {
+      action: "answer",
+      status: 503,
+      body: X402_REPLAY_GUARD_UNAVAILABLE,
+    };
+  }
+
   const settlement = await settlePayment(
     input.proofHeader,
     required.body.accepts[0]
@@ -261,6 +301,8 @@ export async function resolvePaidSealVerify(input: {
     !settlement.settled ||
     (!settlement.trustless && !nonTrustlessAllowed())
   ) {
+    // Not settled, so the authorization was not spent: free it for a retry.
+    await releaseX402Proof(creds, identity, fetchImpl);
     return {
       action: "answer",
       status: 402,

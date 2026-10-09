@@ -268,4 +268,82 @@ describe("POST /api/x402 with the VERIFY_APP binding", () => {
       globalThis.fetch = original;
     }
   });
+
+  it("PM-330: resubmitting the same paid proof to POST /api/x402 returns 409, not a second verification", async () => {
+    process.env.X402_PAY_TO = "0xabc0000000000000000000000000000000000001";
+    process.env.X402_NETWORK = "base";
+    process.env.X402_FACILITATOR_URL = "https://facilitator.example";
+    const original = globalThis.fetch;
+    const proofs = new Set<string>();
+    let settles = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (url.includes("x402_payment_proofs") && method === "POST") {
+        const key = JSON.parse(String(init?.body)).proof_key as string;
+        if (proofs.has(key)) return new Response("{}", { status: 409 });
+        proofs.add(key);
+        return new Response(null, { status: 201 });
+      }
+      if (url.includes("/settle")) {
+        settles += 1;
+        return new Response(JSON.stringify({ success: true, txHash: "0xabc" }));
+      }
+      if (url.includes("auth_seals")) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              product_id: "p",
+              batch_id: "b",
+              brand: "acme",
+              created_at: "2026-01-01T00:00:00Z",
+            },
+          ])
+        );
+      }
+      return new Response("[]");
+    }) as typeof fetch;
+    try {
+      const header = proofHeader({
+        x402Version: 2,
+        accepted: { scheme: "exact", network: "base", amount: "50000" },
+        payload: {
+          signature: "0xsig",
+          authorization: {
+            from: PAYER,
+            to: "0xabc0000000000000000000000000000000000001",
+            value: "50000",
+            validAfter: "0",
+            validBefore: String(Math.floor(Date.now() / 1000) + 120),
+            nonce: "0x" + "e".repeat(64),
+          },
+        },
+      });
+      const post = () =>
+        app().request(
+          "https://authichain.com/api/x402",
+          {
+            method: "POST",
+            headers: { "x-payment": header, "content-type": "application/json" },
+            body: JSON.stringify({ sealId: "11111111-1111-4111-8111-111111111111" }),
+          },
+          {
+            SUPABASE_URL: "https://example.supabase.co",
+            SUPABASE_SERVICE_ROLE_KEY: "service-test",
+          }
+        );
+      const first = await post();
+      expect(first.status).toBe(200);
+      const second = await post();
+      expect(second.status).toBe(409);
+      expect(((await second.json()) as { error: string }).error).toBe(
+        "payment_proof_already_used"
+      );
+      expect(settles).toBe(1);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });
+
