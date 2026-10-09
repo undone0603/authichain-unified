@@ -356,3 +356,10 @@ export default {
     return new Response("Not found", { status: 404, headers: CORS_HEADERS });
   },
 };
+
+
+// Canonical Agent Trust contracts and verification
+export * from "./agent-types";
+export * from "./agent-message";
+export * from "./agent-store";
+export * from "./agent-verifier";

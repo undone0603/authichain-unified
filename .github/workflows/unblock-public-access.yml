@@ -73,11 +73,14 @@ jobs:
           if not accounts:
               accounts = [{"id": default_account, "name": "secret-account"}]
 
-          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.")
-          PUBLIC_HOSTS = (
-              "authichain.com", "qron.space", "govchain.us",
-              "strainchain.io", "workers.dev",
-          )
+          # agentz. stays. A destination of type all_workers has no hostname,
+          # so a hostname list would tag it OTHER and leave the public apexes
+          # locked (2026-10-09 app "All Workers"). workers.dev and pages.dev
+          # are previews: do not delete those apps. A public apex is an exact
+          # host or a subdomain of the brand, and KEEP still wins.
+          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.", "agentz.")
+          PUBLIC_APEXES = ("authichain.com", "qron.space", "govchain.us", "strainchain.io")
+          PREVIEW_MARKERS = (".workers.dev", ".pages.dev")
 
           def blob_of(app):
               parts = [str(app.get("domain") or ""), str(app.get("name") or "")]
@@ -86,6 +89,38 @@ jobs:
               for d in app.get("destinations") or []:
                   parts.append(json.dumps(d) if not isinstance(d, str) else d)
               return " ".join(parts).lower()
+
+          def hosts_of(app):
+              hosts = []
+              domain = str(app.get("domain") or "").strip().lower()
+              if domain:
+                  hosts.append(domain)
+              for d in app.get("self_hosted_domains") or []:
+                  hosts.append((d if isinstance(d, str) else json.dumps(d)).strip().lower())
+              for d in app.get("destinations") or []:
+                  if isinstance(d, dict):
+                      uri = str(d.get("uri") or "").strip().lower()
+                      if uri:
+                          hosts.append(uri)
+                  elif isinstance(d, str):
+                      hosts.append(d.strip().lower())
+              return hosts
+
+          def is_preview(host):
+              return any(marker in host for marker in PREVIEW_MARKERS)
+
+          def is_public_apex(host):
+              if not host or is_preview(host):
+                  return False
+              return any(host == apex or host.endswith("." + apex) for apex in PUBLIC_APEXES)
+
+          def locks_every_worker(app):
+              if str(app.get("name") or "").strip().lower() == "all workers":
+                  return True
+              for d in app.get("destinations") or []:
+                  if isinstance(d, dict) and str(d.get("type") or "") == "all_workers":
+                      return True
+              return False
 
           total_deleted = 0
           for acct in accounts:
@@ -98,13 +133,13 @@ jobs:
               for app in apps:
                   blob = blob_of(app)
                   keep = any(k in blob for k in KEEP_SUBSTR)
-                  public = any(h in blob for h in PUBLIC_HOSTS)
+                  public = locks_every_worker(app) or any(is_public_apex(h) for h in hosts_of(app))
                   tag = "KEEP" if keep else ("PUBLIC" if public else "OTHER")
                   print(f"  {tag} {app.get('id')} {blob[:180]}")
                   if apply and public and not keep:
                       dcode, dbody = cf(f"/accounts/{aid}/access/apps/{app.get('id')}", method="DELETE")
                       print("  DELETE", dcode, json.dumps(dbody)[:200])
-                      if dcode in (200, 204):
+                      if dcode in (200, 202, 204):
                           total_deleted += 1
 
               zcode, _, zones = paginate(f"/zones?account.id={aid}")

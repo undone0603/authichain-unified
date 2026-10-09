@@ -173,8 +173,11 @@ jobs:
           cat /tmp/jwks-after.json || true
           exit 1
 
+      # success() || failure() still runs after a failed edge publish.
+      # always() also runs after a cancel, which published this worker on
+      # 2026-10-09 when the edge-router steps were cancelled.
       - name: Deploy authichain-scan-validate
-        if: ${{ always() && steps.secrets_check.outputs.skip != 'true' }}
+        if: ${{ (success() || failure()) && steps.secrets_check.outputs.skip != 'true' }}
         working-directory: workers/authichain-scan-validate
         run: npx wrangler deploy --minify --keep-vars --config wrangler.toml
         env:

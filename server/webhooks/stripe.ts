@@ -32,8 +32,14 @@ import {
   recordStripeWebhookDelivery,
   type StripeWebhookDeliveryStatus,
 } from "../../src/lib/stripe-webhook-log";
-import { planByAmountCents, planByStripePriceId } from "../../src/lib/plans";
+import {
+  DPP_OFFER_KEY,
+  planByAmountCents,
+  planById,
+  planByStripePriceId,
+} from "../../src/lib/plans";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
+import { claimStripeEvent } from "../../src/lib/stripe-webhook-claim";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -254,6 +260,50 @@ function isStarterCheckoutSession(session: Stripe.Checkout.Session): boolean {
   if (amountPlan) return amountPlan.id === "starter";
 
   return session.metadata?.plan === "starter";
+}
+
+/**
+ * The one-time $299 DPP checkout is not a monthly plan. Its abandoned-cart
+ * email must never quote the Starter monthly price or Starter features (F3).
+ */
+function isDppRecoverySession(session: Stripe.Checkout.Session): boolean {
+  if (isRecurringCheckoutSession(session)) return false;
+  const meta = session.metadata || {};
+  const offer = String(meta.offer || meta.offer_key || "");
+  if (meta.plan === "dpp_readiness" || offer === DPP_OFFER_KEY) return true;
+  const dpp = planById("dpp_readiness");
+  const linePriceId = checkoutLinePriceId(session);
+  // Amount alone is not used: another one-time plan is also $299.
+  return Boolean(dpp?.stripe_price_id && linePriceId === dpp.stripe_price_id);
+}
+
+export function buildCheckoutRecoveryEmail(
+  session: Stripe.Checkout.Session,
+  plan: Plan,
+  name: string,
+  continueUrl: string
+): {
+  template: "dpp_readiness" | "subscription";
+  subject: string;
+  body: string;
+} {
+  if (isDppRecoverySession(session)) {
+    const dpp = planById("dpp_readiness");
+    const productName = dpp?.name ?? "EU DPP Workspace";
+    const price = dpp?.price ?? 299;
+    return {
+      template: "dpp_readiness",
+      subject: `You left something behind — complete your AuthiChain ${productName} checkout`,
+      body: `Hi ${name},\n\nWe noticed you started checkout for the AuthiChain ${productName} (a one-time payment of $${price}, not a subscription) but didn't finish.\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+    };
+  }
+  const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+  const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
+  return {
+    template: "subscription",
+    subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
+    body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+  };
 }
 
 async function recordStarterGrowthEvent(
@@ -547,9 +597,18 @@ export async function handleStripeWebhook(
     });
   };
 
+  // F1: claim the event id once in stripe_events (PRIMARY KEY event_id)
+  // BEFORE any fulfillment or email. Drizzle/DATABASE_URL is absent on the
+  // apex Worker, so this is the only duplicate check that works there.
+  // A duplicate still lets a paid DPP checkout replay its fulfill below.
+  const claim = await claimStripeEvent(supabase, event.id, event.type);
+
   // Persist before side effects so a later throw is still queryable.
-  // A stripe_events row is NOT a fulfill lock — DPP replay still runs.
-  await logDelivery("received");
+  // Skipped for a duplicate: re-marking it "received" would hide the
+  // earlier delivery's final status.
+  if (claim !== "duplicate") {
+    await logDelivery("received");
+  }
 
   // Allow test verification events through without idempotency check
   if (event.id.startsWith("evt_test_")) {
@@ -560,11 +619,12 @@ export async function handleStripeWebhook(
   // Drizzle/DATABASE_URL is optional on the apex Worker. Missing it used to
   // 400 every checkout.session.completed *before* fulfillDppPaidSession, so
   // paid DPP smokes never wrote loop_stage=provisioned. Fail open.
-  const alreadyProcessed = await optionalDb(
+  const drizzleSeen = await optionalDb(
     "idempotency",
     () => db.hasWebhookEventProcessed(event.id),
     false
   );
+  const alreadyProcessed = drizzleSeen || claim === "duplicate";
   if (alreadyProcessed && !isReplayableCheckoutEvent(event.type)) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     await logDelivery("duplicate", { httpStatus: 200 });
@@ -1037,19 +1097,46 @@ export async function handleStripeWebhook(
         }
 
         if (email) {
-          const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
-          const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
-          const continueUrl =
-            recoveryUrl || "https://authichain.com/subscriptions";
-          await sendEmail({
-            to: email,
-            subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
-            body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit ${continueUrl} to continue.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
-            fromName: "AuthiChain",
-          });
-          console.log(
-            `[stripe-webhook] Checkout recovery email sent to ${maskEmail(email)}`
+          const continueFallback = isDppRecoverySession(session)
+            ? "https://authichain.com/dpp"
+            : "https://authichain.com/subscriptions";
+          const continueUrl = recoveryUrl || continueFallback;
+          const message = buildCheckoutRecoveryEmail(
+            session,
+            plan,
+            name,
+            continueUrl
           );
+          // F2: only claim "sent" when the provider actually accepted it.
+          // sendEmail returns suppressed/skipped/dry_run without throwing, and
+          // a provider 403 used to be logged as "sent". No addresses in logs.
+          let sendStatus = "error";
+          let sendReason = "";
+          try {
+            const result = await sendEmail({
+              to: email,
+              subject: message.subject,
+              body: message.body,
+              fromName: "AuthiChain",
+            });
+            sendStatus = result?.status ?? "unknown";
+            sendReason = (result?.reason ?? "")
+              .split(":")
+              .slice(0, 2)
+              .join(":");
+          } catch (sendErr) {
+            sendReason =
+              sendErr instanceof Error ? sendErr.name : "unknown_error";
+          }
+          if (sendStatus === "sent") {
+            console.log(
+              `[stripe-webhook] Checkout recovery email sent (template=${message.template})`
+            );
+          } else {
+            console.warn(
+              `[stripe-webhook] Checkout recovery email FAILED (status=${sendStatus}${sendReason ? ` reason=${sendReason}` : ""} template=${message.template})`
+            );
+          }
         }
 
         console.log(
