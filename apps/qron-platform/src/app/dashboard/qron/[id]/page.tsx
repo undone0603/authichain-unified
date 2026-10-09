@@ -362,9 +362,6 @@ export default function QronManagementPage({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <p className="text-sm text-zinc-500 leading-relaxed max-w-lg">
-                    Anchor this creation&apos;s hash to the Polygon blockchain.
-                  </p>
                   <button 
                     onClick={handleAnchor}
                     disabled={isAnchoring}
