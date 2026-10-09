@@ -50,9 +50,9 @@ describe("autonomy manifest", () => {
     expect(validateManifest(loadManifest(), listWorkflowFiles())).toEqual([]);
   });
 
-  it("has cold outreach switched on (owner, 2026-09-23), a cap, and a strict breaker", () => {
+  it("has cold outreach switched off (containment, 2026-10-09), a cap, and a strict breaker", () => {
     const co = loadManifest().cold_outreach;
-    expect(co.enabled).toBe(true);
+    expect(co.enabled).toBe(false);
     expect(co.max_new_prospects_per_day).toBeLessThanOrEqual(10);
     expect(co.breaker.max_bounce_rate).toBeLessThanOrEqual(0.03);
     expect(co.breaker.max_complaints).toBe(0);
