@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AGENT_CAPABILITIES,
+  type AgentCapability,
   type AgentIdentityAttestation,
   type AgentIdentityResolver,
   type AgentMessageVerificationResult,
@@ -69,7 +70,7 @@ interface Fixture {
 }
 
 async function createFixture(options: {
-  capabilities?: string[];
+  capabilities?: AgentCapability[];
   actionOverrides?: Partial<EconomicAction>;
   policyOverrides?: Partial<EconomicPolicy>;
 } = {}): Promise<Fixture> {
@@ -126,7 +127,7 @@ async function createFixture(options: {
     attestation_id: action.attestation_id,
     role: attestation.role,
     version: attestation.version,
-    capabilities: caps as SignedAgentMessage<EconomicAction>["capabilities"],
+    capabilities: caps,
     policy_version: action.policy_version,
     issued_at: action.created_at,
     expires_at: action.expires_at,
