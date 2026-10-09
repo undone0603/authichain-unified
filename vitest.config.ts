@@ -108,8 +108,14 @@ export default defineConfig({
       // importing them through the catch-all today; the carve-out only fixes
       // resolution for src/ consumers.
       {
-        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts)(\/.*)?$/,
+        find: /^@\/lib\/(provisioning|billing-emails|brand-billing|email|dpp-loop|dpp-fulfill-checkout|ledger-service|stripe-construct-event|founder-alerts|anchoring-status|blockchain|automation)(\/.*)?$/,
         replacement: path.resolve(templateRoot, "src", "lib") + "/$1$2",
+      },
+      // src/utils (Supabase server/client helpers). client/src has no utils/
+      // directory, so the catch-all never served these.
+      {
+        find: /^@\/utils(\/.*)?$/,
+        replacement: path.resolve(templateRoot, "src", "utils") + "$1",
       },
       {
         find: /^@\/db(\/.*)?$/,
