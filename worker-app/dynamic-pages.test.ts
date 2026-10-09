@@ -329,6 +329,8 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
+    expect(body).toContain("On-chain verification is in development.");
+    expect(body).not.toContain("authenticity status");
     expect(getProductById).not.toHaveBeenCalled();
   });
 
