@@ -4,8 +4,8 @@ import type {
   AgentIdentityResolver,
   AgentReplayRecordParams,
   AgentReplayStore,
-} from "./agent-types.ts";
-import { normalizeCapabilities } from "./agent-types.ts";
+} from "./agent-types";
+import { normalizeCapabilities } from "./agent-types";
 
 export interface D1DatabaseLike {
   prepare(query: string): {
