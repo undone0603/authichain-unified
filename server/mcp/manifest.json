@@ -14,7 +14,7 @@
     },
     {
       "name": "mint_certificate",
-      "description": "Initiate a trust certificate mint (5-agent consensus)."
+      "description": "In development. Does not mint a certificate yet; returns a placeholder message."
     },
     {
       "name": "classify_product",

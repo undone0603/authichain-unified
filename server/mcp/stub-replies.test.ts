@@ -142,3 +142,30 @@ describe("qron-platform /api/mcp stub replies (PM-348)", () => {
     }
   });
 });
+
+describe("PM-349: manifest wording and debunked contract address", () => {
+  const read = (rel: string) =>
+    readFileSync(path.resolve(import.meta.dirname, "../..", rel), "utf8");
+
+  it("mint_certificate manifest description says it does not mint yet", () => {
+    const manifest = JSON.parse(read("server/mcp/manifest.json")) as {
+      tools: Array<{ name: string; description: string }>;
+    };
+    const mint = manifest.tools.find(t => t.name === "mint_certificate");
+    expect(mint?.description).toBe(
+      "In development. Does not mint a certificate yet; returns a placeholder message."
+    );
+  });
+
+  it("no live file links or defaults to 0xc3143254…", () => {
+    for (const rel of [
+      "packages/shared/authichain-theme.ts",
+      "shared/authichain-theme.ts",
+      "api/server.js",
+    ]) {
+      const src = read(rel);
+      expect(src.toLowerCase()).not.toContain("0xc3143254");
+      expect(src).not.toContain("Verify Contract");
+    }
+  });
+});
