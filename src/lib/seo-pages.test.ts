@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from "./seo-pages";
 import { planById } from "./plans";
 
@@ -329,6 +331,38 @@ describe("generated SEO money-path CTAs", () => {
         /anchored (on|to) Polygon|Polygon-anchored|Polygon anchoring|blockchain-anchored|hashes and anchors/i
       );
       expect(text, p.slug).not.toMatch(/offline-verification problem GovChain/i);
+    }
+  });
+
+  it("CFA-155: no SEO page claims a contract live or deployed on Polygon, or links 0x4da4", () => {
+    const banned = /(live|deployed) on Polygon|0x4da4/i;
+    for (const p of listSeoPages()) {
+      expect(JSON.stringify(p), p.slug).not.toMatch(banned);
+    }
+    for (const slug of [
+      "blockchain-product-authentication",
+      "counterfeit-detection-with-ai",
+      "blockchain-qr-code-for-luxury",
+      "vechain-alternative-without-tokens-or-gas-fees",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).toBeTruthy();
+      expect(JSON.stringify(page), slug).not.toMatch(banned);
+    }
+  });
+
+  it("CFA-155: the generator data files do not carry the Polygon contract claim", () => {
+    const dir = path.join(process.cwd(), "scripts", "seo-data");
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".cjs"));
+    expect(files.length).toBeGreaterThan(0);
+    const sources = [
+      ...files.map((f) => path.join(dir, f)),
+      path.join(process.cwd(), "scripts", "gen-seo-pages.cjs"),
+    ];
+    for (const f of sources) {
+      expect(fs.readFileSync(f, "utf8"), f).not.toMatch(
+        /(live|deployed) on Polygon|0x4da4/i
+      );
     }
   });
 
