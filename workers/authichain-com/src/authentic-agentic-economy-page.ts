@@ -219,17 +219,12 @@ ${estateHero({
   ],
 })}
 ${estateTrust([
-  { value: "Ed25519", label: "Signed seals" },
   { value: "$0.05", label: "x402 per verify" },
 ])}
 ${estateFeatures(
   "What is live on this estate",
   "Claims limited to capabilities that already run. No invented customer logos, no promised mint that is not deployed.",
   [
-    {
-      title: "Signed seals",
-      body: "Ed25519-signed records, checkable offline with the open verifier at /protocol.",
-    },
     {
       title: "MCP tools",
       body: "The in-repo AuthiChain MCP server lets an agent verify authenticity, classify a product, and request a paid verification. Distribution is the MCP surface, not a new product.",

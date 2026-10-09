@@ -6,7 +6,6 @@ import {
   Sparkles,
   Download,
   Zap,
-  Shield,
   Lock,
   QrCode,
   CheckCircle,
@@ -106,7 +105,7 @@ export default function StudioPage() {
           </div>
           <h1 className="text-5xl font-black mb-4">Create a QRON</h1>
           <p className="text-white/60 text-lg max-w-xl mx-auto">
-            Turn any URL into cryptographically signed AI art. Ed25519-sealed.
+            Turn any URL into AI art.
             Scannable everywhere. Ready in under 3 seconds.
           </p>
         </div>
@@ -218,7 +217,7 @@ export default function StudioPage() {
                   <QrCode className="w-16 h-16 mx-auto mb-4 opacity-30" />
                   <p className="text-sm">Your QRON will appear here</p>
                   <p className="text-xs mt-1">
-                    Ed25519 signed &bull; Scan guaranteed
+                    Scan guaranteed
                   </p>
                 </div>
               </div>
@@ -229,7 +228,6 @@ export default function StudioPage() {
               {[
                 ["<3s", "Generation"],
                 ["100%", "Scan Rate"],
-                ["Ed25519", "Signed"],
               ].map(([val, label]) => (
                 <div key={label}>
                   <div className="text-yellow-400 font-bold text-sm">{val}</div>
@@ -244,7 +242,6 @@ export default function StudioPage() {
         <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { icon: Zap, title: "Instant", desc: "Under 3 seconds" },
-            { icon: Shield, title: "Authentic", desc: "Ed25519 sealed" },
             { icon: CheckCircle, title: "Guaranteed", desc: "100% scan rate" },
           ].map(({ icon: Icon, title, desc }) => (
             <div

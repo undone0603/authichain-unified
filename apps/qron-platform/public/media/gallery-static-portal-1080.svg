@@ -81,7 +81,7 @@
 
 <!-- Bottom label -->
 <rect x="0" y="960" width="1080" height="120" fill="#0d0d1a" opacity="0.72"/>
-<text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#c9a227">◆ Minted by AuthiChain Protocol — Ed25519 Signed</text>
+<text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#c9a227">◆ AuthiChain Protocol</text>
 <text x="540" y="1030" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#6b6b6b">Every QRON is unique, trackable and cryptographically authentic</text>
 <text x="540" y="1058" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#3a3a3a">Powered by Fal.ai illusion-diffusion · qron.space</text>
 </svg>

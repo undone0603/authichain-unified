@@ -14,9 +14,6 @@ A marketing claim is not an artifact. These are.
 ## Live endpoints
 
 ```bash
-# Public verification key (Ed25519)
-curl -sS https://authichain.com/.well-known/jwks.json
-
 # Protocol page + offline verifier
 # https://authichain.com/protocol
 node verifier.mjs record.json anchor.json

@@ -336,7 +336,7 @@ describe("generated SEO money-path CTAs", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
     expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
-    expect(dpp?.bodyHtml).toContain("Ed25519-signed.");
+    expect(dpp?.bodyHtml).not.toContain("Ed25519-signed");
     expect(dpp?.bodyHtml).not.toContain("anchored on Polygon");
     expect(dpp?.bodyHtml).not.toContain("$49/mo");
     expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");

@@ -148,7 +148,6 @@
 
   <!-- Positives -->
   <text x="815" y="672" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  Memorable brand art</text>
-  <text x="815" y="694" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  Ed25519 cryptographic signature</text>
   <text x="815" y="716" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  AuthiChain blockchain verified</text>
 
   <!-- Center +25% callout -->
@@ -164,7 +163,6 @@
 
   <!-- Footer -->
   <line x1="80" y1="788" x2="1000" y2="788" stroke="rgba(201,162,39,0.07)" stroke-width="1"/>
-  <text x="540" y="830" text-anchor="middle" font-family="Arial" font-size="18" fill="#3a3a3a">Every QRON is Ed25519 signed and anchored on the AuthiChain blockchain.</text>
   <text x="540" y="856" text-anchor="middle" font-family="Arial" font-size="18" fill="#3a3a3a">Scanned by any phone. Verified by anyone, anywhere.</text>
   <text x="540" y="920" text-anchor="middle" font-family="Arial" font-size="13" fill="#242424">Powered by Fal.ai illusion-diffusion &#183; Supabase &#183; AuthiChain Protocol</text>
   <text x="540" y="968" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="28" font-weight="900" fill="rgba(201,162,39,0.15)" letter-spacing="8">QRON &#215; AUTHICHAIN</text>

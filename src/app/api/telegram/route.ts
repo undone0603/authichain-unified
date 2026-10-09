@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
           prompt: 'futuristic tech aesthetic, neon lights, highly detailed',
         });
 
-        await sendTelegramPhoto(chatId, result.imageUrl, `✅ Your QRON is ready!\n\n🔒 Ed25519 Secured\n🔗 Target: ${text}`);
+        await sendTelegramPhoto(chatId, result.imageUrl, `✅ Your QRON is ready!\n\n🔗 Target: ${text}`);
         await admin.from('automation_logs').insert({
           workflow_name: 'telegram_qron_generation',
           trigger_type: 'event',

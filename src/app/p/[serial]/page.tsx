@@ -165,7 +165,7 @@ export default async function CertificationPage({ params }: PageProps) {
           </div>
           <div className="bg-zinc-100 py-4 text-center">
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-              AuthiChain Protocol &bull; Ed25519 Signed
+              AuthiChain Protocol
             </p>
           </div>
         </div>
