@@ -66,7 +66,7 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Single QRON", price: "$5", period: "/code", features: ["One AI-generated QR code", "Ed25519 cryptographic signing", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
+  { name: "Single QRON", price: "$5", period: "/code", features: ["One AI-generated QR code", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
   { name: "Creator Pack", price: "$29", period: "/mo", features: ["25 QRONs per month", "All visual modes", "Custom prompt engine", "Brand color matching", "Priority generation queue", "Gallery listing"], highlighted: true },
   { name: "Enterprise", price: "$199", period: "/mo", features: ["Unlimited QRONs", "Batch generation API", "White-label output", "Brand template system", "Analytics dashboard", "Dedicated support"] },
 ];

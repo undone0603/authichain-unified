@@ -378,4 +378,25 @@ describe("generated SEO money-path CTAs", () => {
       "https://authichain.com/p/what-is-a-digital-product-passport"
     );
   });
+  it("RES-100: footwear page has no unsourced forecasts or live-issuance claims", () => {
+    const p = getSeoPageBySlug("eu-digital-product-passport-footwear");
+    expect(p).not.toBeNull();
+    const text = JSON.stringify(p);
+    expect(text).not.toMatch(/feasibility/i);
+    expect(text).not.toMatch(/follow the textiles/i);
+    expect(text).not.toMatch(/can even be proposed/i);
+    expect(text).not.toMatch(/link it to a signed record/i);
+    expect(text).not.toMatch(/signed record published now/i);
+    expect(p?.bodyHtml).toContain("Signed records are in development.");
+    expect(p?.bodyHtml).toContain("a Commission study on footwear due by the end of 2027.</p>");
+    expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
+  });
+
+  it("RES-103: no page claims records are already issuing or offers proof of origin", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(/already issuing/i);
+      expect(text, p.slug).not.toMatch(/proof of origin/i);
+    }
+  });
 });

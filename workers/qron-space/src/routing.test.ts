@@ -519,3 +519,17 @@ test("qron.space carries no $QRON token, staking, or governance copy (PM-375)", 
   assert.doesNotMatch(og, /\$QRON|Stake|Govern|ERC-20/);
   assert.match(og, />QRON<\/text>/);
 });
+
+test("qron.space home meta no longer claims a Polygon certificate contract (PM-437, CFA-164)", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response("<feed></feed>", { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+  try {
+    const html = await (await get("/")).text();
+    assert.doesNotMatch(html, /certificate contract on Polygon/i);
+    assert.doesNotMatch(html, /anchored to AuthiChain/i);
+    assert.match(html, /<meta name="description" content="[^"]+">/);
+  } finally {
+    globalThis.fetch = real;
+  }
+});

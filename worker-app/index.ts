@@ -554,6 +554,10 @@ async function stripeWebhookPost(c: {
     return c.json(result);
   } catch (err: any) {
     console.error(`[Stripe Webhook] Error: ${err.message}`);
+    // PM-338: duplicate guard unavailable -> 500 so Stripe retries.
+    if (err?.name === "StripeEventClaimUnavailableError") {
+      return c.json({ error: "Temporarily unavailable; retry" }, 500);
+    }
     return c.json({ error: err.message }, 400);
   }
 }
