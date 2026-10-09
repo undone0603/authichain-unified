@@ -381,6 +381,77 @@ describe("authichain-api keys", () => {
     expect(body.plan).toBe("pro");
   });
 
+  it("rejects the removed hard-coded demo keys", async () => {
+    for (const k of ["demo_test_key_2026", "rapidapi_test_2026"]) {
+      const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({ resolve: [] }));
+      const res = await w.request("/api/v1/me", { headers: { "X-API-Key": k } });
+      expect(res.status).toBe(401);
+      const bearer = await w.request("/api/v1/me", {
+        headers: { Authorization: "Bearer " + k },
+      });
+      expect(bearer.status).toBe(401);
+    }
+    expect(SOURCE).not.toMatch(/demo_test_key_2026|rapidapi_test_2026/);
+  });
+
+  it("returns 401 for a missing key without calling Supabase", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me");
+    expect(res.status).toBe(401);
+    expect(w.calls.length).toBe(0);
+  });
+
+  it("rejects any X-RapidAPI-Key when no proxy secret is configured", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "anything", "X-RapidAPI-Proxy-Secret": "anything" },
+    });
+    expect(res.status).toBe(401);
+    // Not looked up as a tenant key and not granted the basic plan.
+    expect(w.calls.some((c) => c.url.includes("authichain_api_resolve_key"))).toBe(false);
+  });
+
+  it("rejects a RapidAPI request with a missing or wrong proxy secret", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", RAPIDAPI_PROXY_SECRET: "proxy-secret-1" },
+      supabase({})
+    );
+    const missing = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk" },
+    });
+    expect(missing.status).toBe(401);
+    const wrong = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret-2" },
+    });
+    expect(wrong.status).toBe(401);
+    const prefix = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret" },
+    });
+    expect(prefix.status).toBe(401);
+  });
+
+  it("does not let an unverified X-RapidAPI-Key ride along with a valid key", async () => {
+    const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "anything", "X-API-Key": KEY },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("accepts a RapidAPI request whose proxy secret matches", async () => {
+    const w = loadWorker(
+      { SUPABASE_ANON_KEY: "anon", RAPIDAPI_PROXY_SECRET: "proxy-secret-1" },
+      supabase({})
+    );
+    const res = await w.request("/api/v1/me", {
+      headers: { "X-RapidAPI-Key": "rk", "X-RapidAPI-Proxy-Secret": "proxy-secret-1" },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.plan).toBe("basic");
+    expect(body.isDemo).toBe(false);
+  });
+
   it("JWKS returns 503 when no signing key is configured", async () => {
     const w = loadWorker({ SUPABASE_ANON_KEY: "anon" }, supabase({}));
     const res = await w.request("/api/v1/.well-known/jwks.json");

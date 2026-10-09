@@ -410,7 +410,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <div class="demo-notice">
   <strong>Demo Mode</strong>
   This API operates in demo mode. All responses are simulated. Production blockchain integration is planned for Q3 2026.
-  Use the demo key <code style="color:#d4af37">demo_test_key_2026</code> to explore all endpoints.
+  Get a free key with <code style="color:#d4af37">POST /api/v1/keys/create</code> to explore all endpoints.
 </div>
 
 <div class="demo-notice" style="border-left-color: #3ddc60; background: #0a1a0f; color: #a3f7bf">
@@ -432,21 +432,21 @@ td{padding:12px;border-bottom:1px solid #111}
   <span style="color:#555">or</span><br>
   <span class="key">Authorization:</span> <span class="str">Bearer your_api_key_here</span>
 </div>
-<p>Test with the demo key: <code>demo_test_key_2026</code> (10 requests/hour)</p>
+<p>Get a free key (10 requests/hour): <code>POST /api/v1/keys/create</code> with <code>{"email":"you@example.com"}</code></p>
 
 <h2>Endpoints</h2>
 
 <h3><span class="method post">POST</span> /api/v1/classify</h3>
 <p>Classify a product into one of 10 industries with confidence scoring and workflow generation (demo mode).</p>
 <pre><span class="key">curl</span> -X POST https://authichain-api.undone-k.workers.dev/api/v1/classify \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span> \\
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span> \\
   -H <span class="str">"Content-Type: application/json"</span> \\
   -d <span class="str">'{"name":"iPhone 16 Pro","category":"Electronics","brand":"Apple"}'</span></pre>
 
 <h3><span class="method post">POST</span> /api/v1/verify</h3>
 <p>Simulate product authenticity verification. Returns trust score, confidence, and simulated hash (demo mode).</p>
 <pre><span class="key">curl</span> -X POST https://authichain-api.undone-k.workers.dev/api/v1/verify \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span> \\
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span> \\
   -H <span class="str">"Content-Type: application/json"</span> \\
   -d <span class="str">'{"productId":"PROD-12345"}'</span></pre>
 
@@ -460,7 +460,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <h3><span class="method get">GET</span> /api/v1/industries</h3>
 <p>List all 10 supported industries with market sizes.</p>
 <pre><span class="key">curl</span> https://authichain-api.undone-k.workers.dev/api/v1/industries \\
-  -H <span class="str">"X-API-Key: demo_test_key_2026"</span></pre>
+  -H <span class="str">"X-API-Key: YOUR_API_KEY"</span></pre>
 
 <h3><span class="method get">GET</span> /api/v1/pricing</h3>
 <p>Get current product and pricing information.</p>
@@ -498,7 +498,7 @@ td{padding:12px;border-bottom:1px solid #111}
 <pre><span class="key">const</span> response = <span class="key">await</span> fetch(<span class="str">'https://authichain-api.undone-k.workers.dev/api/v1/verify'</span>, {
   method: <span class="str">'POST'</span>,
   headers: {
-    <span class="str">'X-API-Key'</span>: <span class="str">'demo_test_key_2026'</span>,
+    <span class="str">'X-API-Key'</span>: <span class="str">'YOUR_API_KEY'</span>,
     <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>
   },
   body: JSON.stringify({ productId: <span class="str">'PROD-12345'</span> })
