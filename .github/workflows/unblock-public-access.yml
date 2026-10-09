@@ -73,7 +73,10 @@ jobs:
           if not accounts:
               accounts = [{"id": default_account, "name": "secret-account"}]
 
-          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.")
+          # agentz. stays. A destination of type all_workers has no hostname,
+          # so the host list below would tag it OTHER and leave the public
+          # apexes locked (2026-10-09 app "All Workers").
+          KEEP_SUBSTR = ("dashboard.", "claw.", "openclaw", "/admin", "admin.", "agentz.")
           PUBLIC_HOSTS = (
               "authichain.com", "qron.space", "govchain.us",
               "strainchain.io", "workers.dev",
@@ -87,6 +90,14 @@ jobs:
                   parts.append(json.dumps(d) if not isinstance(d, str) else d)
               return " ".join(parts).lower()
 
+          def locks_every_worker(app):
+              if str(app.get("name") or "").strip().lower() == "all workers":
+                  return True
+              for d in app.get("destinations") or []:
+                  if isinstance(d, dict) and str(d.get("type") or "") == "all_workers":
+                      return True
+              return False
+
           total_deleted = 0
           for acct in accounts:
               aid = acct.get("id")
@@ -98,7 +109,7 @@ jobs:
               for app in apps:
                   blob = blob_of(app)
                   keep = any(k in blob for k in KEEP_SUBSTR)
-                  public = any(h in blob for h in PUBLIC_HOSTS)
+                  public = any(h in blob for h in PUBLIC_HOSTS) or locks_every_worker(app)
                   tag = "KEEP" if keep else ("PUBLIC" if public else "OTHER")
                   print(f"  {tag} {app.get('id')} {blob[:180]}")
                   if apply and public and not keep:
