@@ -27,7 +27,7 @@ const rows: ComparisonRow[] = [
 
 const reasons = [
   {
-    title: 'Tamper-Proof by Design',
+    title: '',
     desc: 'AuthiChain\'s certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.',
   },
   {

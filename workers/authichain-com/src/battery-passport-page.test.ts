@@ -135,9 +135,8 @@ describe("battery passport offer page", () => {
       "A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out."
     );
     expect(html).toContain('href="https://authichain.com/api/verify?id=polygon-anchor-1"');
-    expect(html).toContain(
-      'href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"'
-    );
+    // PM-374: no polygonscan link to the anchor tx (wallet ownership not proven).
+    expect(html).not.toContain("polygonscan.com");
     expect(html).toContain("It is not a battery and not a passport.");
     expect(html).not.toMatch(
       /gets your first passport published|publish your first passport/i

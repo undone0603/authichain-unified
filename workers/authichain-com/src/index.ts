@@ -2477,7 +2477,7 @@ function ecosystemFooter() {
         ],
       },
     ],
-    'Polygon · ERC-721 contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · EU DPP',
+    'EU DPP',
   );
 }
 
@@ -2838,8 +2838,7 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
   <h2>One record, anchored on Polygon mainnet</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
-    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
+  <p>The published demonstration record is signed by the live issuer and its hash is committed in a Polygon transaction (block 94,680,852).
     It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
