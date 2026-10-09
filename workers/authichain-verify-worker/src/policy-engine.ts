@@ -11,6 +11,7 @@ import {
   type EconomicOperation,
 } from "./economic-action";
 import { agentMessageDigest, canonicalizeJson, sha256Base64Url, type SignedAgentMessage } from "./agent-message";
+import { verifyAgentMessage, type VerifyAgentMessageOptions } from "./agent-verifier";
 import type { AgentCapability, AgentMessageVerificationResult } from "./agent-types";
 import { economicActionDigest } from "./crypto-message";
 
@@ -381,3 +382,28 @@ function sameStringArray(left: string[], right: string[]): boolean {
   const b = [...right].sort();
   return a.every((value, index) => value === b[index]);
 }
+/**
+ * Preferred composition for a server-side caller: derive the verification
+ * result directly from the Agent Trust verifier, then immediately evaluate
+ * policy. Never accept a verification result supplied by the remote caller.
+ *
+ * This remains a pre-reservation decision; it is not an execution endpoint.
+ */
+export async function verifyAndAuthorizeEconomicAction(
+  message: unknown,
+  trustOptions: VerifyAgentMessageOptions,
+  policy: unknown,
+  now = trustOptions?.now ?? new Date(),
+): Promise<AuthorizationDecision> {
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date(0);
+  try {
+    const verification = await verifyAgentMessage(
+      message as SignedAgentMessage<unknown>,
+      { ...trustOptions, now: safeNow },
+    );
+    return await authorizeEconomicAction(message, verification, policy, safeNow);
+  } catch {
+    return buildDecision({ now: safeNow, reasons: ["MESSAGE_NOT_VERIFIED"] });
+  }
+}
+
