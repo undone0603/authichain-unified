@@ -39,7 +39,7 @@ The current function can return only `ELIGIBLE_FOR_RESERVATION` or `DENY`. Even 
 ## Contracts added
 
 - `economic-action.ts`: strict runtime schema, stable identifiers, operation types, account bindings, exact decimal minor units, and explicit authorization/audit result shapes.
-- `policy-engine.ts`: fail-closed checks for verifier result binding, exact signed-envelope digest, identity, operation-specific capabilities, organization and policy version, asset allowlist, action limit, evidence, timestamp/TTL, and operation/account consistency.
+- `policy-engine.ts`: fail-closed checks for verifier result binding, exact signed-envelope and signature digests, strict policy fields, identity, operation-specific capabilities, organization and policy version, asset allowlist, action limit, evidence, timestamp/TTL, and operation/account consistency.
 - `crypto-message.ts`: canonical action digest and ECDSA P-256 signed audit payloads. Verification receives an already trusted `CryptoKey`; key resolution and revocation are external.
 - `adversarial-gate.test.ts`: signature fixture plus positive-path and negative-path tests for verification failure, post-verification mutation, unknown envelope fields, insufficient capabilities, amount and policy limits, evidence, timestamps, and audit tampering.
 
