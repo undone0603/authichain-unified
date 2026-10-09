@@ -92,6 +92,8 @@ export interface AgentMessageVerificationResult {
   capabilities?: AgentCapability[];
   policy_version?: string;
   message_digest?: string;
+  /** Hash of the exact signature string observed by the verifier; binds later policy evaluation against signature mutation. */
+  signature_digest?: string;
   verified_at: string;
 }
 
