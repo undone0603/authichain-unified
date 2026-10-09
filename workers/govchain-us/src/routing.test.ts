@@ -624,3 +624,35 @@ test("the apex makes no Polygon contract claim (CFA-147)", async () => {
   }
   assert.match(html, /Hash-anchoring of claims is in development\./);
 });
+
+// GB-20 / RES-221: unbacked compliance, alerting and storage claims stay off
+// the govchain.us home page, and no govchain page links to /seals or /tools
+// (both 404 in production).
+const GB20_RETIRED_HOME = [
+  /FAR\s*\/\s*DFARS/i,
+  /DFARS/i,
+  /800-171/i,
+  /Section 889/i,
+  /Evidence exports/i,
+  /Compliance-ready exports/i,
+  /Compliance coverage/i,
+  /Deadline watchdog/i,
+  /48 hours/i,
+  /IPFS/i,
+  /Content-addressed evidence storage/i,
+  /Four-layer/i,
+];
+
+test("GB-20: home page carries none of the retired compliance/alert/IPFS claims", async () => {
+  const res = await worker.fetch(new Request("https://govchain.us/"), ENV as never);
+  const html = await res.text();
+  for (const re of GB20_RETIRED_HOME) assert.doesNotMatch(html, re);
+});
+
+test("GB-20: govchain pages never link to /seals or /tools", async () => {
+  for (const path of ["/", "/pricing"]) {
+    const res = await worker.fetch(new Request(`https://govchain.us${path}`), ENV as never);
+    const html = await res.text();
+    assert.doesNotMatch(html, /href="(https:\/\/[^"]*govchain\.us)?\/(seals|tools)(["\/?#])/i, path);
+  }
+});

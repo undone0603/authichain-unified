@@ -2410,7 +2410,6 @@ ${estateTrust([
   { value: "—", label: "Opportunities scored", id: "stat-scored" },
   { value: "—", label: "High-fit matches", id: "stat-highfit" },
   { value: "—", label: "Proposals drafted", id: "stat-proposals" },
-  { value: "FAR/DFARS", label: "Evidence exports" },
 ])}
 
 <section class="estate-section" id="live">
@@ -2442,32 +2441,17 @@ ${estateFeatures(
     { title: "Auto-drafted capability statements", body: "Turn a high-fit notice into a tailored capability statement so the team edits instead of starting blank." },
     { title: "Made-in-USA provenance", body: "Our goal: cryptographic seals for domestic-origin claims, built around FTC Made in USA documentation." },
     { title: "Public datalog", body: "On-chain verification of claims for contracting officers and auditors is in development." },
-    { title: "Compliance-ready exports", body: "Evidence packages mapped to FAR/DFARS, NIST 800-171, and Section 889." },
-    { title: "Deadline watchdog", body: "Alerts when a high-fit proposal is within 48 hours of its deadline." },
   ],
   "pros",
 )}
 
 <section class="estate-section" id="audit">
   <div class="wrap">
-    <h2>Four-layer public trust trail</h2>
+    <h2>Public trust trail</h2>
     <p class="section-sub">From operational record to chain anchor (in development).</p>
     <div class="audit-pipeline">
       <div class="audit-layer"><div class="audit-name">SAM.gov</div><div class="audit-desc">Authoritative federal opportunity and entity source</div></div>
       <div class="audit-layer"><div class="audit-name">Supabase</div><div class="audit-desc">Scored opportunities, proposals, and certifications</div></div>
-      <div class="audit-layer"><div class="audit-name">IPFS</div><div class="audit-desc">Content-addressed evidence storage</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="estate-section" id="compliance">
-  <div class="wrap">
-    <h2>Compliance coverage</h2>
-    <p class="section-sub">Built around the standards federal buyers actually require.</p>
-    <div class="compliance-grid">
-      <div class="compliance-card"><h3>FAR / DFARS</h3><p>Evidence mapping for Federal Acquisition Regulation and defense supplement clauses.</p></div>
-      <div class="compliance-card"><h3>NIST SP 800-171</h3><p>Controlled Unclassified Information control tracking with an audit-ready evidence trail.</p></div>
-      <div class="compliance-card"><h3>Section 889 / supply chain</h3><p>Prohibited-source screening and supply-chain provenance for prime and sub assurance.</p></div>
     </div>
   </div>
 </section>

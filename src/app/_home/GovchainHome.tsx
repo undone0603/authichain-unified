@@ -16,7 +16,6 @@ export function GovchainHome() {
       stats={[
         { value: '/onboard', label: 'Live intake' },
         { value: 'SAM.gov', label: 'Notice source' },
-        { value: 'FAR/DFARS', label: 'Evidence map' },
         { value: 'No mint CTA', label: 'No live gov-mint' },
       ]}
       features={[
