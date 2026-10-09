@@ -1,0 +1,21 @@
+name: Expire test checkout session
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: cs_test_ session to expire
+        required: true
+        default: cs_test_a1BFSSy4SzDUjlCTiw9OhaiJjhDloIsVpk80TZDlpSkA8qee5dA57DyV9k
+        type: string
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Expire one test Checkout Session
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          SESSION_ID: ${{ inputs.session_id }}
+        run: node scripts/expire-test-checkout-session.mjs "$SESSION_ID"
