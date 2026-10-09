@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { Palette, ScanLine, ShieldCheck, Sparkles, Download, Layers } from 'lucide-react';
+import { Palette, ScanLine, Sparkles, Download, Layers } from 'lucide-react';
 import { BrandLanding } from '../_home/BrandLanding';
 
 export const metadata: Metadata = {
   title: 'AI QR Art | QRON',
-  description: 'Generate cryptographically-signed, scannable AI QR art in seconds — 11 illusion-diffusion styles, Ed25519-signed.',
+  description: 'Generate scannable AI QR art in seconds — 11 illusion-diffusion styles.',
 };
 
 export default function QrCodesPage() {
@@ -20,7 +20,6 @@ export default function QrCodesPage() {
       stats={[
         { value: '11', label: 'Art styles' },
         { value: '~5s', label: 'Per render' },
-        { value: 'Ed25519', label: 'Signed' },
         { value: '100%', label: 'Scannable' },
       ]}
       features={[
@@ -33,11 +32,6 @@ export default function QrCodesPage() {
           icon: <ScanLine className="h-6 w-6" />,
           title: 'Guaranteed Scannable',
           desc: 'Every generation is validated for scannability across phone cameras before you download it — art that still works.',
-        },
-        {
-          icon: <ShieldCheck className="h-6 w-6" />,
-          title: 'Cryptographically Signed',
-          desc: 'Each QRON is Ed25519-signed, so the destination is verifiable and tamper-evident.',
         },
         {
           icon: <Sparkles className="h-6 w-6" />,

@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Shield,
   FileText,
-  Lock,
   Play
 } from 'lucide-react';
 
@@ -80,11 +79,6 @@ export default function FtcShieldPage() {
               icon: FileText, 
               title: 'Instant Compliance', 
               desc: 'Consumers and regulators scan your product to instantly see the full chain of custody, backing up your "Made in USA" labels.' 
-            },
-            { 
-              icon: Lock, 
-              title: 'Ed25519 Security', 
-              desc: 'Every scan verifies the cryptographic signature of the original factory node, completely eliminating counterfeiting risks.' 
             },
           ].map((item, i) => (
             <div key={i} className="protocol-card p-8 group hover:border-red-500/30 transition-all border-zinc-900 bg-zinc-950/50">

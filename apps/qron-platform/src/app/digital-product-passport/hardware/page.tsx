@@ -36,7 +36,7 @@ export default function StrainChainHardware() {
               <Smartphone className="w-8 h-8 text-gold mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">Elite Mobile Node</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                The QRON Elite App transforms any modern smartphone into a high-speed industrial scanning node. It leverages native GPU acceleration to perform Ed25519 signature verification locally, enabling secure, offline-first compliance checks in remote agricultural or manufacturing environments.
+                The QRON Elite App transforms any modern smartphone into a high-speed industrial scanning node.
               </p>
               <Link href="/elite" className="mt-8 inline-flex btn-gold px-6 py-3 text-[10px] font-black uppercase tracking-widest">
                   View Elite App

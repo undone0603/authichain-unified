@@ -4,12 +4,16 @@
  *
  * Fails the build when either of these regresses:
  *
- *  1. `workers_dev` for the two Workers that serve Stripe webhooks / private
- *     data is anything but an explicit top-level `workers_dev = false`.
+ *  1. `workers_dev` for the Workers listed in WORKERS_DEV_OFF is anything but
+ *     an explicit top-level `workers_dev = false` (TOML) or
+ *     `"workers_dev": false` (JSON/JSONC wrangler configs).
  *     Missing counts as a failure: wrangler then picks a default (true when the
  *     Worker has no routes), and authichain-automation's public workers.dev
  *     address exposed /manufacturers until it was turned off on Oct 9 2026
  *     (PM-322).
+ *
+ *  1b. `preview_urls` for the Workers in PREVIEW_URLS_OFF is anything but an
+ *     explicit top-level false (CFA-144). Missing counts as a failure.
  *
  *  2. `cancel-in-progress: true` (literally) in any workflow that deploys
  *     on push to main. With a ref-keyed concurrency group, every merge then
@@ -35,6 +39,21 @@ export const WORKERS_DEV_OFF = [
     file: "workers/authichain-automation/wrangler.toml",
   },
   { name: "authichain-edge-router", file: "worker-app/wrangler.toml" },
+  // CFA-142: its workers.dev address served stale /governance token and
+  // treasury pages until it was turned off live on Oct 9 2026 (PR #1703).
+  { name: "authichain-app", file: "wrangler.app.jsonc" },
+  // CFA-153: workers_dev = false since #1669. first-dollar-desk is NOT listed:
+  // its workers.dev stays on while a Stripe webhook endpoint points at it.
+  { name: "dpp-fulfillment", file: "workers/dpp-fulfillment/wrangler.toml" },
+];
+
+/**
+ * CFA-144: Workers whose per-version preview URLs must stay off. Needs an
+ * explicit top-level `preview_urls = false`; missing fails, because wrangler
+ * then picks a default.
+ */
+export const PREVIEW_URLS_OFF = [
+  { name: "authichain-app", file: "wrangler.app.jsonc" },
 ];
 
 function stripTomlComment(line) {
@@ -64,6 +83,65 @@ export function topLevelTomlValue(text, key) {
   return undefined;
 }
 
+/**
+ * Strip // line comments, /* block comments and trailing commas (before } or ])
+ * from JSONC. String-aware: "//", "/*" and ",}" inside strings are kept.
+ */
+export function stripJsonc(text) {
+  let out = "";
+  let inString = false;
+  // Index in `out` of a comma seen outside strings, kept until we know whether
+  // the next significant character closes an object/array.
+  let pendingComma = -1;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === "\\") {
+        out += text[i + 1] ?? "";
+        i += 1;
+      } else if (ch === '"') {
+        inString = false;
+      }
+    } else if (ch === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") i += 1;
+      out += "\n";
+    } else if (ch === "/" && text[i + 1] === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+      i += 1;
+      out += " ";
+    } else if (/\s/.test(ch)) {
+      out += ch;
+    } else {
+      if ((ch === "}" || ch === "]") && pendingComma >= 0) {
+        out = out.slice(0, pendingComma) + " " + out.slice(pendingComma + 1);
+      }
+      pendingComma = -1;
+      if (ch === ",") pendingComma = out.length;
+      if (ch === '"') inString = true;
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
+ * Raw top-level value of `key` in a wrangler config, as a TOML-style string
+ * (`"false"`, `"\"name\""`), or undefined. Handles .toml, .json and .jsonc.
+ */
+export function topLevelConfigValue(file, text, key) {
+  if (!/\.jsonc?$/.test(file)) return topLevelTomlValue(text, key);
+  let obj;
+  try {
+    obj = JSON.parse(stripJsonc(text));
+  } catch {
+    return undefined;
+  }
+  if (!obj || typeof obj !== "object" || !(key in obj)) return undefined;
+  return JSON.stringify(obj[key]);
+}
+
 function unquote(value) {
   return value?.replace(/^["']|["']$/g, "");
 }
@@ -78,20 +156,49 @@ export function checkWorkersDev(root = ROOT, targets = WORKERS_DEV_OFF) {
       errors.push(`${file}: missing (expected wrangler config for ${name})`);
       continue;
     }
-    const actualName = unquote(topLevelTomlValue(text, "name"));
+    const actualName = unquote(topLevelConfigValue(file, text, "name"));
     if (actualName !== name) {
       errors.push(
         `${file}: name is ${actualName ?? "missing"}, expected ${name}`
       );
       continue;
     }
-    const value = topLevelTomlValue(text, "workers_dev");
+    const value = topLevelConfigValue(file, text, "workers_dev");
     if (value === undefined) {
       errors.push(
         `${file} (${name}): workers_dev is missing; wrangler would choose a default. Set top-level workers_dev = false.`
       );
     } else if (value !== "false") {
       errors.push(`${file} (${name}): workers_dev = ${value}; must be false.`);
+    }
+  }
+  return errors;
+}
+
+export function checkPreviewUrls(root = ROOT, targets = PREVIEW_URLS_OFF) {
+  const errors = [];
+  for (const { name, file } of targets) {
+    let text;
+    try {
+      text = readFileSync(path.join(root, file), "utf8");
+    } catch {
+      errors.push(`${file}: missing (expected wrangler config for ${name})`);
+      continue;
+    }
+    const actualName = unquote(topLevelConfigValue(file, text, "name"));
+    if (actualName !== name) {
+      errors.push(
+        `${file}: name is ${actualName ?? "missing"}, expected ${name}`
+      );
+      continue;
+    }
+    const value = topLevelConfigValue(file, text, "preview_urls");
+    if (value === undefined) {
+      errors.push(
+        `${file} (${name}): preview_urls is missing; wrangler would choose a default. Set top-level preview_urls = false.`
+      );
+    } else if (value !== "false") {
+      errors.push(`${file} (${name}): preview_urls = ${value}; must be false.`);
     }
   }
   return errors;
@@ -218,6 +325,7 @@ export function checkCiGateWorkflows(root = ROOT, files = CI_GATE_WORKFLOWS) {
 function main() {
   const errors = [
     ...checkWorkersDev(),
+    ...checkPreviewUrls(),
     ...checkCancelInProgress(),
     ...checkCiGateWorkflows(),
   ];
@@ -227,7 +335,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress; CI gate (${CI_GATE_WORKFLOWS.join(", ")}) is per-commit on main.`
+    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; preview_urls = false on ${PREVIEW_URLS_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress; CI gate (${CI_GATE_WORKFLOWS.join(", ")}) is per-commit on main.`
   );
 }
 

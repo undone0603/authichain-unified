@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
-import { DESK_SITEMAP } from "./desk.ts";
+import { DESK_PATHS, DESK_SITEMAP } from "./desk.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
 const ENV = {
@@ -27,7 +27,8 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.doesNotMatch(html, /href="(?:https:\/\/[^"]*)?\/api\/checkout\//);
   assert.doesNotMatch(html, /Aura|MediLedger|Walmart/);
   assert.doesNotMatch(html, /1369/);
-  assert.match(html, /\$QRON is not a payment rail/);
+  assert.doesNotMatch(html, /\$QRON|[Ss]taking/);
+  assert.match(html, /<meta name="robots" content="noindex">/);
   assert.ok(
     html.includes('href="https://authichain.com/checkout/dpp_readiness"')
   );
@@ -42,10 +43,13 @@ test("/desk is a real page, not the indigo homepage", async () => {
   assert.equal(html.includes("9B6cN59br5xcaCuazy1Nu1o"), false);
 });
 
-test("desk subpaths in DESK_SITEMAP all 200", async () => {
-  for (const path of DESK_SITEMAP) {
+test("every desk path is 200, noindex, and free of $QRON copy", async () => {
+  for (const path of DESK_PATHS) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
+    const html = await res.text();
+    assert.match(html, /<meta name="robots" content="noindex">/, path);
+    assert.doesNotMatch(html, /\$QRON|[Ss]taking|[Tt]reasury/, path);
   }
 });
 
@@ -77,8 +81,8 @@ test("/desk/token splits payTo, deployer, and Smart Wallet", async () => {
   assert.ok(html.includes(X402_PUBLISHED_PAY_TO));
   assert.match(html, /0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d/);
   assert.match(html, /0xC0D26735fd9e868eacc60400ef3171Fa4161177f/);
-  assert.match(html, /Staking UI is theater/);
-  assert.match(html, /not a payment rail/);
+  assert.match(html, /<h1>Payment rails<\/h1>/);
+  assert.doesNotMatch(html, /\$QRON|[Ss]taking/);
 });
 
 test("/desk/status records telegram sitemap live and Base pending", async () => {
@@ -99,13 +103,12 @@ test("/desk/hubs does not claim W3C VC specs are implemented", async () => {
   assert.match(html, /eu-digital-product-passport-registry-test-environment/);
 });
 
-test("apex sitemap lists /desk paths that resolve", async () => {
+test("apex sitemap keeps the internal /desk out", async () => {
+  assert.equal(DESK_SITEMAP.length, 0);
   const res = await get("/sitemap.xml");
   assert.equal(res.status, 200);
   const xml = await res.text();
-  for (const path of DESK_SITEMAP) {
-    assert.match(xml, new RegExp(`https://authichain.com${path}<`));
-  }
+  assert.doesNotMatch(xml, /https:\/\/authichain\.com\/desk/);
 });
 
 test("/desk/verify runs five-agent consensus on the desk", async () => {

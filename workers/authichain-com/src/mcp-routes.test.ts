@@ -949,6 +949,13 @@ describe("mcp streamable http conformance", () => {
     expect(body.result.serverInfo.version).toBe(serverManifest.version);
   });
 
+  // PM-395: the registry listing must not say "free" (paid verify is
+  // $0.05 over x402) or claim a Polygon anchor. Cuts only, no publish.
+  it("keeps the registry description free of 'free' and Polygon claims", () => {
+    expect(serverManifest.description).not.toMatch(/\bfree\b/i);
+    expect(serverManifest.description).not.toMatch(/polygon|anchor/i);
+  });
+
   it("points the registry remote at the endpoint this module serves", () => {
     const remote = serverManifest.remotes[0];
     expect(remote.type).toBe("streamable-http");

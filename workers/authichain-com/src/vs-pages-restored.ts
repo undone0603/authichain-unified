@@ -12,7 +12,6 @@ export const RESTORED_VS_PAGES: VsDefinition[] = [
       "Everledger built provenance records for diamonds and high-value goods. Public comparison cells we cannot verify are an em dash.",
     rows: [
       { feature: "Public verifier + JWKS", authichain: "Live at /.well-known/jwks.json", competitor: "\u2014" },
-      { feature: "Certificate contract on Polygon", authichain: "Contract live; issuance in development", competitor: "\u2014" },
       { feature: "Self-serve issue a seal", authichain: "In development", competitor: "\u2014" },
       { feature: "EU DPP export", authichain: "In development", competitor: "\u2014" },
       { feature: "AI 5-agent consensus", authichain: "Goal \u2014 labeled simulated until each agent has a real signal", competitor: "\u2014" },

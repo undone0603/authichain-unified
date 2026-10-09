@@ -36,7 +36,7 @@
 
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
-import { getHyperdriveDb } from "../server/db";
+import { createHyperdriveRequestDb, getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
   getProductById,
@@ -415,7 +415,7 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      '<p>Enter a product ID to look up its record. Verification against AuthiChain\'s Polygon certificate contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> is in development.</p>\n' +
+      "<p>Enter a product ID to look up its record.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -448,27 +448,116 @@ function certificateIssuedLine(cert: {
   );
 }
 
+// Lookups must finish inside the apex worker's 4s APP_WORKER budget
+// (workers/authichain-com proxyAppWorker); otherwise the apex throws and the
+// visitor sees Cloudflare error 1101. Unknown certificate numbers were
+// observed hanging on Hyperdrive (2026-10-09, /verify?id=test123), same as
+// unknown /p/<serial> lookups did.
+const VERIFY_LOOKUP_TIMEOUT_MS = 2500;
+
+// One 2.5s deadline for the whole lookup (connect + every query), not 2.5s
+// per step: three sequential steps at 2.5s each could add up to 7.5s and
+// still blow the apex's 4s budget.
+function makeVerifyDeadline(): <T>(work: PromiseLike<T>) => Promise<T> {
+  const deadline = Date.now() + VERIFY_LOOKUP_TIMEOUT_MS;
+  return function withVerifyTimeout<T>(work: PromiseLike<T>): Promise<T> {
+    const remaining = Math.max(0, deadline - Date.now());
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+      Promise.resolve(work),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("VERIFY_LOOKUP_TIMEOUT")),
+          remaining
+        );
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  };
+}
+
+// Release the per-request pg.Client after the response without delaying it.
+// waitUntil keeps the isolate alive for the socket close; c.executionCtx
+// throws when there is no ExecutionContext (tests), so fall back to void.
+function closeVerifyDb(
+  c: Context,
+  handle: { close: () => Promise<void> }
+): void {
+  const work = handle.close().catch(err => {
+    console.warn("[dynamic-pages] /verify db close failed", err);
+  });
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    void work;
+  }
+}
+
+// One page for "no record" and for "lookup failed": both answer 404 HTML so
+// nothing crashes and nothing gets indexed. The failure variant only adds a
+// retry hint; it never implies a record exists.
+function verifyNoRecordResponse(
+  c: Context,
+  identifier: string,
+  lookupFailed: boolean
+): Response {
+  const message = lookupFailed
+    ? 'We could not complete the lookup for "' +
+      identifier +
+      '" just now, so no record can be shown. Please try again in a minute.'
+    : 'No record was found on the AuthiChain registry for "' +
+      identifier +
+      '". Check the ID and try again.';
+  return htmlResponse(
+    c,
+    htmlDocument({
+      title: "No record found | AuthiChain",
+      description: message,
+      canonicalPath: "/verify",
+      extraHead: '<meta name="robots" content="noindex">\n',
+      bodyHtml:
+        "<main>\n" +
+        "<h1>No record found</h1>\n" +
+        "<p>" +
+        escapeHtml(message) +
+        "</p>\n" +
+        '<p><a href="/verify">Look up another ID</a></p>\n' +
+        "</main>",
+    }),
+    404
+  );
+}
+
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
+  const idParam = url.searchParams.get("id");
+  const rawPathSegment = url.pathname
+    .replace(/^\/verify\/?/, "")
+    .replace(/\/+$/, "");
+  // Fallback label for the error page if decoding below throws.
+  let identifier: string | null = idParam || rawPathSegment || null;
+  let dbHandle: ReturnType<typeof createHyperdriveRequestDb> | undefined;
 
   try {
     // Extraction+decode lives inside the try: decodeURIComponent throws
     // URIError on malformed percent-encoding (e.g. /verify/%zz), and that
-    // should degrade like any other lookup failure (caught below -> SPA
-    // shell) rather than 500. Also strip a trailing slash (e.g.
+    // should degrade like any other lookup failure (caught below -> the
+    // 404 "No record found" page) rather than 500. Also strip a trailing slash (e.g.
     // /verify/CERT-001/) so it resolves the same as the non-slash form.
-    const idParam = url.searchParams.get("id");
-    const rawPathSegment = url.pathname
-      .replace(/^\/verify\/?/, "")
-      .replace(/\/+$/, "");
     const pathSegment = decodeURIComponent(rawPathSegment);
-    const identifier = idParam || pathSegment || null;
+    identifier = idParam || pathSegment || null;
 
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
     }
 
-    const db = getHyperdriveDb(c.env as any);
+    // Hyperdrive-recommended pattern: one pg.Client for this request,
+    // connected inside the lookup budget, closed after the response.
+    const withVerifyTimeout = makeVerifyDeadline();
+    dbHandle = createHyperdriveRequestDb(c.env as any);
+    await withVerifyTimeout(dbHandle.connect());
+    const db = dbHandle.db;
 
     let product: any = null;
     const numericId = Number(idParam);
@@ -477,31 +566,38 @@ async function renderVerify(c: Context): Promise<Response> {
       Number.isFinite(numericId) &&
       String(numericId) === idParam
     ) {
-      product = await getProductById(db, numericId);
+      try {
+        product = await withVerifyTimeout(getProductById(db, numericId));
+      } catch (err) {
+        // products.id is a uuid, so Postgres rejects a numeric id with
+        // 22P02 (invalid_text_representation). That means "no such record",
+        // not "lookup failed". Anything else (timeouts, connection errors)
+        // still goes to the retry page. drizzle may wrap the pg error in .cause.
+        const e = err as { code?: string; cause?: { code?: string } };
+        if (e?.code !== "22P02" && e?.cause?.code !== "22P02") throw err;
+        product = null;
+      }
     } else {
-      const cert = await getCertificateByNumber(db, identifier);
-      if (cert) product = await getProductById(db, cert.productId);
+      const lookupId: string = identifier;
+      const cert = await withVerifyTimeout(
+        getCertificateByNumber(db, lookupId)
+      );
+      if (cert) {
+        product = await withVerifyTimeout(getProductById(db, cert.productId));
+      }
     }
 
     if (!product) {
-      return htmlResponse(
-        c,
-        notFoundHtml(
-          "Verification Failed",
-          'No product was found on the AuthiChain registry for "' +
-            identifier +
-            '".',
-          "/verify"
-        ),
-        404
-      );
+      return verifyNoRecordResponse(c, identifier, false);
     }
 
-    const [cert] = await db
-      .select()
-      .from(certificates)
-      .where(eq(certificates.productId, product.id))
-      .limit(1);
+    const [cert] = await withVerifyTimeout(
+      db
+        .select()
+        .from(certificates)
+        .where(eq(certificates.productId, product.id))
+        .limit(1)
+    );
     const verified = !!cert;
     const status = verified
       ? "Certificate on record"
@@ -565,7 +661,9 @@ async function renderVerify(c: Context): Promise<Response> {
     );
   } catch (err) {
     console.error("[dynamic-pages] /verify lookup failed", err);
-    return serveSpaShell(c);
+    return verifyNoRecordResponse(c, identifier ?? "", true);
+  } finally {
+    if (dbHandle) closeVerifyDb(c, dbHandle);
   }
 }
 
@@ -745,15 +843,10 @@ const LANDING_CONTENT: Record<
   },
   govchain: {
     eyebrow: "Government Blockchain",
-    headline: "Public Records on Blockchain. Transparent & Auditable.",
+    headline: "GovChain: federal contracting tools for US small businesses, in development.",
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
-      {
-        icon: "🏛️",
-        title: "Public Records",
-        desc: "Certificate contract live on Polygon; product certification through verify is in development.",
-      },
       {
         icon: "📊",
         title: "Procurement Tracking",
@@ -763,11 +856,6 @@ const LANDING_CONTENT: Record<
         icon: "✅",
         title: "Compliance Exports",
         desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-      },
-      {
-        icon: "🔐",
-        title: "Digital Signatures",
-        desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
       },
       {
         icon: "📈",
@@ -789,6 +877,10 @@ const LANDING_CONTENT: Record<
     secondaryCta: { label: "Contact Us", href: "mailto:hello@govchain.us" },
   },
 };
+
+/** RES-209: non-affiliation line from the Oct 3 Research review. */
+const GOVCHAIN_NON_AFFILIATION =
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.";
 
 function landingNotFoundHtml(brandId: string): string {
   return notFoundHtml(
@@ -906,6 +998,7 @@ function renderLanding(c: Context): Response {
     "<p>&copy; 2026 " +
     escapeHtml(brand.displayName) +
     " &middot; part of the AuthiChain Protocol</p>\n" +
+    (brandId === "govchain" ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n" : "") +
     "</footer>\n" +
     "</main>";
 
@@ -1511,7 +1604,7 @@ function generateFormHtml(
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
-    title: "Generate a Living QR | $QRON",
+    title: "Generate a Living QR",
     description:
       "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
     canonicalPath: "/generate",

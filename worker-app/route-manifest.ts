@@ -93,6 +93,15 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
 }
 
 /**
+ * Longest prefix first, then lexicographic. First-match-wins is only safe
+ * when a nested path (`/brand/qron/artwork`) is considered before a shorter
+ * one that also matches it.
+ */
+export function prefixesLongestFirst(prefixes: Iterable<string>): string[] {
+  return [...prefixes].sort((a, b) => b.length - a.length || a.localeCompare(b));
+}
+
+/**
  * Resolve which subsystem owns an incoming request path. First-match-wins:
  *   1. `/api/` prefix               -> "api"
  *   2. `/_next/` prefix              -> "marketing" (static passthrough;
@@ -115,13 +124,13 @@ export function resolveOwner(
     return "marketing";
   }
 
-  for (const dynamicPath of DYNAMIC_HANDLER_PATHS) {
+  for (const dynamicPath of prefixesLongestFirst(DYNAMIC_HANDLER_PATHS)) {
     if (matchesPrefix(pathname, dynamicPath)) {
       return "dynamic";
     }
   }
 
-  for (const prefix of SPA_OWNED_PREFIXES) {
+  for (const prefix of prefixesLongestFirst(SPA_OWNED_PREFIXES)) {
     if (matchesPrefix(pathname, prefix)) {
       return "spa";
     }

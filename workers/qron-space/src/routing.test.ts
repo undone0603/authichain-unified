@@ -495,3 +495,41 @@ test("Nightstamp pages and APIs are proxied to the app worker", async () => {
     globalThis.fetch = real;
   }
 });
+
+test("qron.space carries no $QRON token, staking, or governance copy (PM-375)", async () => {
+  const real = globalThis.fetch;
+  const feed =
+    "<feed>" +
+    "<entry><yt:videoId>70KG5d2fFUo</yt:videoId><title>The $QRON Token Economy Incentivizing Truth</title><published>2026-01-01T00:00:00Z</published></entry>" +
+    "<entry><yt:videoId>PdCibPadCxE</yt:videoId><title>Validating Origin with QRON</title><published>2026-01-02T00:00:00Z</published></entry>" +
+    "</feed>";
+  globalThis.fetch = (async () =>
+    new Response(feed, { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+  try {
+    const html = await (await get("/")).text();
+    assert.doesNotMatch(html, /\$QRON|[Ss]taking|[Gg]overnance|0xAebfA6b08fb25b59748c93273aB8880e20FfE437/);
+    assert.doesNotMatch(html, /70KG5d2fFUo/);
+    assert.match(html, /PdCibPadCxE/);
+  } finally {
+    globalThis.fetch = real;
+  }
+  const notFound = await (await get("/nope-xyz123")).text();
+  assert.match(notFound, /<title>404 — Not Found<\/title>/);
+  const og = await (await get("/og-image.svg")).text();
+  assert.doesNotMatch(og, /\$QRON|Stake|Govern|ERC-20/);
+  assert.match(og, />QRON<\/text>/);
+});
+
+test("qron.space home meta no longer claims a Polygon certificate contract (PM-437, CFA-164)", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response("<feed></feed>", { status: 200, headers: { "content-type": "application/xml" } })) as typeof fetch;
+  try {
+    const html = await (await get("/")).text();
+    assert.doesNotMatch(html, /certificate contract on Polygon/i);
+    assert.doesNotMatch(html, /anchored to AuthiChain/i);
+    assert.match(html, /<meta name="description" content="[^"]+">/);
+  } finally {
+    globalThis.fetch = real;
+  }
+});

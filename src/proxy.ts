@@ -77,7 +77,6 @@ export function proxy(req: NextRequest) {
     req.nextUrl.pathname.startsWith('/success') ||
     req.nextUrl.pathname.startsWith('/terms') ||
     req.nextUrl.pathname.startsWith('/privacy') ||
-    req.nextUrl.pathname.startsWith('/governance') ||
     req.nextUrl.pathname.startsWith('/digital-product-passport') ||
     req.nextUrl.pathname.startsWith('/authichain') ||
     req.nextUrl.pathname.startsWith('/p/') ||
@@ -86,13 +85,11 @@ export function proxy(req: NextRequest) {
 
   const hostname = host.toLowerCase().split(':')[0];
   const routePrefix =
-    hostname === 'govchain.us'
-      ? '/governance'
-      : hostname === 'strainchain.io'
-        ? '/digital-product-passport'
-        : hostname === 'authichain.com'
-          ? '/authichain'
-          : null;
+    hostname === 'strainchain.io'
+      ? '/digital-product-passport'
+      : hostname === 'authichain.com'
+        ? '/authichain'
+        : null;
   if (routePrefix) {
     const path = req.nextUrl.pathname === '/' ? routePrefix : `${routePrefix}${req.nextUrl.pathname}`;
     const rewritten = NextResponse.rewrite(new URL(path, req.url), {

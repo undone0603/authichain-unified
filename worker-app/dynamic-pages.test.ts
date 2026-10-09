@@ -4,9 +4,21 @@ import { Hono } from "hono";
 // Node-safe mocking (mirrors worker-app/routes.test.ts's pattern): mock
 // getHyperdriveDb + the specific db helpers dynamic-pages.ts calls, so this
 // suite never touches a real Postgres/Hyperdrive connection or workerd.
-vi.mock("../server/db", () => ({
-  getHyperdriveDb: vi.fn().mockReturnValue({}),
-}));
+vi.mock("../server/db", () => {
+  const getHyperdriveDb = vi.fn().mockReturnValue({});
+  return {
+    getHyperdriveDb,
+    // /verify uses the per-request pg.Client handle. Its db is whatever
+    // getHyperdriveDb is stubbed to return, so existing stubs keep working.
+    createHyperdriveRequestDb: vi.fn(() => ({
+      db: getHyperdriveDb(),
+      connect: verifyDbConnect,
+      close: verifyDbClose,
+    })),
+  };
+});
+const verifyDbConnect = vi.fn();
+const verifyDbClose = vi.fn();
 
 vi.mock("../server/content-db-helpers", () => ({
   getCertificateByNumber: vi.fn(),
@@ -23,7 +35,8 @@ vi.mock("./onboard-notify", () => ({
 
 const { renderDynamicPage } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
-const { getHyperdriveDb } = await import("../server/db");
+const { getHyperdriveDb, createHyperdriveRequestDb } =
+  await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
 const { getQronById } = await import("../server/identity-db-helpers");
@@ -90,6 +103,8 @@ function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
 beforeEach(() => {
   vi.clearAllMocks();
   (getHyperdriveDb as any).mockReturnValue({});
+  verifyDbConnect.mockReset().mockResolvedValue(undefined);
+  verifyDbClose.mockReset().mockResolvedValue(undefined);
 });
 
 describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
@@ -369,13 +384,164 @@ describe("renderDynamicPage: /verify verification landing", () => {
     );
   });
 
-  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
+  it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
     const res = await app.request("/verify/%zz", {}, makeEnv() as any);
     const body = await res.text();
 
-    expect(res.status).toBe(200);
-    expect(body).toBe("SPA-SHELL");
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
     expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("returns a clean 404 'No record found' page for an unknown id", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    (getHyperdriveDb as any).mockReturnValue({});
+
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type") ?? "").toMatch(/html/i);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("&quot;test123&quot;");
+    expect(body).toContain('name="robots" content="noindex"');
+    expect(body).not.toMatch(/on-chain|blockchain|polygon/i);
+  });
+
+  it("escapes the id on the no-record page", async () => {
+    (getCertificateByNumber as any).mockResolvedValue(undefined);
+    const res = await app.request(
+      "/verify?id=" + encodeURIComponent("<script>x</script>"),
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+    expect(res.status).toBe(404);
+    expect(body).not.toContain("<script>x</script>");
+    expect(body).toContain("&lt;script&gt;");
+  });
+
+  it("treats Postgres 22P02 (numeric id vs uuid products.id) as 'No record found', not 'try again'", async () => {
+    const pgErr = Object.assign(
+      new Error('invalid input syntax for type uuid: "1"'),
+      { code: "22P02" }
+    );
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("Failed query"), { cause: pgErr })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("<h1>No record found</h1>");
+    expect(body).toContain("No record was found on the AuthiChain registry");
+    expect(body).not.toContain("try again in a minute");
+  });
+
+  it("keeps the retry page for other numeric-id lookup errors", async () => {
+    (getProductById as any).mockRejectedValueOnce(
+      Object.assign(new Error("connection reset"), { code: "ECONNRESET" })
+    );
+    const res = await app.request("/verify?id=1", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully (404 HTML, no throw) when the lookup errors", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(404);
+    expect(body).toContain("No record found");
+    expect(body).toContain("try again in a minute");
+  });
+
+  it("fails gracefully when the lookup hangs past the budget", async () => {
+    vi.useFakeTimers();
+    try {
+      (getCertificateByNumber as any).mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(3000);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("No record found");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens one Hyperdrive client per request and closes it after a found record", async () => {
+    (getProductById as any).mockResolvedValue({ id: 7, name: "Sneaker" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=7", {}, makeEnv() as any);
+
+    expect(res.status).toBe(200);
+    expect(createHyperdriveRequestDb).toHaveBeenCalledTimes(1);
+    expect(verifyDbConnect).toHaveBeenCalledTimes(1);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the client when the lookup fails", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+
+    expect(res.status).toBe(404);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open a client for the bare prompt", async () => {
+    await app.request("/verify", {}, makeEnv() as any);
+    expect(createHyperdriveRequestDb).not.toHaveBeenCalled();
+  });
+
+  it("answers the retry 404 when connecting through Hyperdrive hangs", async () => {
+    vi.useFakeTimers();
+    try {
+      verifyDbConnect.mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(2600);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("try again in a minute");
+      expect(getCertificateByNumber).not.toHaveBeenCalled();
+      expect(verifyDbClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses one 2.5s budget for the whole lookup, not 2.5s per step", async () => {
+    vi.useFakeTimers();
+    try {
+      // Certificate lookup takes 2s, then the product lookup hangs. With a
+      // per-step timer this would answer at ~4.5s, past the apex's 4s budget.
+      (getCertificateByNumber as any).mockReturnValue(
+        new Promise(resolve =>
+          setTimeout(() => resolve({ productId: "p-1" }), 2000)
+        )
+      );
+      (getProductById as any).mockReturnValue(new Promise(() => {}));
+      let settled = false;
+      const pending = app
+        .request("/verify?id=CERT-1", {}, makeEnv() as any)
+        .then(r => {
+          settled = true;
+          return r;
+        });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(settled).toBe(true);
+      const res = await pending;
+      expect(res.status).toBe(404);
+      expect(await res.text()).toContain("try again in a minute");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -390,6 +556,36 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(body).toContain("11 AI Styles");
     expect(body).toContain('href="/qr-codes"');
     expect(body).toContain('rel="canonical"');
+  });
+
+  it("RES-177: /landing/govchain does not claim a certificate contract live on Polygon", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("GovChain: federal contracting tools for US small businesses, in development.");
+    expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
+  it("RES-208/209: /landing/govchain drops the eSign card and old H1, carries the non-affiliation footer", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    for (const banned of [/eSign Act/i, /legally binding/i, /Public Records on Blockchain/i, /anchored on Polygon/i]) {
+      expect(body).not.toMatch(banned);
+    }
+    expect(body).toContain("GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.");
+  });
+
+  it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(import.meta.dirname, "dynamic-pages.ts"),
+      "utf8"
+    );
+    expect(src).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
   });
 
   it("returns 404 HTML for an unconfigured brand id", async () => {
@@ -692,6 +888,7 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const body = await res.text();
     expect(res.status).toBe(200);
     expect(body).toContain("Generate a Living QR");
+    expect(body).not.toContain("$QRON");
     expect(body).toContain(
       '<form id="generate-form" action="/generate" method="post">'
     );

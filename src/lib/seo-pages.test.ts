@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from "./seo-pages";
 import { planById } from "./plans";
 
@@ -332,16 +334,69 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("CFA-155: no SEO page claims a contract live or deployed on Polygon, or links 0x4da4", () => {
+    const banned = /(live|deployed) on Polygon|0x4da4/i;
+    for (const p of listSeoPages()) {
+      expect(JSON.stringify(p), p.slug).not.toMatch(banned);
+    }
+    for (const slug of [
+      "blockchain-product-authentication",
+      "counterfeit-detection-with-ai",
+      "blockchain-qr-code-for-luxury",
+      "vechain-alternative-without-tokens-or-gas-fees",
+    ]) {
+      const page = getSeoPageBySlug(slug);
+      expect(page, slug).toBeTruthy();
+      expect(JSON.stringify(page), slug).not.toMatch(banned);
+    }
+  });
+
+  it("CFA-155: the generator data files do not carry the Polygon contract claim", () => {
+    const dir = path.join(process.cwd(), "scripts", "seo-data");
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".cjs"));
+    expect(files.length).toBeGreaterThan(0);
+    const sources = [
+      ...files.map((f) => path.join(dir, f)),
+      path.join(process.cwd(), "scripts", "gen-seo-pages.cjs"),
+    ];
+    for (const f of sources) {
+      expect(fs.readFileSync(f, "utf8"), f).not.toMatch(
+        /(live|deployed) on Polygon|0x4da4/i
+      );
+    }
+  });
+
   it("DPP explainer seed does not advertise $49/mo or Bitcoin L1", () => {
     const dpp = getSeoPageBySlug("what-is-a-digital-product-passport");
     expect(dpp?.bodyHtml).toContain("What a DPP contains");
     expect(dpp?.bodyHtml).toContain("EU DPP Readiness is $299 one-time.");
-    expect(dpp?.bodyHtml).toContain("Ed25519-signed.");
+    expect(dpp?.bodyHtml).not.toContain("Ed25519-signed");
     expect(dpp?.bodyHtml).not.toContain("anchored on Polygon");
     expect(dpp?.bodyHtml).not.toContain("$49/mo");
     expect(dpp?.bodyHtml).not.toContain("Bitcoin L1");
     expect(dpp?.jsonLd.url).toBe(
       "https://authichain.com/p/what-is-a-digital-product-passport"
     );
+  });
+  it("RES-100: footwear page has no unsourced forecasts or live-issuance claims", () => {
+    const p = getSeoPageBySlug("eu-digital-product-passport-footwear");
+    expect(p).not.toBeNull();
+    const text = JSON.stringify(p);
+    expect(text).not.toMatch(/feasibility/i);
+    expect(text).not.toMatch(/follow the textiles/i);
+    expect(text).not.toMatch(/can even be proposed/i);
+    expect(text).not.toMatch(/link it to a signed record/i);
+    expect(text).not.toMatch(/signed record published now/i);
+    expect(p?.bodyHtml).toContain("Signed records are in development.");
+    expect(p?.bodyHtml).toContain("a Commission study on footwear due by the end of 2027.</p>");
+    expect(p?.metaDescription.endsWith("by the end of 2027.")).toBe(true);
+  });
+
+  it("RES-103: no page claims records are already issuing or offers proof of origin", () => {
+    for (const p of listSeoPages()) {
+      const text = JSON.stringify(p);
+      expect(text, p.slug).not.toMatch(/already issuing/i);
+      expect(text, p.slug).not.toMatch(/proof of origin/i);
+    }
   });
 });
