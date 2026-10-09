@@ -436,7 +436,7 @@ function renderCertificate(seal: DeskSeal): string {
         : "Unknown";
   const headline =
     seal.status === "verified"
-      ? ""
+      ? "Desk sample on record. Not a live certificate."
       : seal.status === "failed"
         ? "The mark does not hold."
         : "Unknown. Not attested.";
@@ -664,7 +664,7 @@ function verify(request: Request): string {
     "Verify — AuthiChain desk",
     "Unknown IDs stay unknown.",
     "/desk/verify",
-    `<p class="kicker"></p>
+    `<p class="kicker">Desk samples only</p>
      <h1>Verify</h1>
      <p class="muted">Desk samples are labeled. query_provenance never attests an unknown ID.</p>
      <form id="vf" class="card" style="max-width:28rem" method="get" action="/desk/verify">

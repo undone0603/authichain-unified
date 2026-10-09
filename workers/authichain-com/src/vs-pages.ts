@@ -114,11 +114,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
         competitor: true,
       },
       {
-        feature: "On-chain cryptographic anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor: true,
-      },
-      {
         feature: "Self-serve onboarding < 1 day",
         authichain: "In development",
         competitor: false,
@@ -150,7 +145,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Strongest Proof Layer",
-        desc: "",
+        desc: "Signed, publicly checkable certificates are in development.",
       },
     ],
   },
