@@ -342,11 +342,11 @@ new_sqlite_classes = ["RateLimiter"]
 #   "0 6 * * *",   # subscription-health-check — in-app expiry notices, marks past-due, resets quotas (internal)
 #   "0 7 * * *",   # certificate-expiry-check — notifies cert owners of expiry (transactional)
 #   "0 8 * * *",   # dunning-escalation — transactional payment-failed/past-due emails to affected customers (standard billing recovery)
-#   "0 8 * * 1",   # weekly-analytics-digest — Monday internal stats report to the owner
+#   "0 9 * * 1",   # weekly-analytics-digest — Monday internal stats report, off the 08:00 dunning tick
 #   "0 11 * * *",  # live-systems-check — read-only ping of Stripe/HubSpot/Gmail/PostHog/GA4 liveness
 #   "0 12 * * *",  # token-metrics — read-only on-chain $QRON supply/gas snapshot
 #   "0 13 * * *",  # ecosystem-health — read-only external uptime check across product domains
-#   "0 */6 * * *", # fraud-detection-sweep — inserts fraud_alerts flags only (defensive; no revocation/outreach)
+#   "0 1,10,16,22 * * *", # fraud-detection-sweep — fraud_alerts flags only; off the maintenance hours
 # ]
 #
 # ── GROUP B — HELD: do NOT enable without an explicit, per-job decision ──────
