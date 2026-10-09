@@ -164,15 +164,70 @@ export function checkCancelInProgress(root = ROOT) {
   return errors;
 }
 
+/**
+ * CI workflows that gate main (CFA-123). No literal `cancel-in-progress: true`,
+ * and on push the concurrency group must be per commit (contain github.sha):
+ * GitHub cancels an older PENDING run in the same group when a newer one
+ * queues, even with cancel-in-progress false, so a shared main group can still
+ * drop a commit's CI before it starts.
+ */
+export const CI_GATE_WORKFLOWS = ["main.yml"];
+
+/** The `group:` value of the top-level `concurrency:` block, or null. */
+export function topLevelConcurrencyGroup(text) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex(l => /^concurrency\s*:/.test(l));
+  if (start < 0) return null;
+  const inline = lines[start].replace(/^concurrency\s*:/, "").trim();
+  if (inline && !inline.startsWith("#")) return inline;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const l = lines[i];
+    if (/^\S/.test(l) && !l.startsWith("#")) break;
+    const m = l.match(/^\s+group\s*:\s*(.+?)\s*$/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+export function checkCiGateWorkflows(root = ROOT, files = CI_GATE_WORKFLOWS) {
+  const errors = [];
+  for (const file of files) {
+    const rel = `.github/workflows/${file}`;
+    let text;
+    try {
+      text = readFileSync(path.join(root, rel), "utf8");
+    } catch {
+      errors.push(`${rel}: missing (listed in CI_GATE_WORKFLOWS).`);
+      continue;
+    }
+    for (const line of cancelInProgressTrueLines(text)) {
+      errors.push(
+        `${rel}:${line}: cancel-in-progress: true on a CI gate workflow; use \${{ github.event_name == 'pull_request' }}.`
+      );
+    }
+    const group = topLevelConcurrencyGroup(text);
+    if (group !== null && !/github\.sha/.test(group)) {
+      errors.push(
+        `${rel}: concurrency group "${group}" is shared across pushes to main; make it per commit on push (include github.sha) so a newer push can't cancel a pending run.`
+      );
+    }
+  }
+  return errors;
+}
+
 function main() {
-  const errors = [...checkWorkersDev(), ...checkCancelInProgress()];
+  const errors = [
+    ...checkWorkersDev(),
+    ...checkCancelInProgress(),
+    ...checkCiGateWorkflows(),
+  ];
   if (errors.length) {
     for (const e of errors) console.error(`::error::${e}`);
     console.error(`Deploy invariants: ${errors.length} problem(s).`);
     process.exit(1);
   }
   console.log(
-    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress.`
+    `Deploy invariants OK: workers_dev = false on ${WORKERS_DEV_OFF.map(t => t.name).join(", ")}; no push-to-main deploy workflow cancels in progress; CI gate (${CI_GATE_WORKFLOWS.join(", ")}) is per-commit on main.`
   );
 }
 

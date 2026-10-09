@@ -6,7 +6,9 @@ import { test } from "node:test";
 import {
   cancelInProgressTrueLines,
   checkCancelInProgress,
+  checkCiGateWorkflows,
   checkWorkersDev,
+  topLevelConcurrencyGroup,
   topLevelTomlValue,
   triggersOnPushToMain,
 } from "./check-deploy-invariants.mjs";
@@ -136,4 +138,61 @@ test("cancelInProgressTrueLines matches quoted true and trailing comments only",
   const text =
     "a\n  cancel-in-progress: 'true' # x\n  cancel-in-progress: false\n";
   assert.deepEqual(cancelInProgressTrueLines(text), [2]);
+});
+
+// ─── CI gate workflows (CFA-123) ─────────────────────────────────────────────
+
+const CI_OK = `name: CI Main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+concurrency:
+  group: ci-main-\${{ github.event_name == 'push' && github.sha || github.head_ref || github.ref }}
+  cancel-in-progress: \${{ github.event_name == 'pull_request' }}
+jobs: {}
+`;
+
+test("CI gate: per-commit group on push + PR-only cancel passes", () => {
+  const root = repo({ ".github/workflows/main.yml": CI_OK });
+  assert.deepEqual(checkCiGateWorkflows(root, ["main.yml"]), []);
+});
+
+test("CI gate: shared main group fails (newer push cancels the pending run)", () => {
+  const shared = CI_OK.replace(
+    /group: .*/,
+    "group: ci-main-${{ github.head_ref || github.ref }}"
+  );
+  const root = repo({ ".github/workflows/main.yml": shared });
+  const errors = checkCiGateWorkflows(root, ["main.yml"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /per commit/);
+});
+
+test("CI gate: literal cancel-in-progress: true fails", () => {
+  const bad = CI_OK.replace(
+    /cancel-in-progress: .*/,
+    "cancel-in-progress: true"
+  );
+  const root = repo({ ".github/workflows/main.yml": bad });
+  const errors = checkCiGateWorkflows(root, ["main.yml"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /main\.yml:\d+: cancel-in-progress: true/);
+});
+
+test("CI gate: a listed workflow that is missing fails", () => {
+  const root = repo({ "x.txt": "" });
+  assert.match(checkCiGateWorkflows(root, ["main.yml"])[0], /missing/);
+});
+
+test("topLevelConcurrencyGroup reads block and inline forms", () => {
+  assert.equal(
+    topLevelConcurrencyGroup(
+      "concurrency:\n  group: g-1\n  cancel-in-progress: false\n"
+    ),
+    "g-1"
+  );
+  assert.equal(topLevelConcurrencyGroup("concurrency: g-2\n"), "g-2");
+  assert.equal(topLevelConcurrencyGroup("on: push\n"), null);
 });
