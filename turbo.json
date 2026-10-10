@@ -9,6 +9,12 @@
       "dependsOn": ["build"]
     },
     "lint": {},
-    "check": {}
+    "check": {},
+    "authichain-scan-validate#build": {
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "authichain-worker#build": {
+      "outputs": ["dist/**"]
+    }
   }
 }
