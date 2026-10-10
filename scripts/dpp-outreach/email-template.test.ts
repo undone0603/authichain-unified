@@ -2,10 +2,10 @@
 // workspace or generations. The subject line (line 3) is renamed on #1727.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 const tpl = readFileSync(
-  fileURLToPath(new URL("./email-template.txt", import.meta.url)),
+  path.resolve(process.cwd(), "scripts/dpp-outreach/email-template.txt"),
   "utf8",
 );
 const body = tpl
