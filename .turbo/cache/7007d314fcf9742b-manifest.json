@@ -1,0 +1,146 @@
+{
+  "files": {
+    "packages/evidence/dist/index.test.d.ts": {
+      "size": 11,
+      "mtime_nanos": 1791646932211977743,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/.turbo/turbo-build.log": {
+      "size": 386,
+      "mtime_nanos": 1791646932326977749,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/base.d.ts": {
+      "size": 1498,
+      "mtime_nanos": 1791646932169977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.js.map": {
+      "size": 928,
+      "mtime_nanos": 1791646932103977738,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.test.d.ts": {
+      "size": 11,
+      "mtime_nanos": 1791646932200977743,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/mapping.js.map": {
+      "size": 985,
+      "mtime_nanos": 1791646932154977740,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/index.js.map": {
+      "size": 578,
+      "mtime_nanos": 1791646932172977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.d.ts": {
+      "size": 2674,
+      "mtime_nanos": 1791646932140977740,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/index.js": {
+      "size": 496,
+      "mtime_nanos": 1791646932172977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/mapping.d.ts": {
+      "size": 112,
+      "mtime_nanos": 1791646932156977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.test.js.map": {
+      "size": 1245,
+      "mtime_nanos": 1791646932200977743,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.js": {
+      "size": 746,
+      "mtime_nanos": 1791646932103977738,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/base.js.map": {
+      "size": 1332,
+      "mtime_nanos": 1791646932163977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/dscsa.test.js": {
+      "size": 1733,
+      "mtime_nanos": 1791646932200977743,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/index.test.js": {
+      "size": 1197,
+      "mtime_nanos": 1791646932211977743,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist": {
+      "size": 0,
+      "mtime_nanos": 0,
+      "mode": 0,
+      "is_dir": true
+    },
+    "packages/evidence/dist/mapping.js": {
+      "size": 1273,
+      "mtime_nanos": 1791646932154977740,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/index.d.ts": {
+      "size": 2075,
+      "mtime_nanos": 1791646932182977742,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/base.js": {
+      "size": 1104,
+      "mtime_nanos": 1791646932163977741,
+      "mode": 438,
+      "is_dir": false
+    },
+    "packages/evidence/dist/index.test.js.map": {
+      "size": 1017,
+      "mtime_nanos": 1791646932210977743,
+      "mode": 438,
+      "is_dir": false
+    }
+  },
+  "order": [
+    "packages/evidence/.turbo/turbo-build.log",
+    "packages/evidence/dist",
+    "packages/evidence/dist/base.d.ts",
+    "packages/evidence/dist/base.js",
+    "packages/evidence/dist/base.js.map",
+    "packages/evidence/dist/dscsa.d.ts",
+    "packages/evidence/dist/dscsa.js",
+    "packages/evidence/dist/dscsa.js.map",
+    "packages/evidence/dist/dscsa.test.d.ts",
+    "packages/evidence/dist/dscsa.test.js",
+    "packages/evidence/dist/dscsa.test.js.map",
+    "packages/evidence/dist/index.d.ts",
+    "packages/evidence/dist/index.js",
+    "packages/evidence/dist/index.js.map",
+    "packages/evidence/dist/index.test.d.ts",
+    "packages/evidence/dist/index.test.js",
+    "packages/evidence/dist/index.test.js.map",
+    "packages/evidence/dist/mapping.d.ts",
+    "packages/evidence/dist/mapping.js",
+    "packages/evidence/dist/mapping.js.map"
+  ]
+}
