@@ -62,7 +62,7 @@
   },
   "merge_autopilot": {
     "$comment": "Merges trusted PRs into main once every check is green and GitHub reports clean; merges main into branches that fall behind so CI re-runs first (never rebases). Owner decision 2026-10-02: covers every path, including security, revenue, schema and the charter. Set enabled=false, or add the label 'hold' to one PR, to stop it. Script: scripts/autonomy/merge-autopilot.mjs.",
-    "enabled": false,
+    "enabled": true,
     "trusted_authors": ["undone0603", "dependabot[bot]"],
     "hold_labels": ["hold", "do-not-merge"]
   },
@@ -91,7 +91,7 @@
         "content-routine-pr.yml": "off",
         "dependabot-auto-merge.yml": "off",
         "automerge-dependabot.yml": "off",
-        "merge-autopilot.yml": "off",
+        "merge-autopilot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
         "autonomy-reconcile.yml": "off",
