@@ -62,7 +62,10 @@ describe("QRON edge POST /api/verify canonical adapter", () => {
 
     expect(res.status).toBe(409);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.json()).toEqual(canonical);
+    expect(await res.json()).toEqual({
+      ...canonical,
+      reasons: ["decision_blocked", "canonical_response_not_positive"],
+    });
   });
 
   it("downgrades a contradictory blocked HTTP 200 response", async () => {
