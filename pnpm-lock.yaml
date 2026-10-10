@@ -53,6 +53,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.1
         version: 1.31.0(zod@3.25.76)
+      '@modelcontextprotocol/server-memory':
+        specifier: ^2026.8.31
+        version: 2026.8.31(zod@3.25.76)
       '@paddle/paddle-node-sdk':
         specifier: ^3.10.0
         version: 3.10.0
@@ -3505,6 +3508,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@modelcontextprotocol/server-memory@2026.8.31':
+    resolution: {integrity: sha512-ljj/3S4aGjxdNSQWw6gucKKGnTLdBPWxzapyY/MT2tOVyZwvxChvevXSLPwx59nKJAlVpUVW+cOlnVRXRwiqMQ==}
+    hasBin: true
 
   '@msgpack/msgpack@3.1.2':
     resolution: {integrity: sha512-JEW4DEtBzfe8HvUYecLU9e6+XJnKDlUAIve8FvPzF3Kzs6Xo/KuZkZJsDH0wJXl/qEZbeeE7edxDNY3kMs39hQ==}
@@ -16689,6 +16696,14 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.5.4)
     transitivePeerDependencies:
       - supports-color
+
+  '@modelcontextprotocol/server-memory@2026.8.31(zod@3.25.76)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.31.0(zod@3.25.76)
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+      - zod
 
   '@msgpack/msgpack@3.1.2': {}
 
