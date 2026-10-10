@@ -64,12 +64,18 @@ jobs:
       # runs them. node:test files are excluded by vitest.config.ts and run on
       # their workspace runners, or in the next step when they have none.
       - name: Root Vitest suite
+        id: root_vitest
+        # Keep running independent suites when this large suite fails; the final
+        # enforcement step below preserves a failing workflow conclusion.
+        continue-on-error: true
         run: pnpm exec vitest run
 
       # node:test files that no workspace `test` script runs. Named, not
       # globbed, past scripts/ci: scripts/lib and worker-app also hold Vitest
       # suites, which node --test cannot run.
       - name: Check node:test suites with no workspace runner
+        id: node_test_unassigned
+        continue-on-error: true
         run: >-
           node --experimental-strip-types --test
           scripts/autonomy/*.test.mjs
@@ -83,12 +89,40 @@ jobs:
       # node:test suites outside scripts/autonomy and scripts/ci that no other
       # job ran: the QFS envelope, the B2B send policy and the cron dispatcher.
       - name: Check other node:test suites
+        id: node_test_other
+        continue-on-error: true
         run: pnpm exec tsx --test protocol/qfs/envelope.test.mjs scripts/lib/b2b-send-policy.test.ts worker-app/cron-dispatch.test.ts workers/authichain-verify-worker/src/agent-d1-concurrency.node-test.mjs
 
       # Hardhat contract tests (test/AuthiChainLedger.test.ts). Hardhat fetches
       # solc 0.8.19 on first run; no other job ran these.
       - name: Contract tests (Hardhat)
+        id: hardhat_contracts
+        continue-on-error: true
         run: pnpm test:contracts
 
       - name: Check wrangler.toml Durable Object migrations
+        id: wrangler_do
+        continue-on-error: true
         run: node scripts/check-wrangler-durable-objects.mjs
+
+      # Do not let continue-on-error turn a failed suite green. This final gate
+      # makes every suite outcome explicit after all independent checks ran.
+      - name: Enforce full test matrix
+        if: always()
+        env:
+          ROOT_VITEST: ${{ steps.root_vitest.outcome }}
+          NODE_TEST_UNASSIGNED: ${{ steps.node_test_unassigned.outcome }}
+          NODE_TEST_OTHER: ${{ steps.node_test_other.outcome }}
+          HARDHAT_CONTRACTS: ${{ steps.hardhat_contracts.outcome }}
+          WRANGLER_DO: ${{ steps.wrangler_do.outcome }}
+        run: |
+          printf 'Root Vitest: %s\\nUnassigned node:test: %s\\nOther node:test: %s\\nHardhat contracts: %s\\nDurable Object migrations: %s\\n' \\
+            "$ROOT_VITEST" "$NODE_TEST_UNASSIGNED" "$NODE_TEST_OTHER" "$HARDHAT_CONTRACTS" "$WRANGLER_DO"
+          if [ "$ROOT_VITEST" != success ] || \\
+             [ "$NODE_TEST_UNASSIGNED" != success ] || \\
+             [ "$NODE_TEST_OTHER" != success ] || \\
+             [ "$HARDHAT_CONTRACTS" != success ] || \\
+             [ "$WRANGLER_DO" != success ]; then
+            echo "::error::One or more required test suites failed or were skipped. See individual step logs above."
+            exit 1
+          fi
