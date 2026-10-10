@@ -116,3 +116,18 @@ test("/pricing: EU DPP Readiness, no EU DPP Workspace, no workspace-claim copy",
   assert.match(h, /EU DPP Readiness/);
   assert.match(h, /Pay \$299 on Stripe/);
 });
+
+test("PM-519: pages.json has no workspace/generations claims", () => {
+  const all = read("content/seo/pages.json");
+  assert.doesNotMatch(all, /50 workspace generations/i);
+  assert.doesNotMatch(all, /opens an AuthiChain workspace/i);
+  for (const slug of [
+    "battery-passport-for-small-e-bike-brands",
+    "made-in-america-origin-claim-substantiation",
+  ]) {
+    const s = page(slug);
+    assert.doesNotMatch(s, /50 workspace generations/i);
+    assert.doesNotMatch(s, /opens an AuthiChain workspace/i);
+    assert.match(s, /short onboarding form/);
+  }
+});
