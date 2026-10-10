@@ -20,12 +20,11 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-async function canonicalVerification(jws: string | null, expectedObjectId?: string): Promise<CanonicalVerificationResponse | null> {
+async function canonicalVerification(jws: string | null, expectedObjectId?: string) {
   if (!jws) return null;
   const endpoint = process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
   if (!endpoint) throw new Error("AUTHICHAIN_CANONICAL_VERIFY_URL not configured");
-  const result = await verifyWithCanonicalWorker(endpoint, jws, expectedObjectId);
-  return result.response;
+  return verifyWithCanonicalWorker(endpoint, jws, expectedObjectId);
 }
 
 async function handle(dppId: string, visitId: string | null, source: string, jws: string | null = null, expectedObjectId?: string) {
@@ -37,8 +36,27 @@ async function handle(dppId: string, visitId: string | null, source: string, jws
     return NextResponse.json({ error: result.error, ...(result.detail ? { detail: result.detail } : {}) }, { status: result.status });
   }
   try {
-    const protocolVerification = await canonicalVerification(jws, expectedObjectId);
-    return NextResponse.json({ ...result, ...(protocolVerification ? { protocol_verification: protocolVerification } : {}) });
+    const verification = await canonicalVerification(jws, expectedObjectId);
+    if (!verification) return NextResponse.json(result);
+
+    const protocolVerification = verification.response;
+    // A published passport is not a positive protocol decision. Never let the
+    // DPP adapter return HTTP 200 for a blocked, invalid, or indeterminate JWS.
+    const canonicalPositive =
+      verification.httpStatus >= 200 &&
+      verification.httpStatus < 300 &&
+      protocolVerification.valid === true &&
+      protocolVerification.decision === "verified";
+    const status = canonicalPositive
+      ? 200
+      : verification.httpStatus >= 400
+        ? verification.httpStatus
+        : 409;
+
+    return NextResponse.json(
+      { ...result, protocol_verification: protocolVerification },
+      { status },
+    );
   } catch (error) {
     return NextResponse.json({
       ...result,

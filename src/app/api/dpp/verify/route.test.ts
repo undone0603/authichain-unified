@@ -53,7 +53,7 @@ describe("DPP verification canonical adapter", () => {
 
   it("preserves the canonical blocked decision instead of treating publication as physical verification", async () => {
     vi.mocked(verifyWithCanonicalWorker).mockResolvedValue({
-      httpStatus: 409,
+      httpStatus: 200,
       response: canonicalBlocked,
     });
     const res = await POST(new NextRequest("https://authichain.com/api/dpp/verify", {
@@ -62,7 +62,7 @@ describe("DPP verification canonical adapter", () => {
       body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation", expected_object_id: "gtin:123" }),
     }));
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({
       ok: true,
       status: "verified",
