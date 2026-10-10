@@ -210,15 +210,10 @@ function getLandingContent(brandId: BrandId): LandingContent {
     },
     govchain: {
       eyebrow: "Government Blockchain",
-      headline: "Public Records on Blockchain. Transparent & Auditable.",
+      headline: "GovChain: federal contracting tools for US small businesses, in development.",
       subhead:
         "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
       features: [
-        {
-          icon: "🏛️",
-          title: "Public Records",
-          desc: "Certificate contract live on Polygon; product certification through verify is in development.",
-        },
         {
           icon: "📊",
           title: "Procurement Tracking",
@@ -228,11 +223,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
           icon: "✅",
           title: "Compliance Exports",
           desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-        },
-        {
-          icon: "🔐",
-          title: "Digital Signatures",
-          desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
         },
         {
           icon: "📈",

@@ -63,7 +63,6 @@ Include:
 - The "Atomic Action" of truth.
 - Ed25519 signature verification.
 - Bitcoin L1 anchoring.
-- 5-Agent AI Consensus.
 
 Return JSON: { "prTitle": "...", "prBody": "..." }
     `;
@@ -109,14 +108,14 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       summary: "Medtronic recalled the Bravo delivery system due to a defect in the adhesive that causes capsules to prematurely detach, leading to risk of aspiration or esophageal perforation. 33 serious injuries reported.",
       incidentDate: "January 8, 2026",
       whyAuthiChainFixesThis: "AuthiChain's Bitcoin L1 Truth Layer would have provided an immutable manufacturing record of the faulty adhesive batches, enabling Medtronic to perform a surgical recall of specific affected SKUs instead of a global device quarantine.",
-      technicalAngle: "Cryptographic batch-ancestry tracking isolates component-level failures in under 2 seconds."
+      technicalAngle: ""
     };
 
     const prBody = `Roscommon, MI — AuthiChain (SAM: ZACHARY KIETZMAN, CAGE 1PUJ6) has released a technical analysis in response to the FDA Class I designation of the Medtronic Bravo Esophageal pH Monitoring Capsules recall.
 
 The recall, cited for detachment risks linked to adhesive failure, highlights a critical 'Provenance Gap' in medical device supply chains. AuthiChain's protocol addresses this by anchoring component-level metadata—including adhesive batch IDs and curing timestamps—directly to the Bitcoin L1 blockchain.
 
-By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical recalls of specific faulty units within minutes, rather than months. AuthiChain's 5-Agent AI Consensus engine further identifies supply chain anomalies before they result in the 33 serious injuries cited in the Medtronic report. 
+By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical recalls of specific faulty units within minutes, rather than months. 
 
 As the FDA DSCSA 2027 mandates approach, AuthiChain provides the only fips-compliant Truth Layer capable of securing life-critical hardware provenance.`;
 

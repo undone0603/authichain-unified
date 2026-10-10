@@ -30,12 +30,7 @@ import { ESTATE_FONTS_LINK } from "../../_shared/estate-landing";
 // Extensionless on purpose: tsconfig.workers.json charges one TS5097 per
 // ".ts" import and the ratchet fails on any increase.
 import { DPP_CATEGORIES } from "../../../src/lib/dpp-readiness";
-import {
-  ANCHOR_EXAMPLE_ID,
-  ANCHOR_EXAMPLE_TX,
-  CERT_CONTRACT,
-  TOOLS,
-} from "./mcp-routes";
+import { TOOLS } from "./mcp-routes";
 import { PUBLISHED_PACKS as PACKS, packUrl } from "./published-packs";
 
 export const MCP_INSTALL_PATHS = [
@@ -154,22 +149,6 @@ export type Showcase = {
  */
 export const SHOWCASES: readonly Showcase[] = [
   {
-    slug: "anchor",
-    eyebrow: "Polygon mainnet",
-    title: "Verify a signed record against its on-chain anchor",
-    call: { tool: "verify_record", args: { id: ANCHOR_EXAMPLE_ID } },
-    returns:
-      "Checks the Ed25519 signature, confirms the signer is allowlisted, then reads Polygon transaction " +
-      `${ANCHOR_EXAMPLE_TX.slice(0, 10)}…${ANCHOR_EXAMPLE_TX.slice(-4)} and confirms it carries this record's hash. ` +
-      "Returns verified, valid-unanchored or invalid, with the reason list.",
-    limit:
-      "This is the protocol demonstration record. Its own credentialSubject says it is not a product and not a battery passport.",
-    evidence: {
-      label: "protocol/examples/polygon-anchor-1",
-      href: "https://authichain.com/protocol",
-    },
-  },
-  {
     slug: "battery",
     eyebrow: BATTERY ? `Law from ${BATTERY.date}` : "EU battery regulation",
     title: "Score EU Digital Product Passport readiness for a battery",
@@ -269,6 +248,9 @@ section:first-of-type{border-top:0}
 .sub{color:var(--ac-muted);max-width:62ch;margin-bottom:22px}
 .grid{display:grid;gap:14px}
 @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
+@media(min-width:900px){.grid.three{grid-template-columns:repeat(3,1fr)}}
+/* 720-899px: two columns, so an odd last card spans both (no blank slot). */
+@media(min-width:720px) and (max-width:899px){.grid.two.three>:last-child:nth-child(odd){grid-column:1/-1}}
 .card{background:var(--ac-card);border:1px solid var(--ac-line);
   border-radius:var(--ac-radius);padding:var(--ac-pad)}
 .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
@@ -352,7 +334,7 @@ export function renderMcpInstallPage(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the AuthiChain MCP server | AuthiChain</title>
-<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Free verification of Polygon-anchored signed records and EU Digital Product Passport readiness, over MCP.">
+<meta name="description" content="Connect AuthiChain to Claude, Cursor or VS Code in one step. Look up AuthiChain product records. x402 paid verification and on-chain anchoring in development.">
 <link rel="canonical" href="${MCP_INSTALL_CANONICAL}">
 ${ESTATE_FONTS_LINK}
 <style>${CSS}</style>
@@ -419,10 +401,10 @@ ${ESTATE_FONTS_LINK}
 
 <section><div class="wrap">
   <h2>Showcases</h2>
-  <p class="sub">Four calls you can paste and run right now. Every one of them hits a record that is
+  <p class="sub">Calls you can paste and run right now. Every one of them hits a record that is
   already published — none of this is a mock-up, and each card states what the call does
   <em>not</em> prove.</p>
-  <div class="grid two">${SHOWCASES.map(showcaseCard).join("")}</div>
+  <div class="grid two three">${SHOWCASES.map(showcaseCard).join("")}</div>
 </div></section>
 
 <section><div class="wrap">
@@ -449,8 +431,7 @@ ${ESTATE_FONTS_LINK}
 </div></section>
 
 <footer><div class="wrap">
-  <p>Certificates are ERC-721 on Polygon at <code>${esc(CERT_CONTRACT)}</code>.
-  Verification is free and always will be: <a href="https://authichain.com/protocol">read the open
+  <p>Verification is free and always will be: <a href="https://authichain.com/protocol">read the open
   verifier</a>, or run it offline with <code>npx authichain-verify</code>.</p>
   <p style="margin:0"><a href="${esc(MCP_ENDPOINT)}">MCP discovery</a> ·
   <a href="https://authichain.com/protocol">Protocol</a> ·

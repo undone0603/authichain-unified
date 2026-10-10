@@ -127,8 +127,12 @@ describe("battery passport offer page", () => {
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
     expect(html).toContain(
-      "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
+      "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542."
     );
+    // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
+    expect(html).not.toContain("It is a readiness assessment");
+    expect(html).not.toContain('"serviceType":"EU Digital Battery Passport readiness assessment"');
+    expect(html).toContain('"serviceType":"Workspace for EU Digital Battery Passport figures"');
     expect(html).not.toContain("working passport you control");
     expect(html).not.toContain("signed and publicly verifiable");
     expect(html).toContain(

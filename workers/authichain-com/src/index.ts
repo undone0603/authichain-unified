@@ -154,7 +154,7 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. In development: signed, publicly verifiable certificates and 5-agent consensus verification.',
+    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
@@ -180,7 +180,7 @@ const SEO = {
     },
     {
       q: 'What is the authentic agentic economy?',
-      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real.',
     },
   ],
 };
@@ -2577,10 +2577,9 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. In development: 5-agent consensus verification.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "Our goal: five agents reach weighted consensus in under 2.1 seconds. MCP tools will expose that check to any model that can call AuthiChain." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -2698,9 +2697,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. Product certification through verify is in development. See the
-      <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
-      <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
+      This fingerprint is not stored and not anchored. Product certification through verify is in development. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>
@@ -2834,9 +2831,8 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
-  <h2>One record, anchored on Polygon mainnet</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in a Polygon transaction (block 94,680,852).
-    It is a demonstration, not a product.</p>
+  <h2>One demonstration record</h2>
+  <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
     <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
@@ -2887,7 +2883,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3108,7 +3104,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
           <div class="feature-title">AI provenance verification (in development)</div>
-          <div class="feature-desc">Our goal: 5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) that will verify authenticity in under 2.1 seconds. Goal: counterfeit detection built into every verification.</div>
+          <div class="feature-desc">Goal: counterfeit detection built into every verification.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>

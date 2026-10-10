@@ -901,3 +901,32 @@ describe("GET /api/generate requires the service role", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
+  it("answers 500 so Stripe retries when the duplicate guard is down", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const err = Object.assign(new Error("claim unavailable"), {
+      name: "StripeEventClaimUnavailableError",
+    });
+    (handleStripeWebhook as any).mockRejectedValueOnce(err);
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(500);
+  });
+
+  it("still answers 400 for other handler errors (bad signature)", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    (handleStripeWebhook as any).mockRejectedValueOnce(
+      new Error("No signatures found matching the expected signature")
+    );
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(400);
+  });
+});

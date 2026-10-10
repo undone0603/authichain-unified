@@ -302,10 +302,12 @@ function buildEntry(d) {
   const h1 = d.h1 || kwTitle;
   const bodyHtml =
     `<p>${esc(d.lead)}</p>` +
-    `<h2>Why ${esc(b.name)}</h2>` +
-    `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` +
+    (d.bullets.length
+      ? `<h2>Why ${esc(b.name)}</h2>` + `<ul>${d.bullets.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
+      : '') +
     `<h2>How it works</h2>` +
-    `<p>Issue a unique identifier per unit and link it to a signed record. ${esc(b.price)}</p>` +
+    // d.howItWorks (optional) overrides the How-it-works line for one entry (RES-100 F5).
+    `<p>${d.howItWorks ? esc(d.howItWorks) : 'Issue a unique identifier per unit and link it to a signed record.'} ${esc(b.price)}</p>` +
     moneyCtaHtml(d.brand, d.keyword, b) +
     (d.faqs.length ? `<h2>FAQ</h2>` + d.faqs.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('') : '');
   const jsonLd = {

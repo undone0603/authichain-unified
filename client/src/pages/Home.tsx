@@ -391,7 +391,7 @@ export default function Home() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Start authenticating today. Every plan includes Ed25519 signing, blockchain anchoring, and AI analysis.
+              Start authenticating today.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">

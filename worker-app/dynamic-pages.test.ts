@@ -4,9 +4,21 @@ import { Hono } from "hono";
 // Node-safe mocking (mirrors worker-app/routes.test.ts's pattern): mock
 // getHyperdriveDb + the specific db helpers dynamic-pages.ts calls, so this
 // suite never touches a real Postgres/Hyperdrive connection or workerd.
-vi.mock("../server/db", () => ({
-  getHyperdriveDb: vi.fn().mockReturnValue({}),
-}));
+vi.mock("../server/db", () => {
+  const getHyperdriveDb = vi.fn().mockReturnValue({});
+  return {
+    getHyperdriveDb,
+    // /verify uses the per-request pg.Client handle. Its db is whatever
+    // getHyperdriveDb is stubbed to return, so existing stubs keep working.
+    createHyperdriveRequestDb: vi.fn(() => ({
+      db: getHyperdriveDb(),
+      connect: verifyDbConnect,
+      close: verifyDbClose,
+    })),
+  };
+});
+const verifyDbConnect = vi.fn();
+const verifyDbClose = vi.fn();
 
 vi.mock("../server/content-db-helpers", () => ({
   getCertificateByNumber: vi.fn(),
@@ -23,7 +35,8 @@ vi.mock("./onboard-notify", () => ({
 
 const { renderDynamicPage } = await import("./dynamic-pages");
 const { notifyPilotIntake } = await import("./onboard-notify");
-const { getHyperdriveDb } = await import("../server/db");
+const { getHyperdriveDb, createHyperdriveRequestDb } =
+  await import("../server/db");
 const { getCertificateByNumber, getProductById } =
   await import("../server/content-db-helpers");
 const { getQronById } = await import("../server/identity-db-helpers");
@@ -90,6 +103,8 @@ function mockLeadInsert(execute = vi.fn().mockResolvedValue({})) {
 beforeEach(() => {
   vi.clearAllMocks();
   (getHyperdriveDb as any).mockReturnValue({});
+  verifyDbConnect.mockReset().mockResolvedValue(undefined);
+  verifyDbClose.mockReset().mockResolvedValue(undefined);
 });
 
 describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
@@ -314,6 +329,8 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
+    expect(body).toContain("On-chain verification is in development.");
+    expect(body).not.toContain("authenticity status");
     expect(getProductById).not.toHaveBeenCalled();
   });
 
@@ -326,7 +343,13 @@ describe("renderDynamicPage: /verify verification landing", () => {
     });
     (getHyperdriveDb as any).mockReturnValue(
       makeDbSelectStub([
-        { id: 99, productId: 7, status: "active", certificateNumber: "C-99" },
+        {
+          id: 99,
+          productId: 7,
+          status: "active",
+          certificateNumber: "C-99",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
       ])
     );
 
@@ -335,7 +358,106 @@ describe("renderDynamicPage: /verify verification landing", () => {
 
     expect(res.status).toBe(200);
     expect(body).toContain("Verified Sneaker");
-    expect(body).toContain("Authentic Product Verified");
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain on October 1, 2026. On-chain verification is in development."
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Certificate on record: Verified Sneaker by Nike-ish\. Issued by AuthiChain on October 1, 2026\. On-chain verification is in development\."/
+    );
+    expect(body).not.toContain("Authentic Product Verified");
+  });
+
+  it("leaves out the date clause when the certificate row has no usable date", async () => {
+    (getProductById as any).mockResolvedValue({ id: 8, name: "Undated Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        { id: 100, productId: 8, status: "active", certificateNumber: "C-100" },
+      ])
+    );
+
+    const res = await app.request("/verify?id=8", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Certificate on record");
+    expect(body).toContain(
+      "Issued by AuthiChain. On-chain verification is in development."
+    );
+  });
+
+  it("says only that a revoked certificate was revoked (no 'on record', no issued line, no data-verified)", async () => {
+    (getProductById as any).mockResolvedValue({
+      id: 9,
+      name: "Revoked Bag",
+      brand: "Brandco",
+    });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 101,
+          productId: 9,
+          status: "revoked",
+          certificateNumber: "C-101",
+          issuedAt: new Date("2026-10-01T12:00:00Z"),
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=9", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Revoked Bag");
+    expect(body).toContain(
+      '<p data-certificate-state="revoked">This certificate has been revoked.</p>'
+    );
+    expect(body).toMatch(
+      /<meta name="description" content="Revoked Bag by Brandco: This certificate has been revoked\."/
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("Issued by AuthiChain");
+    expect(body).not.toContain("data-certificate-issued");
+    expect(body).not.toContain("data-verified");
+    expect(body).not.toMatch(/Verified|Authentic/);
+  });
+
+  it("marks an active certificate as on record without a data-verified attribute", async () => {
+    (getProductById as any).mockResolvedValue({ id: 10, name: "Active Item" });
+    (getHyperdriveDb as any).mockReturnValue(
+      makeDbSelectStub([
+        {
+          id: 102,
+          productId: 10,
+          status: "active",
+          certificateNumber: "C-102",
+        },
+      ])
+    );
+
+    const res = await app.request("/verify?id=10", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="on-record">Certificate on record</p>'
+    );
+    expect(body).not.toContain("data-verified");
+  });
+
+  it("shows 'No Certificate on Record' with no data-verified attribute when the product has no certificate", async () => {
+    (getProductById as any).mockResolvedValue({ id: 11, name: "Bare Item" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=11", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      '<p data-certificate-state="none">Product Found -- No Certificate on Record</p>'
+    );
+    expect(body).not.toContain("Certificate on record");
+    expect(body).not.toContain("data-verified");
   });
 
   it("does not 500 on malformed percent-encoding (404 no-record page)", async () => {
@@ -427,6 +549,76 @@ describe("renderDynamicPage: /verify verification landing", () => {
       vi.useRealTimers();
     }
   });
+
+  it("opens one Hyperdrive client per request and closes it after a found record", async () => {
+    (getProductById as any).mockResolvedValue({ id: 7, name: "Sneaker" });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/verify?id=7", {}, makeEnv() as any);
+
+    expect(res.status).toBe(200);
+    expect(createHyperdriveRequestDb).toHaveBeenCalledTimes(1);
+    expect(verifyDbConnect).toHaveBeenCalledTimes(1);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the client when the lookup fails", async () => {
+    (getCertificateByNumber as any).mockRejectedValue(new Error("db down"));
+    const res = await app.request("/verify?id=test123", {}, makeEnv() as any);
+
+    expect(res.status).toBe(404);
+    expect(verifyDbClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open a client for the bare prompt", async () => {
+    await app.request("/verify", {}, makeEnv() as any);
+    expect(createHyperdriveRequestDb).not.toHaveBeenCalled();
+  });
+
+  it("answers the retry 404 when connecting through Hyperdrive hangs", async () => {
+    vi.useFakeTimers();
+    try {
+      verifyDbConnect.mockReturnValue(new Promise(() => {}));
+      const pending = app.request("/verify?id=test123", {}, makeEnv() as any);
+      await vi.advanceTimersByTimeAsync(2600);
+      const res = await pending;
+      const body = await res.text();
+      expect(res.status).toBe(404);
+      expect(body).toContain("try again in a minute");
+      expect(getCertificateByNumber).not.toHaveBeenCalled();
+      expect(verifyDbClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses one 2.5s budget for the whole lookup, not 2.5s per step", async () => {
+    vi.useFakeTimers();
+    try {
+      // Certificate lookup takes 2s, then the product lookup hangs. With a
+      // per-step timer this would answer at ~4.5s, past the apex's 4s budget.
+      (getCertificateByNumber as any).mockReturnValue(
+        new Promise(resolve =>
+          setTimeout(() => resolve({ productId: "p-1" }), 2000)
+        )
+      );
+      (getProductById as any).mockReturnValue(new Promise(() => {}));
+      let settled = false;
+      const pending = app
+        .request("/verify?id=CERT-1", {}, makeEnv() as any)
+        .then(r => {
+          settled = true;
+          return r;
+        });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(settled).toBe(true);
+      const res = await pending;
+      expect(res.status).toBe(404);
+      expect(await res.text()).toContain("try again in a minute");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
@@ -440,6 +632,45 @@ describe("renderDynamicPage: /landing/<brandId> brand landing page", () => {
     expect(body).toContain("11 AI Styles");
     expect(body).toContain('href="/qr-codes"');
     expect(body).toContain('rel="canonical"');
+  });
+
+  it("RES-177: /landing/govchain does not claim a certificate contract live on Polygon", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain(
+      "GovChain: federal contracting tools for US small businesses, in development."
+    );
+    expect(body).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
+  });
+
+  it("RES-208/209: /landing/govchain drops the eSign card and old H1, carries the non-affiliation footer", async () => {
+    const res = await app.request("/landing/govchain", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    for (const banned of [
+      /eSign Act/i,
+      /legally binding/i,
+      /Public Records on Blockchain/i,
+      /anchored on Polygon/i,
+    ]) {
+      expect(body).not.toMatch(banned);
+    }
+    expect(body).toContain(
+      "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency."
+    );
+  });
+
+  it("RES-177: no brand landing config in dynamic-pages.ts carries the Polygon contract claim", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(import.meta.dirname, "dynamic-pages.ts"),
+      "utf8"
+    );
+    expect(src).not.toMatch(/(live|deployed) on Polygon|0x4da4/i);
   });
 
   it("returns 404 HTML for an unconfigured brand id", async () => {
