@@ -65,6 +65,56 @@ describe("QRON edge POST /api/verify canonical adapter", () => {
     expect(await res.json()).toEqual(canonical);
   });
 
+  it("downgrades a contradictory blocked HTTP 200 response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ valid: true, decision: "blocked", reasons: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ));
+
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jws: "signed-attestation" }),
+      }),
+      { AUTHICHAIN_CANONICAL_VERIFY_URL: "https://canonical.example.test/verify" } as never,
+    );
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      valid: false,
+      decision: "blocked",
+      reasons: ["canonical_response_not_positive"],
+    });
+  });
+
+  it("never exposes a contradictory verified HTTP error as positive", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ valid: true, decision: "verified", reasons: [] }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      }),
+    ));
+
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jws: "signed-attestation" }),
+      }),
+      { AUTHICHAIN_CANONICAL_VERIFY_URL: "https://canonical.example.test/verify" } as never,
+    );
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      reasons: ["canonical_response_not_positive"],
+    });
+  });
+
   it("fails closed when the canonical endpoint is not configured", async () => {
     const res = await worker.fetch(
       new Request("https://qron.space/api/verify", {
