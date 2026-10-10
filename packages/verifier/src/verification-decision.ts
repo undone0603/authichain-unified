@@ -86,7 +86,17 @@ export function resolveVerificationDecision(
     };
   }
 
-  if (input.expired || input.claimStatus === "expired") {
+  // Prefer the durable lifecycle cause when the registry explicitly records
+  // expiry; only use the generic reason for expiry inferred from time claims.
+  if (input.claimStatus === "expired") {
+    return {
+      decision: "expired",
+      valid: false,
+      reasons: ["durable_status_expired"],
+    };
+  }
+
+  if (input.expired) {
     return {
       decision: "expired",
       valid: false,
