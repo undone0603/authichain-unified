@@ -1,0 +1,11 @@
+{
+  "files": {
+    "workers/authichain-qron-provenance/.turbo/turbo-build.log": {
+      "size": 1579,
+      "mtime_nanos": 1791647095127985949,
+      "mode": 438,
+      "is_dir": false
+    }
+  },
+  "order": ["workers/authichain-qron-provenance/.turbo/turbo-build.log"]
+}

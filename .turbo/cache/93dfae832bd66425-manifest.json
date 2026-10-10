@@ -1,0 +1,11 @@
+{
+  "files": {
+    "workers/authichain-scan-validate/.turbo/turbo-build.log": {
+      "size": 1575,
+      "mtime_nanos": 1791647095382985961,
+      "mode": 438,
+      "is_dir": false
+    }
+  },
+  "order": ["workers/authichain-scan-validate/.turbo/turbo-build.log"]
+}

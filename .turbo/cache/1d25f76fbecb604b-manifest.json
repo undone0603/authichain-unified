@@ -1,0 +1,41 @@
+{
+  "files": {
+    "workers/authichain-verify-worker/dist/README.md": {
+      "size": 125,
+      "mtime_nanos": 1791647090880985735,
+      "mode": 438,
+      "is_dir": false
+    },
+    "workers/authichain-verify-worker/dist": {
+      "size": 0,
+      "mtime_nanos": 0,
+      "mode": 0,
+      "is_dir": true
+    },
+    "workers/authichain-verify-worker/.turbo/turbo-build.log": {
+      "size": 912,
+      "mtime_nanos": 1791647096683986027,
+      "mode": 438,
+      "is_dir": false
+    },
+    "workers/authichain-verify-worker/dist/index.js": {
+      "size": 54403,
+      "mtime_nanos": 1791647095569985971,
+      "mode": 438,
+      "is_dir": false
+    },
+    "workers/authichain-verify-worker/dist/index.js.map": {
+      "size": 106955,
+      "mtime_nanos": 1791647095573985971,
+      "mode": 438,
+      "is_dir": false
+    }
+  },
+  "order": [
+    "workers/authichain-verify-worker/.turbo/turbo-build.log",
+    "workers/authichain-verify-worker/dist",
+    "workers/authichain-verify-worker/dist/README.md",
+    "workers/authichain-verify-worker/dist/index.js",
+    "workers/authichain-verify-worker/dist/index.js.map"
+  ]
+}
