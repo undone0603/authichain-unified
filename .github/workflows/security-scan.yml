@@ -14,7 +14,6 @@ on:
     - cron: "0 12 * * 1" # Mondays 12:00 UTC
   workflow_dispatch:
 
-
 # GB-26 fix 4: a newer commit on the same PR cancels the older run. Pushes to
 # main, schedules and dispatches get one group per commit and are never
 # cancelled (PM-328).
