@@ -1,27 +1,30 @@
 # AuthiChain Unified — Docs Index
 
-_Navigable map of the documentation estate. The repo is `undone0603/authichain-unified`._
+_Navigable map of the documentation estate. The canonical production repository is `undone0603/authichain-unified`._
 
 ## Start here
 
-- [README.md](../README.md) — repo overview: QRON Platform + AuthiChain Unified Core
+- [README.md](../README.md) — canonical product, production source, North-Star MVP and trust boundary
 - [CLAUDE.md](../CLAUDE.md) — AI context, essential commands, architecture summary
 - [GEMINI.md](../GEMINI.md) — AgentZ autonomous launch conventions
-- [AGENTS.md](../AGENTS.md) — Next.js agent rules
+- [AGENTS.md](../AGENTS.md) — repository agent rules
 - [project/START_HERE.md](project/START_HERE.md) — conversion funnel tracking quickstart
 - [project/todo.md](project/todo.md) — platform TODO / progress tracker
-- [project/SAM_PREP.md](project/SAM_PREP.md) — live SAM.gov record; contracts/SAM = ZACHARY KIETZMAN, IRS = AuthiChain, Inc.
 
-## Integrations
+## Canonical verification
 
-- [integrations/hubspot.md](integrations/hubspot.md) — Grok-connected HubSpot portal (Authichain `245112265`, NA2)
-- [integrations/openclaw-setup.md](integrations/openclaw-setup.md)
+- [strategy/NORTH_STAR_MVPS.md](strategy/NORTH_STAR_MVPS.md) — MVP sequence and definition of done
+- [strategy/NORTH_STAR_VERIFICATION_INTEGRATION.md](strategy/NORTH_STAR_VERIFICATION_INTEGRATION.md) — canonical response propagation rules
+- [attestation/v0.1.md](attestation/v0.1.md) — attestation contract
+- [knowledge/VERIFICATION_GUIDE.md](knowledge/VERIFICATION_GUIDE.md) — verification semantics
+- [knowledge/RELIABILITY_ARCHITECTURE.md](knowledge/RELIABILITY_ARCHITECTURE.md) — reliability and financial integrity notes
 
-## Architecture & design
+## Architecture & deployment
 
-- [NETWORK.md](NETWORK.md) — live deploy map (Vercel projects, CF workers, DB)
-- [CAPABILITIES.md](CAPABILITIES.md) — full capability catalog (tRPC routers, API routes, workers, schedulers, AgentZ)
-- [DEPLOY-RUNBOOK.md](DEPLOY-RUNBOOK.md) — one-command deploy paths + per-worker secrets
+- [ESTATE.md](ESTATE.md) — canonical production source and Worker ownership map
+- [NETWORK.md](NETWORK.md) — deployment topology
+- [CAPABILITIES.md](CAPABILITIES.md) — capability catalog
+- [DEPLOY-RUNBOOK.md](DEPLOY-RUNBOOK.md) — deployment paths and per-worker secrets
 - [architecture/ADR-001-deploy-target-and-auth.md](architecture/ADR-001-deploy-target-and-auth.md)
 - [architecture/decoupling.md](architecture/decoupling.md)
 - [architecture/platform-robustness.md](architecture/platform-robustness.md)
@@ -30,56 +33,41 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 
 ## Operations
 
-- [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — main-only integration, Cloudflare deploy authority, smoke + repair loop
-- [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verify is shared
-- [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist
+- [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — Cloudflare deployment authority and smoke/repair loop
+- [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verification is shared
 - [operations/PILOT-READY-BASELINE.md](operations/PILOT-READY-BASELINE.md) — engineering acceptance gate for the first real-product pilot
-- [operations/launch-staging.md](operations/launch-staging.md)
 - [operations/INTEGRATION_CHECKLIST.md](operations/INTEGRATION_CHECKLIST.md) — lead-scoring deploy checklist
-- [operations/stripe-webhook-signing-secret.md](operations/stripe-webhook-signing-secret.md)
-- [operations/stripe-webhook-setup.md](operations/stripe-webhook-setup.md)
-- [operations/stripe-webhook-checklist.md](operations/stripe-webhook-checklist.md)
-- [operations/SBA_Disaster_Loan_Template.md](operations/SBA_Disaster_Loan_Template.md)
-- [operations/autonomy-v7-gemini-spark-prompt.md](operations/autonomy-v7-gemini-spark-prompt.md) — Autonomy v7 setup prompt for Gemini Spark (Phase 0 = read-only audit)
-- [operations/remote-control.md](operations/remote-control.md) — steer a local Claude Code session from phone/browser (manual lane, not a loop)
+- Stripe operations: `operations/stripe-webhook-*`
+- [operations/remote-control.md](operations/remote-control.md) — manual remote-control lane, not an autonomous deployment loop
 
-## Marketing, growth & outreach
-
-- [marketing/FUNNEL_QUICKSTART.md](marketing/FUNNEL_QUICKSTART.md) — 5-min funnel setup
-- [marketing/funnel-tracking.md](marketing/funnel-tracking.md) — complete funnel reference
-- [marketing/funnel-email-example.md](marketing/funnel-email-example.md)
-- [marketing/ab-testing-guide.md](marketing/ab-testing-guide.md)
-- [marketing/brand-selling-points.md](marketing/brand-selling-points.md) — RETIRED 2026-10-02
-- [marketing/gov-engine-lead-pipeline.md](marketing/gov-engine-lead-pipeline.md)
-- [marketing/QUICK_START.md](marketing/QUICK_START.md) — lead scoring quick start
-- [marketing/email-proposals-integration.md](marketing/email-proposals-integration.md)
-- [marketing/gpt-instructions.md](marketing/gpt-instructions.md)
-- [marketing/agentic-economy-strategy.md](marketing/agentic-economy-strategy.md)
-
-## Compliance
-
-- [compliance/EU_DPP_COMPLIANCE_AUDIT.md](compliance/EU_DPP_COMPLIANCE_AUDIT.md)
-
-## Strategy & proposals (`docs/strategy/`)
+## Strategy
 
 - [strategy/ROADMAP.md](strategy/ROADMAP.md) — autonomous evolution roadmap
 - [strategy/REVENUE_STRATEGY.md](strategy/REVENUE_STRATEGY.md) — pricing, grants, partnerships
-- [strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md](strategy/AUTHICHAIN_ZERO_BUDGET_BUYER_TRAFFIC_PLAN_2026-09-20.md) — CashPing Compound: $0 autonomous buyer-traffic plan (no X Ads)
 - [strategy/SYSTEM_STATE.md](strategy/SYSTEM_STATE.md) — AgentZ state snapshot
-- [strategy/ARCHITECTURE_OVERVIEW.md](strategy/ARCHITECTURE_OVERVIEW.md) — email reply/nurture system
+- [strategy/ARCHITECTURE_OVERVIEW.md](strategy/ARCHITECTURE_OVERVIEW.md) — architecture history/reference
 - [strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md](strategy/TECHNICAL_COMPETITIVE_SUPERIORITY.md)
 - [strategy/AUTHENTICITY_INDEX.md](strategy/AUTHENTICITY_INDEX.md)
-- [strategy/DELIVERABLES.md](strategy/DELIVERABLES.md) · [strategy/IMPLEMENTATION_MANIFEST.md](strategy/IMPLEMENTATION_MANIFEST.md) · [strategy/LEAD_SCORING_SUMMARY.md](strategy/LEAD_SCORING_SUMMARY.md)
-- Grants: [strategy/DHS_SVIP_Grant_Application.md](strategy/DHS_SVIP_Grant_Application.md) · [strategy/NSF_SBIR_Project_Pitch.md](strategy/NSF_SBIR_Project_Pitch.md)
-- Partnerships: [strategy/MI_CRA](strategy/MI_CRA_Partnership_Proposal.md) · [strategy/NY_OCM](strategy/NY_OCM_Partnership_Proposal.md) · [strategy/OH_DCC](strategy/OH_DCC_Partnership_Proposal.md)
-- More in `docs/strategy/` (DEMO_PROMPTS, DEPLOYMENT_LOG, FUNNEL_TRACKING_SUMMARY, MONUMENTAL_RELEASE, POSTAL_STRATEGY, SERIES_A_BOARDROOM_BRIEFING, SIGNATURE_MANIFEST, SIGNWELL_MIGRATION, STRATEGIC_EXPANSION, STRIPE_WEBHOOK_*, WORKSPACE, notes-progress, research-findings)
+- [strategy/NORTH_STAR_MVPS.md](strategy/NORTH_STAR_MVPS.md)
 
-## Competitive research
+## Product surfaces
 
-- [project/competitor-research-report.md](project/competitor-research-report.md) — full competitor analysis
-- [project/competitor-research-progress.md](project/competitor-research-progress.md) — research tracker
+- `apps/qron-platform/README.md` — QRON surface retained inside the canonical repository; not a separate production source
+- `agentz/README.md` — AgentZ control plane and canonical verification consumption
+- `protocol/README.md` — offline/reference protocol verifier and its boundary with the live worker
 
-## Knowledge base (`docs/knowledge/`)
+## Integrations
+
+- [integrations/hubspot.md](integrations/hubspot.md)
+- [integrations/openclaw-setup.md](integrations/openclaw-setup.md)
+
+## Compliance and research
+
+- [compliance/EU_DPP_COMPLIANCE_AUDIT.md](compliance/EU_DPP_COMPLIANCE_AUDIT.md)
+- [project/competitor-research-report.md](project/competitor-research-report.md)
+- [project/competitor-research-progress.md](project/competitor-research-progress.md)
+
+## Knowledge base
 
 - [knowledge/PRICING_TIERS.md](knowledge/PRICING_TIERS.md)
 - [knowledge/RELIABILITY_ARCHITECTURE.md](knowledge/RELIABILITY_ARCHITECTURE.md)
@@ -89,29 +77,22 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [knowledge/OPERATIONAL_TIMELINE.md](knowledge/OPERATIONAL_TIMELINE.md)
 - [knowledge/QRON_STYLES.md](knowledge/QRON_STYLES.md)
 - [knowledge/CANNABIS_FAQ.md](knowledge/CANNABIS_FAQ.md)
-- [knowledge/GPT_INSTRUCTIONS.md](knowledge/GPT_INSTRUCTIONS.md) · [knowledge/GPT_OPENAPI_SPEC.yaml](knowledge/GPT_OPENAPI_SPEC.yaml)
-
-## Superpowers (plans & specs)
-
-- [superpowers/plans/worker-inventory.md](superpowers/plans/worker-inventory.md) — generated CF worker inventory (CI-checked)
-- [superpowers/plans/worker-status-2026-04-27.md](superpowers/plans/worker-status-2026-04-27.md)
-- Plans & specs in `docs/superpowers/plans/` and `docs/superpowers/specs/`
 
 ## Reference
 
 - [openapi.yaml](openapi.yaml) — API spec
-- [archive/](archive/) — archived cf-workers bundles & misc session artifacts
+- [archive/](archive/) — archived bundles and session artifacts
 - [submissions/](submissions/) — grant submission drafts
 
-## AgentZ (separate tree, not under docs/)
+## AgentZ
 
 - `agentz/` — Python workflow orchestrator. CLI: `python -m agentz.cli list` / `run <id> --mode dry-run`
 - Conventions: [../GEMINI.md](../GEMINI.md) · State: [strategy/SYSTEM_STATE.md](strategy/SYSTEM_STATE.md)
 
 ---
 
-### Notes
+### Documentation hygiene
 
-- CI-pinned files kept in place: `superpowers/plans/worker-inventory.md` (regenerated by `scripts/gen-worker-inventory.sh`, checked by `.github/workflows/repo-maintenance.yml`) and `superpowers/plans/worker-status-2026-04-27.md` (referenced by worker STATUS files).
-- `docs/NETWORK.md`, `docs/CAPABILITIES.md`, `docs/DEPLOY-RUNBOOK.md` remain at docs root (mutually cross-referenced).
-- `docs/SECURITY-REMEDIATION-CRITICAL.md` is referenced but not present in the repo — pre-existing dangling link.
+- Keep production claims tied to the current canonical repository and validated deployment evidence.
+- Do not present historical/superseded sibling repositories as production authorities.
+- CI-pinned inventory files remain machine-generated and should only change through their generating workflow.
