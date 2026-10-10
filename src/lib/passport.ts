@@ -1,23 +1,14 @@
 /**
  * Client for the GS1 resolver's read-only passport endpoint.
  *
- * Corrects three faults in the previous version, none of which had surfaced
- * because nothing consumed it:
- *
- *  1. It called `/v1/passport/{id}`, which the resolver did not implement —
- *     every call 404'd as `not_a_digital_link_path`. The endpoint now exists
- *     (workers/gs1-resolver), matching what docs/GS1_RESOLVER.md always
- *     claimed.
- *  2. The declared payload shape matched nothing the resolver returns: it was
- *     snake_case with different nesting, so every field would have read
- *     `undefined`. The types below mirror `passportPayload()` exactly.
- *  3. It ignored the HTTP status and cast the body regardless, so an error
- *     object was returned as a passport. A non-2xx now resolves to a typed
- *     not-found rather than a lie.
- *
- * The endpoint is read-only by design: rendering a passport must never
- * register a scan. See the comment on that route in the resolver.
+ * The passport remains a resolution/evidence surface. Protocol truth comes from
+ * the canonical attestation worker, exposed below as verifyPassportAttestation().
  */
+
+import {
+  verifyWithCanonicalWorker,
+  type CanonicalVerificationResponse,
+} from "../../packages/verifier/src/canonical-worker-client";
 
 export type SealStatus =
   "issued" | "active" | "clone_suspected" | "cloned" | "revoked" | "not_found";
@@ -25,9 +16,7 @@ export type SealStatus =
 export interface PassportPayload {
   status: SealStatus;
   label: string;
-  /** What a result of this status does establish. Shown verbatim. */
   proves: string;
-  /** What it does not. Shipped on every response so a green result cannot be over-read. */
   doesNotProve: string;
   reason?: string;
   scanRecorded: boolean;
@@ -38,16 +27,8 @@ export interface PassportPayload {
     certId: string | null;
     digitalLink: string;
   };
-  product: {
-    brand: string | null;
-    name: string | null;
-    issuer: string | null;
-  } | null;
-  anchor: {
-    chain: string | null;
-    contract: string | null;
-    txHash: string | null;
-  } | null;
+  product: { brand: string | null; name: string | null; issuer: string | null } | null;
+  anchor: { chain: string | null; contract: string | null; txHash: string | null } | null;
   fingerprint: {
     digest: string;
     source: "issuer_supplied";
@@ -61,12 +42,12 @@ export interface PassportPayload {
   } | null;
   metadata?: unknown;
   passportUrl: string | null;
+  verification?: CanonicalVerificationResponse;
 }
 
-/** Linear-time trailing-slash strip; see the note in the resolver worker. */
 function stripTrailingSlashes(value: string): string {
   let end = value.length;
-  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
   return value.slice(0, end);
 }
 
@@ -78,33 +59,30 @@ export function resolverBase(): string {
   );
 }
 
-/**
- * Reads a passport without registering a scan.
- *
- * Returns null only when the resolver could not be reached at all — an
- * unreachable resolver and a seal that does not exist are different facts and
- * must not collapse into the same value. A seal that genuinely does not exist
- * comes back as a payload with status "not_found".
- */
-export async function fetchPassport(
-  id: string
-): Promise<PassportPayload | null> {
+export async function fetchPassport(id: string): Promise<PassportPayload | null> {
   const url = `${resolverBase()}/v1/passport/${encodeURIComponent(id)}`;
   try {
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
-
-    // The resolver answers 404 with a well-formed not_found payload, which is a
-    // real answer. Anything else non-2xx is a transport or server fault and is
-    // reported as such rather than rendered as a passport.
+    const res = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
     if (!res.ok && res.status !== 404) return null;
-
     const data = (await res.json()) as PassportPayload | { error: string };
     if (!data || typeof data !== "object" || !("status" in data)) return null;
     return data as PassportPayload;
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve a DPP's signed attestation through the canonical worker and return
+ * the actual protocol response. A passport renderer must use this result for
+ * authenticity decisions; local DPP metadata is not a substitute.
+ */
+export async function verifyPassportAttestation(params: {
+  jws: string;
+  expectedObjectId?: string;
+  endpoint?: string;
+}): Promise<{ httpStatus: number; response: CanonicalVerificationResponse }> {
+  const endpoint = params.endpoint ?? process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
+  if (!endpoint) throw new Error("AUTHICHAIN_CANONICAL_VERIFY_URL not configured");
+  return verifyWithCanonicalWorker(endpoint, params.jws, params.expectedObjectId);
 }
