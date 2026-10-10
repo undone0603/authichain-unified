@@ -1,68 +1,60 @@
-# qron-platform
+# QRON surface inside AuthiChain Unified
 
-A Next.js application with a Cloudflare Edge Worker and Drizzle ORM.
+This directory is a **retained application surface inside the canonical `undone0603/authichain-unified` repository**. It is not a separate production source or an alternate trust protocol.
 
-## Ecosystem & Multi-Domain Architecture
+## Production architecture
 
-The QRON platform operates as a unified codebase serving four distinct branded experiences via Next.js Middleware.
+QRON provides the presentation and interaction layer for beautiful, programmable verification experiences. The production trust result comes from the canonical AuthiChain verification path:
 
-- **qron.space**: Creative Studio & AI QR Art Generator.
-- **authichain.com**: Enterprise Authentication Protocol & API Key Management.
-- **govchain.us**: Ecosystem Governance, $QRON Staking, and DAO Voting.
-- **strainchain.io**: Industrial Provenance & Digital Product Passports (DPP).
+`identifier → resolve → signed attestation → /api/v1/attestation/verify → VerificationDecision`
 
-### Routing Logic
-Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
+A QR image, visual match, registry record, NFT/anchor, or DPP publication must never independently produce `verified=true`.
 
-## Tech Stack
+## Ecosystem surfaces
 
-- **Framework**: [Next.js](https://nextjs.org) (App Router)
-- **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL
-- **Edge Runtime**: Cloudflare Workers
-- **Styling**: Tailwind CSS
+- **qron.space** — QRON creation and verification experiences.
+- **authichain.com** — canonical protocol, verification, certificates, API and billing surface.
+- **govchain.us** — government/contractor trust workflows.
+- **strainchain.io** — provenance and regulated-product workflows.
 
-## Getting Started
+These are branded surfaces over the same AuthiChain trust architecture. New production work belongs in the unified repository rather than the archived/superseded standalone `qron-platform` project.
 
-1.  **Setup Environment**:
-    ```bash
-    cp .env.example .env
-    ```
-    Fill in your database and Cloudflare credentials.
+## Tech stack
 
-2.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+- Next.js where this retained surface requires it
+- Cloudflare Workers at the production edge
+- Drizzle ORM with PostgreSQL where applicable
+- Shared AuthiChain verification contracts from `packages/verifier/`
 
-3.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
+## Verification integration
 
-4.  **Edge Worker**:
-    The edge worker is located at `src/edge.ts` and can be managed via `wrangler.toml`.
+Consumers should call the canonical worker through the shared verification client and forward its response. The canonical response includes:
 
-## Database Management
+- `decision`
+- `valid`
+- `reasons`
+- `decision_contract`
+- issuer/lifecycle status and supporting fields
 
-- `npm run db:generate`: Generate migrations.
-- `npm run db:push`: Push schema changes to the database.
-- `npm run db:studio`: Open Drizzle Studio.
+Only `decision=verified` **and** `valid=true` is a positive protocol verification.
 
-## Code Quality
+## Development
 
-- `npm run lint`: Run ESLint.
-- `npm run format`: Format code with Prettier.
+From the repository root:
 
-## Legal & Intellectual Property
+```bash
+pnpm install
+pnpm dev
+pnpm lint
+pnpm typecheck
+pnpm test
+```
 
-### Licensing
-This project is licensed under the **AuthiChain Proprietary License**. See `LICENSE.md` for full terms. Unauthorized reproduction, distribution, or reverse engineering of the AuthiChain Protocol or its multi-domain routing architecture is strictly prohibited.
+Use the repository root's deployment workflows and Cloudflare estate map for production ownership. Do not create a second production deployment path for this directory.
 
-### Privacy & Security
-- **Privacy Policy**: Accessible at `/privacy`.
-- **Terms of Service**: Accessible at `/terms`.
-- **Security Disclosure**: See `SECURITY.md` for our vulnerability reporting process.
+## Security
 
-### Copyright
-Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.
-
+- Never commit credentials or production secrets.
+- Keep verification fail-closed when the canonical worker is unavailable.
+- Do not present resolution, registration, anchoring, or QR aesthetics as proof of physical authenticity.
+- Treat this directory as a consumer/presentation surface, not the protocol authority.
