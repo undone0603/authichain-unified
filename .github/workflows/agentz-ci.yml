@@ -1,5 +1,10 @@
 name: AgentZ Autonomous CI
 on: [push, pull_request]
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   verify-and-heal:
     runs-on: ubuntu-latest
@@ -9,6 +14,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
+          
       - name: Run Integration Tests
         run: |
           echo "Executing full-stack integration tests..."
@@ -18,6 +24,9 @@ jobs:
           else
             echo "✅ ABI is secure."
           fi
+          
       - name: Trigger AgentZ Self-Healing
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node agentz/healing/auto-fix.js
