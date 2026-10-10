@@ -117,7 +117,7 @@ describe("canonical /api/v1/attestation/verify decision propagation", () => {
       decision: "expired",
       claim_status: "expired",
       decision_contract: "AuthiChain Verification Decision v1",
-      reasons: ["claim_expired"],
+      reasons: ["expired"],
     });
   });
 
