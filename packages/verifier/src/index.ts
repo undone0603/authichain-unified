@@ -213,45 +213,12 @@ export function toW3cVerifiableCredential(attestation: AuthiChainAttestationV01)
   };
 }
 
-export type VerificationDecision =
-  | "verified"
-  | "warning"
-  | "blocked"
-  | "revoked"
-  | "expired"
-  | "not_found"
-  | "risk"
-  | "indeterminate";
-
-export type VerificationDecisionInput = {
-  cryptographicValid: boolean;
-  issuerTrusted: boolean;
-  claimStatus: "active" | "revoked" | "expired" | "superseded" | null;
-  signedDecision: "verified" | "warning" | "blocked";
-  expired: boolean;
-  riskSignals?: readonly string[];
-  found: boolean;
-};
-
-export type VerificationDecisionResult = { decision: VerificationDecision; valid: boolean; reasons: string[] };
-
-export function resolveVerificationDecision(input: VerificationDecisionInput): VerificationDecisionResult {
-  const reasons: string[] = [];
-  if (!input.found) return { decision: "not_found", valid: false, reasons: ["identifier_or_attestation_not_found"] };
-  if (!input.cryptographicValid) return { decision: "indeterminate", valid: false, reasons: ["cryptographic_verification_failed"] };
-  if (!input.issuerTrusted) return { decision: "indeterminate", valid: false, reasons: ["issuer_not_trusted"] };
-  if (input.claimStatus === "revoked") return { decision: "revoked", valid: false, reasons: ["durable_status_revoked"] };
-  if (input.claimStatus === "superseded") return { decision: "risk", valid: false, reasons: ["durable_status_superseded"] };
-  if (input.expired || input.claimStatus === "expired") return { decision: "expired", valid: false, reasons: ["expired"] };
-  if (input.riskSignals && input.riskSignals.length > 0) {
-    reasons.push(...input.riskSignals.map(signal => `risk_${signal}`));
-    return { decision: "risk", valid: false, reasons };
-  }
-  if (input.claimStatus !== "active") return { decision: "indeterminate", valid: false, reasons: ["durable_status_unavailable"] };
-  if (input.signedDecision === "blocked") return { decision: "blocked", valid: false, reasons: ["decision_blocked"] };
-  if (input.signedDecision === "warning") return { decision: "warning", valid: false, reasons: ["decision_warning"] };
-  return { decision: "verified", valid: true, reasons };
-}
+export { resolveVerificationDecision } from "./verification-decision";
+export type {
+  VerificationDecision,
+  VerificationDecisionInput,
+  VerificationDecisionResult,
+} from "./verification-decision";
 
 export type CanonicalVerificationResponse = {
   valid: boolean;
