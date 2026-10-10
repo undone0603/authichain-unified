@@ -127,18 +127,22 @@ describe("battery passport offer page", () => {
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
     expect(html).toContain(
-      "No. It is a readiness assessment and a structured record you can hand to the placing-on-market operator or your counsel. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice."
+      "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542."
     );
+    // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
+    expect(html).not.toContain("It is a readiness assessment");
+    expect(html).not.toContain('"serviceType":"EU Digital Battery Passport readiness assessment"');
+    expect(html).toContain('"serviceType":"Workspace for EU Digital Battery Passport figures"');
     expect(html).not.toContain("working passport you control");
     expect(html).not.toContain("signed and publicly verifiable");
     expect(html).toContain(
       "A published workspace record is a signed proof only when its Ed25519 signature and a mainnet anchor both check out."
     );
-    expect(html).toContain('href="https://authichain.com/api/verify?id=polygon-anchor-1"');
-    expect(html).toContain(
-      'href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"'
-    );
-    expect(html).toContain("It is not a battery and not a passport.");
+    // PM-378: the demonstration-record line (and its Polygon anchor tx) is cut.
+    expect(html).not.toContain("polygon-anchor-1");
+    expect(html).not.toContain("only published demonstration record");
+    // PM-374: no polygonscan link to the anchor tx (wallet ownership not proven).
+    expect(html).not.toContain("polygonscan.com");
     expect(html).not.toMatch(
       /gets your first passport published|publish your first passport/i
     );

@@ -1,5 +1,6 @@
 import { Client } from "@hubspot/api-client";
 import { ENV } from "./_core/env";
+import { existingHubSpotContactId } from "./hubspot-existing-contact";
 
 export {
   HUBSPOT_PORTAL,
@@ -80,6 +81,10 @@ export async function createContact(data: {
     return { success: true as const, id: response.id, properties: response.properties };
   } catch (err: unknown) {
     const message = getErrorMessage(err);
+    const existingId = existingHubSpotContactId(message);
+    if (existingId) {
+      return { success: true as const, id: existingId, alreadyExisted: true as const };
+    }
     console.error("[HubSpot] Create contact error:", message);
     return { success: false as const, error: message || "Failed to create contact" };
   }
@@ -201,7 +206,11 @@ export async function syncLeadToHubSpot(lead: {
       lastname: lastname || undefined,
       company: lead.company || undefined,
     });
-    console.log("[HubSpot] Lead synced:", result.success ? result.id : result.error);
+    const already = "alreadyExisted" in result && result.alreadyExisted;
+    console.log(
+      "[HubSpot] Lead synced:",
+      result.success ? (already ? `already ${result.id}` : result.id) : result.error,
+    );
     return result;
   } catch (err: unknown) {
     console.error("[HubSpot] Lead sync failed:", getErrorMessage(err));

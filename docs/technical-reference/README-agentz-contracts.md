@@ -51,8 +51,3 @@ Wallet and rail names: [`docs/strategy/WEB3_IDENTITY.md`](../strategy/WEB3_IDENT
 
 **Features:** ERC20Burnable + Pausable + Ownable + Secured + Shallowed + tax fee (currently 0%) + blacklist + airdrop mode.
 
----
-
-## Debunked: `0xc3143254997d48fdc9983d618fb2e10067673eb5`
-
-The address referenced in Airtable's "Weekly Polygon Deployed Contracts Report" emails in the Notion Tasks Tracker is **not a real contract** on Polygon — it has zero bytecode. Those reports are populated by a mock-data Airtable automation; ignore them.

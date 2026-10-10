@@ -33,7 +33,6 @@ export default function AdminDashboard() {
   const { data: healthScores } = trpc.admin.healthScores.useQuery();
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
-  const { data: stakingStats } = trpc.admin.platformStaking.useQuery();
   const { data: pastDueSubscriptions } = trpc.admin.pastDueSubscriptions.useQuery();
   const { data: inactiveUsers } = trpc.admin.inactiveUsers.useQuery({ daysSinceLastScan: 7 });
   const serviceOrders: any[] = [];
@@ -75,7 +74,6 @@ export default function AdminDashboard() {
           <TabsTrigger value="health">Health Scores</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
-          <TabsTrigger value="staking">Staking</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4 space-y-4">
@@ -512,16 +510,6 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="staking" className="mt-4 space-y-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total QRON Staked" value={stakingStats?.totalStaked?.toLocaleString() ?? 0} sub="active positions" color="text-purple-400" />
-            <StatCard label="Active Stakers" value={stakingStats?.activeStakers ?? 0} sub="unique wallets" color="text-blue-400" />
-            <StatCard label="Rewards Distributed" value={stakingStats?.totalRewardsDistributed?.toLocaleString() ?? 0} sub="QRON earned" />
-            <StatCard label="Avg APY" value={stakingStats ? `${(stakingStats.avgApy / 100).toFixed(1)}%` : "—"} sub="basis points / 100" color="text-green-400" />
-          </div>
-          {(!stakingStats || stakingStats.activeStakers === 0) && <EmptyState text="No active staking positions yet" />}
         </TabsContent>
       </Tabs>
     </div>

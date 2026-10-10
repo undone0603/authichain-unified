@@ -53,17 +53,6 @@ export default function QronCreators() {
 
         <div className="grid md:grid-cols-2 gap-8 mb-16">
             <div className="protocol-card p-8 border-zinc-800 bg-zinc-950/50">
-              <Paintbrush className="w-8 h-8 text-gold mb-6" />
-              <h3 className="text-xl font-black uppercase tracking-tight mb-4">Artist Grants</h3>
-              <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter mb-6">
-                The GovChain DAO has allocated a treasury grant specifically for creators. If you can train a highly reliable, aesthetically unique ControlNet model for our QR pipeline, you can earn $QRON for every time your preset is used.
-              </p>
-              <Link href="/governance" className="text-[10px] font-black text-gold uppercase hover:underline">
-                  View DAO Proposals &rarr;
-              </Link>
-            </div>
-            
-            <div className="protocol-card p-8 border-zinc-800 bg-zinc-950/50">
               <Code className="w-8 h-8 text-blue-400 mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">Developer SDK</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter mb-6">

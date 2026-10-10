@@ -47,17 +47,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
       "Scantrust is an established secure-QR and brand-protection platform focused on enterprise anti-counterfeiting.",
     rows: [
       {
-        feature: "On-chain cryptographic anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor:
-          "Has shipped blockchain integrations (Cardano, Hyperledger)",
-      },
-      {
-        feature: "AI image analysis (5-agent consensus)",
-        authichain: "In development",
-        competitor: "—",
-      },
-      {
         feature: "EU Digital Product Passport export",
         authichain: "In development",
         competitor: true,
@@ -85,8 +74,8 @@ const BASE_VS_PAGES: VsDefinition[] = [
     ],
     reasons: [
       {
-        title: "Tamper-Proof by Design",
-        desc: "AuthiChain's certificate contract is live on Polygon. Signed, publicly verifiable certificates are in development.",
+        title: "",
+        desc: "Signed, publicly verifiable certificates are in development.",
       },
       {
         title: "Live in a Day, Not a Quarter",
@@ -117,16 +106,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
         feature: "EU Digital Product Passport export",
         authichain: "In development",
         competitor: true,
-      },
-      {
-        feature: "On-chain cryptographic anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor: true,
-      },
-      {
-        feature: "AI image analysis (5-agent consensus)",
-        authichain: "In development",
-        competitor: "—",
       },
       {
         feature: "Self-serve onboarding < 1 day",
@@ -160,7 +139,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Strongest Proof Layer",
-        desc: "Our goal: AI consensus plus on-chain anchoring, so customs, auditors, and customers can verify provenance in a single scan.",
+        desc: "Signed, publicly checkable certificates are in development.",
       },
     ],
   },
@@ -178,16 +157,6 @@ const BASE_VS_PAGES: VsDefinition[] = [
         feature: "Turnkey product (no dev team required)",
         authichain: true,
         competitor: "Via ToolChain or partners",
-      },
-      {
-        feature: "On-chain anchoring",
-        authichain: "Certificate contract live on Polygon",
-        competitor: true,
-      },
-      {
-        feature: "AI image analysis (5-agent consensus)",
-        authichain: "In development",
-        competitor: "—",
       },
       {
         feature: "EU Digital Product Passport export",
@@ -216,7 +185,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "AI + Multi-Chain Assurance",
-        desc: "Our goal: multi-agent AI verification before each certificate is anchored on Polygon.",
+        desc: "On-chain anchoring is in development.",
       },
     ],
   },
@@ -302,7 +271,7 @@ function shell(
 <style>${VS_CSS}</style></head><body>
 <div class="nav"><a href="/" class="logo">AuthiChain</a><a href="/vs">All comparisons</a></div>
 ${body}
-<footer>AuthiChain &middot; Product Authentication &middot; EU DPP Readiness &middot; Certificate contract on Polygon</footer>
+<footer>AuthiChain &middot; Product Authentication &middot; EU DPP Readiness</footer>
 </body></html>`;
 }
 

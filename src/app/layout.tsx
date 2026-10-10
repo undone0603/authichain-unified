@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure.',
+    description: 'Transform your brand with AI QR codes.',
     url: 'https://qron.space',
     siteName: 'QRON Space',
     images: [

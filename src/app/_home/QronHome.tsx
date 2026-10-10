@@ -9,9 +9,7 @@ import {
   CheckCircle,
   Shield,
   Zap,
-  Lock,
   Package,
-  Vote,
   ArrowRight,
   Palette,
   Eye,
@@ -405,11 +403,6 @@ export function QronHome() {
                 label: 'AI art from any camera',
               },
               {
-                icon: <Lock className="w-4 h-4" />,
-                stat: 'Ed25519',
-                label: 'signed',
-              },
-              {
                 icon: <Shield className="w-4 h-4" />,
                 stat: 'Editable',
                 label: 'redirects — no reprint',
@@ -432,10 +425,6 @@ export function QronHome() {
           {/* New Trust Row */}
           <div className="mt-16 flex flex-col items-center">
              <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
-                <span>Polygon PoS</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>Ed25519 Signed</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
                 <span>Editable Redirects</span>
              </div>
              <div className="px-8 py-4 rounded-2xl bg-gold/5 border border-gold/10 inline-flex items-center gap-6">
@@ -984,7 +973,6 @@ export function QronHome() {
         <div className="grid grid-cols-3 gap-4 mb-12 text-center">
           {[
             { stat: '100%', label: 'Scan guarantee' },
-            { stat: 'Ed25519', label: 'Cryptographic signing' },
             { stat: '< 3s', label: 'Generation time' },
           ].map(({ stat, label }) => (
             <div key={label} className="protocol-card p-4">
@@ -1076,21 +1064,17 @@ export function QronHome() {
               </p>
             </div>
 
-            {/* Living Portals & $QRON */}
+            {/* Living Portals */}
             <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left relative overflow-hidden">
               <div className="absolute inset-0 bg-gold/5 blur-2xl rounded-full" />
               <div className="relative z-10">
                 <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-4">
                   <Coins className="w-5 h-5 text-gold" />
                 </div>
-                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile.
                 </p>
-                <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
-                  <span className="text-zinc-500">Contract:</span>
-                  <span className="text-gold">0xAebf...E437</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1334,15 +1318,6 @@ export function QronHome() {
                         link: 'https://strainchain.io'
                     },
                     {
-                        name: 'GovChain.us',
-                        role: 'Ecosystem Governance',
-                        feature: 'DAO Staking Yield',
-                        desc: 'The economic heart. Stake $QRON to govern the protocol and earn yield.',
-                        icon: Vote,
-                        color: 'text-purple-400',
-                        link: 'https://govchain.us'
-                    },
-                    {
                         name: 'AuthiChain.com',
                         role: 'Foundational Layer',
                         feature: 'Ed25519 Verified',
@@ -1389,8 +1364,8 @@ export function QronHome() {
               className="text-base max-w-2xl mx-auto"
               style={{ color: '#6b6b6b' }}
             >
-              Every QRON is an Ed25519-signed cryptographic payload — scannable
-              by anyone, verifiable by the AuthiChain Protocol.
+              Every QRON is scannable
+              by anyone.
             </p>
           </div>
           <div className="flex flex-col items-center gap-6">
@@ -1450,7 +1425,7 @@ export function QronHome() {
                   />
                 </div>
                 <p className="text-[10px] uppercase tracking-widest text-zinc-400 mt-4 leading-relaxed font-medium">
-                  Ed25519-signed art. Eyes lock on. ~25% scan lift, every time.
+                  Eyes lock on. ~25% scan lift, every time.
                 </p>
               </div>
             </div>
@@ -1509,10 +1484,6 @@ export function QronHome() {
                 a: 'Yes. Every QRON works with any standard camera app — no special app required.',
               },
               {
-                q: 'What is AuthiChain verification?',
-                a: 'Each QR is Ed25519-signed and anchored on the AuthiChain blockchain. Anyone who scans it can verify its authenticity instantly.',
-              },
-              {
                 q: 'What if I need more generations than my plan includes?',
                 a: 'Buy another pack. Starter adds 100 generations for $29 and Creator adds 500 for $99, both one-time.',
               },
@@ -1565,7 +1536,6 @@ export function QronHome() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
               {[
                 { id: 'PdCibPadCxE', label: 'Food & Beverage', title: 'Validating Origin with QRON' },
-                { id: '70KG5d2fFUo', label: 'Token Economy', title: 'The $QRON Token Economy' },
                 { id: 'bAI14tPQFF4', label: 'Ecosystem', title: 'Use Cases for Trust' },
               ].map(({ id, label, title }) => (
                 <a key={id} href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer"
@@ -1627,8 +1597,7 @@ export function QronHome() {
           </div>
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>
-              ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic
-              signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
+              ◆ 100% scannable guarantee
             </p>
             <p className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
               Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol

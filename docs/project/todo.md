@@ -82,7 +82,6 @@
 - [x] Write Thirdweb integration tests (41 tests passing)
 
 ## Phase 4: Deploy, Stripe, and Grant Submission
-- [x] Deploy AuthiChainNFT smart contract to Polygon Amoy testnet (0xc3143254997d48fdc9983d618fb2e10067673eb5)
 - [x] Configure contract address in platform
 - [x] Connect Stripe for subscription billing ($49/$199/$799 tiers)
 - [x] Build Stripe webhook handler for subscription lifecycle

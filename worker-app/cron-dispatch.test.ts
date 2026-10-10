@@ -56,19 +56,23 @@ test("each hour fires exactly the jobs due that hour", () => {
   assert.deepEqual(at("2026-09-18T03:00:00Z"), ["database-cleanup"]);
   assert.deepEqual(at("2026-09-18T05:00:00Z"), ["customer-health-score"]);
   assert.deepEqual(at("2026-09-18T07:00:00Z"), ["certificate-expiry-check"]);
-  // 12:00 is both token-metrics and the */6 fraud sweep.
-  assert.deepEqual(at("2026-09-18T12:00:00Z"), ["token-metrics", "fraud-detection-sweep"]);
-  // 09:00 has nothing cleared — GROUP B's 09:00 jobs are not dispatched here.
+  // 12:00 is token-metrics only. Fraud runs at 01, 10, 16, and 22 so it
+  // does not share a tick with the maintenance jobs.
+  assert.deepEqual(at("2026-09-18T12:00:00Z"), ["token-metrics"]);
+  assert.deepEqual(at("2026-09-18T01:00:00Z"), ["fraud-detection-sweep"]);
+  assert.deepEqual(at("2026-09-18T10:00:00Z"), ["fraud-detection-sweep"]);
+  // Friday 09:00 is empty. Monday 09:00 is the weekly digest, tested below.
   assert.deepEqual(at("2026-09-18T09:00:00Z"), []);
 });
 
-test("the weekly digest fires on Monday only", () => {
+test("the weekly digest fires on Monday at 09:00, not on the dunning hour", () => {
   // 2026-09-21 Monday, 2026-09-22 Tuesday.
-  assert.ok(dueJobs(utc("2026-09-21T08:00:00Z")).some((j) => j.name === "weekly-analytics-digest"));
-  assert.ok(!dueJobs(utc("2026-09-22T08:00:00Z")).some((j) => j.name === "weekly-analytics-digest"));
-  // dunning-escalation is daily at 08:00 and fires on both.
+  assert.ok(dueJobs(utc("2026-09-21T09:00:00Z")).some((j) => j.name === "weekly-analytics-digest"));
+  assert.ok(!dueJobs(utc("2026-09-21T08:00:00Z")).some((j) => j.name === "weekly-analytics-digest"));
+  assert.ok(!dueJobs(utc("2026-09-22T09:00:00Z")).some((j) => j.name === "weekly-analytics-digest"));
+  // dunning-escalation is daily at 08:00 and fires on both days, alone.
   for (const d of ["2026-09-21T08:00:00Z", "2026-09-22T08:00:00Z"]) {
-    assert.ok(dueJobs(utc(d)).some((j) => j.name === "dunning-escalation"));
+    assert.deepEqual(dueJobs(utc(d)).map((j) => j.name), ["dunning-escalation"]);
   }
 });
 
@@ -78,11 +82,15 @@ test("a tick delivered late still fires that hour's jobs", () => {
 });
 
 test("one failing job does not cancel the rest of the tick", async () => {
+  const pair = [
+    { name: "token-metrics", schedule: "0 12 * * *", rationale: "test" },
+    { name: "fraud-detection-sweep", schedule: "0 12 * * *", rationale: "test" },
+  ];
   const ran: string[] = [];
   const result = await dispatch(utc("2026-09-18T12:00:00Z"), async (name) => {
     ran.push(name);
     if (name === "token-metrics") throw new Error("boom");
-  });
+  }, pair);
   assert.deepEqual(ran, ["token-metrics", "fraud-detection-sweep"]);
   assert.deepEqual(result.ran, ["fraud-detection-sweep"]);
   assert.equal(result.failed.length, 1);

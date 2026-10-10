@@ -4,7 +4,8 @@
  * Folded from the Grok App Builder preview. Command tokens (ink / paper /
  * steel). Not a second homepage — existing /verify /pricing /dpp stay.
  * Checkout is a confirm page (#1255). GET does not call Stripe. POST starts
- * the session. $QRON is not a payment rail (#1143). Theater SKUs are not listed.
+ * the session. Theater SKUs are not listed. /desk is internal: noindex and
+ * not in the public sitemap (RES-47 #8).
  */
 import {
   catalogPaymentLinkHtml,
@@ -30,7 +31,6 @@ const PAYTO = X402_PUBLISHED_PAY_TO;
 const DEPLOYER = "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d";
 const SMART = "0xC0D26735fd9e868eacc60400ef3171Fa4161177f";
 const POLYGON_NFT = "0x4da4D2675e52374639C9c954f4f653887A9972BE";
-const QRON = "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const SEED = "AC-7C2A91E4";
 
@@ -56,11 +56,6 @@ const ESTATE: { surface: string; state: DeskState; detail: string }[] = [
     surface: "x402 agent pay",
     state: "live",
     detail: "$0.05 USDC on Base. PayTo is the tokenomics EOA. Do not rebind.",
-  },
-  {
-    surface: "$QRON",
-    state: "live",
-    detail: "Polygon ERC-20. Not a payment rail. Staking UI is theater.",
   },
   {
     surface: "SEO hubs /p",
@@ -124,7 +119,8 @@ const HUBS = [
   },
 ];
 
-export const DESK_SITEMAP = [
+/** Every /desk page the handler serves (tests walk these). */
+export const DESK_PATHS = [
   "/desk",
   "/desk/status",
   "/desk/pricing",
@@ -132,6 +128,9 @@ export const DESK_SITEMAP = [
   "/desk/token",
   "/desk/hubs",
 ] as const;
+
+/** /desk is an internal ops desk; keep it out of the public sitemap (RES-47 #8). */
+export const DESK_SITEMAP: readonly string[] = [];
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -142,25 +141,7 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-type AgentId = "guardian" | "sentinel" | "archivist" | "scout" | "arbiter";
-type AgentVote = "pass" | "fail" | "unknown";
 type SealStatus = "verified" | "failed" | "unknown";
-
-const AGENTS: { id: AgentId; name: string; role: string }[] = [
-  { id: "guardian", name: "Guardian", role: "Seal integrity" },
-  { id: "sentinel", name: "Sentinel", role: "Clone / anomaly" },
-  { id: "archivist", name: "Archivist", role: "Registry record" },
-  { id: "scout", name: "Scout", role: "Custody graph" },
-  { id: "arbiter", name: "Arbiter", role: "Consensus" },
-];
-
-const ALL_PASS: Record<AgentId, AgentVote> = {
-  guardian: "pass",
-  sentinel: "pass",
-  archivist: "pass",
-  scout: "pass",
-  arbiter: "pass",
-};
 
 const SAMPLE_NOTE =
   "Desk sample. query_provenance never attests an unknown ID, and it labels this row a sample — not a live registry write.";
@@ -177,7 +158,6 @@ type DeskSeal = {
   plan?: "dpp_readiness" | "strainchain_passport";
   gift?: string;
   fields: { label: string; value: string }[];
-  votes: Record<AgentId, AgentVote>;
 };
 
 const DESK_SEALS: DeskSeal[] = [
@@ -189,16 +169,14 @@ const DESK_SEALS: DeskSeal[] = [
     holder: "Self-serve desk seed",
     origin: "Michigan",
     finding:
-      "Five-agent consensus on the published desk seed. Not a live METRC filing and not a cryptographic attestation.",
+      "Not a live METRC filing and not a cryptographic attestation.",
     disclaimer: SAMPLE_NOTE,
     plan: "strainchain_passport",
     fields: [
       { label: "Source", value: "Desk seed · AC-7C2A91E4" },
       { label: "Protocol", value: "AuthiChain attestation 0.1" },
       { label: "MCP", value: "query_provenance status desk_sample, verified false" },
-      { label: "Scan", value: "2.1s · Guardian → Arbiter" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "AC-DPP-BATT-8841",
@@ -207,7 +185,7 @@ const DESK_SEALS: DeskSeal[] = [
     product: "Harbor-3 LFP industrial pack · 3.2 kWh",
     holder: "Great Lakes Energy Works",
     origin: "Grand Rapids, MI",
-    finding: "Five-agent consensus. Seal matches the sample DPP for this pack.",
+    finding: "Seal matches the sample DPP for this pack.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -218,7 +196,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "ESPR gate", value: "18 Feb 2027 · batteries ≥2 kWh" },
       { label: "DPP class", value: "Industrial / LMT battery" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "SC-FARM-SAMPLE-0912",
@@ -237,7 +214,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Pack", value: "Jar + CoA, not a dispensary license" },
       { label: "SKU", value: "Passport $49. Farm is not a public offer." },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "GC-MIA-DLA-0005",
@@ -258,7 +234,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Origin brief", value: "FTC 16 CFR Part 323 · EO 14392 context" },
       { label: "Packet", value: "govchain.us/gift · free DoD packet" },
     ],
-    votes: ALL_PASS,
   },
   {
     id: "AC-DPP-BATT-8841X",
@@ -268,7 +243,7 @@ const DESK_SEALS: DeskSeal[] = [
     holder: "Unknown presenter",
     origin: "Claimed Grand Rapids, MI",
     finding:
-      "Sentinel rejected a copied QR. The original pack still verifies. This mark does not.",
+      "The original pack still verifies. This mark does not.",
     disclaimer: SAMPLE_NOTE,
     plan: "dpp_readiness",
     fields: [
@@ -276,13 +251,6 @@ const DESK_SEALS: DeskSeal[] = [
       { label: "Signature", value: "Does not verify against JWKS" },
       { label: "Registry", value: "No matching tokenURI" },
     ],
-    votes: {
-      guardian: "fail",
-      sentinel: "fail",
-      archivist: "fail",
-      scout: "unknown",
-      arbiter: "fail",
-    },
   },
 ];
 
@@ -316,13 +284,6 @@ function lookupDeskSeal(raw: string): DeskSeal {
       { label: "Lookup", value: "Public query_provenance" },
       { label: "Attestation", value: "None — unknown stays unknown" },
     ],
-    votes: {
-      guardian: "unknown",
-      sentinel: "unknown",
-      archivist: "unknown",
-      scout: "unknown",
-      arbiter: "unknown",
-    },
   };
 }
 
@@ -340,7 +301,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Classification",
         title: "Labeled, not attested",
-        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false. The scan is Guardian through Arbiter in about 2.1 seconds.",
+        body: "Protocol AuthiChain attestation 0.1. query_provenance returns status desk_sample and verified false.",
       },
       {
         phase: "Sealing",
@@ -408,7 +369,7 @@ function storyChapters(seal: DeskSeal): StoryChapter[] {
       {
         phase: "Classification",
         title: "The signature breaks",
-        body: "The signature does not verify against JWKS. There is no matching tokenURI. Sentinel fails the copy.",
+        body: "The signature does not verify against JWKS. There is no matching tokenURI.",
       },
       {
         phase: "Refusal",
@@ -444,19 +405,6 @@ function renderStory(seal: DeskSeal): string {
   </section>`;
 }
 
-function voteLabel(vote: AgentVote): string {
-  if (vote === "pass") return "Pass";
-  if (vote === "fail") return "Fail";
-  return "Unknown";
-}
-
-function agentRail(votes: Record<AgentId, AgentVote>): string {
-  return `<ol class="agents">${AGENTS.map(
-    a =>
-      `<li class="agent"><p class="kicker">${esc(a.role)}</p><p style="margin:.35rem 0 0;font-family:Newsreader,serif;font-size:1.15rem">${esc(a.name)}</p><p class="vote-${votes[a.id]}">${voteLabel(votes[a.id])}</p></li>`
-  ).join("")}</ol>`;
-}
-
 function sealCta(seal: DeskSeal): string {
   if (seal.gift) {
     return `<a class="btn" href="${esc(seal.gift)}">Open free DoD packet</a>`;
@@ -487,7 +435,7 @@ function renderCertificate(seal: DeskSeal): string {
         : "Unknown";
   const headline =
     seal.status === "verified"
-      ? "Consensus reached."
+      ? "Desk sample on record. Not a live certificate."
       : seal.status === "failed"
         ? "The mark does not hold."
         : "Unknown. Not attested.";
@@ -501,10 +449,9 @@ function renderCertificate(seal: DeskSeal): string {
   <section style="margin-top:2rem">
     <p class="kicker">Verification · ${esc(seal.id)}</p>
     <h2 style="margin:.4rem 0 0">${esc(headline)}</h2>
-    <p class="muted">Guardian, Sentinel, Archivist, Scout, then Arbiter. Target 2.1 seconds. No agent may upgrade an unknown ID to verified.</p>
-    ${agentRail(seal.votes)}
+    <p class="muted">No agent may upgrade an unknown ID to verified.</p>
     <article class="card" style="margin-top:1.25rem">
-      <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""} <span class="muted">2.1s consensus</span></p>
+      <p><span class="badge">${esc(statusLabel)}</span>${seal.sample ? ' <span class="badge">Desk sample</span>' : ""}</p>
       <h3 style="margin:.6rem 0 .35rem">${esc(seal.product)}</h3>
       <p class="mono">${esc(seal.id)}</p>
       <p>${esc(seal.finding)}</p>
@@ -559,14 +506,6 @@ footer .bar{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between
 input,select{height:2.75rem;width:100%;padding:0 .75rem;border:1px solid var(--line);border-radius:10px;background:var(--char);color:var(--paper);font:inherit}
 label{display:block;margin:.75rem 0 .35rem;font-size:.85rem}
 .row{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}
-.agents{display:grid;gap:.5rem;margin:1.25rem 0 0}
-@media(min-width:640px){.agents{grid-template-columns:repeat(5,1fr)}}
-.agent{border:1px solid var(--line);border-radius:12px;padding:.75rem;background:var(--ink);animation:rise .45s ease both}
-.agent:nth-child(1){animation-delay:.32s}.agent:nth-child(2){animation-delay:.64s}.agent:nth-child(3){animation-delay:.96s}.agent:nth-child(4){animation-delay:1.28s}.agent:nth-child(5){animation-delay:1.6s}
-@keyframes rise{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.agent{animation:none}}
-.vote-pass,.vote-fail,.vote-unknown{font-family:IBM Plex Mono,ui-monospace,Menlo,monospace;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;margin:.65rem 0 0}
-.vote-pass{color:var(--ok)}.vote-fail{color:#c45c5c}.vote-unknown{color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
 .chip{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;font-size:.8rem;color:var(--paper)}
 .fields{display:grid;gap:1px;background:var(--line);margin-top:1rem;border-radius:12px;overflow:hidden}
@@ -594,6 +533,7 @@ function shell(
     .join("");
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="https://authichain.com${esc(path)}">
@@ -626,7 +566,7 @@ function home(): string {
     "/desk",
     `<p class="kicker">Self-serve desk</p>
      <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:.4rem 0 1rem">Issue. Bind. Verify.</h1>
-     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base. $QRON is not a payment rail.</p>
+     <p class="muted" style="max-width:36rem">AuthiChain is the truth layer for physical products. Humans pay Stripe. Agents pay $0.05 USDC on Base.</p>
      <div class="row">${dppForm}
        <p style="align-self:end">${catalogPaymentLinkHtml({
          planId: "dpp_readiness",
@@ -670,8 +610,8 @@ function status(): string {
      <p class="muted">As of ${DESK_AS_OF}. SAM legal entity is ZACHARY KIETZMAN. AuthiChain is the brand. Cloudflare is the deploy authority.</p>
      <div class="grid" style="margin-top:1.5rem">${rows}</div>
      <div class="card" style="margin-top:1rem">
-       <p class="kicker">Three rails — do not mix</p>
-       <p>Stripe (humans) · x402 USDC on Base (agents) · $QRON on Polygon (not settlement).</p>
+       <p class="kicker">Two rails — do not mix</p>
+       <p>Stripe (humans) · x402 USDC on Base (agents).</p>
        <p class="mono">payTo / tokenomics ${PAYTO}</p>
        <p class="mono">NFT deployer ${DEPLOYER}</p>
        <p class="mono">Coinbase Smart Wallet ${SMART}</p>
@@ -722,15 +662,15 @@ function verify(request: Request): string {
   const result = seal ? renderCertificate(seal) : "";
   return shell(
     "Verify — AuthiChain desk",
-    "Five-agent consensus on this desk. Typical scan is 2.1 seconds. Unknown IDs stay unknown.",
+    "Unknown IDs stay unknown.",
     "/desk/verify",
-    `<p class="kicker">Five-agent consensus</p>
+    `<p class="kicker">Desk samples only</p>
      <h1>Verify</h1>
-     <p class="muted">Guardian, Sentinel, Archivist, Scout, Arbiter. Desk samples are labeled. query_provenance never attests an unknown ID.</p>
+     <p class="muted">Desk samples are labeled. query_provenance never attests an unknown ID.</p>
      <form id="vf" class="card" style="max-width:28rem" method="get" action="/desk/verify">
        <label for="cert">Certificate ID</label>
        <input id="cert" name="id" value="${inputValue}" autocomplete="off" maxlength="64">
-       <div class="row"><button class="btn" type="submit">Run 2.1s consensus</button>
+       <div class="row"><button class="btn" type="submit">Check</button>
        <a class="btn ghost" href="/protocol">Open Verification Protocol</a></div>
      </form>
      <p class="muted" style="margin-top:1rem">Scan stays on this desk. Samples first:</p>
@@ -742,15 +682,13 @@ function verify(request: Request): string {
 function token(): string {
   return shell(
     "Rails — AuthiChain desk",
-    "Stripe, x402 USDC, and $QRON are three rails. Do not mix them.",
+    "Stripe and x402 USDC are separate rails. Do not mix them.",
     "/desk/token",
-    `<h1>$QRON is not a payment rail.</h1>
+    `<h1>Payment rails</h1>
      <div class="grid" style="margin-top:1rem">
        <div class="card"><p class="kicker">Stripe · humans</p><p>Passport $49 · DPP $299 · QRON packs. Stripe acct, not these wallets.</p></div>
        <div class="card"><p class="kicker">x402 · agents</p><p>$0.05 Circle USDC on Base 8453. Health ready. Do not rebind PayTo.</p>
          <p class="mono">${PAYTO}</p><p class="mono">USDC ${USDC}</p><a href="/x402">authichain.com/x402</a></div>
-       <div class="card"><p class="kicker">$QRON · Polygon</p><p>1,000,000,000 supply. Held almost entirely by the tokenomics EOA. Staking UI is theater — not live tokenomics.</p>
-         <p class="mono">${QRON}</p></div>
      </div>
      <div class="card" style="margin-top:1rem">
        <p class="kicker">Do not call two keys ops</p>

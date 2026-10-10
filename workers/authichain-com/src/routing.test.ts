@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { planPaymentLink, planUsd } from "../../../src/lib/plans.ts";
 import { X402_PUBLISHED_PAY_TO } from "../../../src/lib/x402.ts";
 import worker from "./index.ts";
+import { VS_PAGES } from "./vs-pages.ts";
 
 type Env = Parameters<typeof worker.fetch>[1];
 
@@ -57,6 +58,41 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
     /action="https:\/\/authichain\.com\/checkout\/strainchain_passport"/
   );
   assert.match(html, /name="robots" content="noindex"/);
+});
+
+// RES-162 (sibling of CFA-147 in #1706): the /vs/* comparison pages and
+// /mcp/install make no "certificate contract live/deployed on Polygon" claim
+// and show no 0x4da4 contract address until wallet ownership is proven.
+// RES-167: also no "Polygon mainnet" anchored-record card and no
+// "Certificate contract on Polygon" footer. RES-209: "anchored on Polygon"
+// is now cut from /vs/vechain too and banned on every /vs/* page.
+test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async () => {
+  const paths = ["/vs", "/mcp/install", ...VS_PAGES.map((d) => `/vs/${d.slug}`)];
+  assert.ok(paths.length > 2, "expected at least one /vs/* page");
+  for (const path of paths) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [
+      /live on Polygon/i,
+      /deployed on Polygon/i,
+      /0x4da4/i,
+      // RES-167
+      /Certificate contract on Polygon/i,
+      // The cut "Polygon mainnet" anchored-record showcase card.
+      /class="eyebrow">\s*Polygon mainnet/i,
+      // RES-172: the /mcp/install meta now uses the registry line.
+      /Polygon-anchored/i,
+      // RES-209
+      /anchored on Polygon/i,
+    ]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+    // RES-171: the verify_record tool description and the /mcp/install
+    // opening no longer name Polygon mainnet, so the bare phrase is banned
+    // on /mcp/install as well as /vs/*.
+    assert.doesNotMatch(body, /Polygon\s+mainnet/i, `${path} must not contain Polygon mainnet`);
+  }
 });
 
 test("the apex still renders the homepage", async () => {
@@ -133,7 +169,7 @@ test("the apex still renders the homepage", async () => {
   assert.equal(orgSlice.includes(`"url":"${creatorPay}"`), true);
   assert.equal(orgSlice.includes("/api/checkout"), false);
   assert.match(html, /href="\/authentic-agentic-economy"/);
-  assert.match(html, /not a payment rail/);
+  assert.doesNotMatch(html, /\$QRON token|Speculative utility/);
   assert.doesNotMatch(html, /GET \/api\/checkout/);
   assert.doesNotMatch(
     html,
@@ -505,12 +541,10 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
     html,
     /does not store anything, issue a certificate, or write to a blockchain/
   );
-  // The real Polygon anchor is cited, not hidden.
-  assert.ok(
-    urlsIn(html).some(
-      u => u.hostname === "polygonscan.com" && u.pathname === `/tx/${ANCHOR_TX}`
-    )
-  );
+  // PM-372: wallet ownership of the Polygon anchor is not proven, so the page
+  // must not cite a polygonscan link or the anchor transaction.
+  assert.ok(!urlsIn(html).some(u => u.hostname === "polygonscan.com"));
+  assert.ok(!html.includes(ANCHOR_TX));
   assert.match(html, /Self-serve anchoring from this page is not live yet/);
 });
 
@@ -969,6 +1003,22 @@ test("hung APP_WORKER /p lookup 404s with Payment Links instead of hanging", asy
   assert.match(html, /name="robots" content="noindex"/);
 });
 
+test("hung APP_WORKER /verify lookup 404s with HTML instead of throwing (1101)", async () => {
+  const env = {
+    APP_WORKER_TIMEOUT_MS: "40",
+    APP_WORKER: { fetch: () => new Promise(() => {}) },
+  } as unknown as Env;
+  for (const path of ["/verify?id=test123", "/verify/CERT-001"]) {
+    const res = await get(path, env);
+    assert.equal(res.status, 404);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+    const html = await res.text();
+    assert.match(html, /No record found/);
+    assert.match(html, /name="robots" content="noindex"/);
+    assert.equal(/on-chain|blockchain|polygon/i.test(html), false);
+  }
+});
+
 test("stale APP_WORKER checkout anchors become catalogue Payment Links", async () => {
   const dpp = planPaymentLink("dpp_readiness") ?? "";
   const passport = planPaymentLink("strainchain_passport") ?? "";
@@ -1221,14 +1271,9 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
   const links = [...html.matchAll(/href="([^"]+)"/g)].map(
     m => new URL(m[1], "https://authichain.com")
   );
-  assert.ok(
-    links.some(
-      u =>
-        u.hostname === "polygonscan.com" &&
-        u.pathname ===
-          "/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"
-    )
-  );
+  // PM-374: wallet ownership of the anchor is not proven, so /protocol must
+  // not link the anchor transaction on polygonscan.
+  assert.ok(!links.some(u => u.hostname === "polygonscan.com"));
   assert.ok(
     links.some(
       u =>
@@ -1238,4 +1283,30 @@ test("/protocol links the anchored demonstration record and the MCP tool", async
     )
   );
   assert.match(html, /verify_record/);
+});
+
+// CFA-147 / PM-349 / PM-393: no "certificate contract live/deployed on Polygon"
+// claim and no 0x4da4 contract link until wallet ownership is proven.
+test("home, /anchor, /dpp and the OG image make no Polygon contract claim (CFA-147)", async () => {
+  for (const path of ["/", "/anchor", "/dpp", "/digital-product-passport", "/og-image.svg"]) {
+    const res = await get(path);
+    assert.equal(res.status, 200, `${path} should be 200`);
+    const body = await res.text();
+    for (const banned of [/live on Polygon/i, /deployed on Polygon/i, /0x4da4/i]) {
+      assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
+    }
+  }
+});
+
+test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design' claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { renderVsPage, renderVsIndex } = await import("./vs-pages.ts");
+  const banned = /Tamper-Proof by Design/i;
+  assert.doesNotMatch(renderVsIndex(), banned);
+  for (const def of VS_PAGES) {
+    assert.doesNotMatch(renderVsPage(def), banned, `/vs/${def.slug}`);
+    assert.doesNotMatch(JSON.stringify(def), banned, `/vs/${def.slug} data`);
+  }
+  const scantrust = readFileSync(new URL("../../../src/app/vs/scantrust/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
 });

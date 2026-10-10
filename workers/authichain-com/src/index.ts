@@ -154,7 +154,7 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents. In development: signed, publicly verifiable certificates and 5-agent consensus verification.',
+    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents.',
   keywords:
     'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
   ogTitle: 'AuthiChain — The authentic agentic economy',
@@ -180,7 +180,7 @@ const SEO = {
     },
     {
       q: 'What is the authentic agentic economy?',
-      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real. AuthiChain is that check — signed seals, 5-agent consensus, MCP tools, and x402 pay-per-call verification.',
+      a: 'Agents can already pay and call tools. They still need a machine-verifiable check that a physical product is real.',
     },
   ],
 };
@@ -237,7 +237,7 @@ const OG_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 
   <text x="110" y="385" font-family="'Bebas Neue','Helvetica Neue',Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="6" fill="#f8fafc">AUTHICHAIN</text>
   <line x1="110" y1="412" x2="280" y2="412" stroke="#d4af37" stroke-width="3"/>
   <text x="110" y="468" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="300" fill="#94a3b8">The authentic agentic economy</text>
-  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Certificate contract live on Polygon · Multi-agent verification on our roadmap</text>
+  <text x="110" y="510" font-family="'Outfit','Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="300" fill="#94a3b8" opacity="0.75">Product seals and EU DPP readiness · Multi-agent verification on our roadmap</text>
   <text x="1160" y="595" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="20" letter-spacing="3" fill="#d4af37">AUTHICHAIN.COM</text>
 </svg>`;
 
@@ -2292,7 +2292,6 @@ function communityHub(_brand: keyof typeof BRANDS) {
     "Ecosystem utilities",
     "QRON sits beside AuthiChain certificates when you need a living QR. Bitcoin Ordinals provenance for high-value certificates is in development.",
     [
-      { title: "$QRON token", body: "Polygon ERC-20 (1B supply). Speculative utility — not a payment rail. Live agent pay is $0.05 Circle USDC on Base. Living QR packs are Stripe on qron.space." },
       { title: "Bitcoin Ordinals", body: "On our roadmap: Bitcoin Ordinals inscriptions for certificates." },
       { title: "Living QR", body: "Generate a signed, redirectable QR on qron.space when packaging needs a scannable identity." },
     ],
@@ -2316,7 +2315,7 @@ function howItWorks() {
     "How it works",
     "Three steps that already exist on this estate. No new product surface.",
     [
-      { title: "Issue", body: "Issue a seal for the product. AuthiChain's certificate contract is live on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE. In development: Ed25519-signed certificates anchored to that contract." },
+      { title: "Issue", body: "Issue a seal for the product. In development: Ed25519-signed certificates." },
       { title: "Bind", body: "Bind the seal to the physical item — a Living QR, a passport, or a package label that can change destination without a reprint." },
       { title: "Verify", body: "Our goal: log every scan against the serial. Our goal: anyone with a camera can confirm authenticity against the public on-chain record. Goal: flag duplicate scans, cloned or copied seals, and unexpected scan locations for a serial." },
     ],
@@ -2477,7 +2476,7 @@ function ecosystemFooter() {
         ],
       },
     ],
-    'Polygon · ERC-721 contract <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a> · EU DPP',
+    'EU DPP',
   );
 }
 
@@ -2532,8 +2531,6 @@ const HTML = `<!DOCTYPE html>
     ],
   })}
   ${estateTrust([
-    { value: "Ed25519", label: "Signed seals" },
-    { value: "Polygon", label: "Contract deployed" },
     { value: "$299", label: "EU DPP Readiness" },
     { value: "x402", label: "Agent micropayments" },
   ])}
@@ -2580,10 +2577,9 @@ const HTML = `<!DOCTYPE html>
   ${howItWorks()}
   ${estateFeatures(
     "The authentic agentic economy",
-    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base. In development: 5-agent consensus verification.",
+    "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
-      { title: "Identity", body: "Every product gets a seal. AuthiChain's certificate contract is deployed on Polygon https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE; public certificate lookup for people and agents is in development." },
-      { title: "Verification", body: "Our goal: five agents reach weighted consensus in under 2.1 seconds. MCP tools will expose that check to any model that can call AuthiChain." },
+      { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
       { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
@@ -2701,9 +2697,7 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-weight:700;font-size:1.15rem;margin-bottom:.75rem">SHA-256 fingerprint</div>
     <div class="hash-preview" id="hash-display" style="margin:0 0 1rem"></div>
     <div class="note">
-      This fingerprint is not stored and not anchored. Certificate contract live on Polygon; product certification through verify is in development. See the
-      <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7">first anchored record</a> and <a href="https://authichain.com/api/verify?id=polygon-anchor-1">its verdict</a>, or check it yourself with the
-      <a href="/protocol">open verifier</a>. Self-serve anchoring from this page is not live yet.
+      This fingerprint is not stored and not anchored. Product certification through verify is in development. Self-serve anchoring from this page is not live yet.
     </div>
   </div>
 </div>
@@ -2837,10 +2831,8 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
   </ul>
   <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
 
-  <h2>One record, anchored on Polygon mainnet</h2>
-  <p>The published demonstration record is signed by the live issuer and its hash is committed in Polygon transaction
-    <a href="https://polygonscan.com/tx/0x24911473b03c19f3b1ee9b0887fd82ef648bf2c85386f9505a0336a9c1ae10b7"><code>0x24911473&hellip;10b7</code></a> (block 94,680,852).
-    It is a demonstration, not a product.</p>
+  <h2>One demonstration record</h2>
+  <p>It is a demonstration, not a product.</p>
   <ul>
     <li>Live verdict: <a href="/api/verify?id=polygon-anchor-1"><code>/api/verify?id=polygon-anchor-1</code></a></li>
     <li>Files: <a href="https://github.com/undone0603/authichain-unified/tree/main/protocol/examples">record and anchor JSON</a>, to run with the verifier above</li>
@@ -2891,7 +2883,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
   <meta name="twitter:description" content="EU DPP readiness tooling. On our roadmap: offline verification with no account required.">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands and is building toward passport certificates on its Polygon contract.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport readiness tooling for brands.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
     ${cssVars(BRAND)}
@@ -3086,13 +3078,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">THE AUTHICHAIN SOLUTION</div>
       <h2 class="section-title">One Integration. Every Standard.</h2>
-      <p class="section-sub">AuthiChain is building passport tooling on its certificate contract, live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
+      <p class="section-sub">AuthiChain is building passport tooling. Our goal: the certificate NFT serves as the passport, with no retrofitting or middleware.</p>
 
       <div class="feature-row">
         <div class="feature-item">
           <div class="feature-icon">🔗</div>
           <div class="feature-title">ERC-721 certificates (in development)</div>
-          <div class="feature-desc">The certificate contract is live on Polygon <a href="https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE" target="_blank" rel="noopener">https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE</a>. We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
+          <div class="feature-desc">We're building per-product certificates that carry passport data such as materials, carbon footprint, recycled content, supplier chain, and repair information.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">📱</div>
@@ -3112,7 +3104,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         <div class="feature-item">
           <div class="feature-icon">🤖</div>
           <div class="feature-title">AI provenance verification (in development)</div>
-          <div class="feature-desc">Our goal: 5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) that will verify authenticity in under 2.1 seconds. Goal: counterfeit detection built into every verification.</div>
+          <div class="feature-desc">Goal: counterfeit detection built into every verification.</div>
         </div>
         <div class="feature-item">
           <div class="feature-icon">🌍</div>
@@ -3251,6 +3243,34 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
 }
 
 /**
+ * /verify lookups that outlive the APP_WORKER budget used to rethrow, which
+ * surfaced as Cloudflare error 1101 (2026-10-09, /verify?id=test123). Answer
+ * a plain 404 "No record found" page instead; it never implies a record exists.
+ */
+function verifyLookupTimeoutResponse(): Response {
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>No record found · AuthiChain</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',system-ui,sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+h1{font-size:1.25rem;font-weight:800;text-transform:uppercase;letter-spacing:-.01em;margin:.75rem 0 .5rem}
+p{color:#a1a1aa;margin-bottom:1rem}
+a.btn{display:inline-block;padding:.75rem 1.75rem;border-radius:.75rem;font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid #27272a;color:#fff;text-decoration:none}
+</style></head><body><main>
+<h1>No record found</h1>
+<p>We could not complete this lookup just now, so no record can be shown. Please try again in a minute.</p>
+<a class="btn" href="/verify">Look up another ID</a>
+</main></body></html>`;
+  return new Response(html, {
+    status: 404,
+    headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
  * Proxy APP_WORKER and rewrite stale one-click checkout <a href> to the
  * published Payment Links. GET /api/checkout without email is already
  * bounced; this covers HTML that still points at those URLs
@@ -3278,6 +3298,9 @@ async function proxyAppWorker(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     if (pathname === "/p" || pathname.startsWith("/p/")) {
       return passportLookupTimeoutResponse(pathname);
+    }
+    if (pathname === "/verify" || pathname.startsWith("/verify/")) {
+      return verifyLookupTimeoutResponse();
     }
     throw err;
   } finally {

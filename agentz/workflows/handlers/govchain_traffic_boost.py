@@ -10,9 +10,9 @@ from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get_or_placeholder
 
 BUNDLE = {
-    "linkedin": "🏛️ GovChain.us achieves 'Sovereign Document' status (CAGE 1PUJ6).\n\nWe are now deploying W3C Verifiable Credentials for federal and defense supply chains. Secure your credentials with FIPS 140-2 HSM-grade cryptographic truth and prevent state-level forgery in under 2 seconds.\n\nView the Sovereign Protocol: govchain.us\n\n#GovChain #FederalSecurity #W3C #VerifiableCredentials #CAGE1PUJ6",
-    "reddit": { "subreddit": "supplychain", "title": "Deploying FIPS-grade W3C Verifiable Credentials for federal supply chains", "body": "Our protocol (CAGE 1PUJ6) just finalized its W3C VC implementation for sovereign documents. We use Ed25519 signatures and FIPS 140-2 compliance to secure credentials against state-level forgery. High-performance field verification in <2 seconds. Documentation: govchain.us" },
-    "twitter": "1/ Federal supply chains are vulnerable to credential forgery. GovChain just fixed it.\n2/ Using W3C Verifiable Credentials and FIPS 140-2 HSM security to anchor sovereign truth.\n3/ Verified by CAGE Code 1PUJ6. Secure your federal document pipeline: govchain.us 🏛️"
+    "linkedin": "🏛️ GovChain.us achieves 'Sovereign Document' status (CAGE 1PUJ6).\n\nWe are now deploying W3C Verifiable Credentials for federal and defense supply chains.\n\nView the Sovereign Protocol: govchain.us\n\n#GovChain #FederalSecurity #W3C #VerifiableCredentials #CAGE1PUJ6",
+    "reddit": { "subreddit": "supplychain", "title": "Deploying W3C Verifiable Credentials for federal supply chains", "body": "Our protocol (CAGE 1PUJ6) just finalized its W3C VC implementation for sovereign documents. High-performance field verification in <2 seconds. Documentation: govchain.us" },
+    "twitter": "1/ Federal supply chains are vulnerable to credential forgery. GovChain just fixed it.\n2/ Using W3C Verifiable Credentials to anchor sovereign truth.\n3/ Verified by CAGE Code 1PUJ6. Secure your federal document pipeline: govchain.us 🏛️"
 }
 
 def run(ctx: ExecutionContext) -> str:

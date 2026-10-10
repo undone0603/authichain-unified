@@ -33,6 +33,7 @@ npx wrangler kv namespace create dpp-fulfillment-kv
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put HUBSPOT_TOKEN   # optional but recommended
+npx wrangler secret put DPP_ADMIN_TOKEN # bearer for POST /admin/report; unset = 401
 
 npx wrangler deploy
 ```
