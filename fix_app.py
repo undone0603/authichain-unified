@@ -1,4 +1,5 @@
-import { useState } from "react";
+path = "/workspaces/authichain-unified/apps/verifier-web/src/App.tsx"
+code = """import { useState } from "react";
 import {
   verifyAttestationJwS,
   AttestationEvaluation,
@@ -33,7 +34,7 @@ const VerifierApp = () => {
       <h1>AuthIChain Verifier</h1>
       <textarea
         value={ws}
-        onChange={e => setWs(e.target.value)}
+        onChange={(e) => setWs(e.target.value)}
         placeholder="Paste compact JWS here"
         style={{ width: "100%", height: "100px", marginBottom: "1rem" }}
       />
@@ -54,3 +55,9 @@ const VerifierApp = () => {
 };
 
 export default VerifierApp;
+"""
+
+with open(path, "w") as f:
+    f.write(code)
+
+print("FILE_REWRITTEN_CLEAN")
