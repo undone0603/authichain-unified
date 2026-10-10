@@ -49,14 +49,14 @@ describe("canonical /api/v1/attestation/verify decision propagation", () => {
     delete process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
   });
 
-  async function setup() {
+  async function setup(registry = registryFor()) {
     const { privateKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
     process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(await exportPKCS8(privateKey), "utf8").toString("base64");
     process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "decision-route-kid";
     process.env.CRON_SECRET = "issuer-test-secret";
     const app = new Hono();
     registerJwksRoute(app);
-    registerAttestationApi(app, registryFor());
+    registerAttestationApi(app, registry);
     const sign = async (overrides: Record<string, unknown> = {}) => {
       const res = await app.request("/api/v1/attestation", {
         method: "POST",
@@ -104,12 +104,12 @@ describe("canonical /api/v1/attestation/verify decision propagation", () => {
     }
   });
 
-  it("maps an expired signed claim to expired", async () => {
-    const { app, sign } = await setup();
+  it("maps durable expiry to expired without bypassing signing validation", async () => {
+    const { app, sign } = await setup(registryFor("expired"));
     const res = await app.request("/api/v1/attestation/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jws: await sign({ expires_at: "2026-01-01T00:00:00Z" }) }),
+      body: JSON.stringify({ jws: await sign() }),
     });
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({
@@ -117,7 +117,7 @@ describe("canonical /api/v1/attestation/verify decision propagation", () => {
       decision: "expired",
       claim_status: "expired",
       decision_contract: "AuthiChain Verification Decision v1",
-      reasons: ["expired"],
+      reasons: ["durable_status_expired"],
     });
   });
 
