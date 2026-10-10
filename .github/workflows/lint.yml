@@ -3,6 +3,14 @@ name: Lint
 on:
   pull_request:
     branches: [main]
+    # GB-26 fix 3: skip PRs that touch ONLY these paths. Kept narrow on
+    # purpose: docs/** is NOT ignored because product code renders and
+    # validates it (workers/authichain-com docs pages, identity validators,
+    # src/lib/authentic-economy.ts). Pushes to main are never filtered.
+    paths-ignore:
+      - "*.md"
+      - "**/CHANGELOG.md"
+      - "docs/archive/**"
   push:
     branches: [main]
 
