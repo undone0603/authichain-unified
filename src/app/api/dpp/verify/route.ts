@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyWithCanonicalWorker, type CanonicalVerificationResponse } from "../../../../packages/verifier/src/canonical-worker-client";
+import { verifyWithCanonicalWorker, type CanonicalVerificationResponse } from "../../../../../packages/verifier/src/canonical-worker-client";
 import { verifyDpp } from "@/lib/dpp-verify";
 
 export const dynamic = "force-dynamic";
@@ -28,34 +28,17 @@ async function canonicalVerification(jws: string | null, expectedObjectId?: stri
   return result.response;
 }
 
-async function handle(
-  dppId: string,
-  visitId: string | null,
-  source: string,
-  jws: string | null = null,
-  expectedObjectId?: string,
-) {
+async function handle(dppId: string, visitId: string | null, source: string, jws: string | null = null, expectedObjectId?: string) {
   const result = await verifyDpp({ dppId, visitId, source, supabase: getSupabase() });
   if (!result.ok) {
     if (result.error === "not_found") {
-      return NextResponse.json({
-        ok: false,
-        status: "not_found",
-        dpp_id: result.dpp_id,
-        proves: result.proves,
-        doesNotProve: result.doesNotProve,
-        event_recorded: false,
-      }, { status: 404 });
+      return NextResponse.json({ ok: false, status: "not_found", dpp_id: result.dpp_id, proves: result.proves, doesNotProve: result.doesNotProve, event_recorded: false }, { status: 404 });
     }
     return NextResponse.json({ error: result.error, ...(result.detail ? { detail: result.detail } : {}) }, { status: result.status });
   }
-
   try {
     const protocolVerification = await canonicalVerification(jws, expectedObjectId);
-    return NextResponse.json({
-      ...result,
-      ...(protocolVerification ? { protocol_verification: protocolVerification } : {}),
-    });
+    return NextResponse.json({ ...result, ...(protocolVerification ? { protocol_verification: protocolVerification } : {}) });
   } catch (error) {
     return NextResponse.json({
       ...result,
