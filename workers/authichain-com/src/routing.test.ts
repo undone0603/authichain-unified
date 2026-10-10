@@ -1297,3 +1297,16 @@ test("home, /anchor, /dpp and the OG image make no Polygon contract claim (CFA-1
     }
   }
 });
+
+test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design' claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { renderVsPage, renderVsIndex } = await import("./vs-pages.ts");
+  const banned = /Tamper-Proof by Design/i;
+  assert.doesNotMatch(renderVsIndex(), banned);
+  for (const def of VS_PAGES) {
+    assert.doesNotMatch(renderVsPage(def), banned, `/vs/${def.slug}`);
+    assert.doesNotMatch(JSON.stringify(def), banned, `/vs/${def.slug} data`);
+  }
+  const scantrust = readFileSync(new URL("../../../src/app/vs/scantrust/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
+});

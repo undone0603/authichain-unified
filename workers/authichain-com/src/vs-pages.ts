@@ -74,7 +74,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
     ],
     reasons: [
       {
-        title: "Tamper-Proof by Design",
+        title: "",
         desc: "Signed, publicly verifiable certificates are in development.",
       },
       {
