@@ -421,7 +421,7 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     expect(r.body).toMatchObject({
       valid: false,
       status: "revoked",
-      decision: "blocked",
+      decision: "revoked",
     });
   });
 
