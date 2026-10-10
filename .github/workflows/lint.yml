@@ -38,7 +38,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run lint and prettier
         run: pnpm run lint:ci

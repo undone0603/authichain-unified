@@ -57,7 +57,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Validate secrets format
         run: node scripts/check-secrets-format.mjs
@@ -104,11 +104,25 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      # GB-26 fix 2: cache the Chromium download (~26 s); system deps still
+      # install on a hit. Keyed on the lockfile, so a Playwright bump misses.
+      - name: Cache Playwright browsers
+        id: pw-cache
+        if: matrix.shard == 2
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        if: matrix.shard == 2
+        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit != 'true'
         run: pnpm --filter agent-browser exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: matrix.shard == 2 && steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter agent-browser exec playwright install-deps chromium
 
       # turbo.json's test task dependsOn build, so each shard builds the
       # workspace apps it tests. One retry for the next/font/google fetch
@@ -144,7 +158,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       # next/font/google sometimes 404s mid-build (null CSS parse at
       # google/loader.js:122 on Public_Sans); one retry. Second `pnpm build`
