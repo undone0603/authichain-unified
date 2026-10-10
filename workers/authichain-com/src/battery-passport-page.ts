@@ -127,7 +127,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Is this legal advice or a certification?",
+<<<<<<< HEAD
     a: "No. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice.",
+=======
+    a: "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542.",
+>>>>>>> main
   },
   {
     q: "Do I have to book a call?",
@@ -283,7 +287,11 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       {
         "@type": "Service",
         name: "EU Battery Passport Readiness",
+<<<<<<< HEAD
         serviceType: "EU Digital Battery Passport",
+=======
+        serviceType: "Workspace for EU Digital Battery Passport figures",
+>>>>>>> main
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
@@ -361,7 +369,9 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       { href: "/pricing", label: "Pricing" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "#get-started", label: `Get ready — $${price}` }
+    { href: "#grep -ni "generation" workers/authichain-com/src/battery-passport-page.ts
+      git status
+      t-started", label: `Get ready — $${price}` }
   )}
 <main id="main">
   <header class="estate-hero hero" id="hero">

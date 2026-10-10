@@ -258,7 +258,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
   if (cert.status === "active")
-    return { label: "Verified Authentic", verified: true };
+    return { label: "", verified: true };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
@@ -332,19 +332,16 @@ async function renderProductPassport(c: Context): Promise<Response> {
     const { label, verified } = certStatusLabel(cert);
     const title = product.name + " -- Product Passport | AuthiChain";
     const description =
-      label +
-      ": " +
+      (label ? label + ": " : "") +
       product.name +
       (product.brand ? " by " + product.brand : "") +
       ". AuthiChain digital product passport and certification status.";
 
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
-      '">' +
-      escapeHtml(label) +
-      "</p>\n" +
+      (label
+        ? '<p data-verified="' + verified + '">' + escapeHtml(label) + "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -366,9 +363,7 @@ async function renderProductPassport(c: Context): Promise<Response> {
           escapeHtml(cert.certificateNumber) +
           "</dd>\n"
         : "") +
-      "<dt>Status</dt><dd>" +
-      escapeHtml(label) +
-      "</dd>\n" +
+      (label ? "<dt>Status</dt><dd>" + escapeHtml(label) + "</dd>\n" : "") +
       "</dl>\n" +
       "</main>";
 
@@ -410,12 +405,12 @@ function verifyPromptHtml(): string {
   return htmlDocument({
     title: "Verify a Product | AuthiChain",
     description:
-      "Look up an AuthiChain-registered product or certificate to check its authenticity status.",
+      "Look up an AuthiChain record. On-chain verification is in development.",
     canonicalPath: "/verify",
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record.</p>\n" +
+      "<p>Enter a product ID to look up its record. On-chain verification is in development.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
@@ -423,6 +418,29 @@ function verifyPromptHtml(): string {
       "</form>\n" +
       "</main>",
   });
+}
+
+function certificateIssuedLine(cert: {
+  issuedAt?: Date | string | null;
+  createdAt?: Date | string | null;
+}): string {
+  const raw = cert?.issuedAt ?? cert?.createdAt ?? null;
+  const when = raw ? new Date(raw) : null;
+  const dateClause =
+    when && !Number.isNaN(when.getTime())
+      ? " on " +
+        when.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : "";
+  return (
+    "Issued by AuthiChain" +
+    dateClause +
+    ". On-chain verification is in development."
+  );
 }
 
 // Lookups must finish inside the apex worker's 4s APP_WORKER budget
@@ -575,25 +593,52 @@ async function renderVerify(c: Context): Promise<Response> {
         .where(eq(certificates.productId, product.id))
         .limit(1)
     );
-    const verified = !!cert;
-    const status = verified
-      ? "Authentic Product Verified"
-      : "Product Found -- No Certificate on Record";
+    // A revoked row is not "on record": say it was revoked and nothing else
+    // (no issued line, no verdict). certificates.status is the only revoked
+    // state in the data.
+    const revoked = !!cert && cert.status === "revoked";
+    const onRecord = !!cert && !revoked;
+    const certificateState = revoked
+      ? "revoked"
+      : onRecord
+        ? "on-record"
+        : "none";
+    const status = revoked
+      ? "This certificate has been revoked."
+      : onRecord
+        ? "Certificate on record"
+        : "Product Found -- No Certificate on Record";
+    // RES-97: a certificate row is a record, not an authenticity verdict.
+    // The date comes from the row itself (issued_at, else created_at); if
+    // neither parses, the date clause is left out rather than guessed.
+    const issuedLine = onRecord ? certificateIssuedLine(cert) : "";
     const title = product.name + " -- Verification | AuthiChain";
-    const description =
-      status +
-      ": " +
-      product.name +
-      (product.brand ? " by " + product.brand : "") +
-      ".";
+    const description = revoked
+      ? product.name +
+        (product.brand ? " by " + product.brand : "") +
+        ": " +
+        status
+      : status +
+        ": " +
+        product.name +
+        (product.brand ? " by " + product.brand : "") +
+        "." +
+        (issuedLine ? " " + issuedLine : "");
 
+    // No data-verified attribute: this page states what is on record, not a
+    // verification verdict.
     const body =
       "<main>\n" +
-      '<p data-verified="' +
-      verified +
+      '<p data-certificate-state="' +
+      certificateState +
       '">' +
       escapeHtml(status) +
       "</p>\n" +
+      (issuedLine
+        ? '<p data-certificate-issued="true">' +
+          escapeHtml(issuedLine) +
+          "</p>\n"
+        : "") +
       "<h1>" +
       escapeHtml(product.name) +
       "</h1>\n" +
@@ -812,7 +857,8 @@ const LANDING_CONTENT: Record<
   },
   govchain: {
     eyebrow: "Government Blockchain",
-    headline: "Public Records on Blockchain. Transparent & Auditable.",
+    headline:
+      "GovChain: federal contracting tools for US small businesses, in development.",
     subhead:
       "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
     features: [
@@ -825,11 +871,6 @@ const LANDING_CONTENT: Record<
         icon: "✅",
         title: "Compliance Exports",
         desc: "FCPA, FAR, SAM.gov integration. Automated reporting saves audit time.",
-      },
-      {
-        icon: "🔐",
-        title: "Digital Signatures",
-        desc: "Legally binding signatures on blockchain. Meets eSign Act requirements.",
       },
       {
         icon: "📈",
@@ -851,6 +892,10 @@ const LANDING_CONTENT: Record<
     secondaryCta: { label: "Contact Us", href: "mailto:hello@govchain.us" },
   },
 };
+
+/** RES-209: non-affiliation line from the Oct 3 Research review. */
+const GOVCHAIN_NON_AFFILIATION =
+  "GovChain is an independent product of AuthiChain and is not affiliated with any U.S. government agency.";
 
 function landingNotFoundHtml(brandId: string): string {
   return notFoundHtml(
@@ -968,6 +1013,9 @@ function renderLanding(c: Context): Response {
     "<p>&copy; 2026 " +
     escapeHtml(brand.displayName) +
     " &middot; part of the AuthiChain Protocol</p>\n" +
+    (brandId === "govchain"
+      ? "<p>" + escapeHtml(GOVCHAIN_NON_AFFILIATION) + "</p>\n"
+      : "") +
     "</footer>\n" +
     "</main>";
 
@@ -1350,7 +1398,6 @@ function launchProofStoryHtml(): string {
       "<main>\n" +
       "<p>StoryMode</p>\n" +
       "<h1>AuthiChain Launch Proof — QRON / StoryMode</h1>\n" +
-      '<p data-verified="true">Production issuer signing</p>\n' +
       "<dl>\n" +
       "<dt>Object</dt><dd>authi:authichain:SN-001</dd>\n" +
       "<dt>kid</dt><dd><code>" +

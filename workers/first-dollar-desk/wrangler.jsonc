@@ -20,11 +20,12 @@
   "compatibility_date": "2026-09-01",
   "compatibility_flags": [],
 
-  // src/index.js is already the deployed module. no_bundle uploads it as-is, so
-  // `wrangler deploy --dry-run --outdir x` produces a file byte-identical to
-  // the live script (checked 2026-09-29, sha256 matches). Without this, wrangler
-  // re-bundles and adds ~80 lines of __name2() wrappers.
-  "no_bundle": true,
+  // PM-330: src/index.js now imports the official `stripe` library for
+  // webhook verification, so wrangler must bundle it. Until Oct 9 2026 this
+  // was `no_bundle: true` and the file was the live bundle byte-for-byte;
+  // after this change a deploy re-bundles (adds stripe + __name wrappers).
+  // Still not in deploy-workers.yml's matrix: merging does not deploy it.
+  "no_bundle": false,
 
   // Live: workers.dev ON, preview URLs ON. The code uses
   // https://first-dollar-desk.undone-k.workers.dev as its canonical origin

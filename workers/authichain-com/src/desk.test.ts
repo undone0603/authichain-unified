@@ -111,15 +111,14 @@ test("apex sitemap keeps the internal /desk out", async () => {
   assert.doesNotMatch(xml, /https:\/\/authichain\.com\/desk/);
 });
 
-test("/desk/verify runs five-agent consensus on the desk", async () => {
+test("/desk/verify renders the lookup form with no agent vote rail", async () => {
   const res = await get("/desk/verify");
   assert.equal(res.status, 200);
   const html = await res.text();
-  assert.match(html, /Guardian/);
-  assert.match(html, /Sentinel/);
-  assert.match(html, /Archivist/);
-  assert.match(html, /Scout/);
-  assert.match(html, /Arbiter/);
+  assert.doesNotMatch(html, /Guardian|Sentinel|Archivist|Scout|Arbiter/);
+  assert.doesNotMatch(html, /class="agents?"|vote-(pass|fail|unknown)/);
+  assert.doesNotMatch(html, /consensus/i);
+  assert.match(html, /<button class="btn" type="submit">Check<\/button>/);
   assert.match(html, /AC-7C2A91E4/);
   assert.match(html, /AC-DPP-BATT-8841/);
   assert.match(html, /action="\/desk\/verify"/);
@@ -127,13 +126,13 @@ test("/desk/verify runs five-agent consensus on the desk", async () => {
   assert.doesNotMatch(html, /Verify on apex/);
 });
 
-test("/desk/verify?id=AC-7C2A91E4 shows labeled sample consensus", async () => {
+test("/desk/verify?id=AC-7C2A91E4 shows the labeled sample without a vote rail", async () => {
   const res = await get("/desk/verify?id=AC-7C2A91E4");
   const html = await res.text();
-  assert.match(html, /Guardian/);
+  assert.doesNotMatch(html, /Guardian|Arbiter|class="agents"/);
   assert.match(html, /Michigan METRC/);
   assert.match(html, /Desk sample/);
-  assert.match(html, /Consensus reached/);
+  assert.doesNotMatch(html, /Consensus reached/);
   assert.match(html, /query_provenance status desk_sample, verified false/);
   assert.doesNotMatch(html, /location\.href = '\/verify'/);
 });
@@ -143,7 +142,7 @@ test("/desk/verify?id=AC-DPP-BATT-8841 is the battery DPP sample", async () => {
   const html = await res.text();
   assert.match(html, /Harbor-3/);
   assert.match(html, /18 Feb 2027/);
-  assert.match(html, /Guardian/);
+  assert.doesNotMatch(html, /Guardian/);
   assert.match(html, /Story Mode/);
   assert.match(html, /Cells, then a pack/);
   assert.match(html, /this lot only/);
@@ -155,7 +154,7 @@ test("/desk/verify never attests an unknown ID", async () => {
   const html = await res.text();
   assert.match(html, /Unknown\. Not attested/);
   assert.match(html, /unknown stays unknown/i);
-  assert.match(html, /vote-unknown/);
+  assert.doesNotMatch(html, /vote-unknown/);
   assert.doesNotMatch(html, /EU DPP Ready/);
   assert.doesNotMatch(html, /Consensus reached/);
   assert.doesNotMatch(html, /location\.href = '\/verify'/);

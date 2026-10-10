@@ -120,6 +120,17 @@ const { growthRecordRpc } = vi.hoisted(() => ({
   growthRecordRpc: vi.fn().mockResolvedValue({ error: null }),
 }));
 
+// PM-338: the handler now fails closed when the stripe_events claim is
+// unavailable, and the fake Supabase client above cannot run the real claim.
+// Default to "claimed"; individual tests override it.
+const claimStripeEventMock = vi.hoisted(() => vi.fn());
+vi.mock("../../src/lib/stripe-webhook-claim", async importOriginal => ({
+  ...(await importOriginal<
+    typeof import("../../src/lib/stripe-webhook-claim")
+  >()),
+  claimStripeEvent: claimStripeEventMock,
+}));
+
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn().mockReturnValue({
     from: vi.fn(),
@@ -155,6 +166,7 @@ beforeEach(async () => {
   vi.mocked(db.logActivity).mockResolvedValue(undefined);
   vi.mocked(db.logAutomationAudit).mockResolvedValue(undefined);
   growthRecordRpc.mockResolvedValue({ error: null });
+  claimStripeEventMock.mockResolvedValue("claimed");
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   delete process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test";
@@ -1217,6 +1229,11 @@ describe("handleStripeWebhook — recovery email logging (F2)", () => {
 
 describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_URL)", () => {
   it("processes the first delivery and skips the second as a duplicate", async () => {
+    // Exercise the real claim against the fake stripe_events table.
+    const actualClaim = await vi.importActual<
+      typeof import("../../src/lib/stripe-webhook-claim")
+    >("../../src/lib/stripe-webhook-claim");
+    claimStripeEventMock.mockImplementation(actualClaim.claimStripeEvent);
     const { createClient } = await import("@supabase/supabase-js");
     const client = vi.mocked(createClient)("", "") as unknown as {
       from: ReturnType<typeof vi.fn>;
@@ -1281,5 +1298,49 @@ describe("handleStripeWebhook — once-only claim in stripe_events (no DATABASE_
     log.mockRestore();
     client.from.mockReset();
     vi.mocked(db.hasWebhookEventProcessed).mockResolvedValue(false);
+  });
+});
+
+describe("handleStripeWebhook — stripe_events claim fails closed (PM-338)", () => {
+  async function setup(eventId: string) {
+    const session = {
+      id: "cs_claim_down",
+      mode: "payment",
+      payment_status: "paid",
+      amount_total: 29900,
+      customer_email: "buyer@example.test",
+      metadata: { offer: "dpp_readiness_2026" },
+    };
+    const event = makeEvent("checkout.session.completed", eventId, session);
+    mockConstructEvent.mockReturnValue(event);
+    return event;
+  }
+
+  it("throws StripeEventClaimUnavailableError (route -> 500) and runs no side effects", async () => {
+    await setup("evt_claim_down");
+    claimStripeEventMock.mockResolvedValueOnce("unavailable");
+    const { handleStripeWebhook } = await import("./stripe.js");
+    const { StripeEventClaimUnavailableError } =
+      await import("../../src/lib/stripe-webhook-claim");
+    const err = await handleStripeWebhook(RAW_BODY, SIG).catch(e => e);
+    expect(err).toBeInstanceOf(StripeEventClaimUnavailableError);
+    expect(err.httpStatus).toBe(500);
+    const { fulfillDppPaidSession } =
+      await import("../../src/lib/dpp-fulfill-checkout");
+    expect(fulfillDppPaidSession).not.toHaveBeenCalled();
+    const { sendEmail } = await import("../email-service.js");
+    expect(sendEmail).not.toHaveBeenCalled();
+    const { recordStripeWebhookDelivery } =
+      await import("../../src/lib/stripe-webhook-log");
+    expect(recordStripeWebhookDelivery).not.toHaveBeenCalled();
+  });
+
+  it("still lets Stripe dashboard evt_test_ events through", async () => {
+    await setup("evt_test_claim_down");
+    claimStripeEventMock.mockResolvedValueOnce("unavailable");
+    const { handleStripeWebhook } = await import("./stripe.js");
+    await expect(handleStripeWebhook(RAW_BODY, SIG)).resolves.toMatchObject({
+      received: true,
+    });
   });
 });

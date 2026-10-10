@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import Stripe from "stripe";
 // ============================================================
 // AuthiChain Automation Worker — v2.0.2
 //
@@ -38,18 +39,44 @@ function handleOptions(origin) {
   return new Response(null, { status: 204, headers: corsHeaders(origin) });
 }
 
-async function verifyStripeSignature(body, signature, webhookSecret) {
-  if (!signature || !webhookSecret) return false;
+// ── Stripe signature + once-only claim (PM-330) ───────────────
+// The official library, not a hand-rolled HMAC: the old check compared the
+// header to `sha256=<hex of body>`, which is not Stripe's format (Stripe signs
+// `${t}.${body}` and sends `t=...,v1=...`), so it rejected every real event
+// and had no timestamp window. constructEventAsync with the SubtleCrypto
+// provider is the Workers-safe path; 300s is Stripe's default tolerance,
+// pinned so a captured delivery can't be replayed later.
+const STRIPE_TOLERANCE_SECONDS = 300;
+const stripeCryptoProvider = Stripe.createSubtleCryptoProvider();
+
+async function constructStripeEvent(body, signature, webhookSecret) {
+  return Stripe.webhooks.constructEventAsync(
+    body,
+    signature,
+    webhookSecret.trim(),
+    STRIPE_TOLERANCE_SECONDS,
+    stripeCryptoProvider
+  );
+}
+
+// D1 has no stripe event table yet; create it on first use (additive, no
+// existing table touched). event_id is the PRIMARY KEY, so INSERT OR IGNORE
+// is an atomic claim: exactly one delivery of an event gets changes === 1.
+async function claimStripeEvent(db, eventId, eventType) {
+  await db.prepare(
+    "CREATE TABLE IF NOT EXISTS stripe_webhook_events (event_id TEXT PRIMARY KEY, event_type TEXT, received_at TEXT NOT NULL DEFAULT (datetime('now')))"
+  ).run();
+  const res = await db.prepare(
+    "INSERT OR IGNORE INTO stripe_webhook_events (event_id, event_type) VALUES (?, ?)"
+  ).bind(eventId, eventType || "").run();
+  return (res?.meta?.changes ?? 0) === 1;
+}
+
+// A failed handler releases its claim so Stripe's retry is processed.
+async function releaseStripeEvent(db, eventId) {
   try {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey("raw", encoder.encode(webhookSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const signatureBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-    const expected = `sha256=${Array.from(new Uint8Array(signatureBytes)).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
-    return signature === expected;
-  } catch (error) {
-    logger("stripe_verify", { error: error.message });
-    return false;
-  }
+    await db.prepare("DELETE FROM stripe_webhook_events WHERE event_id = ?").bind(eventId).run();
+  } catch (e) { console.error("Failed to release stripe event claim:", e?.message); }
 }
 
 // ── DB operations ─────────────────────────────────────────────
@@ -205,15 +232,30 @@ async function handleStripeWebhook(request, env) {
   let event;
   try {
     const body = await request.text();
-    const isValid = await verifyStripeSignature(body, signature, env.STRIPE_WEBHOOK_SECRET);
-    if (!isValid) return errorResponse("Invalid webhook signature", 401, origin);
-    event = JSON.parse(body);
+    event = await constructStripeEvent(body, signature, env.STRIPE_WEBHOOK_SECRET);
   } catch (e) {
-    return errorResponse("Invalid JSON body", 400, origin);
+    // Bad/forged signature, timestamp outside the 300s window, or a body
+    // that isn't the one Stripe signed. Nothing is written.
+    logger("stripe_verify", { error: e?.type || e?.name || "verify_failed" });
+    return errorResponse("Invalid webhook signature", 401, origin);
   }
 
   const eventType = event.type;
   logger("stripe_webhook", { event_type: eventType });
+
+  // Claim the event id once, BEFORE any write (PM-330). A retry or replay of
+  // an event that was already handled is acknowledged and skipped.
+  let claimed;
+  try {
+    claimed = await claimStripeEvent(env.DB, event.id, eventType);
+  } catch (e) {
+    // Fail closed: without the claim we can't promise once-only, so ask
+    // Stripe to retry rather than risk a double write.
+    return errorResponse("Event claim unavailable", 503, origin);
+  }
+  if (!claimed) {
+    return successResponse({ handled: false, duplicate: true, event: eventType }, undefined, origin);
+  }
 
   try {
     if (eventType === "customer.subscription.created" || eventType === "customer.subscription.updated") {
@@ -261,6 +303,7 @@ async function handleStripeWebhook(request, env) {
 
     return successResponse({ handled: false, event: eventType }, undefined, origin);
   } catch (error) {
+    await releaseStripeEvent(env.DB, event.id);
     await logAutomation(env.DB, eventType, event.data?.object, { error: error.message }, "error").catch(() => {});
     return errorResponse(error.message, 500, origin);
   }

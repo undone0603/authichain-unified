@@ -64,8 +64,8 @@ test("unknown 404s still offer catalogue Payment Links", async () => {
 // /mcp/install make no "certificate contract live/deployed on Polygon" claim
 // and show no 0x4da4 contract address until wallet ownership is proven.
 // RES-167: also no "Polygon mainnet" anchored-record card and no
-// "Certificate contract on Polygon" footer. "anchored on Polygon" stays
-// allowed: vs-pages.ts states it as a goal and names no contract.
+// "Certificate contract on Polygon" footer. RES-209: "anchored on Polygon"
+// is now cut from /vs/vechain too and banned on every /vs/* page.
 test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async () => {
   const paths = ["/vs", "/mcp/install", ...VS_PAGES.map((d) => `/vs/${d.slug}`)];
   assert.ok(paths.length > 2, "expected at least one /vs/* page");
@@ -83,6 +83,8 @@ test("/vs/* and /mcp/install make no Polygon contract claim (RES-162)", async ()
       /class="eyebrow">\s*Polygon mainnet/i,
       // RES-172: the /mcp/install meta now uses the registry line.
       /Polygon-anchored/i,
+      // RES-209
+      /anchored on Polygon/i,
     ]) {
       assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
     }
@@ -539,12 +541,10 @@ test("anchor is an in-browser fingerprint that claims no anchoring", async () =>
     html,
     /does not store anything, issue a certificate, or write to a blockchain/
   );
-  // The real Polygon anchor is cited, not hidden.
-  assert.ok(
-    urlsIn(html).some(
-      u => u.hostname === "polygonscan.com" && u.pathname === `/tx/${ANCHOR_TX}`
-    )
-  );
+  // PM-372: wallet ownership of the Polygon anchor is not proven, so the page
+  // must not cite a polygonscan link or the anchor transaction.
+  assert.ok(!urlsIn(html).some(u => u.hostname === "polygonscan.com"));
+  assert.ok(!html.includes(ANCHOR_TX));
   assert.match(html, /Self-serve anchoring from this page is not live yet/);
 });
 
@@ -1296,4 +1296,17 @@ test("home, /anchor, /dpp and the OG image make no Polygon contract claim (CFA-1
       assert.doesNotMatch(body, banned, `${path} must not contain ${banned}`);
     }
   }
+});
+
+test("vs pages and the scantrust page carry no unbacked 'Tamper-Proof by Design' claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { renderVsPage, renderVsIndex } = await import("./vs-pages.ts");
+  const banned = /Tamper-Proof by Design/i;
+  assert.doesNotMatch(renderVsIndex(), banned);
+  for (const def of VS_PAGES) {
+    assert.doesNotMatch(renderVsPage(def), banned, `/vs/${def.slug}`);
+    assert.doesNotMatch(JSON.stringify(def), banned, `/vs/${def.slug} data`);
+  }
+  const scantrust = readFileSync(new URL("../../../src/app/vs/scantrust/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(scantrust, banned, "src/app/vs/scantrust/page.tsx");
 });
