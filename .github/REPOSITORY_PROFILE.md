@@ -56,13 +56,13 @@ Do not present a QR match, registry row, NFT, blockchain anchor, DPP publication
 
 ## Pinned-project language
 
-The repository should be the primary AuthiChain project shown on the owner's GitHub profile. GitHub profile pins identify repositories, not individual commits; the pinned repository therefore needs a current README and a clearly stated validation state. citehttps://docs.github.com/en/account-and-profile/how-tos/profile-customization/pinning-items-to-your-profile
+The repository should be the primary AuthiChain project shown on the owner's GitHub profile. GitHub profile pins identify repositories, not individual commits; the pinned repository therefore needs a current README and a clearly stated validation state.
 
 The pinned project should point visitors to the canonical repository and current validation/release state rather than to a stale launch tag or superseded sibling repository.
 
 ## Release policy
 
-A GitHub Release must be attached to an exact Git tag and should identify the commit being released. Releases are deployable iterations; a release is not a substitute for CI evidence. citehttps://docs.github.com/en/repositories/releasing-projects-on-github/about-releases
+A GitHub Release must be attached to an exact Git tag and should identify the commit being released. Releases are deployable iterations; a release is not a substitute for CI evidence.
 
 For AuthiChain:
 
