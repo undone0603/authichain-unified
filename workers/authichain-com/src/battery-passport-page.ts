@@ -7,8 +7,8 @@
  * no new price. Checkout is tagged utm_campaign=battery-passport so the
  * Command Center and Stripe metadata show which sales this page produced.
  *
- * Truth rules: the $299 list on this page is the workspace, self-serve
- * activation, and 50 generations. src/lib/plans.ts also names a written
+ * Truth rules: the $299 list on this page is the workspace and self-serve
+ * activation. src/lib/plans.ts also names a written
  * assessment and a Basic credit; those stay off this page until they exist.
  * Regulatory facts are dated and hedged (not legal advice). No customer
  * logos, testimonials, or counts.
@@ -109,9 +109,7 @@ const CHECKLIST: Array<{ tier: string; who: string; items: string[] }> = [
 
 /** What paid checkout on this page grants. Not the full plan.features list. */
 export const PAGE_DELIVERABLES = [
-  "AuthiChain workspace",
   "Self-serve activation",
-  "50 workspace generations",
 ] as const;
 
 const FAQ: Array<{ q: string; a: string }> = [
@@ -125,11 +123,15 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What exactly do I get for $299?",
-    a: "Self-serve activation of your AuthiChain workspace, and 50 workspace generations.",
+    a: "Self-serve activation: a short onboarding form.",
   },
   {
     q: "Is this legal advice or a certification?",
+<<<<<<< HEAD
+    a: "No. Confirm obligations against Regulation (EU) 2023/1542. Not legal advice.",
+=======
     a: "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542.",
+>>>>>>> main
   },
   {
     q: "Do I have to book a call?",
@@ -264,7 +266,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
   const price = plan?.price ?? 299;
   const days = daysUntilDeadline(now);
   const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation and 50 workspace generations, for $${price}.`;
+  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve activation: a short onboarding form, for $${price}.`;
   const checklist = CHECKLIST.map(
     g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
@@ -285,7 +287,11 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       {
         "@type": "Service",
         name: "EU Battery Passport Readiness",
+<<<<<<< HEAD
+        serviceType: "EU Digital Battery Passport",
+=======
         serviceType: "Workspace for EU Digital Battery Passport figures",
+>>>>>>> main
         provider: {
           "@type": "Organization",
           name: "AuthiChain",
@@ -363,7 +369,10 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       { href: "/pricing", label: "Pricing" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "#get-started", label: `Get ready — $${price}` }
+    { href: "#grep -ni "generation" workers/authichain-com/src/battery-passport-page.ts
+      git status
+      t-started", label: `Get ready — $${price}` }
+git --no-pager log -1
   )}
 <main id="main">
   <header class="estate-hero hero" id="hero">

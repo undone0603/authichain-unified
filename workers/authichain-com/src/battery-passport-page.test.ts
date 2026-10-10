@@ -39,9 +39,7 @@ describe("battery passport offer page", () => {
 
   it("lists the workspace grant and leaves the unbuilt report and credit off the page", () => {
     for (const line of [
-      "AuthiChain workspace",
       "Self-serve activation",
-      "50 workspace generations",
     ])
       expect(html).toContain(line);
     expect(html).not.toContain("Written EU DPP readiness assessment");
@@ -127,7 +125,7 @@ describe("battery passport offer page", () => {
 
   it("answers the legal FAQ without claiming to issue a passport", () => {
     expect(html).toContain(
-      "No. It is a workspace for your passport figures. Not an assessment, not legal advice, not a certification. Confirm obligations against Regulation (EU) 2023/1542."
+    expect(html).toContain("published claims workspace battery passport for polygon-anchor");
     );
     // RESEARCH-GATE fix 13 (PM-331): the $299 is a workspace, not an assessment.
     expect(html).not.toContain("It is a readiness assessment");
@@ -147,5 +145,15 @@ describe("battery passport offer page", () => {
       /gets your first passport published|publish your first passport/i
     );
     expect(html).toContain("gets you ready for your first passport");
+  });
+
+  it("GB-17: never promises 50 workspace generations", () => {
+    for (const re of [/50 workspace generations/i, /50 generations/i, /fifty (workspace )?generations/i])
+      expect(html).not.toMatch(re);
+  });
+
+  it("RES-214: never calls the offer a readiness assessment", () => {
+    expect(html).not.toMatch(/readiness assessment/i);
+    expect(html).not.toMatch(/AuthiChain workspace/i);
   });
 });

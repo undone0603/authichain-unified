@@ -405,3 +405,31 @@ test("qron pricing does not list Theater", () => {
   assert.doesNotMatch(html, /Contact for Theater 3/);
   assert.doesNotMatch(html, /theater_1/);
 });
+
+// GB-17: the workspace-generations promise stays off /pricing until sign-in
+// actually lets buyers use them. The $299 amount and checkout are unchanged.
+const GB17_RETIRED = [/50 workspace generations/i, /50 generations/i, /fifty (workspace )?generations/i];
+
+test("GB-17: /pricing never promises 50 workspace generations", () => {
+  const pages = [
+    renderEstatePricingPage("authichain"),
+    renderEstatePricingPage("qron"),
+    renderEstatePricingPage("strainchain"),
+    renderGovchainPricingPage(),
+  ];
+  for (const html of pages) for (const re of GB17_RETIRED) assert.doesNotMatch(html, re);
+  const dpp = plan("dpp_readiness");
+  assert.equal(dpp.price, 299);
+  for (const re of GB17_RETIRED) {
+    assert.doesNotMatch(dpp.description, re);
+    for (const f of dpp.features) assert.doesNotMatch(f, re);
+  }
+});
+
+test("RES-214: dpp_readiness copy drops the workspace clause and readiness assessment", () => {
+  const dpp = plan("dpp_readiness");
+  for (const text of [dpp.description, ...dpp.features]) {
+    assert.doesNotMatch(text, /opens an AuthiChain workspace/i);
+    assert.doesNotMatch(text, /readiness assessment/i);
+  }
+});
