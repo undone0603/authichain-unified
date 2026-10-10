@@ -1,42 +1,3 @@
-export interface GS1DigitalLink {
-  gtin: string;
-  batch?: string;
-  expiration?: string;
-  serial?: string;
-}
-
-export function parseGS1DigitalLink(url: string | URL): GS1DigitalLink | null {
-  try {
-    const parsedUrl = typeof url === 'string' ? new URL(url) : url;
-    const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
-    if (pathParts.length < 2 || pathParts[0] !== '01') return null;
-    
-    const result: GS1DigitalLink = { gtin: pathParts[1] };
-    
-    for (let i = 2; i < pathParts.length; i += 2) {
-      const ai = pathParts[i];
-      const value = pathParts[i + 1];
-      if (!value) continue;
-      if (ai === '10') result.batch = value;
-      if (ai === '17') result.expiration = value;
-      if (ai === '21') result.serial = value;
-    }
-
-    if (parsedUrl.searchParams.has('10')) result.batch = parsedUrl.searchParams.get('10')!;
-    if (parsedUrl.searchParams.has('17')) result.expiration = parsedUrl.searchParams.get('17')!;
-    if (parsedUrl.searchParams.has('21')) result.serial = parsedUrl.searchParams.get('21')!;
-    
-    return result;
-  } catch {
-    return null;
-  }
-}
-EOFgit add .
-git commit -m "feat: implement GS1 Sunrise 2027 parser logic" --no-verify
-git push
-
-
-mkdir -p api/src && cat << 'EOF' > api/src/index.ts
 import { parseGS1DigitalLink } from '../../protocol/src/gs1-extended-parser';
 
 export default {
@@ -79,4 +40,3 @@ export default {
     return new Response('AuthiChain Edge API', { status: 200 });
   }
 }
-EOFgit add .
