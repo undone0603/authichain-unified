@@ -1,112 +1,159 @@
 # AuthiChain Unified
 
-**The canonical implementation of AuthiChain's physical-world trust layer.**
+**The canonical source for AuthiChain's physical-world trust protocol.**
 
-AuthiChain turns a physical product or asset into a verifiable digital identity: a standards-aware identifier resolves to a signed claim, policy and provenance data are evaluated, and an independent verifier returns an auditable result.
+AuthiChain gives physical products and assets a verifiable digital identity: an identifier resolves to a representation, an issuer signs claims, the verifier evaluates cryptography, issuer trust, lifecycle state and evidence, and consumers receive a deterministic decision.
 
-This repository is the canonical build/deploy surface for:
+> **Production source of truth:** `undone0603/authichain-unified`.
+>
+> **Validation rule:** the repository can contain candidates, previews and historical material. Do not call a commit or release production-validated until the exact commit passes the required gates.
 
-- **AuthiChain** — verification, attestations, product identity, API and billing
-- **QRON** — beautiful, programmable verification experiences and QR studio
-- **GovChain** — government/contractor trust workflows and seals
-- **StrainChain** — provenance and product verification for regulated physical goods
-- **AgentZ / MCP** — agentic orchestration and machine-facing access to the same trust primitives
-
-> **Core thesis:** one verification protocol, many commercial surfaces. The vertical products should not fork the trust model.
-
-## Architecture at a glance
+## North Star
 
 ```text
-                    PHYSICAL WORLD
-                          │
-                 product / asset / unit
-                          │
-                          ▼
-                 GS1 Digital Link
-              GTIN + serial / lot / qualifiers
-                          │
-                          ▼
-                  ┌───────────────┐
-                  │   RESOLUTION  │
-                  │ identifier →  │
-                  │ representation│
-                  └───────┬───────┘
-                          │
-                          ▼
-              ┌──────────────────────┐
-              │ AUTHICHAIN VERIFY    │
-              │ signed claims        │
-              │ issuer / JWKS         │
-              │ status / revocation   │
-              │ provenance / policy   │
-              │ scan-risk signals     │
-              └──────────┬──────────┘
-                         │
-              ┌──────────┼──────────┐
-              ▼          ▼          ▼
-           Humans      Agents     Enterprise
-           /verify     MCP/API    integrations
-              │          │          │
-              └──────────┼──────────┘
-                         ▼
-              QRON · GovChain · StrainChain
-                         │
-                         ▼
-                billing / onboarding /
-                audit / operational data
+identify → resolve → attest → verify → interpret → act → pay → retain
 ```
 
-### Trust boundary
+One trust protocol powers multiple surfaces:
 
-**Resolution is not verification.** A resolver answers *what identifier/resource is being addressed*. AuthiChain verification evaluates *whether a signed claim is valid, current, attributable and consistent with the evidence available to the verifier*.
+- **AuthiChain** — verification, attestations, product identity, API and billing
+- **QRON** — programmable verification presentation and QR experiences
+- **GovChain** — evidence-backed government/contractor workflows
+- **StrainChain** — provenance and regulated-product workflows
+- **AgentZ / MCP** — machine-facing consumption of the same verification result
 
-A positive status is therefore scoped to the evidence and policy being evaluated. For example, a registered product identifier does not by itself prove manufacturing quality, and a missing identifier is not by itself proof of counterfeiting.
+The vertical products are consumers of the trust layer, not alternate verification authorities.
+
+## Canonical verification
+
+**Trust boundary:** `POST /api/v1/attestation/verify`
+
+Resolution is not verification. A resolver tells us what identifier or resource is being addressed. Verification evaluates whether a signed claim is valid, attributable, current and consistent with the evidence available to the verifier.
+
+The canonical response uses a deterministic decision vocabulary:
+
+`verified | warning | blocked | revoked | expired | not_found | risk | indeterminate`
+
+Only **`decision=verified` AND `valid=true`** is positive protocol verification.
+
+A QR match, registry row, NFT, blockchain anchor, DPP publication or valid signature cannot independently manufacture `verified=true`. A missing identifier is not by itself proof of counterfeiting; a registered identifier is not by itself proof of manufacturing quality or physical inspection.
+
+## Architecture
+
+```text
+                         PHYSICAL WORLD
+                               │
+                        product / asset / unit
+                               │
+                               ▼
+                       identifier / GS1 link
+                               │
+                               ▼
+                        ┌───────────────┐
+                        │   RESOLVE     │
+                        │ representation│
+                        └───────┬───────┘
+                                │
+                                ▼
+                 ┌────────────────────────────┐
+                 │     CANONICAL VERIFY       │
+                 │ /api/v1/attestation/verify│
+                 │                            │
+                 │ JWS + issuer/JWKS          │
+                 │ lifecycle / revocation     │
+                 │ provenance / policy        │
+                 │ risk signals                │
+                 └──────────────┬─────────────┘
+                                │
+                       VerificationDecision
+                                │
+             ┌──────────────────┼──────────────────┐
+             ▼                  ▼                  ▼
+          Humans             AgentZ/MCP         Products
+          /verify               /API          DPP · QRON
+             │                  │                  │
+             └──────────────────┼──────────────────┘
+                                ▼
+                    GovChain · StrainChain
+                                │
+                                ▼
+                     billing / audit / retention
+```
 
 ## Repository map
 
-| Layer | Location | Responsibility |
+| Area | Location | Role |
 |---|---|---|
-| Web / customer surfaces | `client/`, `workers/` | QRON and vertical user experiences at the public domains |
-| Verification protocol | `protocol/` | Open-source protocol/reference implementation |
-| Agentic operations | `agentz/` | Workflow orchestration, pilots, operational automation |
+| Canonical verifier | `worker-app/` | Cloudflare Worker implementation of the canonical verification response |
+| Verification primitives | `packages/verifier/`, `protocol/` | Decision contract, canonicalization, signatures and reference verification |
+| Product surfaces | `src/`, `apps/`, `client/` | DPP, QRON and vertical customer experiences |
+| Edge integrations | `workers/` | Cloudflare Workers and integrations with declared estate ownership |
+| Agent operations | `agentz/` | AgentZ workflows, gates and operational adapters |
 | Machine interface | `mcp/` | MCP access to AuthiChain capabilities |
-| Edge/API | `workers/*` | Cloudflare Workers, routing, verification and integrations |
 | Persistence | Supabase/Postgres + D1 | Operational state, attestations, events and application data |
-| Architecture docs | `docs/ESTATE.md`, `docs/NETWORK.md` | System inventory and deployment topology |
+| Deployment inventory | `config/cloudflare-estate.json`, `docs/ESTATE.md`, `docs/NETWORK.md` | Source, identity and deployment topology |
+| Strategy | `docs/strategy/` | North-Star product/protocol strategy and MVP sequencing |
 
-## Public surfaces
+Start here:
+
+1. `README.md` — public architecture and trust boundary
+2. `docs/INDEX.md` — documentation index
+3. `docs/ESTATE.md` — canonical source and deployment ownership
+4. `docs/NETWORK.md` — production topology
+5. `docs/strategy/NORTH_STAR_MVPS.md` — current MVP sequence
+
+Historical or experimental material may remain for provenance, but it should not be treated as a competing production source.
+
+## Product surfaces
 
 - **authichain.com** — protocol, verification, certificates, API and billing
-- **qron.space** — QRON creation and programmable experiences
+- **qron.space** — QRON creation and verification presentation
 - **govchain.us** — government/contractor trust workflows
-- **strainchain.io** — provenance and product verification workflows
+- **strainchain.io** — provenance and regulated-product workflows
 
-The domains are commercial and presentation surfaces over the same underlying trust architecture. The canonical customer paths are `/onboard`, `/dapp`, and `/verify`.
+These are presentation/commercial surfaces over the same underlying trust model.
 
-## Standards and verification flow
+## Standards flow
 
-1. **Identify** — a physical unit is represented with a stable identifier; where applicable, use GS1 Digital Link syntax such as `/01/{gtin}/21/{serial}`.
-2. **Resolve** — the identifier resolves to the appropriate representation or linkset.
+1. **Identify** — represent a unit with a stable identifier; where applicable use GS1 Digital Link such as `/01/{gtin}/21/{serial}`.
+2. **Resolve** — resolve the identifier to the appropriate representation or linkset.
 3. **Attest** — an issuer signs claims about the identified object.
-4. **Verify** — the verifier checks signatures, issuer keys, status/revocation and applicable policy.
-5. **Interpret** — the system reports the evidence-backed state and any risk signals without conflating registration with physical inspection.
-6. **Act** — humans, agents or enterprise systems consume the result through web, API or MCP interfaces.
+4. **Verify** — check the signature, issuer trust, lifecycle/revocation and applicable policy.
+5. **Interpret** — return the evidence-backed decision and risk signals.
+6. **Act** — humans, agents and enterprise systems consume the canonical response.
+7. **Pay / retain** — commercial flows measure attribution, checkout, provisioning and retention without changing the trust result.
 
 ## Deployment model
 
-**Cloudflare-first.** The production edge is Cloudflare Workers and the repository's worker deployment configuration. Legacy framework code may remain in the repository where it supports compatibility or migration, but it is not the architectural center of gravity.
+**Cloudflare-first.** Cloudflare Workers/Wrangler are the production edge. Legacy framework code may remain for compatibility or migration, but it is not the architectural center of gravity.
 
 - Edge/runtime: Cloudflare Workers + Wrangler
-- Web: Vite + React
-- Data: Supabase/Postgres and Cloudflare D1
+- Web: Vite + React, with legacy Next.js surfaces where still required
+- Data: Supabase/Postgres + Cloudflare D1
 - ORM: Drizzle
 - Package manager: pnpm
 - Agent runtime: Python / AgentZ
-- Protocol/API components: TypeScript, Hono and standard cryptographic libraries
+- Protocol/API: TypeScript, Hono and standard cryptographic libraries
 
-See `docs/NETWORK.md` for deployment topology and `docs/ESTATE.md` for the system inventory.
+## Validation and release discipline
 
-## Getting started
+The intended readiness sequence is:
+
+`install → typecheck → lint → tests → production build → security checks → deployment smoke test → real product scan`
+
+For contract-related work, **Contract tests (Hardhat)** are the decisive contract gate.
+
+Use these labels precisely:
+
+- **Validated** — required gates passed for the exact commit/tag.
+- **Candidate** — intended for validation; not released.
+- **Preview / experimental** — exploratory; not a production guarantee.
+- **Historical** — retained for provenance or migration.
+- **Goal** — intended future capability, not current evidence.
+
+A deployment proves that a bundle was published; it does not by itself prove protocol, regulatory, security or commercial claims.
+
+## Quick start
 
 ```bash
 cp .env.example .env
@@ -114,61 +161,22 @@ pnpm install
 pnpm dev
 ```
 
-For database-backed scripts, **never put credentials in source code**. Set `DATABASE_URL` in the local environment or the deployment secret store.
+Never put credentials in source code. Use local environment variables or deployment secret stores.
 
-Example:
-
-```bash
-export DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require'
-```
-
-## AgentZ
+For AgentZ:
 
 ```bash
 python -m agentz.cli list
 python -m agentz.cli run authichain_pilot_deploy --mode dry-run
 ```
 
-## Pilot readiness
-
-The canonical readiness path is:
-
-`install → typecheck → lint → tests → production build → deploy smoke test → real product scan`
-
-See:
-
-- `docs/operations/PILOT-READY-BASELINE.md`
-- `docs/attestation/v0.1.md`
-- `docs/ESTATE.md`
-- `docs/NETWORK.md`
-
 ## Security
 
-### Deploy invariant
-
-A push to `main`, including a docs-only commit, runs `deploy-cloudflare.yml` and `deploy-edge-worker.yml`. Do not add `paths` or `paths-ignore`.
-
-Secret scan (gitleaks 8.28.0, `--no-git`) runs first and must fail closed. Deploy permissions stay `contents: read`. No token values in Git.
-
-A green Wrangler deploy means that commit's bundle was published. It is not a SOC 2, FedRAMP, FDA, government, or cannabis COA certificate. A verifier pass is the checks this checkout ran.
-
-`authichain-consensus-engine` is an identity collision. Confirm it in Cloudflare before any retirement. This file does not retire it.
-
-Security is part of the protocol presentation, not an afterthought.
-
-- **No credentials in Git.** Runtime secrets belong in environment/deployment secret stores.
-- **No live secrets in examples.** Use placeholders such as `sk_live_…`, `whsec_…`, or `postgresql://USER:PASSWORD@HOST/DB`.
-- **Rotate exposed credentials immediately.** Removing a secret from the current tree does not invalidate a credential that may already exist in Git history, caches or logs.
-- **Verify before release.** Run secret scanning before merging and keep the existing security checks enabled.
-- **Least privilege.** Prefer narrowly scoped credentials and service bindings over broad account tokens.
-
-If a credential has ever been committed, treat it as compromised until the provider confirms rotation/revocation.
-
-## Project principle
-
-AuthiChain is not fundamentally a blockchain UI. The durable product is the **verification layer**: standardized identity → resolution → signed attestation → independent verification → evidence-backed decision.
-
-Blockchain anchoring, NFTs, QR art, AI agents and vertical applications can extend that layer; they should not redefine its trust boundary.
+- No credentials in Git.
+- Rotate any credential that has ever been committed until the provider confirms revocation/rotation.
+- Keep secret scanning and fail-closed checks enabled.
+- Prefer narrowly scoped credentials and service bindings.
+- Do not use a green deployment as evidence for claims it did not test.
 
 ## License
 
