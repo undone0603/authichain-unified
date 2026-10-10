@@ -303,6 +303,14 @@ describe("generated SEO money-path CTAs", () => {
     }
   });
 
+  it("seo-data/comparison.cjs (pages.json generator input) never says 'EU DPP Workspace'", async () => {
+    const file = path.resolve(__dirname, "../../scripts/seo-data/comparison.cjs");
+    expect(fs.readFileSync(file, "utf8")).not.toMatch(/EU DPP Workspace/i);
+    const mod = await import(file);
+    const data = (mod as { default?: unknown }).default ?? mod;
+    expect(JSON.stringify(data)).not.toMatch(/EU DPP Workspace/i);
+  });
+
   it("every stated DPP Readiness price matches src/lib/plans.ts", () => {
     const price = planById("dpp_readiness")?.price;
     expect(price).toBeGreaterThan(0);
