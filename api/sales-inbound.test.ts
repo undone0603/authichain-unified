@@ -242,7 +242,7 @@ describe("sales inbound: validation and outcomes", () => {
     const body = (await res.json()) as Record<string, string>;
     expect(res.status).toBe(200);
     expect(body.replySource).toBe("template");
-    expect(body.aiResponse).toContain("EU DPP Workspace ($299)");
+    expect(body.aiResponse).toContain("EU DPP Readiness ($299)");
     expect(body.aiResponse).not.toContain("EU DPP Readiness Audit");
   });
 

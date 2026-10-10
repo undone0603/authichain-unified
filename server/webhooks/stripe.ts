@@ -292,7 +292,7 @@ export function buildCheckoutRecoveryEmail(
 } {
   if (isDppRecoverySession(session)) {
     const dpp = planById("dpp_readiness");
-    const productName = dpp?.name ?? "EU DPP Workspace";
+    const productName = dpp?.name ?? "EU DPP Readiness";
     const price = dpp?.price ?? 299;
     return {
       template: "dpp_readiness",

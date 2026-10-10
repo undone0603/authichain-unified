@@ -13,7 +13,7 @@ test("exact DPP phrases map to the public confirm page", () => {
   assert.equal(offer.checkout_url, "https://authichain.com/checkout/dpp_readiness");
   assert.equal(offer.sends_mail, false);
   assert.equal(offer.opens_checkout_session, false);
-  assert.match(offer.text, /EU DPP Workspace is a public offer at \$299/);
+  assert.match(offer.text, /EU DPP Readiness is a public offer at \$299/);
   assert.doesNotMatch(offer.text, /buy\.stripe\.com|mailto:|@/);
   assert.doesNotMatch(offer.text, /Readiness Audit/);
 });

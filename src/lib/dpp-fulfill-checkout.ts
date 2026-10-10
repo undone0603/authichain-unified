@@ -140,7 +140,7 @@ export async function fulfillDppPaidSession(
   let activationEmail: ActivationEmailStatus = "skipped";
   if (prov.profileId && email && !demo) {
     const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
-      planName: "EU DPP Workspace",
+      planName: "EU DPP Readiness",
       activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),
     });
     // A paid buyer who never gets this email has no way into the workspace, so

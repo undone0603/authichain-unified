@@ -1,6 +1,6 @@
 DO NOT SEND. Draft only. Founder has not approved an outbound send.
 
-Subject: EU DPP workspace for {{company}} — $299, not an audit
+Subject: EU DPP Readiness for {{company}} — $299, not an audit
 
 Hi {{contact_name}},
 

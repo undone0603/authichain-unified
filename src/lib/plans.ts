@@ -3,7 +3,7 @@
 // priceId values are LIVE; keep in sync with Stripe.
 //
 // 2026-10-06: homepage paid product is starter $29. dpp_readiness stays
-// listed as EU DPP Workspace, not an audit. Price id unchanged.
+// listed as EU DPP Readiness, not an audit. Price id unchanged.
 // Theater stays unlisted. Studio stays unlisted until a hard cap exists.
 // generations: 0 = no grant. 999999 = unlimited sentinel (see business-tier.ts).
 
@@ -56,7 +56,7 @@ export const PLANS: Plan[] = [
       "5 generations per account",
       "Sign-in required",
       "Lookup verify only (no GPT-4V)",
-      "Then Starter $29 or DPP workspace $299",
+      "Then Starter $29 or DPP checkout $299",
     ],
     cta: "Sign in for 5 credits",
   },
@@ -163,7 +163,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "dpp_readiness",
-    name: "EU DPP Workspace",
+    name: "EU DPP Readiness",
     price: 299,
     description:
       "One-time checkout that opens an AuthiChain workspace with 50 generations. Not an audit, not a certification, not legal advice.",
@@ -172,13 +172,13 @@ export const PLANS: Plan[] = [
     stripe_mode: "payment",
     tier: "pro",
     features: [
-      "AuthiChain workspace",
-      "Self-serve activation",
+      "Payment confirmation",
+      "Short onboarding form",
       "50 workspace generations",
       "Not an audit and not a legal opinion",
       "Does not register a product in EUDAMED",
     ],
-    cta: "Open DPP workspace — $299",
+    cta: "Pay $299 on Stripe",
   },
   {
     id: "strainchain_passport",

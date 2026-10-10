@@ -334,12 +334,12 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       eyebrow: "Pricing",
       heroTitle: "Plans and prices",
       heroLede:
-        "Start with the $299 EU DPP Workspace, or request a free pilot seal. Every paid plan below checks out on Stripe.",
+        "Start with the $299 EU DPP Readiness checkout, or request a free pilot seal. Every paid plan below checks out on Stripe.",
       navLabel: "Open workspace",
       secondary: { href: "/onboard", label: "Onboard", primary: false },
       plansNote:
-        "QRON generation packs and plans, the EU DPP Workspace, and a free pilot. E-bike and other LMT batteries need a passport from 18 February 2027.",
-      ctaTitle: "Open your EU DPP Workspace",
+        "QRON generation packs and plans, the EU DPP Readiness checkout, and a free pilot. E-bike and other LMT batteries need a passport from 18 February 2027.",
+      ctaTitle: "EU DPP Readiness: pay $299 on Stripe",
       ctaLede:
         "$299, one time. Pay on Stripe, or add your work email first so we can send your receipt.",
       footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
@@ -597,7 +597,7 @@ ${CHECKOUT_NEED_EMAIL_BANNER_HTML}
 ${estateHero({
   eyebrow: "Published paths only",
   title: "No GovChain self-serve price.",
-  lede: "Request access and we'll talk through what you need. If you also sell into the EU, you can open AuthiChain's $299 EU DPP Workspace today.",
+  lede: "Request access and we'll talk through what you need. If you also sell into the EU, you can start AuthiChain's $299 EU DPP Readiness checkout today.",
   emailCheckout: {
     action: GOVCHAIN_DPP_CHECKOUT,
     label: dppCta,

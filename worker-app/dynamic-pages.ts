@@ -1063,7 +1063,7 @@ function onboardPayNowHtml(): string {
     "\n" +
     catalogPaymentLinkHtml({
       planId: "dpp_readiness",
-      label: "EU DPP Workspace — $299",
+      label: "Pay $299 on Stripe",
     }) +
     "\n" +
     "</p>\n" +
@@ -1098,7 +1098,7 @@ function onboardFormHtml(error?: string, host = ""): string {
   return htmlDocument({
     title: onboardTitle(host),
     description:
-      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 or EU DPP Workspace $299.",
+      "Start an AuthiChain, QRON, StrainChain, or GovChain pilot. Company, product, serial — then a v0.1 seal. Or pay Passport $49 or EU DPP Readiness $299.",
     canonicalPath: "/onboard",
     extraHead:
       "<style>" +

@@ -1,5 +1,5 @@
 /**
- * dpp-fulfillment — Stripe webhook + daily report for the EU DPP Workspace ($299).
+ * dpp-fulfillment — Stripe webhook + daily report for the EU DPP Readiness checkout ($299).
  * Not an audit. Price id is unchanged.
  */
 
@@ -18,7 +18,7 @@ export interface Env {
 }
 
 const OFFER = "dpp_readiness_2026";
-const PRODUCT_NAME = "EU DPP Workspace";
+const PRODUCT_NAME = "EU DPP Readiness";
 
 async function verifyStripeSignature(
   body: string,

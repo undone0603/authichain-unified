@@ -78,11 +78,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
         desc: "Signed, publicly verifiable certificates are in development.",
       },
       {
-        title: "Live in a Day, Not a Quarter",
-        desc: "Import your catalog and issue authenticated codes the same day.",
-      },
-      {
-        title: "Pricing You Can Actually See",
+        title: "Pricing on request",
         desc: "Pricing: contact us at authichain.com/contact.",
       },
     ],
@@ -135,10 +131,10 @@ const BASE_VS_PAGES: VsDefinition[] = [
       },
       {
         title: "Open to Every Brand",
-        desc: "No enterprise-only gate. A single-product luxury maker or a cannabis dispensary can self-serve onboard the same day as a Fortune 500 supply chain.",
+        desc: "No enterprise-only gate.",
       },
       {
-        title: "Strongest Proof Layer",
+        title: "Proof layer (in development)",
         desc: "Signed, publicly checkable certificates are in development.",
       },
     ],
@@ -184,7 +180,7 @@ const BASE_VS_PAGES: VsDefinition[] = [
         desc: "Pay in USD by card through Stripe.",
       },
       {
-        title: "AI + Multi-Chain Assurance",
+        title: "On-chain anchoring (in development)",
         desc: "On-chain anchoring is in development.",
       },
     ],

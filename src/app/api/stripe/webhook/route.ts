@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
           if (email) {
             const mail = dppOffer
               ? renderBillingEmail("dpp_audit_provisioned", brand, {
-                  planName: "EU DPP Workspace",
+                  planName: "EU DPP Readiness",
                   activateUrl: dppActivateUrl(
                     session.id,
                     visitId ? String(visitId) : null
