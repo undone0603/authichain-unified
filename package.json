@@ -34,7 +34,7 @@
     "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
     "lint-staged": "lint-staged",
     "preinstall": "node scripts/check-npm-version.cjs",
-    "prepare": "husky install",
+    "prepare": "husky",
     "build:server": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start:server": "NODE_ENV=production tsx server/_core/index.ts",
     "dev:server": "tsx watch server/_core/index.ts",
