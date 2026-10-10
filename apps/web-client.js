@@ -1,1 +1,0 @@
-const AuthTokenABI = {}; // Placeholder
