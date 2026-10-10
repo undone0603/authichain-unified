@@ -28,7 +28,7 @@ function createMcpServer(env: Env): McpServer {
   // ─── Tool: verify_product ───────────────────────────────────────────────────
   server.tool(
     "verify_product",
-    "Verify the authenticity of a physical product using AuthiChain's 5-agent AI consensus protocol. Returns trust score, verification status, and provenance data.",
+    "Returns trust score, verification status, and provenance data.",
     {
       productId: z.string().optional().describe("Product ID or serial number"),
       imageUrl: z

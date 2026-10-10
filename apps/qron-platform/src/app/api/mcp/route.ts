@@ -20,7 +20,7 @@ const STUB_TOOL_REPLY =
 const TOOLS = [
   {
     name: "authichain_verify_product",
-    description: "Verifies product authenticity using a 5-agent AI consensus mechanism. Requires a serial number.",
+    description: "Requires a serial number.",
     inputSchema: {
       type: "object",
       properties: {
@@ -31,7 +31,7 @@ const TOOLS = [
   },
   {
     name: "authichain_register_product",
-    description: "Registers a new product in the registry and mints a corresponding NFT certificate on Polygon.",
+    description: "Registers a new product in the registry.",
     inputSchema: {
       type: "object",
       properties: {

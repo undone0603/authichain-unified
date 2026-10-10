@@ -215,11 +215,6 @@ function getLandingContent(brandId: BrandId): LandingContent {
         "Verifiable government data. Compliance reporting, procurement transparency, and public accountability with cryptographic proof.",
       features: [
         {
-          icon: "🏛️",
-          title: "Public Records",
-          desc: "Certificate contract live on Polygon; product certification through verify is in development.",
-        },
-        {
           icon: "📊",
           title: "Procurement Tracking",
           desc: "Contract awards, bids, spending. Full transparency. Real-time compliance reporting.",
