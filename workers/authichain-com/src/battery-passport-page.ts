@@ -372,6 +372,7 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
     { href: "#grep -ni "generation" workers/authichain-com/src/battery-passport-page.ts
       git status
       t-started", label: `Get ready — $${price}` }
+git --no-pager log -1
   )}
 <main id="main">
   <header class="estate-hero hero" id="hero">
