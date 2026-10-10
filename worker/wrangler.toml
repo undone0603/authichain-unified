@@ -8,3 +8,6 @@ GITHUB_REPO = "undone0603/authichain-unified"
 
 [observability]
 enabled = true
+
+[assets]
+directory = "../.next"
