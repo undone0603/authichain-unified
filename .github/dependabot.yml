@@ -5,22 +5,6 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
-    # GB-26 fix 3: one PR per group instead of one per package.
-    groups:
-      npm-dev-minor-patch:
-        dependency-type: "development"
-        update-types: ["minor", "patch"]
-      npm-prod-minor-patch:
-        dependency-type: "production"
-        update-types: ["minor", "patch"]
-    # Dead sub-folders: vendored copies of agent-browser and its docs site,
-    # each with its own standalone pnpm-lock.yaml, outside pnpm-workspace.yaml
-    # (not built, tested or deployed). Their bump PRs failed ~100% of the time.
-    exclude-paths:
-      - "apps/chatbot/**"
-      - "docs/technical-reference/**"
-      - "apps/agent-browser/docs/**"
-      - "apps/agent-browser/examples/**"
     allow:
       - dependency-type: "all"
     ignore:
@@ -58,6 +42,3 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    groups:
-      github-actions:
-        patterns: ["*"]
