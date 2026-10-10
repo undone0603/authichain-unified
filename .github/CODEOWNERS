@@ -28,3 +28,13 @@ src/lib/auth*               @undone0603
 .env.example                @undone0603
 .env.local.example          @undone0603
 .env.template               @undone0603
+
+# Billing, Stripe, entitlements, usage metering — revenue-critical; always founder review
+src/lib/billing*                 @undone0603
+src/lib/stripe*                  @undone0603
+src/lib/dunning*                 @undone0603
+workers/**/*stripe*              @undone0603
+workers/**/*billing*             @undone0603
+.github/workflows/*stripe*       @undone0603
+.github/workflows/revenue*       @undone0603
+.github/workflows/checkout*      @undone0603
