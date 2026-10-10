@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Button, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import MissionMilestoneTracker from './components/MissionMilestoneTracker';
 
 const API_URL = 'https://qron.space'; // Production API URL
 
@@ -19,6 +20,7 @@ export default function App() {
     // Camera permissions are not granted yet.
     return (
       <View style={styles.container}>
+      <MissionMilestoneTracker />
         <Text style={styles.message}>We need your permission to show the camera</Text>
         <Button onPress={requestPermission} title="grant permission" color="#c9a227" />
       </View>
