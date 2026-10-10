@@ -30,10 +30,17 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  ci:
-    name: Main quality gate
+  # GB-26 fix 1: the old single "Main quality gate" job ran typecheck, lint,
+  # tests (~314 s) and the production build (~218 s) one after another. They
+  # now run as parallel jobs, tests split into 2 shards. The job below keeps
+  # the exact check name "Main quality gate" (the only required status check
+  # in ruleset main-no-direct-push) and goes green only when every
+  # parallel job succeeded.
+  # Rollback: git revert <merge sha> (restores the single serial job).
+  quality:
+    name: Typecheck and lint
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -49,14 +56,14 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
       - name: Validate secrets format
         run: node scripts/check-secrets-format.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Type check
         run: pnpm check
@@ -64,39 +71,84 @@ jobs:
       - name: Lint
         run: pnpm lint:ci
 
+  test:
+    # The workspace suites mix Vitest, node:test and tsx --test, so
+    # `vitest --shard` cannot split them. Shards split turbo's package graph
+    # instead: shard 1 = workers/*, shard 2 = every other workspace package.
+    # Together they equal the old `turbo test --filter=!.`.
+    name: Tests (shard ${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1
+            filter: "--filter=./workers/*"
+          - shard: 2
+            filter: "--filter=!. --filter=!./workers/*"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+
       - name: Install Playwright browsers
+        if: matrix.shard == 2
         run: pnpm --filter agent-browser exec playwright install --with-deps chromium
 
-      # `pnpm test` runs `turbo test`, and turbo.json's test task
-      # `dependsOn: ["build"]` builds every workspace app first — including
-      # every Next.js app using next/font/google, not just the root app the
-      # "Production build" step below covers. That step already retries once
-      # for the same flake (see its comment); this implicit build had no such
-      # retry, so a font-fetch hiccup here failed the whole required gate with
-      # no test output at all. Second `pnpm test` keeps the step's exit code —
-      # do not `set +e`.
-      #
-      # `--continue=dependencies-successful` keeps turbo running every other
-      # package's tests after one fails, so a single red package no longer
-      # hides failures elsewhere; turbo still exits non-zero if any task
-      # failed. A package whose own build failed is skipped, not tested.
+      # turbo.json's test task dependsOn build, so each shard builds the
+      # workspace apps it tests. One retry for the next/font/google fetch
+      # flake; the second run keeps the step's exit code (no `set +e`).
+      # --continue=dependencies-successful keeps other packages' tests
+      # running after one fails; turbo still exits non-zero.
       - name: Run tests
         run: |
-          if pnpm test --continue=dependencies-successful; then
+          if pnpm exec turbo test ${{ matrix.filter }} --continue=dependencies-successful; then
             exit 0
           fi
           echo "Tests failed; retrying once for a possible next/font fetch flake in a workspace build"
           sleep 15
-          pnpm test --continue=dependencies-successful
+          pnpm exec turbo test ${{ matrix.filter }} --continue=dependencies-successful
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       # next/font/google sometimes 404s mid-build (null CSS parse at
-      # google/loader.js:122 on Public_Sans). Same layout just passed on
-      # sibling PRs; one retry is cheaper than a red required gate.
-      # Second `pnpm build` keeps the step's exit code — do not `set +e`.
-      # After the test step, V8 caps this process near 2 GB and
-      # `next build --webpack` aborts during "Creating an optimized
-      # production build" (exit 134) on both attempts. 4096 MB overrides
-      # that cap on the 7 GB runner.
+      # google/loader.js:122 on Public_Sans); one retry. Second `pnpm build`
+      # keeps the step's exit code. 4096 MB heap kept from the serial job
+      # (next build --webpack aborted with exit 134 under the ~2 GB cap).
       - name: Production build
         env:
           NODE_OPTIONS: --max-old-space-size=4096
@@ -107,6 +159,25 @@ jobs:
           echo "Production build failed; retrying once for next/font fetch flake"
           sleep 15
           pnpm build
+
+  ci:
+    name: Main quality gate
+    needs: [quality, test, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All CI Main jobs passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "quality/test/build results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::A CI Main job did not succeed ($r)"
+              exit 1
+            fi
+          done
 
   production-proof:
     name: Production launch proof
