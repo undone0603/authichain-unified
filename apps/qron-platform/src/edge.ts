@@ -66,8 +66,29 @@ const worker = {
           body.jws.trim(),
           typeof body.expected_object_id === 'string' ? body.expected_object_id : undefined,
         );
-        return new Response(JSON.stringify(result.response), {
-          status: result.httpStatus,
+        const canonicalPositive =
+          result.httpStatus >= 200 &&
+          result.httpStatus < 300 &&
+          result.response.valid === true &&
+          result.response.decision === 'verified';
+        const response = canonicalPositive
+          ? result.response
+          : {
+              ...result.response,
+              valid: false,
+              ...(result.response.decision === 'verified' ? { decision: 'indeterminate' } : {}),
+              reasons: [
+                ...(Array.isArray(result.response.reasons) ? result.response.reasons : []),
+                'canonical_response_not_positive',
+              ],
+            };
+        const status = canonicalPositive
+          ? 200
+          : result.httpStatus >= 400
+            ? result.httpStatus
+            : 409;
+        return new Response(JSON.stringify(response), {
+          status,
           headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         });
       } catch (error) {
