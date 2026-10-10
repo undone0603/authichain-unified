@@ -1,0 +1,54 @@
+changelog:
+  categories:
+    - title: Canonical Trust Layer
+      labels:
+        - protocol
+        - verification
+        - attestation
+    - title: Product Surfaces
+      labels:
+        - dpp
+        - qron
+        - govchain
+        - strainchain
+    - title: Agentic Operations
+      labels:
+        - agentz
+        - mcp
+    - title: Security & Reliability
+      labels:
+        - security
+        - reliability
+        - bug
+    - title: Developer Experience
+      labels:
+        - documentation
+        - tooling
+        - dependencies
+    - title: Other Changes
+      labels:
+        - '*'
+
+  exclude:
+    labels:
+      - skip-changelog
+      - duplicate
+      - invalid
+      - wontfix
+
+  template: |
+    ## What changed
+
+    $CHANGES
+
+    ## Validation
+
+    - Exact release commit/tag:
+    - CI/security/build gates:
+    - Contract tests, when applicable:
+    - Deployment evidence, when applicable:
+    - Known limitations:
+
+    ## Trust-boundary note
+
+    A release describes the code and evidence validated for this exact tag. It does not turn a registry row, QR match, blockchain anchor, DPP publication, or signature into independent proof of authenticity.
