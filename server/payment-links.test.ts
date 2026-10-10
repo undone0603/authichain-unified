@@ -13,7 +13,7 @@ describe("PAYMENT_LINKS", () => {
   it("loads when dpp_readiness has no raw Stripe Payment Link", () => {
     expect(planById("dpp_readiness")?.stripe_payment_link).toBeUndefined();
     expect(PAYMENT_LINKS.authichain.starter).toEqual({
-      name: "EU DPP Workspace",
+      name: "EU DPP Readiness",
       price: "$299",
       url: "https://authichain.com/checkout/dpp_readiness",
     });
