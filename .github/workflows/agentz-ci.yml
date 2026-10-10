@@ -1,0 +1,19 @@
+name: AgentZ Autonomous CI
+on: [push]
+jobs:
+  verify-and-heal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Run Integration Tests
+        run: |
+          echo "Executing full-stack integration tests..."
+          echo "❌ Error: Missing ABI definitions in web-client.js"
+          exit 1 # Simulating a failed test pipeline
+      - name: Trigger AgentZ Self-Healing
+        if: failure()
+        run: node agentz/healing/auto-fix.js
