@@ -191,7 +191,7 @@ jobs:
           node-version: 22
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile
 
       # Cloudflare Containers (wrangler.jsonc "containers") need a Docker
       # builder on the runner. Without Buildx, authichain-agentz fails mid-deploy

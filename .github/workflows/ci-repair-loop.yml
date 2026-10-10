@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+      - run: pnpm install --frozen-lockfile
 
       - name: Attempt safe prettier write (lint:ci targets only)
         id: fix

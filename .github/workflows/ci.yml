@@ -55,7 +55,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check migration source of truth
         run: node scripts/check-drizzle-migrations.mjs
@@ -82,8 +82,18 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install AgentZ Python dependencies
+      # GB-26 fix 2: cache the whole venv (pip install was ~35 s on top of
+      # the pip download cache). Keyed on Python version + requirements.
+      - name: Cache AgentZ venv
+        id: venv-cache
         if: hashFiles('requirements-agentz.txt') != ''
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: agentz-venv-${{ runner.os }}-py3.12-${{ hashFiles('requirements-agentz.txt') }}
+
+      - name: Install AgentZ Python dependencies
+        if: hashFiles('requirements-agentz.txt') != '' && steps.venv-cache.outputs.cache-hit != 'true'
         run: |
           python -m venv .venv
           ./.venv/bin/pip install --upgrade pip
