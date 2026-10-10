@@ -104,6 +104,23 @@ describe("canonical /api/v1/attestation/verify decision propagation", () => {
     }
   });
 
+  it("maps an expired signed claim to expired", async () => {
+    const { app, sign } = await setup();
+    const res = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws: await sign({ expires_at: "2026-01-01T00:00:00Z" }) }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      valid: false,
+      decision: "expired",
+      claim_status: "expired",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["claim_expired"],
+    });
+  });
+
   it("maps durable revocation to revoked even when the signed decision was verified", async () => {
     const { privateKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
     process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(await exportPKCS8(privateKey), "utf8").toString("base64");
