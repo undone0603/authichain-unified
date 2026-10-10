@@ -10,11 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           
+      - name: TurboRepo Local Cache
+        uses: actions/cache@v3
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            \${{ runner.os }}-turbo-
+
       - name: Run Integration Tests
         run: |
           echo "Executing full-stack integration tests..."
@@ -28,5 +37,5 @@ jobs:
       - name: Trigger AgentZ Self-Healing
         if: failure()
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: \${{ github.token }}
         run: node agentz/healing/auto-fix.js

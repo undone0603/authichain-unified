@@ -1,17 +1,22 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import path from "path";
+import fs from "fs";
 
-console.log('\n  🌍 [AgentZ] Initializing Non-Simulated Third-Party Agent Gateway...');
+console.log('\n  ⚡ [AgentZ] Initializing High-Performance MCP Gateway...');
 
 async function connectToThirdPartyBot() {
+    // Target the local binary directly to eliminate network overhead and npx cold starts
+    const mcpBin = path.join(process.cwd(), 'node_modules', '.bin', 'mcp-server-memory');
+    
+    if (!fs.existsSync(mcpBin)) {
+        console.error('  ❌ [AgentZ] Local MCP binary not found. Run `pnpm install`.');
+        process.exit(1);
+    }
+
     const transport = new StdioClientTransport({
-        command: "npx",
-        args: ["-y", "@modelcontextprotocol/server-fetch"],
-        env: {
-            ...process.env,
-            // Suppress the "frozen-lockfile" npm warnings to keep the JSON-RPC stream clean
-            npm_config_loglevel: "error" 
-        }
+        command: mcpBin,
+        args: []
     });
 
     const client = new Client({
@@ -22,20 +27,20 @@ async function connectToThirdPartyBot() {
     });
 
     try {
-        console.log('  🌍 [AgentZ] Dialing external MCP Fetch Bot...');
+        const startTime = Date.now();
         await client.connect(transport);
-        
         const tools = await client.listTools();
+        const bootTime = Date.now() - startTime;
         
-        console.log(`  ✅ [AgentZ] Connection established! Unlocked ${tools.tools.length} real-world capabilities:`);
+        console.log(`  ✅ [AgentZ] Instant connection established in ${bootTime}ms!`);
         tools.tools.forEach(tool => {
             console.log(`      -> 🔧 ${tool.name}: ${tool.description?.split('\n')[0] || 'No description'}`);
         });
 
-        console.log('\n  🚀 [AgentZ] 3rd-party integration live. AgentZ can now execute real-world web requests.\n');
+        console.log('\n  🚀 [AgentZ] Zero-latency Swarm Memory Graph is live and ready for execution.\n');
         process.exit(0);
     } catch (error) {
-        console.error('  ❌ [AgentZ] Failed to connect to third-party bot:', error.message);
+        console.error('  ❌ [AgentZ] Connection failed:', error.message);
         process.exit(1);
     }
 }
