@@ -23,4 +23,8 @@ describe("dpp-outreach email-template", () => {
     expect(body).not.toMatch(/workspace/i);
     expect(tpl).not.toMatch(/50 generations/i);
   });
+  it("keeps the disclaimer", () => {
+    expect(tpl).toMatch(/not legal advice/i);
+    expect(tpl).toMatch(/EUDAMED/);
+  });
 });

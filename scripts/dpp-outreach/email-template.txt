@@ -6,7 +6,7 @@ Hi {{contact_name}},
 
 If {{company}} sells into the EU, Digital Product Passport requirements are moving from roadmap to buyer questions.
 
-EU DPP Readiness is $299. Stripe confirms your payment and links you to a short onboarding form. The readiness work itself is in development.
+EU DPP Readiness is $299. Stripe confirms your payment and links you to a short onboarding form. The readiness work itself is in development. It is not an audit, not a certification, and not legal advice. It does not register a product in EUDAMED.
 
 Start here (tracked):
 https://authichain.com/checkout/dpp_readiness?utm_source=email&utm_medium=warm&utm_campaign={{utm_campaign}}&email={{email}}
