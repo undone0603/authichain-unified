@@ -4,12 +4,12 @@ import fs from 'fs';
 console.log('\n  🚑 [AgentZ] Analyzing CI/CD pipeline failure...');
 
 try {
-    const fileToFix = 'apps/web-client.js';
+    const fileToFix = 'apps/web-client.ts';
     if (fs.existsSync(fileToFix)) {
         let code = fs.readFileSync(fileToFix, 'utf8');
         code = code.replace(
-            'const AuthTokenABI = {}; // Placeholder', 
-            'const AuthTokenABI = { status: "secure", version: "1.0.0" }; // Autonomous patch applied by AgentZ'
+            'export const AuthTokenABI = {}; // Placeholder', 
+            'export const AuthTokenABI = { status: "secure", version: "1.0.0" }; // Autonomous patch applied by AgentZ'
         );
         fs.writeFileSync(fileToFix, code);
         console.log(`  🚑 [AgentZ] Patch applied to ${fileToFix}.`);
@@ -28,7 +28,7 @@ try {
     execSync(`git push -u origin ${branchName}`);
     
     // Create the PR
-    execSync(`gh pr create --title "fix: autonomous pipeline repair" --body "🤖 **AgentZ Autonomous Repair**\n\nThis PR automatically patches a failure detected in the CI/CD pipeline.\n- **Issue:** Missing ABI definitions.\n- **Resolution:** Autonomous patch applied to \`apps/web-client.js\`." --base main`, { stdio: 'inherit' });
+    execSync(`gh pr create --title "fix: autonomous pipeline repair" --body "🤖 **AgentZ Autonomous Repair**\n\nThis PR automatically patches a failure detected in the CI/CD pipeline.\n- **Issue:** Missing ABI definitions.\n- **Resolution:** Autonomous patch applied to \`apps/web-client.ts\`." --base main`, { stdio: 'inherit' });
     
     // Use --auto to respect branch protection rules and merge once checks pass
     console.log(`  🚑 [AgentZ] Queuing Pull Request for Auto-Merge...`);
