@@ -12,7 +12,7 @@ on:
   # with GITHUB_TOKEN never trigger pull_request workflows, so without this a
   # routine PR gets no "Main quality gate" check at all (that is how #1474
   # merged with no CI on 2026-10-02). workflow_dispatch from GITHUB_TOKEN does
-  # start runs. Live proof is enabled for same-repository PRs and marked main pushes.
+  # start runs. production-proof stays push-only (its `if:` is unchanged).
   workflow_dispatch:
 
 concurrency:
@@ -196,12 +196,7 @@ jobs:
 
   production-proof:
     name: Production launch proof
-    needs: [ci]
-    # Same-repository PR code may perform live operations before merge.
-    # Fork PRs are excluded; main pushes retain the explicit message marker.
-    if: >-
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]'))
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pipeline-proof]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -210,9 +205,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -250,7 +242,7 @@ jobs:
           AUTHICHAIN_ATTESTATION_KEY_ID: ${{ secrets.AUTHICHAIN_ATTESTATION_KEY_ID }}
           AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_SHA: ${{ github.sha }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: pnpm tsx scripts/launch-proof.ts
 
