@@ -16,9 +16,15 @@ import {
 
 export const FIRST_STRANGER_SKU: PlanId = "starter";
 
+/**
+ * Exact founder inboxes, plus "@domain" entries that cover every alias on an
+ * owned domain (same contract as scripts/autonomy/revenue-watch.mjs isFounder
+ * and .github/autonomy.json founder_emails).
+ */
 export const FOUNDER_EMAILS = [
   "undone.k@gmail.com",
   "authichain@gmail.com",
+  "@authichain.com",
 ] as const;
 
 export type PublicPlanId = (typeof PUBLIC_PLAN_IDS)[number];
@@ -92,9 +98,19 @@ export const UNLISTED_SMOKE = {
 const PUBLIC_SET = new Set<string>(PUBLIC_PLAN_IDS);
 const UNLISTED_PRICE_SET = new Set<string>(Object.values(UNLISTED_SMOKE));
 
-export function isFounderEmail(email?: string | null): boolean {
+export function isFounderEmail(
+  email?: string | null,
+  founderEmails: readonly string[] = FOUNDER_EMAILS
+): boolean {
   const e = (email || "").toLowerCase().trim();
-  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+  if (!e) return false;
+  if (founderEmails.some(item => item.trim().toLowerCase() === e)) return true;
+  const at = e.lastIndexOf("@");
+  if (at < 0) return false;
+  const domainEntry = e.slice(at);
+  return founderEmails.some(
+    item => item.trim().toLowerCase() === domainEntry
+  );
 }
 
 export function isPublicPlanId(id: string): id is PublicPlanId {
