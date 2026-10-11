@@ -1,0 +1,25 @@
+{
+  "name": "AuthiChain Verify",
+  "short_name": "Verify",
+  "description": "Free product authenticity verification. AI consensus + on-chain proof.",
+  "start_url": "/verify?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0c0d",
+  "theme_color": "#d4b45a",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
