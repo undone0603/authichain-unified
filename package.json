@@ -1,4 +1,5 @@
 {
+  
   "name": "authichain-unified",
   "version": "1.0.0",
   "type": "module",
@@ -9,7 +10,7 @@
     "npm": ">=11.3.0"
   },
   "scripts": {
-    "dev": "turbo dev --single-package",
+    "dev": "turbo run dev",
     "build": "next build --webpack",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",

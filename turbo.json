@@ -1,14 +1,1 @@
-{
-  "$schema": "https://turbo.build/schema.json",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", ".output/**", "public/dist/**"]
-    },
-    "test": {
-      "dependsOn": ["build"]
-    },
-    "lint": {},
-    "check": {}
-  }
-}
+{"$schema":"https://turbo.build/schema.json","concurrency":"20","tasks":{"build":{"dependsOn":["^build"],"outputs":["dist/**",".next/**",".output/**","public/dist/**"]},"dev":{"cache":false,"persistent":true},"test":{"dependsOn":["build"]},"lint":{},"check":{}}}
