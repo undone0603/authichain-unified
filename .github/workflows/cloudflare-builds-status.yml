@@ -33,7 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Skip API query on pull_request
+        if: github.event_name == 'pull_request'
+        run: echo "CFA-215 - CLOUDFLARE_API_TOKEN is not exposed to pull_request runs; dispatch this workflow from main to query."
+
       - name: Query Workers Builds API
+        # CFA-215: the token only reaches non-PR runs (workflow_dispatch).
+        if: github.event_name != 'pull_request'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

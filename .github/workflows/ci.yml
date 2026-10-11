@@ -48,7 +48,9 @@ jobs:
       - name: Supabase explicit GRANTs for new public tables (Oct 30)
         run: node scripts/ci/check-supabase-grants.mjs --run
 
-      - name: Validate secrets format
+      - name: Validate secrets format (skipped on pull_request)
+        # CFA-215: secrets never reach pull_request runs; PR code is untrusted.
+        if: github.event_name != 'pull_request'
         run: node scripts/check-secrets-format.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

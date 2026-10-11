@@ -26,7 +26,7 @@ jobs:
       - name: Check database secret
         id: secret
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ github.event_name != 'pull_request' && secrets.DATABASE_URL || '' }} # CFA-215: empty on pull_request
         run: |
           if [ -n "$DATABASE_URL" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
@@ -60,7 +60,7 @@ jobs:
         if: steps.secret.outputs.available == 'true'
         run: node scripts/audit-production-drizzle.mjs
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ github.event_name != 'pull_request' && secrets.DATABASE_URL || '' }} # CFA-215: empty on pull_request
 
       - name: Upload audit artifact
         if: steps.secret.outputs.available == 'true'
