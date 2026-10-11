@@ -1,3 +1,4 @@
+import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild

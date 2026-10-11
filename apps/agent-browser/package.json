@@ -60,8 +60,11 @@
   },
   "homepage": "https://github.com/vercel-labs/agent-browser#readme",
   "dependencies": {
+    "next": "^16.4.0",
     "node-simctl": "^9.1.1",
     "playwright-core": "^1.63.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "webdriverio": "^9.32.0",
     "ws": "^8.22.0",
     "zod": "^3.22.4"
