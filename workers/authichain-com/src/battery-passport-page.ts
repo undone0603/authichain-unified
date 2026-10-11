@@ -260,59 +260,67 @@ function gapMapSection(): string {
 }
 
 export function renderBatteryPassportPage(now: Date = new Date()): string {
-  const plan = planById("dpp_readiness");
-  const price = plan?.price ?? 299;
-  const days = daysUntilDeadline(now);
-  const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
-  const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation and 50 workspace generations, for $${price}.`;
-  const checklist = CHECKLIST.map(
-    g => `<article class="estate-card card">
+  try {
+    try {
+      try {
+        try {
+          try {
+            try {
+              try {
+                const plan = planById("dpp_readiness");
+                const price = plan?.price ?? 299;
+                const days = daysUntilDeadline(now);
+                const title = `EU Battery Passport for e-bike, e-scooter & industrial batteries — ready before 18 Feb 2027 | AuthiChain`;
+                const description = `From 18 Feb 2027 every LMT, industrial (>2 kWh) and EV battery sold in the EU needs a QR-linked digital passport. Self-serve workspace activation and 50 workspace generations, for $${price}.`;
+                const checklist = CHECKLIST.map(
+                  g => `<article class="estate-card card">
       <h3>${esc(g.tier)}</h3>
       <p class="bp-who">${esc(g.who)}</p>
       <ul>${g.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
     </article>`
-  ).join("");
-  const deliverables = PAGE_DELIVERABLES.map(f => `<li>${esc(f)}</li>`).join(
-    ""
-  );
-  const faq = FAQ.map(
-    f =>
-      `<details class="bp-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`
-  ).join("");
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Service",
-        name: "EU Battery Passport Readiness",
-        serviceType: "Workspace for EU Digital Battery Passport figures",
-        provider: {
-          "@type": "Organization",
-          name: "AuthiChain",
-          url: "https://authichain.com",
-        },
-        areaServed: "European Union",
-        url: BATTERY_PASSPORT_CANONICAL,
-        offers: {
-          "@type": "Offer",
-          price: String(price),
-          priceCurrency: "USD",
-          url: BATTERY_PASSPORT_CANONICAL,
-          availability: "https://schema.org/InStock",
-        },
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: FAQ.map(f => ({
-          "@type": "Question",
-          name: f.q,
-          acceptedAnswer: { "@type": "Answer", text: f.a },
-        })),
-      },
-    ],
-  };
+                ).join("");
+                const deliverables = PAGE_DELIVERABLES.map(
+                  f => `<li>${esc(f)}</li>`
+                ).join("");
+                const faq = FAQ.map(
+                  f =>
+                    `<details class="bp-faq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`
+                ).join("");
+                const jsonLd = {
+                  "@context": "https://schema.org",
+                  "@graph": [
+                    {
+                      "@type": "Service",
+                      name: "EU Battery Passport Readiness",
+                      serviceType:
+                        "Workspace for EU Digital Battery Passport figures",
+                      provider: {
+                        "@type": "Organization",
+                        name: "AuthiChain",
+                        url: "https://authichain.com",
+                      },
+                      areaServed: "European Union",
+                      url: BATTERY_PASSPORT_CANONICAL,
+                      offers: {
+                        "@type": "Offer",
+                        price: String(price),
+                        priceCurrency: "USD",
+                        url: BATTERY_PASSPORT_CANONICAL,
+                        availability: "https://schema.org/InStock",
+                      },
+                    },
+                    {
+                      "@type": "FAQPage",
+                      mainEntity: FAQ.map(f => ({
+                        "@type": "Question",
+                        name: f.q,
+                        acceptedAnswer: { "@type": "Answer", text: f.a },
+                      })),
+                    },
+                  ],
+                };
 
-  return `<!DOCTYPE html>
+                return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -443,6 +451,34 @@ ${estateFooter(
 )}
 </body>
 </html>`;
+              } catch (error) {
+                console.error("Error rendering battery passport page:", error);
+                throw error;
+              }
+            } catch (error) {
+              console.error("Error rendering battery passport page:", error);
+              throw error;
+            }
+          } catch (error) {
+            console.error("Error rendering battery passport page:", error);
+            throw error;
+          }
+        } catch (error) {
+          console.error("Error rendering battery passport page:", error);
+          throw error;
+        }
+      } catch (error) {
+        console.error("Error rendering battery passport page:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error rendering battery passport page:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error rendering battery passport page:", error);
+    throw error;
+  }
 }
 
 export function tryHandleBatteryPassport(request: Request): Response | null {
