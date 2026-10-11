@@ -1,3 +1,4 @@
+import { handleSalesInquiry } from './routes/sales';
 import mcpServer from './mcp-server';
 // The DPP regulatory timeline is shared with the Next.js page rather than
 // duplicated here: content/dpp/regulatory-timeline.json is the single source of
@@ -3565,6 +3566,9 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (mcp) return mcp;
     const apiV1 = await tryHandleApiV1(request, env);
     if (apiV1) return apiV1;
+    if (p === '/api/sales') {
+      return handleSalesInquiry(request, env);
+    }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
