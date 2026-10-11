@@ -134,7 +134,7 @@ export function DocsChat({
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [desktopWidth, setDesktopWidth] = useState(
-    Math.min(DESKTOP_MAX_WIDTH, Math.max(DESKTOP_MIN_WIDTH, defaultWidth)),
+    Math.min(DESKTOP_MAX_WIDTH, Math.max(DESKTOP_MIN_WIDTH, defaultWidth))
   );
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -203,7 +203,7 @@ export function DocsChat({
         const delta = startX - ev.clientX;
         const newWidth = Math.min(
           DESKTOP_MAX_WIDTH,
-          Math.max(DESKTOP_MIN_WIDTH, startWidth + delta),
+          Math.max(DESKTOP_MIN_WIDTH, startWidth + delta)
         );
         setDesktopWidth(newWidth);
       };
@@ -218,7 +218,7 @@ export function DocsChat({
       document.addEventListener("pointermove", onPointerMove);
       document.addEventListener("pointerup", onPointerUp);
     },
-    [desktopWidth],
+    [desktopWidth]
   );
 
   // Persist width to cookie
@@ -263,7 +263,7 @@ export function DocsChat({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => {
+        setOpen(prev => {
           if (!prev) {
             setTimeout(() => inputRef.current?.focus(), 200);
           }
@@ -307,7 +307,7 @@ export function DocsChat({
       sendMessage({ text: input });
       setInput("");
     },
-    [input, isLoading, sendMessage],
+    [input, isLoading, sendMessage]
   );
 
   const handleClear = useCallback(() => {
@@ -316,10 +316,10 @@ export function DocsChat({
   }, [setMessages]);
 
   const hasVisibleContent = (
-    parts: (typeof messages)[number]["parts"],
+    parts: (typeof messages)[number]["parts"]
   ): boolean => {
     return parts.some(
-      (p) => (p.type === "text" && p.text.length > 0) || isToolPart(p),
+      p => (p.type === "text" && p.text.length > 0) || isToolPart(p)
     );
   };
 
@@ -367,7 +367,7 @@ export function DocsChat({
           ref={messagesScrollRef}
           className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto"
         >
-          {messages.map((message) => {
+          {messages.map(message => {
             if (!hasVisibleContent(message.parts)) return null;
             return (
               <div key={message.id}>
@@ -376,9 +376,9 @@ export function DocsChat({
                     {message.parts
                       .filter(
                         (p): p is Extract<typeof p, { type: "text" }> =>
-                          p.type === "text",
+                          p.type === "text"
                       )
-                      .map((p) => p.text)
+                      .map(p => p.text)
                       .join("")}
                   </div>
                 ) : (
@@ -424,7 +424,7 @@ export function DocsChat({
       ) : (
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex flex-wrap gap-2 p-4">
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTIONS.map(s => (
               <button
                 key={s}
                 type="button"
@@ -448,7 +448,7 @@ export function DocsChat({
         <textarea
           ref={inputRef}
           value={input}
-          onChange={(e) => {
+          onChange={e => {
             setInput(e.target.value);
             e.target.style.height = "auto";
             e.target.style.height = `${e.target.scrollHeight}px`;
@@ -456,7 +456,7 @@ export function DocsChat({
           rows={1}
           enterKeyHint="send"
           placeholder="Ask a question..."
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSubmit(e);

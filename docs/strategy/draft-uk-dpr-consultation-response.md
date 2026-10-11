@@ -16,6 +16,7 @@ interoperability, unique product identifiers, and verification/data-collection c
 exact numbered questions or the submission mechanism (online form vs. email vs. postal).
 
 **Before this goes anywhere, someone needs to:**
+
 1. Open the actual gov.uk page and get the real question list and submission method.
 2. Decide who is submitting this and under what name/capacity — a consultation response is a
    public-record document attributable to whoever signs it.
@@ -26,6 +27,7 @@ I did not invent citation numbers, adoption figures, or claims not already state
 `protocol/` directory. Where I don't know something, it says so.
 
 ## Suggested framing (map onto whichever question covers "interoperability" / "verification
+
 standards" / "what technical approaches should the government consider")
 
 > A domestic digital product record policy will need a way for any party — not just the
@@ -58,6 +60,7 @@ standards" / "what technical approaches should the government consider")
 > https://github.com/undone0603/authichain-unified/tree/main/protocol
 
 ## On "what happened when this wasn't done properly" (if a question asks about risks / what to
+
 avoid)
 
 > Worth naming directly: this repository previously published a public-facing "verified" listing

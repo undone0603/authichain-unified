@@ -74,16 +74,19 @@ Qualified Prospects Only
 **258 Opportunities → X Qualified Leads**
 
 After implementation, you'll filter to only send to:
+
 - ✅ fit_score ≥ 70 (high-fit)
 - ✅ Detailed scoring breakdown (4 dimensions)
 - ✅ No duplicates (upsert by email)
 - ✅ Tracked engagement (opened, clicked, replied)
 
 **Manual Review Queue:**
+
 - ❓ fit_score 60-69 (borderline)
 - Set to `recommended_action='qualify'` for your team to review
 
 **Rejected:**
+
 - ❌ fit_score < 60 (low-fit, not contacted)
 
 ---
@@ -91,6 +94,7 @@ After implementation, you'll filter to only send to:
 ## Files Created/Modified
 
 ### Code Files
+
 ```
 scripts/
 ├── score-opportunities.ts (MODIFIED - threshold logic added)
@@ -102,6 +106,7 @@ drizzle/migrations/
 ```
 
 ### Documentation Files
+
 ```
 docs/
 ├── gov-engine-lead-pipeline.md (NEW - architecture & examples)
@@ -117,6 +122,7 @@ root/
 ## Integration Steps
 
 ### 1. Apply Database Migration
+
 ```bash
 # Option A: Local Supabase
 supabase migration up
@@ -126,6 +132,7 @@ supabase migration up
 ```
 
 ### 2. Test Scripts Locally
+
 ```bash
 # Test scoring (updated thresholds)
 DRY_RUN=true pnpm tsx scripts/score-opportunities.ts
@@ -138,7 +145,9 @@ DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 ```
 
 ### 3. Update GitHub Actions
+
 Add to `.github/workflows/gov-engine.yml`:
+
 ```yaml
 - name: Qualify High-Fit Leads (fit_score ≥ 70)
   run: pnpm tsx scripts/qualify-leads.ts
@@ -149,6 +158,7 @@ Add to `.github/workflows/gov-engine.yml`:
 ```
 
 ### 4. Deploy
+
 ```bash
 git add -A
 git commit -m "feat: lead scoring & qualification pipeline
@@ -166,6 +176,7 @@ git push
 ## Configuration Required
 
 ### Environment Variables
+
 ```bash
 # Existing (still required)
 SUPABASE_URL=your_project_url
@@ -179,6 +190,7 @@ EMAIL_FROM=proposals@authichain.com
 ```
 
 ### Optional
+
 ```bash
 DRY_RUN=true          # Preview changes without writing to DB
 SUPPRESSION_LIST=...  # Comma-separated emails to skip
@@ -191,18 +203,20 @@ SUPPRESSION_LIST=...  # Comma-separated emails to skip
 ### Key Queries
 
 **Check qualification rate:**
+
 ```sql
-SELECT 
+SELECT
   COUNT(CASE WHEN fit_score >= 70 THEN 1 END) as high_fit,
   COUNT(CASE WHEN fit_score BETWEEN 60 AND 69 THEN 1 END) as borderline,
   COUNT(CASE WHEN fit_score < 60 THEN 1 END) as low_fit
-FROM gov_opportunities 
+FROM gov_opportunities
 WHERE status IN ('scored', 'skipped');
 ```
 
 **Email engagement:**
+
 ```sql
-SELECT 
+SELECT
   COUNT(*) as sent,
   SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) as opened,
   ROUND(100.0 * SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) / COUNT(*), 1) as open_rate
@@ -211,13 +225,14 @@ WHERE source = 'gov_engine' AND lastContactedAt IS NOT NULL;
 ```
 
 **Identify issues:**
+
 ```sql
 -- Leads without proposals
-SELECT * FROM leads 
-WHERE source = 'gov_engine' 
+SELECT * FROM leads
+WHERE source = 'gov_engine'
   AND status = 'qualified'
   AND NOT EXISTS (
-    SELECT 1 FROM gov_proposals 
+    SELECT 1 FROM gov_proposals
     WHERE notice_id = leads.metadata->>'opportunity_id'
   );
 ```
@@ -239,6 +254,7 @@ WHERE source = 'gov_engine'
 ## Troubleshooting
 
 **No qualified leads being generated**
+
 - Check: Are opportunities scoring ≥70?
   ```sql
   SELECT COUNT(*) FROM gov_opportunities WHERE fit_score >= 70;
@@ -249,11 +265,13 @@ WHERE source = 'gov_engine'
   ```
 
 **Email not sending despite qualified leads**
+
 - See: `docs/marketing/email-proposals-integration.md` → Troubleshooting section
 - Verify: RESEND_API_KEY is set and valid
 - Check: Email template renders without errors (DRY_RUN=true)
 
 **Proposal data missing from leads**
+
 - Query: `SELECT COUNT(*) FROM gov_proposals WHERE fit_score >= 65`
 - Run: `pnpm tsx scripts/generate-proposals.ts` to create drafts first
 
@@ -284,20 +302,21 @@ WHERE source = 'gov_engine'
 
 ## Summary of Benefits
 
-| Problem | Solution | Outcome |
-|---------|----------|---------|
-| 258 proposals to low-fit agencies | fit_score ≥ 70 filter | ~60-70% fewer emails, higher reply rate |
-| No visibility into fit reasoning | 4-dim lead_score_detail | Transparency, easier manual review |
-| Email quota waste | Qualified leads only | Cost savings & reputation protection |
-| Untracked engagement | leads.emailOpened/Clicked/Replied | Data-driven follow-up |
-| Duplicates across tables | Leads table as source of truth | Single schema, no sync issues |
-| Manual lead creation | Automated qualify-leads.ts | Scale from 50→500 opportunities |
+| Problem                           | Solution                          | Outcome                                 |
+| --------------------------------- | --------------------------------- | --------------------------------------- |
+| 258 proposals to low-fit agencies | fit_score ≥ 70 filter             | ~60-70% fewer emails, higher reply rate |
+| No visibility into fit reasoning  | 4-dim lead_score_detail           | Transparency, easier manual review      |
+| Email quota waste                 | Qualified leads only              | Cost savings & reputation protection    |
+| Untracked engagement              | leads.emailOpened/Clicked/Replied | Data-driven follow-up                   |
+| Duplicates across tables          | Leads table as source of truth    | Single schema, no sync issues           |
+| Manual lead creation              | Automated qualify-leads.ts        | Scale from 50→500 opportunities         |
 
 ---
 
 ## Support
 
 For questions or issues:
+
 1. Check relevant documentation:
    - `docs/marketing/gov-engine-lead-pipeline.md` (architecture)
    - `docs/marketing/email-proposals-integration.md` (email setup)

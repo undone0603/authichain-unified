@@ -7,15 +7,15 @@ They do not send email, post on X, merge main, or change Stripe prices.
 
 ## Live (Grok Automations)
 
-| Bot | Trigger | May do | Must not |
-|---|---|---|---|
-| AuthiChain ship gate | Daily 07:00 ET | Grade CI / Workers | Merge, deploy, comment |
-| AuthiChain revenue review | Daily 07:30 ET | Read Stripe / PayPal / HubSpot | Refund, price edit, email |
-| Daily X radar | Daily 08:30 ET | Draft replies + 1 post | Publish as @Undone0603 |
-| SuperGrok Growth Loop Watch | Daily 08:45 ET | HTTP-check money URLs | Invent traffic, email |
-| Task Extractor | Daily 17:00 ET | Extract P0–P2 into Notion | Close tasks without proof |
-| SuperGrok First Dollar Watch | Gmail from `@stripe.com` | Classify $29/$99/$299/$49 | Count founder charges |
-| SuperGrok CI Break | GitHub workflow failure on `authichain-unified` | Name the red check | Rerun, merge |
+| Bot                          | Trigger                                         | May do                         | Must not                  |
+| ---------------------------- | ----------------------------------------------- | ------------------------------ | ------------------------- |
+| AuthiChain ship gate         | Daily 07:00 ET                                  | Grade CI / Workers             | Merge, deploy, comment    |
+| AuthiChain revenue review    | Daily 07:30 ET                                  | Read Stripe / PayPal / HubSpot | Refund, price edit, email |
+| Daily X radar                | Daily 08:30 ET                                  | Draft replies + 1 post         | Publish as @Undone0603    |
+| SuperGrok Growth Loop Watch  | Daily 08:45 ET                                  | HTTP-check money URLs          | Invent traffic, email     |
+| Task Extractor               | Daily 17:00 ET                                  | Extract P0–P2 into Notion      | Close tasks without proof |
+| SuperGrok First Dollar Watch | Gmail from `@stripe.com`                        | Classify $29/$99/$299/$49      | Count founder charges     |
+| SuperGrok CI Break           | GitHub workflow failure on `authichain-unified` | Name the red check             | Rerun, merge              |
 
 ## Paused
 

@@ -16,7 +16,7 @@ export function DocsMobileNav() {
   const pathname = usePathname();
 
   const currentPage = useMemo(() => {
-    const page = allDocsPages.find((p) => p.href === pathname);
+    const page = allDocsPages.find(p => p.href === pathname);
     return page ?? allDocsPages[0];
   }, [pathname]);
 
@@ -45,7 +45,11 @@ export function DocsMobileNav() {
           </svg>
         </div>
       </SheetTrigger>
-      <SheetContent side="left" showCloseButton={false} className="overflow-y-auto p-6">
+      <SheetContent
+        side="left"
+        showCloseButton={false}
+        className="overflow-y-auto p-6"
+      >
         <SheetTitle className="mb-6">Table of Contents</SheetTitle>
         <nav className="space-y-6">
           {navigation.map((section, sectionIndex) => (
@@ -56,7 +60,7 @@ export function DocsMobileNav() {
                 </h4>
               )}
               <ul className="space-y-1">
-                {section.items.map((item) => (
+                {section.items.map(item => (
                   <li key={item.href}>
                     <Link
                       href={item.href}

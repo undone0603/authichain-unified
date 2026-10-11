@@ -6,17 +6,17 @@
 
 ## Moat stack
 
-| Layer | Durable asset | Autopilot action | KPI |
-|---|---|---|---|
-| Protocol | Versioned verification/attestation spec | Keep schemas, fixtures, verifier behavior and docs synchronized | Conformance pass rate |
-| Proof | Independently recomputable evidence | Add only real customer/testnet/mainnet evidence with network/date labels | Evidence coverage |
-| Data | Product/evidence/verification graph | Capture normalized lifecycle events with provenance | Verified objects + event depth |
-| Distribution | Integrator and partner network | Prioritize integrations that create recurring inbound verification traffic | Active integrations |
-| Certification | Issuer/verifier conformance program | Publish requirements, fixtures and badges only after passing tests | Certified participants |
-| Developer adoption | Public verifier + API/MCP | Reduce time-to-first-verification and publish compatibility examples | TTFV + monthly verified calls |
-| Economics | Usage-based verification | Measure gross margin and revenue per verified event | Net revenue / verification |
-| Reputation | Transparency + incident history | Publish factual status, changelog and security/conformance results | Trust signals |
-| IP | Targeted patents + trade secrets | Maintain invention disclosures; patent only genuinely novel mechanisms | Defensible claims |
+| Layer              | Durable asset                           | Autopilot action                                                           | KPI                            |
+| ------------------ | --------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| Protocol           | Versioned verification/attestation spec | Keep schemas, fixtures, verifier behavior and docs synchronized            | Conformance pass rate          |
+| Proof              | Independently recomputable evidence     | Add only real customer/testnet/mainnet evidence with network/date labels   | Evidence coverage              |
+| Data               | Product/evidence/verification graph     | Capture normalized lifecycle events with provenance                        | Verified objects + event depth |
+| Distribution       | Integrator and partner network          | Prioritize integrations that create recurring inbound verification traffic | Active integrations            |
+| Certification      | Issuer/verifier conformance program     | Publish requirements, fixtures and badges only after passing tests         | Certified participants         |
+| Developer adoption | Public verifier + API/MCP               | Reduce time-to-first-verification and publish compatibility examples       | TTFV + monthly verified calls  |
+| Economics          | Usage-based verification                | Measure gross margin and revenue per verified event                        | Net revenue / verification     |
+| Reputation         | Transparency + incident history         | Publish factual status, changelog and security/conformance results         | Trust signals                  |
+| IP                 | Targeted patents + trade secrets        | Maintain invention disclosures; patent only genuinely novel mechanisms     | Defensible claims              |
 
 ## Operating rules
 

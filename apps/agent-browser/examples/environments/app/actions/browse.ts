@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 export type EnvStatus = {
   sandbox: {

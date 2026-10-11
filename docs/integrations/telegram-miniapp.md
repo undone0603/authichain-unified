@@ -9,14 +9,14 @@ The May 2025 strainchain-telegram-app PDFs (Inc, $8M Series A, NFT-forward) are 
 
 ## Live URLs (after `authichain-com` deploy)
 
-| Role | URL |
-|---|---|
-| Mini App (BotFather Menu Button) | https://authichain.com/telegram |
-| Alias | https://authichain.com/miniapp |
-| Passport checkout | https://authichain.com/api/checkout/plan/strainchain_passport |
-| Pricing | https://authichain.com/pricing |
-| Verify | https://authichain.com/verify |
-| Genetics / passport pages | https://authichain.com/genetics · https://authichain.com/passport |
+| Role                             | URL                                                               |
+| -------------------------------- | ----------------------------------------------------------------- |
+| Mini App (BotFather Menu Button) | https://authichain.com/telegram                                   |
+| Alias                            | https://authichain.com/miniapp                                    |
+| Passport checkout                | https://authichain.com/api/checkout/plan/strainchain_passport     |
+| Pricing                          | https://authichain.com/pricing                                    |
+| Verify                           | https://authichain.com/verify                                     |
+| Genetics / passport pages        | https://authichain.com/genetics · https://authichain.com/passport |
 
 `/telegram` is served by `workers/authichain-com` (apex + www routes). Preview it in a normal browser; Telegram loads the same HTML in a WebView.
 
@@ -24,13 +24,13 @@ Do **not** point a StrainChain webhook at `https://authichain.com/api/telegram` 
 
 ## What already exists in `workers/authichain-telegram`
 
-| Piece | Status |
-|---|---|
-| `POST /api/telegram/webhook` | Implemented: `/start`, `/help`, `/status`, `/verify`, TruMark auto-detect, inline query |
+| Piece                              | Status                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| `POST /api/telegram/webhook`       | Implemented: `/start`, `/help`, `/status`, `/verify`, TruMark auto-detect, inline query |
 | `POST /api/telegram/setup-webhook` | Implemented: `setWebhook`, `setMyCommands`, **`setChatMenuButton`** (Passport Mini App) |
-| `/start` keyboard | `web_app` + live `$49` checkout URL |
-| Static Mini App HTML | **Not in this worker** — hosted on authichain.com |
-| Cloudflare deploy | Never recorded. Optional. Free plan is enough |
+| `/start` keyboard                  | `web_app` + live `$49` checkout URL                                                     |
+| Static Mini App HTML               | **Not in this worker** — hosted on authichain.com                                       |
+| Cloudflare deploy                  | Never recorded. Optional. Free plan is enough                                           |
 
 `/start` no longer advertises QRON broadcast/channel templates.
 
@@ -106,12 +106,12 @@ Do not enable Cloudflare Workers Paid, Queues, or Containers for this bot.
 
 ## Secrets checklist (owner)
 
-| Name | Where | Required for |
-|---|---|---|
-| `TELEGRAM_AUTHICHAINBOT_TOKEN` | AgentZ credential map (if present) | Source of the BotFather token |
-| `TELEGRAM_BOT_TOKEN` | GitHub Actions + CF worker secret | Menu Button API, webhook, content-publish |
-| `TELEGRAM_WEBHOOK_SECRET` | CF worker secret | Webhook auth |
-| `TELEGRAM_ADMIN_CHAT_ID` | CF worker secret | `/admin` only |
-| `SITE_URL` | CF worker secret / var | TruMark lookup base (`/api/verify/...`) |
+| Name                           | Where                              | Required for                              |
+| ------------------------------ | ---------------------------------- | ----------------------------------------- |
+| `TELEGRAM_AUTHICHAINBOT_TOKEN` | AgentZ credential map (if present) | Source of the BotFather token             |
+| `TELEGRAM_BOT_TOKEN`           | GitHub Actions + CF worker secret  | Menu Button API, webhook, content-publish |
+| `TELEGRAM_WEBHOOK_SECRET`      | CF worker secret                   | Webhook auth                              |
+| `TELEGRAM_ADMIN_CHAT_ID`       | CF worker secret                   | `/admin` only                             |
+| `SITE_URL`                     | CF worker secret / var             | TruMark lookup base (`/api/verify/...`)   |
 
 If the token is missing, ship the HTML PR anyway and leave this file as the owner step.

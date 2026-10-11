@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 async function checkStatus() {
   try {
-    const res = await sql`SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'gov_proposals_status_check'`;
+    const res =
+      await sql`SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'gov_proposals_status_check'`;
     console.log(res[0].pg_get_constraintdef);
   } catch (err) {
-    console.error('Failed:', err.message);
+    console.error("Failed:", err.message);
   } finally {
     process.exit();
   }

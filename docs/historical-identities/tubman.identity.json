@@ -3,10 +3,7 @@
   "identity": {
     "identity_id": "hist:harriet-tubman",
     "canonical_name": "Harriet Tubman",
-    "alternate_names": [
-      "Araminta Ross",
-      "Harriet Tubman Davis"
-    ],
+    "alternate_names": ["Araminta Ross", "Harriet Tubman Davis"],
     "birth": {
       "date": "c. 1822"
     },
@@ -45,12 +42,7 @@
       "claim_id": "claim:tubman-service",
       "subject": "hist:harriet-tubman",
       "predicate": "civil_war_roles",
-      "object": [
-        "nurse",
-        "cook",
-        "scout",
-        "spy"
-      ],
+      "object": ["nurse", "cook", "scout", "spy"],
       "valid_from": "1861",
       "valid_to": "1865",
       "evidence_class": "direct"
@@ -80,10 +72,7 @@
       "as_of": "1863-06-02",
       "knowledge_cutoff": "1863-06-02T23:59:59Z",
       "location": "South Carolina, United States",
-      "known_claim_ids": [
-        "claim:tubman-service",
-        "claim:tubman-combahee"
-      ],
+      "known_claim_ids": ["claim:tubman-service", "claim:tubman-combahee"],
       "unknown_topics": [
         "Postwar pension evidence and later narratives must not be imported as knowledge Tubman had on this date."
       ],

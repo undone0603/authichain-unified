@@ -22,19 +22,19 @@ publisher posts the oldest filename first, so the date prefix orders the queue):
 {
   "linkedin": "post body, ≤3000 chars",
   "reddit": {
-    "subreddit": "supplychain",          // bare name, no "r/", 2–21 [A-Za-z0-9_]
+    "subreddit": "supplychain", // bare name, no "r/", 2–21 [A-Za-z0-9_]
     "title": "≤300 chars",
-    "body": "must contain: Disclosure: I work on this project."
+    "body": "must contain: Disclosure: I work on this project.",
   },
-  "twitter": ["tweet 1", "tweet 2", "tweet 3"],  // exactly 3, each ≤280
+  "twitter": ["tweet 1", "tweet 2", "tweet 3"], // exactly 3, each ≤280
 
   // Optional — drives A/B. Recorded verbatim into .published.json alongside
   // the live post URLs, so every variant is traceable to what it produced.
   "experiment": {
-    "campaign": "dpp-deadline",          // shared across the A and B variant
-    "variant": "a",                      // "a" | "b"
-    "hypothesis": "deadline-led hook beats capability-led hook on click-through"
-  }
+    "campaign": "dpp-deadline", // shared across the A and B variant
+    "variant": "a", // "a" | "b"
+    "hypothesis": "deadline-led hook beats capability-led hook on click-through",
+  },
 }
 ```
 
@@ -96,13 +96,13 @@ is even still active all drift.
 `content-publish.yml` runs every channel; each **skips cleanly when its secrets
 are absent**, so wire up whichever subset you want. In rising order of setup pain:
 
-| Channel | Secrets | Setup | OAuth? |
-| --- | --- | --- | --- |
-| **Telegram** | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID` | BotFather gives a token in ~1 min; add the bot as a channel admin | none |
+| Channel             | Secrets                                                  | Setup                                                                                                                                                        | OAuth?                           |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| **Telegram**        | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`              | BotFather gives a token in ~1 min; add the bot as a channel admin                                                                                            | none                             |
 | **Webhook fan-out** | `SOCIAL_WEBHOOK_URL` (+ optional `SOCIAL_WEBHOOK_TOKEN`) | One Zapier Zap / Make scenario / n8n flow, triggered by a Catch Hook, that posts to LinkedIn + Reddit + X. Connect those accounts **once in that tool's UI** | handled by Zapier/Make, not here |
-| LinkedIn (direct) | `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_PERSON_URN` | `scripts/linkedin-oauth-setup.mjs` | interactive OAuth |
-| Reddit (direct) | `REDDIT_CLIENT_ID/SECRET/USERNAME/PASSWORD` | Reddit "script" app | password grant |
-| X/Twitter (direct) | `TWITTER_API_KEY/SECRET`, `TWITTER_ACCESS_TOKEN/SECRET` | X developer app | OAuth 1.0a |
+| LinkedIn (direct)   | `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_PERSON_URN`           | `scripts/linkedin-oauth-setup.mjs`                                                                                                                           | interactive OAuth                |
+| Reddit (direct)     | `REDDIT_CLIENT_ID/SECRET/USERNAME/PASSWORD`              | Reddit "script" app                                                                                                                                          | password grant                   |
+| X/Twitter (direct)  | `TWITTER_API_KEY/SECRET`, `TWITTER_ACCESS_TOKEN/SECRET`  | X developer app                                                                                                                                              | OAuth 1.0a                       |
 
 The **webhook** is the recommended autonomous path: it collapses three OAuth
 flows and eight secrets into a single URL, and the platform authorisation lives
@@ -124,14 +124,14 @@ each element as a line item.
 
 Incoming field reference:
 
-| Payload path | Catch Hook key |
-| --- | --- |
-| `linkedin` | `linkedin` |
-| `reddit.subreddit` | `reddit__subreddit` (bare name, no `r/`) |
-| `reddit.title` | `reddit__title` |
-| `reddit.body` | `reddit__body` |
-| `twitter[0..2]` | `twitter` (items `twitter[]`) |
-| `experiment.*` | `experiment__campaign` / `__variant` / `__hypothesis` (metadata — ignore or log) |
+| Payload path       | Catch Hook key                                                                   |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `linkedin`         | `linkedin`                                                                       |
+| `reddit.subreddit` | `reddit__subreddit` (bare name, no `r/`)                                         |
+| `reddit.title`     | `reddit__title`                                                                  |
+| `reddit.body`      | `reddit__body`                                                                   |
+| `twitter[0..2]`    | `twitter` (items `twitter[]`)                                                    |
+| `experiment.*`     | `experiment__campaign` / `__variant` / `__hypothesis` (metadata — ignore or log) |
 
 Steps:
 
@@ -162,12 +162,12 @@ Two gotchas:
 
 Owner-approved **manual** live posts only. Scheduled marketing does **not** post.
 
-| Path | How | Live? |
-| --- | --- | --- |
-| **AgentZ** | Actions → `agentz-manual-post` → `live=true` (default is `false`) | Only on that dispatch. Calls `POST https://agentz.authichain.com/workflows/{id}/run?live=…` with `AGENT_SECRET`. For LinkedIn-first use `workflow_id=linkedin_post` and a payload such as `{"bundle":"content/social/2026-09-20-consumer-verify-flow-a.json"}` (or paste `linkedin` text). |
-| **content-publish** | Dispatch with `dry_run=false`, or a push of a validated bundle to `content/social/**` on `main` | Yes, for channels whose OAuth secrets exist. |
-| **content-publish schedule** | Monday/Thursday cron | **Always dry-run** (fail-closed). Does not post. |
-| **Grok Bot** | — | Does **not** post to X. |
+| Path                         | How                                                                                             | Live?                                                                                                                                                                                                                                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **AgentZ**                   | Actions → `agentz-manual-post` → `live=true` (default is `false`)                               | Only on that dispatch. Calls `POST https://agentz.authichain.com/workflows/{id}/run?live=…` with `AGENT_SECRET`. For LinkedIn-first use `workflow_id=linkedin_post` and a payload such as `{"bundle":"content/social/2026-09-20-consumer-verify-flow-a.json"}` (or paste `linkedin` text). |
+| **content-publish**          | Dispatch with `dry_run=false`, or a push of a validated bundle to `content/social/**` on `main` | Yes, for channels whose OAuth secrets exist.                                                                                                                                                                                                                                               |
+| **content-publish schedule** | Monday/Thursday cron                                                                            | **Always dry-run** (fail-closed). Does not post.                                                                                                                                                                                                                                           |
+| **Grok Bot**                 | —                                                                                               | Does **not** post to X.                                                                                                                                                                                                                                                                    |
 
 LinkedIn browser session (AgentZ): GitHub already has `LINKEDIN_SESSION_COOKIE` + `LINKEDIN_JSESSIONID`. Dispatch `sync-agentz-linkedin-session` first so AgentZ stores them (`POST /credentials/linkedin_session` + `/linkedin_jsessionid`). Then dispatch `agentz-manual-post` with `live=true`. `content-publish` still uses OAuth when present; if OAuth is empty but the session cookie is set, it skips with `session cookie present — use AgentZ browser path` instead of a silent skip.
 

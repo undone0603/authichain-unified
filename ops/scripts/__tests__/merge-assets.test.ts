@@ -18,18 +18,27 @@ describe("mergeAssets", () => {
 
     fs.mkdirSync(path.join(spaDir, "assets"), { recursive: true });
     fs.writeFileSync(path.join(spaDir, "index.html"), "<html>spa shell</html>");
-    fs.writeFileSync(path.join(spaDir, "assets", "app.js"), "console.log('spa')");
+    fs.writeFileSync(
+      path.join(spaDir, "assets", "app.js"),
+      "console.log('spa')"
+    );
     fs.writeFileSync(path.join(spaDir, "robots.txt"), "spa robots");
     fs.writeFileSync(path.join(spaDir, "sitemap.xml"), "<urlset>spa</urlset>");
 
     fs.mkdirSync(path.join(mktDir, "_next", "static"), { recursive: true });
     fs.writeFileSync(path.join(mktDir, "about.html"), "<html>about</html>");
-    fs.writeFileSync(path.join(mktDir, "_next", "static", "x.js"), "console.log('x')");
+    fs.writeFileSync(
+      path.join(mktDir, "_next", "static", "x.js"),
+      "console.log('x')"
+    );
     fs.writeFileSync(path.join(mktDir, "robots.txt"), "marketing robots");
-    fs.writeFileSync(path.join(mktDir, "sitemap.xml"), "<urlset>marketing</urlset>");
+    fs.writeFileSync(
+      path.join(mktDir, "sitemap.xml"),
+      "<urlset>marketing</urlset>"
+    );
     fs.writeFileSync(
       path.join(mktDir, "marketing-manifest.json"),
-      JSON.stringify({ routes: ["/about"] }, null, 2) + "\n",
+      JSON.stringify({ routes: ["/about"] }, null, 2) + "\n"
     );
   });
 
@@ -44,7 +53,7 @@ describe("mergeAssets", () => {
   it("preserves the SPA shell at outDir/index.html", async () => {
     await mergeAssets({ spaDir, mktDir, outDir });
     expect(read(path.join(outDir, "index.html"))).toBe(
-      read(path.join(spaDir, "index.html")),
+      read(path.join(spaDir, "index.html"))
     );
   });
 
@@ -61,21 +70,21 @@ describe("mergeAssets", () => {
   it("overlays _next/static chunks", async () => {
     await mergeAssets({ spaDir, mktDir, outDir });
     expect(fs.existsSync(path.join(outDir, "_next", "static", "x.js"))).toBe(
-      true,
+      true
     );
   });
 
   it("keeps the SPA robots.txt (marketing version dropped)", async () => {
     await mergeAssets({ spaDir, mktDir, outDir });
     expect(read(path.join(outDir, "robots.txt"))).toBe(
-      read(path.join(spaDir, "robots.txt")),
+      read(path.join(spaDir, "robots.txt"))
     );
   });
 
   it("keeps the SPA sitemap.xml (marketing version dropped)", async () => {
     await mergeAssets({ spaDir, mktDir, outDir });
     expect(read(path.join(outDir, "sitemap.xml"))).toBe(
-      read(path.join(spaDir, "sitemap.xml")),
+      read(path.join(spaDir, "sitemap.xml"))
     );
   });
 

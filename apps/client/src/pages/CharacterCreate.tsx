@@ -1,28 +1,99 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Zap, ChevronRight, ShoppingBag, Map } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Shield,
+  BookOpen,
+  Eye,
+  Compass,
+  Scale,
+  Check,
+  Zap,
+  ChevronRight,
+  ShoppingBag,
+  Map,
+} from "lucide-react";
 
 const ARCHETYPES = [
-  { key: "guardian" as const, name: "Guardian", icon: Shield, color: "from-blue-500 to-blue-700", description: "Protects brand integrity and product authenticity", abilities: ["Verify", "Protect", "Alert"] },
-  { key: "archivist" as const, name: "Archivist", icon: BookOpen, color: "from-yellow-500 to-yellow-600", description: "Records and preserves provenance data on-chain", abilities: ["Record", "Archive", "Query"] },
-  { key: "sentinel" as const, name: "Sentinel", icon: Eye, color: "from-red-500 to-red-700", description: "Monitors supply chain integrity in real-time", abilities: ["Monitor", "Detect", "Respond"] },
-  { key: "scout" as const, name: "Scout", icon: Compass, color: "from-emerald-500 to-emerald-700", description: "Discovers counterfeits and maps threat networks", abilities: ["Scan", "Discover", "Map"] },
-  { key: "arbiter" as const, name: "Arbiter", icon: Scale, color: "from-amber-500 to-amber-700", description: "Resolves disputes and renders consensus verdicts", abilities: ["Judge", "Resolve", "Settle"] },
-  { key: "merchant" as const, name: "Merchant", icon: ShoppingBag, color: "from-pink-500 to-pink-700", description: "Facilitates authentic commerce and value exchange", abilities: ["Trade", "Certify", "Price"] },
-  { key: "explorer" as const, name: "Explorer", icon: Map, color: "from-cyan-500 to-cyan-700", description: "Charts new authentication frontiers and protocols", abilities: ["Discover", "Pioneer", "Integrate"] },
+  {
+    key: "guardian" as const,
+    name: "Guardian",
+    icon: Shield,
+    color: "from-blue-500 to-blue-700",
+    description: "Protects brand integrity and product authenticity",
+    abilities: ["Verify", "Protect", "Alert"],
+  },
+  {
+    key: "archivist" as const,
+    name: "Archivist",
+    icon: BookOpen,
+    color: "from-yellow-500 to-yellow-600",
+    description: "Records and preserves provenance data on-chain",
+    abilities: ["Record", "Archive", "Query"],
+  },
+  {
+    key: "sentinel" as const,
+    name: "Sentinel",
+    icon: Eye,
+    color: "from-red-500 to-red-700",
+    description: "Monitors supply chain integrity in real-time",
+    abilities: ["Monitor", "Detect", "Respond"],
+  },
+  {
+    key: "scout" as const,
+    name: "Scout",
+    icon: Compass,
+    color: "from-emerald-500 to-emerald-700",
+    description: "Discovers counterfeits and maps threat networks",
+    abilities: ["Scan", "Discover", "Map"],
+  },
+  {
+    key: "arbiter" as const,
+    name: "Arbiter",
+    icon: Scale,
+    color: "from-amber-500 to-amber-700",
+    description: "Resolves disputes and renders consensus verdicts",
+    abilities: ["Judge", "Resolve", "Settle"],
+  },
+  {
+    key: "merchant" as const,
+    name: "Merchant",
+    icon: ShoppingBag,
+    color: "from-pink-500 to-pink-700",
+    description: "Facilitates authentic commerce and value exchange",
+    abilities: ["Trade", "Certify", "Price"],
+  },
+  {
+    key: "explorer" as const,
+    name: "Explorer",
+    icon: Map,
+    color: "from-cyan-500 to-cyan-700",
+    description: "Charts new authentication frontiers and protocols",
+    abilities: ["Discover", "Pioneer", "Integrate"],
+  },
 ];
 
-type Step = "archetype" | "context" | "generating" | "select" | "name" | "complete";
+type Step =
+  "archetype" | "context" | "generating" | "select" | "name" | "complete";
 
 export default function CharacterCreate() {
   const [step, setStep] = useState<Step>("archetype");
-  const [selectedArchetype, setSelectedArchetype] = useState<typeof ARCHETYPES[number] | null>(null);
+  const [selectedArchetype, setSelectedArchetype] = useState<
+    (typeof ARCHETYPES)[number] | null
+  >(null);
   const [brand, setBrand] = useState("");
   const [object, setObject] = useState("");
   const [colorway, setColorway] = useState("");
@@ -42,7 +113,10 @@ export default function CharacterCreate() {
 
   const generationStatus = trpc.character.generationStatus.useQuery(
     { generationId: generationId! },
-    { enabled: !!generationId, refetchInterval: step === "generating" ? 3000 : false }
+    {
+      enabled: !!generationId,
+      refetchInterval: step === "generating" ? 3000 : false,
+    }
   );
 
   const selectMutation = trpc.character.select.useMutation({
@@ -63,7 +137,10 @@ export default function CharacterCreate() {
 
   // Auto-advance when generation completes
   useEffect(() => {
-    if (generationStatus.data?.status === "completed" && step === "generating") {
+    if (
+      generationStatus.data?.status === "completed" &&
+      step === "generating"
+    ) {
       setStep("select");
     }
   }, [generationStatus.data?.status, step]);
@@ -108,55 +185,91 @@ export default function CharacterCreate() {
             Create Your Protocol Agent
           </h1>
           <p className="text-gray-400 mt-2 max-w-xl mx-auto">
-            Generate an AI-powered character, score its attributes, and deploy it as your verification agent on the AuthiChain network.
+            Generate an AI-powered character, score its attributes, and deploy
+            it as your verification agent on the AuthiChain network.
           </p>
         </div>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-10">
-          {["Archetype", "Context", "Generate", "Select", "Name", "Deploy"].map((label, i) => {
-            const steps: Step[] = ["archetype", "context", "generating", "select", "name", "complete"];
-            const isActive = steps.indexOf(step) >= i;
-            const isCurrent = steps.indexOf(step) === i;
-            return (
-              <div key={label} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  isActive ? "bg-blue-500 text-white" : "bg-gray-800 text-gray-500"
-                } ${isCurrent ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-950" : ""}`}>
-                  {isActive && i < steps.indexOf(step) ? <Check className="w-4 h-4" /> : i + 1}
+          {["Archetype", "Context", "Generate", "Select", "Name", "Deploy"].map(
+            (label, i) => {
+              const steps: Step[] = [
+                "archetype",
+                "context",
+                "generating",
+                "select",
+                "name",
+                "complete",
+              ];
+              const isActive = steps.indexOf(step) >= i;
+              const isCurrent = steps.indexOf(step) === i;
+              return (
+                <div key={label} className="flex items-center gap-2">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-800 text-gray-500"
+                    } ${isCurrent ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-950" : ""}`}
+                  >
+                    {isActive && i < steps.indexOf(step) ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      i + 1
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs hidden sm:inline ${isActive ? "text-blue-400" : "text-gray-600"}`}
+                  >
+                    {label}
+                  </span>
+                  {i < 5 && <ChevronRight className="w-4 h-4 text-gray-700" />}
                 </div>
-                <span className={`text-xs hidden sm:inline ${isActive ? "text-blue-400" : "text-gray-600"}`}>{label}</span>
-                {i < 5 && <ChevronRight className="w-4 h-4 text-gray-700" />}
-              </div>
-            );
-          })}
+              );
+            }
+          )}
         </div>
 
         {/* Step 1: Archetype Selection */}
         {step === "archetype" && (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-center">Choose Your Agent Archetype</h2>
+            <h2 className="text-xl font-semibold text-center">
+              Choose Your Agent Archetype
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {ARCHETYPES.map((arch) => {
+              {ARCHETYPES.map(arch => {
                 const Icon = arch.icon;
                 const isSelected = selectedArchetype?.key === arch.key;
                 return (
                   <Card
                     key={arch.key}
                     className={`cursor-pointer transition-all hover:scale-[1.02] border-2 bg-gray-900/50 ${
-                      isSelected ? "border-blue-500 shadow-lg shadow-blue-500/20" : "border-gray-800 hover:border-gray-700"
+                      isSelected
+                        ? "border-blue-500 shadow-lg shadow-blue-500/20"
+                        : "border-gray-800 hover:border-gray-700"
                     }`}
                     onClick={() => setSelectedArchetype(arch)}
                   >
                     <CardContent className="p-6">
-                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${arch.color} flex items-center justify-center mb-4`}>
+                      <div
+                        className={`w-14 h-14 rounded-xl bg-gradient-to-br ${arch.color} flex items-center justify-center mb-4`}
+                      >
                         <Icon className="w-8 h-8 text-white" />
                       </div>
-                      <h3 className="text-lg font-bold text-white mb-1">{arch.name}</h3>
-                      <p className="text-xs text-gray-400 leading-relaxed mb-4">{arch.description}</p>
+                      <h3 className="text-lg font-bold text-white mb-1">
+                        {arch.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                        {arch.description}
+                      </p>
                       <div className="flex flex-wrap gap-1">
-                        {arch.abilities.map((a) => (
-                          <Badge key={a} variant="secondary" className="text-[10px] py-0 bg-gray-800 text-gray-300 border-none">
+                        {arch.abilities.map(a => (
+                          <Badge
+                            key={a}
+                            variant="secondary"
+                            className="text-[10px] py-0 bg-gray-800 text-gray-300 border-none"
+                          >
                             {a}
                           </Badge>
                         ))}
@@ -184,35 +297,69 @@ export default function CharacterCreate() {
           <div className="max-w-2xl mx-auto space-y-6">
             <Card className="bg-gray-900/50 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">Define Visual Context</CardTitle>
-                <CardDescription>Tell the AI how your {selectedArchetype?.name} should look</CardDescription>
+                <CardTitle className="text-white">
+                  Define Visual Context
+                </CardTitle>
+                <CardDescription>
+                  Tell the AI how your {selectedArchetype?.name} should look
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-gray-300">Brand Influence</Label>
-                    <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g., Apple, Nike, Rolex" className="bg-gray-800 border-gray-700 text-white" />
+                    <Input
+                      value={brand}
+                      onChange={e => setBrand(e.target.value)}
+                      placeholder="e.g., Apple, Nike, Rolex"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-gray-300">Core Object</Label>
-                    <Input value={object} onChange={(e) => setObject(e.target.value)} placeholder="e.g., Drone, Sword, Tablet" className="bg-gray-800 border-gray-700 text-white" />
+                    <Input
+                      value={object}
+                      onChange={e => setObject(e.target.value)}
+                      placeholder="e.g., Drone, Sword, Tablet"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-gray-300">Color Palette</Label>
-                    <Input value={colorway} onChange={(e) => setColorway(e.target.value)} placeholder="e.g., Obsidian & Neon Cyan" className="bg-gray-800 border-gray-700 text-white" />
+                    <Input
+                      value={colorway}
+                      onChange={e => setColorway(e.target.value)}
+                      placeholder="e.g., Obsidian & Neon Cyan"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-gray-300">Atmospheric Mood</Label>
-                    <Input value={mood} onChange={(e) => setMood(e.target.value)} placeholder="e.g., Cyberpunk, Ethereal, Brutalist" className="bg-gray-800 border-gray-700 text-white" />
+                    <Input
+                      value={mood}
+                      onChange={e => setMood(e.target.value)}
+                      placeholder="e.g., Cyberpunk, Ethereal, Brutalist"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep("archetype")} className="text-gray-400">Back</Button>
-              <Button size="lg" onClick={handleGenerate} className="bg-blue-600 hover:bg-blue-700 px-8">
+              <Button
+                variant="ghost"
+                onClick={() => setStep("archetype")}
+                className="text-gray-400"
+              >
+                Back
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleGenerate}
+                className="bg-blue-600 hover:bg-blue-700 px-8"
+              >
                 Generate Character <Sparkles className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -230,9 +377,13 @@ export default function CharacterCreate() {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Synthesizing Protocol Entity...</h2>
+              <h2 className="text-2xl font-bold">
+                Synthesizing Protocol Entity...
+              </h2>
               <p className="text-gray-400 max-w-sm mx-auto">
-                Our neural engines are crafting four high-fidelity variants of your {selectedArchetype?.name}. This usually takes 15-20 seconds.
+                Our neural engines are crafting four high-fidelity variants of
+                your {selectedArchetype?.name}. This usually takes 15-20
+                seconds.
               </p>
             </div>
           </div>
@@ -241,20 +392,28 @@ export default function CharacterCreate() {
         {/* Step 4: Selection */}
         {step === "select" && generationStatus.data && (
           <div className="space-y-8">
-            <h2 className="text-xl font-semibold text-center">Select Your Preferred Avatar</h2>
+            <h2 className="text-xl font-semibold text-center">
+              Select Your Preferred Avatar
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {generationStatus.data.assets.map((asset: any) => {
                 const isSelected = selectedAssetId === asset.id;
                 return (
-                  <Card 
+                  <Card
                     key={asset.id}
                     className={`overflow-hidden cursor-pointer transition-all ${
-                      isSelected ? "ring-4 ring-blue-500" : "hover:scale-[1.02] border-gray-800"
+                      isSelected
+                        ? "ring-4 ring-blue-500"
+                        : "hover:scale-[1.02] border-gray-800"
                     } bg-gray-900`}
                     onClick={() => setSelectedAssetId(asset.id)}
                   >
                     <div className="aspect-square relative">
-                      <img src={asset.imageUrl} alt="Variant" className="w-full h-full object-cover" />
+                      <img
+                        src={asset.imageUrl}
+                        alt="Variant"
+                        className="w-full h-full object-cover"
+                      />
                       {asset.totalScore && (
                         <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold border border-white/10">
                           SCORE: {asset.totalScore}
@@ -265,15 +424,45 @@ export default function CharacterCreate() {
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                           {[
-                            { label: "Protocol Fit", value: asset.protocolFitScore ? parseFloat(asset.protocolFitScore) * 10 : asset.scoreClarity },
-                            { label: "Silhouette", value: asset.silhouetteScore ? parseFloat(asset.silhouetteScore) * 10 : asset.scoreSilhouette },
-                            { label: "Trust", value: asset.trustSymbolismScore ? parseFloat(asset.trustSymbolismScore) * 10 : asset.scoreUiCompat },
-                            { label: "Mint Ready", value: asset.mintReadinessScore ? parseFloat(asset.mintReadinessScore) * 10 : asset.scoreMintReady },
-                            { label: "UI Compat", value: asset.uiCompatibilityScore ? parseFloat(asset.uiCompatibilityScore) * 10 : asset.scoreProtocolAlign },
-                          ].map((s) => (
-                            <div key={s.label} className="flex justify-between text-gray-400">
+                            {
+                              label: "Protocol Fit",
+                              value: asset.protocolFitScore
+                                ? parseFloat(asset.protocolFitScore) * 10
+                                : asset.scoreClarity,
+                            },
+                            {
+                              label: "Silhouette",
+                              value: asset.silhouetteScore
+                                ? parseFloat(asset.silhouetteScore) * 10
+                                : asset.scoreSilhouette,
+                            },
+                            {
+                              label: "Trust",
+                              value: asset.trustSymbolismScore
+                                ? parseFloat(asset.trustSymbolismScore) * 10
+                                : asset.scoreUiCompat,
+                            },
+                            {
+                              label: "Mint Ready",
+                              value: asset.mintReadinessScore
+                                ? parseFloat(asset.mintReadinessScore) * 10
+                                : asset.scoreMintReady,
+                            },
+                            {
+                              label: "UI Compat",
+                              value: asset.uiCompatibilityScore
+                                ? parseFloat(asset.uiCompatibilityScore) * 10
+                                : asset.scoreProtocolAlign,
+                            },
+                          ].map(s => (
+                            <div
+                              key={s.label}
+                              className="flex justify-between text-gray-400"
+                            >
                               <span>{s.label}</span>
-                              <span className={`font-mono ${(s.value || 0) >= 75 ? "text-emerald-400" : (s.value || 0) >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                              <span
+                                className={`font-mono ${(s.value || 0) >= 75 ? "text-emerald-400" : (s.value || 0) >= 50 ? "text-amber-400" : "text-red-400"}`}
+                              >
                                 {s.value ?? "..."}
                               </span>
                             </div>
@@ -298,9 +487,15 @@ export default function CharacterCreate() {
                 className="bg-blue-600 hover:bg-blue-700 px-8"
               >
                 {selectMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Preparing Mint...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Preparing
+                    Mint...
+                  </>
                 ) : (
-                  <>Select & Prepare for Mint <ChevronRight className="w-4 h-4 ml-1" /></>
+                  <>
+                    Select & Prepare for Mint{" "}
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </>
                 )}
               </Button>
             </div>
@@ -312,15 +507,20 @@ export default function CharacterCreate() {
           <div className="max-w-lg mx-auto space-y-6">
             <Card className="bg-gray-900/50 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">Name Your Protocol Agent</CardTitle>
-                <CardDescription>Give your {selectedArchetype.name} a unique identity on the network</CardDescription>
+                <CardTitle className="text-white">
+                  Name Your Protocol Agent
+                </CardTitle>
+                <CardDescription>
+                  Give your {selectedArchetype.name} a unique identity on the
+                  network
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label className="text-gray-300">Agent Name</Label>
                   <Input
                     value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
+                    onChange={e => setAgentName(e.target.value)}
                     placeholder={`e.g., ${selectedArchetype.name} Alpha, Aegis-${selectedArchetype.key.slice(0, 3).toUpperCase()}-001`}
                     className="bg-gray-800 border-gray-700 text-white"
                     maxLength={64}
@@ -329,11 +529,17 @@ export default function CharacterCreate() {
                 <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700 space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Zap className="w-4 h-4 text-blue-400" />
-                    <span className="text-gray-300">Starting XP: <span className="text-white font-mono">100</span></span>
+                    <span className="text-gray-300">
+                      Starting XP:{" "}
+                      <span className="text-white font-mono">100</span>
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Shield className="w-4 h-4 text-emerald-400" />
-                    <span className="text-gray-300">Reputation: <span className="text-white font-mono">100</span></span>
+                    <span className="text-gray-300">
+                      Reputation:{" "}
+                      <span className="text-white font-mono">100</span>
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -346,9 +552,15 @@ export default function CharacterCreate() {
                 className="bg-gradient-to-r from-blue-600 to-yellow-600 hover:from-blue-700 hover:to-yellow-600 px-8"
               >
                 {createAgentMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deploying...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />{" "}
+                    Deploying...
+                  </>
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Deploy Agent to Network</>
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" /> Deploy Agent to
+                    Network
+                  </>
                 )}
               </Button>
             </div>
@@ -365,14 +577,20 @@ export default function CharacterCreate() {
               Agent Deployed!
             </h2>
             <p className="text-gray-400">
-              Your protocol agent <span className="text-white font-semibold">{agentName}</span> is now active on the AuthiChain verification network.
-              Start verifying products.
+              Your protocol agent{" "}
+              <span className="text-white font-semibold">{agentName}</span> is
+              now active on the AuthiChain verification network. Start verifying
+              products.
             </p>
             <div className="flex gap-3 justify-center">
               <Button asChild className="bg-blue-600 hover:bg-blue-700">
                 <a href="/character">View Dashboard</a>
               </Button>
-              <Button asChild variant="outline" className="border-gray-700 text-gray-300">
+              <Button
+                asChild
+                variant="outline"
+                className="border-gray-700 text-gray-300"
+              >
                 <a href="/network">Network Stats</a>
               </Button>
             </div>

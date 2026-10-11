@@ -6,15 +6,15 @@ Status: draft. Not live. No prices changed. No mail sent.
 
 Rubric (0–5), growth-loop rules: live checkout, external deadline, self-serve (no call), defensible claim, existing distribution, AOV x estimated paid conversion, zero founder time.
 
-| Market | Live charge | Self-serve | Claim safety | Distribution already up | Founder time | Score | EV note |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| EU DPP Readiness $299 | 5 — Payment Link + `/api/checkout/dpp` | 5 | 4 if copy stays readiness, not certification | 5 — `/dpp-check`, `/battery-passport`, `/p/eu-digital-product-passport-batteries` | 5 | 24 | Highest. Feb 18 2027 LMT/EV battery passport date is external. |
-| QRON Starter $29 / Creator $99 / Launch $19/mo | 5 | 5 | 2 — signed verification listed in development | 3 | 5 | 15 | Impulse AOV. Not the trust-layer customer. |
-| StrainChain Passport $49 | 5 — Payment Link live | 4 | 3 — must not claim METRC or a legal COA | 3 | 3 if we email | 15 | Real SKU. Prior RealTHCV reply was no. |
-| StrainChain Farm $149/mo | 4 — link live, catalogue PR was draft | 3 | 3 | 2 | 2 | 12 | Zero subscriptions on the account as of 2026-09-21 brief. |
-| x402 $0.05 | 4 — 402 rail live | 5 for agents | 4 | 2 | 5 | 11 | payTo balance is prior self-pay. No external payer. |
-| AgentZ | 0 — control plane | 0 | n/a | 0 | 0 | 0 | Operator runtime. Not a SKU. |
-| OpenClaw | 0 — owner-set gateway | 0 | n/a | 0 | 0 | 0 | Bridge. Not a market. |
+| Market                                         | Live charge                            | Self-serve   | Claim safety                                  | Distribution already up                                                           | Founder time  | Score | EV note                                                        |
+| ---------------------------------------------- | -------------------------------------- | ------------ | --------------------------------------------- | --------------------------------------------------------------------------------- | ------------- | ----- | -------------------------------------------------------------- |
+| EU DPP Readiness $299                          | 5 — Payment Link + `/api/checkout/dpp` | 5            | 4 if copy stays readiness, not certification  | 5 — `/dpp-check`, `/battery-passport`, `/p/eu-digital-product-passport-batteries` | 5             | 24    | Highest. Feb 18 2027 LMT/EV battery passport date is external. |
+| QRON Starter $29 / Creator $99 / Launch $19/mo | 5                                      | 5            | 2 — signed verification listed in development | 3                                                                                 | 5             | 15    | Impulse AOV. Not the trust-layer customer.                     |
+| StrainChain Passport $49                       | 5 — Payment Link live                  | 4            | 3 — must not claim METRC or a legal COA       | 3                                                                                 | 3 if we email | 15    | Real SKU. Prior RealTHCV reply was no.                         |
+| StrainChain Farm $149/mo                       | 4 — link live, catalogue PR was draft  | 3            | 3                                             | 2                                                                                 | 2             | 12    | Zero subscriptions on the account as of 2026-09-21 brief.      |
+| x402 $0.05                                     | 4 — 402 rail live                      | 5 for agents | 4                                             | 2                                                                                 | 5             | 11    | payTo balance is prior self-pay. No external payer.            |
+| AgentZ                                         | 0 — control plane                      | 0            | n/a                                           | 0                                                                                 | 0             | 0     | Operator runtime. Not a SKU.                                   |
+| OpenClaw                                       | 0 — owner-set gateway                  | 0            | n/a                                           | 0                                                                                 | 0             | 0     | Bridge. Not a market.                                          |
 
 ## Pick
 

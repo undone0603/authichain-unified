@@ -1,4 +1,5 @@
 # DHS SVIP Grant Application
+
 ## AuthiChain — Blockchain-AI Platform for Preventing Forgery and Counterfeiting
 
 **Legal Applicant / SAM Entity:** ZACHARY KIETZMAN
@@ -22,6 +23,7 @@
 AuthiChain is a production-deployed AI + blockchain authentication platform that prevents counterfeiting of physical products, digital certificates, and official documents. We request Phase I funding of $200,000 under the DHS SVIP "Preventing Forgery and Counterfeiting" topic to demonstrate our platform's applicability to government-issued document verification, border protection use cases, and critical supply chain integrity.
 
 AuthiChain already has:
+
 - **Live production platform** at authichain.com with full authentication, NFT certificate issuance, and supply chain tracking
 - **Ed25519 digital signature infrastructure** (QRON cryptographic QR system)
 - **Blockchain anchoring** on Polygon (Amoy testnet deployed, mainnet-ready)
@@ -54,12 +56,14 @@ Current verification methods rely on physical security features (holograms, wate
 ### 3.1 Core Technology
 
 **QRON (Quantum-Resistant Object Notation)** — AuthiChain's cryptographic QR system:
+
 - Each document/product is assigned a unique Ed25519-signed payload at issuance.
 - The signature is embedded in a QR code alongside the plaintext claim (issuer, date, document ID, holder hash).
 - Any verifier scans the QR and hits our public API (`/api/qron/verify`) which returns a **trust score 0-100** and the full verification chain.
 - No central database lookup required — the cryptographic proof is self-contained in the QR, enabling high-performance field verification.
 
 **AI Agent Consensus Engine (The Security Council):**
+
 - Unlike single-point AI models, AuthiChain uses a **5-agent consensus model** to render authenticity verdicts.
 - **GovEngine Integration:** Our platform natively integrates with the **SAM.gov API (Opportunities v2 & Contract Awards v1)** to identify high-value procurement targets requiring cryptographic provenance.
 - **Guardian (35%)**: Analyzes visual brand/issuer markers and physical integrity.
@@ -70,21 +74,21 @@ Current verification methods rely on physical security features (holograms, wate
 - This multi-agent approach minimizes false positives and provides a "Defense in Depth" strategy for federal credentials.
 
 **Blockchain Anchoring & W3C VC Alignment:**
+
 - All certificate hashes are committed to Polygon (EVM-compatible) at issuance.
 - **W3C Verifiable Credentials (VC)**: AuthiChain natively supports the W3C VC Data Model. Each QRON scan can be exported as a standard JSON-LD Verifiable Presentation, ensuring 100% interoperability with existing DHS/CBP identity ecosystems.
 - Smart contract: `AuthiChainNFT` deployed at `0xc3143254997d48fdc9983d618fb2e10067673eb5` (Amoy testnet).
 
 ### 3.2 DHS-Specific Adaptations (Phase I Deliverables)
 
-| Feature | Description | Timeline |
-|---|---|---|
-| Government Issuer API | Secure API for DHS-authorized issuers to register and sign documents. | Month 2 |
-| CBP Field Verification App | PWA optimized for offline-first operations; local trust anchor caching for high-speed field verification. | Month 3 |
-| FIPS 140-2 Crypto Module | Transition to FIPS-validated cryptographic providers (e.g., AWS CloudHSM or OpenSSL FIPS provider) for all federal credential signing. | Month 3 |
-| W3C VC/DID Interoperability | Native JSON-LD export for Verifiable Credentials, supporting W3C and Decentralized Identifier (DID) standards. | Month 4 |
-| ICE/CBP Workflow Integration | Webhook endpoints for real-time event synchronization with government case management systems (e.g., MACROHARD). | Month 5 |
-| Fraud Alert Network | Shared intelligence ledger of known fraudulent patterns identified by the Scout agent network. | Month 6 |
-
+| Feature                      | Description                                                                                                                            | Timeline |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Government Issuer API        | Secure API for DHS-authorized issuers to register and sign documents.                                                                  | Month 2  |
+| CBP Field Verification App   | PWA optimized for offline-first operations; local trust anchor caching for high-speed field verification.                              | Month 3  |
+| FIPS 140-2 Crypto Module     | Transition to FIPS-validated cryptographic providers (e.g., AWS CloudHSM or OpenSSL FIPS provider) for all federal credential signing. | Month 3  |
+| W3C VC/DID Interoperability  | Native JSON-LD export for Verifiable Credentials, supporting W3C and Decentralized Identifier (DID) standards.                         | Month 4  |
+| ICE/CBP Workflow Integration | Webhook endpoints for real-time event synchronization with government case management systems (e.g., MACROHARD).                       | Month 5  |
+| Fraud Alert Network          | Shared intelligence ledger of known fraudulent patterns identified by the Scout agent network.                                         | Month 6  |
 
 ### 3.3 Architecture
 
@@ -108,6 +112,7 @@ VERIFICATION FLOW:
 **Objective:** Demonstrate cryptographic document verification for 3 DHS use cases (work authorization documents, import certificates, and driver's licenses) with >99% accuracy and <500ms verification latency.
 
 **Deliverables:**
+
 - Government Issuer API v1.0 with role-based access
 - FIPS 140-2 compliant cryptographic signing module
 - CBP field verification PWA (offline-capable)
@@ -116,6 +121,7 @@ VERIFICATION FLOW:
 - Technical documentation and security audit
 
 **Success Metrics:**
+
 - Verification accuracy >99% on test dataset of 10,000 authentic + 1,000 counterfeit documents
 - Verification latency <500ms (95th percentile) on 4G connection
 - Zero false negatives (no authentic document marked counterfeit)
@@ -126,6 +132,7 @@ VERIFICATION FLOW:
 **Objective:** Deploy live pilot with CBP at a selected port of entry. Process real import documentation with AI + cryptographic verification.
 
 **Deliverables:**
+
 - Live integration with CBP Automated Targeting System (ATS) data feeds
 - Mobile app for iOS/Android with biometric authentication for officers
 - Fraud alert network connected to ICE HSI intelligence feeds
@@ -149,11 +156,13 @@ VERIFICATION FLOW:
 **Founder/CEO (Z)** — Full-stack platform architect. Built and deployed the entire AuthiChain platform including blockchain integration (Polygon, Thirdweb), AI authentication pipeline, tRPC API layer, and enterprise billing. Direct experience with Stripe, HubSpot CRM, cryptographic QR systems, and Vercel-hosted production deployments.
 
 **Advisory relationships:**
+
 - Blockchain authentication precedents: Transmute Industries (DHS SVIP alumnus, W3C DID contributor)
 - Digital Bazaar (DHS SVIP alumnus, Verifiable Credentials spec author)
 - We are aligned with the W3C VC Data Model and intend to collaborate with the existing SVIP cohort
 
 **Current Production Infrastructure:**
+
 - authichain.com (live, Vercel + Supabase PostgreSQL + Polygon)
 - qron-app deployed at qron-app-gamma.vercel.app
 - 15+ tRPC routers, 35+ passing Vitest test suites
@@ -161,35 +170,39 @@ VERIFICATION FLOW:
 
 ### Key Hires Planned with Phase I Funding
 
-| Role | Focus | Cost |
-|---|---|---|
-| Senior Cryptography Engineer | FIPS 140-2 implementation, HSM integration | $80,000 |
-| Federal Solutions Architect | ATO process, FedRAMP, government procurement | $70,000 |
-| Infrastructure / DevSecOps | FedRAMP-ready cloud (AWS GovCloud) | $30,000 |
+| Role                         | Focus                                        | Cost    |
+| ---------------------------- | -------------------------------------------- | ------- |
+| Senior Cryptography Engineer | FIPS 140-2 implementation, HSM integration   | $80,000 |
+| Federal Solutions Architect  | ATO process, FedRAMP, government procurement | $70,000 |
+| Infrastructure / DevSecOps   | FedRAMP-ready cloud (AWS GovCloud)           | $30,000 |
 
 ---
 
 ## 6. Commercial Viability
 
 ### Revenue Traction
+
 - Stripe Enterprise plan: $799/month (live, tested with real payment)
 - Professional plan: $199/month
 - Starter plan: $49/month
 - Active billing integration with promo code testing completed
 
 ### Addressable Government Market
+
 - DHS S&T annual budget: $800M+ R&D spending
 - CBP processes 26M containers/year — even 1% document verification fee = $2M+ ARR
 - ICE HSI: 400+ active counterfeiting investigations annually
 - TSA credential verification: 2.5M passengers/day
 
 ### Commercial Path Post-SVIP
+
 - GSA Schedule 70 (IT Products & Services) — target listing within 12 months of Phase II
 - Sole-source DHS contract for document verification (precedent: Transmute received DHS follow-on contracts)
 - State government licensing for DMV credential verification
 - Private sector: pharma (DSCSA compliance), luxury goods (CBP seizure prevention)
 
 ### Comparable SVIP Outcomes
+
 - Transmute: DHS SVIP → $8.5M Series A → DHS, State Dept, DOE contracts
 - Digital Bazaar: DHS SVIP → multiple follow-on contracts for VC infrastructure
 - MATTR: DHS SVIP → global government VC deployment
@@ -210,15 +223,15 @@ VERIFICATION FLOW:
 
 ## 8. Budget Narrative — Phase I ($200,000)
 
-| Category | Amount | Justification |
-|---|---|---|
-| Personnel (2 engineers, 6 months) | $120,000 | Senior cryptography engineer + federal solutions architect |
-| Infrastructure | $18,000 | AWS GovCloud, HSM rental, FedRAMP-aligned tooling |
-| Subcontractors | $20,000 | Security audit firm (FIPS 140-2 validation support) |
-| Travel | $12,000 | DHS S&T meetings (Washington DC), CBP port site visits |
-| Materials & Equipment | $10,000 | Test hardware, smart card readers for field testing |
-| Indirect / Overhead | $20,000 | 10% administrative overhead |
-| **Total** | **$200,000** | |
+| Category                          | Amount       | Justification                                              |
+| --------------------------------- | ------------ | ---------------------------------------------------------- |
+| Personnel (2 engineers, 6 months) | $120,000     | Senior cryptography engineer + federal solutions architect |
+| Infrastructure                    | $18,000      | AWS GovCloud, HSM rental, FedRAMP-aligned tooling          |
+| Subcontractors                    | $20,000      | Security audit firm (FIPS 140-2 validation support)        |
+| Travel                            | $12,000      | DHS S&T meetings (Washington DC), CBP port site visits     |
+| Materials & Equipment             | $10,000      | Test hardware, smart card readers for field testing        |
+| Indirect / Overhead               | $20,000      | 10% administrative overhead                                |
+| **Total**                         | **$200,000** |                                                            |
 
 ---
 
@@ -227,6 +240,7 @@ VERIFICATION FLOW:
 All core technology is developed and owned by ZACHARY KIETZMAN and marketed under the AuthiChain brand. We will grant DHS a non-exclusive, royalty-free license to use technology developed under this award in accordance with SBIR/SVIP standard IP provisions. The applicant retains commercial rights to deploy the technology commercially following program completion.
 
 Key IP assets:
+
 - QRON cryptographic QR system (trade secret, patent application in preparation)
 - AI authenticity scoring algorithm (proprietary training data pipeline)
 - Hybrid trust score combining cryptographic + AI + blockchain signals
@@ -235,7 +249,7 @@ Key IP assets:
 
 ## 10. Letters of Support / Partnerships
 
-*[To be attached prior to submission:]*
+_[To be attached prior to submission:]_
 
 - **CBP Innovation Team** — Letter confirming interest in document verification pilot (contact via DHS S&T program manager)
 - **Luxury goods industry partner** — confirms interest in import certificate verification use case
@@ -245,13 +259,13 @@ Key IP assets:
 
 ## 11. Appendix: Deployed Technology Evidence
 
-| Asset | URL / Evidence |
-|---|---|
-| Live platform | https://authichain.com |
-| QRON app | https://qron-app-gamma.vercel.app |
+| Asset                         | URL / Evidence                             |
+| ----------------------------- | ------------------------------------------ |
+| Live platform                 | https://authichain.com                     |
+| QRON app                      | https://qron-app-gamma.vercel.app          |
 | Smart contract (Amoy testnet) | 0xc3143254997d48fdc9983d618fb2e10067673eb5 |
-| GitHub (AuthiChain2026 org) | https://github.com/AuthiChain2026/qron-app |
-| API verify endpoint | POST /api/qron/verify (live) |
+| GitHub (AuthiChain2026 org)   | https://github.com/AuthiChain2026/qron-app |
+| API verify endpoint           | POST /api/qron/verify (live)               |
 
 ---
 

@@ -12,12 +12,12 @@ Canonical repo: https://github.com/undone0603/authichain-unified
 
 ## Surfaces
 
-| Host | Job | Public CTA |
-| --- | --- | --- |
-| authichain.com | protocol, verify, certs, billing | https://authichain.com/verify and https://authichain.com/dapp |
-| qron.space | Living QR studio | https://qron.space/generate |
-| govchain.us | contractor pursue + document seals | https://govchain.us/onboard |
-| strainchain.io | cannabis jar / COA packs | https://strainchain.io/onboard |
+| Host           | Job                                | Public CTA                                                    |
+| -------------- | ---------------------------------- | ------------------------------------------------------------- |
+| authichain.com | protocol, verify, certs, billing   | https://authichain.com/verify and https://authichain.com/dapp |
+| qron.space     | Living QR studio                   | https://qron.space/generate                                   |
+| govchain.us    | contractor pursue + document seals | https://govchain.us/onboard                                   |
+| strainchain.io | cannabis jar / COA packs           | https://strainchain.io/onboard                                |
 
 Never send a customer to a Vercel preview URL.
 

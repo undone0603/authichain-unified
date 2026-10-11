@@ -7,7 +7,12 @@ import { createClient } from "@supabase/supabase-js";
 import { ExecutiveAgent } from "../server/agents/executive";
 
 // Load from qron-platform/.env.local since it has the real keys
-const qronEnvPath = path.join(process.cwd(), "..", "qron-platform", ".env.local");
+const qronEnvPath = path.join(
+  process.cwd(),
+  "..",
+  "qron-platform",
+  ".env.local"
+);
 if (fs.existsSync(qronEnvPath)) {
   const envContent = fs.readFileSync(qronEnvPath, "utf-8");
   envContent.split("\n").forEach(line => {
@@ -26,7 +31,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.");
+  console.error(
+    "FATAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set."
+  );
   process.exit(1);
 }
 
@@ -49,32 +56,36 @@ async function draftOutreach() {
   let draftedCount = 0;
   for (const line of lines) {
     if (!line.trim()) continue;
-    
+
     // email,first_name,company,dba,city,type,tax_vulnerability
-    const [email, first_name, company, dba, city, type, tax_vulnerability] = line.split(",");
+    const [email, first_name, company, dba, city, type, tax_vulnerability] =
+      line.split(",");
 
     const prospect = {
-      name: first_name === "Operations Director" ? `${dba} Operations` : first_name,
+      name:
+        first_name === "Operations Director" ? `${dba} Operations` : first_name,
       email: email.trim(),
       company: company.trim(),
       dba: dba.trim(),
       city: city.trim(),
       industry: "Cannabis",
-      type: type.trim()
+      type: type.trim(),
     };
 
     console.log(`📡 Drafting for ${prospect.email} (${prospect.dba})...`);
-    
+
     try {
       // Check if draft already exists
       const { data: existing } = await supabase
-        .from('email_drafts')
-        .select('id')
-        .eq('to_email', prospect.email)
+        .from("email_drafts")
+        .select("id")
+        .eq("to_email", prospect.email)
         .limit(1);
 
       if (existing && existing.length > 0) {
-        console.log(`⏭️  Draft already exists for ${prospect.email}. Skipping.`);
+        console.log(
+          `⏭️  Draft already exists for ${prospect.email}. Skipping.`
+        );
         continue;
       }
 
@@ -85,7 +96,7 @@ async function draftOutreach() {
         to_email: prospect.email,
         subject: subject,
         body: body,
-        status: 'draft',
+        status: "draft",
         metadata: {
           prospectName: prospect.name,
           prospectCompany: prospect.company,
@@ -94,14 +105,17 @@ async function draftOutreach() {
           city: prospect.city,
           type: prospect.type,
           tax_vulnerability: tax_vulnerability,
-          generatedBy: 'executive_agent'
-        }
+          generatedBy: "executive_agent",
+        },
       };
 
-      const { error } = await supabase.from('email_drafts').insert(insertData);
+      const { error } = await supabase.from("email_drafts").insert(insertData);
 
       if (error) {
-        console.error(`✗ Failed to save draft for ${prospect.email}:`, error.message);
+        console.error(
+          `✗ Failed to save draft for ${prospect.email}:`,
+          error.message
+        );
       } else {
         draftedCount++;
         console.log(`✅ Draft saved: ${prospect.email}`);
@@ -111,7 +125,9 @@ async function draftOutreach() {
     }
   }
 
-  console.log(`\n✨ Draft Generation Complete. Total drafts created: ${draftedCount}`);
+  console.log(
+    `\n✨ Draft Generation Complete. Total drafts created: ${draftedCount}`
+  );
 }
 
 draftOutreach().catch(console.error);

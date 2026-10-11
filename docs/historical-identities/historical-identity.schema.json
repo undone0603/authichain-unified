@@ -80,11 +80,7 @@
     },
     "attestation_subject": {
       "type": "object",
-      "required": [
-        "subject_type",
-        "canonicalization",
-        "manifest_hash_input"
-      ],
+      "required": ["subject_type", "canonicalization", "manifest_hash_input"],
       "properties": {
         "subject_type": {
           "const": "historical_identity_manifest"
@@ -102,9 +98,7 @@
   "$defs": {
     "date_place": {
       "type": "object",
-      "required": [
-        "date"
-      ],
+      "required": ["date"],
       "properties": {
         "date": {
           "type": "string"
@@ -155,9 +149,7 @@
         },
         "rights": {
           "type": "object",
-          "required": [
-            "status"
-          ],
+          "required": ["status"],
           "properties": {
             "status": {
               "enum": [
@@ -211,12 +203,7 @@
           "type": "string"
         },
         "evidence_class": {
-          "enum": [
-            "direct",
-            "contextual",
-            "inferred",
-            "unknown"
-          ]
+          "enum": ["direct", "contextual", "inferred", "unknown"]
         },
         "notes": {
           "type": "string"
@@ -271,13 +258,7 @@
     },
     "evidence_edge": {
       "type": "object",
-      "required": [
-        "edge_id",
-        "from",
-        "to",
-        "relation",
-        "evidence_class"
-      ],
+      "required": ["edge_id", "from", "to", "relation", "evidence_class"],
       "properties": {
         "edge_id": {
           "type": "string",
@@ -299,12 +280,7 @@
           ]
         },
         "evidence_class": {
-          "enum": [
-            "direct",
-            "contextual",
-            "inferred",
-            "unknown"
-          ]
+          "enum": ["direct", "contextual", "inferred", "unknown"]
         },
         "notes": {
           "type": "string"

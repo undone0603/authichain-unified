@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 /**
  * NORTHERN MICHIGAN INDUSTRIAL PILOT (NMIP) - CAMPAIGN PLAYBOOK
@@ -10,54 +10,58 @@ const sql = postgres(process.env.DATABASE_URL || '');
 
 const NMIP_CAMPAIGN = [
   {
-    target_sector: 'Advanced Wood Tech',
-    lead_name: 'Operations Director',
-    company: 'ARAUCO North America',
-    location: 'Grayling, MI',
-    use_case: 'Eco-Provenance Tracking',
-    narrative: 'Track the "Seed-to-Slab" journey. Prove sustainable forest sourcing for North America\'s largest particleboard facility.',
-    style: 'industrial-timber'
+    target_sector: "Advanced Wood Tech",
+    lead_name: "Operations Director",
+    company: "ARAUCO North America",
+    location: "Grayling, MI",
+    use_case: "Eco-Provenance Tracking",
+    narrative:
+      'Track the "Seed-to-Slab" journey. Prove sustainable forest sourcing for North America\'s largest particleboard facility.',
+    style: "industrial-timber",
   },
   {
-    target_sector: 'Automotive Components',
-    lead_name: 'Supply Chain VP',
-    company: 'Lear Corporation',
-    location: 'Roscommon, MI',
-    use_case: 'Anti-Counterfeit Parts Registry',
-    narrative: 'Anchor seating and wiring components to AuthiChain to prevent gray-market substitution in the OEM supply chain.',
-    style: 'cyber-chrome'
+    target_sector: "Automotive Components",
+    lead_name: "Supply Chain VP",
+    company: "Lear Corporation",
+    location: "Roscommon, MI",
+    use_case: "Anti-Counterfeit Parts Registry",
+    narrative:
+      "Anchor seating and wiring components to AuthiChain to prevent gray-market substitution in the OEM supply chain.",
+    style: "cyber-chrome",
   },
   {
-    target_sector: 'Marine & Blue Economy',
-    lead_name: 'CEO',
-    company: 'Spicer\'s Boat City',
-    location: 'Houghton Lake, MI',
-    use_case: 'Digital Service Passports',
-    narrative: 'A living QRON on every boat hull. Scannable service history, winterization proofs, and instant resale value verification.',
-    style: 'biolume-deep'
+    target_sector: "Marine & Blue Economy",
+    lead_name: "CEO",
+    company: "Spicer's Boat City",
+    location: "Houghton Lake, MI",
+    use_case: "Digital Service Passports",
+    narrative:
+      "A living QRON on every boat hull. Scannable service history, winterization proofs, and instant resale value verification.",
+    style: "biolume-deep",
   },
   {
-    target_sector: 'Advanced Manufacturing',
-    lead_name: 'Innovation Lead',
-    company: 'ATLAS Space Operations',
-    location: 'Traverse City, MI',
-    use_case: 'Satellite Component Pedigree',
-    narrative: 'Cryptographic component-level tracking for satellite hardware. Ed25519-signed verification for space-grade manufacturing.',
-    style: 'cosmic-nebula'
-  }
+    target_sector: "Advanced Manufacturing",
+    lead_name: "Innovation Lead",
+    company: "ATLAS Space Operations",
+    location: "Traverse City, MI",
+    use_case: "Satellite Component Pedigree",
+    narrative:
+      "Cryptographic component-level tracking for satellite hardware. Ed25519-signed verification for space-grade manufacturing.",
+    style: "cosmic-nebula",
+  },
 ];
 
 async function launchCampaign() {
-  console.log('🚀 Launching NMIP Outreach Campaign...');
+  console.log("🚀 Launching NMIP Outreach Campaign...");
   try {
     for (const lead of NMIP_CAMPAIGN) {
       console.log(`Setting up outreach for: ${lead.company}...`);
-      
+
       // 1. Create specialized Lead in CRM
       const [newLead] = await sql`
         INSERT INTO lead_captures (email, name, source, product_interest, status, score, metadata)
         VALUES (
-          ${`contact@${lead.company.toLowerCase().replace(/\s/g, '')}.com`},
+          ${`contact@${lead.company.toLowerCase().replace(/\s/g, "")}.com`},
           ${lead.lead_name},
           'NMIP-Autonomous-Outreach',
           'Industrial Artifacts',
@@ -67,7 +71,7 @@ async function launchCampaign() {
             sector: lead.target_sector,
             use_case: lead.use_case,
             narrative: lead.narrative,
-            pilot_id: 'NMIP-2026-V1'
+            pilot_id: "NMIP-2026-V1",
           })}
         )
         RETURNING id
@@ -84,15 +88,17 @@ async function launchCampaign() {
             target: lead.company,
             location: lead.location,
             narrative_sent: lead.narrative,
-            lead_id: newLead.id
+            lead_id: newLead.id,
           })}
         )
       `;
     }
 
-    console.log('✅ NMIP Campaign successfully launched in the Autonomous Engine.');
+    console.log(
+      "✅ NMIP Campaign successfully launched in the Autonomous Engine."
+    );
   } catch (err) {
-    console.error('❌ Campaign launch failed:', err.message);
+    console.error("❌ Campaign launch failed:", err.message);
   } finally {
     process.exit();
   }

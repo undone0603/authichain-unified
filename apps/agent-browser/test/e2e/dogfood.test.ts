@@ -115,9 +115,7 @@ describe('Dogfood skill: report template', () => {
   });
 
   it('lists all valid category values', () => {
-    const categoryLine = template
-      .split('\n')
-      .find((l) => l.includes('**Category**'));
+    const categoryLine = template.split('\n').find((l) => l.includes('**Category**'));
     expect(categoryLine).toBeTruthy();
     for (const cat of [
       'visual',
@@ -182,9 +180,7 @@ describe('Dogfood skill: cross-consistency', () => {
   const taxonomy = readSkillFile(TAXONOMY_MD);
 
   it('every category in template exists in taxonomy', () => {
-    const categoryLine = template
-      .split('\n')
-      .find((l) => l.includes('**Category**'));
+    const categoryLine = template.split('\n').find((l) => l.includes('**Category**'));
     expect(categoryLine).toBeTruthy();
 
     const categories = categoryLine!

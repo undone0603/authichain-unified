@@ -54,9 +54,12 @@ export default function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
 
-  const { data: unreadData } = trpc.notifications.unreadCount.useQuery(undefined, {
-    refetchInterval: 30000, // Poll every 30 seconds
-  });
+  const { data: unreadData } = trpc.notifications.unreadCount.useQuery(
+    undefined,
+    {
+      refetchInterval: 30000, // Poll every 30 seconds
+    }
+  );
 
   const { data: notificationsData, refetch } = trpc.notifications.list.useQuery(
     { limit: 20 },
@@ -81,7 +84,10 @@ export default function NotificationBell() {
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -138,9 +144,12 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <Bell className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No notifications yet</p>
+                <p className="text-sm text-muted-foreground">
+                  No notifications yet
+                </p>
                 <p className="text-xs text-muted-foreground/60 mt-1">
-                  You'll see updates about authentications, payments, and more here.
+                  You'll see updates about authentications, payments, and more
+                  here.
                 </p>
               </div>
             ) : (
@@ -162,14 +171,18 @@ export default function NotificationBell() {
                       }}
                     >
                       {/* Type Icon */}
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm ${typeColors[notification.type] || "bg-gray-500/10"}`}>
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm ${typeColors[notification.type] || "bg-gray-500/10"}`}
+                      >
                         {typeIcons[notification.type] || "📌"}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={`text-sm leading-tight ${!notification.isRead ? "font-medium" : "text-muted-foreground"}`}>
+                          <p
+                            className={`text-sm leading-tight ${!notification.isRead ? "font-medium" : "text-muted-foreground"}`}
+                          >
                             {notification.title}
                           </p>
                           {!notification.isRead && (
@@ -193,7 +206,7 @@ export default function NotificationBell() {
                       <div className="flex flex-col gap-1 shrink-0">
                         {!notification.isRead && (
                           <button
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation();
                               markRead.mutate({ id: notification.id });
                             }}
@@ -204,7 +217,7 @@ export default function NotificationBell() {
                           </button>
                         )}
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.stopPropagation();
                             deleteNotification.mutate({ id: notification.id });
                           }}

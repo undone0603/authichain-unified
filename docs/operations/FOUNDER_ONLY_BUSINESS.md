@@ -30,28 +30,35 @@ The founder is intentionally removed from routine operations. The founder only h
 ## Autonomous loops
 
 ### Acquire
+
 Run owned content/SEO, buyer-signal detection, community listening, government opportunity ingestion, and gated first-touch outreach.
 
 Cold outreach remains subject to `.github/autonomy.json`, the deliverability breaker, provenance/send guards, opt-out handling, and the `OWNER_LIVE_SEND` gate. A breaker trip is an automatic stop, not an instruction to work around it.
 
 ### Convert
+
 Warm leads move to the appropriate live checkout or written async proposal. The machine should prefer a self-serve checkout over a call. No invented customer, certification, urgency, result, or logo.
 
 ### Fulfill
+
 A successful payment triggers the existing provisioning path. Fulfillment evidence should contain the subject identifier, attestation/JWS where applicable, JWKS reference, evidence digest, verification result, timestamp, and deployment/version identifier.
 
 ### Retain
+
 Subscription health, failed-payment dunning, customer-health scoring, and win-back run without founder involvement. Material exceptions become approval/ops issues.
 
 ### Operate
+
 Checkout, production, schema, integration, estate, and verification health loops continuously test the money path and trust path. Failed loops fail closed where money, privacy, or deliverability is involved.
 
 ### Improve
+
 The repair loop may open deterministic draft PRs. Content/AI suggestions remain suggestions. Security, revenue, schema, charter, secret, and DNS changes remain founder-gated.
 
 ## Founder command center
 
 The founder should need only:
+
 1. Owner digest — weekly numbers and exceptions.
 2. GitHub approval issues — rare decisions.
 3. GitHub ops-alert issues — failures requiring intervention.
@@ -76,6 +83,7 @@ Count revenue only from verified payment events, not proposals, clicks, traffic,
 ## Exit condition
 
 The system is successful when the founder can stop checking dashboards and still receive only:
+
 - a compact revenue/health digest;
 - an approval request when a genuine founder decision is required;
 - an ops alert when automation cannot safely continue.

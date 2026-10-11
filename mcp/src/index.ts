@@ -1,6 +1,9 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { getQronById, getQronList } from "./db.js";
 
 const server = new Server(
@@ -41,29 +44,43 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async request => {
   try {
     if (request.params.name === "verify_product") {
       const qronId = request.params.arguments?.qron_id;
-      if (typeof qronId !== 'string') throw new Error("Invalid QRON ID");
-      
+      if (typeof qronId !== "string") throw new Error("Invalid QRON ID");
+
       const qron = await getQronById(qronId);
       if (!qron) {
-        return { content: [{ type: "text", text: `Product not found for QRON ID: ${qronId}` }] };
+        return {
+          content: [
+            { type: "text", text: `Product not found for QRON ID: ${qronId}` },
+          ],
+        };
       }
-      
+
       return {
-        content: [{ type: "text", text: `Product Found: ${JSON.stringify(qron, null, 2)}` }],
+        content: [
+          {
+            type: "text",
+            text: `Product Found: ${JSON.stringify(qron, null, 2)}`,
+          },
+        ],
       };
     }
-    
+
     if (request.params.name === "list_qrons") {
       const qrons = await getQronList();
       return {
-        content: [{ type: "text", text: `Recent QRONs: ${JSON.stringify(qrons, null, 2)}` }],
+        content: [
+          {
+            type: "text",
+            text: `Recent QRONs: ${JSON.stringify(qrons, null, 2)}`,
+          },
+        ],
       };
     }
-    
+
     throw new Error("Tool not found");
   } catch (error) {
     console.error("MCP Tool Error:", error);
@@ -77,7 +94,7 @@ async function main() {
   console.error("AuthiChain MCP Server running on stdio");
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error("Server error:", error);
   process.exit(1);
 });

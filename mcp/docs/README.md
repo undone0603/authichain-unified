@@ -5,12 +5,16 @@ This MCP (Model Context Protocol) server provides external AI agents with secure
 ## Available Tools
 
 ### 1. `verify_product`
+
 Verifies the authenticity of a product using its unique `qron_id`.
+
 - **Input:** `{ "qron_id": "string" }`
 - **Output:** Detailed product provenance data, including authenticity score, current trust status, and the dynamic identity timeline.
 
 ### 2. `list_qrons`
+
 Provides a listing of the 50 most recent product scan events processed by the AuthiChain network.
+
 - **Input:** None
 - **Output:** A list of recent QRON registrations.
 

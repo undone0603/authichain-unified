@@ -1,38 +1,36 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 export function CopyPageButton() {
   const pathname = usePathname();
-  const [state, setState] = useState<"idle" | "loading" | "copied">("idle");
+  const [state, setState] = useState<'idle' | 'loading' | 'copied'>('idle');
 
   const handleCopy = async () => {
-    setState("loading");
+    setState('loading');
     try {
-      const response = await fetch(
-        `/api/docs-markdown?path=${encodeURIComponent(pathname)}`,
-      );
+      const response = await fetch(`/api/docs-markdown?path=${encodeURIComponent(pathname)}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch markdown");
+        throw new Error('Failed to fetch markdown');
       }
       const markdown = await response.text();
       await navigator.clipboard.writeText(markdown);
-      setState("copied");
-      setTimeout(() => setState("idle"), 2000);
+      setState('copied');
+      setTimeout(() => setState('idle'), 2000);
     } catch {
-      setState("idle");
+      setState('idle');
     }
   };
 
   return (
     <button
       onClick={handleCopy}
-      disabled={state === "loading"}
+      disabled={state === 'loading'}
       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
       aria-label="Copy page as Markdown"
     >
-      {state === "copied" ? (
+      {state === 'copied' ? (
         <>
           <svg
             width="14"

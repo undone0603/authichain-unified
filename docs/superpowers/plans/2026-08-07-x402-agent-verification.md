@@ -1,7 +1,7 @@
 # Plan: pay-per-call verification for autonomous agents (x402)
 
 **Created:** 2026-08-07 · Implements Move 2 of `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md`.
-**Status:** historical plan. Current rails and wallets: [`docs/strategy/WEB3_IDENTITY.md`](../../strategy/WEB3_IDENTITY.md). Live economics: [`docs/strategy/AGENT_TOKENOMICS_x402.md`](../../strategy/AGENT_TOKENOMICS_x402.md). The paywall is **live** on Base USDC $0.05; Polygon / `$QRON` settlement in the build-order section below is **outdated**. Do not add `$QRON` to `accepts[]`.
+**Status:** historical plan. Current rails and wallets: [`docs/strategy/WEB3_IDENTITY.md`](../../strategy/WEB3_IDENTITY.md). Live economics: [`docs/strategy/AGENT_TOKENOMICS_x402.md`](../../strategy/AGENT_TOKENOMICS_x402.md). The paywall is **live** on Base USDC $0.05; Polygon / `$QRON`settlement in the build-order section below is **outdated**. Do not add`$QRON`to`accepts[]`.
 
 ## Decisions (operator-approved 2026-08-07)
 
@@ -35,7 +35,7 @@ Incumbents in brand protection (IBM TrustChain, Avery Dennison atma.io) sell six
 annual contracts through field sales. A $0.03 pay-per-call endpoint with no contract, no
 procurement, and no human in the loop is not a feature they can bolt on — it contradicts
 their pricing model, their sales compensation, and their buyer's procurement process. That
-is what makes this defensible rather than merely differentiated: not that they *haven't*
+is what makes this defensible rather than merely differentiated: not that they _haven't_
 done it, but that doing it costs them their existing business.
 
 AuthiChain already has the parts: edge workers in 300+ locations with sub-50ms cold starts,
@@ -47,7 +47,7 @@ an MCP server at `server/mcp/`, a `$QRON` ERC-20 on Polygon, Stripe metered bill
 
 The order matters more than the pieces. Do not reorder.
 
-### 1. Spend caps and rate limits — *first, before any payment path*
+### 1. Spend caps and rate limits — _first, before any payment path_
 
 An agent-payable endpoint without caps is an unbounded liability: a looping agent, a bug, or
 an attacker with a funded key can spend without limit and generate unbounded infrastructure
@@ -97,7 +97,7 @@ agent is spending or they will not fund it.
 
 ## The honest caveat, stated publicly
 
-Fully autonomous *execution* is real: a funded agent pays per call with no human in the
+Fully autonomous _execution_ is real: a funded agent pays per call with no human in the
 loop. But a KYC'd legal entity must fund and own the wallet, and that is where compliance
 lives. The accurate framing is **autonomous at runtime, one-time human setup, guardrails
 throughout.**

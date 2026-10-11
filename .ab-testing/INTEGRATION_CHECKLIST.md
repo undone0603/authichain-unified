@@ -12,7 +12,7 @@ Complete these steps to activate A/B testing across email, LinkedIn, and pricing
 
 - [ ] Verify tables exist:
   ```sql
-  SELECT table_name FROM information_schema.tables 
+  SELECT table_name FROM information_schema.tables
   WHERE table_schema = 'public' AND table_name LIKE 'ab_%';
   ```
 
@@ -59,6 +59,7 @@ pnpm exec ts-node scripts/email-templates-ab.ts 1
 ```
 
 Populates `ab_test_variants` with:
+
 - Variant A: Professional proposal email
 - Variant B: ROI-focused $2M opportunity email
 
@@ -100,10 +101,10 @@ When your email campaign system sends emails:
 ```typescript
 // In your email sending function (e.g., server/routes/email.ts)
 
-import { db } from '../db';
-import { leads } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import { createClient } from '@supabase/supabase-js';
+import { db } from "../db";
+import { leads } from "../db/schema";
+import { eq } from "drizzle-orm";
+import { createClient } from "@supabase/supabase-js";
 
 async function sendProposalEmail(leadId: number) {
   // Get lead + their assigned variant
@@ -123,11 +124,11 @@ async function sendProposalEmail(leadId: number) {
   );
 
   const { data: variant } = await supabase
-    .from('ab_test_variants')
-    .select('*')
-    .eq('ab_test_id', lead.ab_test_id)
-    .eq('variant_name', lead.ab_variant)
-    .eq('variant_type', 'email')
+    .from("ab_test_variants")
+    .select("*")
+    .eq("ab_test_id", lead.ab_test_id)
+    .eq("variant_name", lead.ab_variant)
+    .eq("variant_type", "email")
     .single();
 
   if (!variant) {
@@ -136,14 +137,14 @@ async function sendProposalEmail(leadId: number) {
 
   // Replace placeholders
   const subject = variant.subject
-    .replace('{{name}}', lead.name || '')
-    .replace('{{company}}', lead.company || '')
-    .replace('{{industry}}', lead.industry || '');
+    .replace("{{name}}", lead.name || "")
+    .replace("{{company}}", lead.company || "")
+    .replace("{{industry}}", lead.industry || "");
 
   const htmlContent = variant.html_content
-    .replace('{{name}}', lead.name || '')
-    .replace('{{company}}', lead.company || '')
-    .replace('{{industry}}', lead.industry || '');
+    .replace("{{name}}", lead.name || "")
+    .replace("{{company}}", lead.company || "")
+    .replace("{{industry}}", lead.industry || "");
 
   // Send email via Resend
   const { error } = await resend.emails.send({
@@ -151,19 +152,19 @@ async function sendProposalEmail(leadId: number) {
     subject,
     html: htmlContent,
     // Add tracking pixel for email_open tracking
-    replyTo: 'noreply@authichain.io',
+    replyTo: "noreply@authichain.io",
   });
 
   if (!error) {
     // Log email sent
     await supabase
-      .from('ab_test_results')
+      .from("ab_test_results")
       .update({
         email_sent: true,
         updated_at: new Date().toISOString(),
       })
-      .eq('lead_id', leadId)
-      .eq('ab_test_id', lead.ab_test_id);
+      .eq("lead_id", leadId)
+      .eq("ab_test_id", lead.ab_test_id);
   }
 
   return error;
@@ -423,6 +424,7 @@ pnpm exec ts-node scripts/ab-test-report.ts --test-id 1 --format csv --export re
 ```
 
 Sample output shows:
+
 - Conversion rates per variant
 - Statistical significance (p-value)
 - Email/LinkedIn metrics
@@ -452,6 +454,7 @@ pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 2 --limit 1000 --email
 ## 13. Monitor & Iterate ✅
 
 - [ ] Generate weekly reports:
+
   ```bash
   pnpm exec ts-node scripts/ab-test-report.ts --test-id 1 --export report-week-$(date +%Y%m%d).csv
   ```
@@ -479,18 +482,22 @@ pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 2 --limit 1000 --email
 ## Troubleshooting
 
 **No variants showing in report:**
+
 - Check `ab_test_variants` table is populated
 - Verify `ab_test_id` and `variant_name` match in seed script
 
 **Leads not assigned to tests:**
+
 - Run: `SELECT COUNT(*) FROM leads WHERE ab_variant IS NULL LIMIT 10;`
 - Check `assign-ab-variant.ts` ran without error
 
 **Email metrics not tracking:**
+
 - Verify webhook receiver is active (Resend, SendGrid, etc.)
 - Check `ab_test_results` table for records
 
 **Statistical significance showing as N/A:**
+
 - Need at least 30 results per variant
 - Chi-squared test requires sufficient sample size
 
@@ -499,6 +506,7 @@ pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 2 --limit 1000 --email
 ## Success Metrics
 
 After 2 weeks of testing:
+
 - [ ] 100+ participants per variant
 - [ ] p-value showing significant difference (p < 0.05)
 - [ ] Clear winner identified (A or B)

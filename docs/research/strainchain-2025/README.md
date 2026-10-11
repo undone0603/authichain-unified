@@ -5,13 +5,13 @@
 
 ## Live truth (use these instead)
 
-| Concern | Source of truth |
-|---|---|
-| Product law / genetics passport | `docs/strategy/strainchain-genetics-passport.md` |
-| Human pricing | `src/lib/plans.ts` (`strainchain_passport` $49, `strainchain_farm` $149/mo) |
-| Estate / domains | `docs/ESTATE.md` — CTAs on `strainchain.io/onboard` |
-| Deploy | `docs/NETWORK.md`, `docs/DEPLOY-RUNBOOK.md` |
-| Cannabis FAQ | `docs/knowledge/CANNABIS_FAQ.md` (pricing table may be stale) |
+| Concern                         | Source of truth                                                             |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| Product law / genetics passport | `docs/strategy/strainchain-genetics-passport.md`                            |
+| Human pricing                   | `src/lib/plans.ts` (`strainchain_passport` $49, `strainchain_farm` $149/mo) |
+| Estate / domains                | `docs/ESTATE.md` — CTAs on `strainchain.io/onboard`                         |
+| Deploy                          | `docs/NETWORK.md`, `docs/DEPLOY-RUNBOOK.md`                                 |
+| Cannabis FAQ                    | `docs/knowledge/CANNABIS_FAQ.md` (pricing table may be stale)               |
 
 ## What to keep from these files
 

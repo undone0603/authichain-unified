@@ -1,21 +1,53 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { SUBSCRIPTION_PLANS, ADDON_PRICING, INDUSTRY_SOLUTIONS } from "@shared/subscriptionPlans";
+import {
+  SUBSCRIPTION_PLANS,
+  ADDON_PRICING,
+  INDUSTRY_SOLUTIONS,
+} from "@shared/subscriptionPlans";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import {
-  Shield, Check, ArrowRight, Calculator, Zap, Building2,
-  Pill, Leaf, Palette, Cannabis, Cpu, ChevronDown, Star,
-  TrendingUp, DollarSign, Lock, Globe, Users
+  Shield,
+  Check,
+  ArrowRight,
+  Calculator,
+  Zap,
+  Building2,
+  Pill,
+  Leaf,
+  Palette,
+  Cannabis,
+  Cpu,
+  ChevronDown,
+  Star,
+  TrendingUp,
+  DollarSign,
+  Lock,
+  Globe,
+  Users,
 } from "lucide-react";
 
 const industryIcons: Record<string, React.ReactNode> = {
@@ -34,13 +66,15 @@ function ROICalculator() {
   const [industry, setIndustry] = useState("luxury");
 
   const roi = useMemo(() => {
-    const monthlyRevenueLost = productsPerMonth * avgProductValue * (counterfeitRate / 100);
+    const monthlyRevenueLost =
+      productsPerMonth * avgProductValue * (counterfeitRate / 100);
     const annualRevenueLost = monthlyRevenueLost * 12;
-    const authiChainCost = productsPerMonth <= 100 ? 49 : productsPerMonth <= 2500 ? 199 : 799;
+    const authiChainCost =
+      productsPerMonth <= 100 ? 49 : productsPerMonth <= 2500 ? 199 : 799;
     const annualCost = authiChainCost * 12;
     const revenueRecovered = annualRevenueLost * 0.85; // 85% recovery rate
     const netBenefit = revenueRecovered - annualCost;
-    const roiPercent = annualCost > 0 ? ((netBenefit / annualCost) * 100) : 0;
+    const roiPercent = annualCost > 0 ? (netBenefit / annualCost) * 100 : 0;
     return {
       monthlyRevenueLost,
       annualRevenueLost,
@@ -48,7 +82,12 @@ function ROICalculator() {
       revenueRecovered,
       netBenefit,
       roiPercent,
-      recommendedPlan: productsPerMonth <= 100 ? "Starter" : productsPerMonth <= 2500 ? "Professional" : "Enterprise",
+      recommendedPlan:
+        productsPerMonth <= 100
+          ? "Starter"
+          : productsPerMonth <= 2500
+            ? "Professional"
+            : "Enterprise",
     };
   }, [productsPerMonth, avgProductValue, counterfeitRate]);
 
@@ -59,7 +98,9 @@ function ROICalculator() {
           <Calculator className="h-5 w-5 text-primary" />
           <CardTitle>ROI Calculator</CardTitle>
         </div>
-        <CardDescription>See how much AuthiChain saves your business</CardDescription>
+        <CardDescription>
+          See how much AuthiChain saves your business
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -68,7 +109,7 @@ function ROICalculator() {
             <Input
               type="number"
               value={productsPerMonth}
-              onChange={(e) => setProductsPerMonth(Number(e.target.value) || 0)}
+              onChange={e => setProductsPerMonth(Number(e.target.value) || 0)}
               min={1}
             />
           </div>
@@ -77,7 +118,7 @@ function ROICalculator() {
             <Input
               type="number"
               value={avgProductValue}
-              onChange={(e) => setAvgProductValue(Number(e.target.value) || 0)}
+              onChange={e => setAvgProductValue(Number(e.target.value) || 0)}
               min={1}
             />
           </div>
@@ -86,7 +127,7 @@ function ROICalculator() {
             <Input
               type="number"
               value={counterfeitRate}
-              onChange={(e) => setCounterfeitRate(Number(e.target.value) || 0)}
+              onChange={e => setCounterfeitRate(Number(e.target.value) || 0)}
               min={0}
               max={100}
             />
@@ -99,7 +140,9 @@ function ROICalculator() {
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(INDUSTRY_SOLUTIONS).map(([key, sol]) => (
-                  <SelectItem key={key} value={key}>{sol.name}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {sol.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -111,26 +154,38 @@ function ROICalculator() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 rounded-lg bg-destructive/10">
             <p className="text-sm text-muted-foreground">Annual Revenue Lost</p>
-            <p className="text-2xl font-bold text-destructive">${roi.annualRevenueLost.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-destructive">
+              ${roi.annualRevenueLost.toLocaleString()}
+            </p>
           </div>
           <div className="text-center p-4 rounded-lg bg-primary/10">
             <p className="text-sm text-muted-foreground">Revenue Recovered</p>
-            <p className="text-2xl font-bold text-primary">${roi.revenueRecovered.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-primary">
+              ${roi.revenueRecovered.toLocaleString()}
+            </p>
           </div>
           <div className="text-center p-4 rounded-lg bg-muted">
             <p className="text-sm text-muted-foreground">AuthiChain Cost</p>
-            <p className="text-2xl font-bold">${roi.annualCost.toLocaleString()}/yr</p>
+            <p className="text-2xl font-bold">
+              ${roi.annualCost.toLocaleString()}/yr
+            </p>
           </div>
           <div className="text-center p-4 rounded-lg bg-green-500/10">
             <p className="text-sm text-muted-foreground">ROI</p>
-            <p className="text-2xl font-bold text-green-500">{roi.roiPercent.toFixed(0)}%</p>
+            <p className="text-2xl font-bold text-green-500">
+              {roi.roiPercent.toFixed(0)}%
+            </p>
           </div>
         </div>
 
         <div className="flex items-center justify-between p-4 rounded-lg border border-primary/30 bg-primary/5">
           <div>
-            <p className="font-semibold">Recommended Plan: {roi.recommendedPlan}</p>
-            <p className="text-sm text-muted-foreground">Net annual benefit: ${roi.netBenefit.toLocaleString()}</p>
+            <p className="font-semibold">
+              Recommended Plan: {roi.recommendedPlan}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Net annual benefit: ${roi.netBenefit.toLocaleString()}
+            </p>
           </div>
           <Button>
             Get Started <ArrowRight className="ml-2 h-4 w-4" />
@@ -183,7 +238,8 @@ function LeadCaptureForm() {
           <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Request Received</h3>
           <p className="text-muted-foreground">
-            Our enterprise team will reach out within 24 hours to schedule your personalized demo and compliance assessment.
+            Our enterprise team will reach out within 24 hours to schedule your
+            personalized demo and compliance assessment.
           </p>
         </CardContent>
       </Card>
@@ -205,7 +261,12 @@ function LeadCaptureForm() {
               <Label>Company Name *</Label>
               <Input
                 value={formData.companyName}
-                onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    companyName: e.target.value,
+                  }))
+                }
                 placeholder="Acme Corp"
                 required
               />
@@ -214,7 +275,12 @@ function LeadCaptureForm() {
               <Label>Contact Name</Label>
               <Input
                 value={formData.contactName}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactName: e.target.value }))}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    contactName: e.target.value,
+                  }))
+                }
                 placeholder="Jane Smith"
               />
             </div>
@@ -223,20 +289,29 @@ function LeadCaptureForm() {
               <Input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, email: e.target.value }))
+                }
                 placeholder="jane@acme.com"
                 required
               />
             </div>
             <div className="space-y-2">
               <Label>Industry</Label>
-              <Select value={formData.industry} onValueChange={(v) => setFormData(prev => ({ ...prev, industry: v }))}>
+              <Select
+                value={formData.industry}
+                onValueChange={v =>
+                  setFormData(prev => ({ ...prev, industry: v }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(INDUSTRY_SOLUTIONS).map(([key, sol]) => (
-                    <SelectItem key={key} value={key}>{sol.name}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      {sol.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -246,12 +321,24 @@ function LeadCaptureForm() {
             <Label>How many products do you authenticate monthly?</Label>
             <Input
               value={formData.productsPerMonth}
-              onChange={(e) => setFormData(prev => ({ ...prev, productsPerMonth: e.target.value }))}
+              onChange={e =>
+                setFormData(prev => ({
+                  ...prev,
+                  productsPerMonth: e.target.value,
+                }))
+              }
               placeholder="e.g., 5,000"
             />
           </div>
-          <Button type="submit" className="w-full" size="lg" disabled={createLead.isPending}>
-            {createLead.isPending ? "Submitting..." : "Schedule Compliance Assessment"}
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={createLead.isPending}
+          >
+            {createLead.isPending
+              ? "Submitting..."
+              : "Schedule Compliance Assessment"}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           <p className="text-xs text-muted-foreground text-center">
@@ -277,11 +364,20 @@ export default function Pricing() {
             <span className="font-bold text-lg">AuthiChain</span>
           </a>
           <div className="flex items-center gap-4">
-            <a href="/" className="text-sm text-muted-foreground hover:text-foreground">Home</a>
+            <a
+              href="/"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Home
+            </a>
             {isAuthenticated ? (
-              <Button asChild size="sm"><a href="/dashboard">Dashboard</a></Button>
+              <Button asChild size="sm">
+                <a href="/dashboard">Dashboard</a>
+              </Button>
             ) : (
-              <Button asChild size="sm"><a href={getLoginUrl()}>Get Started</a></Button>
+              <Button asChild size="sm">
+                <a href={getLoginUrl()}>Get Started</a>
+              </Button>
             )}
           </div>
         </div>
@@ -290,24 +386,38 @@ export default function Pricing() {
       {/* Hero */}
       <section className="py-20 text-center">
         <div className="container max-w-4xl">
-          <Badge variant="outline" className="mb-4 text-primary border-primary/30">
-            <Zap className="h-3 w-3 mr-1" /> The Only AI + Blockchain Authentication Platform
+          <Badge
+            variant="outline"
+            className="mb-4 text-primary border-primary/30"
+          >
+            <Zap className="h-3 w-3 mr-1" /> The Only AI + Blockchain
+            Authentication Platform
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
             One Platform. Complete Protection.
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            AuthiChain is the world's first platform combining AI-powered image analysis, 
-            blockchain verification, NFT certificates, and automated business intelligence 
-            in a single solution. No other service offers this.
+            AuthiChain is the world's first platform combining AI-powered image
+            analysis, blockchain verification, NFT certificates, and automated
+            business intelligence in a single solution. No other service offers
+            this.
           </p>
 
           {/* Billing toggle */}
           <div className="flex items-center justify-center gap-3 mb-12">
-            <span className={!annual ? "font-semibold" : "text-muted-foreground"}>Monthly</span>
+            <span
+              className={!annual ? "font-semibold" : "text-muted-foreground"}
+            >
+              Monthly
+            </span>
             <Switch checked={annual} onCheckedChange={setAnnual} />
-            <span className={annual ? "font-semibold" : "text-muted-foreground"}>
-              Annual <Badge variant="secondary" className="ml-1">Save 20%</Badge>
+            <span
+              className={annual ? "font-semibold" : "text-muted-foreground"}
+            >
+              Annual{" "}
+              <Badge variant="secondary" className="ml-1">
+                Save 20%
+              </Badge>
             </span>
           </div>
         </div>
@@ -318,7 +428,9 @@ export default function Pricing() {
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {Object.entries(SUBSCRIPTION_PLANS).map(([key, plan]) => {
-              const price = annual ? Math.round(plan.annualPrice / 12) : plan.monthlyPrice;
+              const price = annual
+                ? Math.round(plan.annualPrice / 12)
+                : plan.monthlyPrice;
               return (
                 <Card
                   key={key}
@@ -326,7 +438,9 @@ export default function Pricing() {
                 >
                   {plan.badge && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground">{plan.badge}</Badge>
+                      <Badge className="bg-primary text-primary-foreground">
+                        {plan.badge}
+                      </Badge>
                     </div>
                   )}
                   <CardHeader className="text-center pb-2">
@@ -360,10 +474,15 @@ export default function Pricing() {
                       variant={plan.highlighted ? "default" : "outline"}
                       asChild
                     >
-                      <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={plan.paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         {key === "enterprise" || key === "medtech"
                           ? "Contact Sales"
-                          : "Start Free Trial"} <ArrowRight className="ml-2 h-4 w-4" />
+                          : "Start Free Trial"}{" "}
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
                     {(key === "starter" || key === "professional") && (
@@ -372,7 +491,12 @@ export default function Pricing() {
                       </p>
                     )}
                     {isAuthenticated && (
-                      <Button className="w-full" variant="ghost" size="sm" asChild>
+                      <Button
+                        className="w-full"
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                      >
                         <a href="/subscriptions">Manage Subscription</a>
                       </Button>
                     )}
@@ -387,7 +511,9 @@ export default function Pricing() {
       {/* Add-ons */}
       <section className="py-16 bg-muted/30">
         <div className="container max-w-5xl">
-          <h2 className="text-2xl font-bold text-center mb-8">Add-On Services</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">
+            Add-On Services
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(ADDON_PRICING).map(([key, addon]) => (
               <Card key={key} className="border-border/50">
@@ -395,9 +521,13 @@ export default function Pricing() {
                   <h3 className="font-semibold">{addon.name}</h3>
                   <p className="text-2xl font-bold text-primary mt-1">
                     ${addon.price.toLocaleString()}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">{addon.unit}</span>
+                    <span className="text-sm font-normal text-muted-foreground ml-1">
+                      {addon.unit}
+                    </span>
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">{addon.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {addon.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -408,13 +538,18 @@ export default function Pricing() {
       {/* Industry Solutions */}
       <section className="py-16">
         <div className="container max-w-5xl">
-          <h2 className="text-2xl font-bold text-center mb-2">Industry Solutions</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Industry Solutions
+          </h2>
           <p className="text-center text-muted-foreground mb-8">
             Tailored authentication for your specific compliance requirements
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(INDUSTRY_SOLUTIONS).map(([key, sol]) => (
-              <Card key={key} className="border-border/50 hover:border-primary/30 transition-colors">
+              <Card
+                key={key}
+                className="border-border/50 hover:border-primary/30 transition-colors"
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -422,7 +557,9 @@ export default function Pricing() {
                     </div>
                     <div>
                       <h3 className="font-semibold">{sol.name}</h3>
-                      <p className="text-xs text-muted-foreground">From ${sol.startingPrice}/mo</p>
+                      <p className="text-xs text-muted-foreground">
+                        From ${sol.startingPrice}/mo
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">{sol.tagline}</p>
@@ -436,9 +573,12 @@ export default function Pricing() {
       {/* ROI Calculator */}
       <section className="py-16 bg-muted/30">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl font-bold text-center mb-2">Calculate Your ROI</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Calculate Your ROI
+          </h2>
           <p className="text-center text-muted-foreground mb-8">
-            See how much counterfeiting costs your business and how AuthiChain pays for itself
+            See how much counterfeiting costs your business and how AuthiChain
+            pays for itself
           </p>
           <ROICalculator />
         </div>
@@ -447,16 +587,34 @@ export default function Pricing() {
       {/* Why One-of-a-Kind */}
       <section className="py-16">
         <div className="container max-w-5xl">
-          <h2 className="text-2xl font-bold text-center mb-2">Why AuthiChain Is One-of-a-Kind</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Why AuthiChain Is One-of-a-Kind
+          </h2>
           <p className="text-center text-muted-foreground mb-8">
             No other platform combines all of these capabilities
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: <Shield className="h-6 w-6" />, title: "AI + Blockchain", desc: "AI analysis (in development) plus on-chain certificate record" },
-              { icon: <TrendingUp className="h-6 w-6" />, title: "Autopilot AI", desc: "Automated lead gen, outreach, and qualification" },
-              { icon: <DollarSign className="h-6 w-6" />, title: "NFT Marketplace", desc: "Monetize authentication with tradeable certificates" },
-              { icon: <Globe className="h-6 w-6" />, title: "White-Label", desc: "Resell as your own brand to enterprise clients" },
+              {
+                icon: <Shield className="h-6 w-6" />,
+                title: "AI + Blockchain",
+                desc: "AI analysis (in development) plus on-chain certificate record",
+              },
+              {
+                icon: <TrendingUp className="h-6 w-6" />,
+                title: "Autopilot AI",
+                desc: "Automated lead gen, outreach, and qualification",
+              },
+              {
+                icon: <DollarSign className="h-6 w-6" />,
+                title: "NFT Marketplace",
+                desc: "Monetize authentication with tradeable certificates",
+              },
+              {
+                icon: <Globe className="h-6 w-6" />,
+                title: "White-Label",
+                desc: "Resell as your own brand to enterprise clients",
+              },
             ].map((item, i) => (
               <div key={i} className="text-center p-6">
                 <div className="inline-flex p-3 rounded-xl bg-primary/10 text-primary mb-3">
@@ -473,9 +631,12 @@ export default function Pricing() {
       {/* Enterprise Lead Capture */}
       <section className="py-16 bg-muted/30">
         <div className="container max-w-2xl">
-          <h2 className="text-2xl font-bold text-center mb-2">Enterprise & Custom Solutions</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Enterprise & Custom Solutions
+          </h2>
           <p className="text-center text-muted-foreground mb-8">
-            Need a custom deployment, on-premise solution, or volume pricing? Let's talk.
+            Need a custom deployment, on-premise solution, or volume pricing?
+            Let's talk.
           </p>
           <LeadCaptureForm />
         </div>
@@ -487,19 +648,27 @@ export default function Pricing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
               <p className="text-3xl font-bold text-primary">$4.1B</p>
-              <p className="text-sm text-muted-foreground">Market Size (2026)</p>
+              <p className="text-sm text-muted-foreground">
+                Market Size (2026)
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary">53.5%</p>
-              <p className="text-sm text-muted-foreground">Blockchain Auth Share</p>
+              <p className="text-sm text-muted-foreground">
+                Blockchain Auth Share
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary">12%</p>
-              <p className="text-sm text-muted-foreground">Annual Market Growth</p>
+              <p className="text-sm text-muted-foreground">
+                Annual Market Growth
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary">85%</p>
-              <p className="text-sm text-muted-foreground">Revenue Recovery Rate</p>
+              <p className="text-sm text-muted-foreground">
+                Revenue Recovery Rate
+              </p>
             </div>
           </div>
         </div>
@@ -512,7 +681,8 @@ export default function Pricing() {
             Stop Losing Revenue to Counterfeits
           </h2>
           <p className="text-muted-foreground mb-8">
-            Join the authentication revolution. Start protecting your products today.
+            Join the authentication revolution. Start protecting your products
+            today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>

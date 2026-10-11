@@ -5,163 +5,158 @@
  * Do NOT import into estate /pricing, Next.js routes, workers checkout, or Stripe.
  * Paired reconciliation doc: claude-draft-pricing-artifact-2026-09-20.md
  */
-import React, { useState, useEffect } from 'react';
-import { Check, X, Zap, TrendingUp, Shield, Star } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Check, X, Zap, TrendingUp, Shield, Star } from "lucide-react";
 
 const PricingPage = () => {
-  const [selectedTier, setSelectedTier] = useState('professional');
+  const [selectedTier, setSelectedTier] = useState("professional");
   const [isAnnual, setIsAnnual] = useState(false);
   const [currentUsage, setCurrentUsage] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const tiers = {
     basic: {
-      name: 'Basic',
+      name: "Basic",
       price: isAnnual ? 159 : 199,
       originalPrice: 199,
-      color: 'bg-gray-500',
+      color: "bg-gray-500",
       features: [
-        '500 Monthly Scans',
-        '1 Brand Account',
-        '5 Artist Profiles',
-        'Basic Analytics',
-        'Email Support',
-        'NFT Minting',
-        'QR Authentication'
+        "500 Monthly Scans",
+        "1 Brand Account",
+        "5 Artist Profiles",
+        "Basic Analytics",
+        "Email Support",
+        "NFT Minting",
+        "QR Authentication",
       ],
       notIncluded: [
-        'API Access',
-        'Compliance Reports',
-        'White Label',
-        'Priority Support'
+        "API Access",
+        "Compliance Reports",
+        "White Label",
+        "Priority Support",
       ],
       limits: {
         scans: 500,
 
         brands: 1,
-        artists: 5
-      }
+        artists: 5,
+      },
     },
     professional: {
-      name: 'Professional',
+      name: "Professional",
       price: isAnnual ? 399 : 499,
       originalPrice: 499,
-      color: 'bg-blue-600',
+      color: "bg-blue-600",
       popular: true,
       features: [
-        '2,500 Monthly Scans',
-        '5 Brand Accounts',
-        '25 Artist Profiles',
-        'Advanced Analytics',
-        'Priority Support',
-        'Compliance Reports',
-        'API Access (50K calls)',
-        'Bulk Operations',
-        'Custom Integrations'
+        "2,500 Monthly Scans",
+        "5 Brand Accounts",
+        "25 Artist Profiles",
+        "Advanced Analytics",
+        "Priority Support",
+        "Compliance Reports",
+        "API Access (50K calls)",
+        "Bulk Operations",
+        "Custom Integrations",
       ],
-      notIncluded: [
-        'White Label',
-        'Dedicated Support',
-        'Custom Features'
-      ],
+      notIncluded: ["White Label", "Dedicated Support", "Custom Features"],
       limits: {
         scans: 2500,
         brands: 5,
-        artists: 25
-      }
+        artists: 25,
+      },
     },
 
     enterprise: {
-      name: 'Enterprise',
+      name: "Enterprise",
       price: isAnnual ? 799 : 999,
       originalPrice: 999,
-      color: 'bg-green-600',
+      color: "bg-green-600",
       features: [
-        'Unlimited Scans',
-        'Unlimited Brands',
-        'Unlimited Artists',
-        'Custom Analytics',
-        'Dedicated Support',
-        'White Label Options',
-        'Unlimited API Access',
-        'SLA Guarantee',
-        'Custom Integrations',
-        'Training & Onboarding',
-        'Custom Reporting',
-        'Priority Features'
+        "Unlimited Scans",
+        "Unlimited Brands",
+        "Unlimited Artists",
+        "Custom Analytics",
+        "Dedicated Support",
+        "White Label Options",
+        "Unlimited API Access",
+        "SLA Guarantee",
+        "Custom Integrations",
+        "Training & Onboarding",
+        "Custom Reporting",
+        "Priority Features",
       ],
       notIncluded: [],
       limits: {
-        scans: 'unlimited',
-        brands: 'unlimited',
-        artists: 'unlimited'
-      }
-    }
+        scans: "unlimited",
+        brands: "unlimited",
+        artists: "unlimited",
+      },
+    },
   };
 
   useEffect(() => {
     // Fetch current usage if user is logged in
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     if (userId) {
-
       fetchCurrentUsage(userId);
     }
   }, []);
 
-  const fetchCurrentUsage = async (userId) => {
+  const fetchCurrentUsage = async userId => {
     try {
-      const response = await fetch('/subscription/usage', {
-        headers: { 'X-User-ID': userId }
+      const response = await fetch("/subscription/usage", {
+        headers: { "X-User-ID": userId },
       });
       const data = await response.json();
       setCurrentUsage(data);
     } catch (error) {
-      console.error('Failed to fetch usage:', error);
+      console.error("Failed to fetch usage:", error);
     }
   };
 
-  const handleUpgrade = async (tierName) => {
+  const handleUpgrade = async tierName => {
     setLoading(true);
-    const userId = localStorage.getItem('userId');
-    
+    const userId = localStorage.getItem("userId");
+
     if (!userId) {
-      alert('Please log in to upgrade your subscription');
+      alert("Please log in to upgrade your subscription");
       setLoading(false);
       return;
     }
 
     try {
       // In production, integrate with Stripe
-      const response = await fetch('/subscription/upgrade', {
-        method: 'POST',
+      const response = await fetch("/subscription/upgrade", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
 
-          'X-User-ID': userId
+          "X-User-ID": userId,
         },
         body: JSON.stringify({
           userId,
           tier: tierName,
-          paymentToken: 'demo_token' // Replace with Stripe token
-        })
+          paymentToken: "demo_token", // Replace with Stripe token
+        }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         alert(`Successfully upgraded to ${tierName} tier!`);
-        window.location.href = '/dashboard';
+        window.location.href = "/dashboard";
       } else {
         alert(`Upgrade failed: ${result.error}`);
       }
     } catch (error) {
-      alert('Error processing upgrade. Please try again.');
+      alert("Error processing upgrade. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateSavings = (tier) => {
+  const calculateSavings = tier => {
     const monthlyCost = tiers[tier].originalPrice;
     const annualCost = tiers[tier].price * 12;
     const regularAnnualCost = monthlyCost * 12;
@@ -169,7 +164,6 @@ const PricingPage = () => {
   };
 
   return (
-
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -186,7 +180,7 @@ const PricingPage = () => {
             <button
               onClick={() => setIsAnnual(false)}
               className={`px-6 py-2 rounded-md transition ${
-                !isAnnual ? 'bg-blue-600 text-white' : 'text-gray-400'
+                !isAnnual ? "bg-blue-600 text-white" : "text-gray-400"
               }`}
             >
               Monthly
@@ -194,7 +188,7 @@ const PricingPage = () => {
             <button
               onClick={() => setIsAnnual(true)}
               className={`px-6 py-2 rounded-md transition ${
-                isAnnual ? 'bg-blue-600 text-white' : 'text-gray-400'
+                isAnnual ? "bg-blue-600 text-white" : "text-gray-400"
               }`}
             >
               Annual
@@ -202,16 +196,15 @@ const PricingPage = () => {
                 Save 20%
               </span>
             </button>
-
           </div>
         </div>
 
         {/* Current Usage Alert */}
-        {currentUsage && currentUsage.tier === 'free' && (
+        {currentUsage && currentUsage.tier === "free" && (
           <div className="bg-yellow-900/50 border border-yellow-500 rounded-lg p-4 mb-8 text-center">
             <p className="text-yellow-300">
-              ⚠️ You've used {currentUsage.usage.scans} of 10 free scans this month.
-              Upgrade now to continue scanning!
+              ⚠️ You've used {currentUsage.usage.scans} of 10 free scans this
+              month. Upgrade now to continue scanning!
             </p>
           </div>
         )}
@@ -222,7 +215,7 @@ const PricingPage = () => {
             <div
               key={key}
               className={`relative bg-gray-800 rounded-2xl p-8 ${
-                tier.popular ? 'ring-2 ring-blue-500 transform scale-105' : ''
+                tier.popular ? "ring-2 ring-blue-500 transform scale-105" : ""
               } hover:transform hover:scale-105 transition-all duration-200`}
             >
               {tier.popular && (
@@ -239,7 +232,7 @@ const PricingPage = () => {
                 <div className="mb-4">
                   <span className="text-5xl font-bold">${tier.price}</span>
                   <span className="text-gray-400 ml-2">
-                    /{isAnnual ? 'month' : 'month'}
+                    /{isAnnual ? "month" : "month"}
                   </span>
                 </div>
                 {isAnnual && (
@@ -272,11 +265,11 @@ const PricingPage = () => {
                 disabled={loading}
                 className={`w-full py-4 px-6 rounded-lg font-bold transition ${
                   tier.popular
-                    ? 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-white'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    ? "bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white"
+                    : "bg-gray-700 hover:bg-gray-600 text-white"
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {loading ? 'Processing...' : 'Start Free Trial'}
+                {loading ? "Processing..." : "Start Free Trial"}
               </button>
 
               {/* Trial info */}
@@ -320,8 +313,9 @@ const PricingPage = () => {
               <Star className="w-5 h-5 text-yellow-400" />
             </div>
             <p className="text-gray-300 mb-4">
-              "StrainChain eliminated 100% of counterfeiting for our premium products. 
-              The ROI was immediate - we paid back our investment in just 6 weeks."
+              "StrainChain eliminated 100% of counterfeiting for our premium
+              products. The ROI was immediate - we paid back our investment in
+              just 6 weeks."
             </p>
             <p className="font-bold">- Green Valley Premium</p>
           </div>
@@ -334,9 +328,9 @@ const PricingPage = () => {
               <Star className="w-5 h-5 text-yellow-400" />
             </div>
             <p className="text-gray-300 mb-4">
-
-              "As an artist, I'm now earning $2,500/month in royalties. 
-              The platform transformed my cannabis packaging art into a revenue stream."
+              "As an artist, I'm now earning $2,500/month in royalties. The
+              platform transformed my cannabis packaging art into a revenue
+              stream."
             </p>
             <p className="font-bold">- Maya Chen, Cannabis Artist</p>
           </div>
@@ -344,30 +338,39 @@ const PricingPage = () => {
 
         {/* FAQs */}
         <div className="bg-gray-800 rounded-2xl p-8">
-          <h2 className="text-3xl font-bold mb-6">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold mb-6">
+            Frequently Asked Questions
+          </h2>
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-bold mb-2">Can I change plans anytime?</h3>
+              <h3 className="text-xl font-bold mb-2">
+                Can I change plans anytime?
+              </h3>
               <p className="text-gray-400">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.
+                Yes! You can upgrade or downgrade your plan at any time. Changes
+                take effect immediately.
               </p>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">What happens if I exceed my limits?</h3>
+              <h3 className="text-xl font-bold mb-2">
+                What happens if I exceed my limits?
+              </h3>
               <p className="text-gray-400">
-                We'll notify you when you're approaching your limits and offer an easy upgrade path. 
-                You won't lose any data or functionality.
+                We'll notify you when you're approaching your limits and offer
+                an easy upgrade path. You won't lose any data or functionality.
               </p>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">Do you offer custom enterprise pricing?</h3>
+              <h3 className="text-xl font-bold mb-2">
+                Do you offer custom enterprise pricing?
+              </h3>
               <p className="text-gray-400">
-                Yes! For organizations with special requirements, contact us for custom pricing and features.
+                Yes! For organizations with special requirements, contact us for
+                custom pricing and features.
               </p>
             </div>
           </div>
         </div>
-
 
         {/* Contact Sales */}
         <div className="text-center mt-12">

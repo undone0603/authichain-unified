@@ -1,6 +1,7 @@
 # Progress Notes
 
 ## Notification System - Visual Check
+
 - Dashboard shows correctly with sidebar navigation
 - Notification bell (index 21) visible in top-right header area
 - "Notifications" item (index 14) visible in sidebar

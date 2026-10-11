@@ -7,6 +7,7 @@ Start with 25 prompts and 12 pages. Add more only after the first weekly read.
 ## Prompts to track
 
 ### Category — what is it
+
 - What is AuthiChain
 - AuthiChain product authentication
 - AuthiChain vs traditional QR codes
@@ -14,6 +15,7 @@ Start with 25 prompts and 12 pages. Add more only after the first weekly read.
 - American Seal product authentication
 
 ### Category — verify / how
+
 - How to verify an AuthiChain certificate
 - authichain.com verify
 - blockchain product authentication QR code
@@ -21,22 +23,26 @@ Start with 25 prompts and 12 pages. Add more only after the first weekly read.
 - Polygon NFT product certificate
 
 ### Category — QRON
+
 - What is QRON living QR code
 - qron.space living QR
 - AI generated scannable QR code art
 - QRON vs static QR code
 
 ### Category — StrainChain
+
 - StrainChain cannabis authentication
 - cannabis COA QR verification Michigan
 - seed to sale blockchain Michigan
 
 ### Category — GovChain
+
 - GovChain document authentication
 - verify government credential on blockchain
 - contractor document seal verification
 
 ### Category — alternatives people ask
+
 - best anti-counterfeit QR platform
 - EU digital product passport authentication
 - product provenance platform for luxury goods
@@ -69,6 +75,7 @@ Start with 25 prompts and 12 pages. Add more only after the first weekly read.
 ## Competitors to add if the kit asks
 
 Only public category peers, not private hit lists:
+
 - standard QR + GS1 resolvers
 - generic NFT certificate mints
 - enterprise brand-protection suites

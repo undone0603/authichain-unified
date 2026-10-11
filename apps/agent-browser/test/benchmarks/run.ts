@@ -1,12 +1,12 @@
-import { spawn, ChildProcess } from "child_process";
-import * as http from "http";
-import * as net from "net";
-import * as os from "os";
-import * as path from "path";
-import * as fs from "fs";
-import { fileURLToPath } from "url";
-import { scenarios, type BenchmarkCommand, type Scenario } from "./scenarios.js";
-import { engineScenarios } from "./engine-scenarios.js";
+import { spawn, ChildProcess } from 'child_process';
+import * as http from 'http';
+import * as net from 'net';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+import { scenarios, type BenchmarkCommand, type Scenario } from './scenarios.js';
+import { engineScenarios } from './engine-scenarios.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,23 +15,23 @@ const __dirname = path.dirname(__filename);
 // Static file server for HTTP-served benchmarks
 // ---------------------------------------------------------------------------
 
-const PAGES_DIR = path.join(__dirname, "pages");
+const PAGES_DIR = path.join(__dirname, 'pages');
 
 const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "application/javascript",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".svg": "image/svg+xml",
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
 };
 
 function startFileServer(): Promise<{ server: http.Server; port: number }> {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
-      const url = new URL(req.url || "/", `http://localhost`);
-      let filePath = path.join(PAGES_DIR, url.pathname === "/" ? "article.html" : url.pathname);
+      const url = new URL(req.url || '/', `http://localhost`);
+      let filePath = path.join(PAGES_DIR, url.pathname === '/' ? 'article.html' : url.pathname);
 
       if (!filePath.startsWith(PAGES_DIR)) {
         res.writeHead(403);
@@ -40,30 +40,30 @@ function startFileServer(): Promise<{ server: http.Server; port: number }> {
       }
 
       if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
-        filePath = path.join(filePath, "index.html");
+        filePath = path.join(filePath, 'index.html');
       }
 
       try {
         const content = fs.readFileSync(filePath);
         const ext = path.extname(filePath);
-        res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "application/octet-stream" });
+        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
         res.end(content);
       } catch {
         res.writeHead(404);
-        res.end("Not found");
+        res.end('Not found');
       }
     });
 
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(0, '127.0.0.1', () => {
       const addr = server.address();
-      if (!addr || typeof addr === "string") {
-        reject(new Error("Failed to get server address"));
+      if (!addr || typeof addr === 'string') {
+        reject(new Error('Failed to get server address'));
         return;
       }
       resolve({ server, port: addr.port });
     });
 
-    server.on("error", reject);
+    server.on('error', reject);
   });
 }
 
@@ -78,20 +78,24 @@ function stopFileServer(server: http.Server): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function getProcessMemoryKB(pid: number): number | null {
-  if (process.platform === "linux") {
+  if (process.platform === 'linux') {
     try {
-      const status = fs.readFileSync(`/proc/${pid}/status`, "utf-8");
+      const status = fs.readFileSync(`/proc/${pid}/status`, 'utf-8');
       const match = status.match(/VmRSS:\s+(\d+)\s+kB/);
       if (match) return parseInt(match[1], 10);
-    } catch { /* */ }
+    } catch {
+      /* */
+    }
   }
 
   try {
-    const { execSync } = require("child_process");
-    const output = execSync(`ps -o rss= -p ${pid}`, { encoding: "utf-8", timeout: 2000 });
+    const { execSync } = require('child_process');
+    const output = execSync(`ps -o rss= -p ${pid}`, { encoding: 'utf-8', timeout: 2000 });
     const kb = parseInt(output.trim(), 10);
     if (!isNaN(kb)) return kb;
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
 
   return null;
 }
@@ -132,13 +136,13 @@ function getSocketDir(): string {
     return process.env.AGENT_BROWSER_SOCKET_DIR;
   }
   if (process.env.XDG_RUNTIME_DIR) {
-    return path.join(process.env.XDG_RUNTIME_DIR, "agent-browser");
+    return path.join(process.env.XDG_RUNTIME_DIR, 'agent-browser');
   }
   const home = os.homedir();
   if (home) {
-    return path.join(home, ".agent-browser");
+    return path.join(home, '.agent-browser');
   }
-  return path.join(os.tmpdir(), "agent-browser");
+  return path.join(os.tmpdir(), 'agent-browser');
 }
 
 function getSocketPath(session: string): string {
@@ -146,7 +150,7 @@ function getSocketPath(session: string): string {
 }
 
 function getProjectRoot(): string {
-  return path.resolve(__dirname, "../..");
+  return path.resolve(__dirname, '../..');
 }
 
 function getNativeBinaryPath(): string {
@@ -155,21 +159,21 @@ function getNativeBinaryPath(): string {
   const a = os.arch();
 
   const osKey =
-    p === "darwin" ? "darwin" : p === "linux" ? "linux" : p === "win32" ? "win32" : null;
+    p === 'darwin' ? 'darwin' : p === 'linux' ? 'linux' : p === 'win32' ? 'win32' : null;
   const archKey =
-    a === "x64" || a === "x86_64" ? "x64" : a === "arm64" || a === "aarch64" ? "arm64" : null;
+    a === 'x64' || a === 'x86_64' ? 'x64' : a === 'arm64' || a === 'aarch64' ? 'arm64' : null;
 
   if (!osKey || !archKey) {
     throw new Error(`Unsupported platform: ${p}-${a}`);
   }
 
-  const ext = p === "win32" ? ".exe" : "";
+  const ext = p === 'win32' ? '.exe' : '';
   const binName = `agent-browser-${osKey}-${archKey}${ext}`;
 
   const candidates = [
-    path.join(root, "cli/target/release/agent-browser"),
-    path.join(root, "cli/target/debug/agent-browser"),
-    path.join(root, "bin", binName),
+    path.join(root, 'cli/target/release/agent-browser'),
+    path.join(root, 'cli/target/debug/agent-browser'),
+    path.join(root, 'bin', binName),
   ];
 
   for (const candidate of candidates) {
@@ -177,8 +181,8 @@ function getNativeBinaryPath(): string {
   }
 
   throw new Error(
-    `Native binary not found. Tried:\n${candidates.map((c) => "  " + c).join("\n")}\n` +
-      'Run "pnpm build:native" to build the native binary.',
+    `Native binary not found. Tried:\n${candidates.map((c) => '  ' + c).join('\n')}\n` +
+      'Run "pnpm build:native" to build the native binary.'
   );
 }
 
@@ -186,13 +190,13 @@ function sendCommand(session: string, cmd: BenchmarkCommand): Promise<Record<str
   return new Promise((resolve, reject) => {
     const socketPath = getSocketPath(session);
     const client = net.createConnection({ path: socketPath }, () => {
-      client.write(JSON.stringify(cmd) + "\n");
+      client.write(JSON.stringify(cmd) + '\n');
     });
 
-    let data = "";
-    client.on("data", (chunk) => {
+    let data = '';
+    client.on('data', (chunk) => {
       data += chunk.toString();
-      const newlineIdx = data.indexOf("\n");
+      const newlineIdx = data.indexOf('\n');
       if (newlineIdx !== -1) {
         const line = data.slice(0, newlineIdx);
         client.destroy();
@@ -204,10 +208,10 @@ function sendCommand(session: string, cmd: BenchmarkCommand): Promise<Record<str
       }
     });
 
-    client.on("error", (err) => reject(err));
-    client.on("timeout", () => {
+    client.on('error', (err) => reject(err));
+    client.on('timeout', () => {
       client.destroy();
-      reject(new Error("Socket timeout"));
+      reject(new Error('Socket timeout'));
     });
     client.setTimeout(30_000);
   });
@@ -228,11 +232,11 @@ async function waitForSocket(session: string, timeoutMs = 15_000): Promise<void>
             c.destroy();
             resolve();
           });
-          c.on("error", reject);
+          c.on('error', reject);
           c.setTimeout(1000);
-          c.on("timeout", () => {
+          c.on('timeout', () => {
             c.destroy();
-            reject(new Error("timeout"));
+            reject(new Error('timeout'));
           });
         });
         return;
@@ -251,22 +255,22 @@ interface DaemonHandle {
 }
 
 function spawnNodeDaemon(session: string): DaemonHandle {
-  const daemonPath = path.join(getProjectRoot(), "dist/daemon.js");
+  const daemonPath = path.join(getProjectRoot(), 'dist/daemon.js');
   if (!fs.existsSync(daemonPath)) {
     throw new Error(`Node daemon not found at ${daemonPath}. Run "pnpm build" first.`);
   }
 
-  const child = spawn("node", [daemonPath], {
+  const child = spawn('node', [daemonPath], {
     env: {
       ...process.env,
-      AGENT_BROWSER_DAEMON: "1",
+      AGENT_BROWSER_DAEMON: '1',
       AGENT_BROWSER_SESSION: session,
     },
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ['ignore', 'ignore', 'pipe'],
     detached: true,
   });
 
-  child.stderr?.on("data", (chunk) => {
+  child.stderr?.on('data', (chunk) => {
     const msg = chunk.toString().trim();
     if (msg && process.env.BENCH_DEBUG) {
       process.stderr.write(`[node-daemon] ${msg}\n`);
@@ -280,8 +284,8 @@ function spawnNativeDaemon(session: string, engine?: string): DaemonHandle {
   const binaryPath = getNativeBinaryPath();
 
   const env: Record<string, string> = {
-    ...process.env as Record<string, string>,
-    AGENT_BROWSER_DAEMON: "1",
+    ...(process.env as Record<string, string>),
+    AGENT_BROWSER_DAEMON: '1',
     AGENT_BROWSER_SESSION: session,
   };
   if (engine) {
@@ -290,12 +294,12 @@ function spawnNativeDaemon(session: string, engine?: string): DaemonHandle {
 
   const child = spawn(binaryPath, [], {
     env,
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ['ignore', 'ignore', 'pipe'],
     detached: true,
   });
 
-  const label = engine ? `native-${engine}` : "native-daemon";
-  child.stderr?.on("data", (chunk) => {
+  const label = engine ? `native-${engine}` : 'native-daemon';
+  child.stderr?.on('data', (chunk) => {
     const msg = chunk.toString().trim();
     if (msg && process.env.BENCH_DEBUG) {
       process.stderr.write(`[${label}] ${msg}\n`);
@@ -307,27 +311,22 @@ function spawnNativeDaemon(session: string, engine?: string): DaemonHandle {
 
 async function closeDaemon(handle: DaemonHandle): Promise<void> {
   try {
-    await sendCommand(handle.session, { id: "close", action: "close" });
+    await sendCommand(handle.session, { id: 'close', action: 'close' });
   } catch {
     // daemon may already be gone
   }
   await sleep(200);
   try {
-    handle.process.kill("SIGTERM");
+    handle.process.kill('SIGTERM');
   } catch {
     // already exited
   }
 }
 
 function cleanupSockets(): void {
-  for (const session of [
-    "bench-node",
-    "bench-native",
-    "bench-chrome",
-    "bench-lightpanda",
-  ]) {
+  for (const session of ['bench-node', 'bench-native', 'bench-chrome', 'bench-lightpanda']) {
     const sockPath = getSocketPath(session);
-    const pidPath = sockPath.replace(/\.sock$/, ".pid");
+    const pidPath = sockPath.replace(/\.sock$/, '.pid');
     try {
       fs.unlinkSync(sockPath);
     } catch {
@@ -380,7 +379,7 @@ async function runCommands(session: string, commands: BenchmarkCommand[]): Promi
     const resp = await sendCommand(session, cmd);
     if (!(resp as { success?: boolean }).success) {
       throw new Error(
-        `Command '${cmd.action}' failed on session '${session}': ${JSON.stringify(resp)}`,
+        `Command '${cmd.action}' failed on session '${session}': ${JSON.stringify(resp)}`
       );
     }
   }
@@ -405,7 +404,7 @@ async function runScenario(
   scenario: Scenario,
   sessions: { node?: string; native?: string },
   iterations: number,
-  warmup: number,
+  warmup: number
 ): Promise<ScenarioResult> {
   const result: ScenarioResult = {
     name: scenario.name,
@@ -436,10 +435,10 @@ async function runScenario(
     }
 
     const stats = computeStats(timings);
-    if (label === "node") result.nodeStats = stats;
-    else if (label === "native") result.nativeStats = stats;
-    else if (label === "chrome") result.chromeStats = stats;
-    else if (label === "lightpanda") result.lightpandaStats = stats;
+    if (label === 'node') result.nodeStats = stats;
+    else if (label === 'native') result.nativeStats = stats;
+    else if (label === 'chrome') result.chromeStats = stats;
+    else if (label === 'lightpanda') result.lightpandaStats = stats;
   }
 
   return result;
@@ -449,7 +448,7 @@ async function runScenarioWithErrorTolerance(
   scenario: Scenario,
   sessions: Record<string, string>,
   iterations: number,
-  warmup: number,
+  warmup: number
 ): Promise<ScenarioResult> {
   const result: ScenarioResult = {
     name: scenario.name,
@@ -481,10 +480,10 @@ async function runScenarioWithErrorTolerance(
       }
 
       const stats = computeStats(timings);
-      if (label === "chrome") result.chromeStats = stats;
-      else if (label === "lightpanda") result.lightpandaStats = stats;
-      else if (label === "node") result.nodeStats = stats;
-      else if (label === "native") result.nativeStats = stats;
+      if (label === 'chrome') result.chromeStats = stats;
+      else if (label === 'lightpanda') result.lightpandaStats = stats;
+      else if (label === 'node') result.nodeStats = stats;
+      else if (label === 'native') result.nativeStats = stats;
     } catch (err) {
       if (process.env.BENCH_DEBUG) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -509,23 +508,23 @@ function rpad(s: string, len: number): string {
 }
 
 function formatSpeedup(baselineUs: number, candidateUs: number): string {
-  if (candidateUs === 0 && baselineUs === 0) return "  --";
-  if (candidateUs === 0) return "  >>>";
+  if (candidateUs === 0 && baselineUs === 0) return '  --';
+  if (candidateUs === 0) return '  >>>';
   const ratio = baselineUs / candidateUs;
   return `${ratio.toFixed(1)}x`;
 }
 
-type BenchmarkMode = "daemon" | "engine";
+type BenchmarkMode = 'daemon' | 'engine';
 
 function printResults(
   results: ScenarioResult[],
   iterations: number,
   warmup: number,
-  mode: BenchmarkMode = "daemon",
+  mode: BenchmarkMode = 'daemon'
 ): void {
-  console.log("");
+  console.log('');
 
-  if (mode === "engine") {
+  if (mode === 'engine') {
     printEngineResults(results, iterations, warmup);
     return;
   }
@@ -536,20 +535,20 @@ function printResults(
     ? `agent-browser benchmark: node vs native (${iterations} iterations, ${warmup} warmup)`
     : `agent-browser benchmark (${iterations} iterations, ${warmup} warmup)`;
   console.log(header);
-  console.log("=".repeat(header.length));
-  console.log("");
+  console.log('='.repeat(header.length));
+  console.log('');
 
   if (bothPaths) {
     const nameW = 20;
     const colW = 14;
 
     console.log(
-      pad("Scenario", nameW) +
-        rpad("Node (avg)", colW) +
-        rpad("Native (avg)", colW) +
-        rpad("Speedup", 10),
+      pad('Scenario', nameW) +
+        rpad('Node (avg)', colW) +
+        rpad('Native (avg)', colW) +
+        rpad('Speedup', 10)
     );
-    console.log("-".repeat(nameW + colW * 2 + 10));
+    console.log('-'.repeat(nameW + colW * 2 + 10));
 
     let totalNodeUs = 0;
     let totalNativeUs = 0;
@@ -565,42 +564,42 @@ function printResults(
         pad(r.name, nameW) +
           rpad(formatDuration(r.nodeStats.avgUs), colW) +
           rpad(formatDuration(r.nativeStats.avgUs), colW) +
-          rpad(formatSpeedup(r.nodeStats.avgUs, r.nativeStats.avgUs), 10),
+          rpad(formatSpeedup(r.nodeStats.avgUs, r.nativeStats.avgUs), 10)
       );
     }
 
-    console.log("-".repeat(nameW + colW * 2 + 10));
+    console.log('-'.repeat(nameW + colW * 2 + 10));
 
     if (count > 0 && totalNativeUs > 0) {
       const overallSpeedup = totalNodeUs / totalNativeUs;
-      const winner = overallSpeedup >= 1.0 ? "native is faster" : "node is faster";
+      const winner = overallSpeedup >= 1.0 ? 'native is faster' : 'node is faster';
       console.log(`Overall average speedup: ${overallSpeedup.toFixed(1)}x (${winner})`);
-      console.log("");
+      console.log('');
 
       const allNativeFaster = results.every(
-        (r) => !r.nodeStats || !r.nativeStats || r.nodeStats.avgUs >= r.nativeStats.avgUs,
+        (r) => !r.nodeStats || !r.nativeStats || r.nodeStats.avgUs >= r.nativeStats.avgUs
       );
       if (allNativeFaster) {
-        console.log("Result: PASS -- native is faster across all scenarios");
+        console.log('Result: PASS -- native is faster across all scenarios');
       } else {
         const slower = results
           .filter((r) => r.nodeStats && r.nativeStats && r.nodeStats.avgUs < r.nativeStats.avgUs)
           .map((r) => r.name);
-        console.log(`Result: WARN -- native is slower in: ${slower.join(", ")}`);
+        console.log(`Result: WARN -- native is slower in: ${slower.join(', ')}`);
       }
     }
   } else {
     const nameW = 20;
-    const label = results[0].nodeStats ? "Node" : "Native";
+    const label = results[0].nodeStats ? 'Node' : 'Native';
     console.log(
-      pad("Scenario", nameW) +
+      pad('Scenario', nameW) +
         rpad(`${label} avg`, 10) +
-        rpad("min", 10) +
-        rpad("max", 10) +
-        rpad("p50", 10) +
-        rpad("p95", 10),
+        rpad('min', 10) +
+        rpad('max', 10) +
+        rpad('p50', 10) +
+        rpad('p95', 10)
     );
-    console.log("-".repeat(nameW + 50));
+    console.log('-'.repeat(nameW + 50));
     for (const r of results) {
       const s = r.nodeStats ?? r.nativeStats;
       if (!s) continue;
@@ -610,43 +609,39 @@ function printResults(
           rpad(formatDuration(s.minUs), 10) +
           rpad(formatDuration(s.maxUs), 10) +
           rpad(formatDuration(s.p50Us), 10) +
-          rpad(formatDuration(s.p95Us), 10),
+          rpad(formatDuration(s.p95Us), 10)
       );
     }
   }
 
-  console.log("");
+  console.log('');
 }
 
-function printEngineResults(
-  results: ScenarioResult[],
-  iterations: number,
-  warmup: number,
-): void {
+function printEngineResults(results: ScenarioResult[], iterations: number, warmup: number): void {
   const header = `agent-browser benchmark: chrome vs lightpanda (${iterations} iterations, ${warmup} warmup)`;
   console.log(header);
-  console.log("=".repeat(header.length));
-  console.log("");
+  console.log('='.repeat(header.length));
+  console.log('');
 
   const nameW = 22;
   const colW = 18;
 
   console.log(
-    pad("Scenario", nameW) +
-      rpad("Chrome (avg)", colW) +
-      rpad("Lightpanda (avg)", colW) +
-      rpad("Speedup", 10),
+    pad('Scenario', nameW) +
+      rpad('Chrome (avg)', colW) +
+      rpad('Lightpanda (avg)', colW) +
+      rpad('Speedup', 10)
   );
-  console.log("-".repeat(nameW + colW * 2 + 10));
+  console.log('-'.repeat(nameW + colW * 2 + 10));
 
   let totalChromeUs = 0;
   let totalLightpandaUs = 0;
   let comparableCount = 0;
 
   for (const r of results) {
-    const chromeAvg = r.chromeStats ? formatDuration(r.chromeStats.avgUs) : "N/A";
-    const lpAvg = r.lightpandaStats ? formatDuration(r.lightpandaStats.avgUs) : "N/A";
-    let speedup = "  --";
+    const chromeAvg = r.chromeStats ? formatDuration(r.chromeStats.avgUs) : 'N/A';
+    const lpAvg = r.lightpandaStats ? formatDuration(r.lightpandaStats.avgUs) : 'N/A';
+    let speedup = '  --';
 
     if (r.chromeStats && r.lightpandaStats) {
       totalChromeUs += r.chromeStats.avgUs;
@@ -655,31 +650,27 @@ function printEngineResults(
       speedup = formatSpeedup(r.chromeStats.avgUs, r.lightpandaStats.avgUs);
     }
 
-    console.log(
-      pad(r.name, nameW) +
-        rpad(chromeAvg, colW) +
-        rpad(lpAvg, colW) +
-        rpad(speedup, 10),
-    );
+    console.log(pad(r.name, nameW) + rpad(chromeAvg, colW) + rpad(lpAvg, colW) + rpad(speedup, 10));
   }
 
-  console.log("-".repeat(nameW + colW * 2 + 10));
+  console.log('-'.repeat(nameW + colW * 2 + 10));
 
   if (comparableCount > 0 && totalLightpandaUs > 0) {
     const ratio = totalChromeUs / totalLightpandaUs;
-    const winner = ratio >= 1.0
-      ? `lightpanda ${ratio.toFixed(1)}x faster`
-      : `chrome ${(1 / ratio).toFixed(1)}x faster`;
+    const winner =
+      ratio >= 1.0
+        ? `lightpanda ${ratio.toFixed(1)}x faster`
+        : `chrome ${(1 / ratio).toFixed(1)}x faster`;
     console.log(`Overall: ${winner}`);
   }
 
-  console.log("");
+  console.log('');
 }
 
 function writeJsonResults(
   results: ScenarioResult[],
   outputPath: string,
-  mode: BenchmarkMode = "daemon",
+  mode: BenchmarkMode = 'daemon'
 ): void {
   const toMs = (us: number) => +(us / 1000).toFixed(2);
   const statsToJson = (s: Stats) => ({
@@ -691,7 +682,7 @@ function writeJsonResults(
   });
 
   const json = results.map((r) => {
-    if (mode === "engine") {
+    if (mode === 'engine') {
       return {
         scenario: r.name,
         chrome: r.chromeStats ? statsToJson(r.chromeStats) : null,
@@ -712,7 +703,7 @@ function writeJsonResults(
           : null,
     };
   });
-  fs.writeFileSync(outputPath, JSON.stringify(json, null, 2) + "\n");
+  fs.writeFileSync(outputPath, JSON.stringify(json, null, 2) + '\n');
   console.log(`JSON results written to ${outputPath}`);
 }
 
@@ -742,22 +733,22 @@ function parseArgs(): CliArgs {
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
-      case "--iterations":
+      case '--iterations':
         result.iterations = parseInt(args[++i], 10);
         break;
-      case "--warmup":
+      case '--warmup':
         result.warmup = parseInt(args[++i], 10);
         break;
-      case "--node-only":
+      case '--node-only':
         result.nodeOnly = true;
         break;
-      case "--native-only":
+      case '--native-only':
         result.nativeOnly = true;
         break;
-      case "--engine":
+      case '--engine':
         result.engineMode = true;
         break;
-      case "--json":
+      case '--json':
         result.json = true;
         break;
       default:
@@ -777,40 +768,40 @@ async function runDaemonBenchmark(args: CliArgs): Promise<void> {
   const runNode = !args.nativeOnly;
   const runNative = !args.nodeOnly;
 
-  console.log("Starting benchmark daemons...");
+  console.log('Starting benchmark daemons...');
 
   let nodeHandle: DaemonHandle | undefined;
   let nativeHandle: DaemonHandle | undefined;
 
   try {
     if (runNode) {
-      nodeHandle = spawnNodeDaemon("bench-node");
-      await waitForSocket("bench-node");
-      console.log("  Node daemon ready");
+      nodeHandle = spawnNodeDaemon('bench-node');
+      await waitForSocket('bench-node');
+      console.log('  Node daemon ready');
     }
 
     if (runNative) {
-      nativeHandle = spawnNativeDaemon("bench-native");
-      await waitForSocket("bench-native");
-      console.log("  Native daemon ready");
+      nativeHandle = spawnNativeDaemon('bench-native');
+      await waitForSocket('bench-native');
+      console.log('  Native daemon ready');
     }
 
     const sessions: { node?: string; native?: string } = {};
-    if (runNode) sessions.node = "bench-node";
-    if (runNative) sessions.native = "bench-native";
+    if (runNode) sessions.node = 'bench-node';
+    if (runNative) sessions.native = 'bench-native';
 
     for (const session of Object.values(sessions)) {
       const resp = await sendCommand(session, {
-        id: "launch",
-        action: "launch",
+        id: 'launch',
+        action: 'launch',
         headless: true,
       });
       if (!(resp as { success?: boolean }).success) {
         throw new Error(`Failed to launch browser on ${session}: ${JSON.stringify(resp)}`);
       }
     }
-    console.log("  Browsers launched");
-    console.log("");
+    console.log('  Browsers launched');
+    console.log('');
 
     const results: ScenarioResult[] = [];
     for (const scenario of scenarios) {
@@ -821,26 +812,26 @@ async function runDaemonBenchmark(args: CliArgs): Promise<void> {
       if (result.nodeStats && result.nativeStats) {
         const speedup = formatSpeedup(result.nodeStats.avgUs, result.nativeStats.avgUs);
         process.stdout.write(
-          ` node=${formatDuration(result.nodeStats.avgUs)} native=${formatDuration(result.nativeStats.avgUs)} (${speedup})\n`,
+          ` node=${formatDuration(result.nodeStats.avgUs)} native=${formatDuration(result.nativeStats.avgUs)} (${speedup})\n`
         );
       } else {
         const s = result.nodeStats ?? result.nativeStats;
-        process.stdout.write(` avg=${s ? formatDuration(s.avgUs) : "??"}\n`);
+        process.stdout.write(` avg=${s ? formatDuration(s.avgUs) : '??'}\n`);
       }
     }
 
-    printResults(results, args.iterations, args.warmup, "daemon");
+    printResults(results, args.iterations, args.warmup, 'daemon');
 
     if (args.json) {
       writeJsonResults(
         results,
-        path.join(getProjectRoot(), "test/benchmarks/results.json"),
-        "daemon",
+        path.join(getProjectRoot(), 'test/benchmarks/results.json'),
+        'daemon'
       );
     }
 
     for (const session of Object.values(sessions)) {
-      await sendCommand(session, { id: "close", action: "close" }).catch(() => {});
+      await sendCommand(session, { id: 'close', action: 'close' }).catch(() => {});
     }
 
     await sleep(300);
@@ -865,26 +856,24 @@ async function runDaemonBenchmark(args: CliArgs): Promise<void> {
 }
 
 function buildHttpScenarios(baseUrl: string): Scenario[] {
-  const pages = ["article.html", "dashboard.html", "ecommerce.html"];
+  const pages = ['article.html', 'dashboard.html', 'ecommerce.html'];
   const httpScenarios: Scenario[] = [];
 
   for (const page of pages) {
-    const label = page.replace(".html", "");
+    const label = page.replace('.html', '');
     httpScenarios.push({
       name: `http-${label}`,
       description: `Navigate to ${label} page over HTTP (full fetch + parse + layout)`,
-      commands: [
-        { id: "nav", action: "navigate", url: `${baseUrl}/${page}`, waitUntil: "load" },
-      ],
+      commands: [{ id: 'nav', action: 'navigate', url: `${baseUrl}/${page}`, waitUntil: 'load' }],
     });
   }
 
   httpScenarios.push({
-    name: "http-nav+snap",
-    description: "Navigate to article over HTTP then snapshot",
+    name: 'http-nav+snap',
+    description: 'Navigate to article over HTTP then snapshot',
     commands: [
-      { id: "nav", action: "navigate", url: `${baseUrl}/article.html`, waitUntil: "load" },
-      { id: "snap", action: "snapshot" },
+      { id: 'nav', action: 'navigate', url: `${baseUrl}/article.html`, waitUntil: 'load' },
+      { id: 'snap', action: 'snapshot' },
     ],
   });
 
@@ -894,15 +883,15 @@ function buildHttpScenarios(baseUrl: string): Scenario[] {
     for (const page of pages) {
       multiPageCmds.push({
         id: `nav-${round}-${page}`,
-        action: "navigate",
+        action: 'navigate',
         url: `${baseUrl}/${page}`,
-        waitUntil: "load",
+        waitUntil: 'load',
       });
     }
   }
   httpScenarios.push({
-    name: "http-multi-15pg",
-    description: "Navigate 15 pages in sequence (5 rounds x 3 pages)",
+    name: 'http-multi-15pg',
+    description: 'Navigate 15 pages in sequence (5 rounds x 3 pages)',
     commands: multiPageCmds,
   });
 
@@ -911,14 +900,14 @@ function buildHttpScenarios(baseUrl: string): Scenario[] {
   for (let i = 0; i < 50; i++) {
     bulkCmds.push({
       id: `bulk-${i}`,
-      action: "navigate",
+      action: 'navigate',
       url: `${baseUrl}/${pages[i % pages.length]}`,
-      waitUntil: "load",
+      waitUntil: 'load',
     });
   }
   httpScenarios.push({
-    name: "http-bulk-50pg",
-    description: "Navigate 50 pages sequentially (throughput test)",
+    name: 'http-bulk-50pg',
+    description: 'Navigate 50 pages sequentially (throughput test)',
     commands: bulkCmds,
   });
 
@@ -926,43 +915,41 @@ function buildHttpScenarios(baseUrl: string): Scenario[] {
 }
 
 async function runEngineBenchmark(args: CliArgs): Promise<void> {
-  console.log("Starting local file server...");
+  console.log('Starting local file server...');
   const { server, port } = await startFileServer();
   const baseUrl = `http://127.0.0.1:${port}`;
   console.log(`  Serving pages at ${baseUrl}`);
 
-  console.log("Starting engine benchmark daemons...");
+  console.log('Starting engine benchmark daemons...');
 
   let chromeHandle: DaemonHandle | undefined;
   let lightpandaHandle: DaemonHandle | undefined;
 
   try {
-    chromeHandle = spawnNativeDaemon("bench-chrome", "chrome");
-    await waitForSocket("bench-chrome");
-    console.log("  Chrome daemon ready");
+    chromeHandle = spawnNativeDaemon('bench-chrome', 'chrome');
+    await waitForSocket('bench-chrome');
+    console.log('  Chrome daemon ready');
 
-    lightpandaHandle = spawnNativeDaemon("bench-lightpanda", "lightpanda");
-    await waitForSocket("bench-lightpanda");
-    console.log("  Lightpanda daemon ready");
+    lightpandaHandle = spawnNativeDaemon('bench-lightpanda', 'lightpanda');
+    await waitForSocket('bench-lightpanda');
+    console.log('  Lightpanda daemon ready');
 
     const sessions: Record<string, string> = {
-      chrome: "bench-chrome",
-      lightpanda: "bench-lightpanda",
+      chrome: 'bench-chrome',
+      lightpanda: 'bench-lightpanda',
     };
 
     for (const [label, session] of Object.entries(sessions)) {
       const resp = await sendCommand(session, {
-        id: "launch",
-        action: "launch",
+        id: 'launch',
+        action: 'launch',
         headless: true,
       });
       if (!(resp as { success?: boolean }).success) {
-        throw new Error(
-          `Failed to launch ${label} browser on ${session}: ${JSON.stringify(resp)}`,
-        );
+        throw new Error(`Failed to launch ${label} browser on ${session}: ${JSON.stringify(resp)}`);
       }
     }
-    console.log("  Browsers launched");
+    console.log('  Browsers launched');
 
     // Collect PIDs for memory sampling
     const chromePid = chromeHandle.process.pid;
@@ -971,15 +958,13 @@ async function runEngineBenchmark(args: CliArgs): Promise<void> {
     if (chromePid) pidsToSample.push(chromePid);
     if (lpPid) pidsToSample.push(lpPid);
 
-    const memSampler = pidsToSample.length > 0
-      ? sampleMemory(pidsToSample, 500)
-      : null;
+    const memSampler = pidsToSample.length > 0 ? sampleMemory(pidsToSample, 500) : null;
 
     // Measure per-engine peak memory during the heavy scenarios
     const chromeMemPids = chromePid ? [chromePid] : [];
     const lpMemPids = lpPid ? [lpPid] : [];
 
-    console.log("");
+    console.log('');
 
     const httpScenarios = buildHttpScenarios(baseUrl);
     const allScenarios = [...scenarios, ...engineScenarios, ...httpScenarios];
@@ -990,22 +975,15 @@ async function runEngineBenchmark(args: CliArgs): Promise<void> {
         scenario,
         sessions,
         args.iterations,
-        args.warmup,
+        args.warmup
       );
       results.push(result);
 
-      const chromeAvg = result.chromeStats
-        ? formatDuration(result.chromeStats.avgUs)
-        : "N/A";
-      const lpAvg = result.lightpandaStats
-        ? formatDuration(result.lightpandaStats.avgUs)
-        : "N/A";
+      const chromeAvg = result.chromeStats ? formatDuration(result.chromeStats.avgUs) : 'N/A';
+      const lpAvg = result.lightpandaStats ? formatDuration(result.lightpandaStats.avgUs) : 'N/A';
 
       if (result.chromeStats && result.lightpandaStats) {
-        const speedup = formatSpeedup(
-          result.chromeStats.avgUs,
-          result.lightpandaStats.avgUs,
-        );
+        const speedup = formatSpeedup(result.chromeStats.avgUs, result.lightpandaStats.avgUs);
         process.stdout.write(` chrome=${chromeAvg} lightpanda=${lpAvg} (${speedup})\n`);
       } else {
         process.stdout.write(` chrome=${chromeAvg} lightpanda=${lpAvg}\n`);
@@ -1017,29 +995,29 @@ async function runEngineBenchmark(args: CliArgs): Promise<void> {
     const lpMemKB = lpMemPids.length > 0 ? getProcessMemoryKB(lpMemPids[0]) : null;
     if (memSampler) memSampler.stop();
 
-    printResults(results, args.iterations, args.warmup, "engine");
+    printResults(results, args.iterations, args.warmup, 'engine');
 
     if (chromeMemKB || lpMemKB) {
-      console.log("Memory (daemon RSS after benchmarks):");
+      console.log('Memory (daemon RSS after benchmarks):');
       if (chromeMemKB) console.log(`  Chrome daemon:     ${formatMemory(chromeMemKB)}`);
       if (lpMemKB) console.log(`  Lightpanda daemon: ${formatMemory(lpMemKB)}`);
       if (chromeMemKB && lpMemKB && lpMemKB > 0) {
         const memRatio = chromeMemKB / lpMemKB;
         console.log(`  Ratio: chrome uses ${memRatio.toFixed(1)}x more memory`);
       }
-      console.log("");
+      console.log('');
     }
 
     if (args.json) {
       writeJsonResults(
         results,
-        path.join(getProjectRoot(), "test/benchmarks/results-engine.json"),
-        "engine",
+        path.join(getProjectRoot(), 'test/benchmarks/results-engine.json'),
+        'engine'
       );
     }
 
     for (const session of Object.values(sessions)) {
-      await sendCommand(session, { id: "close", action: "close" }).catch(() => {});
+      await sendCommand(session, { id: 'close', action: 'close' }).catch(() => {});
     }
 
     await sleep(300);
@@ -1067,6 +1045,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error("Benchmark failed:", err.message || err);
+  console.error('Benchmark failed:', err.message || err);
   process.exit(2);
 });

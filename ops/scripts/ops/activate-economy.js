@@ -3,7 +3,10 @@
  */
 import { activate } from "../../../scripts/ops/activate-economy.js";
 
-activate().catch((err) => {
-  console.error("❌ ACTIVATION FAILED:", err instanceof Error ? err.message : err);
+activate().catch(err => {
+  console.error(
+    "❌ ACTIVATION FAILED:",
+    err instanceof Error ? err.message : err
+  );
   process.exit(1);
 });

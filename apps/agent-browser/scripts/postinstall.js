@@ -2,14 +2,23 @@
 
 /**
  * Postinstall script for agent-browser
- * 
+ *
  * Downloads the platform-specific native binary if not present.
  * On global installs, patches npm's bin entry to use the native binary directly:
  * - Windows: Overwrites .cmd/.ps1 shims
  * - Mac/Linux: Replaces symlink to point to native binary
  */
 
-import { existsSync, mkdirSync, chmodSync, createWriteStream, unlinkSync, writeFileSync, symlinkSync, lstatSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  chmodSync,
+  createWriteStream,
+  unlinkSync,
+  writeFileSync,
+  symlinkSync,
+  lstatSync,
+} from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { platform, arch } from 'os';
@@ -39,7 +48,7 @@ const DOWNLOAD_URL = `https://github.com/${GITHUB_REPO}/releases/download/v${ver
 async function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
     const file = createWriteStream(dest);
-    
+
     const request = (url) => {
       get(url, (response) => {
         // Handle redirects
@@ -47,12 +56,12 @@ async function downloadFile(url, dest) {
           request(response.headers.location);
           return;
         }
-        
+
         if (response.statusCode !== 200) {
           reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
           return;
         }
-        
+
         response.pipe(file);
         file.on('finish', () => {
           file.close();
@@ -63,7 +72,7 @@ async function downloadFile(url, dest) {
         reject(err);
       });
     };
-    
+
     request(url);
   });
 }
@@ -76,10 +85,10 @@ async function main() {
       chmodSync(binaryPath, 0o755);
     }
     console.log(`✓ Native binary ready: ${binaryName}`);
-    
+
     // On global installs, fix npm's bin entry to use native binary directly
     await fixGlobalInstallBin();
-    
+
     showPlaywrightReminder();
     return;
   }
@@ -94,12 +103,12 @@ async function main() {
 
   try {
     await downloadFile(DOWNLOAD_URL, binaryPath);
-    
+
     // Make executable on Unix
     if (platform() !== 'win32') {
       chmodSync(binaryPath, 0o755);
     }
-    
+
     console.log(`✓ Downloaded native binary: ${binaryName}`);
   } catch (err) {
     console.log(`⚠ Could not download native binary: ${err.message}`);

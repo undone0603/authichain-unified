@@ -16,10 +16,10 @@ candidate. The body is the raw POST bytes (not re-JSON’d).
 
 ## Secret names (handler)
 
-| Env name on the Worker                         | Used for                                      |
-| ---------------------------------------------- | --------------------------------------------- |
-| `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`             | authichain.com (`shared/brands.ts`)           |
-| `STRIPE_WEBHOOK_SECRET`                        | fallback + qron / strainchain / govchain      |
+| Env name on the Worker             | Used for                                 |
+| ---------------------------------- | ---------------------------------------- |
+| `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` | authichain.com (`shared/brands.ts`)      |
+| `STRIPE_WEBHOOK_SECRET`            | fallback + qron / strainchain / govchain |
 
 `hydrateProcessEnv` copies those Cloudflare **Worker secrets** onto
 `process.env`. `getWebhookSecretCandidates` reads both names and tries each
@@ -27,12 +27,12 @@ value until one verifies.
 
 ## Where they are **not** updated
 
-| Path                                         | What it actually binds                                      |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| `.github/workflows/deploy-cloudflare.yml`    | Deploys `authichain-edge-router`. **Does not** put `STRIPE_WEBHOOK_*`. |
-| `.github/workflows/deploy-edge-worker.yml`   | `STRIPE_WEBHOOK_SECRET` → **`authichain-revenue-worker`** only |
-| `scripts/push-secrets-to-cloudflare.sh`      | Now includes `authichain-edge-router` + both names (local `.env`) |
-| Vercel                                       | Not the live destination                                    |
+| Path                                       | What it actually binds                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| `.github/workflows/deploy-cloudflare.yml`  | Deploys `authichain-edge-router`. **Does not** put `STRIPE_WEBHOOK_*`. |
+| `.github/workflows/deploy-edge-worker.yml` | `STRIPE_WEBHOOK_SECRET` → **`authichain-revenue-worker`** only         |
+| `scripts/push-secrets-to-cloudflare.sh`    | Now includes `authichain-edge-router` + both names (local `.env`)      |
+| Vercel                                     | Not the live destination                                               |
 
 A successful `deploy-cloudflare.yml` after #1084 only proves the Worker
 **code** is current. Secrets persist across deploys until you `wrangler secret

@@ -1,7 +1,14 @@
 const fs = require("fs");
 const root = path.join(__dirname, "../server/");
-const files = ["auth.logout.test.ts", "missions.test.ts", "new-features.test.ts", "new-routers.test.ts", "routers.test.ts"];
-const inject = "stripeCustomerId: null,\n    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,";
+const files = [
+  "auth.logout.test.ts",
+  "missions.test.ts",
+  "new-features.test.ts",
+  "new-routers.test.ts",
+  "routers.test.ts",
+];
+const inject =
+  "stripeCustomerId: null,\n    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,";
 for (const f of files) {
   const p = root + f;
   const before = fs.readFileSync(p, "utf8");

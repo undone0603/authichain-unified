@@ -23,15 +23,43 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
-  Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
-  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
+  LayoutDashboard,
+  LogOut,
+  PanelLeft,
+  Shield,
+  QrCode,
+  Award,
+  Gem,
+  CreditCard,
+  Bot,
+  Mail,
+  Truck,
+  Users,
+  BarChart3,
+  Building2,
+  Link2,
+  Settings,
+  Rocket,
+  DollarSign,
+  TrendingUp,
+  Blocks,
+  Bell,
+  Video,
+  Cpu,
+  Sparkles,
+  Landmark,
+  Activity,
+  Image,
+  Calendar,
+  ShoppingCart,
+  Briefcase,
+  BookOpen,
+  HandCoins,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -61,7 +89,11 @@ const adminMenuItems = [
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
-  { icon: Sparkles, label: "Executive Assistant", path: "/executive-assistant" },
+  {
+    icon: Sparkles,
+    label: "Executive Assistant",
+    path: "/executive-assistant",
+  },
   { icon: Video, label: "AI Avatar Videos", path: "/heygen" },
   { icon: Cpu, label: "MACROHARD", path: "/macrohard" },
   { icon: Activity, label: "Network Stats", path: "/network-stats" },
@@ -91,7 +123,7 @@ export default function DashboardLayout({
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {
@@ -101,7 +133,9 @@ export default function DashboardLayout({
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
               <Shield className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold gradient-text">AuthiChain</span>
+              <span className="text-2xl font-bold gradient-text">
+                AuthiChain
+              </span>
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-center">
               Sign in to continue
@@ -111,7 +145,9 @@ export default function DashboardLayout({
             </p>
           </div>
           <Button
-            onClick={() => { window.location.href = getLoginUrl(); }}
+            onClick={() => {
+              window.location.href = getLoginUrl();
+            }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
@@ -138,14 +174,20 @@ type DashboardLayoutContentProps = {
   setSidebarWidth: (width: number) => void;
 };
 
-function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutContentProps) {
+function DashboardLayoutContent({
+  children,
+  setSidebarWidth,
+}: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const allItems = [...menuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
+  const allItems = [
+    ...menuItems,
+    ...(user?.role === "admin" ? adminMenuItems : []),
+  ];
   const activeMenuItem = allItems.find(item => location.startsWith(item.path));
   const isMobile = useIsMobile();
 
@@ -158,7 +200,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
       if (!isResizing) return;
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) setSidebarWidth(newWidth);
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH)
+        setSidebarWidth(newWidth);
     };
     const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
@@ -178,7 +221,11 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
+        <Sidebar
+          collapsible="icon"
+          className="border-r-0"
+          disableTransition={isResizing}
+        >
           <SidebarHeader className="h-16 justify-center">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
@@ -191,7 +238,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
               {!isCollapsed && (
                 <div className="flex items-center gap-2 min-w-0">
                   <Shield className="h-5 w-5 text-primary shrink-0" />
-                  <span className="font-bold tracking-tight truncate gradient-text">AuthiChain</span>
+                  <span className="font-bold tracking-tight truncate gradient-text">
+                    AuthiChain
+                  </span>
                 </div>
               )}
             </div>
@@ -200,7 +249,10 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
-                const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
+                const isActive =
+                  location === item.path ||
+                  (item.path !== "/dashboard" &&
+                    location.startsWith(item.path));
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
@@ -209,7 +261,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
                       tooltip={item.label}
                       className="h-9 transition-all font-normal text-[13px]"
                     >
-                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                      <item.icon
+                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                      />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -221,7 +275,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
               <>
                 {!isCollapsed && (
                   <div className="px-4 py-2 mt-2">
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Admin</span>
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Admin
+                    </span>
                   </div>
                 )}
                 <SidebarMenu className="px-2 py-1">
@@ -235,7 +291,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
                           tooltip={item.label}
                           className="h-9 transition-all font-normal text-[13px]"
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                          <item.icon
+                            className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                          />
                           <span>{item.label}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -256,18 +314,28 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">{user?.name || "-"}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">{user?.email || "-"}</p>
+                    <p className="text-sm font-medium truncate leading-none">
+                      {user?.name || "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-1.5">
+                      {user?.email || "-"}
+                    </p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setLocation("/subscriptions")} className="cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => setLocation("/subscriptions")}
+                  className="cursor-pointer"
+                >
                   <CreditCard className="mr-2 h-4 w-4" />
                   <span>Subscription</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
@@ -277,7 +345,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
         </Sidebar>
         <div
           className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
+          onMouseDown={() => {
+            if (!isCollapsed) setIsResizing(true);
+          }}
           style={{ zIndex: 50 }}
         />
       </div>
@@ -287,7 +357,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <span className="tracking-tight text-foreground">{activeMenuItem?.label ?? "Menu"}</span>
+              <span className="tracking-tight text-foreground">
+                {activeMenuItem?.label ?? "Menu"}
+              </span>
             </div>
             <NotificationBell />
           </div>
@@ -302,4 +374,3 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
     </>
   );
 }
-

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migration = `
 CREATE TABLE IF NOT EXISTS "user_reputation" (
@@ -25,11 +25,11 @@ CREATE INDEX IF NOT EXISTS "idx_reputation_events_user" ON "reputation_events" (
 
 async function migrate() {
   try {
-    console.log('Running reputation engine migration...');
+    console.log("Running reputation engine migration...");
     await sql.unsafe(migration);
-    console.log('✅ REPUTATION MIGRATION COMPLETE: Tables synchronized.');
+    console.log("✅ REPUTATION MIGRATION COMPLETE: Tables synchronized.");
   } catch (err) {
-    console.error('❌ MIGRATION FAILED:', err.message);
+    console.error("❌ MIGRATION FAILED:", err.message);
   } finally {
     process.exit();
   }

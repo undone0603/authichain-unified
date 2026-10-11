@@ -9,31 +9,35 @@
 ## Files Modified
 
 ### 1. `/scripts/score-opportunities.ts`
+
 **Status:** ✏️ MODIFIED
 
 **Changes:**
+
 - Added constants for threshold boundaries:
+
   ```typescript
-  const FIT_THRESHOLD_HIGH = 70;       // Only pursue high-fit opportunities
+  const FIT_THRESHOLD_HIGH = 70; // Only pursue high-fit opportunities
   const FIT_THRESHOLD_BORDERLINE = 60; // Manual review queue threshold
   ```
 
 - Updated scoring logic to categorize by thresholds:
+
   ```typescript
   // Determine recommended action based on fit_score thresholds
   let finalAction = result.recommended_action;
   if (result.fit_score >= FIT_THRESHOLD_HIGH) {
-    finalAction = 'pursue';
+    finalAction = "pursue";
   } else if (result.fit_score >= FIT_THRESHOLD_BORDERLINE) {
-    finalAction = 'qualify'; // Borderline — manual review queue
+    finalAction = "qualify"; // Borderline — manual review queue
   } else {
-    finalAction = 'skip';
+    finalAction = "skip";
   }
   ```
 
 - Updated status assignment:
   ```typescript
-  const newStatus = finalAction === 'skip' ? 'skipped' : 'scored';
+  const newStatus = finalAction === "skip" ? "skipped" : "scored";
   ```
 
 **Lines Changed:** ~20 (lines 23-24, 74-84)
@@ -45,11 +49,13 @@
 ## Files Created
 
 ### 2. `/scripts/qualify-leads.ts`
+
 **Status:** ✨ NEW (362 lines)
 
 **Purpose:** Convert high-fit opportunities into qualified leads with detailed scoring
 
 **Key Features:**
+
 - Queries gov_opportunities with fit_score >= 70, status='scored'
 - Generates 4-dimension lead_score_detail (blockchain, sector, budget, timeline)
 - Upserts to leads table with gov_engine source
@@ -64,11 +70,13 @@
 ---
 
 ### 3. `/drizzle/migrations/015_lead_scoring_pipeline.sql`
+
 **Status:** ✨ NEW (52 lines)
 
 **Purpose:** Database schema updates for lead scoring pipeline
 
 **Changes:**
+
 - Adds `qualified_at TIMESTAMPTZ` to gov_opportunities
 - Adds `threadId VARCHAR(256)` to leads (for email tracking)
 - Creates index: `gov_opportunities_status_fit_score_idx` on (status, fit_score DESC)
@@ -82,11 +90,13 @@
 ---
 
 ### 4. `/docs/marketing/gov-engine-lead-pipeline.md`
+
 **Status:** ✨ NEW (380 lines)
 
 **Purpose:** Complete architecture guide for lead scoring & qualification pipeline
 
 **Contents:**
+
 - Overview & pipeline diagram
 - Script documentation (score-opportunities, qualify-leads, email-proposals)
 - Database schema & metadata structure
@@ -102,11 +112,13 @@
 ---
 
 ### 5. `/docs/operations/INTEGRATION_CHECKLIST.md`
+
 **Status:** ✨ NEW (240 lines)
 
 **Purpose:** Step-by-step deployment checklist
 
 **Contents:**
+
 - Files created/modified summary
 - 8-step implementation process
 - Configuration requirements
@@ -122,11 +134,13 @@
 ---
 
 ### 6. `/docs/marketing/email-proposals-integration.md`
+
 **Status:** ✨ NEW (280 lines)
 
 **Purpose:** Integration guide for existing email-proposals.ts script
 
 **Contents:**
+
 - Current architecture explanation
 - Two integration options (A: minimal, B: recommended)
 - Code snippets for Option B migration
@@ -143,11 +157,13 @@
 ---
 
 ### 7. `/docs/marketing/QUICK_START.md`
+
 **Status:** ✨ NEW (180 lines)
 
 **Purpose:** 5-minute quick reference for developers
 
 **Contents:**
+
 - One-minute overview
 - File reference table
 - 5-step deployment
@@ -163,11 +179,13 @@
 ---
 
 ### 8. `/LEAD_SCORING_SUMMARY.md`
+
 **Status:** ✨ NEW (220 lines)
 
 **Purpose:** High-level executive summary & implementation guide
 
 **Contents:**
+
 - What was delivered
 - Core components overview
 - Data flow diagram
@@ -186,6 +204,7 @@
 ---
 
 ### 9. `/IMPLEMENTATION_MANIFEST.md`
+
 **Status:** ✨ NEW (this file)
 
 **Purpose:** Complete inventory of changes
@@ -194,16 +213,16 @@
 
 ## Summary Statistics
 
-| Metric | Value |
-|--------|-------|
-| **Total Files Modified** | 1 |
-| **Total Files Created** | 8 |
-| **Lines of Code Added** | ~362 (qualify-leads.ts) + ~52 (migration) |
-| **Documentation Pages** | 6 |
-| **Breaking Changes** | 0 |
-| **Database Migrations** | 1 |
-| **New Scripts** | 1 |
-| **Estimated Deploy Time** | 10 minutes |
+| Metric                    | Value                                     |
+| ------------------------- | ----------------------------------------- |
+| **Total Files Modified**  | 1                                         |
+| **Total Files Created**   | 8                                         |
+| **Lines of Code Added**   | ~362 (qualify-leads.ts) + ~52 (migration) |
+| **Documentation Pages**   | 6                                         |
+| **Breaking Changes**      | 0                                         |
+| **Database Migrations**   | 1                                         |
+| **New Scripts**           | 1                                         |
+| **Estimated Deploy Time** | 10 minutes                                |
 
 ---
 
@@ -250,6 +269,7 @@
 ## Configuration Checklist
 
 Before deployment, ensure:
+
 - [ ] SUPABASE_URL set in GitHub Secrets
 - [ ] SUPABASE_SERVICE_KEY set in GitHub Secrets
 - [ ] OPENAI_API_KEY set (or GROQ_API_KEY alternative)
@@ -262,6 +282,7 @@ Before deployment, ensure:
 ## Testing Evidence
 
 **DRY_RUN Tests:**
+
 ```bash
 # score-opportunities.ts (threshold logic)
 DRY_RUN=true pnpm tsx scripts/score-opportunities.ts
@@ -281,6 +302,7 @@ DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 ## Known Limitations & Future Work
 
 ### Current Scope
+
 - ✅ Fit_score threshold filtering
 - ✅ Lead qualification with 4-dim breakdown
 - ✅ Borderline lead queue (60-69)
@@ -288,6 +310,7 @@ DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 - ✅ Email integration ready (two options)
 
 ### Not in Scope (Optional Enhancements)
+
 - ⏱️ Manual review UI for borderline leads (build later)
 - ⏱️ LinkedIn outreach for non-respondents (build later)
 - ⏱️ CRM sync (HubSpot/Salesforce) (build later)
@@ -361,13 +384,13 @@ Track these to validate implementation:
 
 ```sql
 -- 1. Qualification distribution
-SELECT 
+SELECT
   'high_fit' as category,
   COUNT(*) as count
 FROM gov_opportunities
 WHERE fit_score >= 70
 UNION ALL
-SELECT 
+SELECT
   'borderline',
   COUNT(*)
 FROM gov_opportunities
@@ -380,14 +403,14 @@ FROM gov_opportunities
 WHERE fit_score < 60;
 
 -- 2. Lead qualification rate
-SELECT 
+SELECT
   COUNT(*) as total_opportunities,
   COUNT(CASE WHEN fit_score >= 70 THEN 1 END) as qualified_count,
   ROUND(100.0 * COUNT(CASE WHEN fit_score >= 70 THEN 1 END) / COUNT(*), 1) as qualification_rate
 FROM gov_opportunities;
 
 -- 3. Email engagement
-SELECT 
+SELECT
   COUNT(*) as emails_sent,
   SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) as opened,
   SUM(CASE WHEN emailClicked THEN 1 ELSE 0 END) as clicked,
@@ -424,14 +447,14 @@ git checkout HEAD~1 scripts/score-opportunities.ts
 
 ## Sign-Off
 
-| Role | Status | Notes |
-|------|--------|-------|
+| Role               | Status      | Notes                                |
+| ------------------ | ----------- | ------------------------------------ |
 | **Implementation** | ✅ Complete | All code written, tested, documented |
-| **Code Review** | ⏳ Pending | Ready for peer review |
-| **Database** | ✅ Ready | Migration idempotent, no risk |
-| **Documentation** | ✅ Complete | 6 docs covering all aspects |
-| **Testing** | ✅ Ready | DRY_RUN support built-in |
-| **Deployment** | ⏳ Pending | Awaiting approval & scheduling |
+| **Code Review**    | ⏳ Pending  | Ready for peer review                |
+| **Database**       | ✅ Ready    | Migration idempotent, no risk        |
+| **Documentation**  | ✅ Complete | 6 docs covering all aspects          |
+| **Testing**        | ✅ Ready    | DRY_RUN support built-in             |
+| **Deployment**     | ⏳ Pending  | Awaiting approval & scheduling       |
 
 ---
 

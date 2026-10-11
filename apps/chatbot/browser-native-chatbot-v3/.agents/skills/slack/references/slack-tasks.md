@@ -5,11 +5,13 @@ Reference guide for common automations and data extraction patterns when interac
 ## Task: Check All Unread Messages
 
 ### Goal
+
 Determine which channels and DMs have unread messages.
 
 ### Steps
 
 1. **Connect to Slack**
+
    ```bash
    agent-browser connect 9222
    ```
@@ -37,6 +39,7 @@ Determine which channels and DMs have unread messages.
    - Activity + DMs + Channels = complete unread picture
 
 ### Evidence Capture
+
 - Screenshot of Activity tab
 - Screenshot of DMs
 - Screenshot of expanded unreads sidebar
@@ -46,11 +49,13 @@ Determine which channels and DMs have unread messages.
 ## Task: Find All Channels in Workspace
 
 ### Goal
+
 Get a complete list of all channels you have access to.
 
 ### Steps
 
 1. **Navigate to Channels section**
+
    ```bash
    agent-browser connect 9222
    agent-browser snapshot -i
@@ -62,6 +67,7 @@ Get a complete list of all channels you have access to.
    - Screenshot: `agent-browser screenshot all-channels.png`
 
 3. **Scroll through sidebar**
+
    ```bash
    # If the list is long, scroll within the sidebar
    agent-browser scroll down 500 --selector ".p-sidebar"
@@ -75,6 +81,7 @@ Get a complete list of all channels you have access to.
    ```
 
 ### Evidence
+
 - JSON snapshot with all channel refs
 - Screenshots of channel list
 - Count of total channels
@@ -84,11 +91,13 @@ Get a complete list of all channels you have access to.
 ## Task: Search for Messages Containing Keywords
 
 ### Goal
+
 Find all messages/threads mentioning specific terms.
 
 ### Steps
 
 1. **Open search**
+
    ```bash
    agent-browser snapshot -i
    # Find Search button ref (usually @e5)
@@ -97,6 +106,7 @@ Find all messages/threads mentioning specific terms.
    ```
 
 2. **Enter search term**
+
    ```bash
    # Identify search input ref from snapshot
    agent-browser fill @e_search_input "your keyword"
@@ -105,6 +115,7 @@ Find all messages/threads mentioning specific terms.
    ```
 
 3. **Capture results**
+
    ```bash
    agent-browser screenshot search-results.png
    agent-browser snapshot -i > search-snapshot.txt
@@ -116,7 +127,9 @@ Find all messages/threads mentioning specific terms.
    - Follow links to view full context
 
 ### Filters
+
 Slack search supports filters:
+
 - `in:channel-name` - Search in specific channel
 - `from:@user` - Messages from specific user
 - `before:2026-02-25` - Messages before date
@@ -131,11 +144,13 @@ Example search: `"bug report" in:engineering from:@alice after:2026-02-20`
 ## Task: Monitor a Specific Channel for Activity
 
 ### Goal
+
 Watch a channel and capture new messages/engagement.
 
 ### Steps
 
 1. **Navigate to channel**
+
    ```bash
    agent-browser connect 9222
    agent-browser snapshot -i
@@ -149,6 +164,7 @@ Watch a channel and capture new messages/engagement.
    - Look for member count, description, topic
 
 3. **View messages**
+
    ```bash
    # Jump to recent/unread
    agent-browser press j  # Jump to unread in Slack
@@ -157,6 +173,7 @@ Watch a channel and capture new messages/engagement.
    ```
 
 4. **Scroll to see more**
+
    ```bash
    agent-browser scroll down 500
    agent-browser screenshot more-messages.png
@@ -168,6 +185,7 @@ Watch a channel and capture new messages/engagement.
    - Screenshot: `agent-browser screenshot thread.png`
 
 ### Evidence
+
 - Channel info screenshot
 - Message history screenshots
 - Thread examples
@@ -177,17 +195,20 @@ Watch a channel and capture new messages/engagement.
 ## Task: Extract User Information from a Conversation
 
 ### Goal
+
 Find who said what, when, and in what context.
 
 ### Steps
 
 1. **Navigate to relevant channel or DM**
+
    ```bash
    agent-browser click @e_conversation_ref
    agent-browser wait 1000
    ```
 
 2. **Take snapshot with context**
+
    ```bash
    agent-browser snapshot --json > conversation.json
    ```
@@ -213,23 +234,27 @@ Find who said what, when, and in what context.
 ## Task: Track Reactions to a Message
 
 ### Goal
+
 See who reacted to a message and with what emoji.
 
 ### Steps
 
 1. **Find message with reactions**
+
    ```bash
    agent-browser snapshot -i
    # Look for "N reaction(s)" buttons in messages
    ```
 
 2. **Click reaction button to expand**
+
    ```bash
    agent-browser click @e_reaction_button
    agent-browser wait 500
    ```
 
 3. **Capture reaction details**
+
    ```bash
    agent-browser screenshot reactions.png
    # You'll see emoji, count, and list of users who reacted
@@ -245,11 +270,13 @@ See who reacted to a message and with what emoji.
 ## Task: Find and Review Pinned Messages
 
 ### Goal
+
 See messages that have been pinned in a channel.
 
 ### Steps
 
 1. **Open a channel**
+
    ```bash
    agent-browser click @e_channel_ref
    agent-browser wait 1000
@@ -262,6 +289,7 @@ See messages that have been pinned in a channel.
    - Wait: `agent-browser wait 500`
 
 3. **View pinned messages**
+
    ```bash
    agent-browser screenshot pins.png
    agent-browser snapshot -i > pins-snapshot.txt
@@ -277,6 +305,7 @@ See messages that have been pinned in a channel.
 ## Pattern: Extract Timestamp from Link
 
 In Slack snapshot, message timestamps appear as links. Example:
+
 ```
 - link "Feb 25th at 10:26:22 AM" [ref=e151]
   - /url: https://vercel.slack.com/archives/C0A5RTN0856/p1772036782543189
@@ -303,14 +332,14 @@ The URL contains the timestamp in the fragment (`p1772036782543189`). This is a 
 
 These refs vary per session, but follow patterns:
 
-| Element | Typical Ref Range | How to Find |
-|---------|------------------|------------|
-| Home tab | e10-e20 | `snapshot -i \| grep "Home"` |
-| DMs tab | e10-e20 | `snapshot -i \| grep "DMs"` |
-| Activity tab | e10-e20 | `snapshot -i \| grep "Activity"` |
-| Search | e5-e10 | `snapshot -i \| grep "Search"` |
-| More unreads | e20-e30 | `snapshot -i \| grep "More unreads"` |
-| Channel refs | e30+ | `snapshot -i \| grep "treeitem"` |
+| Element      | Typical Ref Range | How to Find                          |
+| ------------ | ----------------- | ------------------------------------ |
+| Home tab     | e10-e20           | `snapshot -i \| grep "Home"`         |
+| DMs tab      | e10-e20           | `snapshot -i \| grep "DMs"`          |
+| Activity tab | e10-e20           | `snapshot -i \| grep "Activity"`     |
+| Search       | e5-e10            | `snapshot -i \| grep "Search"`       |
+| More unreads | e20-e30           | `snapshot -i \| grep "More unreads"` |
+| Channel refs | e30+              | `snapshot -i \| grep "treeitem"`     |
 
 **Always take a fresh snapshot** to find current refs for the current session.
 
@@ -321,6 +350,7 @@ These refs vary per session, but follow patterns:
 If you can't find an element:
 
 1. **Check it's visible**
+
    ```bash
    # Is the element on screen or off-screen?
    agent-browser screenshot current-state.png
@@ -328,6 +358,7 @@ If you can't find an element:
    ```
 
 2. **Try expanding/scrolling**
+
    ```bash
    # Sidebar might need scrolling
    agent-browser scroll down 300 --selector ".p-sidebar"
@@ -335,12 +366,14 @@ If you can't find an element:
    ```
 
 3. **Try snapshot with extended range**
+
    ```bash
    # Include cursor-interactive elements (divs with onclick handlers)
    agent-browser snapshot -i -C
    ```
 
 4. **Check current URL**
+
    ```bash
    agent-browser get url
    # Verify you're in the right section

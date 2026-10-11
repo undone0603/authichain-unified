@@ -1,13 +1,28 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CloudLightning, FileText, CheckCircle2, AlertTriangle, Send, Loader2, Info } from "lucide-react";
+import {
+  CloudLightning,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  Send,
+  Loader2,
+  Info,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -47,11 +62,11 @@ export default function SbaDisasterLoan() {
             2. Economic Injury Analysis
             3. Operational Impact Statement
             4. Required Documents Checklist (Forms 5, 5C, 413, 2202, etc.)
-            5. Recommendations for submission.`
-          }
-        ]
+            5. Recommendations for submission.`,
+          },
+        ],
       });
-      const content = Array.isArray(response.content) 
+      const content = Array.isArray(response.content)
         ? response.content.map(c => ("text" in c ? c.text : "")).join("\n")
         : response.content;
       setDossier(content);
@@ -77,10 +92,16 @@ export default function SbaDisasterLoan() {
           </p>
         </div>
         <div className="flex gap-4">
-          <Badge variant="outline" className="px-3 py-1 border-blue-500/50 text-blue-400 bg-blue-500/10">
+          <Badge
+            variant="outline"
+            className="px-3 py-1 border-blue-500/50 text-blue-400 bg-blue-500/10"
+          >
             GovChain Vertical
           </Badge>
-          <Badge variant="outline" className="px-3 py-1 border-blue-500/50 text-blue-400 bg-blue-500/10">
+          <Badge
+            variant="outline"
+            className="px-3 py-1 border-blue-500/50 text-blue-400 bg-blue-500/10"
+          >
             Executive Recovery Mode
           </Badge>
         </div>
@@ -91,41 +112,52 @@ export default function SbaDisasterLoan() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Business Context</CardTitle>
-              <CardDescription>Provide details about the disaster impact</CardDescription>
+              <CardDescription>
+                Provide details about the disaster impact
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="businessName">Business Legal Name</Label>
-                <Input 
-                  id="businessName" 
-                  placeholder="e.g. Acme Manufacturing LLC" 
+                <Input
+                  id="businessName"
+                  placeholder="e.g. Acme Manufacturing LLC"
                   value={formData.businessName}
-                  onChange={(e) => setFormData({...formData, businessName: e.target.value})}
+                  onChange={e =>
+                    setFormData({ ...formData, businessName: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>
-                <Input 
-                  id="industry" 
-                  placeholder="e.g. Logistics & Distribution" 
+                <Input
+                  id="industry"
+                  placeholder="e.g. Logistics & Distribution"
                   value={formData.industry}
-                  onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                  onChange={e =>
+                    setFormData({ ...formData, industry: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="impact">Impact Description</Label>
-                <Textarea 
-                  id="impact" 
-                  placeholder="Describe how the disaster affected your revenue and operations..." 
+                <Textarea
+                  id="impact"
+                  placeholder="Describe how the disaster affected your revenue and operations..."
                   className="min-h-[120px]"
                   value={formData.impactDescription}
-                  onChange={(e) => setFormData({...formData, impactDescription: e.target.value})}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      impactDescription: e.target.value,
+                    })
+                  }
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700" 
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700"
                 onClick={handleGenerateDossier}
                 disabled={loading}
               >
@@ -179,14 +211,20 @@ export default function SbaDisasterLoan() {
                   Application Dossier Intelligence
                 </CardTitle>
                 {dossier && (
-                  <Button variant="outline" size="sm" onClick={() => {
-                    const blob = new Blob([dossier], { type: 'text/markdown' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `SBA_Disaster_Dossier_${formData.businessName.replace(/\s+/g, '_')}.md`;
-                    a.click();
-                  }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const blob = new Blob([dossier], {
+                        type: "text/markdown",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `SBA_Disaster_Dossier_${formData.businessName.replace(/\s+/g, "_")}.md`;
+                      a.click();
+                    }}
+                  >
                     Export as Markdown
                   </Button>
                 )}
@@ -207,15 +245,23 @@ export default function SbaDisasterLoan() {
                   <div>
                     <h3 className="text-xl font-medium">Ready for Analysis</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mt-2 text-sm">
-                      Input your business context and disaster details on the left to generate an institutional-grade application dossier for SBA recovery funding.
+                      Input your business context and disaster details on the
+                      left to generate an institutional-grade application
+                      dossier for SBA recovery funding.
                     </p>
                   </div>
                   <div className="flex gap-4 pt-4">
-                    <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                    <Badge
+                      variant="secondary"
+                      className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                    >
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Time-Sensitive
                     </Badge>
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-400 border-green-500/20">
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-500/10 text-green-400 border-green-500/20"
+                    >
                       AI Verified
                     </Badge>
                   </div>

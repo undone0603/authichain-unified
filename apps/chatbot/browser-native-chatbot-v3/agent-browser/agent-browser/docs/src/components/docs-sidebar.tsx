@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { navigation } from "@/lib/docs-navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { navigation } from '@/lib/docs-navigation';
 
 export function DocsSidebar() {
   const pathname = usePathname();
@@ -25,10 +25,10 @@ export function DocsSidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "text-sm transition-colors block py-1",
+                      'text-sm transition-colors block py-1',
                       isActive
-                        ? "text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? 'text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
                     {item.name}

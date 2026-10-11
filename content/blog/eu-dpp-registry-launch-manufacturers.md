@@ -29,10 +29,10 @@ Digital product passports are moving from concept to requirement. Brands now nee
 - Why item-level identity matters for anti-counterfeit and traceability.
 - How AuthiChain can position itself as a more agile, product-first platform.
 
-| Focus | Meaning |
-| --- | --- |
-| **1 product** | 1 digital identity with verifiable history |
-| **1 scan** | A single QR or touchpoint can connect verification, provenance, and engagement |
+| Focus          | Meaning                                                                             |
+| -------------- | ----------------------------------------------------------------------------------- |
+| **1 product**  | 1 digital identity with verifiable history                                          |
+| **1 scan**     | A single QR or touchpoint can connect verification, provenance, and engagement      |
 | **1 platform** | Authentication, traceability, and digital passport experiences should live together |
 
 ## Market context — Product trust is becoming a systems problem

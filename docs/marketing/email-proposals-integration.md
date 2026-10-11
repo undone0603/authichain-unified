@@ -7,18 +7,20 @@ The existing `/scripts/email-proposals.ts` sends HTML-formatted proposal emails 
 ## Current Architecture
 
 **Existing:** `email-proposals.ts` queries `gov_proposals` table
+
 ```sql
-SELECT * FROM gov_proposals 
-WHERE email_status = 'unsent' 
+SELECT * FROM gov_proposals
+WHERE email_status = 'unsent'
   AND fit_score >= 70
 LIMIT 50
 ```
 
 **New Pipeline:** We recommend transitioning to query `leads` table instead:
+
 ```sql
-SELECT * FROM leads 
-WHERE source = 'gov_engine' 
-  AND status = 'qualified' 
+SELECT * FROM leads
+WHERE source = 'gov_engine'
+  AND status = 'qualified'
   AND lastContactedAt IS NULL
 LIMIT 50
 ```
@@ -35,8 +37,9 @@ If you want to continue using gov_proposals directly:
    - `email_status` (tracks 'unsent' → 'sent')
 
 2. Update `email_status` threshold in score-opportunities.ts:
+
    ```sql
-   UPDATE gov_proposals 
+   UPDATE gov_proposals
    SET email_status = 'unsent'
    WHERE fit_score >= 70;
    ```
@@ -59,18 +62,19 @@ Replace the query section (lines 254-261):
 ```typescript
 // OLD:
 const { data: proposals, error } = await supabase
-  .from('gov_proposals')
-  .select('*')
-  .eq('email_status', 'unsent')
-  .gte('fit_score', 70)
-  .order('fit_score', { ascending: false })
+  .from("gov_proposals")
+  .select("*")
+  .eq("email_status", "unsent")
+  .gte("fit_score", 70)
+  .order("fit_score", { ascending: false })
   .limit(50);
 
 // NEW:
 // Join leads → gov_proposals to get full proposal details
 const { data: leads, error } = await supabase
-  .from('leads')
-  .select(`
+  .from("leads")
+  .select(
+    `
     *,
     proposal:gov_proposals!inner(
       notice_id,
@@ -79,16 +83,17 @@ const { data: leads, error } = await supabase
       email_status,
       deadline
     )
-  `)
-  .eq('source', 'gov_engine')
-  .eq('status', 'qualified')
-  .is('lastContactedAt', null)
-  .order('leadScore', { ascending: false })
+  `
+  )
+  .eq("source", "gov_engine")
+  .eq("status", "qualified")
+  .is("lastContactedAt", null)
+  .order("leadScore", { ascending: false })
   .limit(50);
 
 if (error) throw error;
 if (!leads?.length) {
-  console.log('No qualified leads awaiting outreach.');
+  console.log("No qualified leads awaiting outreach.");
   process.exit(0);
 }
 ```
@@ -112,8 +117,8 @@ for (const lead of leads) {
     const leadScoreDetail = lead.metadata?.lead_score_detail;
     const proposalData = {
       notice_id: proposal.notice_id,
-      title: lead.name || 'Government Opportunity',
-      agency: lead.company || 'Government Agency',
+      title: lead.name || "Government Opportunity",
+      agency: lead.company || "Government Agency",
       fit_score: lead.leadScore,
       proposal_draft: proposal.proposal_draft,
       contact_email: lead.email,
@@ -140,22 +145,22 @@ for (const lead of leads) {
 
       // Update lead status
       await supabase
-        .from('leads')
+        .from("leads")
         .update({
-          status: 'contacted',
+          status: "contacted",
           lastContactedAt: new Date().toISOString(),
           threadId: response.data.id, // Store Resend message ID for tracking
         })
-        .eq('id', lead.id);
+        .eq("id", lead.id);
 
       // Also mark proposal as sent (for audit trail)
       await supabase
-        .from('gov_proposals')
+        .from("gov_proposals")
         .update({
-          email_status: 'sent',
-          status: 'submitted',
+          email_status: "sent",
+          status: "submitted",
         })
-        .eq('notice_id', proposal.notice_id);
+        .eq("notice_id", proposal.notice_id);
     } else {
       console.log(`  [DRY RUN] Would send to ${lead.email}`);
     }
@@ -164,7 +169,7 @@ for (const lead of leads) {
     sent++;
   } catch (err: any) {
     failed++;
-    const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
+    const shortMsg = (err?.message || String(err)).split("\n")[0].slice(0, 200);
     console.warn(`  ⚠️  Error: ${shortMsg}`);
   }
 }
@@ -175,11 +180,14 @@ for (const lead of leads) {
 Modify `generateEmailHtml()` to include lead scoring breakdown:
 
 ```typescript
-function generateEmailHtml(proposal: Proposal & { leadScoreDetail?: any }): string {
+function generateEmailHtml(
+  proposal: Proposal & { leadScoreDetail?: any }
+): string {
   // ... existing header code ...
-  
+
   // Add new section in email body (after proposal preview):
-  const leadScoreSection = proposal.leadScoreDetail ? `
+  const leadScoreSection = proposal.leadScoreDetail
+    ? `
     <div class="score-breakdown" style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 4px;">
       <strong style="color: #15803d;">Detailed Fit Analysis:</strong>
       <div style="margin-top: 12px; font-size: 13px; color: #166534;">
@@ -189,8 +197,9 @@ function generateEmailHtml(proposal: Proposal & { leadScoreDetail?: any }): stri
         <div style="margin: 6px 0;">Timeline Feasibility: <strong>${proposal.leadScoreDetail.timeline_fit.score}/100</strong> — ${proposal.leadScoreDetail.timeline_fit.rationale}</div>
       </div>
     </div>
-  ` : '';
-  
+  `
+    : "";
+
   // ... insert leadScoreSection before CTA ...
 }
 ```
@@ -212,6 +221,7 @@ After sending, enable engagement tracking:
 ## Database Schema Requirements
 
 ### Leads Table Columns (Already Exist)
+
 - `id` SERIAL
 - `email` VARCHAR
 - `name` VARCHAR (contact person or agency name)
@@ -228,6 +238,7 @@ After sending, enable engagement tracking:
 - `createdAt`, `updatedAt` TIMESTAMP
 
 ### Gov_Proposals Columns (Existing)
+
 - `notice_id` TEXT (PK)
 - `title` TEXT
 - `agency` TEXT
@@ -244,11 +255,13 @@ After sending, enable engagement tracking:
 ## Testing
 
 ### Dry Run Test
+
 ```bash
 DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 ```
 
 Expected output:
+
 ```
   [DRY RUN] Would send to procurement@agency.gov
   [DRY RUN] Would send to contracting@agency2.gov
@@ -256,10 +269,11 @@ Expected output:
 ```
 
 ### Manual Lead Setup
+
 ```sql
 -- Insert test lead
 INSERT INTO leads (
-  email, name, company, source, leadScore, status, 
+  email, name, company, source, leadScore, status,
   metadata, createdAt, updatedAt
 ) VALUES (
   'test@example.com',
@@ -275,7 +289,7 @@ INSERT INTO leads (
 
 -- Create corresponding proposal (or use existing)
 INSERT INTO gov_proposals (
-  notice_id, title, agency, fit_score, proposal_draft, 
+  notice_id, title, agency, fit_score, proposal_draft,
   status, email_status, deadline, govchain_url
 ) VALUES (
   'TEST-001',
@@ -294,8 +308,9 @@ pnpm tsx scripts/email-proposals.ts
 ```
 
 ### Monitor Engagement
+
 ```sql
-SELECT 
+SELECT
   company,
   COUNT(*) as total_sent,
   SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) as opened,
@@ -312,15 +327,15 @@ ORDER BY replied DESC;
 
 ## Comparison: Old vs New Architecture
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| **Lead Source** | gov_proposals.contact_email | leads.email (gov_engine source) |
-| **Qualification Gate** | fit_score >= 70 | status='qualified' (scored + filtered) |
-| **Lead Score Detail** | In gov_opportunities.ai_reasoning | In leads.metadata.lead_score_detail (4-dim breakdown) |
-| **Lead Status** | Implicit in email_status | Explicit: new → qualified → contacted → responded |
-| **Contact Tracking** | email_status column | lastContactedAt + emailOpened/Clicked/Replied |
-| **Email Filtering** | Random sample, no scoring | Scored and ranked by leadScore DESC |
-| **Dedup** | By notice_id | By email + source (prevents dupes) |
+| Aspect                 | Before                            | After                                                 |
+| ---------------------- | --------------------------------- | ----------------------------------------------------- |
+| **Lead Source**        | gov_proposals.contact_email       | leads.email (gov_engine source)                       |
+| **Qualification Gate** | fit_score >= 70                   | status='qualified' (scored + filtered)                |
+| **Lead Score Detail**  | In gov_opportunities.ai_reasoning | In leads.metadata.lead_score_detail (4-dim breakdown) |
+| **Lead Status**        | Implicit in email_status          | Explicit: new → qualified → contacted → responded     |
+| **Contact Tracking**   | email_status column               | lastContactedAt + emailOpened/Clicked/Replied         |
+| **Email Filtering**    | Random sample, no scoring         | Scored and ranked by leadScore DESC                   |
+| **Dedup**              | By notice_id                      | By email + source (prevents dupes)                    |
 
 ---
 
@@ -350,6 +365,7 @@ DRY_RUN=true                         # Preview only
 
 **Q: "No proposals ready for email delivery"**
 A: Check:
+
 1. Do leads exist with `source='gov_engine'` and `status='qualified'`?
    ```sql
    SELECT COUNT(*) FROM leads WHERE source='gov_engine' AND status='qualified';
@@ -365,12 +381,14 @@ A: Check:
 
 **Q: Email not sending but no error**
 A: Check:
+
 1. Is RESEND_API_KEY set and valid?
 2. Is EMAIL_FROM valid in Resend?
 3. Are leads being filtered too aggressively? Try reducing WHERE clauses.
 
 **Q: "Resend returned no message ID"**
 A: Resend API issue. Check:
+
 1. API key is valid
 2. From email is verified in Resend account
 3. Resend service status at https://status.resend.com

@@ -8,6 +8,7 @@
 > User preference: no invented prices — these are repo-sourced historical only.
 
 ## Free — $0forever
+
 Explore authenticity verification
 
 - 10 registrations/month
@@ -18,6 +19,7 @@ Explore authenticity verification
 - Community support
 
 ## Starter — $49/month
+
 For small brands
 
 - 100 registrations/month
@@ -30,6 +32,7 @@ For small brands
 - Email support
 
 ## Professional — $199/month
+
 For growing brands
 
 - 1,000 registrations/month
@@ -43,6 +46,7 @@ For growing brands
 - Analytics dashboard
 
 ## Enterprise — Custom
+
 Global authentication
 
 - Unlimited everything

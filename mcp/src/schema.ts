@@ -1,9 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 
 // Local mirror of the `qr_codes` table used by db.ts. This server can't import
 // the shared ../../src/db/schema.ts directly: it lives outside mcp's tsconfig

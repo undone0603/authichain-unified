@@ -2,14 +2,14 @@
 
 The Grok HubSpot connector (connected 2026-09-17) is bound to this repo.
 
-| | |
-|---|---|
-| Portal | **Authichain** |
-| Portal ID | `245112265` |
-| UI | [app-na2.hubspot.com](https://app-na2.hubspot.com/contacts/245112265) |
-| Owner | Zac (`ownerId` `87978084`) |
-| Pipeline | Sales Pipeline (`default`) |
-| Currency / TZ | USD · US/Eastern |
+|               |                                                                       |
+| ------------- | --------------------------------------------------------------------- |
+| Portal        | **Authichain**                                                        |
+| Portal ID     | `245112265`                                                           |
+| UI            | [app-na2.hubspot.com](https://app-na2.hubspot.com/contacts/245112265) |
+| Owner         | Zac (`ownerId` `87978084`)                                            |
+| Pipeline      | Sales Pipeline (`default`)                                            |
+| Currency / TZ | USD · US/Eastern                                                      |
 
 Canonical machine config: [`config/hubspot-portal.json`](../../config/hubspot-portal.json). TypeScript helpers: [`server/hubspot-portal.ts`](../../server/hubspot-portal.ts).
 
@@ -24,12 +24,12 @@ Set `HUBSPOT_PORTAL_ID=245112265` if you ever point a sandbox token at a differe
 
 Live snapshot from the connector (2026-09-17):
 
-| Object | Count | Notes |
-|---|---:|---|
-| Contacts | 179 | Mix of real pilots (Trulieve, Curaleaf, Onnit) and noisy imports |
-| Companies | 133 | Cannabis MSOs, luxury, DoD/DLA, print vendors |
-| Deals | 171 | Open pipeline ~$83.3M (exclude closed-lost) |
-| Tasks | 268 | Almost all HIGH follow-ups, last touched 2026-08-21 — stale |
+| Object    | Count | Notes                                                            |
+| --------- | ----: | ---------------------------------------------------------------- |
+| Contacts  |   179 | Mix of real pilots (Trulieve, Curaleaf, Onnit) and noisy imports |
+| Companies |   133 | Cannabis MSOs, luxury, DoD/DLA, print vendors                    |
+| Deals     |   171 | Open pipeline ~$83.3M (exclude closed-lost)                      |
+| Tasks     |   268 | Almost all HIGH follow-ups, last touched 2026-08-21 — stale      |
 
 Stage mix (default pipeline):
 
@@ -52,7 +52,11 @@ Warm StrainChain pilots (Qualified To Buy): Trulieve, Curaleaf, Cresco, Lume, JA
 New helpers:
 
 ```ts
-import { classifyVertical, hubspotRecordUrl, HUBSPOT_PORTAL } from "../server/hubspot-portal";
+import {
+  classifyVertical,
+  hubspotRecordUrl,
+  HUBSPOT_PORTAL,
+} from "../server/hubspot-portal";
 
 classifyVertical("Trulieve — StrainChain Dispensary Pilot"); // "strainchain"
 hubspotRecordUrl("deal", "320453470925");
@@ -68,15 +72,15 @@ npx tsx scripts/hubspot-portal-health.ts
 
 `classifyVertical(name, description)` maps deal titles onto AuthiChain lines so dashboards and AgentZ can filter without extra HubSpot properties:
 
-| Tag | Trigger |
-|---|---|
-| `strainchain` | StrainChain, METRC, MI MSOs, dispensaries |
-| `luxury` | LVMH, Hermès, Kering, Rolex, Richemont, Breitling |
-| `govchain` | DoD, DHS SVIP, CBP, SBIR, ITAR, Navy |
-| `medical` | Pfizer DSCSA, FDA, J&J, EUDAMED |
-| `qron` | QRON, Product Hunt, Onnit |
-| `industrial` | Nike, Apple, Amazon, 3M, CATL |
-| `funding` | Casa Verde, SAFE, pitch competitions |
+| Tag           | Trigger                                           |
+| ------------- | ------------------------------------------------- |
+| `strainchain` | StrainChain, METRC, MI MSOs, dispensaries         |
+| `luxury`      | LVMH, Hermès, Kering, Rolex, Richemont, Breitling |
+| `govchain`    | DoD, DHS SVIP, CBP, SBIR, ITAR, Navy              |
+| `medical`     | Pfizer DSCSA, FDA, J&J, EUDAMED                   |
+| `qron`        | QRON, Product Hunt, Onnit                         |
+| `industrial`  | Nike, Apple, Amazon, 3M, CATL                     |
+| `funding`     | Casa Verde, SAFE, pitch competitions              |
 
 ## Hygiene (do not dump into git)
 

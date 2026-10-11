@@ -12,40 +12,38 @@ export const navigation: NavSection[] = [
   {
     title: null,
     items: [
-      { name: "Introduction", href: "/" },
-      { name: "Installation", href: "/installation" },
-      { name: "Quick Start", href: "/quick-start" },
-      { name: "Skills", href: "/skills" },
+      { name: 'Introduction', href: '/' },
+      { name: 'Installation', href: '/installation' },
+      { name: 'Quick Start', href: '/quick-start' },
+      { name: 'Skills', href: '/skills' },
     ],
   },
   {
-    title: "Reference",
+    title: 'Reference',
     items: [
-      { name: "Commands", href: "/commands" },
-      { name: "Configuration", href: "/configuration" },
-      { name: "Selectors", href: "/selectors" },
-      { name: "Snapshots", href: "/snapshots" },
+      { name: 'Commands', href: '/commands' },
+      { name: 'Configuration', href: '/configuration' },
+      { name: 'Selectors', href: '/selectors' },
+      { name: 'Snapshots', href: '/snapshots' },
     ],
   },
   {
-    title: "Features",
+    title: 'Features',
     items: [
-      { name: "Sessions", href: "/sessions" },
-      { name: "Diffing", href: "/diffing" },
-      { name: "CDP Mode", href: "/cdp-mode" },
-      { name: "Streaming", href: "/streaming" },
-      { name: "Profiler", href: "/profiler" },
-      { name: "iOS Simulator", href: "/ios" },
-      { name: "Security", href: "/security" },
-      { name: "Native Mode (Experimental)", href: "/native-mode" },
+      { name: 'Sessions', href: '/sessions' },
+      { name: 'Diffing', href: '/diffing' },
+      { name: 'CDP Mode', href: '/cdp-mode' },
+      { name: 'Streaming', href: '/streaming' },
+      { name: 'Profiler', href: '/profiler' },
+      { name: 'iOS Simulator', href: '/ios' },
+      { name: 'Security', href: '/security' },
+      { name: 'Native Mode (Experimental)', href: '/native-mode' },
     ],
   },
   {
     title: null,
-    items: [{ name: "Changelog", href: "/changelog" }],
+    items: [{ name: 'Changelog', href: '/changelog' }],
   },
 ];
 
-export const allDocsPages: NavItem[] = navigation.flatMap(
-  (section) => section.items
-);
+export const allDocsPages: NavItem[] = navigation.flatMap((section) => section.items);

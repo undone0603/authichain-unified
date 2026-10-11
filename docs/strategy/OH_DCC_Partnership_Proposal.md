@@ -1,4 +1,5 @@
 # PARTNERSHIP PROPOSAL: Ohio DCC Audit Integrity Shield
+
 ## Powered by GovChain.us & AuthiChain Protocol
 
 **Date:** May 16, 2026  
@@ -11,12 +12,15 @@
 ---
 
 ### **Executive Summary**
+
 ZACHARY KIETZMAN proposes the implementation of the **Ohio Audit Integrity Shield (OAIS)**—a blockchain-anchored "Truth Layer" designed to automate compliance reporting for the **Ohio Division of Cannabis Control (DCC)**. By bridging real-time METRC manifest data with W3C-compliant Verifiable Credentials, we eliminate manual audit overhead and ensure 100% data integrity for Ohio's rapidly expanding adult-use market.
 
 ### **The Problem: The "Provenance Gap"**
+
 As Ohio scales its adult-use program, seed-to-sale tracking (METRC) generates massive data volumes that lack **cryptographic finality**. Manual audits are labor-intensive, creating bottlenecks for state regulators and compliance risks for operators.
 
 ### **The Solution: OAIS (Ohio Audit Integrity Shield)**
+
 The GovChain protocol provides three core pillars of trust for Ohio:
 
 1.  **Automated Manifest Anchoring:** Every cannabis transfer manifest is cryptographically signed using Ed25519 and anchored to the Bitcoin L1 Truth Layer.
@@ -24,13 +28,15 @@ The GovChain protocol provides three core pillars of trust for Ohio:
 3.  **AI Consensus Monitoring:** A 5-agent AI model (The Security Council) monitors for supply chain anomalies, alerting the DCC to potential illegal diversions or "scan storm" clones in real-time.
 
 ### **Strategic Impact for Ohio**
-*   **80% Reduction** in manual compliance labor for DCC-licensed businesses.
-*   **Real-time Fraud Detection:** Protect Ohio cultivators from out-of-state counterfeit products.
-*   **Federal Alignment:** Ensuring Ohio is compliant with emerging federal standards for high-value biological assets.
+
+- **80% Reduction** in manual compliance labor for DCC-licensed businesses.
+- **Real-time Fraud Detection:** Protect Ohio cultivators from out-of-state counterfeit products.
+- **Federal Alignment:** Ensuring Ohio is compliant with emerging federal standards for high-value biological assets.
 
 ---
 
 ### **Next Steps**
+
 ZACHARY KIETZMAN is prepared to deploy a **Phase I Pilot** targeting 15 major cultivators in the Columbus and Cleveland regions.
 
 **Contact:**  

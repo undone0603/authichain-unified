@@ -68,11 +68,11 @@ migrations/
 
 ## Bindings
 
-| Binding | Type | Purpose |
-|---------|------|---------|
-| `TELEGRAM_BOT_TOKEN` | Secret | Bot API auth |
-| `TELEGRAM_WEBHOOK_SECRET` | Secret | Request signature validation |
-| `TELEGRAM_ADMIN_CHAT_ID` | Secret | Admin-only commands |
-| `SITE_URL` | Secret | AuthiChain API base URL for live verification |
-| `DATABASE` | D1 | Message logs |
-| `SESSIONS` | KV | User session state (24h TTL) |
+| Binding                   | Type   | Purpose                                       |
+| ------------------------- | ------ | --------------------------------------------- |
+| `TELEGRAM_BOT_TOKEN`      | Secret | Bot API auth                                  |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret | Request signature validation                  |
+| `TELEGRAM_ADMIN_CHAT_ID`  | Secret | Admin-only commands                           |
+| `SITE_URL`                | Secret | AuthiChain API base URL for live verification |
+| `DATABASE`                | D1     | Message logs                                  |
+| `SESSIONS`                | KV     | User session state (24h TTL)                  |

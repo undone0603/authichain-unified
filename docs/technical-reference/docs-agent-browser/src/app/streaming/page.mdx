@@ -1,6 +1,6 @@
-import { pageMetadata } from "@/lib/page-metadata"
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata = pageMetadata("streaming")
+export const metadata = pageMetadata("streaming");
 
 # Streaming
 
@@ -176,48 +176,56 @@ Send input events to control the browser remotely.
 For advanced use, control streaming directly via the TypeScript API:
 
 ```typescript
-import { BrowserManager } from 'agent-browser';
+import { BrowserManager } from "agent-browser";
 
 const browser = new BrowserManager();
 await browser.launch({ headless: true });
-await browser.navigate('https://example.com');
+await browser.navigate("https://example.com");
 
 // Start screencast with callback
-await browser.startScreencast((frame) => {
-  console.log('Frame:', frame.metadata.deviceWidth, 'x', frame.metadata.deviceHeight);
-  // frame.data is base64-encoded image
-}, {
-  format: 'jpeg',  // or 'png'
-  quality: 80,     // 0-100, jpeg only
-  maxWidth: 1280,
-  maxHeight: 720,
-  everyNthFrame: 1
-});
+await browser.startScreencast(
+  frame => {
+    console.log(
+      "Frame:",
+      frame.metadata.deviceWidth,
+      "x",
+      frame.metadata.deviceHeight
+    );
+    // frame.data is base64-encoded image
+  },
+  {
+    format: "jpeg", // or 'png'
+    quality: 80, // 0-100, jpeg only
+    maxWidth: 1280,
+    maxHeight: 720,
+    everyNthFrame: 1,
+  }
+);
 
 // Inject mouse event
 await browser.injectMouseEvent({
-  type: 'mousePressed',
+  type: "mousePressed",
   x: 100,
   y: 200,
-  button: 'left',
-  clickCount: 1
+  button: "left",
+  clickCount: 1,
 });
 
 // Inject keyboard event
 await browser.injectKeyboardEvent({
-  type: 'keyDown',
-  key: 'Enter',
-  code: 'Enter'
+  type: "keyDown",
+  key: "Enter",
+  code: "Enter",
 });
 
 // Inject touch event
 await browser.injectTouchEvent({
-  type: 'touchStart',
-  touchPoints: [{ x: 100, y: 200 }]
+  type: "touchStart",
+  touchPoints: [{ x: 100, y: 200 }],
 });
 
 // Check if screencasting
-console.log('Active:', browser.isScreencasting());
+console.log("Active:", browser.isScreencasting());
 
 // Stop screencast
 await browser.stopScreencast();

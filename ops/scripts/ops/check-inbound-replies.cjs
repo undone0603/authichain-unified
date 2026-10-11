@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 async function check() {
   try {
@@ -10,9 +10,9 @@ async function check() {
         WHERE table_name = 'inbound_replies'
       );
     `;
-    console.log('inbound_replies exists:', res[0].exists);
+    console.log("inbound_replies exists:", res[0].exists);
   } catch (err) {
-    console.error('Error:', err.message);
+    console.error("Error:", err.message);
   } finally {
     process.exit();
   }

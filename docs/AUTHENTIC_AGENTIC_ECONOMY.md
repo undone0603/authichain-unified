@@ -15,12 +15,12 @@ A seal proves the record the issuer published has not been altered since it was 
 
 ## Public money URLs (only these)
 
-| URL | SKU | Price |
-|---|---|---|
-| https://authichain.com/battery-passport | dpp_readiness | $299 one-time |
-| https://qron.space/generate | starter / creator | $29 / $99 one-time |
-| https://strainchain.io/onboard | strainchain_passport | $49 one-time |
-| https://authichain.com/x402 | agent verify | $0.05 USDC |
+| URL                                     | SKU                  | Price              |
+| --------------------------------------- | -------------------- | ------------------ |
+| https://authichain.com/battery-passport | dpp_readiness        | $299 one-time      |
+| https://qron.space/generate             | starter / creator    | $29 / $99 one-time |
+| https://strainchain.io/onboard          | strainchain_passport | $49 one-time       |
+| https://authichain.com/x402             | agent verify         | $0.05 USDC         |
 
 Apex product CTAs stay `/onboard`, `/dapp`, `/verify`. Never a `*.vercel.app` URL.
 

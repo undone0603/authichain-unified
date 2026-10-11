@@ -30,11 +30,11 @@ negotiation copy, not the agent meter.
 
 Canonical map: [`WEB3_IDENTITY.md`](../strategy/WEB3_IDENTITY.md).
 
-| Rail | Buyer | Asset / SKU | Chain or processor | Status |
-| --- | --- | --- | --- | --- |
-| **Stripe** | Person with a card | Passport **$49** · DPP **$299** · QRON Living QR packs | Stripe | **LIVE** — `src/lib/plans.ts` |
-| **x402** | Funded agent wallet | Circle **USDC**, **$0.05 / call** | **Base 8453** | **LIVE** — payTo / tokenomics EOA `0xaebf…e437` (`X402_PAY_TO`). Do not rebind away from the owner-authorized treasury. |
-| **$QRON** ERC-20 | n/a | 1B supply, 18 decimals | **Polygon 137** | **Deployed, not a payment rail.** Do not add to x402 `accepts[]`. |
+| Rail             | Buyer               | Asset / SKU                                            | Chain or processor | Status                                                                                                                  |
+| ---------------- | ------------------- | ------------------------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **Stripe**       | Person with a card  | Passport **$49** · DPP **$299** · QRON Living QR packs | Stripe             | **LIVE** — `src/lib/plans.ts`                                                                                           |
+| **x402**         | Funded agent wallet | Circle **USDC**, **$0.05 / call**                      | **Base 8453**      | **LIVE** — payTo / tokenomics EOA `0xaebf…e437` (`X402_PAY_TO`). Do not rebind away from the owner-authorized treasury. |
+| **$QRON** ERC-20 | n/a                 | 1B supply, 18 decimals                                 | **Polygon 137**    | **Deployed, not a payment rail.** Do not add to x402 `accepts[]`.                                                       |
 
 `$QRON` held by former payTo `0x5db5…` does **not** make `$QRON` the settlement asset. Live USDC `payTo` is `0xaebf…e437`. govchain.us staking figures are **theater**, not circulating supply.
 

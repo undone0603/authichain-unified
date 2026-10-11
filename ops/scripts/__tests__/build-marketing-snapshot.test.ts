@@ -23,12 +23,12 @@ describe("buildMarketingSnapshot", () => {
     fs.writeFileSync(path.join(appDir, "about.html"), "<html>about</html>");
     fs.writeFileSync(
       path.join(appDir, "authichain", "about.html"),
-      "<html>authichain about</html>",
+      "<html>authichain about</html>"
     );
     // Should be excluded: lives under api/, never a marketing page.
     fs.writeFileSync(
       path.join(appDir, "api", "webhook", "route.html"),
-      "<html>should be excluded</html>",
+      "<html>should be excluded</html>"
     );
     // Should be excluded: matches a default dynamic route (/gallery).
     fs.writeFileSync(path.join(appDir, "gallery.html"), "<html>gallery</html>");
@@ -47,14 +47,14 @@ describe("buildMarketingSnapshot", () => {
 
     expect(fs.existsSync(path.join(outDir, "about.html"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "authichain", "about.html"))).toBe(
-      true,
+      true
     );
   });
 
   it("excludes routes under api/", () => {
     return buildMarketingSnapshot({ nextDir, outDir }).then(() => {
       expect(
-        fs.existsSync(path.join(outDir, "api", "webhook", "route.html")),
+        fs.existsSync(path.join(outDir, "api", "webhook", "route.html"))
       ).toBe(false);
     });
   });
@@ -67,7 +67,7 @@ describe("buildMarketingSnapshot", () => {
   it("copies nextDir/static/** verbatim into outDir/_next/static/**", async () => {
     await buildMarketingSnapshot({ nextDir, outDir });
     expect(
-      fs.existsSync(path.join(outDir, "_next", "static", "chunks", "x.js")),
+      fs.existsSync(path.join(outDir, "_next", "static", "chunks", "x.js"))
     ).toBe(true);
   });
 

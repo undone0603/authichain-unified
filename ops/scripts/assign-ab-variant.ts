@@ -11,8 +11,8 @@
  *   pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 1 --pricing
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { parse } from 'ts-command-line-args';
+import { createClient } from "@supabase/supabase-js";
+import { parse } from "ts-command-line-args";
 
 interface IArgs {
   testId: number;
@@ -26,16 +26,46 @@ interface IArgs {
 
 const args = parse<IArgs>(
   {
-    testId: { type: Number, description: 'A/B test ID to assign variants for' },
-    limit: { type: Number, optional: true, defaultValue: 100, description: 'Max leads to assign' },
-    email: { type: Boolean, optional: true, defaultValue: false, description: 'Assign email template variants' },
-    linkedin: { type: Boolean, optional: true, defaultValue: false, description: 'Assign LinkedIn post variants' },
-    pricing: { type: Boolean, optional: true, defaultValue: false, description: 'Assign pricing tier variants' },
-    dryRun: { type: Boolean, optional: true, defaultValue: false, description: 'Preview without saving' },
-    help: { type: Boolean, optional: true, defaultValue: false, description: 'Show this help message' },
+    testId: { type: Number, description: "A/B test ID to assign variants for" },
+    limit: {
+      type: Number,
+      optional: true,
+      defaultValue: 100,
+      description: "Max leads to assign",
+    },
+    email: {
+      type: Boolean,
+      optional: true,
+      defaultValue: false,
+      description: "Assign email template variants",
+    },
+    linkedin: {
+      type: Boolean,
+      optional: true,
+      defaultValue: false,
+      description: "Assign LinkedIn post variants",
+    },
+    pricing: {
+      type: Boolean,
+      optional: true,
+      defaultValue: false,
+      description: "Assign pricing tier variants",
+    },
+    dryRun: {
+      type: Boolean,
+      optional: true,
+      defaultValue: false,
+      description: "Preview without saving",
+    },
+    help: {
+      type: Boolean,
+      optional: true,
+      defaultValue: false,
+      description: "Show this help message",
+    },
   },
   {
-    helpArg: 'help',
+    helpArg: "help",
   }
 );
 
@@ -45,13 +75,15 @@ const supabase = createClient(
 );
 
 async function assignVariants() {
-  console.log(`[A/B Assignment] Starting variant assignment for test #${args.testId}`);
+  console.log(
+    `[A/B Assignment] Starting variant assignment for test #${args.testId}`
+  );
 
   // Fetch the A/B test
   const { data: test, error: testError } = await supabase
-    .from('ab_tests')
-    .select('*')
-    .eq('id', args.testId)
+    .from("ab_tests")
+    .select("*")
+    .eq("id", args.testId)
     .single();
 
   if (testError || !test) {
@@ -60,28 +92,30 @@ async function assignVariants() {
   }
 
   console.log(`\n📋 Test: ${test.name}`);
-  console.log(`   Type: ${test.hypothesis_type || 'general'}`);
+  console.log(`   Type: ${test.hypothesis_type || "general"}`);
   console.log(`   Status: ${test.status}`);
   console.log(`   Hypothesis: ${test.hypothesis}`);
 
   // Fetch unassigned leads (no ab_variant yet)
   const { data: leads, error: leadsError } = await supabase
-    .from('leads')
-    .select('id, email, name, company, ab_variant')
-    .is('ab_variant', null)
+    .from("leads")
+    .select("id, email, name, company, ab_variant")
+    .is("ab_variant", null)
     .limit(args.limit || 100);
 
   if (leadsError) {
-    console.error('❌ Error fetching leads:', leadsError);
+    console.error("❌ Error fetching leads:", leadsError);
     process.exit(1);
   }
 
   if (!leads || leads.length === 0) {
-    console.log('✅ No unassigned leads found.');
+    console.log("✅ No unassigned leads found.");
     return;
   }
 
-  console.log(`\n📊 Found ${leads.length} unassigned leads. Assigning variants...`);
+  console.log(
+    `\n📊 Found ${leads.length} unassigned leads. Assigning variants...`
+  );
 
   const assignments: Array<{
     id: number;
@@ -91,7 +125,7 @@ async function assignVariants() {
 
   for (const lead of leads) {
     // 50/50 random split
-    const variant = Math.random() < 0.5 ? 'A' : 'B';
+    const variant = Math.random() < 0.5 ? "A" : "B";
     const metadata: Record<string, string> = {};
 
     // Assign email template variant
@@ -122,22 +156,26 @@ async function assignVariants() {
   }
 
   // Show sample assignments
-  console.log('\n📌 Sample assignments (first 5):');
-  assignments.slice(0, 5).forEach((a) => {
+  console.log("\n📌 Sample assignments (first 5):");
+  assignments.slice(0, 5).forEach(a => {
     console.log(
       `   Lead ${a.id}: Variant ${a.variant} → ${JSON.stringify(a.metadata)}`
     );
   });
 
   const variantCounts = {
-    A: assignments.filter((a) => a.variant === 'A').length,
-    B: assignments.filter((a) => a.variant === 'B').length,
+    A: assignments.filter(a => a.variant === "A").length,
+    B: assignments.filter(a => a.variant === "B").length,
   };
-  console.log(`\n✓ Variant A: ${variantCounts.A} (${((variantCounts.A / assignments.length) * 100).toFixed(1)}%)`);
-  console.log(`✓ Variant B: ${variantCounts.B} (${((variantCounts.B / assignments.length) * 100).toFixed(1)}%)`);
+  console.log(
+    `\n✓ Variant A: ${variantCounts.A} (${((variantCounts.A / assignments.length) * 100).toFixed(1)}%)`
+  );
+  console.log(
+    `✓ Variant B: ${variantCounts.B} (${((variantCounts.B / assignments.length) * 100).toFixed(1)}%)`
+  );
 
   if (args.dryRun) {
-    console.log('\n🔍 DRY RUN: Would update', assignments.length, 'leads');
+    console.log("\n🔍 DRY RUN: Would update", assignments.length, "leads");
     process.exit(0);
   }
 
@@ -148,21 +186,23 @@ async function assignVariants() {
 
   for (let i = 0; i < assignments.length; i += 100) {
     const batch = assignments.slice(i, i + 100);
-    const updates = batch.map((a) => ({
+    const updates = batch.map(a => ({
       id: a.id,
       ab_test_id: args.testId,
       ab_variant: a.variant,
       ...(args.email && { email_variant_assigned: a.metadata.email_variant }),
       ...(args.linkedin && { linkedin_variant_assigned: a.variant }),
-      ...(args.pricing && { pricing_tier_assigned: JSON.stringify(a.metadata.pricing_tiers) }),
+      ...(args.pricing && {
+        pricing_tier_assigned: JSON.stringify(a.metadata.pricing_tiers),
+      }),
       metadata: a.metadata,
       updated_at: new Date().toISOString(),
     }));
 
     // Use upsert to update existing leads
     const { error } = await supabase
-      .from('leads')
-      .upsert(updates, { onConflict: 'id' });
+      .from("leads")
+      .upsert(updates, { onConflict: "id" });
 
     if (error) {
       console.error(`❌ Batch ${i / 100 + 1} error:`, error);
@@ -174,7 +214,7 @@ async function assignVariants() {
 
   // Log to ab_test_results table
   console.log(`\n📝 Creating result tracking records...`);
-  const resultRecords = assignments.map((a) => ({
+  const resultRecords = assignments.map(a => ({
     ab_test_id: args.testId,
     lead_id: a.id,
     variant_assigned: a.variant,
@@ -184,9 +224,7 @@ async function assignVariants() {
 
   for (let i = 0; i < resultRecords.length; i += 100) {
     const batch = resultRecords.slice(i, i + 100);
-    const { error } = await supabase
-      .from('ab_test_results')
-      .insert(batch);
+    const { error } = await supabase.from("ab_test_results").insert(batch);
 
     if (error) {
       console.warn(`⚠️  Failed to log some results:`, error.message);
@@ -195,17 +233,17 @@ async function assignVariants() {
 
   // Update ab_tests totalParticipants
   const { error: updateTestError } = await supabase
-    .from('ab_tests')
+    .from("ab_tests")
     .update({
       total_participants: (test.total_participants || 0) + updated,
       started_at: test.started_at || new Date().toISOString(),
-      status: test.status === 'draft' ? 'running' : test.status,
+      status: test.status === "draft" ? "running" : test.status,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', args.testId);
+    .eq("id", args.testId);
 
   if (updateTestError) {
-    console.warn('⚠️  Could not update test status:', updateTestError);
+    console.warn("⚠️  Could not update test status:", updateTestError);
   }
 
   console.log(`\n✅ Assignment complete!`);
@@ -214,7 +252,7 @@ async function assignVariants() {
   console.log(`   Total in test: ${(test.total_participants || 0) + updated}`);
 }
 
-assignVariants().catch((err) => {
-  console.error('❌ Fatal error:', err);
+assignVariants().catch(err => {
+  console.error("❌ Fatal error:", err);
   process.exit(1);
 });

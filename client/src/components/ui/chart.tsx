@@ -131,7 +131,10 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: Omit<React.ComponentProps<typeof RechartsPrimitive.Tooltip>, "payload" | "label"> &
+}: Omit<
+  React.ComponentProps<typeof RechartsPrimitive.Tooltip>,
+  "payload" | "label"
+> &
   Omit<React.ComponentProps<"div">, "color"> & {
     payload?: ChartPayloadItem[];
     label?: unknown;
@@ -161,7 +164,10 @@ function ChartTooltipContent({
     if (labelFormatter) {
       return (
         <div className={cn("font-medium", labelClassName)}>
-          {(labelFormatter as (v: unknown, p: unknown) => React.ReactNode)(value, payload)}
+          {(labelFormatter as (v: unknown, p: unknown) => React.ReactNode)(
+            value,
+            payload
+          )}
         </div>
       );
     }
@@ -212,7 +218,13 @@ function ChartTooltipContent({
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
-                  (formatter as (...a: unknown[]) => React.ReactNode)(item.value, item.name, item, index, item.payload)
+                  (formatter as (...a: unknown[]) => React.ReactNode)(
+                    item.value,
+                    item.name,
+                    item,
+                    index,
+                    item.payload
+                  )
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -276,11 +288,11 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> & {
-    payload?: ChartPayloadItem[];
-    verticalAlign?: "top" | "middle" | "bottom";
-    hideIcon?: boolean;
-    nameKey?: string;
-  }) {
+  payload?: ChartPayloadItem[];
+  verticalAlign?: "top" | "middle" | "bottom";
+  hideIcon?: boolean;
+  nameKey?: string;
+}) {
   const { config } = useChart();
 
   if (!payload?.length) {

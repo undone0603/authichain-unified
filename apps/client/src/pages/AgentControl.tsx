@@ -1,9 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Play, RefreshCcw, AlertCircle, CheckCircle2, Clock, Terminal } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Play,
+  RefreshCcw,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Terminal,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface WorkflowState {
@@ -25,7 +45,7 @@ export default function AgentControl() {
   const fetchStates = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/agents/states');
+      const res = await fetch("/api/agents/states");
       const data = await res.json();
       if (Array.isArray(data)) {
         setStates(data);
@@ -45,10 +65,10 @@ export default function AgentControl() {
 
   const handleResume = async (workflow_id: string, run_id: string) => {
     try {
-      const res = await fetch('/api/agents/states', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflow_id, run_id, action: 'resume' }),
+      const res = await fetch("/api/agents/states", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflow_id, run_id, action: "resume" }),
       });
       const data = await res.json();
       if (data.success) {
@@ -70,10 +90,14 @@ export default function AgentControl() {
             <Terminal className="h-8 w-8 text-primary" />
             Agent Control Center
           </h1>
-          <p className="text-muted-foreground">Monitor and manage autonomous state machines</p>
+          <p className="text-muted-foreground">
+            Monitor and manage autonomous state machines
+          </p>
         </div>
         <Button onClick={fetchStates} disabled={loading} variant="outline">
-          <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCcw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh States
         </Button>
       </div>
@@ -86,7 +110,9 @@ export default function AgentControl() {
             <CardDescription>Workflows currently in progress</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{states.filter(s => s.status === 'running').length}</div>
+            <div className="text-4xl font-bold">
+              {states.filter(s => s.status === "running").length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +121,9 @@ export default function AgentControl() {
             <CardDescription>Successful workflow exits</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{states.filter(s => s.status === 'completed').length}</div>
+            <div className="text-4xl font-bold">
+              {states.filter(s => s.status === "completed").length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -104,7 +132,9 @@ export default function AgentControl() {
             <CardDescription>Requires manual intervention</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-red-500">{states.filter(s => s.status === 'failed').length}</div>
+            <div className="text-4xl font-bold text-red-500">
+              {states.filter(s => s.status === "failed").length}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -112,7 +142,9 @@ export default function AgentControl() {
       <Card>
         <CardHeader>
           <CardTitle>Execution History</CardTitle>
-          <CardDescription>Real-time state of all AgentZ workflows</CardDescription>
+          <CardDescription>
+            Real-time state of all AgentZ workflows
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -129,36 +161,58 @@ export default function AgentControl() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">Loading state machine data...</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10">
+                    Loading state machine data...
+                  </TableCell>
                 </TableRow>
               ) : states.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">No workflow states found in logs.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10">
+                    No workflow states found in logs.
+                  </TableCell>
                 </TableRow>
               ) : (
-                states.map((s) => (
+                states.map(s => (
                   <TableRow key={s.run_id}>
-                    <TableCell className="font-medium">{s.workflow_id}</TableCell>
-                    <TableCell className="font-mono text-xs">{s.run_id}</TableCell>
+                    <TableCell className="font-medium">
+                      {s.workflow_id}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {s.run_id}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant={
-                        s.status === 'completed' ? 'success' : 
-                        s.status === 'failed' ? 'destructive' : 
-                        s.status === 'running' ? 'default' : 'secondary'
-                      }>
-                        {s.status === 'completed' ? <CheckCircle2 className="h-3 w-3 mr-1" /> : 
-                         s.status === 'failed' ? <AlertCircle className="h-3 w-3 mr-1" /> : 
-                         <Clock className="h-3 w-3 mr-1" />}
+                      <Badge
+                        variant={
+                          s.status === "completed"
+                            ? "success"
+                            : s.status === "failed"
+                              ? "destructive"
+                              : s.status === "running"
+                                ? "default"
+                                : "secondary"
+                        }
+                      >
+                        {s.status === "completed" ? (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        ) : s.status === "failed" ? (
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                        ) : (
+                          <Clock className="h-3 w-3 mr-1" />
+                        )}
                         {s.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{s.current_step || 'N/A'}</TableCell>
-                    <TableCell className="text-xs">{new Date(s.started_at).toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {s.current_step || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {new Date(s.started_at).toLocaleString()}
+                    </TableCell>
                     <TableCell className="text-right">
-                      {s.status !== 'completed' && (
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                      {s.status !== "completed" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => handleResume(s.workflow_id, s.run_id)}
                         >
                           <Play className="h-3 w-3 mr-1" />

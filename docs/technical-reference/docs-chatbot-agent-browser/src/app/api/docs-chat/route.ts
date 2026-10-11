@@ -34,7 +34,7 @@ async function loadDocsFiles(): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
 
   const results = await Promise.allSettled(
-    allDocsPages.map(async (page) => {
+    allDocsPages.map(async page => {
       const slug = page.href === "/" ? "" : page.href.replace(/^\//, "");
       const filePath = slug
         ? join(process.cwd(), "src", "app", slug, "page.mdx")
@@ -44,7 +44,7 @@ async function loadDocsFiles(): Promise<Record<string, string>> {
       const md = mdxToCleanMarkdown(raw);
       const fileName = slug ? `/${slug}.md` : "/index.md";
       return { fileName, md };
-    }),
+    })
   );
 
   for (const result of results) {
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
       {
         status: 429,
         headers: { "Content-Type": "application/json" },
-      },
+      }
     );
   }
 

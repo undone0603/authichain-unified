@@ -3,6 +3,7 @@
 Do not send memorial, METRC, or hash language. Photographer emails Mon–Thu only.
 
 ## Photographer (batch of 10 on 14 Sep)
+
 Subject: A scannable sky for the first dance — mockup in 24h
 
 Hi {Name},
@@ -17,6 +18,7 @@ No NFT pitch.
 https://qron.space/starmap
 
 ## Craft (Thu 17)
+
 Subject: A second QR for the night this lot was bottled — not a compliance swap
 
 Hi {Name},

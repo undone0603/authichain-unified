@@ -13,9 +13,11 @@
 ## Task 1 (Most Complex): Security Vulnerabilities
 
 **Files:**
+
 - Modify: `package.json`
 
 Key vulns:
+
 - `undici` HIGH — unbounded decompression (transitive via wrangler/miniflare)
 - `nodemailer` LOW — SMTP injection, fix: upgrade to >=8.0.4
 - `postcss` MODERATE — XSS via `</style>`, fix: upgrade
@@ -32,9 +34,11 @@ Key vulns:
 ## Task 2: Fix `worker/index.ts` Bugs
 
 **Files:**
+
 - Modify: `worker/index.ts`
 
 Three bugs:
+
 1. `cssVars` uses escaped `\${b.bg}` — CSS vars never interpolate
 2. `MARKETING_HTML` referenced but never defined — runtime crash on apex `/`
 3. `createHmac` used but never imported — webhook handler crashes
@@ -52,14 +56,17 @@ Fix 3: Replace `createHmac(...)` with Web Crypto HMAC: `await crypto.subtle.sign
 ## Task 3: Stripe Checkout on authichain.com
 
 **Files:**
+
 - Modify: `workers/authichain-com/src/index.ts`
 
 Real Stripe prices (from Stripe):
+
 - Starter: `price_1TWcdFGqTruSqV8TAowGYKIo` — $199/mo
 - Professional: `price_1TWcdHGqTruSqV8T3OvHngUZ` — $499/mo
 - Enterprise: `price_1TWcdIGqTruSqV8TfQGUAH2q` — $999/mo
 
 Steps:
+
 - [ ] Create 3 Stripe payment links (one per price) via MCP
 - [ ] Update pricing section in worker: fix prices ($199/$499/$999), swap CTA hrefs to payment link URLs
 - [ ] Commit
@@ -69,6 +76,7 @@ Steps:
 ## Task 4: Wire `/verify/[productId]` Page
 
 **Files:**
+
 - Modify: `src/app/verify/[productId]/page.tsx`
 
 Current state: static spinner, never fetches. Needs to call the edge worker `/verify/:id` endpoint.
@@ -83,6 +91,7 @@ Worker endpoint: `https://authichain.com/verify/:id` returns `{ status, name, sk
 ## Task 5: Fix `next.config.ts` serverActions Origins
 
 **Files:**
+
 - Modify: `next.config.ts`
 
 `serverActions.allowedOrigins` only has `qron.space` / `www.qron.space`. Missing `authichain.com`, `strainchain.io`, `govchain.us`.
@@ -95,6 +104,7 @@ Worker endpoint: `https://authichain.com/verify/:id` returns `{ status, name, sk
 ## Task 6: Create MICROSITES_KV + Fix `wrangler.toml`
 
 **Files:**
+
 - Modify: `wrangler.toml`
 
 MICROSITES_KV namespace doesn't exist yet. Create via Cloudflare MCP, then replace placeholder ID.

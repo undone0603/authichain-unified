@@ -3,7 +3,12 @@ import fs from "fs";
 import path from "path";
 
 // Load from qron-platform/.env.local since it has the real keys
-const qronEnvPath = path.join(process.cwd(), "..", "qron-platform", ".env.local");
+const qronEnvPath = path.join(
+  process.cwd(),
+  "..",
+  "qron-platform",
+  ".env.local"
+);
 if (fs.existsSync(qronEnvPath)) {
   const envContent = fs.readFileSync(qronEnvPath, "utf-8");
   envContent.split("\n").forEach(line => {
@@ -36,9 +41,9 @@ async function sendDrafts() {
   console.log("🟠 Starting Outreach Dispatch...");
 
   const { data: drafts, error: fetchError } = await supabase
-    .from('email_drafts')
-    .select('*')
-    .eq('status', 'draft')
+    .from("email_drafts")
+    .select("*")
+    .eq("status", "draft")
     .limit(20);
 
   if (fetchError) {
@@ -57,32 +62,34 @@ async function sendDrafts() {
   for (const draft of drafts) {
     try {
       console.log(`📧 Sending to ${draft.to_email}...`);
-      
+
       await sendEmail({
         to: draft.to_email,
         subject: draft.subject,
         text: draft.body,
-        from: process.env.SMTP_FROM
+        from: process.env.SMTP_FROM,
       });
 
       const { error: updateError } = await supabase
-        .from('email_drafts')
-        .update({ 
-          status: 'sent',
-          sent_at: new Date().toISOString()
+        .from("email_drafts")
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
         })
-        .eq('id', draft.id);
+        .eq("id", draft.id);
 
       if (updateError) {
-        console.error(`✗ Failed to update status for ${draft.to_email}:`, updateError.message);
+        console.error(
+          `✗ Failed to update status for ${draft.to_email}:`,
+          updateError.message
+        );
       } else {
         sentCount++;
         console.log(`✅ Sent and updated: ${draft.to_email}`);
       }
-      
+
       // Rate limiting
       await new Promise(r => setTimeout(r, 1000));
-
     } catch (e: any) {
       console.error(`✗ Error sending to ${draft.to_email}: ${e.message}`);
     }

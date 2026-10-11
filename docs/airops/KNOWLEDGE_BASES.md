@@ -11,6 +11,7 @@ Purpose: what the company is, what it sells, what agents may say.
 Upload this file: `docs/airops/KB_PUBLIC_PRODUCT.md` (also in this folder).
 
 Optional extra files (only if they stay public-safe):
+
 - repo `README.md`
 - `docs/ESTATE.md` (domains and CTA rules — yes, public)
 

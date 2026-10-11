@@ -24,16 +24,12 @@ describe('keyboard command validation', () => {
   });
 
   it('accepts legacy keyboard (no subaction) with keys', () => {
-    const result = parseCommand(
-      JSON.stringify({ id: '1', action: 'keyboard', keys: 'Enter' })
-    );
+    const result = parseCommand(JSON.stringify({ id: '1', action: 'keyboard', keys: 'Enter' }));
     expect(result.success).toBe(true);
   });
 
   it('rejects keyboard type without text', () => {
-    const result = parseCommand(
-      JSON.stringify({ id: '1', action: 'keyboard', subaction: 'type' })
-    );
+    const result = parseCommand(JSON.stringify({ id: '1', action: 'keyboard', subaction: 'type' }));
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toContain('requires text');
   });
@@ -55,9 +51,7 @@ describe('keyboard command validation', () => {
   });
 
   it('rejects legacy keyboard (no subaction) without keys', () => {
-    const result = parseCommand(
-      JSON.stringify({ id: '1', action: 'keyboard' })
-    );
+    const result = parseCommand(JSON.stringify({ id: '1', action: 'keyboard' }));
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toContain('requires keys');
   });

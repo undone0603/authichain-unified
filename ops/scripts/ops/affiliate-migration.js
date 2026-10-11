@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migration = `
 -- Affiliate Expansion
@@ -35,15 +35,14 @@ CREATE INDEX IF NOT EXISTS "idx_referral_affiliate" ON "referrals" ("affiliate_i
 
 async function migrate() {
   try {
-    console.log('Scaling: Adding Affiliate & Referral logic...');
+    console.log("Scaling: Adding Affiliate & Referral logic...");
     await sql.unsafe(migration);
-    console.log('✅ Affiliate tables live.');
+    console.log("✅ Affiliate tables live.");
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    console.error("❌ Migration failed:", err.message);
   } finally {
     process.exit();
   }
 }
 
 migrate();
-

@@ -1,6 +1,6 @@
-import { pageMetadata } from "@/lib/page-metadata"
+import { pageMetadata } from '@/lib/page-metadata';
 
-export const metadata = pageMetadata("streaming")
+export const metadata = pageMetadata('streaming');
 
 # Streaming
 
@@ -183,16 +183,19 @@ await browser.launch({ headless: true });
 await browser.navigate('https://example.com');
 
 // Start screencast with callback
-await browser.startScreencast((frame) => {
-  console.log('Frame:', frame.metadata.deviceWidth, 'x', frame.metadata.deviceHeight);
-  // frame.data is base64-encoded image
-}, {
-  format: 'jpeg',  // or 'png'
-  quality: 80,     // 0-100, jpeg only
-  maxWidth: 1280,
-  maxHeight: 720,
-  everyNthFrame: 1
-});
+await browser.startScreencast(
+  (frame) => {
+    console.log('Frame:', frame.metadata.deviceWidth, 'x', frame.metadata.deviceHeight);
+    // frame.data is base64-encoded image
+  },
+  {
+    format: 'jpeg', // or 'png'
+    quality: 80, // 0-100, jpeg only
+    maxWidth: 1280,
+    maxHeight: 720,
+    everyNthFrame: 1,
+  }
+);
 
 // Inject mouse event
 await browser.injectMouseEvent({
@@ -200,20 +203,20 @@ await browser.injectMouseEvent({
   x: 100,
   y: 200,
   button: 'left',
-  clickCount: 1
+  clickCount: 1,
 });
 
 // Inject keyboard event
 await browser.injectKeyboardEvent({
   type: 'keyDown',
   key: 'Enter',
-  code: 'Enter'
+  code: 'Enter',
 });
 
 // Inject touch event
 await browser.injectTouchEvent({
   type: 'touchStart',
-  touchPoints: [{ x: 100, y: 200 }]
+  touchPoints: [{ x: 100, y: 200 }],
 });
 
 // Check if screencasting

@@ -41,7 +41,11 @@ export interface BaseAgent {
   version: string;
   tools: AgentTool[];
 
-  execute(action: string, params: any, context?: AgentContext): Promise<AgentExecutionResult>;
+  execute(
+    action: string,
+    params: any,
+    context?: AgentContext
+  ): Promise<AgentExecutionResult>;
   getTools(): AgentTool[];
   canHandle(capability: AgentCapability): boolean;
   healthCheck(): Promise<boolean>;
@@ -78,6 +82,7 @@ Handles business operations, marketing, and strategic content:
 **Capabilities**: `executive`, `sales`
 
 **Tools**:
+
 - `draft_sales_email` - Generate personalized sales emails
 - `draft_partnership_email` - Create partnership proposals
 - `generate_linkedin_post` - LinkedIn content generation
@@ -86,14 +91,15 @@ Handles business operations, marketing, and strategic content:
 - `daily_briefing` - Executive daily briefing
 
 **Example**:
+
 ```typescript
-const result = await agent.execute('draft_sales_email', {
+const result = await agent.execute("draft_sales_email", {
   prospect: {
-    name: 'Jane Doe',
-    company: 'MegaCorp',
-    industry: 'Manufacturing',
-    city: 'Detroit'
-  }
+    name: "Jane Doe",
+    company: "MegaCorp",
+    industry: "Manufacturing",
+    city: "Detroit",
+  },
 });
 ```
 
@@ -104,6 +110,7 @@ Handles code, infrastructure, and operations:
 **Capabilities**: `technical`, `operations`
 
 **Tools**:
+
 - `analyze_codebase` - Analyze project structure and patterns
 - `check_type_safety` - TypeScript type validation
 - `propose_implementation` - Feature implementation planning
@@ -112,9 +119,10 @@ Handles code, infrastructure, and operations:
 - `generate_migration` - Database migration generation
 
 **Example**:
+
 ```typescript
-const result = await agent.execute('check_type_safety', {
-  files: ['server/agents/executive.unified.ts']
+const result = await agent.execute("check_type_safety", {
+  files: ["server/agents/executive.unified.ts"],
 });
 ```
 
@@ -123,38 +131,41 @@ const result = await agent.execute('check_type_safety', {
 ### 1. Direct Agent Execution
 
 ```typescript
-import { ExecutiveAgentImpl } from './agents/executive.unified.js';
+import { ExecutiveAgentImpl } from "./agents/executive.unified.js";
 
 const agent = new ExecutiveAgentImpl();
-const result = await agent.execute('draft_sales_email', {
-  prospect: { name: 'John', company: 'Corp' }
+const result = await agent.execute("draft_sales_email", {
+  prospect: { name: "John", company: "Corp" },
 });
 ```
 
 ### 2. Registry-Based Routing
 
 ```typescript
-import { AgentRegistry } from './agents/base/agent.registry.js';
+import { AgentRegistry } from "./agents/base/agent.registry.js";
 
 await AgentRegistry.initialize();
 
-const agent = AgentRegistry.getAgent('ExecutiveAgent');
-const result = await agent?.execute('draft_sales_email', params);
+const agent = AgentRegistry.getAgent("ExecutiveAgent");
+const result = await agent?.execute("draft_sales_email", params);
 ```
 
 ### 3. Orchestrator-Based Execution
 
 ```typescript
-import { AgentOrchestrator, AgentTask } from './agents/base/agent.orchestrator.js';
+import {
+  AgentOrchestrator,
+  AgentTask,
+} from "./agents/base/agent.orchestrator.js";
 
 const orchestrator = AgentOrchestrator.getInstance();
 await orchestrator.initialize();
 
 const task: AgentTask = {
-  id: 'task-001',
-  capability: 'executive',
-  action: 'draft_sales_email',
-  params: { prospect: { /* ... */ } }
+  id: "task-001",
+  capability: "executive",
+  action: "draft_sales_email",
+  params: { prospect: {/* ... */} },
 };
 
 const result = await orchestrator.executeTask(task);
@@ -165,17 +176,17 @@ const result = await orchestrator.executeTask(task);
 ```typescript
 const tasks: AgentTask[] = [
   {
-    id: 'email',
-    capability: 'executive',
-    action: 'draft_sales_email',
-    params: { /* ... */ }
+    id: "email",
+    capability: "executive",
+    action: "draft_sales_email",
+    params: {/* ... */},
   },
   {
-    id: 'analysis',
-    capability: 'technical',
-    action: 'analyze_codebase',
-    params: { paths: ['server/'] }
-  }
+    id: "analysis",
+    capability: "technical",
+    action: "analyze_codebase",
+    params: { paths: ["server/"] },
+  },
 ];
 
 const results = await orchestrator.executeParallel(tasks);
@@ -185,12 +196,22 @@ const results = await orchestrator.executeParallel(tasks);
 
 ```typescript
 const tasks: AgentTask[] = [
-  { id: 'analysis', capability: 'technical', action: 'analyze_codebase', params: {} },
-  { id: 'proposal', capability: 'technical', action: 'propose_implementation', params: {} }
+  {
+    id: "analysis",
+    capability: "technical",
+    action: "analyze_codebase",
+    params: {},
+  },
+  {
+    id: "proposal",
+    capability: "technical",
+    action: "propose_implementation",
+    params: {},
+  },
 ];
 
 const dependencies = {
-  'proposal': ['analysis']
+  proposal: ["analysis"],
 };
 
 const results = await orchestrator.executeSequential(tasks, dependencies);
@@ -201,12 +222,16 @@ const results = await orchestrator.executeSequential(tasks, dependencies);
 ### Step 1: Extend AbstractAgent
 
 ```typescript
-import { AbstractAgent, AgentContext, AgentCapability } from './base/agent.interface.js';
+import {
+  AbstractAgent,
+  AgentContext,
+  AgentCapability,
+} from "./base/agent.interface.js";
 
 export class MyAgentImpl extends AbstractAgent {
-  name = 'MyAgent';
-  capabilities: AgentCapability[] = ['custom_capability'];
-  version = '1.0.0';
+  name = "MyAgent";
+  capabilities: AgentCapability[] = ["custom_capability"];
+  version = "1.0.0";
 
   constructor() {
     super();
@@ -216,10 +241,10 @@ export class MyAgentImpl extends AbstractAgent {
   private initializeTools(): void {
     this.tools = [
       {
-        name: 'my_tool',
-        description: 'What it does',
-        execute: (params) => this.myToolImpl(params)
-      }
+        name: "my_tool",
+        description: "What it does",
+        execute: params => this.myToolImpl(params),
+      },
     ];
   }
 
@@ -240,7 +265,7 @@ export class MyAgentImpl extends AbstractAgent {
 const agentConstructors: AgentConstructor[] = [
   ExecutiveAgentImpl,
   TechnicalAgentImpl,
-  MyAgentImpl  // Add your agent
+  MyAgentImpl, // Add your agent
 ];
 ```
 
@@ -249,7 +274,7 @@ const agentConstructors: AgentConstructor[] = [
 ### Execution History
 
 ```typescript
-const history = orchestrator.getExecutionHistory('ExecutiveAgent', 10);
+const history = orchestrator.getExecutionHistory("ExecutiveAgent", 10);
 ```
 
 ### Statistics
@@ -260,7 +285,7 @@ console.log({
   totalExecutions: stats.totalExecutions,
   successRate: stats.successCount / stats.totalExecutions,
   averageDuration: stats.averageDuration,
-  byAgent: stats.byAgent
+  byAgent: stats.byAgent,
 });
 ```
 
@@ -280,11 +305,11 @@ Pass execution context to agents:
 
 ```typescript
 const context: AgentContext = {
-  userId: 'user-123',
-  sessionId: 'sess-456',
+  userId: "user-123",
+  sessionId: "sess-456",
   missionId: 789,
   taskId: 101,
-  metadata: { source: 'webhook' }
+  metadata: { source: "webhook" },
 };
 
 const result = await agent.execute(action, params, context);
@@ -294,13 +319,13 @@ const result = await agent.execute(action, params, context);
 
 ```typescript
 const task: AgentTask = {
-  id: 'task-001',
-  capability: 'technical',
-  action: 'check_security',
-  params: { scope: 'code' },
-  retries: 3,           // Retry up to 3 times
-  timeout: 30000,       // 30 second timeout
-  context: { userId: 'user-123' }
+  id: "task-001",
+  capability: "technical",
+  action: "check_security",
+  params: { scope: "code" },
+  retries: 3, // Retry up to 3 times
+  timeout: 30000, // 30 second timeout
+  context: { userId: "user-123" },
 };
 ```
 
@@ -309,6 +334,7 @@ const task: AgentTask = {
 ### 1. Use Appropriate Capabilities
 
 Match task types to agent capabilities:
+
 - `executive` → Marketing, sales, strategy content
 - `technical` → Code analysis, architecture, infrastructure
 - `operations` → Monitoring, maintenance, compliance
@@ -322,7 +348,7 @@ Always include relevant context for audit trails:
 const context = {
   userId: currentUser.id,
   missionId: mission.id,
-  metadata: { source: 'api', priority: 'high' }
+  metadata: { source: "api", priority: "high" },
 };
 ```
 
@@ -342,7 +368,7 @@ if (!result.success) {
 ```typescript
 const task: AgentTask = {
   // ...
-  timeout: 60000  // 1 minute for performance audits
+  timeout: 60000, // 1 minute for performance audits
 };
 ```
 
@@ -352,7 +378,7 @@ const task: AgentTask = {
 const stats = orchestrator.getStatistics();
 
 if (stats.byAgent.TechnicalAgent?.avgDuration > 30000) {
-  console.warn('TechnicalAgent is slow');
+  console.warn("TechnicalAgent is slow");
 }
 ```
 
@@ -367,6 +393,7 @@ pnpm test -- server/agents/unified.test.ts
 ## Roadmap
 
 ### Phase 1 ✅ (Current)
+
 - Base agent interface
 - Agent registry
 - Orchestrator
@@ -374,12 +401,14 @@ pnpm test -- server/agents/unified.test.ts
 - TechnicalAgent implementation
 
 ### Phase 2 (Next)
+
 - OperationsAgent (monitoring, alerting)
 - DataAgent (analytics, reporting)
 - Plugin architecture for hot-reload
 - Enhanced retry/circuit-breaker logic
 
 ### Phase 3 (Future)
+
 - Multi-tenant agent routing
 - Federated execution (agents spawning sub-agents)
 - Agent-to-agent communication
@@ -391,9 +420,9 @@ pnpm test -- server/agents/unified.test.ts
 ### Agent Not Found
 
 ```typescript
-const agents = AgentRegistry.getAgentsByCapability('missing_capability');
+const agents = AgentRegistry.getAgentsByCapability("missing_capability");
 if (agents.length === 0) {
-  console.log('No agent available for this capability');
+  console.log("No agent available for this capability");
 }
 ```
 
@@ -402,7 +431,7 @@ if (agents.length === 0) {
 ```typescript
 const result = await orchestrator.executeTask({
   // ...
-  timeout: 120000  // Increase timeout
+  timeout: 120000, // Increase timeout
 });
 ```
 

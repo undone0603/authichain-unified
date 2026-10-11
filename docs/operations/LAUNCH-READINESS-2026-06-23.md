@@ -5,14 +5,15 @@ Snapshot of what is code-complete vs. what still needs founder action (credentia
 
 ## ✅ Green — verified on `main`
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Type safety | ✅ | `pnpm check` (tsc --noEmit) clean |
-| Production build | ✅ | `pnpm build` → `dist/public` (Vite SPA) + `dist/index.js` (server) |
-| Unit/integration tests | ✅ | `pnpm test` — 435/435 passing |
-| Standalone server runtime | ✅ | `node dist/index.js` serves SPA (`/`, client routes), static assets, `/api/*`, and proper 404s |
+| Gate                      | Status | Evidence                                                                                       |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| Type safety               | ✅     | `pnpm check` (tsc --noEmit) clean                                                              |
+| Production build          | ✅     | `pnpm build` → `dist/public` (Vite SPA) + `dist/index.js` (server)                             |
+| Unit/integration tests    | ✅     | `pnpm test` — 435/435 passing                                                                  |
+| Standalone server runtime | ✅     | `node dist/index.js` serves SPA (`/`, client routes), static assets, `/api/*`, and proper 404s |
 
 ### What was repaired this session
+
 - **Production build was fully broken** and is now fixed:
   - Tailwind v4 stylesheets reconciled to the installed v3 toolchain (gold "Protocol" theme preserved); `tailwind.config.ts` token mapping + `content` globs corrected.
   - 37 missing dependencies added (33 client shadcn/Radix + `pg`, `nodemailer`, `cookie`, `crisp-api` on the server). `pg`/`nodemailer` were genuine runtime gaps.
@@ -36,4 +37,5 @@ These need secrets / dashboard access that are intentionally not in the repo:
 - Changed `.github/workflows/deploy-workers.yml` to fail the workflow when a Worker deployment fails instead of silently continuing.
 
 ## 🟡 Known non-blockers
+
 - ~22 open Dependabot PRs (minor/dev/python + a few major bumps like Stripe/Clerk/Drizzle). None gate launch; the build runs on current pins. The major bumps (`stripe` 17→22, `@clerk/nextjs` 5→7, `drizzle-orm` 0.33→0.45) need a deliberate review pass and should not be auto-merged.

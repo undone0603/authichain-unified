@@ -101,10 +101,10 @@ Only the canonical repo remains.
 
 ## Net result of the consolidation effort
 
-| Sibling | Before | After |
-|---|---|---|
-| `authichain-unified/` | active monorepo, structural cruft | clean monorepo with documented worker fleet |
-| `authichain/` | active sibling Next.js prototype, ahead-of-origin work | **archived** at `undone0603/authichain-archive` tag `archive/2026-04-27` |
-| `authichain-mobile/` | stale Expo skeleton, no git | **archived** at `Documents/_archive/authichain-mobile-archive-2026-04-27.tar.gz` |
+| Sibling               | Before                                                 | After                                                                            |
+| --------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `authichain-unified/` | active monorepo, structural cruft                      | clean monorepo with documented worker fleet                                      |
+| `authichain/`         | active sibling Next.js prototype, ahead-of-origin work | **archived** at `undone0603/authichain-archive` tag `archive/2026-04-27`         |
+| `authichain-mobile/`  | stale Expo skeleton, no git                            | **archived** at `Documents/_archive/authichain-mobile-archive-2026-04-27.tar.gz` |
 
 Salvage from `authichain` into `authichain-unified` was a single lift: the analytics aggregation pattern (PR #70). All other Phase 4 lifts were rejected with rationale recorded in `lift-log-2026-04-27.md` (PR #71) — unified already had equivalent or more sophisticated implementations.

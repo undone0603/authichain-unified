@@ -33,6 +33,7 @@
 ## File Structure
 
 **Create:**
+
 - `src/lib/certify-mint.ts` — real ethers.js call to `mintProduct`, hard-fails on any error.
 - `src/app/api/certify/metadata/[productId]/route.ts` — serves the ERC-721 metadata JSON the mint call needs as its `uri`.
 - `src/app/api/certify/order/route.ts` — creates a pending `certify_orders` row from the self-serve form.
@@ -42,6 +43,7 @@
 - `tests/certify-webhook.test.ts` — unit tests for the new webhook branch.
 
 **Modify:**
+
 - `server/qrcode/router.ts` — fix the verify URL bug (path segment → query param, matching the actual page).
 - `src/db/schema.ts` — add `certifyOrders` table.
 - `src/lib/plans.ts` — add the `certify_single` plan entry.
@@ -55,10 +57,12 @@
 This is a real, currently-shipping bug found during design research: `server/qrcode/router.ts`'s `generate` mutation builds a verify URL as `${...}/verify/${product.id}` (a path segment), but the only page that exists is `src/app/verify/page.tsx`, which reads `searchParams: { id, hash }` — a query-string page, not a dynamic route. **Every QR code any real customer generates today via the live dashboard 404s when scanned.** Fixing this is independent of everything else in this plan and should ship first/separately.
 
 **Files:**
+
 - Modify: `server/qrcode/router.ts:35` (inside `generate`)
 - Test: `server/routers.test.ts` (existing file already has a `describe("qrcode", ...)` block per `server/routers.test.ts:1082` — add the new test there, following the existing style in that block)
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: nothing new consumes this — it's a leaf fix.
 
@@ -123,32 +127,34 @@ the page that actually exists."
 ### Task 2: `certify_orders` table
 
 **Files:**
+
 - Modify: `src/db/schema.ts` (add near the `products`/`qrCodes` tables, `src/db/schema.ts:59-155` region)
 - Test: none (schema-only; exercised by Task 5's tests)
 
 **Interfaces:**
+
 - Produces: `certifyOrders` table, `CertifyOrder`/`InsertCertifyOrder` types, consumed by Tasks 5, 7, 9.
 
 - [ ] **Step 1: Add the table definition**
 
 ```ts
-export const certifyOrders = pgTable('certify_orders', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  productName: varchar('productName', { length: 512 }).notNull(),
-  description: text('description'),
-  manufacturerName: varchar('manufacturerName', { length: 256 }).notNull(),
-  serialNumber: varchar('serialNumber', { length: 256 }),
-  imageUrl: text('imageUrl'),
-  email: varchar('email', { length: 320 }).notNull(),
-  brand: varchar('brand', { length: 64 }).notNull(),
-  status: varchar('status', { length: 32 }).default('pending').notNull(), // pending | paid | minted | mint_failed
-  stripeSessionId: varchar('stripeSessionId', { length: 256 }),
-  productId: integer('productId'), // set once the products row is created
-  qrCodeId: integer('qrCodeId'),   // set once the qr_codes row is created
-  polygonTxHash: varchar('polygonTxHash', { length: 128 }),
-  mintError: text('mintError'), // set only on status = mint_failed, for support/refund follow-up
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+export const certifyOrders = pgTable("certify_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productName: varchar("productName", { length: 512 }).notNull(),
+  description: text("description"),
+  manufacturerName: varchar("manufacturerName", { length: 256 }).notNull(),
+  serialNumber: varchar("serialNumber", { length: 256 }),
+  imageUrl: text("imageUrl"),
+  email: varchar("email", { length: 320 }).notNull(),
+  brand: varchar("brand", { length: 64 }).notNull(),
+  status: varchar("status", { length: 32 }).default("pending").notNull(), // pending | paid | minted | mint_failed
+  stripeSessionId: varchar("stripeSessionId", { length: 256 }),
+  productId: integer("productId"), // set once the products row is created
+  qrCodeId: integer("qrCodeId"), // set once the qr_codes row is created
+  polygonTxHash: varchar("polygonTxHash", { length: 128 }),
+  mintError: text("mintError"), // set only on status = mint_failed, for support/refund follow-up
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type CertifyOrder = typeof certifyOrders.$inferSelect;
@@ -177,21 +183,24 @@ git commit -m "feat(db): add certify_orders table for self-serve certificate pur
 ### Task 3: Real mint helper (`src/lib/certify-mint.ts`)
 
 **Files:**
+
 - Create: `src/lib/certify-mint.ts`
 - Test: `tests/certify-mint.test.ts`
 
 **Interfaces:**
+
 - Consumes: `AUTHICHAIN_CONTRACT_ADDRESS`, `BLOCKCHAIN_PRIVATE_KEY`, `POLYGON_RPC_URL` (optional, defaults to `https://polygon-rpc.com`) env vars.
 - Produces: `mintCertificate(input: MintCertificateInput): Promise<MintCertificateResult>`, consumed by Task 9 (webhook branch).
+
   ```ts
   export interface MintCertificateInput {
-    to: string;               // recipient wallet address
+    to: string; // recipient wallet address
     productIdentifier: string; // must be globally unique on-chain
     manufacturer: string;
     model: string;
     serialNumber: string;
     additionalDetails: string;
-    uri: string;              // metadata JSON URL, must be non-empty
+    uri: string; // metadata JSON URL, must be non-empty
   }
   export interface MintCertificateResult {
     txHash: string;
@@ -204,16 +213,16 @@ git commit -m "feat(db): add certify_orders table for self-serve certificate pur
 
 ```ts
 // tests/certify-mint.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockWait = vi.fn();
 const mockMintProduct = vi.fn();
 
-vi.mock('ethers', () => {
+vi.mock("ethers", () => {
   return {
     ethers: {
       JsonRpcProvider: vi.fn(),
-      Wallet: vi.fn().mockImplementation(() => ({ address: '0xMinter' })),
+      Wallet: vi.fn().mockImplementation(() => ({ address: "0xMinter" })),
       Contract: vi.fn().mockImplementation(() => ({
         mintProduct: mockMintProduct,
       })),
@@ -221,65 +230,70 @@ vi.mock('ethers', () => {
   };
 });
 
-describe('mintCertificate', () => {
+describe("mintCertificate", () => {
   beforeEach(() => {
     vi.resetModules();
     mockMintProduct.mockReset();
     mockWait.mockReset();
-    process.env.AUTHICHAIN_CONTRACT_ADDRESS = '0x4da4D2675e52374639C9c954f4f653887A9972BE';
-    process.env.BLOCKCHAIN_PRIVATE_KEY = '0x' + '1'.repeat(64);
+    process.env.AUTHICHAIN_CONTRACT_ADDRESS =
+      "0x4da4D2675e52374639C9c954f4f653887A9972BE";
+    process.env.BLOCKCHAIN_PRIVATE_KEY = "0x" + "1".repeat(64);
   });
 
-  it('returns a real tx hash and token id on success', async () => {
+  it("returns a real tx hash and token id on success", async () => {
     mockWait.mockResolvedValue({
-      hash: '0xrealtxhash',
+      hash: "0xrealtxhash",
       blockNumber: 12345,
       logs: [],
     });
-    mockMintProduct.mockResolvedValue({ hash: '0xrealtxhash', wait: mockWait });
+    mockMintProduct.mockResolvedValue({ hash: "0xrealtxhash", wait: mockWait });
 
-    const { mintCertificate } = await import('../src/lib/certify-mint');
+    const { mintCertificate } = await import("../src/lib/certify-mint");
     const result = await mintCertificate({
-      to: '0xRecipient',
-      productIdentifier: 'certify-order-abc123',
-      manufacturer: 'Acme Co',
-      model: 'Widget X',
-      serialNumber: 'SN-001',
-      additionalDetails: '',
-      uri: 'https://authichain.com/api/certify/metadata/abc123',
+      to: "0xRecipient",
+      productIdentifier: "certify-order-abc123",
+      manufacturer: "Acme Co",
+      model: "Widget X",
+      serialNumber: "SN-001",
+      additionalDetails: "",
+      uri: "https://authichain.com/api/certify/metadata/abc123",
     });
 
-    expect(result.txHash).toBe('0xrealtxhash');
+    expect(result.txHash).toBe("0xrealtxhash");
     expect(result.blockNumber).toBe(12345);
   });
 
-  it('throws (does not swallow) when the chain call fails', async () => {
-    mockMintProduct.mockRejectedValue(new Error('insufficient funds for gas'));
+  it("throws (does not swallow) when the chain call fails", async () => {
+    mockMintProduct.mockRejectedValue(new Error("insufficient funds for gas"));
 
-    const { mintCertificate } = await import('../src/lib/certify-mint');
-    await expect(mintCertificate({
-      to: '0xRecipient',
-      productIdentifier: 'certify-order-def456',
-      manufacturer: 'Acme Co',
-      model: 'Widget X',
-      serialNumber: 'SN-002',
-      additionalDetails: '',
-      uri: 'https://authichain.com/api/certify/metadata/def456',
-    })).rejects.toThrow('insufficient funds for gas');
+    const { mintCertificate } = await import("../src/lib/certify-mint");
+    await expect(
+      mintCertificate({
+        to: "0xRecipient",
+        productIdentifier: "certify-order-def456",
+        manufacturer: "Acme Co",
+        model: "Widget X",
+        serialNumber: "SN-002",
+        additionalDetails: "",
+        uri: "https://authichain.com/api/certify/metadata/def456",
+      })
+    ).rejects.toThrow("insufficient funds for gas");
   });
 
-  it('throws when required env vars are missing', async () => {
+  it("throws when required env vars are missing", async () => {
     delete process.env.BLOCKCHAIN_PRIVATE_KEY;
-    const { mintCertificate } = await import('../src/lib/certify-mint');
-    await expect(mintCertificate({
-      to: '0xRecipient',
-      productIdentifier: 'certify-order-ghi789',
-      manufacturer: 'Acme Co',
-      model: 'Widget X',
-      serialNumber: 'SN-003',
-      additionalDetails: '',
-      uri: 'https://authichain.com/api/certify/metadata/ghi789',
-    })).rejects.toThrow(/Blockchain configuration missing/i);
+    const { mintCertificate } = await import("../src/lib/certify-mint");
+    await expect(
+      mintCertificate({
+        to: "0xRecipient",
+        productIdentifier: "certify-order-ghi789",
+        manufacturer: "Acme Co",
+        model: "Widget X",
+        serialNumber: "SN-003",
+        additionalDetails: "",
+        uri: "https://authichain.com/api/certify/metadata/ghi789",
+      })
+    ).rejects.toThrow(/Blockchain configuration missing/i);
   });
 });
 ```
@@ -293,11 +307,11 @@ Expected: FAIL with "Cannot find module '../src/lib/certify-mint'"
 
 ```ts
 // src/lib/certify-mint.ts
-import { ethers } from 'ethers';
+import { ethers } from "ethers";
 
 const AUTHICHAIN_NFT_ABI = [
-  'function mintProduct(address to, string productIdentifier, string manufacturer, string model, string serialNumber, string additionalDetails, string uri) public returns (uint256)',
-  'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)',
+  "function mintProduct(address to, string productIdentifier, string manufacturer, string model, string serialNumber, string additionalDetails, string uri) public returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ];
 
 export interface MintCertificateInput {
@@ -316,21 +330,31 @@ export interface MintCertificateResult {
   blockNumber: number;
 }
 
-export async function mintCertificate(input: MintCertificateInput): Promise<MintCertificateResult> {
+export async function mintCertificate(
+  input: MintCertificateInput
+): Promise<MintCertificateResult> {
   const contractAddress = process.env.AUTHICHAIN_CONTRACT_ADDRESS;
   const privateKey = process.env.BLOCKCHAIN_PRIVATE_KEY;
-  const rpcUrl = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
+  const rpcUrl = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com";
 
   if (!contractAddress || !privateKey) {
-    throw new Error('Blockchain configuration missing: AUTHICHAIN_CONTRACT_ADDRESS or BLOCKCHAIN_PRIVATE_KEY not set');
+    throw new Error(
+      "Blockchain configuration missing: AUTHICHAIN_CONTRACT_ADDRESS or BLOCKCHAIN_PRIVATE_KEY not set"
+    );
   }
   if (!input.uri) {
-    throw new Error('mintCertificate: uri is required (contract reverts InvalidTokenURI on empty uri)');
+    throw new Error(
+      "mintCertificate: uri is required (contract reverts InvalidTokenURI on empty uri)"
+    );
   }
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(privateKey, provider);
-  const contract = new ethers.Contract(contractAddress, AUTHICHAIN_NFT_ABI, wallet);
+  const contract = new ethers.Contract(
+    contractAddress,
+    AUTHICHAIN_NFT_ABI,
+    wallet
+  );
 
   const tx = await contract.mintProduct(
     input.to,
@@ -339,15 +363,15 @@ export async function mintCertificate(input: MintCertificateInput): Promise<Mint
     input.model,
     input.serialNumber,
     input.additionalDetails,
-    input.uri,
+    input.uri
   );
   const receipt = await tx.wait();
 
-  let tokenId = '0';
+  let tokenId = "0";
   for (const log of receipt.logs ?? []) {
     try {
       const parsed = contract.interface.parseLog(log);
-      if (parsed?.name === 'Transfer') {
+      if (parsed?.name === "Transfer") {
         tokenId = parsed.args.tokenId.toString();
         break;
       }
@@ -383,10 +407,12 @@ git commit -m "feat: add real Polygon mint helper for Certify, hard-fails on cha
 `mintProduct` reverts if `uri` is empty, so each mint needs a real, stable metadata URL before it can be called.
 
 **Files:**
+
 - Create: `src/app/api/certify/metadata/[productId]/route.ts`
 - Test: `tests/certify-metadata-route.test.ts`
 
 **Interfaces:**
+
 - Consumes: `getProductById` from `server/identity-db-helpers.ts`, `getDb` from `server/db.ts`.
 - Produces: a public `GET /api/certify/metadata/:productId` endpoint returning standard ERC-721 metadata JSON, consumed by Task 9 as the mint's `uri` argument (`${appUrl}/api/certify/metadata/${productId}`).
 
@@ -394,45 +420,59 @@ git commit -m "feat: add real Polygon mint helper for Certify, hard-fails on cha
 
 ```ts
 // tests/certify-metadata-route.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from "vitest";
 
-vi.mock('../server/identity-db-helpers', () => ({
+vi.mock("../server/identity-db-helpers", () => ({
   getProductById: vi.fn().mockResolvedValue({
     id: 42,
-    name: 'Acme Widget X',
-    description: 'A premium widget',
-    imageUrl: 'https://authichain.com/images/widget.png',
-    manufacturer: 'Acme Co',
-    serialNumber: 'SN-001',
-    blockchainTxHash: '0xrealtxhash',
+    name: "Acme Widget X",
+    description: "A premium widget",
+    imageUrl: "https://authichain.com/images/widget.png",
+    manufacturer: "Acme Co",
+    serialNumber: "SN-001",
+    blockchainTxHash: "0xrealtxhash",
   }),
 }));
-vi.mock('../server/db', () => ({ getDb: vi.fn().mockResolvedValue({}) }));
+vi.mock("../server/db", () => ({ getDb: vi.fn().mockResolvedValue({}) }));
 
-describe('GET /api/certify/metadata/[productId]', () => {
-  it('returns ERC-721-shaped metadata JSON', async () => {
-    const { GET } = await import('../src/app/api/certify/metadata/[productId]/route');
-    const res = await GET(new Request('https://authichain.com/api/certify/metadata/42'), {
-      params: Promise.resolve({ productId: '42' }),
-    });
+describe("GET /api/certify/metadata/[productId]", () => {
+  it("returns ERC-721-shaped metadata JSON", async () => {
+    const { GET } =
+      await import("../src/app/api/certify/metadata/[productId]/route");
+    const res = await GET(
+      new Request("https://authichain.com/api/certify/metadata/42"),
+      {
+        params: Promise.resolve({ productId: "42" }),
+      }
+    );
     const body = await res.json();
-    expect(body.name).toBe('Acme Widget X');
-    expect(body.image).toBe('https://authichain.com/images/widget.png');
+    expect(body.name).toBe("Acme Widget X");
+    expect(body.image).toBe("https://authichain.com/images/widget.png");
     expect(body.attributes).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ trait_type: 'Manufacturer', value: 'Acme Co' }),
-        expect.objectContaining({ trait_type: 'Serial Number', value: 'SN-001' }),
-      ]),
+        expect.objectContaining({
+          trait_type: "Manufacturer",
+          value: "Acme Co",
+        }),
+        expect.objectContaining({
+          trait_type: "Serial Number",
+          value: "SN-001",
+        }),
+      ])
     );
   });
 
-  it('404s for an unknown product', async () => {
-    const helpers = await import('../server/identity-db-helpers');
+  it("404s for an unknown product", async () => {
+    const helpers = await import("../server/identity-db-helpers");
     vi.mocked(helpers.getProductById).mockResolvedValueOnce(undefined as any);
-    const { GET } = await import('../src/app/api/certify/metadata/[productId]/route');
-    const res = await GET(new Request('https://authichain.com/api/certify/metadata/999'), {
-      params: Promise.resolve({ productId: '999' }),
-    });
+    const { GET } =
+      await import("../src/app/api/certify/metadata/[productId]/route");
+    const res = await GET(
+      new Request("https://authichain.com/api/certify/metadata/999"),
+      {
+        params: Promise.resolve({ productId: "999" }),
+      }
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -447,37 +487,40 @@ Expected: FAIL — route file doesn't exist yet.
 
 ```ts
 // src/app/api/certify/metadata/[productId]/route.ts
-import { NextResponse } from 'next/server';
-import { getDb } from '../../../../../../server/db';
-import { getProductById } from '../../../../../../server/identity-db-helpers';
+import { NextResponse } from "next/server";
+import { getDb } from "../../../../../../server/db";
+import { getProductById } from "../../../../../../server/identity-db-helpers";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ productId: string }> },
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   const { productId } = await params;
   const id = parseInt(productId, 10);
   if (Number.isNaN(id)) {
-    return NextResponse.json({ error: 'Invalid product id' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid product id" }, { status: 400 });
   }
 
   const db = await getDb();
   const product = await getProductById(db, id);
   if (!product) {
-    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
   return NextResponse.json({
     name: product.name,
-    description: product.description ?? '',
+    description: product.description ?? "",
     image: product.imageUrl ?? undefined,
-    external_url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://authichain.com'}/verify?id=${product.id}`,
+    external_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://authichain.com"}/verify?id=${product.id}`,
     attributes: [
-      { trait_type: 'Manufacturer', value: product.manufacturer ?? 'Unknown' },
-      { trait_type: 'Serial Number', value: product.serialNumber ?? 'N/A' },
-      { trait_type: 'Polygon Tx', value: product.blockchainTxHash ?? 'pending' },
+      { trait_type: "Manufacturer", value: product.manufacturer ?? "Unknown" },
+      { trait_type: "Serial Number", value: product.serialNumber ?? "N/A" },
+      {
+        trait_type: "Polygon Tx",
+        value: product.blockchainTxHash ?? "pending",
+      },
     ],
   });
 }
@@ -502,10 +545,12 @@ git commit -m "feat: add certificate metadata endpoint required by on-chain mint
 ### Task 5: Pending-order endpoint (`/api/certify/order`)
 
 **Files:**
+
 - Create: `src/app/api/certify/order/route.ts`
 - Test: `tests/certify-order-route.test.ts`
 
 **Interfaces:**
+
 - Consumes: `certifyOrders` table (Task 2), `getDb` from `server/db.ts`.
 - Produces: `POST /api/certify/order` → `{ orderId: string }`, consumed by Task 6 (the `/certify` page calls this before redirecting to checkout).
 
@@ -513,40 +558,40 @@ git commit -m "feat: add certificate metadata endpoint required by on-chain mint
 
 ```ts
 // tests/certify-order-route.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from "vitest";
 
 const mockInsert = vi.fn();
-vi.mock('../server/db', () => ({
+vi.mock("../server/db", () => ({
   getDb: vi.fn().mockResolvedValue({
     insert: () => ({ values: () => ({ returning: mockInsert }) }),
   }),
 }));
 
-describe('POST /api/certify/order', () => {
-  it('creates a pending certify_orders row and returns its id', async () => {
-    mockInsert.mockResolvedValue([{ id: 'order-uuid-123' }]);
-    const { POST } = await import('../src/app/api/certify/order/route');
-    const req = new Request('https://authichain.com/api/certify/order', {
-      method: 'POST',
+describe("POST /api/certify/order", () => {
+  it("creates a pending certify_orders row and returns its id", async () => {
+    mockInsert.mockResolvedValue([{ id: "order-uuid-123" }]);
+    const { POST } = await import("../src/app/api/certify/order/route");
+    const req = new Request("https://authichain.com/api/certify/order", {
+      method: "POST",
       body: JSON.stringify({
-        productName: 'Acme Widget X',
-        manufacturerName: 'Acme Co',
-        serialNumber: 'SN-001',
-        email: 'buyer@example.com',
-        brand: 'authichain',
+        productName: "Acme Widget X",
+        manufacturerName: "Acme Co",
+        serialNumber: "SN-001",
+        email: "buyer@example.com",
+        brand: "authichain",
       }),
     });
     const res = await POST(req);
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body.orderId).toBe('order-uuid-123');
+    expect(body.orderId).toBe("order-uuid-123");
   });
 
-  it('rejects a request missing required fields', async () => {
-    const { POST } = await import('../src/app/api/certify/order/route');
-    const req = new Request('https://authichain.com/api/certify/order', {
-      method: 'POST',
-      body: JSON.stringify({ productName: 'Acme Widget X' }), // missing manufacturerName/email/brand
+  it("rejects a request missing required fields", async () => {
+    const { POST } = await import("../src/app/api/certify/order/route");
+    const req = new Request("https://authichain.com/api/certify/order", {
+      method: "POST",
+      body: JSON.stringify({ productName: "Acme Widget X" }), // missing manufacturerName/email/brand
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -563,11 +608,11 @@ Expected: FAIL — route file doesn't exist yet.
 
 ```ts
 // src/app/api/certify/order/route.ts
-import { NextResponse } from 'next/server';
-import { getDb } from '../../../../../server/db';
-import { certifyOrders } from '../../../../db/schema';
+import { NextResponse } from "next/server";
+import { getDb } from "../../../../../server/db";
+import { certifyOrders } from "../../../../db/schema";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 interface CertifyOrderBody {
   productName?: string;
@@ -582,24 +627,32 @@ interface CertifyOrderBody {
 export async function POST(req: Request) {
   const body = (await req.json()) as CertifyOrderBody;
 
-  if (!body.productName || !body.manufacturerName || !body.email || !body.brand) {
+  if (
+    !body.productName ||
+    !body.manufacturerName ||
+    !body.email ||
+    !body.brand
+  ) {
     return NextResponse.json(
-      { error: 'productName, manufacturerName, email, and brand are required' },
-      { status: 400 },
+      { error: "productName, manufacturerName, email, and brand are required" },
+      { status: 400 }
     );
   }
 
   const db = await getDb();
-  const [row] = await db.insert(certifyOrders).values({
-    productName: body.productName,
-    description: body.description ?? null,
-    manufacturerName: body.manufacturerName,
-    serialNumber: body.serialNumber ?? null,
-    imageUrl: body.imageUrl ?? null,
-    email: body.email,
-    brand: body.brand,
-    status: 'pending',
-  }).returning();
+  const [row] = await db
+    .insert(certifyOrders)
+    .values({
+      productName: body.productName,
+      description: body.description ?? null,
+      manufacturerName: body.manufacturerName,
+      serialNumber: body.serialNumber ?? null,
+      imageUrl: body.imageUrl ?? null,
+      email: body.email,
+      brand: body.brand,
+      status: "pending",
+    })
+    .returning();
 
   return NextResponse.json({ orderId: row.id });
 }
@@ -624,10 +677,12 @@ git commit -m "feat: add pending certify_orders creation endpoint"
 ### Task 6: Real Stripe Price + `certify_single` plan entry
 
 **Files:**
+
 - Modify: `src/lib/plans.ts`
 - Test: none (a data/config change; exercised end-to-end in Task 9's tests and the Task 11 smoke test)
 
 **Interfaces:**
+
 - Produces: `PLANS` entry with `id: 'certify_single'`, consumed by `/api/checkout` (already generic over `PLANS`, no code change needed there for this part) and Task 9's webhook branch (`md.plan === 'certify_single'`).
 
 - [ ] **Step 1: Create the real Stripe Product + Price**
@@ -639,7 +694,15 @@ Using the Stripe MCP tools (`mcp__plugin_stripe_stripe__stripe_api_write` or equ
 In `src/lib/plans.ts`, extend the `PlanId` union and add to the `PLANS` array:
 
 ```ts
-export type PlanId = 'free' | 'starter' | 'creator' | 'studio' | 'business' | 'theater_1' | 'theater_3' | 'certify_single';
+export type PlanId =
+  | "free"
+  | "starter"
+  | "creator"
+  | "studio"
+  | "business"
+  | "theater_1"
+  | "theater_3"
+  | "certify_single";
 ```
 
 ```ts
@@ -677,9 +740,11 @@ git commit -m "feat: add certify_single plan ($19 one-time real Polygon certific
 ### Task 7: Pass `certifyOrderId` through checkout
 
 **Files:**
+
 - Modify: `src/app/api/checkout/route.ts`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: Stripe session `metadata.certify_order_id`, consumed by Task 9's webhook branch.
 
@@ -688,17 +753,20 @@ git commit -m "feat: add certify_single plan ($19 one-time real Polygon certific
 Add to (or create, following this repo's existing convention for testing API routes — check whether `src/app/api/checkout/route.ts` already has a sibling test file before creating a new one):
 
 ```ts
-it('passes certifyOrderId through as certify_order_id in Stripe metadata', async () => {
+it("passes certifyOrderId through as certify_order_id in Stripe metadata", async () => {
   // Reuse whatever Stripe-mock setup this route's existing tests already use.
-  const req = new Request('https://authichain.com/api/checkout', {
-    method: 'POST',
-    body: JSON.stringify({ planId: 'certify_single', certifyOrderId: 'order-uuid-123' }),
+  const req = new Request("https://authichain.com/api/checkout", {
+    method: "POST",
+    body: JSON.stringify({
+      planId: "certify_single",
+      certifyOrderId: "order-uuid-123",
+    }),
   });
   await POST(req);
   expect(mockStripeSessionsCreate).toHaveBeenCalledWith(
     expect.objectContaining({
-      metadata: expect.objectContaining({ certify_order_id: 'order-uuid-123' }),
-    }),
+      metadata: expect.objectContaining({ certify_order_id: "order-uuid-123" }),
+    })
   );
 });
 ```
@@ -735,9 +803,11 @@ git commit -m "feat: pass certifyOrderId through Stripe checkout metadata"
 ### Task 8: The `/certify` page
 
 **Files:**
+
 - Create: `src/app/certify/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `resolveBrand()` from `shared/brands.ts`, `POST /api/certify/order` (Task 5), existing checkout-kickoff pattern (whatever client-side helper the rest of the app already uses to call `/api/checkout` and redirect to `session.url` — reuse it rather than writing a second one; find it via the existing pricing page's "Buy" button handler before writing this).
 
 - [ ] **Step 1: Locate the existing checkout-kickoff client code**
@@ -747,43 +817,52 @@ Read whatever component currently renders the QRON pricing page's "Buy Starter P
 - [ ] **Step 2: Build the form + submit flow**
 
 ```tsx
-'use client';
-import { useState } from 'react';
-import { resolveBrand } from '../../../shared/brands';
+"use client";
+import { useState } from "react";
+import { resolveBrand } from "../../../shared/brands";
 
 export default function CertifyPage() {
   const [form, setForm] = useState({
-    productName: '', description: '', manufacturerName: '',
-    serialNumber: '', email: '',
+    productName: "",
+    description: "",
+    manufacturerName: "",
+    serialNumber: "",
+    email: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const brand = resolveBrand(typeof window !== 'undefined' ? window.location.hostname : '');
+  const brand = resolveBrand(
+    typeof window !== "undefined" ? window.location.hostname : ""
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      const orderRes = await fetch('/api/certify/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const orderRes = await fetch("/api/certify/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, brand: brand.id }),
       });
-      if (!orderRes.ok) throw new Error('Could not create order');
+      if (!orderRes.ok) throw new Error("Could not create order");
       const { orderId } = await orderRes.json();
 
-      const checkoutRes = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: 'certify_single', email: form.email, certifyOrderId: orderId }),
+      const checkoutRes = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: "certify_single",
+          email: form.email,
+          certifyOrderId: orderId,
+        }),
       });
-      if (!checkoutRes.ok) throw new Error('Could not start checkout');
+      if (!checkoutRes.ok) throw new Error("Could not start checkout");
       const { url } = await checkoutRes.json();
       window.location.href = url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : "Something went wrong");
       setSubmitting(false);
     }
   }
@@ -792,19 +871,38 @@ export default function CertifyPage() {
     <main>
       <h1>Certify Your Product — {brand.tagline}</h1>
       <form onSubmit={handleSubmit}>
-        <input required placeholder="Product name" value={form.productName}
-          onChange={(e) => setForm({ ...form, productName: e.target.value })} />
-        <input required placeholder="Manufacturer" value={form.manufacturerName}
-          onChange={(e) => setForm({ ...form, manufacturerName: e.target.value })} />
-        <input placeholder="Serial number (optional)" value={form.serialNumber}
-          onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} />
-        <textarea placeholder="Description (optional)" value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <input required type="email" placeholder="Your email" value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <input
+          required
+          placeholder="Product name"
+          value={form.productName}
+          onChange={e => setForm({ ...form, productName: e.target.value })}
+        />
+        <input
+          required
+          placeholder="Manufacturer"
+          value={form.manufacturerName}
+          onChange={e => setForm({ ...form, manufacturerName: e.target.value })}
+        />
+        <input
+          placeholder="Serial number (optional)"
+          value={form.serialNumber}
+          onChange={e => setForm({ ...form, serialNumber: e.target.value })}
+        />
+        <textarea
+          placeholder="Description (optional)"
+          value={form.description}
+          onChange={e => setForm({ ...form, description: e.target.value })}
+        />
+        <input
+          required
+          type="email"
+          placeholder="Your email"
+          value={form.email}
+          onChange={e => setForm({ ...form, email: e.target.value })}
+        />
         {error && <p role="alert">{error}</p>}
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Starting checkout…' : 'Certify My Product — $19'}
+          {submitting ? "Starting checkout…" : "Certify My Product — $19"}
         </button>
       </form>
     </main>
@@ -832,10 +930,12 @@ git commit -m "feat: add /certify self-serve purchase page"
 This is the core of the feature: on confirmed payment, create the product, mint for real, and handle mint failure honestly.
 
 **Files:**
+
 - Modify: `src/app/api/stripe/webhook/route.ts` (inside the existing `case 'checkout.session.completed':` block, `src/app/api/stripe/webhook/route.ts:152-243`)
 - Test: `tests/certify-webhook.test.ts`
 
 **Interfaces:**
+
 - Consumes: `mintCertificate` (Task 3), `createProduct`/`createQrCode` from `server/identity-db-helpers.ts`, `getDb` from `server/db.ts`, `certifyOrders` from `src/db/schema.ts`, `sendEmail` from `src/lib/email.ts` (already imported in this file).
 - Produces: nothing further consumed elsewhere — this is the terminal step of the purchase flow.
 
@@ -843,7 +943,7 @@ This is the core of the feature: on confirmed payment, create the product, mint 
 
 ```ts
 // tests/certify-webhook.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockMintCertificate = vi.fn();
 const mockCreateProduct = vi.fn();
@@ -851,15 +951,17 @@ const mockCreateQrCode = vi.fn();
 const mockUpdateCertifyOrder = vi.fn();
 const mockSendEmail = vi.fn().mockResolvedValue({ ok: true });
 
-vi.mock('../src/lib/certify-mint', () => ({ mintCertificate: mockMintCertificate }));
-vi.mock('../server/identity-db-helpers', () => ({
+vi.mock("../src/lib/certify-mint", () => ({
+  mintCertificate: mockMintCertificate,
+}));
+vi.mock("../server/identity-db-helpers", () => ({
   createProduct: mockCreateProduct,
   createQrCode: mockCreateQrCode,
 }));
-vi.mock('../src/lib/email', () => ({ sendEmail: mockSendEmail }));
+vi.mock("../src/lib/email", () => ({ sendEmail: mockSendEmail }));
 // Mock getDb / certify_orders lookup+update to return a fixed pending order row keyed by id.
 
-describe('webhook certify_single branch', () => {
+describe("webhook certify_single branch", () => {
   beforeEach(() => {
     mockMintCertificate.mockReset();
     mockCreateProduct.mockReset();
@@ -867,10 +969,14 @@ describe('webhook certify_single branch', () => {
     mockSendEmail.mockClear();
   });
 
-  it('on successful mint: creates product+qr rows, marks order minted, emails the QR', async () => {
+  it("on successful mint: creates product+qr rows, marks order minted, emails the QR", async () => {
     mockCreateProduct.mockResolvedValue({ id: 42 });
     mockCreateQrCode.mockResolvedValue({ id: 7 });
-    mockMintCertificate.mockResolvedValue({ txHash: '0xrealtx', tokenId: '5', blockNumber: 100 });
+    mockMintCertificate.mockResolvedValue({
+      txHash: "0xrealtx",
+      tokenId: "5",
+      blockNumber: 100,
+    });
 
     // Invoke the webhook's POST handler with a synthetic
     // checkout.session.completed event carrying
@@ -880,19 +986,21 @@ describe('webhook certify_single branch', () => {
 
     expect(mockMintCertificate).toHaveBeenCalled();
     expect(mockSendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ subject: expect.stringMatching(/certif/i) }),
+      expect.objectContaining({ subject: expect.stringMatching(/certif/i) })
     );
     // Assert the certify_orders update call set status: 'minted', polygonTxHash: '0xrealtx'.
   });
 
-  it('on mint failure: marks the order mint_failed with the real error, does not email a fake success', async () => {
+  it("on mint failure: marks the order mint_failed with the real error, does not email a fake success", async () => {
     mockCreateProduct.mockResolvedValue({ id: 43 });
-    mockMintCertificate.mockRejectedValue(new Error('insufficient funds for gas'));
+    mockMintCertificate.mockRejectedValue(
+      new Error("insufficient funds for gas")
+    );
 
     // Invoke the webhook the same way as above.
 
     expect(mockSendEmail).not.toHaveBeenCalledWith(
-      expect.objectContaining({ subject: expect.stringMatching(/certif/i) }),
+      expect.objectContaining({ subject: expect.stringMatching(/certif/i) })
     );
     // Assert the certify_orders update call set status: 'mint_failed',
     // mintError: expect.stringContaining('insufficient funds for gas').
@@ -900,7 +1008,7 @@ describe('webhook certify_single branch', () => {
 });
 ```
 
-Fill in the exact Stripe-event-construction and `certify_orders` DB-mock wiring to match whatever pattern this file's *existing* webhook tests already use (check for a sibling `route.test.ts` next to `src/app/api/stripe/webhook/route.ts` before inventing a new harness).
+Fill in the exact Stripe-event-construction and `certify_orders` DB-mock wiring to match whatever pattern this file's _existing_ webhook tests already use (check for a sibling `route.test.ts` next to `src/app/api/stripe/webhook/route.ts` before inventing a new harness).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -912,7 +1020,7 @@ Expected: FAIL — no `certify_single` branch exists yet.
 Inside `src/app/api/stripe/webhook/route.ts`, in the `case 'checkout.session.completed':` block, after the existing `const plan = md.plan;` line and before the generic `provisionPurchase` call for the ordinary case, add:
 
 ```ts
-if (plan === 'certify_single' && md.certify_order_id) {
+if (plan === "certify_single" && md.certify_order_id) {
   await handleCertifyOrder(md.certify_order_id, brand);
   break; // certify orders don't go through the generic credits/subscription provisioning path
 }
@@ -921,17 +1029,25 @@ if (plan === 'certify_single' && md.certify_order_id) {
 And add the handler function (near the top of the file, alongside the existing `creditReferral` helper):
 
 ```ts
-async function handleCertifyOrder(certifyOrderId: string, brand: string): Promise<void> {
-  const { getDb } = await import('../../../../server/db');
-  const { certifyOrders } = await import('../../../db/schema');
-  const { createProduct, createQrCode } = await import('../../../../server/identity-db-helpers');
-  const { mintCertificate } = await import('@/lib/certify-mint');
-  const { eq } = await import('drizzle-orm');
-  const QRCode = (await import('qrcode')).default;
+async function handleCertifyOrder(
+  certifyOrderId: string,
+  brand: string
+): Promise<void> {
+  const { getDb } = await import("../../../../server/db");
+  const { certifyOrders } = await import("../../../db/schema");
+  const { createProduct, createQrCode } =
+    await import("../../../../server/identity-db-helpers");
+  const { mintCertificate } = await import("@/lib/certify-mint");
+  const { eq } = await import("drizzle-orm");
+  const QRCode = (await import("qrcode")).default;
 
   const db = await getDb();
-  const [order] = await db.select().from(certifyOrders).where(eq(certifyOrders.id, certifyOrderId)).limit(1);
-  if (!order || order.status !== 'pending') return; // already processed or unknown -- idempotent no-op
+  const [order] = await db
+    .select()
+    .from(certifyOrders)
+    .where(eq(certifyOrders.id, certifyOrderId))
+    .limit(1);
+  if (!order || order.status !== "pending") return; // already processed or unknown -- idempotent no-op
 
   const product = await createProduct(db, {
     userId: 0, // system-owned; self-serve certify purchases aren't tied to a dashboard account
@@ -941,31 +1057,35 @@ async function handleCertifyOrder(certifyOrderId: string, brand: string): Promis
     imageUrl: order.imageUrl,
     serialNumber: order.serialNumber,
     manufacturer: order.manufacturerName,
-    status: 'active',
+    status: "active",
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://authichain.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://authichain.com";
   const metadataUri = `${appUrl}/api/certify/metadata/${product.id}`;
 
   try {
     const mintResult = await mintCertificate({
-      to: process.env.CERTIFY_CUSTODIAL_WALLET_ADDRESS ?? '', // see Task 9 Step 4 note
+      to: process.env.CERTIFY_CUSTODIAL_WALLET_ADDRESS ?? "", // see Task 9 Step 4 note
       productIdentifier: `certify-${certifyOrderId}`,
       manufacturer: order.manufacturerName,
       model: order.productName,
-      serialNumber: order.serialNumber ?? '',
-      additionalDetails: order.description ?? '',
+      serialNumber: order.serialNumber ?? "",
+      additionalDetails: order.description ?? "",
       uri: metadataUri,
     });
 
-    const { updateProduct } = await import('../../../../server/identity-db-helpers');
+    const { updateProduct } =
+      await import("../../../../server/identity-db-helpers");
     await updateProduct(db, product.id, {
       blockchainTxHash: mintResult.txHash,
       nftTokenId: mintResult.tokenId,
     });
 
     const verifyUrl = `${appUrl}/verify?id=${product.id}`;
-    const qrImageUrl = await QRCode.toDataURL(verifyUrl, { width: 400, margin: 2 });
+    const qrImageUrl = await QRCode.toDataURL(verifyUrl, {
+      width: 400,
+      margin: 2,
+    });
     const qrRow = await createQrCode(db, {
       productId: product.id,
       userId: 0,
@@ -973,41 +1093,48 @@ async function handleCertifyOrder(certifyOrderId: string, brand: string): Promis
       qrImageUrl,
     });
 
-    await db.update(certifyOrders).set({
-      status: 'minted',
-      productId: product.id,
-      qrCodeId: qrRow.id,
-      polygonTxHash: mintResult.txHash,
-      updatedAt: new Date(),
-    }).where(eq(certifyOrders.id, certifyOrderId));
+    await db
+      .update(certifyOrders)
+      .set({
+        status: "minted",
+        productId: product.id,
+        qrCodeId: qrRow.id,
+        polygonTxHash: mintResult.txHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(certifyOrders.id, certifyOrderId));
 
-    const { sendEmail } = await import('@/lib/email');
+    const { sendEmail } = await import("@/lib/email");
     await sendEmail({
       to: order.email,
-      from: 'AuthiChain <billing@authichain.com>',
-      subject: 'Your product is certified on Polygon',
+      from: "AuthiChain <billing@authichain.com>",
+      subject: "Your product is certified on Polygon",
       html: `<p>Your certificate for <strong>${order.productName}</strong> is live.</p>
              <p>Verify it any time: <a href="${verifyUrl}">${verifyUrl}</a></p>
              <p>On-chain transaction: <a href="https://polygonscan.com/tx/${mintResult.txHash}">${mintResult.txHash}</a></p>
              <img src="${qrImageUrl}" alt="Certificate QR code" width="300" />`,
     });
   } catch (mintErr) {
-    const message = mintErr instanceof Error ? mintErr.message : String(mintErr);
-    await db.update(certifyOrders).set({
-      status: 'mint_failed',
-      productId: product.id,
-      mintError: message,
-      updatedAt: new Date(),
-    }).where(eq(certifyOrders.id, certifyOrderId));
+    const message =
+      mintErr instanceof Error ? mintErr.message : String(mintErr);
+    await db
+      .update(certifyOrders)
+      .set({
+        status: "mint_failed",
+        productId: product.id,
+        mintError: message,
+        updatedAt: new Date(),
+      })
+      .where(eq(certifyOrders.id, certifyOrderId));
     // Deliberately do not email a success message or fabricate a tx hash --
     // the customer paid for something that didn't get delivered; this state
     // is surfaced for manual follow-up (refund or retry), not hidden.
-    console.error('[certify] Mint failed for order', certifyOrderId, message);
+    console.error("[certify] Mint failed for order", certifyOrderId, message);
   }
 }
 ```
 
-**Note for Task 9 Step 4 (flagged, not resolved here):** `to: process.env.CERTIFY_CUSTODIAL_WALLET_ADDRESS` is a placeholder decision, not placeholder code — the plan needs one real answer for *whose* wallet address receives the minted NFT for a self-serve buyer who doesn't have their own crypto wallet. The straightforward MVP answer is a custodial address the owner controls (e.g. the same deployer wallet, or a second wallet reserved for holding customer certs on their behalf until/unless a transfer flow is built) — set this as one more real env var before Task 11's live test, not resolved by writing code now.
+**Note for Task 9 Step 4 (flagged, not resolved here):** `to: process.env.CERTIFY_CUSTODIAL_WALLET_ADDRESS` is a placeholder decision, not placeholder code — the plan needs one real answer for _whose_ wallet address receives the minted NFT for a self-serve buyer who doesn't have their own crypto wallet. The straightforward MVP answer is a custodial address the owner controls (e.g. the same deployer wallet, or a second wallet reserved for holding customer certs on their behalf until/unless a transfer flow is built) — set this as one more real env var before Task 11's live test, not resolved by writing code now.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1031,10 +1158,12 @@ fabrication, and this path is designed not to repeat it."
 ### Task 10: Success page
 
 **Files:**
+
 - Create: `src/app/certify/success/page.tsx`
 - Modify: `src/app/api/checkout/route.ts` — make the success redirect plan-aware (currently every plan hardcodes `/success`)
 
 **Interfaces:**
+
 - Consumes: `certifyOrders` lookup by `stripeSessionId` (requires storing the Stripe session id on the order — add this in Task 9's handler, or note it here and wire it: after `stripe.checkout.sessions.create` in `/api/checkout`, when `certifyOrderId` is present, update that `certify_orders` row's `stripeSessionId` before returning — small addition to Task 7 instead of a new step, revisit Task 7 Step 3 to include it).
 
 - [ ] **Step 1: Add success-path awareness to checkout**
@@ -1057,11 +1186,11 @@ success_url: `${origin}${plan.successPath ?? '/success'}?session_id={CHECKOUT_SE
 
 ```tsx
 // src/app/certify/success/page.tsx
-import { getDb } from '../../../../server/db';
-import { certifyOrders } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { getDb } from "../../../../server/db";
+import { certifyOrders } from "../../../db/schema";
+import { eq } from "drizzle-orm";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function CertifySuccessPage({
   searchParams,
@@ -1072,24 +1201,48 @@ export default async function CertifySuccessPage({
   if (!session_id) return <p>Missing session.</p>;
 
   const db = await getDb();
-  const [order] = await db.select().from(certifyOrders)
-    .where(eq(certifyOrders.stripeSessionId, session_id)).limit(1);
+  const [order] = await db
+    .select()
+    .from(certifyOrders)
+    .where(eq(certifyOrders.stripeSessionId, session_id))
+    .limit(1);
 
-  if (!order) return <p>We couldn't find your order yet — check back in a moment.</p>;
+  if (!order)
+    return <p>We couldn't find your order yet — check back in a moment.</p>;
 
-  if (order.status === 'minted') {
+  if (order.status === "minted") {
     return (
       <main>
         <h1>Your certificate is live</h1>
-        <p>Verify it any time: <a href={`/verify?id=${order.productId}`}>/verify?id={order.productId}</a></p>
-        <p>On-chain proof: <a href={`https://polygonscan.com/tx/${order.polygonTxHash}`}>{order.polygonTxHash}</a></p>
+        <p>
+          Verify it any time:{" "}
+          <a href={`/verify?id=${order.productId}`}>
+            /verify?id={order.productId}
+          </a>
+        </p>
+        <p>
+          On-chain proof:{" "}
+          <a href={`https://polygonscan.com/tx/${order.polygonTxHash}`}>
+            {order.polygonTxHash}
+          </a>
+        </p>
       </main>
     );
   }
-  if (order.status === 'mint_failed') {
-    return <p>Payment received, but minting hit a problem. We're on it — check your email.</p>;
+  if (order.status === "mint_failed") {
+    return (
+      <p>
+        Payment received, but minting hit a problem. We're on it — check your
+        email.
+      </p>
+    );
   }
-  return <p>Finishing up your certificate — this page will show the real result once it's ready. Refresh in a few seconds.</p>;
+  return (
+    <p>
+      Finishing up your certificate — this page will show the real result once
+      it's ready. Refresh in a few seconds.
+    </p>
+  );
 }
 ```
 

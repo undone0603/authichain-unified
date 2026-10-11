@@ -11,6 +11,7 @@ AuthiChain has a comprehensive A/B testing system to maximize conversion across 
 ### Database Schema
 
 **Core Tables:**
+
 - `ab_tests` — Test metadata (name, hypothesis, variants, status, winner)
 - `ab_test_results` — Per-lead tracking (conversions, email metrics, LinkedIn metrics)
 - `ab_test_variants` — Template variants (email HTML, LinkedIn text, pricing JSON)
@@ -18,6 +19,7 @@ AuthiChain has a comprehensive A/B testing system to maximize conversion across 
 - `leads` — Enhanced with `ab_variant`, `ab_test_id`, pricing/email/LinkedIn assignments
 
 ### Key Columns on `leads`
+
 - `ab_variant` — 'A' or 'B' (random 50/50 assignment)
 - `ab_test_id` — Foreign key to test
 - `pricing_tier_assigned` — Pricing variant assigned
@@ -53,6 +55,7 @@ pnpm exec ts-node scripts/email-templates-ab.ts 1
 ```
 
 This populates `ab_test_variants` with:
+
 - **Variant A**: "Proposal: Blockchain Authentication for {{company}}" (professional)
 - **Variant B**: "Your $2M Opportunity: Blockchain Authentication" (ROI-focused)
 
@@ -81,6 +84,7 @@ Each lead is randomly assigned to either Variant A or B (50/50 split).
 ### 5. Track Results
 
 As campaigns run:
+
 - Email campaigns send variant-specific templates based on `lead.email_variant_assigned`
 - Email metrics update: `email_sent`, `email_opened`, `email_clicked`, `email_replied`
 - LinkedIn engagement is tracked: impressions, likes, comments, shares
@@ -100,6 +104,7 @@ pnpm exec ts-node scripts/ab-test-report.ts --test-id 1 --format csv --export re
 ```
 
 **Sample Output:**
+
 ```
 ═══════════════════════════════════════════════════════════════════════════
 VARIANT A vs VARIANT B
@@ -145,6 +150,7 @@ VARIANT A vs VARIANT B
 **Tone:** Formal, feature-focused, technical benefits first.
 
 **Key Elements:**
+
 - Blockchain architecture details (ERC-721, Polygon network)
 - Compliance features (SOC 2, ISO 27001)
 - Implementation timeline
@@ -159,6 +165,7 @@ VARIANT A vs VARIANT B
 **Tone:** Friendly, pain-point-driven, urgency + social proof.
 
 **Key Elements:**
+
 - $2–5M annual counterfeit loss (industry average)
 - Real customer success story ($2.1M fraud prevented)
 - Clear ROI breakdown
@@ -180,7 +187,8 @@ Use `{{name}}`, `{{company}}`, `{{industry}}` in both HTML and text versions. Th
 
 **Key Hook:** "Immutable Verification — Every product sealed on the blockchain."
 
-**Best For:** 
+**Best For:**
+
 - LinkedIn audiences: CTOs, security professionals, compliance leaders
 - Content calendar: Technical deep-dives
 - Engagement: Comments from experts
@@ -192,6 +200,7 @@ Use `{{name}}`, `{{company}}`, `{{industry}}` in both HTML and text versions. Th
 **Key Hook:** "A government agency prevented a $2.1M counterfeit procurement fraud in 60 days."
 
 **Best For:**
+
 - LinkedIn audiences: Decision-makers, business leaders
 - Content calendar: Customer success stories
 - Engagement: Shares, emotional resonance
@@ -214,7 +223,7 @@ Use `{{name}}`, `{{company}}`, `{{industry}}` in both HTML and text versions. Th
 **Strategy:** Round numbers, traditional tier structure.
 
 | Tier       | A/Month | Features                             |
-|------------|---------|--------------------------------------|
+| ---------- | ------- | ------------------------------------ |
 | Starter    | $29     | 100 QR/mo, basic auth, email support |
 | Pro        | $199    | Unlimited QR, advanced auth, API     |
 | Enterprise | $999    | Everything + SLA, white-label        |
@@ -224,12 +233,13 @@ Use `{{name}}`, `{{company}}`, `{{industry}}` in both HTML and text versions. Th
 **Strategy:** Psychological pricing ($X.99 effect), anchor lower tiers.
 
 | Tier       | B/Month | Features                             |
-|------------|---------|--------------------------------------|
+| ---------- | ------- | ------------------------------------ |
 | Starter    | $24     | 100 QR/mo, basic auth, email support |
 | Pro        | $179    | Unlimited QR, advanced auth, API     |
 | Enterprise | $899    | Everything + SLA, white-label        |
 
 **Rationale:**
+
 - Lower anchor ($24 vs $29) makes Pro tier seem more valuable
 - Charm pricing ($179, $899) feels cheaper than round numbers
 - May increase conversion 5–12% despite lower price
@@ -288,24 +298,27 @@ When sending emails, reference the variant:
 const lead = await db.query.leads.findFirst({ where: eq(leads.id, leadId) });
 
 const emailTemplate = await supabase
-  .from('ab_test_variants')
-  .select('*')
-  .eq('ab_test_id', lead.ab_test_id)
-  .eq('variant_name', lead.ab_variant)
+  .from("ab_test_variants")
+  .select("*")
+  .eq("ab_test_id", lead.ab_test_id)
+  .eq("variant_name", lead.ab_variant)
   .single();
 
 // Send with variant
 await resend.emails.send({
-  subject: emailTemplate.subject.replace('{{company}}', lead.company),
-  html: emailTemplate.html_content.replace('{{name}}', lead.name),
+  subject: emailTemplate.subject.replace("{{company}}", lead.company),
+  html: emailTemplate.html_content.replace("{{name}}", lead.name),
   // ...
 });
 
 // Log result
-await supabase.from('ab_test_results').update({
-  email_sent: true,
-  email_sent_at: new Date(),
-}).eq('lead_id', leadId);
+await supabase
+  .from("ab_test_results")
+  .update({
+    email_sent: true,
+    email_sent_at: new Date(),
+  })
+  .eq("lead_id", leadId);
 ```
 
 ### LinkedIn Posting
@@ -314,10 +327,10 @@ When posting, reference the variant:
 
 ```typescript
 const variant = await supabase
-  .from('ab_test_variants')
-  .select('*')
-  .eq('variant_type', 'linkedin_post')
-  .eq('variant_name', assignedVariant) // 'A' or 'B'
+  .from("ab_test_variants")
+  .select("*")
+  .eq("variant_type", "linkedin_post")
+  .eq("variant_name", assignedVariant) // 'A' or 'B'
   .single();
 
 // Post with variant text + hashtags
@@ -339,21 +352,24 @@ const lead = await db.query.leads.findFirst({ where: eq(leads.id, leadId) });
 
 // Get assigned pricing tier variant
 const pricingVariant = await supabase
-  .from('ab_test_variants')
-  .select('pricing_json')
-  .eq('ab_test_id', lead.ab_test_id)
-  .eq('variant_name', lead.ab_variant) // 'A' or 'B'
+  .from("ab_test_variants")
+  .select("pricing_json")
+  .eq("ab_test_id", lead.ab_test_id)
+  .eq("variant_name", lead.ab_variant) // 'A' or 'B'
   .single();
 
 // Render tiers from pricingVariant.pricing_json
 // User selects tier → log to ab_test_results.pricing_selected
 
 if (userPurchases) {
-  await supabase.from('ab_test_results').update({
-    pricing_purchased: true,
-    deal_converted: true,
-    deal_size: totalAmount,
-  }).eq('lead_id', leadId);
+  await supabase
+    .from("ab_test_results")
+    .update({
+      pricing_purchased: true,
+      deal_converted: true,
+      deal_size: totalAmount,
+    })
+    .eq("lead_id", leadId);
 }
 ```
 
@@ -368,20 +384,21 @@ if (userPurchases) {
 **Target:** Achieve >30 per variant for statistical significance.
 
 **Interpretation:**
+
 - 5%+ difference = meaningful (typically recommended to switch)
 - 2–5% difference = monitor further (continue test)
 - <2% difference = statistically unclear (likely no real difference)
 
 ### Secondary Metrics
 
-| Metric                  | What It Means                                      |
-|-------------------------|---------------------------------------------------|
-| Email Open Rate         | How compelling the subject line is                |
-| Email Click Rate        | How relevant the email body is                     |
-| Email Reply Rate        | How engaging the CTA is                           |
-| LinkedIn Engagement Rate| How much the post angle resonates                 |
-| Average Deal Size       | Whether variant attracts different deal values    |
-| Revenue Per Variant     | Total revenue generated (most important for ROI)  |
+| Metric                   | What It Means                                    |
+| ------------------------ | ------------------------------------------------ |
+| Email Open Rate          | How compelling the subject line is               |
+| Email Click Rate         | How relevant the email body is                   |
+| Email Reply Rate         | How engaging the CTA is                          |
+| LinkedIn Engagement Rate | How much the post angle resonates                |
+| Average Deal Size        | Whether variant attracts different deal values   |
+| Revenue Per Variant      | Total revenue generated (most important for ROI) |
 
 ### Statistical Significance
 
@@ -392,6 +409,7 @@ The report uses Chi-squared test (1 degree of freedom):
 - **p-value > 0.05** = Difference likely due to randomness; keep testing
 
 **When to stop:**
+
 - 30+ participants per variant + p < 0.05 = **declare winner**
 - 50+ participants + no significance = **likely no real difference** (end test)
 
@@ -400,20 +418,25 @@ The report uses Chi-squared test (1 degree of freedom):
 ## Common Pitfalls
 
 ### 1. **Peeking at Results Too Early**
+
 Running report after 5 leads converted is premature. Minimum 30 per variant.
 
 ### 2. **Changing Variants Mid-Test**
+
 Invalidates results. Run separate tests instead.
 
 ### 3. **Not Tracking All Interactions**
+
 Missing email opens or LinkedIn engagement loses signal. Ensure tracking is complete.
 
 ### 4. **Confusing Correlation with Causation**
+
 Variant B had higher conversions → was it the variant or external factors (seasonality, campaign timing, lead quality)?
 
 **Solution:** Randomize assignment and run multiple tests.
 
 ### 5. **Declaring Winner Too Early**
+
 4.33% difference with p=0.02 and only 50 leads = risky. Ideally 100+ per variant.
 
 ---
@@ -423,12 +446,14 @@ Variant B had higher conversions → was it the variant or external factors (sea
 Once a winner is declared (p < 0.05, 30+ participants per variant):
 
 1. **Create a new deployment**
+
    ```bash
    INSERT INTO ab_tests (name, status, hypothesis_type)
    VALUES ('Email Variant B Rollout', 'running', 'email');
    ```
 
 2. **Assign all new leads to winning variant**
+
    ```bash
    pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 2 --email
    # (Script checks test type and always assigns 'B')
@@ -459,6 +484,7 @@ pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 1 --limit 500 --email -
 ```
 
 **Options:**
+
 - `--test-id` (required): Test ID
 - `--limit` (optional): Max leads (default 100)
 - `--email`: Assign email template variants
@@ -498,16 +524,19 @@ pnpm exec ts-node scripts/ab-test-report.ts --test-id 1 --format csv --export re
 ## Expected Results
 
 **Baseline (No Test):**
+
 - Proposal email open rate: ~20–25%
 - Click rate: ~4–6%
 - Conversion rate: ~2–4%
 
 **After Winning A/B Test (Typical):**
+
 - Email variant: +8–15% open rate, +5–10% click rate
 - LinkedIn variant: +20–40% engagement rate
 - Pricing variant: +5–12% conversion rate, $50–150k additional ARR with 258 proposals
 
 **3–6 Month Impact:**
+
 - Testing 3–4 variables = 10–50% conversion lift
 - Estimated ARR increase: $250k–$1M+ (at $5–20k ACV)
 

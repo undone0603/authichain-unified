@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const schema = `
 CREATE TABLE IF NOT EXISTS "products" (
@@ -60,15 +60,16 @@ CREATE INDEX IF NOT EXISTS "idx_redirect_qron" ON "redirect_rules" ("qron_id");
 
 async function update() {
   try {
-    console.log('Updating database schema...');
+    console.log("Updating database schema...");
     await sql.unsafe(schema);
-    console.log('✅ Schema updated: Products, Certifications, and Redirect Rules added.');
+    console.log(
+      "✅ Schema updated: Products, Certifications, and Redirect Rules added."
+    );
   } catch (err) {
-    console.error('❌ Update failed:', err.message);
+    console.error("❌ Update failed:", err.message);
   } finally {
     process.exit();
   }
 }
 
 update();
-

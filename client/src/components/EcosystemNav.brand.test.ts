@@ -11,12 +11,14 @@ import { BrandProvider } from "../contexts/BrandContext";
 // react-dom/server reproduces the render-time throw in the node vitest env.
 describe("EcosystemNav requires a mounted BrandProvider", () => {
   it("throws when rendered without a BrandProvider (the pre-fix crash)", () => {
-    expect(() => renderToStaticMarkup(createElement(EcosystemNav))).toThrow(/BrandProvider/);
+    expect(() => renderToStaticMarkup(createElement(EcosystemNav))).toThrow(
+      /BrandProvider/
+    );
   });
 
   it("renders the ecosystem strip when wrapped in a BrandProvider (the fix)", () => {
     const html = renderToStaticMarkup(
-      createElement(BrandProvider, null, createElement(EcosystemNav)),
+      createElement(BrandProvider, null, createElement(EcosystemNav))
     );
     expect(html).toContain("AuthiChain");
     expect(html).toContain("QRON");

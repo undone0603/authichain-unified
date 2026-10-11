@@ -5,7 +5,7 @@
  * attributes, passing everything else through as valid Markdown.
  */
 export function mdxToCleanMarkdown(raw: string): string {
-  const lines = raw.split("\n");
+  const lines = raw.split('\n');
   const out: string[] = [];
   let inJsxBlock = false;
   let jsxDepth = 0;
@@ -13,15 +13,11 @@ export function mdxToCleanMarkdown(raw: string): string {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed.startsWith("export ") || trimmed.startsWith("import ")) {
+    if (trimmed.startsWith('export ') || trimmed.startsWith('import ')) {
       continue;
     }
 
-    if (
-      !inJsxBlock &&
-      trimmed.startsWith("<div ") &&
-      trimmed.includes("className=")
-    ) {
+    if (!inJsxBlock && trimmed.startsWith('<div ') && trimmed.includes('className=')) {
       inJsxBlock = true;
       jsxDepth = 1;
       continue;
@@ -41,7 +37,7 @@ export function mdxToCleanMarkdown(raw: string): string {
     out.push(line);
   }
 
-  let result = out.join("\n");
-  result = result.replace(/^\n+/, "\n").trim();
+  let result = out.join('\n');
+  result = result.replace(/^\n+/, '\n').trim();
   return result;
 }

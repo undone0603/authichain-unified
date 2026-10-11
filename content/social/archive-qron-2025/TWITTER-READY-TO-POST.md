@@ -1,6 +1,7 @@
 > Imported from Undone0603 sibling repo on 2026-09-20. Historical prices scrubbed — use live Stripe/`plans.ts` only.
 
 # 🐦 TWITTER/X - READY TO POST
+
 ## Copy, Paste, Attach Image, Send
 
 ---
@@ -8,13 +9,14 @@
 # LAUNCH DAY THREAD (Use Sample #4 - Cosmic Nebula as hero)
 
 ## Tweet 1 (ATTACH: Cosmic Nebula - Sample 4)
+
 ```
 Your QR codes are boring.
 
 Here's what a QR code SHOULD look like 👇
 
 🌌 AI-generated art
-📱 100% scannable  
+📱 100% scannable
 ⚡ 3 seconds to create
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
 
@@ -24,6 +26,7 @@ qron.space
 ```
 
 ## Tweet 2 (ATTACH: Neon Glitch - Sample 1)
+
 ```
 9 styles. Infinite possibilities.
 
@@ -41,6 +44,7 @@ More styles below 👇
 ```
 
 ## Tweet 3 (ATTACH: Holographic Mosaic - Sample 2)
+
 ```
 "HOLOGRAPHIC MOSAIC" mode.
 
@@ -54,6 +58,7 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ```
 
 ## Tweet 4 (ATTACH: Matrix Cascade - Sample 3)
+
 ```
 "MATRIX CASCADE" mode.
 
@@ -67,6 +72,7 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ```
 
 ## Tweet 5 (ATTACH: Aurora Dreams - Sample 8)
+
 ```
 "AURORA DREAMS" mode.
 
@@ -80,11 +86,12 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ```
 
 ## Tweet 6 (Call to Action)
+
 ```
 8 more styles available:
 
 🔮 Bioluminescent Deep
-💎 Prism Shift  
+💎 Prism Shift
 🌊 Teal Pulse
 ✨ And more coming...
 
@@ -103,6 +110,7 @@ Create yours: qron.space
 # STANDALONE VIRAL TWEETS
 
 ## Tweet A - The Hook (ATTACH: Sample 4 - Cosmic Nebula)
+
 ```
 Stop putting ugly QR codes on your products.
 
@@ -114,6 +122,7 @@ qron.space
 ```
 
 ## Tweet B - Restaurant Focus (ATTACH: Sample 7 - Teal Pulse)
+
 ```
 Restaurant owners:
 
@@ -125,6 +134,7 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ```
 
 ## Tweet C - Before/After Hook
+
 ```
 BEFORE: Ugly black squares that nobody wants to scan
 AFTER: Art that demands attention
@@ -139,6 +149,7 @@ qron.space
 ```
 
 ## Tweet D - Build In Public (ATTACH: Sample 2 - Holographic)
+
 ```
 Week 1 of building QRON:
 
@@ -158,6 +169,7 @@ qron.space
 ```
 
 ## Tweet E - Social Proof Setup
+
 ```
 DM from a restaurant owner yesterday:
 
@@ -171,6 +183,7 @@ qron.space
 ```
 
 ## Tweet F - Hot Take (ATTACH: Sample 6 - Prism Shift)
+
 ```
 Hot take:
 
@@ -182,6 +195,7 @@ Stand out for See live pricing at [qron.space/pricing](https://qron.space/pricin
 ```
 
 ## Tweet G - Comparison
+
 ```
 Cost comparison:
 
@@ -198,6 +212,7 @@ qron.space
 ```
 
 ## Tweet H - Event Planners (ATTACH: Sample 4 - Cosmic)
+
 ```
 Event planners:
 
@@ -211,6 +226,7 @@ qron.space
 ```
 
 ## Tweet I - Cannabis/AuthiChain (ATTACH: Sample 8 - Aurora)
+
 ```
 Cannabis brands:
 
@@ -225,6 +241,7 @@ Coming soon.
 ```
 
 ## Tweet J - Real Estate (ATTACH: Sample 6 - Prism)
+
 ```
 Realtors:
 
@@ -244,6 +261,7 @@ qron.space
 # ENGAGEMENT TWEETS (No Image Required)
 
 ## Tweet K - Question
+
 ```
 Quick poll:
 
@@ -256,6 +274,7 @@ Would you be more likely to scan a QR code if it looked like:
 ```
 
 ## Tweet L - Engagement Bait
+
 ```
 Drop your business type below 👇
 
@@ -265,6 +284,7 @@ I'll tell you which QRON style would work best for your brand.
 ```
 
 ## Tweet M - Value Post
+
 ```
 The psychology of QR codes:
 
@@ -282,6 +302,7 @@ qron.space
 # WEEKLY CONTENT CALENDAR
 
 ## Monday - Motivation
+
 ```
 New week energy.
 
@@ -293,6 +314,7 @@ Upgrade from boring: qron.space
 ```
 
 ## Tuesday - Tip/Value
+
 ```
 QR code tip:
 
@@ -306,6 +328,7 @@ qron.space
 ```
 
 ## Wednesday - Showcase
+
 ```
 Style spotlight: [STYLE NAME]
 
@@ -319,6 +342,7 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ```
 
 ## Thursday - Social Proof
+
 ```
 Another happy QRON customer:
 
@@ -330,6 +354,7 @@ Your turn: qron.space
 ```
 
 ## Friday - Weekend CTA
+
 ```
 Weekend project idea:
 
@@ -347,11 +372,13 @@ qron.space
 # REPLY TEMPLATES
 
 ## When someone asks about scannability:
+
 ```
 Great question! Every QRON portal is tested for 98% scan success rate. The AI preserves the QR data patterns while transforming the aesthetics. If it doesn't scan, full refund guaranteed. 🎯
 ```
 
 ## When someone asks about pricing:
+
 ```
 See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)). depending on style complexity:
 
@@ -363,11 +390,13 @@ Free preview before you buy!
 ```
 
 ## When someone compliments the design:
+
 ```
 Thanks! 🙏 The AI does incredible work. Each one takes about 3 seconds to generate. Want me to DM you a sample for your [business type]?
 ```
 
 ## When someone asks how it works:
+
 ```
 Super simple:
 1. Enter your URL

@@ -12,6 +12,7 @@ The QRON platform operates as a unified codebase serving four distinct branded e
 - **strainchain.io**: Industrial Provenance & Digital Product Passports (DPP).
 
 ### Routing Logic
+
 Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
 
 ## Tech Stack
@@ -24,17 +25,21 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 ## Getting Started
 
 1.  **Setup Environment**:
+
     ```bash
     cp .env.example .env
     ```
+
     Fill in your database and Cloudflare credentials.
 
 2.  **Install Dependencies**:
+
     ```bash
     npm install
     ```
 
 3.  **Run Development Server**:
+
     ```bash
     npm run dev
     ```
@@ -56,13 +61,15 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 ## Legal & Intellectual Property
 
 ### Licensing
+
 This project is licensed under the **AuthiChain Proprietary License**. See `LICENSE.md` for full terms. Unauthorized reproduction, distribution, or reverse engineering of the AuthiChain Protocol or its multi-domain routing architecture is strictly prohibited.
 
 ### Privacy & Security
+
 - **Privacy Policy**: Accessible at `/privacy`.
 - **Terms of Service**: Accessible at `/terms`.
 - **Security Disclosure**: See `SECURITY.md` for our vulnerability reporting process.
 
 ### Copyright
-Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.
 
+Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.

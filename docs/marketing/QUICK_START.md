@@ -12,19 +12,20 @@
 
 ## Files You Need to Know About
 
-| File | Status | What It Does |
-|------|--------|-------------|
-| `scripts/score-opportunities.ts` | ✏️ UPDATED | Scores opportunities, gates at 70/60 thresholds |
-| `scripts/qualify-leads.ts` | ✨ NEW | Converts scores into qualified leads with 4-dim breakdown |
-| `drizzle/migrations/015_lead_scoring_pipeline.sql` | ✨ NEW | Adds DB columns & indexes |
-| `gov-engine-lead-pipeline.md` | 📖 NEW | Full architecture guide |
-| `../operations/INTEGRATION_CHECKLIST.md` | 📖 NEW | Step-by-step deploy |
+| File                                               | Status     | What It Does                                              |
+| -------------------------------------------------- | ---------- | --------------------------------------------------------- |
+| `scripts/score-opportunities.ts`                   | ✏️ UPDATED | Scores opportunities, gates at 70/60 thresholds           |
+| `scripts/qualify-leads.ts`                         | ✨ NEW     | Converts scores into qualified leads with 4-dim breakdown |
+| `drizzle/migrations/015_lead_scoring_pipeline.sql` | ✨ NEW     | Adds DB columns & indexes                                 |
+| `gov-engine-lead-pipeline.md`                      | 📖 NEW     | Full architecture guide                                   |
+| `../operations/INTEGRATION_CHECKLIST.md`           | 📖 NEW     | Step-by-step deploy                                       |
 
 ---
 
 ## Deploy in 5 Steps
 
 ### 1. Apply Migration
+
 ```bash
 # Backup first, then:
 supabase migration up
@@ -32,12 +33,14 @@ supabase migration up
 ```
 
 ### 2. Test Locally (Dry Run)
+
 ```bash
 DRY_RUN=true pnpm tsx scripts/score-opportunities.ts
 DRY_RUN=true pnpm tsx scripts/qualify-leads.ts
 ```
 
 ### 3. Add to GitHub Actions
+
 ```yaml
 - name: Qualify High-Fit Leads
   run: pnpm tsx scripts/qualify-leads.ts
@@ -48,6 +51,7 @@ DRY_RUN=true pnpm tsx scripts/qualify-leads.ts
 ```
 
 ### 4. Commit & Push
+
 ```bash
 git add scripts/score-opportunities.ts scripts/qualify-leads.ts \
         drizzle/migrations/015_lead_scoring_pipeline.sql
@@ -56,9 +60,10 @@ git push
 ```
 
 ### 5. Monitor
+
 ```sql
-SELECT COUNT(*) as qualified_leads 
-FROM leads 
+SELECT COUNT(*) as qualified_leads
+FROM leads
 WHERE source='gov_engine' AND status='qualified';
 ```
 
@@ -100,21 +105,24 @@ fit_score < 60     → status='skipped'                  → No contact
 ## SQL Queries to Know
 
 **Count qualified leads:**
+
 ```sql
-SELECT COUNT(*) FROM leads 
+SELECT COUNT(*) FROM leads
 WHERE source='gov_engine' AND status='qualified';
 ```
 
 **Find borderline leads (manual review):**
+
 ```sql
-SELECT title, fit_score FROM gov_opportunities 
-WHERE recommended_action='qualify' 
+SELECT title, fit_score FROM gov_opportunities
+WHERE recommended_action='qualify'
 ORDER BY fit_score DESC;
 ```
 
 **Email engagement:**
+
 ```sql
-SELECT company, 
+SELECT company,
   COUNT(*) as sent,
   SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) as opened
 FROM leads
@@ -139,6 +147,7 @@ GROUP BY company;
 The existing `scripts/email-proposals.ts` can query from `leads` table.
 
 Options:
+
 - **Option A (Easy):** Keep using gov_proposals table as-is
 - **Option B (Recommended):** Migrate to leads table + add fit_score breakdown
 

@@ -184,60 +184,60 @@ Return 200 with reply data
 
 ### inbound_replies table
 
-| Column | Type | Index | Purpose |
-|--------|------|-------|---------|
-| id | uuid PK | - | Unique reply ID |
-| lead_id | int FK | ✓ lead | Links to leads table |
-| lead_email | varchar | ✓ email | Sender email address |
-| sender_name | varchar | - | Extracted from From header |
-| subject | varchar | - | Email subject line |
-| body_plaintext | text | - | Plain text version of email |
-| body_html | text | - | HTML version of email |
-| message_id | varchar | U | Resend message ID (deduplication) |
-| sentiment | varchar | ✓ sentiment | positive\|neutral\|negative\|objection |
-| objection_type | varchar | - | budget\|timeline\|competitor\|decision_maker\|other |
-| objection_details | text | - | Free-form objection description |
-| confidence | real | - | 0.0-1.0 from AI classifier |
-| proposal_match_id | varchar | - | UUID of matched proposal |
-| match_confidence | real | - | 0.0-1.0 confidence in match |
-| status | varchar | ✓ status | new\|contacted\|deal_won\|disqualified\|nurture_paused |
-| manual_override | boolean | - | Sales team corrected sentiment |
-| manual_sentiment | varchar | - | Human-provided sentiment |
-| overridden_by | int FK | - | User ID who overrode |
-| overridden_at | timestamp | - | When override occurred |
-| metadata | jsonb | - | Headers, thread info, match reason |
-| created_at | timestamp | - | When reply received |
-| updated_at | timestamp | - | Last modification |
+| Column            | Type      | Index       | Purpose                                                |
+| ----------------- | --------- | ----------- | ------------------------------------------------------ |
+| id                | uuid PK   | -           | Unique reply ID                                        |
+| lead_id           | int FK    | ✓ lead      | Links to leads table                                   |
+| lead_email        | varchar   | ✓ email     | Sender email address                                   |
+| sender_name       | varchar   | -           | Extracted from From header                             |
+| subject           | varchar   | -           | Email subject line                                     |
+| body_plaintext    | text      | -           | Plain text version of email                            |
+| body_html         | text      | -           | HTML version of email                                  |
+| message_id        | varchar   | U           | Resend message ID (deduplication)                      |
+| sentiment         | varchar   | ✓ sentiment | positive\|neutral\|negative\|objection                 |
+| objection_type    | varchar   | -           | budget\|timeline\|competitor\|decision_maker\|other    |
+| objection_details | text      | -           | Free-form objection description                        |
+| confidence        | real      | -           | 0.0-1.0 from AI classifier                             |
+| proposal_match_id | varchar   | -           | UUID of matched proposal                               |
+| match_confidence  | real      | -           | 0.0-1.0 confidence in match                            |
+| status            | varchar   | ✓ status    | new\|contacted\|deal_won\|disqualified\|nurture_paused |
+| manual_override   | boolean   | -           | Sales team corrected sentiment                         |
+| manual_sentiment  | varchar   | -           | Human-provided sentiment                               |
+| overridden_by     | int FK    | -           | User ID who overrode                                   |
+| overridden_at     | timestamp | -           | When override occurred                                 |
+| metadata          | jsonb     | -           | Headers, thread info, match reason                     |
+| created_at        | timestamp | -           | When reply received                                    |
+| updated_at        | timestamp | -           | Last modification                                      |
 
 ### reply_sequences table
 
-| Column | Type | Index | Purpose |
-|--------|------|-------|---------|
-| id | uuid PK | - | Unique sequence ID |
-| lead_id | int FK | ✓ lead | Links to leads |
-| reply_id | uuid FK | ✓ reply | Links to inbound_replies |
-| template_type | varchar | - | objection_budget\|positive_followup\|reminder |
-| sequence_number | int | - | 1, 2, 3... in multi-touch sequence |
-| status | varchar | ✓ status | pending\|sent\|clicked\|bounced\|paused |
-| sent_at | timestamp | - | When email sent |
-| clicked_at | timestamp | - | If link clicked (future) |
-| next_scheduled_at | timestamp | ✓ scheduled | When to send (cron uses this) |
-| email_subject | varchar | - | Generated subject line |
-| email_body | text | - | Generated email body |
-| metadata | jsonb | - | Link tracking, template params |
-| created_at | timestamp | - | When sequence created |
-| updated_at | timestamp | - | Last modification |
+| Column            | Type      | Index       | Purpose                                       |
+| ----------------- | --------- | ----------- | --------------------------------------------- |
+| id                | uuid PK   | -           | Unique sequence ID                            |
+| lead_id           | int FK    | ✓ lead      | Links to leads                                |
+| reply_id          | uuid FK   | ✓ reply     | Links to inbound_replies                      |
+| template_type     | varchar   | -           | objection_budget\|positive_followup\|reminder |
+| sequence_number   | int       | -           | 1, 2, 3... in multi-touch sequence            |
+| status            | varchar   | ✓ status    | pending\|sent\|clicked\|bounced\|paused       |
+| sent_at           | timestamp | -           | When email sent                               |
+| clicked_at        | timestamp | -           | If link clicked (future)                      |
+| next_scheduled_at | timestamp | ✓ scheduled | When to send (cron uses this)                 |
+| email_subject     | varchar   | -           | Generated subject line                        |
+| email_body        | text      | -           | Generated email body                          |
+| metadata          | jsonb     | -           | Link tracking, template params                |
+| created_at        | timestamp | -           | When sequence created                         |
+| updated_at        | timestamp | -           | Last modification                             |
 
 ### leads table extensions
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| sentiment | varchar | Latest sentiment from any reply |
-| last_reply_at | timestamp | When last reply received |
-| objection_type | varchar | Latest objection type |
-| nurture_paused | boolean | Sales team can pause sequences |
-| proposals_sent | int | Count of proposals sent to lead |
-| replies_received | int | Count of replies from lead |
+| Column           | Type      | Purpose                         |
+| ---------------- | --------- | ------------------------------- |
+| sentiment        | varchar   | Latest sentiment from any reply |
+| last_reply_at    | timestamp | When last reply received        |
+| objection_type   | varchar   | Latest objection type           |
+| nurture_paused   | boolean   | Sales team can pause sequences  |
+| proposals_sent   | int       | Count of proposals sent to lead |
+| replies_received | int       | Count of replies from lead      |
 
 ---
 
@@ -245,25 +245,27 @@ Return 200 with reply data
 
 ### Sentiment → Template Mapping
 
-| Sentiment | Objection Type | Template | Delay | Strategy |
-|-----------|----------------|----------|-------|----------|
-| positive | null | positive_followup | 2 hrs | Send calendar link |
-| objection | budget | objection_budget | 4 hrs | Pilot pricing highlight |
-| objection | timeline | objection_timeline | 6 hrs | Phased approach |
-| objection | competitor | objection_competitor | 3 hrs | Differentiation doc |
-| objection | decision_maker | objection_decision_maker | 5 hrs | Escalation path |
-| objection | other | objection_generic | 4 hrs | Generic objection response |
-| neutral | null | (no auto-nurture) | - | Manual review |
-| negative | null | (no auto-nurture) | - | Manual review |
+| Sentiment | Objection Type | Template                 | Delay | Strategy                   |
+| --------- | -------------- | ------------------------ | ----- | -------------------------- |
+| positive  | null           | positive_followup        | 2 hrs | Send calendar link         |
+| objection | budget         | objection_budget         | 4 hrs | Pilot pricing highlight    |
+| objection | timeline       | objection_timeline       | 6 hrs | Phased approach            |
+| objection | competitor     | objection_competitor     | 3 hrs | Differentiation doc        |
+| objection | decision_maker | objection_decision_maker | 5 hrs | Escalation path            |
+| objection | other          | objection_generic        | 4 hrs | Generic objection response |
+| neutral   | null           | (no auto-nurture)        | -     | Manual review              |
+| negative  | null           | (no auto-nurture)        | -     | Manual review              |
 
 ---
 
 ## API Endpoints
 
 ### 1. Inbound Webhook
+
 **Path**: `POST /api/webhooks/resend-inbound`
 
 **Request**:
+
 ```json
 {
   "from": "prospect@company.com",
@@ -277,6 +279,7 @@ Return 200 with reply data
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -288,14 +291,17 @@ Return 200 with reply data
 ```
 
 ### 2. Cron Job
+
 **Path**: `GET /api/cron/nurture-replies`
 
 **Headers**:
+
 ```
 Authorization: Bearer ${CRON_SECRET}
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -305,9 +311,11 @@ Authorization: Bearer ${CRON_SECRET}
 ```
 
 ### 3. Dashboard API - Get Replies
+
 **Path**: `GET /api/dashboard/replies?sentiment=positive&status=new&page=1&limit=20`
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -329,9 +337,11 @@ Authorization: Bearer ${CRON_SECRET}
 ```
 
 ### 4. Dashboard API - Update Reply
+
 **Path**: `PATCH /api/dashboard/replies`
 
 **Request**:
+
 ```json
 {
   "id": "uuid",
@@ -341,6 +351,7 @@ Authorization: Bearer ${CRON_SECRET}
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -353,12 +364,14 @@ Authorization: Bearer ${CRON_SECRET}
 ## Deployment Checklist
 
 ### Pre-Deployment
+
 - [ ] All files created/modified
 - [ ] Database migrations applied (`supabase db push`)
 - [ ] Schema verified in Supabase console
 - [ ] No TypeScript errors (`pnpm check`)
 
 ### Configuration
+
 - [ ] Resend domain verified
 - [ ] Inbound route created (`proposals@authichain.com`)
 - [ ] Webhook secret copied from Resend
@@ -370,6 +383,7 @@ Authorization: Bearer ${CRON_SECRET}
 - [ ] Cron job configured in `vercel.json`
 
 ### Testing
+
 - [ ] Webhook accepts POST request
 - [ ] Email parsing works (test with sample)
 - [ ] Sentiment classification accurate
@@ -380,6 +394,7 @@ Authorization: Bearer ${CRON_SECRET}
 - [ ] Status/sentiment updates work
 
 ### Production
+
 - [ ] All tests passing
 - [ ] Performance acceptable (< 2sec per reply)
 - [ ] Database indexes in place
@@ -392,6 +407,7 @@ Authorization: Bearer ${CRON_SECRET}
 ## Performance & Scaling
 
 ### Single Reply Processing
+
 - Parse: < 100ms
 - Sentiment classification: 1-2 seconds (GPT-4 API)
 - Proposal matching: < 50ms
@@ -399,6 +415,7 @@ Authorization: Bearer ${CRON_SECRET}
 - **Total: 2-3 seconds per reply**
 
 ### Cron Job Batch (10-20 sequences)
+
 - Query pending sequences: < 100ms
 - Generate emails (10x): 100-200ms total
 - Send emails (10x via API): 2-3 seconds
@@ -406,11 +423,13 @@ Authorization: Bearer ${CRON_SECRET}
 - **Total: 3-4 seconds per batch**
 
 ### Dashboard Query
+
 - SELECT with filters: < 100ms
 - Format response: < 50ms
 - **Total: < 200ms latency**
 
 ### Storage
+
 - 258 proposals → 77 replies → 77 inbound_replies rows
 - 77 replies × 2-3 touch sequences → 150-230 reply_sequences rows
 - ~500KB total storage (small, not a constraint)
@@ -458,6 +477,7 @@ WHERE status = 'pending' AND next_scheduled_at <= NOW();
 ### Error Alerts
 
 Set up monitoring for:
+
 1. Webhook response time > 5 seconds
 2. Sentiment classification failures
 3. Cron job failures (HTTP 5xx)
@@ -490,5 +510,5 @@ Set up monitoring for:
 
 ---
 
-*Architecture finalized June 25, 2026*
-*Ready for production deployment*
+_Architecture finalized June 25, 2026_
+_Ready for production deployment_

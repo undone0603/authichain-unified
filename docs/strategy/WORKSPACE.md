@@ -3,6 +3,7 @@
 This directory is the canonical root for the AgentZ autonomous trust infrastructure.
 
 ## Structure
+
 - `/client`: Frontend UI (Vite SPA)
 - `/server`: Backend API (Express + tRPC)
 - `/agentz`: Autonomous Agent core logic and workflows
@@ -10,12 +11,14 @@ This directory is the canonical root for the AgentZ autonomous trust infrastruct
 - `/contracts`: Smart contract definitions
 
 ## Documentation Index
+
 - [Master Conventions](/GEMINI.md)
 - [Platform Robustness Directive](/docs/architecture/platform-robustness.md)
 - [Architectural Decoupling Plan](/docs/architecture/decoupling.md)
 - [Configuration Standardization Plan](/docs/architecture/config-standardization.md)
 
 ## Operational Tips
+
 - **Run Development Environment:** `npm run dev`
 - **Operations Console:** Available at `http://localhost:5173/admin/ops` (after starting dev server)
 - **Deployment:** Use `pnpm run build`

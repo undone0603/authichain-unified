@@ -3,6 +3,7 @@
 ## Overview
 
 This system tracks prospect drop-off through the conversion funnel at each stage:
+
 1. **proposal_sent** - Email sent to prospect
 2. **email_opened** - Prospect opens email
 3. **link_clicked** - Prospect clicks link in email/social
@@ -36,6 +37,7 @@ CREATE TABLE funnel_events (
 Track a conversion event.
 
 **Request:**
+
 ```json
 {
   "prospect_id": "prospect_12345",
@@ -51,6 +53,7 @@ Track a conversion event.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -68,30 +71,32 @@ Track a conversion event.
 Add UTM parameters + prospect_id to all email links:
 
 ```typescript
-import { addFunnelParams } from '@/lib/funnel-tracking';
+import { addFunnelParams } from "@/lib/funnel-tracking";
 
-const emailLink = addFunnelParams('https://govchain.us', {
-  prospectId: 'prospect_12345',
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: 'campaign_5'
+const emailLink = addFunnelParams("https://govchain.us", {
+  prospectId: "prospect_12345",
+  source: "gov_engine",
+  medium: "email",
+  campaign: "campaign_5",
 });
 // Result: https://govchain.us?prospect_id=prospect_12345&utm_source=gov_engine&utm_medium=email&utm_campaign=campaign_5
 ```
 
 **Action:** When sending emails via gov_engine:
+
 1. Generate prospect_id (e.g., hash of email)
 2. Add funnel params to link
 3. Log `proposal_sent` event
 
 **Example in automation/email service:**
+
 ```typescript
 const prospectId = `prospect_${crypto.randomUUID()}`;
-const trackingLink = addFunnelParams('https://govchain.us/opportunities', {
+const trackingLink = addFunnelParams("https://govchain.us/opportunities", {
   prospectId,
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: campaignId
+  source: "gov_engine",
+  medium: "email",
+  campaign: campaignId,
 });
 
 // Send email with tracking link
@@ -103,9 +108,9 @@ await sendEmail({
 // Log proposal sent
 await trackFunnelEvent({
   prospectId,
-  stage: 'proposal_sent',
-  source: 'gov_engine',
-  metadata: { campaign_id: campaignId }
+  stage: "proposal_sent",
+  source: "gov_engine",
+  metadata: { campaign_id: campaignId },
 });
 ```
 
@@ -117,22 +122,30 @@ Use email service provider's tracking pixel or implement server-side logging:
 // GET /api/email/pixel?prospect_id=X&campaign_id=Y
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams;
-  const prospectId = params.get('prospect_id');
-  const campaignId = params.get('campaign_id');
+  const prospectId = params.get("prospect_id");
+  const campaignId = params.get("campaign_id");
 
   if (prospectId) {
     await trackFunnelEvent({
       prospectId,
-      stage: 'email_opened',
-      source: 'gov_engine',
-      metadata: { campaign_id: campaignId }
+      stage: "email_opened",
+      source: "gov_engine",
+      metadata: { campaign_id: campaignId },
     });
   }
 
   // Return 1x1 transparent GIF
-  const gif = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x01, 0x0A, 0x00, 0x01, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B]);
+  const gif = Buffer.from([
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00,
+    0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x01, 0x0a,
+    0x00, 0x01, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+    0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
+  ]);
   return new Response(gif, {
-    headers: { 'Content-Type': 'image/gif', 'Cache-Control': 'no-cache, no-store' }
+    headers: {
+      "Content-Type": "image/gif",
+      "Cache-Control": "no-cache, no-store",
+    },
   });
 }
 ```
@@ -176,16 +189,17 @@ export default function FunnelPage() {
 - Captures source from URL parameter: `?utm_source=gov_engine`
 
 **Client integration:**
+
 ```typescript
 // In checkout page/component
-const response = await fetch('/api/checkout', {
-  method: 'POST',
+const response = await fetch("/api/checkout", {
+  method: "POST",
   body: JSON.stringify({
-    planId: 'pro',
-    email: 'prospect@example.com',
+    planId: "pro",
+    email: "prospect@example.com",
     prospectId: getProspectIdFromUrl(), // Auto-capture from URL
-    source: getSourceFromUrl()           // Auto-capture from URL
-  })
+    source: getSourceFromUrl(), // Auto-capture from URL
+  }),
 });
 ```
 
@@ -194,32 +208,34 @@ const response = await fetch('/api/checkout', {
 Add to `/api/webhook/route.ts` to log checkout completion:
 
 ```typescript
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session
+) {
   const prospectId = session.metadata?.prospect_id;
   const source = session.metadata?.source;
 
   if (prospectId) {
     await trackFunnelEvent({
       prospectId,
-      stage: 'complete_checkout',
-      source: source || 'direct',
+      stage: "complete_checkout",
+      source: source || "direct",
       metadata: {
         stripe_session_id: session.id,
         customer_email: session.customer_email,
-        amount: session.amount_total
-      }
+        amount: session.amount_total,
+      },
     });
 
     // Log subscription activation if applicable
     if (session.subscription) {
       await trackFunnelEvent({
         prospectId,
-        stage: 'subscribe',
-        source: source || 'direct',
+        stage: "subscribe",
+        source: source || "direct",
         metadata: {
           stripe_subscription_id: session.subscription,
-          stripe_session_id: session.id
-        }
+          stripe_session_id: session.id,
+        },
       });
     }
   }
@@ -231,13 +247,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 Track Calendly bookings back to prospect:
 
 ```typescript
-import { getCalendlyUrl } from '@/lib/funnel-tracking';
+import { getCalendlyUrl } from "@/lib/funnel-tracking";
 
-const prospectId = 'prospect_12345';
+const prospectId = "prospect_12345";
 const calendlyLink = getCalendlyUrl(
-  'https://calendly.com/john/30min',
+  "https://calendly.com/john/30min",
   prospectId,
-  'gov_engine'
+  "gov_engine"
 );
 // Returns: https://calendly.com/john/30min?name=prospect_12345&utm_source=gov_engine
 
@@ -252,10 +268,10 @@ Then in Calendly webhooks, use the attendee name to match back to prospect_id.
 Add UTM params to links in LinkedIn posts:
 
 ```typescript
-const linkedinLink = addFunnelParams('https://authichain.com/demo', {
-  prospectId: 'campaign_linkedin_12345',  // Use campaign ID as prospect ID
-  source: 'linkedin_post',
-  campaign: 'linkedin_organic'
+const linkedinLink = addFunnelParams("https://authichain.com/demo", {
+  prospectId: "campaign_linkedin_12345", // Use campaign ID as prospect ID
+  source: "linkedin_post",
+  campaign: "linkedin_organic",
 });
 // Result: https://authichain.com/demo?prospect_id=campaign_linkedin_12345&utm_source=linkedin_post&utm_campaign=linkedin_organic
 ```
@@ -340,6 +356,7 @@ pnpm tsx scripts/funnel-report.ts
 ```
 
 Output shows:
+
 - Email open rates by source (identify weak email channels)
 - Conversion rates by source (identify highest-intent channels)
 - Bottleneck for each source (where to optimize)
@@ -358,26 +375,31 @@ This tells you where to focus optimization efforts.
 ## Client-Side Utility
 
 ```typescript
-import { trackFunnelEvent, getProspectIdFromUrl, getSourceFromUrl, addFunnelParams } from '@/lib/funnel-tracking';
+import {
+  trackFunnelEvent,
+  getProspectIdFromUrl,
+  getSourceFromUrl,
+  addFunnelParams,
+} from "@/lib/funnel-tracking";
 
 // Auto-detect prospect ID and source from URL
-const prospectId = getProspectIdFromUrl();  // ?prospect_id=X
-const source = getSourceFromUrl();           // ?utm_source=gov_engine
+const prospectId = getProspectIdFromUrl(); // ?prospect_id=X
+const source = getSourceFromUrl(); // ?utm_source=gov_engine
 
 // Track an event
 await trackFunnelEvent({
-  prospectId: 'prospect_12345',
-  stage: 'link_clicked',
-  source: 'gov_engine',
-  metadata: { link_position: 'above_fold' }
+  prospectId: "prospect_12345",
+  stage: "link_clicked",
+  source: "gov_engine",
+  metadata: { link_position: "above_fold" },
 });
 
 // Add params to a link
-const link = addFunnelParams('https://govchain.us', {
-  prospectId: 'prospect_12345',
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: 'campaign_5'
+const link = addFunnelParams("https://govchain.us", {
+  prospectId: "prospect_12345",
+  source: "gov_engine",
+  medium: "email",
+  campaign: "campaign_5",
 });
 ```
 

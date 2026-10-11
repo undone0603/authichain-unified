@@ -5,26 +5,24 @@
  * Run this script before building or releasing.
  */
 
-import { execSync } from "child_process";
-import { readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { execSync } from 'child_process';
+import { readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(__dirname, "..");
-const cliDir = join(rootDir, "cli");
+const rootDir = join(__dirname, '..');
+const cliDir = join(rootDir, 'cli');
 
 // Read version from package.json (single source of truth)
-const packageJson = JSON.parse(
-  readFileSync(join(rootDir, "package.json"), "utf-8")
-);
+const packageJson = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf-8'));
 const version = packageJson.version;
 
 console.log(`Syncing version ${version} to all config files...`);
 
 // Update Cargo.toml
-const cargoTomlPath = join(cliDir, "Cargo.toml");
-let cargoToml = readFileSync(cargoTomlPath, "utf-8");
+const cargoTomlPath = join(cliDir, 'Cargo.toml');
+let cargoToml = readFileSync(cargoTomlPath, 'utf-8');
 const cargoVersionRegex = /^version\s*=\s*"[^"]*"/m;
 const newCargoVersion = `version = "${version}"`;
 
@@ -40,24 +38,24 @@ if (cargoVersionRegex.test(cargoToml)) {
     console.log(`  cli/Cargo.toml already up to date`);
   }
 } else {
-  console.error("  Could not find version field in cli/Cargo.toml");
+  console.error('  Could not find version field in cli/Cargo.toml');
   process.exit(1);
 }
 
 // Update Cargo.lock to match Cargo.toml
 if (cargoTomlUpdated) {
   try {
-    execSync("cargo update -p agent-browser --offline", {
+    execSync('cargo update -p agent-browser --offline', {
       cwd: cliDir,
-      stdio: "pipe",
+      stdio: 'pipe',
     });
     console.log(`  Updated cli/Cargo.lock`);
   } catch {
     // --offline may fail if package not in cache, try without it
     try {
-      execSync("cargo update -p agent-browser", {
+      execSync('cargo update -p agent-browser', {
         cwd: cliDir,
-        stdio: "pipe",
+        stdio: 'pipe',
       });
       console.log(`  Updated cli/Cargo.lock`);
     } catch (e) {
@@ -66,4 +64,4 @@ if (cargoTomlUpdated) {
   }
 }
 
-console.log("Version sync complete.");
+console.log('Version sync complete.');

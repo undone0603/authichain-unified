@@ -25,4 +25,3 @@ status: retired - do not post
 2/3 GovChain anchors document hashes to Bitcoin L1 — decentralized, tamper-evident, verifiable without any central authority. Perfect for SBIR/SVIP Phase I proposals.
 
 3/3 We're submitting for DHS SVIP Focus Area 4 (Digital Identity) and DoD SBIR Topic N26-A001. If you have insight into the evaluation criteria, DM me.
-

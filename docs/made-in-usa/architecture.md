@@ -24,6 +24,7 @@ BOM Payload + Supplier Documents
 ```
 
 ## Core Modules
+
 - `src/lib/compliance/rules.ts`: Versioned ruleset matrix.
 - `src/lib/compliance/cost.ts`: Deterministic manufacturing cost calculations.
 - `src/lib/compliance/transformation.ts`: Substantial transformation evaluation.

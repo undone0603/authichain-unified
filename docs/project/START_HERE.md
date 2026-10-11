@@ -5,6 +5,7 @@
 A complete conversion funnel tracking system that answers: **Where do prospects drop off?**
 
 You'll now see:
+
 - How many emails were sent (proposal_sent)
 - How many were opened (email_opened)
 - How many clicked the link (link_clicked)
@@ -14,6 +15,7 @@ You'll now see:
 - How many activated subscription (subscribe)
 
 Plus:
+
 - Drop-off rates at each stage
 - Bottleneck identification (where to optimize)
 - Comparison across sources (gov_engine vs linkedin_post vs seo)
@@ -50,11 +52,13 @@ Plus:
 ## Quick Start (5 minutes)
 
 ### Step 1: Apply Database Migration
+
 ```bash
 supabase db push
 ```
 
 ### Step 2: Test the API
+
 ```bash
 curl -X POST http://localhost:3000/api/funnel \
   -H "Content-Type: application/json" \
@@ -66,31 +70,34 @@ curl -X POST http://localhost:3000/api/funnel \
 ```
 
 ### Step 3: Read the Setup Guide
+
 ```bash
 # Open and read this file:
 /docs/FUNNEL_QUICKSTART.md
 ```
 
 ### Step 4: Add to Your First Campaign
+
 ```typescript
-import { addFunnelParams } from '@/lib/funnel-tracking';
+import { addFunnelParams } from "@/lib/funnel-tracking";
 
 // When sending emails, add params to link:
 const prospectId = `prospect_${crypto.randomUUID()}`;
-const link = addFunnelParams('https://govchain.us', {
+const link = addFunnelParams("https://govchain.us", {
   prospectId,
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: 'q3_opportunities'
+  source: "gov_engine",
+  medium: "email",
+  campaign: "q3_opportunities",
 });
 
 // Then send email with that link
 ```
 
 ### Step 5: Add to Landing Pages
+
 ```tsx
 // In your page component
-import { FunnelTracker } from '@/components/FunnelTracker';
+import { FunnelTracker } from "@/components/FunnelTracker";
 
 export default function Page() {
   return (
@@ -103,6 +110,7 @@ export default function Page() {
 ```
 
 ### Step 6: View Reports
+
 ```bash
 # After you have some data:
 pnpm tsx scripts/funnel-report.ts
@@ -130,6 +138,7 @@ Action: Review messaging, creative, or targeting at this stage.
 ```
 
 **What this means:**
+
 - Only 8.9% of emails are opened (too low - should be 15-25%)
 - Of those who opened, 17.4% clicked (good)
 - Of those who clicked, 25% landed on page (good)
@@ -138,31 +147,34 @@ Action: Review messaging, creative, or targeting at this stage.
 
 ## 7-Stage Funnel Explained
 
-| Stage | What Happens | How to Track |
-|-------|--------------|--------------|
-| proposal_sent | Email sent to prospect | Log when email is sent |
-| email_opened | Prospect opens email | 1x1 pixel in email |
-| link_clicked | Prospect clicks link | Auto-tracked via FunnelTracker |
-| visit_landing_page | Lands on govchain.us | FunnelTracker component |
-| start_checkout | Starts payment form | Already in /api/checkout |
-| complete_checkout | Stripe confirms payment | Add to webhook |
-| subscribe | Subscription activated | Add to webhook |
+| Stage              | What Happens            | How to Track                   |
+| ------------------ | ----------------------- | ------------------------------ |
+| proposal_sent      | Email sent to prospect  | Log when email is sent         |
+| email_opened       | Prospect opens email    | 1x1 pixel in email             |
+| link_clicked       | Prospect clicks link    | Auto-tracked via FunnelTracker |
+| visit_landing_page | Lands on govchain.us    | FunnelTracker component        |
+| start_checkout     | Starts payment form     | Already in /api/checkout       |
+| complete_checkout  | Stripe confirms payment | Add to webhook                 |
+| subscribe          | Subscription activated  | Add to webhook                 |
 
 ## Integration Path
 
 **This Week:**
+
 1. Run `supabase db push`
 2. Test `/api/funnel` endpoint
 3. Read `docs/FUNNEL_QUICKSTART.md`
 4. Add to first email campaign
 
 **Next Week:**
+
 1. Add email open pixel
 2. Add `<FunnelTracker />` to pages
 3. Update Stripe webhook
 4. Run first report
 
 **2 Weeks In:**
+
 1. Identify bottleneck
 2. Optimize (usually email subject line)
 3. Re-run report
@@ -171,12 +183,14 @@ Action: Review messaging, creative, or targeting at this stage.
 ## Key Metrics
 
 What's good?
+
 - **Email open rate:** 15-25% (if lower, test subject lines)
 - **Click-through rate:** 10-20% (if lower, review CTA)
 - **Landing page conversion:** 30-50% (if lower, improve page)
 - **Checkout completion:** 50-80% (if lower, simplify form)
 
 Your Example (from report above):
+
 - Email open: 8.9% ❌ Too low - needs work
 - Click-through: 17.4% ✓ Good
 - Landing page: 25% ✓ Okay
@@ -185,11 +199,13 @@ Your Example (from report above):
 ## Common URL Pattern
 
 When sending emails, URLs look like:
+
 ```
 https://govchain.us/opportunities?prospect_id=prospect_abc123&utm_source=gov_engine&utm_medium=email&utm_campaign=q3_opportunities
 ```
 
 Broken down:
+
 - `prospect_id=prospect_abc123` - Unique prospect ID
 - `utm_source=gov_engine` - Campaign source
 - `utm_medium=email` - How they received it
@@ -200,15 +216,12 @@ Use `addFunnelParams()` to build these automatically.
 ## Documentation Structure
 
 **For Quick Setup:**
+
 1. `docs/FUNNEL_QUICKSTART.md` (5-minute guide)
 
-**For Implementation:**
-2. `docs/funnel-email-example.md` (email integration)
-3. Read `/src/lib/funnel-tracking.ts` (code reference)
+**For Implementation:** 2. `docs/funnel-email-example.md` (email integration) 3. Read `/src/lib/funnel-tracking.ts` (code reference)
 
-**For Complete Understanding:**
-4. `docs/funnel-tracking.md` (complete reference)
-5. `FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
+**For Complete Understanding:** 4. `docs/funnel-tracking.md` (complete reference) 5. `FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
 
 ## Commands You'll Use
 
@@ -239,27 +252,27 @@ pnpm tsx scripts/funnel-report.ts --source linkedin_post --days 7
 const prospectId = `prospect_${crypto.randomUUID()}`;
 
 // 2. Build tracked link
-const link = addFunnelParams('https://govchain.us/opportunities', {
+const link = addFunnelParams("https://govchain.us/opportunities", {
   prospectId,
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: 'campaign_5'
+  source: "gov_engine",
+  medium: "email",
+  campaign: "campaign_5",
 });
 // Result: https://govchain.us/opportunities?prospect_id=...&utm_source=gov_engine&utm_medium=email&utm_campaign=campaign_5
 
 // 3. Send email
 await sendEmail({
   to: prospect.email,
-  subject: 'Government Contract Opportunities',
-  body: `Click here: ${link}`
+  subject: "Government Contract Opportunities",
+  body: `Click here: ${link}`,
 });
 
 // 4. Log proposal sent
 await trackFunnelEvent({
   prospectId,
-  stage: 'proposal_sent',
-  source: 'gov_engine',
-  metadata: { campaign_id: 'campaign_5' }
+  stage: "proposal_sent",
+  source: "gov_engine",
+  metadata: { campaign_id: "campaign_5" },
 });
 
 // 5. User clicks link, lands on page
@@ -275,15 +288,18 @@ await trackFunnelEvent({
 ## Troubleshooting
 
 **No data showing up?**
+
 - Run: `supabase status` (verify migration applied)
 - Check: Browser console for FunnelTracker errors
 - Verify: URL has `prospect_id` and `utm_source` params
 
 **Email not tracking?**
+
 - Create: `/src/app/api/email/pixel/route.ts` (see email-example.md)
 - Add to email: `<img src="...pixel?prospect_id=X&campaign=Y">`
 
 **Low conversion rates?**
+
 - Check: Email open rate (biggest bottleneck usually here)
 - Read: Bottleneck section in report
 - Optimize: That stage (usually email subject line)
@@ -310,16 +326,19 @@ await trackFunnelEvent({
 ---
 
 **Start here:**
+
 ```bash
 cat /docs/FUNNEL_QUICKSTART.md
 ```
 
 Then:
+
 ```bash
 supabase db push
 ```
 
 Then:
+
 ```bash
 pnpm tsx scripts/funnel-report.ts
 ```

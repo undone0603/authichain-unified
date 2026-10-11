@@ -3,7 +3,13 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Sparkles, Copy, Loader2 } from "lucide-react";
 
@@ -14,16 +20,16 @@ export default function ExecutiveAssistant() {
   const [output, setOutput] = useState<string | null>(null);
 
   const generate = trpc.executive.generate.useMutation({
-    onSuccess: (data) => setOutput(data.output),
-    onError: (err) => toast.error(err.message || "Generation failed"),
+    onSuccess: data => setOutput(data.output),
+    onError: err => toast.error(err.message || "Generation failed"),
   });
 
-  const selected = actions.data?.find((a) => a.key === selectedKey);
+  const selected = actions.data?.find(a => a.key === selectedKey);
 
   function handleSelect(key: string) {
     setSelectedKey(key);
     setOutput(null);
-    const action = actions.data?.find((a) => a.key === key);
+    const action = actions.data?.find(a => a.key === key);
     setInputJson(action ? JSON.stringify(action.example, null, 2) : "");
   }
 
@@ -52,7 +58,8 @@ export default function ExecutiveAssistant() {
           Executive Assistant
         </h1>
         <p className="text-muted-foreground">
-          AI-generated sales emails, marketing copy, and analysis — powered by the platform LLM.
+          AI-generated sales emails, marketing copy, and analysis — powered by
+          the platform LLM.
         </p>
       </div>
 
@@ -67,20 +74,24 @@ export default function ExecutiveAssistant() {
                 <SelectValue placeholder="Choose what to generate…" />
               </SelectTrigger>
               <SelectContent>
-                {(actions.data ?? []).map((a) => (
+                {(actions.data ?? []).map(a => (
                   <SelectItem key={a.key} value={a.key}>
                     {a.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selected && <p className="text-sm text-muted-foreground">{selected.description}</p>}
+            {selected && (
+              <p className="text-sm text-muted-foreground">
+                {selected.description}
+              </p>
+            )}
 
             <div>
               <p className="text-sm font-medium mb-2">Input (JSON)</p>
               <Textarea
                 value={inputJson}
-                onChange={(e) => setInputJson(e.target.value)}
+                onChange={e => setInputJson(e.target.value)}
                 rows={10}
                 className="font-mono text-xs"
                 disabled={!selectedKey}
@@ -88,7 +99,11 @@ export default function ExecutiveAssistant() {
               />
             </div>
 
-            <Button onClick={handleGenerate} disabled={!selectedKey || generate.isPending} className="w-full">
+            <Button
+              onClick={handleGenerate}
+              disabled={!selectedKey || generate.isPending}
+              className="w-full"
+            >
               {generate.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating…

@@ -17,17 +17,20 @@
 This plan touches structure across the repo. The destinations established here are referenced in later tasks.
 
 **Doomed files (deleted by the plan):**
+
 - `app/globals.css`, `app/layout.tsx` — orphaned Next.js leftovers
 - `src/` (top-level) — orphan, pending P0.3 confirmation
 - (Possibly) some `workers/<name>/` subdirs — only after Phase 0 marks them PHANTOM
 
 **Files moved by the plan:**
+
 - `components/ecosystem-footer.tsx` → `client/src/components/ecosystem/footer.tsx`
 - `components/ecosystem-nav.tsx` → `client/src/components/ecosystem/nav.tsx`
 - `lib/ecosystem.ts` → `client/src/lib/ecosystem.ts` (or `shared/ecosystem.ts` if server uses it; decided in P0.4)
 - `lib/industries.ts` → `client/src/lib/industries.ts` (or `shared/industries.ts`)
 
 **New files created by the plan:**
+
 - `docs/superpowers/plans/2026-04-27-ecosystem-consolidation.md` (this file)
 - `docs/superpowers/plans/worker-status-2026-04-27.md` (Phase 0 output — worker reality table)
 - `docs/superpowers/plans/lift-log-2026-04-27.md` (Phase 4 lift provenance log)
@@ -35,6 +38,7 @@ This plan touches structure across the repo. The destinations established here a
 - New tests under `client/src/__tests__/` or `server/_core/__tests__/` per lift
 
 **Files modified across multiple PRs:**
+
 - `CLAUDE.md` — Phase 1.2 corrects the "8 workers" claim
 - `.git/config` — Phase 1.3 may remove dead remotes (no commit needed; local only)
 
@@ -56,6 +60,7 @@ Output: a written worker-status table + answers to three structural questions. P
 ## Task 0.1: Set up the Phase 0 output document
 
 **Files:**
+
 - Create: `docs/superpowers/plans/worker-status-2026-04-27.md`
 
 - [ ] **Step 1: Create the empty status doc with required sections**
@@ -102,6 +107,7 @@ Open PR. Merge after the rest of Phase 0 fills it in (Tasks 0.2–0.5).
 ## Task 0.2: Inventory worker deployments (P0.1)
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/worker-status-2026-04-27.md` (Question 1 table)
 
 - [ ] **Step 1: For each of the 20 worker dirs, query Cloudflare**
@@ -121,6 +127,7 @@ Expected: each block shows either deployment list with timestamps, or `Worker no
 - [ ] **Step 2: Classify each worker**
 
 Read `/tmp/worker-deploys.txt`. For each:
+
 - Has deploys in last 90 days → **DEPLOYED**
 - Worker exists in Cloudflare but no recent deploy → **DEPLOYED-STALE** (treat as DEPLOYED for safety)
 - `Worker not found` AND `wc -l workers/<name>/src/*.ts` shows >50 LOC → **SCAFFOLDED**
@@ -149,6 +156,7 @@ git push -u origin consolidate/p0-worker-inventory
 ## Task 0.3: Investigate "remote forks" (P0.2)
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/worker-status-2026-04-27.md` (Question 2 table)
 
 - [ ] **Step 1: Inspect each remote**
@@ -189,6 +197,7 @@ git push
 ## Task 0.4: Confirm top-level `src/` orphan (P0.3)
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/worker-status-2026-04-27.md` (Question 3)
 
 - [ ] **Step 1: Verify `src/` exists and inventory it**
@@ -226,6 +235,7 @@ git push
 ## Task 0.5: Inventory `lib/ecosystem.ts` + `lib/industries.ts` import sites (P0.4)
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/worker-status-2026-04-27.md` (Question 4)
 
 - [ ] **Step 1: Grep for imports**
@@ -238,6 +248,7 @@ grep -rn "from ['\"][^'\"]*lib/ecosystem\|from ['\"][^'\"]*lib/industries" \
 - [ ] **Step 2: Decide target dir based on consumers**
 
 Apply this rule:
+
 - All imports from `client/` only → target is `client/src/lib/`
 - Any imports from `server/` or `worker/` → target is `shared/` (create if needed)
 
@@ -264,6 +275,7 @@ After Phase 0 PR merges, these can run in parallel.
 ## Task 1.1: Delete orphaned `app/` directory (PR C1)
 
 **Files:**
+
 - Delete: `app/globals.css`, `app/layout.tsx`, `app/`
 
 - [ ] **Step 1: Confirm orphan one more time before deletion**
@@ -312,6 +324,7 @@ gh pr create --title "consolidate(p1): delete orphaned app/ directory" \
 ## Task 1.2: Correct the CLAUDE.md "8 workers" claim (PR C5)
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 - [ ] **Step 1: Read current text**
@@ -417,6 +430,7 @@ gh pr create --title "consolidate(p1): document dead-remote removal" \
 **Skip this task entirely if Question 3 of the status doc says `BLOCKED — top-level src/ is in use`.**
 
 **Files:**
+
 - Delete: `src/` (top-level only — NOT `client/src/`)
 
 - [ ] **Step 1: Final orphan verification**
@@ -463,6 +477,7 @@ gh pr create --title "consolidate(p1): delete orphaned top-level src/" \
 ## Task 2.1: Move `components/` into `client/src/components/ecosystem/` (PR C3)
 
 **Files:**
+
 - Move: `components/ecosystem-footer.tsx` → `client/src/components/ecosystem/footer.tsx`
 - Move: `components/ecosystem-nav.tsx` → `client/src/components/ecosystem/nav.tsx`
 - Modify: every file that imports either component
@@ -540,6 +555,7 @@ gh pr create --title "consolidate(p2): fold components/ into client tree" \
 ## Task 2.2: Move `lib/` into target chosen in P0.4 (PR C4)
 
 **Files (target depends on P0.4 outcome):**
+
 - Move: `lib/ecosystem.ts` → either `client/src/lib/ecosystem.ts` OR `shared/ecosystem.ts`
 - Move: `lib/industries.ts` → either `client/src/lib/industries.ts` OR `shared/industries.ts`
 - Modify: every file that imports either
@@ -616,6 +632,7 @@ gh pr create --title "consolidate(p2): fold lib/ into <TARGET>" \
 **Only run for workers marked DEPLOYED or SCAFFOLDED in Phase 0.** PHANTOM workers are deleted in Task 3.1 — skip them here.
 
 **Affected dirs (per current `wrangler.toml` declarations):**
+
 - `workers/license-issuer/` → declared name `authichain-license-issuer`
 - `workers/qron-provenance/` → declared name `authichain-qron-provenance`
 - `workers/scan-validate/` → declared name `authichain-scan-validate`
@@ -686,6 +703,7 @@ gh pr create --title "consolidate(p2): rename worker dirs to match wrangler name
 ## Task 3.1: Delete PHANTOM workers (PR P3.1)
 
 **Files (depends on Phase 0):**
+
 - Delete: every `workers/<name>/` row marked `PHANTOM` in the status table
 
 - [ ] **Step 1: Branch and list targets**
@@ -743,6 +761,7 @@ gh pr create --title "consolidate(p3): delete phantom worker dirs" \
 ## Task 3.2: Add CI deploy job for each DEPLOYED worker not yet in CI (PR P3.2)
 
 **Files:**
+
 - Modify or create: `.github/workflows/deploy-workers.yml`
 
 - [ ] **Step 1: Branch and inventory current CI**
@@ -766,11 +785,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'workers/**'
+      - "workers/**"
   workflow_dispatch:
     inputs:
       worker:
-        description: 'Specific worker dir to deploy (leave blank for all)'
+        description: "Specific worker dir to deploy (leave blank for all)"
         required: false
 
 permissions:
@@ -793,8 +812,8 @@ jobs:
           version: 10.28.2
       - uses: actions/setup-node@v5
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - name: Install root deps
         run: pnpm install --frozen-lockfile
       - name: Install worker deps
@@ -856,6 +875,7 @@ gh pr create --title "consolidate(p3): CI deploy for workers/* fleet" \
 ## Task 3.3: Decide fate of SCAFFOLDED workers (PR P3.3)
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/worker-status-2026-04-27.md` (decision column)
 - Possibly delete: `workers/<name>/` for workers decided as DELETE
 - Possibly add: matrix entries to `.github/workflows/deploy-workers.yml` for workers decided as DEPLOY-NOW
@@ -942,6 +962,7 @@ Each Phase-4 task follows the same pattern: copy file → adapt to unified conve
 ## Task 4.0: Create the lift log
 
 **Files:**
+
 - Create: `docs/superpowers/plans/lift-log-2026-04-27.md`
 
 - [ ] **Step 1: Branch and create**
@@ -1145,9 +1166,17 @@ import { describe, it, expect } from "vitest";
 
 describe("stripe webhook idempotency", () => {
   it("returns early when the same eventId is processed twice", async () => {
-    const result1 = await handleStripeEvent({ id: "evt_test_001", type: "checkout.session.completed", data: {} });
+    const result1 = await handleStripeEvent({
+      id: "evt_test_001",
+      type: "checkout.session.completed",
+      data: {},
+    });
     expect(result1.processed).toBe(true);
-    const result2 = await handleStripeEvent({ id: "evt_test_001", type: "checkout.session.completed", data: {} });
+    const result2 = await handleStripeEvent({
+      id: "evt_test_001",
+      type: "checkout.session.completed",
+      data: {},
+    });
     expect(result2.processed).toBe(false);
     expect(result2.reason).toMatch(/duplicate/i);
   });
@@ -1175,12 +1204,19 @@ Add a `wasProcessed` / `markProcessed` helper to the existing Stripe handler:
 
 ```typescript
 async function wasProcessed(eventId: string): Promise<boolean> {
-  const row = await db.select().from(stripeProcessedEvents).where(eq(stripeProcessedEvents.eventId, eventId)).limit(1);
+  const row = await db
+    .select()
+    .from(stripeProcessedEvents)
+    .where(eq(stripeProcessedEvents.eventId, eventId))
+    .limit(1);
   return row.length > 0;
 }
 
 async function markProcessed(eventId: string, type: string) {
-  await db.insert(stripeProcessedEvents).values({ eventId, type }).onConflictDoNothing();
+  await db
+    .insert(stripeProcessedEvents)
+    .values({ eventId, type })
+    .onConflictDoNothing();
 }
 ```
 
@@ -1221,6 +1257,7 @@ gh pr create --title "consolidate(p4): Stripe webhook idempotency" \
 ## Task 4.5: Lift brand-settings page + API
 
 **Sources:**
+
 - `C:\Users\rac\authichain\app\dashboard\brand\page.tsx` (237 LOC, React UI)
 - `C:\Users\rac\authichain\app\api\brand\route.ts` (79 LOC, server handler)
 
@@ -1285,6 +1322,7 @@ Drizzle for the brand row)."
 ## Task 4.6: Lift verification UI components batch
 
 **Sources (8 components, total ~1,620 LOC):**
+
 - `components/nft-certificate.tsx` (135)
 - `components/seed-to-sale-timeline.tsx` (325)
 - `components/truemark-fingerprint.tsx` (101)
@@ -1581,6 +1619,7 @@ Add a final commit on a `consolidate/done` branch updating `CLAUDE.md` with a on
 
 ```markdown
 ## 📜 Consolidation history
+
 The 2026-04-27 ecosystem consolidation effort is logged in
 `docs/superpowers/plans/lift-log-2026-04-27.md` (sibling salvage)
 and `docs/superpowers/plans/worker-status-2026-04-27.md` (worker fleet

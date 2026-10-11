@@ -17,15 +17,19 @@
  *   npx wrangler kv key put --namespace-id=291baff0863044998e9ba716dfc06085 "sender_config" "$(cat scripts/kv-data/sender_config.json)"
  */
 
-const ACCOUNT_ID = '4c1869b90f13f86940aa3747839bf420';
-const NAMESPACE_ID = '291baff0863044998e9ba716dfc06085';
+const ACCOUNT_ID = "4c1869b90f13f86940aa3747839bf420";
+const NAMESPACE_ID = "291baff0863044998e9ba716dfc06085";
 
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
 if (!API_TOKEN) {
-  console.error('ERROR: CLOUDFLARE_API_TOKEN environment variable is required.');
-  console.error('Create a token at: https://dash.cloudflare.com/profile/api-tokens');
-  console.error('Required permission: Workers KV Storage:Edit');
+  console.error(
+    "ERROR: CLOUDFLARE_API_TOKEN environment variable is required."
+  );
+  console.error(
+    "Create a token at: https://dash.cloudflare.com/profile/api-tokens"
+  );
+  console.error("Required permission: Workers KV Storage:Edit");
   process.exit(1);
 }
 
@@ -52,7 +56,7 @@ I'd love to create a free sample for one of your restaurants. Just reply with a 
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "fatsquirrelseo@gmail.com",
@@ -77,7 +81,7 @@ Happy to create a free sample for one of your clients. What do you think?
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "klong@c3industries.com",
@@ -101,7 +105,7 @@ Reply with your website URL and I'll generate a free branded sample.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "christopher.kwilasz@lume.com",
@@ -121,7 +125,7 @@ Reply with a URL and I'll create a free Lume-branded sample.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "contact@cannabiscreative.com",
@@ -145,7 +149,7 @@ Happy to create a free branded sample for one of your clients.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "privacy@lettuce.com",
@@ -169,7 +173,7 @@ I'd love to create a free sample for one of your Chicago locations. Just reply w
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "press@compass.com",
@@ -192,12 +196,13 @@ Happy to create a free sample using a live Compass listing URL.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "Helpteam@oakleysign.com",
     name: "Oakley Signs Team",
-    subject: "AI QR Art Partnership \u2013 Upgrade Your Real Estate Sign QR Codes",
+    subject:
+      "AI QR Art Partnership \u2013 Upgrade Your Real Estate Sign QR Codes",
     body: `Hi Oakley Signs Team,
 
 I saw your partnership with Local Logic for QR-enabled signage. I'd like to propose a visual upgrade that makes your QR signs even more compelling.
@@ -215,7 +220,7 @@ Happy to create free samples using any brokerage's brand colors.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com`,
   },
   {
     to: "info@creativevinylsigns.com",
@@ -235,32 +240,35 @@ Reply for a free sample.
 
 Best,
 Z | QRON
-authichain@gmail.com`
-  }
+authichain@gmail.com`,
+  },
 ];
 
 const SENDER_CONFIG = {
   from: "hello@authichain.com",
   fromName: "Z | QRON AI QR Art",
-  replyTo: "authichain@gmail.com"
+  replyTo: "authichain@gmail.com",
 };
 
 async function writeKV(key, value) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${NAMESPACE_ID}/values/${encodeURIComponent(key)}`;
 
   const resp = await fetch(url, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
-      'Content-Type': 'text/plain',
+      Authorization: `Bearer ${API_TOKEN}`,
+      "Content-Type": "text/plain",
     },
-    body: typeof value === 'string' ? value : JSON.stringify(value),
+    body: typeof value === "string" ? value : JSON.stringify(value),
   });
 
   const result = await resp.json();
 
   if (!result.success) {
-    console.error(`FAILED to write key "${key}":`, JSON.stringify(result.errors, null, 2));
+    console.error(
+      `FAILED to write key "${key}":`,
+      JSON.stringify(result.errors, null, 2)
+    );
     return false;
   }
 
@@ -273,7 +281,7 @@ async function verifyKV(key) {
 
   const resp = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
+      Authorization: `Bearer ${API_TOKEN}`,
     },
   });
 
@@ -288,41 +296,45 @@ async function verifyKV(key) {
 }
 
 async function main() {
-  console.log('=== QRON Outreach KV Security Fix ===');
+  console.log("=== QRON Outreach KV Security Fix ===");
   console.log(`Account: ${ACCOUNT_ID}`);
   console.log(`Namespace: ${NAMESPACE_ID} (qron-outreach-kv)`);
-  console.log('');
+  console.log("");
 
   // Write outreach_queue
-  console.log(`Writing outreach_queue (${OUTREACH_QUEUE.length} email objects)...`);
-  const q1 = await writeKV('outreach_queue', JSON.stringify(OUTREACH_QUEUE));
+  console.log(
+    `Writing outreach_queue (${OUTREACH_QUEUE.length} email objects)...`
+  );
+  const q1 = await writeKV("outreach_queue", JSON.stringify(OUTREACH_QUEUE));
 
   // Write sender_config
   console.log(`Writing sender_config...`);
-  const q2 = await writeKV('sender_config', JSON.stringify(SENDER_CONFIG));
+  const q2 = await writeKV("sender_config", JSON.stringify(SENDER_CONFIG));
 
-  console.log('');
+  console.log("");
 
   if (q1 && q2) {
-    console.log('--- Verifying writes ---');
-    await verifyKV('outreach_queue');
-    await verifyKV('sender_config');
-    console.log('');
-    console.log('ALL KV DATA WRITTEN SUCCESSFULLY.');
-    console.log('');
-    console.log('Next step: Deploy the fixed worker code from:');
-    console.log('  scripts/qron-outreach-fixed.js');
-    console.log('');
-    console.log('Deploy command:');
-    console.log('  npx wrangler deploy --name qron-outreach scripts/qron-outreach-fixed.js');
-    console.log('  (or use the Cloudflare dashboard to paste the fixed code)');
+    console.log("--- Verifying writes ---");
+    await verifyKV("outreach_queue");
+    await verifyKV("sender_config");
+    console.log("");
+    console.log("ALL KV DATA WRITTEN SUCCESSFULLY.");
+    console.log("");
+    console.log("Next step: Deploy the fixed worker code from:");
+    console.log("  scripts/qron-outreach-fixed.js");
+    console.log("");
+    console.log("Deploy command:");
+    console.log(
+      "  npx wrangler deploy --name qron-outreach scripts/qron-outreach-fixed.js"
+    );
+    console.log("  (or use the Cloudflare dashboard to paste the fixed code)");
   } else {
-    console.error('SOME WRITES FAILED. Check errors above.');
+    console.error("SOME WRITES FAILED. Check errors above.");
     process.exit(1);
   }
 }
 
 main().catch(err => {
-  console.error('Fatal error:', err);
+  console.error("Fatal error:", err);
   process.exit(1);
 });

@@ -6,13 +6,13 @@ This file is the agent's latest local audit. It is not a Cloudflare API listing 
 
 ## Counts
 
-| Count | Value |
-|---|---|
-| workflows | 101 |
-| scheduled_workflows | 36 |
-| wrangler_identities | 50 |
-| ledger_workers | 17 |
-| wrangler_not_in_ledger | 39 |
+| Count                  | Value |
+| ---------------------- | ----- |
+| workflows              | 101   |
+| scheduled_workflows    | 36    |
+| wrangler_identities    | 50    |
+| ledger_workers         | 17    |
+| wrangler_not_in_ledger | 39    |
 
 ## Findings
 

@@ -9,6 +9,7 @@ Complete A/B testing system to maximize conversion across email templates, Linke
 ## 📊 What You Get
 
 ### Supabase Schema (615 lines)
+
 - `ab_tests` — Test metadata with hypothesis & winner tracking
 - `ab_test_results` — Per-lead conversion tracking (email opens, clicks, deals)
 - `ab_test_variants` — Template variants (email HTML, LinkedIn text, pricing JSON)
@@ -19,22 +20,24 @@ Complete A/B testing system to maximize conversion across email templates, Linke
 
 ### TypeScript Scripts (1200+ lines)
 
-| Script | Purpose | Output |
-|--------|---------|--------|
-| `scripts/assign-ab-variant.ts` | Randomly assign leads to A or B (50/50) | `ab_test_results` records |
-| `scripts/email-templates-ab.ts` | Two email variants (professional vs. ROI) | `ab_test_variants` with HTML templates |
-| `scripts/linkedin-pricing-variants.ts` | Two LinkedIn angles + two pricing strategies | LinkedIn posts + pricing tiers |
-| `scripts/ab-test-report.ts` | Statistical analysis & results dashboard | Text/JSON/CSV report with p-value |
+| Script                                 | Purpose                                      | Output                                 |
+| -------------------------------------- | -------------------------------------------- | -------------------------------------- |
+| `scripts/assign-ab-variant.ts`         | Randomly assign leads to A or B (50/50)      | `ab_test_results` records              |
+| `scripts/email-templates-ab.ts`        | Two email variants (professional vs. ROI)    | `ab_test_variants` with HTML templates |
+| `scripts/linkedin-pricing-variants.ts` | Two LinkedIn angles + two pricing strategies | LinkedIn posts + pricing tiers         |
+| `scripts/ab-test-report.ts`            | Statistical analysis & results dashboard     | Text/JSON/CSV report with p-value      |
 
 ### Email Templates (2 Variants)
 
 **Variant A: Professional / Technical**
+
 - Subject: "Proposal: Blockchain Authentication for {{company}}"
 - Tone: Formal, features-focused, technical benefits first
 - CTA: "Schedule a Technical Demo"
 - Best for: CTOs, security leads
 
 **Variant B: Conversational / ROI**
+
 - Subject: "Your $2M Opportunity: Blockchain Authentication for {{company}}"
 - Tone: Friendly, pain-point-driven, urgency + social proof
 - CTA: "Let's Talk (15 min)"
@@ -43,20 +46,22 @@ Complete A/B testing system to maximize conversion across email templates, Linke
 ### LinkedIn Variants (2 Angles)
 
 **Post A: Technical Focus**
+
 - Topic: Blockchain security, compliance, audit trail
 - CTAs: Expert engagement, technical follow-ups
 
 **Post B: Storytelling**
+
 - Topic: Real customer win ($2.1M fraud prevented)
 - CTAs: Business leader follow-ups, emotional resonance
 
 ### Pricing Strategies (2 Variants)
 
-| Tier | Variant A | Variant B |
-|------|-----------|-----------|
-| Starter | $29/mo | $24/mo |
-| Pro | $199/mo | $179/mo |
-| Enterprise | $999/mo | $899/mo |
+| Tier       | Variant A | Variant B |
+| ---------- | --------- | --------- |
+| Starter    | $29/mo    | $24/mo    |
+| Pro        | $199/mo   | $179/mo   |
+| Enterprise | $999/mo   | $899/mo   |
 
 **Strategy:** Standard vs. Charm pricing (psychological effect).
 
@@ -65,12 +70,14 @@ Complete A/B testing system to maximize conversion across email templates, Linke
 ## 🚀 Quick Start (5 minutes)
 
 ### 1. Deploy Schema
+
 ```bash
 pnpm drizzle migrate
 # Runs 015_ab_testing_infrastructure.sql
 ```
 
 ### 2. Create Test
+
 ```sql
 INSERT INTO ab_tests (name, description, type, status, hypothesis, hypothesis_type)
 VALUES (
@@ -85,6 +92,7 @@ VALUES (
 ```
 
 ### 3. Seed Templates
+
 ```bash
 pnpm exec ts-node scripts/email-templates-ab.ts 1
 pnpm exec ts-node scripts/linkedin-pricing-variants.ts 1 linkedin
@@ -92,21 +100,25 @@ pnpm exec ts-node scripts/linkedin-pricing-variants.ts 1 pricing
 ```
 
 ### 4. Assign Variants
+
 ```bash
 pnpm exec ts-node scripts/assign-ab-variant.ts --test-id 1 --limit 500 --email
 ```
 
 ### 5. Start Campaigns
+
 - Send emails via variant-specific templates (from `ab_test_variants`)
 - Post LinkedIn content (both variants simultaneously)
 - Show pricing variant to checkout users
 
 ### 6. Track Results
+
 - Email system logs opens/clicks automatically
 - LinkedIn logs impressions/engagement via webhook
 - Pricing logs conversions and deal size
 
 ### 7. Generate Report (After 30+ per variant)
+
 ```bash
 pnpm exec ts-node scripts/ab-test-report.ts --test-id 1
 ```
@@ -116,6 +128,7 @@ pnpm exec ts-node scripts/ab-test-report.ts --test-id 1
 ## 📈 How It Works
 
 ### Assignment Flow
+
 ```
 Lead Created
     ↓
@@ -135,6 +148,7 @@ Sends variant-specific content
 ```
 
 ### Tracking Flow
+
 ```
 Lead opens email
     ↓
@@ -152,6 +166,7 @@ ab-test-report calculates conversion rate + p-value
 ```
 
 ### Results Report
+
 ```
 Variant A: 25/300 conversions (8.34%)
 Variant B: 38/300 conversions (12.67%)
@@ -190,47 +205,55 @@ authichain-unified/
 ## 🔧 Integration Points
 
 ### Email Campaign System
+
 Get variant when sending:
+
 ```typescript
 const variant = await supabase
-  .from('ab_test_variants')
-  .select('*')
-  .eq('ab_test_id', lead.ab_test_id)
-  .eq('variant_name', lead.ab_variant)
+  .from("ab_test_variants")
+  .select("*")
+  .eq("ab_test_id", lead.ab_test_id)
+  .eq("variant_name", lead.ab_variant)
   .single();
 
 // Use variant.subject and variant.html_content
 ```
 
 ### Email Webhook (Open/Click)
+
 ```typescript
 // When email opened:
-await supabase.from('ab_test_results')
+await supabase
+  .from("ab_test_results")
   .update({ email_opened: true })
-  .eq('lead_id', leadId);
+  .eq("lead_id", leadId);
 ```
 
 ### LinkedIn Posting
+
 Get variant text:
+
 ```typescript
 const variant = await supabase
-  .from('ab_test_variants')
-  .select('linkedin_text')
-  .eq('variant_type', 'linkedin_post')
-  .eq('variant_name', 'A')
+  .from("ab_test_variants")
+  .select("linkedin_text")
+  .eq("variant_type", "linkedin_post")
+  .eq("variant_name", "A")
   .single();
 
 // Post variant.linkedin_text + hashtags
 ```
 
 ### Pricing Page
+
 Get assigned pricing:
+
 ```typescript
 const variant = await supabase
-  .from('ab_test_variants')
-  .select('pricing_json')
-  .eq('ab_test_id', lead.ab_test_id)
-  .eq('variant_name', lead.ab_variant)
+  .from("ab_test_variants")
+  .select("pricing_json")
+  .eq("ab_test_id", lead.ab_test_id)
+  .eq("variant_name", lead.ab_variant)
   .single();
 
 // Show pricing from variant.pricing_json.tiers
@@ -241,16 +264,19 @@ const variant = await supabase
 ## 📊 Expected Results
 
 ### Baseline (No Testing)
+
 - Email open rate: 20–25%
 - Click rate: 4–6%
 - Conversion rate: 2–4%
 
 ### After Winner Declared
+
 - Email open rate: +8–15% (28–40%)
 - Click rate: +5–10% (9–16%)
 - Conversion rate: +5–12% (7–16%)
 
 ### 3–6 Month Impact (258 Proposals)
+
 - **Email test:** +10% open rate = +1,500 opens
 - **Pricing test:** +8% conversion = +20 new deals × $5k ACV = **$100k ARR**
 - **LinkedIn test:** +30% engagement = 300+ follower growth + pipeline
@@ -261,18 +287,19 @@ const variant = await supabase
 
 ## 📚 Documentation
 
-| File | Purpose |
-|------|---------|
-| `/docs/ab-testing-guide.md` | Complete A/B testing reference (email variants, pricing strategies, interpretation) |
-| `/.ab-testing/INTEGRATION_CHECKLIST.md` | Step-by-step integration guide for email/LinkedIn/pricing |
-| `/.ab-testing/config.ts` | Global config (test metadata, targets, metrics) |
-| `/scripts/*.ts` | Runnable scripts with --help |
+| File                                    | Purpose                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------- |
+| `/docs/ab-testing-guide.md`             | Complete A/B testing reference (email variants, pricing strategies, interpretation) |
+| `/.ab-testing/INTEGRATION_CHECKLIST.md` | Step-by-step integration guide for email/LinkedIn/pricing                           |
+| `/.ab-testing/config.ts`                | Global config (test metadata, targets, metrics)                                     |
+| `/scripts/*.ts`                         | Runnable scripts with --help                                                        |
 
 ---
 
 ## 🎯 Workflow
 
 ### Week 1: Setup
+
 - [ ] Deploy schema (`pnpm drizzle migrate`)
 - [ ] Create first test (email subject lines)
 - [ ] Seed email templates
@@ -280,16 +307,19 @@ const variant = await supabase
 - [ ] Integrate email system to use variants
 
 ### Week 2–3: Run Test
+
 - [ ] Send emails from variant templates
 - [ ] Track opens/clicks
 - [ ] Accumulate 30+ conversions per variant
 
 ### Week 4: Analyze & Declare Winner
+
 - [ ] Generate report (`ab-test-report.ts`)
 - [ ] Identify winner (p < 0.05)
 - [ ] Quantify impact ($XXk opportunity)
 
 ### Week 5: Scale & Iterate
+
 - [ ] Roll out winner to all new leads
 - [ ] Start next test (LinkedIn angles)
 - [ ] Run multiple tests in parallel
@@ -300,13 +330,13 @@ const variant = await supabase
 
 The report calculates **Chi-squared test** with these thresholds:
 
-| p-value | Confidence | Interpretation |
-|---------|-----------|-----------------|
-| < 0.001 | 99.9% | Extremely strong winner |
-| < 0.01 | 99% | Very strong winner |
-| < 0.05 | 95% | **Declare winner** ✅ |
-| 0.05–0.10 | 90% | Keep testing |
-| > 0.10 | < 90% | No clear winner yet |
+| p-value   | Confidence | Interpretation          |
+| --------- | ---------- | ----------------------- |
+| < 0.001   | 99.9%      | Extremely strong winner |
+| < 0.01    | 99%        | Very strong winner      |
+| < 0.05    | 95%        | **Declare winner** ✅   |
+| 0.05–0.10 | 90%        | Keep testing            |
+| > 0.10    | < 90%      | No clear winner yet     |
 
 **Minimum sample size:** 30 participants per variant.
 
@@ -314,13 +344,13 @@ The report calculates **Chi-squared test** with these thresholds:
 
 ## ⚠️ Common Pitfalls
 
-| Mistake | Impact | Fix |
-|---------|--------|-----|
-| Peeking at results after 5 leads | False winner | Wait for 30+ per variant |
-| Changing variants mid-test | Invalid results | Run separate tests |
-| Not tracking all interactions | Lost signal | Set up email/webhook hooks |
-| Declaring winner with p=0.08 | Low confidence | Keep testing (p < 0.05) |
-| Running too many tests at once | Confusing variables | Focus on one metric per test |
+| Mistake                          | Impact              | Fix                          |
+| -------------------------------- | ------------------- | ---------------------------- |
+| Peeking at results after 5 leads | False winner        | Wait for 30+ per variant     |
+| Changing variants mid-test       | Invalid results     | Run separate tests           |
+| Not tracking all interactions    | Lost signal         | Set up email/webhook hooks   |
+| Declaring winner with p=0.08     | Low confidence      | Keep testing (p < 0.05)      |
+| Running too many tests at once   | Confusing variables | Focus on one metric per test |
 
 ---
 

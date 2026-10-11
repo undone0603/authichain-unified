@@ -10,13 +10,13 @@
 
 The repository simultaneously contains configuration for multiple runtimes:
 
-| File / Dir | Runtime |
-|------------|---------|
+| File / Dir                    | Runtime               |
+| ----------------------------- | --------------------- |
 | `next.config.js` + `src/app/` | Next.js 15 App Router |
-| `vite.config.ts` + `client/` | Vite SPA |
-| `server/_core/index.ts` | Express (tsx) |
-| `open-next.config.ts` | OpenNext → Cloudflare |
-| `wrangler.toml` + `workers/` | Cloudflare Workers |
+| `vite.config.ts` + `client/`  | Vite SPA              |
+| `server/_core/index.ts`       | Express (tsx)         |
+| `open-next.config.ts`         | OpenNext → Cloudflare |
+| `wrangler.toml` + `workers/`  | Cloudflare Workers    |
 
 This ambiguity caused production incidents where Vercel was set to "Next.js" framework instead of "Vite", resulting in JS/CSS assets returning `text/html` (white screen).
 

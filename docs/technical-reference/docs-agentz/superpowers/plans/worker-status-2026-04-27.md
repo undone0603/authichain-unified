@@ -8,12 +8,12 @@
 
 ## Summary
 
-| Question | Outcome |
-|---|---|
-| Q1 — `workers/<name>/` deployment status | **12 DEPLOYED, 8 SCAFFOLDED, 0 PHANTOM** |
-| Q2 — "Remote forks" status | None exist on GitHub; 3 are stale **local** branches |
-| Q3 — Top-level `src/` orphan? | **NO — it's a Hono Cloudflare Worker** (Bridge/JWT/Supabase/RapidAPI). Reclassify, do not delete. |
-| Q4 — Where do `lib/*` get imported? | `lib/industries.ts` used by `server/`; `lib/ecosystem.ts` has no consumers. Target: `shared/` |
+| Question                                 | Outcome                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Q1 — `workers/<name>/` deployment status | **12 DEPLOYED, 8 SCAFFOLDED, 0 PHANTOM**                                                          |
+| Q2 — "Remote forks" status               | None exist on GitHub; 3 are stale **local** branches                                              |
+| Q3 — Top-level `src/` orphan?            | **NO — it's a Hono Cloudflare Worker** (Bridge/JWT/Supabase/RapidAPI). Reclassify, do not delete. |
+| Q4 — Where do `lib/*` get imported?      | `lib/industries.ts` used by `server/`; `lib/ecosystem.ts` has no consumers. Target: `shared/`     |
 
 ---
 
@@ -21,28 +21,28 @@
 
 Queried via `wrangler deployments list --name <declared-name>` against account `4c1869b9…`. Workers with no deployments returned the wrangler "not found" path.
 
-| Dir | Declared name | Status | Last deploy | LOC | pkg.json |
-|---|---|---|---|---|---|
-| `authichain-api` | authichain-api | **DEPLOYED** | 2026-04-11 | 427 | no |
-| `authichain-api-gateway` | authichain-api-gateway | **DEPLOYED** | 2026-04-23 | 466 | no |
-| `authichain-automation` | authichain-automation | **DEPLOYED** | 2026-02-25 | 468 | no |
-| `authichain-autopilot` | authichain-autopilot | SCAFFOLDED | never | 302 | no |
-| `authichain-chain-data` | authichain-chain-data | SCAFFOLDED | never | 155 | no |
-| `authichain-com` | authichain-com | **DEPLOYED** | 2026-04-23 | 302 | no |
-| `authichain-dashboard` | authichain-dashboard | **DEPLOYED** | 2026-04-13 | 271 | no |
-| `authichain-gateway` | authichain-gateway | SCAFFOLDED | never | 552 | yes |
-| `govchain-us` | govchain-us | **DEPLOYED** | 2026-04-23 | 298 | no |
-| `license-issuer` | authichain-license-issuer | SCAFFOLDED | never | 644 | yes |
-| `qron-automation` | qron-automation | **DEPLOYED** | 2026-04-13 | 412 | no |
-| `qron-image-gen` | qron-image-gen | **DEPLOYED** | 2026-04-11 | 280 | no |
-| `qron-outreach` | qron-outreach | **DEPLOYED** | 2026-04-13 | 357 | no |
-| `qron-provenance` | authichain-qron-provenance (+ staging) | SCAFFOLDED | never | 226 | yes |
-| `qron-space` | qron-space | **DEPLOYED** | 2026-04-23 | 318 | no |
-| `resend-relay` | resend-relay | **DEPLOYED** | 2026-04-03 | 91 | no |
-| `scan-validate` | authichain-scan-validate (+ staging) | SCAFFOLDED | never | 193 | yes |
-| `strainchain-io` | strainchain-io | **DEPLOYED** | 2026-04-23 | 272 | no |
-| `telegram` | authichain-telegram | SCAFFOLDED | never | 376 | yes |
-| `verify-worker` | authichain-verify-worker (+ staging) | SCAFFOLDED | never | 174 | yes |
+| Dir                      | Declared name                          | Status       | Last deploy | LOC | pkg.json |
+| ------------------------ | -------------------------------------- | ------------ | ----------- | --- | -------- |
+| `authichain-api`         | authichain-api                         | **DEPLOYED** | 2026-04-11  | 427 | no       |
+| `authichain-api-gateway` | authichain-api-gateway                 | **DEPLOYED** | 2026-04-23  | 466 | no       |
+| `authichain-automation`  | authichain-automation                  | **DEPLOYED** | 2026-02-25  | 468 | no       |
+| `authichain-autopilot`   | authichain-autopilot                   | SCAFFOLDED   | never       | 302 | no       |
+| `authichain-chain-data`  | authichain-chain-data                  | SCAFFOLDED   | never       | 155 | no       |
+| `authichain-com`         | authichain-com                         | **DEPLOYED** | 2026-04-23  | 302 | no       |
+| `authichain-dashboard`   | authichain-dashboard                   | **DEPLOYED** | 2026-04-13  | 271 | no       |
+| `authichain-gateway`     | authichain-gateway                     | SCAFFOLDED   | never       | 552 | yes      |
+| `govchain-us`            | govchain-us                            | **DEPLOYED** | 2026-04-23  | 298 | no       |
+| `license-issuer`         | authichain-license-issuer              | SCAFFOLDED   | never       | 644 | yes      |
+| `qron-automation`        | qron-automation                        | **DEPLOYED** | 2026-04-13  | 412 | no       |
+| `qron-image-gen`         | qron-image-gen                         | **DEPLOYED** | 2026-04-11  | 280 | no       |
+| `qron-outreach`          | qron-outreach                          | **DEPLOYED** | 2026-04-13  | 357 | no       |
+| `qron-provenance`        | authichain-qron-provenance (+ staging) | SCAFFOLDED   | never       | 226 | yes      |
+| `qron-space`             | qron-space                             | **DEPLOYED** | 2026-04-23  | 318 | no       |
+| `resend-relay`           | resend-relay                           | **DEPLOYED** | 2026-04-03  | 91  | no       |
+| `scan-validate`          | authichain-scan-validate (+ staging)   | SCAFFOLDED   | never       | 193 | yes      |
+| `strainchain-io`         | strainchain-io                         | **DEPLOYED** | 2026-04-23  | 272 | no       |
+| `telegram`               | authichain-telegram                    | SCAFFOLDED   | never       | 376 | yes      |
+| `verify-worker`          | authichain-verify-worker (+ staging)   | SCAFFOLDED   | never       | 174 | yes      |
 
 **12 DEPLOYED workers** are all on the user's Cloudflare account, last-deployed within the past 60 days. These need CI deploy coverage in Phase 3.2 (currently only the root `worker/index.ts` is deployed by `.github/workflows/deploy-cloudflare.yml`).
 
@@ -72,11 +72,11 @@ The names `confident-germain`, `stupefied-almeida`, `sweet-liskov` initially loo
 2. **`git remote -v` — no AuthiChain remotes configured.** Only `origin` (this repo's actual upstream).
 3. **`git for-each-ref` — they're LOCAL BRANCHES** with slashes in the name (`refs/heads/AuthiChain/<name>`).
 
-| Local branch | Unique commits vs main | Action |
-|---|---|---|
+| Local branch                   | Unique commits vs main    | Action                    |
+| ------------------------------ | ------------------------- | ------------------------- |
 | `AuthiChain/confident-germain` | **2 commits** — see below | INVESTIGATE before delete |
-| `AuthiChain/stupefied-almeida` | 0 (empty against main) | safe DELETE |
-| `AuthiChain/sweet-liskov` | 0 (empty against main) | safe DELETE |
+| `AuthiChain/stupefied-almeida` | 0 (empty against main)    | safe DELETE               |
+| `AuthiChain/sweet-liskov`      | 0 (empty against main)    | safe DELETE               |
 
 ### Unique commits on `AuthiChain/confident-germain`
 
@@ -105,6 +105,7 @@ src/
 **Implication:** This is effectively a 21st worker scaffold that lives outside `workers/`. It is NOT consumed by `client/`, `server/`, or the canonical `worker/index.ts` build.
 
 **Plan revision needed:**
+
 - Original plan Task 1.4 was "delete top-level `src/`" — this would delete a Worker. **Cancel that task.**
 - Replace with: investigate `src/index.ts` against Cloudflare deployments. Either:
   - **Move to `workers/<name>/`** if it's a real worker that should be in the fleet
@@ -143,14 +144,14 @@ Use relative imports (`from "../../shared/industries"`) unless a `@shared/` alia
 
 This Phase 0 output produces these changes to `2026-04-27-ecosystem-consolidation.md`:
 
-| Plan task | Original | Revised |
-|---|---|---|
-| Task 1.3 (remove dead remotes) | Remove 3 git remotes | **Cherry-pick `confident-germain` unique commits, then delete 3 local branches** |
-| Task 1.4 (delete top-level `src/`) | Delete it | **Cancel — replaced by new Task 0.6 (Hono worker disposition)** |
-| Task 2.2 (fold `lib/`) | Target TBD | **Target = `shared/`** |
-| Task 3.1 (delete PHANTOM workers) | Delete each phantom | **No-op — zero phantoms found** |
-| Task 3.2 (CI deploys) | DEPLOYED workers | **12 specific workers (list above)** |
-| Task 3.3 (SCAFFOLDED decisions) | Per-worker decision | **Covers all 8 undeployed workers (list above)** |
+| Plan task                          | Original             | Revised                                                                          |
+| ---------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| Task 1.3 (remove dead remotes)     | Remove 3 git remotes | **Cherry-pick `confident-germain` unique commits, then delete 3 local branches** |
+| Task 1.4 (delete top-level `src/`) | Delete it            | **Cancel — replaced by new Task 0.6 (Hono worker disposition)**                  |
+| Task 2.2 (fold `lib/`)             | Target TBD           | **Target = `shared/`**                                                           |
+| Task 3.1 (delete PHANTOM workers)  | Delete each phantom  | **No-op — zero phantoms found**                                                  |
+| Task 3.2 (CI deploys)              | DEPLOYED workers     | **12 specific workers (list above)**                                             |
+| Task 3.3 (SCAFFOLDED decisions)    | Per-worker decision  | **Covers all 8 undeployed workers (list above)**                                 |
 
 ---
 

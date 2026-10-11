@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sdk';
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import {
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  rmSync,
+} from 'node:fs';
 import path from 'node:path';
 
-const AI_GATEWAY_URL =
-  process.env.ANTHROPIC_BASE_URL || 'https://ai-gateway.vercel.sh';
+const AI_GATEWAY_URL = process.env.ANTHROPIC_BASE_URL || 'https://ai-gateway.vercel.sh';
 const API_KEY = process.env.AI_GATEWAY_API_KEY;
 const MODEL = process.env.DOGFOOD_MODEL || 'anthropic/claude-haiku-4.5';
 const CUSTOM_URL = process.env.DOGFOOD_URL;
@@ -80,7 +87,9 @@ async function runDogfood(outputDir: string): Promise<{
           let preview: string;
           if (block.name === 'Bash') {
             const cmd = String(input.command ?? '');
-            const firstLine = cmd.split('\n').find(l => l.trim() && !l.trim().startsWith('#')) ?? cmd.split('\n')[0];
+            const firstLine =
+              cmd.split('\n').find((l) => l.trim() && !l.trim().startsWith('#')) ??
+              cmd.split('\n')[0];
             preview = firstLine.trim().slice(0, 200);
           } else if (block.name === 'Write') {
             preview = String(input.file_path ?? input.path ?? '');
@@ -110,15 +119,21 @@ async function runDogfood(outputDir: string): Promise<{
       const cacheRead = usage.cache_read_input_tokens ?? 0;
       const cacheCreate = usage.cache_creation_input_tokens ?? 0;
       const inputTokens = usage.input_tokens ?? 0;
-      const cacheInfo = cacheRead > 0
-        ? ` | cache: ${cacheRead} read, ${cacheCreate} created, ${inputTokens} uncached`
-        : '';
+      const cacheInfo =
+        cacheRead > 0
+          ? ` | cache: ${cacheRead} read, ${cacheCreate} created, ${inputTokens} uncached`
+          : '';
       if (message.subtype === 'success') {
         log(`done (${message.num_turns} turns, ${cost}${cacheInfo})`);
       } else {
         log(`stopped: ${message.subtype} (${message.num_turns} turns, ${cost}${cacheInfo})`);
       }
-      appendToLog({ type: 'result', subtype: message.subtype, num_turns: message.num_turns, cost: message.total_cost_usd });
+      appendToLog({
+        type: 'result',
+        subtype: message.subtype,
+        num_turns: message.num_turns,
+        cost: message.total_cost_usd,
+      });
     }
   }
 
@@ -149,10 +164,9 @@ describe.skipIf(!API_KEY)('Dogfood e2e eval (Agent SDK)', () => {
   it('completes without hard failure', () => {
     expect(evalResult.result, 'No result message received').toBeTruthy();
     const acceptable = ['success', 'error_max_turns', 'error_max_budget_usd'];
-    expect(
-      acceptable,
-      `Agent failed unexpectedly: ${evalResult.result!.subtype}`
-    ).toContain(evalResult.result!.subtype);
+    expect(acceptable, `Agent failed unexpectedly: ${evalResult.result!.subtype}`).toContain(
+      evalResult.result!.subtype
+    );
   });
 
   it('used agent-browser via Bash tool', () => {
@@ -164,9 +178,7 @@ describe.skipIf(!API_KEY)('Dogfood e2e eval (Agent SDK)', () => {
 
   it('produced a report file', () => {
     const reportPath = path.join(outputDir, 'report.md');
-    expect(existsSync(reportPath), 'report.md not found in output dir').toBe(
-      true
-    );
+    expect(existsSync(reportPath), 'report.md not found in output dir').toBe(true);
   });
 
   it('found a minimum number of issues', () => {
@@ -194,24 +206,16 @@ describe.skipIf(!API_KEY)('Dogfood e2e eval (Agent SDK)', () => {
     for (const section of issueSections) {
       const issueId = section.match(/ISSUE-\d+/)?.[0] ?? 'unknown';
 
-      expect(section, `${issueId}: missing Severity`).toMatch(
-        /\*\*Severity\*\*/i
-      );
+      expect(section, `${issueId}: missing Severity`).toMatch(/\*\*Severity\*\*/i);
 
-      const sevMatch = section.match(
-        /\*\*Severity\*\*\s*\|?\s*(critical|high|medium|low)/i
-      );
+      const sevMatch = section.match(/\*\*Severity\*\*\s*\|?\s*(critical|high|medium|low)/i);
       expect(sevMatch, `${issueId}: invalid severity value`).toBeTruthy();
 
-      expect(section, `${issueId}: missing Category`).toMatch(
-        /\*\*Category\*\*/i
-      );
+      expect(section, `${issueId}: missing Category`).toMatch(/\*\*Category\*\*/i);
 
       expect(section, `${issueId}: missing URL`).toMatch(/\*\*URL\*\*/i);
 
-      expect(section, `${issueId}: missing Repro Video field`).toMatch(
-        /\*\*Repro Video\*\*/i
-      );
+      expect(section, `${issueId}: missing Repro Video field`).toMatch(/\*\*Repro Video\*\*/i);
 
       const hasScreenshot = /!\[.*?\]\(.*?\)/.test(section);
       const hasReproSteps = /\*\*Repro Steps\*\*/i.test(section);
@@ -239,10 +243,7 @@ describe.skipIf(!API_KEY)('Dogfood e2e eval (Agent SDK)', () => {
   it('produced screenshot files', () => {
     const screenshotsDir = path.join(outputDir, 'screenshots');
     const screenshots = findFiles(screenshotsDir, '.png');
-    expect(
-      screenshots.length,
-      'No screenshot files found in output'
-    ).toBeGreaterThan(0);
+    expect(screenshots.length, 'No screenshot files found in output').toBeGreaterThan(0);
   });
 
   it('produced video files for interactive issues', () => {
@@ -253,9 +254,6 @@ describe.skipIf(!API_KEY)('Dogfood e2e eval (Agent SDK)', () => {
     if (!hasVideoRefs) return;
     const videosDir = path.join(outputDir, 'videos');
     const videos = findFiles(videosDir, '.webm');
-    expect(
-      videos.length,
-      'Report references videos but none were found'
-    ).toBeGreaterThan(0);
+    expect(videos.length, 'Report references videos but none were found').toBeGreaterThan(0);
   });
 });
