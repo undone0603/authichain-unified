@@ -51,20 +51,6 @@ export function proxy(req: NextRequest) {
   const reqHeaders = new Headers(req.headers);
   reqHeaders.set('x-brand', brand);
 
-  const res = NextResponse.next({ request: { headers: reqHeaders } });
-  res.headers.set('x-brand', brand);
-
-  // 2. Affiliate attribution: persist ?ref=CODE for 30 days (read at checkout).
-  const ref = req.nextUrl.searchParams.get('ref');
-  if (ref && /^[A-Za-z0-9_-]{1,64}$/.test(ref)) {
-    res.cookies.set('aff_ref', ref, {
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
-    });
-  }
-
   const isSystemRoute =
     req.nextUrl.pathname.startsWith('/_next') ||
     req.nextUrl.pathname.startsWith('/api') ||
@@ -81,7 +67,6 @@ export function proxy(req: NextRequest) {
     req.nextUrl.pathname.startsWith('/authichain') ||
     req.nextUrl.pathname.startsWith('/p/') ||
     req.nextUrl.pathname.startsWith('/s/');
-  if (isSystemRoute || isAppRoute) return res;
 
   const hostname = host.toLowerCase().split(':')[0];
   const routePrefix =
@@ -90,13 +75,28 @@ export function proxy(req: NextRequest) {
       : hostname === 'authichain.com'
         ? '/authichain'
         : null;
-  if (routePrefix) {
-    const path = req.nextUrl.pathname === '/' ? routePrefix : `${routePrefix}${req.nextUrl.pathname}`;
-    const rewritten = NextResponse.rewrite(new URL(path, req.url), {
-      request: { headers: reqHeaders },
+
+  // Keep the original query string and decorate only the response we return.
+  let res: NextResponse;
+  if (routePrefix && !isSystemRoute && !isAppRoute) {
+    const destination = new URL(req.url);
+    destination.pathname =
+      req.nextUrl.pathname === '/' ? routePrefix : `${routePrefix}${req.nextUrl.pathname}`;
+    res = NextResponse.rewrite(destination, { request: { headers: reqHeaders } });
+  } else {
+    res = NextResponse.next({ request: { headers: reqHeaders } });
+  }
+  res.headers.set('x-brand', brand);
+
+  // 2. Affiliate attribution: persist ?ref=CODE for 30 days (read at checkout).
+  const ref = req.nextUrl.searchParams.get('ref');
+  if (ref && /^[A-Za-z0-9_-]{1,64}$/.test(ref)) {
+    res.cookies.set('aff_ref', ref, {
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
     });
-    rewritten.headers.set('x-brand', brand);
-    return rewritten;
   }
 
   return res;
