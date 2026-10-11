@@ -52,7 +52,7 @@ jobs:
 
       - name: Check for drift
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ github.event_name != 'pull_request' && secrets.DATABASE_URL || '' }} # CFA-215: empty on pull_request
         run: |
           set -o pipefail
           if [ -z "$DATABASE_URL" ]; then

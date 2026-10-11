@@ -36,7 +36,8 @@ jobs:
     # available in a job-level `if`, so the availability check runs as the
     # first step and the audit step is guarded with an env-based condition.
     env:
-      HAS_SUPABASE_SECRETS: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+      # CFA-215: false on pull_request so PR code never receives these secrets.
+      HAS_SUPABASE_SECRETS: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -63,6 +64,6 @@ jobs:
       - name: Run Compliance Audit
         if: env.HAS_SUPABASE_SECRETS == 'true'
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit
