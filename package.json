@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "turbo dev --single-package",
-    "build": "next build --webpack",
+    "build": "bash scripts/build-with-retry.sh",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",
     "check": "turbo run check --filter=!.",

@@ -8,9 +8,15 @@
  * Intercepts /s/[shortcode] and executes redirect rules at the network edge.
  */
 
+import {
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+} from "../../../packages/verifier/src/canonical-worker-client";
+
 interface Env {
   NEXT_PUBLIC_SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
 }
 
 interface Brand {
@@ -54,6 +60,68 @@ const worker = {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // QRON consumers use the canonical worker's signed decision as protocol truth.
+    // Visual / gallery / redirect layers must not manufacture a positive authenticity
+    // decision when the canonical worker blocks it.
+    if (url.pathname === '/api/verify' && request.method === 'POST') {
+      try {
+        const body = await request.json() as { jws?: unknown; expected_object_id?: unknown };
+        if (typeof body.jws !== 'string' || !body.jws.trim()) {
+          return new Response(JSON.stringify({
+            valid: false,
+            decision: 'indeterminate',
+            decision_contract: 'AuthiChain Verification Decision v1',
+            error: 'jws is required',
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+          });
+        }
+        const result = await verifyWithCanonicalWorker(
+          resolveCanonicalVerifyUrl(env.AUTHICHAIN_CANONICAL_VERIFY_URL),
+          body.jws.trim(),
+          typeof body.expected_object_id === 'string' ? body.expected_object_id : undefined,
+        );
+        const canonicalPositive =
+          result.httpStatus >= 200 &&
+          result.httpStatus < 300 &&
+          result.response.valid === true &&
+          result.response.decision === 'verified';
+        const response = canonicalPositive
+          ? result.response
+          : {
+              ...result.response,
+              valid: false,
+              ...(result.response.decision === 'verified'
+                ? { decision: 'indeterminate' }
+                : {}),
+              reasons: [
+                ...(Array.isArray(result.response.reasons) ? result.response.reasons : []),
+                'canonical_response_not_positive',
+              ],
+            };
+        const status = canonicalPositive
+          ? 200
+          : result.httpStatus >= 400
+            ? result.httpStatus
+            : 409;
+        return new Response(JSON.stringify(response), {
+          status,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          valid: false,
+          decision: 'indeterminate',
+          decision_contract: 'AuthiChain Verification Decision v1',
+          error: error instanceof Error ? error.message : 'canonical verification failed',
+        }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+      }
     }
 
     // 2. Shortcode Redirect Engine (/s/[id] or /s/[shortcode])
