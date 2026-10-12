@@ -135,7 +135,6 @@ export function renderBatteryPassportPage(now: Date = new Date()): string {
       <h1>Free EU Battery Passport gap map</h1>
       <p class="estate-lede hero-sub">Your e-bike, e-scooter or industrial battery needs a passport to be sold in the EU. Map the public-tier gaps in your browser — nothing is sent or stored. From 18 February 2027.</p>
       <div class="estate-actions hero-cta">
-        <a class="btn btn-secondary" href="#gap-map">Map my gaps</a>
         ${checkoutForm("hero-checkout", `Get passport-ready — $${price}`)}
       </div>
     </div>
