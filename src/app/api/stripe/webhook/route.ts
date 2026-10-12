@@ -1,1 +1,694 @@
-PLACEHOLDER - FULL FILE NEEDS MANUAL RESTORE FROM MAIN PLUS sessionId: session.id in provisionPurchase call. Tool truncation prevents clean full-file push. Please complete in PR web UI.
+import { NextRequest, NextResponse, after } from "next/server";
+import Stripe from "stripe";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { provisionPurchase } from "@/lib/provisioning";
+import { renderBillingEmail } from "@/lib/billing-emails";
+import { getBrandIdFromMetadata } from "@/lib/brand-billing";
+import { sendEmail } from "@/lib/email";
+import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
+import { fulfillDppPaidSession } from "@/lib/dpp-fulfill-checkout";
+import {
+  anchorStripeReversal,
+  anchorStripeSale,
+  resolveBuyerWallet,
+  resolveSku,
+} from "@/lib/ledger-service";
+import { constructStripeEventAsync } from "@/lib/stripe-construct-event";
+import { accrueAffiliateCommission } from "../../../../lib/affiliate-accrual";
+
+// Never anchor test-mode objects from a production deployment.
+function isAnchorable(event: Stripe.Event): boolean {
+  return event.livemode || process.env.NODE_ENV !== "production";
+}
+
+// Stripe fields typed as `string | Expandable<T> | null` collapse to a plain
+// id string whenever we don't pass `expand`, which this webhook never does.
+function toStripeId(
+  value: string | { id: string } | null | undefined
+): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+// The Stripe SDK's types no longer expose `subscription`/`payment_intent`
+// directly on Invoice, and `invoice` on Charge, after the account moved to a
+// newer API version's typings — but the webhook payloads on this account's
+// pinned apiVersion still carry them at runtime. Read defensively.
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { subscription?: string | { id: string } | null })
+      .subscription ?? null
+  );
+}
+function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { payment_intent?: string | { id: string } | null })
+      .payment_intent ?? null
+  );
+}
+function getLinePriceId(line: Stripe.InvoiceLineItem): string | null {
+  return (
+    (line as unknown as { price?: { id: string } | null }).price?.id ?? null
+  );
+}
+function getChargeInvoiceId(charge: Stripe.Charge): string | null {
+  return toStripeId(
+    (charge as unknown as { invoice?: string | { id: string } | null })
+      .invoice ?? null
+  );
+}
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const REFERRAL_REWARD_CREDITS = 100;
+type AdminSupabase = SupabaseClient<any>;
+
+type BillingProfile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  brand: string | null;
+  subscription_plan: string | null;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+/**
+ * Credit a user-to-user referrer with account credit on the referred buyer's
+ * first paid conversion. `ref_code` is the referrer's profile id (issued by
+ * ReferralTracker). Idempotent via the user_referrals table.
+ */
+async function creditReferral(
+  supabase: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  refCode: string | undefined,
+  referredEmail: string | null,
+  brand: string
+): Promise<void> {
+  if (!refCode || !referredEmail) return;
+  const email = referredEmail.toLowerCase().trim();
+  if (refCode === email) return; // can't refer yourself by email
+
+  try {
+    const { data: existing } = await supabase
+      .from("user_referrals")
+      .select("id, status")
+      .eq("ref_code", refCode)
+      .eq("referred_email", email)
+      .maybeSingle();
+    if (
+      existing &&
+      (existing.status === "converted" || existing.status === "rewarded")
+    ) {
+      return; // already credited
+    }
+
+    const { data: referrer } = await supabase
+      .from("profiles")
+      .select("id, generations_limit")
+      .eq("id", refCode)
+      .maybeSingle();
+
+    if (referrer?.id) {
+      await supabase
+        .from("profiles")
+        .update({
+          generations_limit:
+            Number(referrer.generations_limit ?? 0) + REFERRAL_REWARD_CREDITS,
+        })
+        .eq("id", referrer.id);
+    }
+
+    await supabase.from("user_referrals").insert({
+      ref_code: refCode,
+      referrer_id: referrer?.id ?? null,
+      referred_email: email,
+      brand,
+      status: "rewarded",
+      reward_credits: REFERRAL_REWARD_CREDITS,
+      converted_at: new Date().toISOString(),
+      rewarded_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("[webhook] referral credit failed:", e);
+  }
+}
+
+// Lazy singletons — avoid build-time throw when env vars are absent.
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+    _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
+  }
+  return _stripe;
+}
+
+let _supabase: AdminSupabase | null = null;
+function getSupabase(): AdminSupabase {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+}
+
+async function claimStripeEvent(
+  supabase: AdminSupabase,
+  event: Stripe.Event
+): Promise<"claimed" | "duplicate" | "in_progress"> {
+  const { error: insertError } = await supabase.from("stripe_events").insert({
+    event_id: event.id,
+    event_type: event.type,
+    processed_at: new Date().toISOString(),
+    status: "processing",
+  });
+  if (!insertError) return "claimed";
+  if (insertError.code !== "23505") throw insertError;
+
+  const { data: existing, error: readError } = await supabase
+    .from("stripe_events")
+    .select("status, processed_at")
+    .eq("event_id", event.id)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!existing || existing.status === "success" || !existing.status) {
+    return "duplicate";
+  }
+
+  const processedAt = existing.processed_at
+    ? new Date(existing.processed_at).getTime()
+    : 0;
+  const staleProcessing =
+    existing.status === "processing" &&
+    (!Number.isFinite(processedAt) || Date.now() - processedAt > 5 * 60_000);
+  if (existing.status !== "error" && !staleProcessing) return "in_progress";
+
+  let reclaim = supabase
+    .from("stripe_events")
+    .update({
+      status: "processing",
+      processed_at: new Date().toISOString(),
+      error: null,
+    })
+    .eq("event_id", event.id)
+    .eq("status", existing.status);
+  if (existing.processed_at) {
+    reclaim = reclaim.eq("processed_at", existing.processed_at);
+  }
+  const { data: reclaimed, error: reclaimError } =
+    await reclaim.select("event_id");
+  if (reclaimError) throw reclaimError;
+  return reclaimed?.length ? "claimed" : "in_progress";
+}
+
+export async function POST(req: NextRequest) {
+  // Single canonical endpoint for the whole (single-account) ecosystem. Accept
+  // either signing secret so consolidation doesn't depend on which secret the
+  // live Stripe endpoint was registered with. Brand is read from event metadata,
+  // not from the endpoint.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET,
+  ].filter((s): s is string => !!s);
+
+  if (!process.env.STRIPE_SECRET_KEY || secrets.length === 0) {
+    return NextResponse.json(
+      { error: "Stripe not configured" },
+      { status: 500 }
+    );
+  }
+
+  const stripe = getStripe();
+
+  const body = await req.text();
+  const sig = req.headers.get("stripe-signature")!;
+
+  let event: Stripe.Event;
+  try {
+    event = await constructStripeEventAsync(stripe, body, sig, secrets);
+  } catch (err) {
+    const lastErr = getErrorMessage(err);
+    console.error("Stripe webhook signature verification failed:", lastErr);
+    return NextResponse.json(
+      { error: `Webhook Error: ${lastErr}` },
+      { status: 400 }
+    );
+  }
+
+  // Atomically claim the event using stripe_events.event_id's primary key.
+  // Never fail open here: concurrent delivery must not run financial side effects twice.
+  try {
+    const claim = await claimStripeEvent(getSupabase(), event);
+    if (claim === "duplicate") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    if (claim === "in_progress") {
+      return NextResponse.json(
+        { error: "Webhook event is already being processed" },
+        { status: 500 }
+      );
+    }
+  } catch (err) {
+    console.error("[webhook] Stripe event claim failed:", err);
+    return NextResponse.json(
+      { error: "Could not claim Stripe event" },
+      { status: 500 }
+    );
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const md = session.metadata || {};
+        const userId = md.user_id;
+        const plan = md.plan;
+        const brand = getBrandIdFromMetadata(md);
+        const customerId = toStripeId(session.customer);
+        const subscriptionId = toStripeId(session.subscription);
+
+        const isTrial = md.trial === "true";
+        const grantRaw = md.grant;
+        const grantParsed = grantRaw ? parseInt(grantRaw, 10) : NaN;
+        const generationsGrant = Number.isNaN(grantParsed)
+          ? undefined
+          : grantParsed;
+        const email =
+          session.customer_email || session.customer_details?.email || null;
+        const linePriceId =
+          session.line_items?.data?.[0]?.price?.id ||
+          (typeof session.metadata?.stripe_price_id === "string"
+            ? session.metadata.stripe_price_id
+            : null);
+        const dppOffer = isDppOffer(md as Record<string, unknown>, linePriceId);
+        const visitId =
+          md.visit_id || md.prospect_id || session.client_reference_id || null;
+
+        if (dppOffer) {
+          await fulfillDppPaidSession(getSupabase(), session, linePriceId);
+          break;
+        }
+
+        // Hands-off provisioning for BOTH authenticated and guest checkouts.
+        // Guests get a profile created/resolved by email so the purchase is
+        // never lost.
+        const prov = await provisionPurchase(getSupabase(), {
+          email,
+          userId,
+          plan: plan || (dppOffer ? "dpp_readiness" : plan),
+          brand,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          isTrial,
+          generationsGrant,
+          sessionId: session.id,
+        });
+
+        if (prov.profileId) {
+          await getSupabase()
+            .from("checkout_sessions")
+            .update({ status: "completed" })
+            .eq("session_id", session.id);
+
+          if (dppOffer && visitId) {
+            await recordDppLoopEvent(getSupabase(), {
+              visitId: String(visitId),
+              stage: "provisioned",
+              source: md.source || "direct",
+              email,
+              profileId: prov.profileId,
+              stripeSessionId: session.id,
+              metadata: {
+                created: prov.created,
+                plan: plan || "dpp_readiness",
+              },
+            });
+          }
+
+          // Brand-aware welcome email (replaces the cross-call to /api/email).
+          if (email) {
+            const mail = dppOffer
+              ? renderBillingEmail("dpp_audit_provisioned", brand, {
+                  planName: "EU DPP Workspace",
+                  activateUrl: dppActivateUrl(
+                    session.id,
+                    visitId ? String(visitId) : null
+                  ),
+                })
+              : renderBillingEmail("subscription_confirmed", brand, {
+                  planName: plan || undefined,
+                });
+            await sendEmail({
+              to: email,
+              from: mail.from,
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+            }).catch(() => {});
+          }
+        }
+
+        // complete_checkout funnel event — success is only known here.
+        // DPP offers record via recordDppLoopEvent above; skip duplicate insert.
+        if (md.prospect_id && !dppOffer) {
+          try {
+            await getSupabase()
+              .from("funnel_events")
+              .insert({
+                prospect_id: md.prospect_id,
+                stage: "complete_checkout",
+                source: md.source || "direct",
+                metadata: { plan, brand },
+                timestamp: new Date().toISOString(),
+              });
+          } catch (e) {
+            console.error(
+              "[webhook] complete_checkout funnel insert failed:",
+              e
+            );
+          }
+        }
+
+        // User-to-user referral account credit (first paid conversion).
+        if (
+          typeof session.amount_total === "number" &&
+          session.amount_total > 0
+        ) {
+          await creditReferral(getSupabase(), md.ref_code, email, brand);
+        }
+
+        // Affiliate commission accrual — credit the referring affiliate's
+        // pending_payout when the buyer arrived via an affiliate code.
+        // Runs independently of userId (guest checkouts can still be referred).
+        const affiliateCode = session.metadata?.affiliate_code;
+        if (
+          affiliateCode &&
+          typeof session.amount_total === "number" &&
+          session.amount_total > 0
+        ) {
+          const accrual = await accrueAffiliateCommission(getSupabase(), {
+            affiliateCode,
+            amountCents: session.amount_total,
+            conversion: true,
+            eventId: event.id,
+          });
+          if (!accrual.credited) {
+            throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+          }
+        }
+
+        // --- AuthiChainLedger: anchor the sale (non-blocking, never throws) --
+        if (
+          isAnchorable(event) &&
+          session.payment_status === "paid" &&
+          (session.amount_total ?? 0) > 0
+        ) {
+          after(() =>
+            anchorStripeSale({
+              eventId: event.id,
+              objectId: session.id,
+              sku: resolveSku(md, null),
+              amountCents: session.amount_total!,
+              currency: session.currency ?? "usd",
+              buyerWallet: resolveBuyerWallet(md),
+              stripeCreated: session.created,
+              source: "live",
+              paymentIntentId:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : null,
+              checkoutSessionId: session.id,
+            })
+          );
+        }
+        break;
+      }
+
+      case "invoice.paid": {
+        const invoice = event.data.object;
+        const customerId = toStripeId(invoice.customer);
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
+        const amountPaid = invoice.amount_paid / 100;
+
+        const { data: profile } = await getSupabase()
+          .from("profiles")
+          .select("id, subscription_plan")
+          .eq("stripe_customer_id", customerId)
+          .single();
+
+        if (profile) {
+          await getSupabase()
+            .from("profiles")
+            .update({
+              subscription_status: "active",
+              last_payment_at: new Date().toISOString(),
+            })
+            .eq("id", profile.id);
+
+          await getSupabase().from("payment_history").insert({
+            user_id: profile.id,
+            stripe_invoice_id: invoice.id,
+            stripe_subscription_id: subscriptionId,
+            amount: amountPaid,
+            currency: invoice.currency,
+            status: "paid",
+            paid_at: new Date().toISOString(),
+          });
+        }
+
+        // Recurring affiliate commission — credit on renewals only.
+        // The first payment is handled by checkout.session.completed, so we skip
+        // billing_reason 'subscription_create' here to avoid double-counting.
+        // Event-level idempotency (stripe_events) prevents re-crediting a retry.
+        if (
+          invoice.billing_reason === "subscription_cycle" &&
+          subscriptionId &&
+          invoice.amount_paid > 0
+        ) {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const affiliateCode = sub.metadata?.affiliate_code;
+          if (affiliateCode) {
+            const accrual = await accrueAffiliateCommission(getSupabase(), {
+              affiliateCode,
+              amountCents: invoice.amount_paid,
+              conversion: false,
+              eventId: event.id,
+            });
+            if (!accrual.credited) {
+              throw new Error(`Affiliate commission not recorded: ${accrual.reason}`);
+            }
+          }
+        }
+
+        // --- AuthiChainLedger: anchor renewal payments only. The first
+        // subscription invoice is already anchored under the checkout
+        // session id — anchoring it again here would double-count revenue
+        // under a second ref.
+        const isRenewal = invoice.billing_reason !== "subscription_create";
+        if (
+          isAnchorable(event) &&
+          isRenewal &&
+          invoice.status === "paid" &&
+          (invoice.amount_paid ?? 0) > 0
+        ) {
+          const line = invoice.lines?.data?.[0];
+          after(() =>
+            anchorStripeSale({
+              eventId: event.id,
+              objectId: invoice.id!,
+              sku: resolveSku(
+                invoice.metadata,
+                line ? getLinePriceId(line) : null
+              ),
+              amountCents: invoice.amount_paid!,
+              currency: invoice.currency ?? "usd",
+              buyerWallet: resolveBuyerWallet(invoice.metadata, line?.metadata),
+              stripeCreated: invoice.created,
+              source: "live",
+              invoiceId: invoice.id,
+              paymentIntentId: getInvoicePaymentIntentId(invoice),
+            })
+          );
+        }
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const customerId = toStripeId(invoice.customer);
+
+        const profileResult = await getSupabase()
+          .from("profiles")
+          .select("id, email, full_name, brand, subscription_plan")
+          .eq("stripe_customer_id", customerId)
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
+
+        if (profile) {
+          await getSupabase()
+            .from("profiles")
+            .update({
+              subscription_status: "past_due",
+            })
+            .eq("id", profile.id);
+
+          if (profile.email) {
+            const brand = getBrandIdFromMetadata({ brand: profile.brand });
+            const mail = renderBillingEmail("payment_failed", brand, {
+              name: profile.full_name || undefined,
+              planName: profile.subscription_plan || undefined,
+            });
+            await sendEmail({
+              to: profile.email,
+              from: mail.from,
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+            }).catch(() => {});
+          }
+        }
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object;
+        const customerId = toStripeId(subscription.customer);
+
+        await getSupabase()
+          .from("profiles")
+          .update({
+            subscription_status: "cancelled",
+            subscription_plan: "free",
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq("stripe_customer_id", customerId);
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object;
+        const customerId = toStripeId(subscription.customer);
+        const status = subscription.status;
+
+        await getSupabase()
+          .from("profiles")
+          .update({
+            subscription_status: status,
+            stripe_subscription_id: subscription.id,
+          })
+          .eq("stripe_customer_id", customerId);
+        break;
+      }
+
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object;
+        const customerId = toStripeId(subscription.customer);
+
+        const profileResult = await getSupabase()
+          .from("profiles")
+          .select("id, email, full_name, brand, subscription_plan")
+          .eq("stripe_customer_id", customerId)
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
+
+        if (profile?.email) {
+          const brand = getBrandIdFromMetadata({ brand: profile.brand });
+          const mail = renderBillingEmail("trial_expiring", brand, {
+            name: profile.full_name || undefined,
+            planName: profile.subscription_plan || undefined,
+            days: 3,
+          });
+          await sendEmail({
+            to: profile.email,
+            from: mail.from,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+          }).catch(() => {});
+        }
+        break;
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object;
+
+        // The refund arrives as ch_/pi_, but the sale was anchored under cs_
+        // or in_. Resolve the checkout session so the reversal lands right.
+        let sessionId: string | undefined;
+        const piId =
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id;
+        if (piId) {
+          const sessions = await stripe.checkout.sessions.list({
+            payment_intent: piId,
+            limit: 1,
+          });
+          sessionId = sessions.data[0]?.id;
+        }
+        const invoiceId = getChargeInvoiceId(charge);
+
+        if (isAnchorable(event)) {
+          after(() =>
+            anchorStripeReversal({
+              eventId: event.id,
+              candidateObjectIds: [sessionId, invoiceId, charge.id],
+            })
+          );
+        }
+        break;
+      }
+
+      case "invoice.voided": {
+        const invoice = event.data.object;
+        if (isAnchorable(event)) {
+          after(() =>
+            anchorStripeReversal({
+              eventId: event.id,
+              candidateObjectIds: [invoice.id],
+            })
+          );
+        }
+        break;
+      }
+
+      default:
+        console.log(`Unhandled Stripe event: ${event.type}`);
+    }
+
+    const { error: completeError } = await getSupabase()
+      .from("stripe_events")
+      .update({
+        status: "success",
+        processed_at: new Date().toISOString(),
+      })
+      .eq("event_id", event.id);
+    if (completeError) throw completeError;
+
+    return NextResponse.json({ received: true, type: event.type });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    try {
+      const { error: markError } = await getSupabase()
+        .from("stripe_events")
+        .update({
+          status: "error",
+          processed_at: new Date().toISOString(),
+          error: getErrorMessage(err).slice(0, 1000),
+        })
+        .eq("event_id", event.id);
+      if (markError) {
+        console.error("[webhook] Failed to mark event error:", markError);
+      }
+    } catch (markError) {
+      console.error("[webhook] Failed to mark event error:", markError);
+    }
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
+  }
+}
