@@ -43,7 +43,7 @@ const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
         c
       ]!
   );
@@ -60,7 +60,7 @@ function checkoutForm(id: string, label: string, category?: string): string {
     <input id="${id}-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="you@yourbrand.com">
   </label>
   ${hidden}
-  <p class="checkout-email-hint">Opens Stripe checkout. Your email is used for the receipt and workspace activation. Not a newsletter.</p>
+  <p class="checkout-email-hint">We use this for your receipt and to follow up if checkout doesn’t finish. No newsletter.</p>
   <button class="btn btn-primary" type="submit">${esc(label)}</button>
 </form>`;
 }
@@ -103,8 +103,9 @@ function resultHtml(r: DppReadinessResult, price: number): string {
         ? "Expected"
         : "Not scheduled";
   const cta = r.inScope
-    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Open a workspace — $${price}`, r.category.id)}</div>
-    <p class="bp-note"><a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>. The checkout does not send that page as a document.</p>`
+    ? `<div class="dc-cta">${checkoutForm("result-checkout", `Start EU DPP Readiness — $${price}`, r.category.id)}</div>
+    <p class="bp-note"><a href="/onboard">Onboard a pilot — work email, no call</a>.</p>
+    <p class="bp-note"><a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>.</p>`
     : "";
   return `<section class="estate-section dc-result" id="result" aria-live="polite">
   <div class="wrap">
@@ -117,6 +118,9 @@ function resultHtml(r: DppReadinessResult, price: number): string {
     <p>${esc(r.nextStep)}</p>
     ${cta}
     <p class="bp-note">${esc(r.disclaimer)}</p>
+    <details><summary>Does $299 file my passport with the EU?</summary><p>No.</p></details>
+    <details><summary>What does $299 buy?</summary><p>An AuthiChain workspace, self-serve activation, and 50 workspace generations. Not an audit, certification, or legal opinion.</p></details>
+    <details><summary>Is AuthiChain a GS1 Conformant Resolver?</summary><p>No.</p></details>
   </div>
 </section>`;
 }
@@ -132,7 +136,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
     : null;
   const title = "Free EU Digital Product Passport readiness check | AuthiChain";
   const description =
-    "Answer eight quick questions and see how ready your products are for the EU Digital Product Passport: score, gaps, and the dated obligation for your category. Free, no sign-up.";
+    "Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -202,8 +206,8 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
   <header class="estate-hero hero" id="hero">
     <div class="wrap hero-content">
       <p class="estate-badge hero-badge">Free tool · EU Digital Product Passport</p>
-      <h1>How ready are your products for the EU Digital Product Passport?</h1>
-      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, no sign-up, nothing stored.</p>
+      <h1>Map your EU DPP gaps. Free.</h1>
+      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, nothing stored. AuthiChain does not operate the EU DPP registry. This is a readiness map, not a filing, not a notified-body opinion, and not legal advice.</p>
       <p class="bp-note">The $299 checkout opens a workspace. <a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>.</p>
       ${formHtml(input)}
     </div>
