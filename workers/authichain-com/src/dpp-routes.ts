@@ -131,6 +131,11 @@ function activateHtml(sessionId: string, visitId: string): string {
          <textarea name="markets" rows="2" required></textarea></label>
        <label>Current labeling / QR / NFC setup (or "none")
          <textarea name="labeling" rows="2" required></textarea></label>
+       <p style="margin:1rem 0 0.5rem;color:#94a3b8;font-size:0.9rem">Optional pack figures (same as the free /battery-passport gap map). Leave blank if unknown.</p>
+       <label>Pack model <input name="pack_model" type="text" /></label>
+       <label>Stated energy (Wh) <input name="stated_wh" type="number" step="any" min="0" /></label>
+       <label>Rated capacity (Ah) <input name="ah" type="number" step="any" min="0" /></label>
+       <label>Nominal voltage (V) <input name="nominal_v" type="number" step="any" min="0" /></label>
        <button class="btn" type="submit">Activate workspace</button>
        <p id="msg" style="margin-top:1rem"></p>
      </form>
@@ -149,7 +154,11 @@ function activateHtml(sessionId: string, visitId: string): string {
                visit_id: ${JSON.stringify(visitId)},
                categories: fd.get('categories'),
                markets: fd.get('markets'),
-               labeling: fd.get('labeling')
+               labeling: fd.get('labeling'),
+               pack_model: fd.get('pack_model') || undefined,
+               stated_wh: fd.get('stated_wh') || undefined,
+               ah: fd.get('ah') || undefined,
+               nominal_v: fd.get('nominal_v') || undefined
              })
            });
            var data = await res.json().catch(function () { return {}; });
