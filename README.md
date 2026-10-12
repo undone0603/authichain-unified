@@ -114,6 +114,10 @@ pnpm install
 pnpm dev
 ```
 
+### GitHub Codespaces
+
+A condensed Codespaces config lives in `.devcontainer/`. Default scope is `core` (frozen pnpm install, no browser binaries, no husky). Technique and expand rules: [`.devcontainer/CONDENSING.md`](.devcontainer/CONDENSING.md).
+
 For database-backed scripts, **never put credentials in source code**. Set `DATABASE_URL` in the local environment or the deployment secret store.
 
 Example:
