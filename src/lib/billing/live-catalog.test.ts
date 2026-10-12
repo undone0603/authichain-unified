@@ -67,4 +67,11 @@ describe("catalog freeze 2026-09-28", () => {
     expect(isFounderEmail("authichain@gmail.com")).toBe(true);
     expect(isFounderEmail("buyer@example.com")).toBe(false);
   });
+
+  it("treats every alias on an owned @domain founder entry as founder", () => {
+    expect(isFounderEmail("ops@authichain.com")).toBe(true);
+    expect(isFounderEmail("smoke+dpp@authichain.com")).toBe(true);
+    expect(isFounderEmail("a@authichain.com.au")).toBe(false);
+    expect(isFounderEmail("buyer@farm.com")).toBe(false);
+  });
 });
