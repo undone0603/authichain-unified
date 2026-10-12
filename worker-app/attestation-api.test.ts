@@ -421,7 +421,45 @@ describe("verification reports the issuer's decision (docs/attestation/v0.1.md)"
     expect(r.body).toMatchObject({
       valid: false,
       status: "revoked",
-      decision: "blocked",
+      // Durable/signed lifecycle revocation is a lifecycle decision, not a
+      // counterfeit verdict and not the issuer's signed blocked decision.
+      decision: "revoked",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["durable_status_revoked"],
+    });
+  });
+
+  it("verified responses expose the structured trust decision contract", async () => {
+    const { sign, verify } = await appWithKey();
+    const r = await verify(await sign({}));
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({
+      decision_contract: "AuthiChain Verification Decision v1",
+      trust: {
+        evidence: { cryptographic_status: "valid", signature: "valid" },
+        lifecycle: { claim_status: "active", expired: false },
+        risk: { flagged: false },
+        policy: { authorized: true },
+        decision: { code: "verified", valid: true, reasons: [] },
+      },
+    });
+  });
+
+  it("risk signals keep a cryptographically valid claim unauthorized", async () => {
+    const { sign, verify } = await appWithKey();
+    const r = await verify(await sign({}), "/api/v1/attestation/verify", {
+      risk_signals: ["scan_velocity"],
+    });
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({
+      valid: false,
+      decision: "risk",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["risk_scan_velocity"],
+      trust: {
+        risk: { flagged: true, signals: ["scan_velocity"] },
+        policy: { authorized: false },
+      },
     });
   });
 

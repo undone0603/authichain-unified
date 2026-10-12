@@ -4,6 +4,7 @@ import {
   evaluateAttestation,
   inspectAttestationJws,
   publicJwkFromPrivateKey,
+  resolveVerificationDecision,
   signAttestation,
   validateAttestation,
 } from "../packages/verifier/src/index";
@@ -95,37 +96,94 @@ async function verifyResponse(
       payload: { valid: false, error: durable.error, signature: "valid" },
     };
   }
-  const durableStatus = durable.status?.claimStatus;
-  const valid = !issuerActive || (durableStatus && durableStatus !== "active")
-    ? false
-    : evaluation.valid;
-  const reasons = [
-    ...evaluation.reasons,
-    ...(!issuerActive ? [`issuer_status_${issuer.issuer.status}`] : []),
-    ...(durableStatus && durableStatus !== "active" ? [`durable_status_${durableStatus}`] : []),
-  ];
+  const durableStatus = durable.status?.claimStatus ?? null;
+  const riskSignals = Array.isArray(input.risk_signals)
+    ? input.risk_signals.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    : Array.isArray(input.riskSignals)
+      ? input.riskSignals.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      : [];
+  const claimStatusForDecision =
+    (durableStatus ??
+      (evaluation.status === "expired"
+        ? "expired"
+        : evaluation.status === "revoked"
+          ? "revoked"
+          : evaluation.status === "active"
+            ? "active"
+            : null)) as "active" | "revoked" | "expired" | "superseded" | null;
+  const decisionResult = resolveVerificationDecision({
+    cryptographicValid: true,
+    issuerTrusted: issuerActive,
+    claimStatus: claimStatusForDecision,
+    signedDecision: attestation.decision,
+    expired: evaluation.expired,
+    found: true,
+    ...(riskSignals.length ? { riskSignals } : {}),
+  });
   const effectiveStatus = durableStatus ?? evaluation.status;
+  const authorized =
+    decisionResult.valid === true && decisionResult.decision === "verified";
   return {
-    status: valid ? 200 : 409,
+    status: decisionResult.valid ? 200 : 409,
     payload: {
-      valid,
+      valid: decisionResult.valid,
       contract: "AuthiChain Attestation Contract",
       version: "0.1",
-      decision: evaluation.decision,
+      decision: decisionResult.decision,
+      decision_contract: "AuthiChain Verification Decision v1",
       status: effectiveStatus,
       claim_status: effectiveStatus,
       cryptographic_status: "valid",
       issuer_status: issuer.issuer.status,
-      overall_valid: valid,
+      overall_valid: decisionResult.valid,
       ...(durable.status ? {
         status_event_id: durable.status.eventId,
         effective_at: durable.status.effectiveAt,
         ...(durable.status.reasonCode ? { reason_code: durable.status.reasonCode } : {}),
       } : {}),
       expired: evaluation.expired,
-      reasons,
+      reasons: decisionResult.reasons,
       signature: "valid",
       attestation,
+      // Structured decision surfaces for DPP / QRON / AgentZ consumers.
+      // Cryptographically valid ≠ authorized; not_found ≠ counterfeit.
+      trust: {
+        evidence: {
+          cryptographic_status: "valid",
+          signature: "valid",
+          issuer_id: attestation.issuer.id,
+          issuer_status: issuer.issuer.status,
+          subject_object_id: attestation.subject.object_id,
+          evidence_count: Array.isArray(attestation.evidence)
+            ? attestation.evidence.length
+            : 0,
+        },
+        lifecycle: {
+          claim_status: effectiveStatus,
+          expired: evaluation.expired,
+          durable: Boolean(durable.status),
+        },
+        risk: {
+          signals: riskSignals,
+          flagged: riskSignals.length > 0 || decisionResult.decision === "risk",
+        },
+        policy: {
+          authorized,
+          rules_evaluated: [
+            "cryptographic_validity",
+            "issuer_trust",
+            "durable_lifecycle",
+            "expiry",
+            "risk_signals",
+            "signed_decision",
+          ],
+        },
+        decision: {
+          code: decisionResult.decision,
+          valid: decisionResult.valid,
+          reasons: decisionResult.reasons,
+        },
+      },
     },
   };
 }

@@ -390,3 +390,19 @@ export function toW3cVerifiableCredential(
     },
   };
 }
+
+export { resolveVerificationDecision } from "./verification-decision";
+export type {
+  VerificationDecision,
+  VerificationDecisionInput,
+  VerificationDecisionResult,
+} from "./verification-decision";
+export {
+  isVerificationDecisionResponse,
+  projectVerificationDecision,
+} from "./verification-decision-response";
+export type { VerificationDecisionResponse } from "./verification-decision-response";
+export {
+  verifyWithCanonicalWorker,
+  type CanonicalVerificationResponse,
+} from "./canonical-worker-client";
