@@ -86,6 +86,104 @@ export function buildQronAttestationSubject(
   };
 }
 
+/** Issuer id used for AuthiChain-signed Living QR attestations. */
+export const QRON_ATTESTATION_ISSUER = {
+  id: "https://authichain.com",
+  name: "AuthiChain",
+} as const;
+
+/** JWKS URL matching worker-app/issuer.ts (same keys as /.well-known/jwks.json). */
+export const QRON_ATTESTATION_JWKS_URL =
+  "https://authichain.com/protocol/jwks.json";
+
+/**
+ * Attestation Contract v0.1 payload for a Living QR destination.
+ * Caller supplies sha256 digests (`sha256:` + 64 hex) for evidence.
+ */
+export function buildQronLivingQrAttestation(input: {
+  destinationUrl: string;
+  imageUrl: string;
+  destinationDigest: string;
+  imageDigest?: string;
+  objectId?: string;
+  issuedAt?: string;
+  attestationId?: string;
+  expiresAt?: string;
+}): {
+  version: "0.1";
+  attestation_id: string;
+  issuer: { id: string; name: string };
+  subject: {
+    object_id: string;
+    product_class: "living_qr";
+  };
+  decision: "verified";
+  status: "active";
+  issued_at: string;
+  expires_at?: string;
+  evidence: Array<{
+    id: string;
+    type: string;
+    digest: string;
+    uri?: string;
+  }>;
+} {
+  const destinationUrl = input.destinationUrl.trim();
+  const imageUrl = input.imageUrl.trim();
+  if (!destinationUrl) throw new Error("destinationUrl is required");
+  if (!imageUrl) throw new Error("imageUrl is required");
+  if (!/^sha256:[A-Fa-f0-9]{64}$/.test(input.destinationDigest)) {
+    throw new Error("destinationDigest must be sha256:<64 hex chars>");
+  }
+  if (
+    input.imageDigest !== undefined &&
+    !/^sha256:[A-Fa-f0-9]{64}$/.test(input.imageDigest)
+  ) {
+    throw new Error("imageDigest must be sha256:<64 hex chars>");
+  }
+
+  const object_id =
+    input.objectId?.trim() || qronObjectIdForDestination(destinationUrl);
+  const issued_at = input.issuedAt || new Date().toISOString();
+  const attestation_id =
+    input.attestationId ||
+    `urn:authichain:attestation:v01:qron-${fnv1aHex(object_id + issued_at)}`;
+
+  const evidence: Array<{
+    id: string;
+    type: string;
+    digest: string;
+    uri?: string;
+  }> = [
+    {
+      id: "living-qr-destination",
+      type: "living_qr_destination",
+      digest: input.destinationDigest,
+      uri: destinationUrl,
+    },
+  ];
+  if (input.imageDigest) {
+    evidence.push({
+      id: "living-qr-image",
+      type: "living_qr_image",
+      digest: input.imageDigest,
+      uri: imageUrl.startsWith("data:") ? undefined : imageUrl,
+    });
+  }
+
+  return {
+    version: "0.1",
+    attestation_id,
+    issuer: { ...QRON_ATTESTATION_ISSUER },
+    subject: { object_id, product_class: "living_qr" },
+    decision: "verified",
+    status: "active",
+    issued_at,
+    ...(input.expiresAt ? { expires_at: input.expiresAt } : {}),
+    evidence,
+  };
+}
+
 export function buildQronPresentation(input: {
   destinationUrl: string;
   imageUrl: string;

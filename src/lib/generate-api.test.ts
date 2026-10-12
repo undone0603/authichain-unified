@@ -179,6 +179,58 @@ describe("handleGeneratePost", () => {
       deductCredit.mock.invocationCallOrder[0]
     );
   });
+
+  it("binds attestation when bindAttestation returns jws/kid/jwks", async () => {
+    const bindAttestation = vi.fn(async () => ({
+      jws: "a.b.c",
+      kid: "kid-test",
+      jwks_url: "https://authichain.com/protocol/jwks.json",
+    }));
+    const result = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+    });
+    expect(result.status).toBe(200);
+    const presentation = result.body.presentation as {
+      status: string;
+      attestation: { jws: string; kid: string; jwks_url: string };
+    };
+    expect(presentation.status).toBe("attestation_bound");
+    expect(presentation.attestation.jws).toBe("a.b.c");
+    expect(bindAttestation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destinationUrl: "https://example.com/sku",
+        userId: "user_1",
+      })
+    );
+  });
+
+  it("stays image_issued when bindAttestation throws", async () => {
+    const result = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation: async () => {
+        throw new Error("signing down");
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(
+      (result.body.presentation as { status: string }).status
+    ).toBe("image_issued");
+  });
 });
 
 describe("extractAccessToken", () => {
