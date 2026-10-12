@@ -65,6 +65,7 @@ describe("gated checkout paths", () => {
 
   it("resolves ids and aliases, rejects free/unknown plans", () => {
     expect(planFromGatedPath("/checkout/dpp")?.id).toBe("dpp_readiness");
+    expect(planFromGatedPath("/checkout/launch")?.id).toBe("qron_launch");
     expect(planFromGatedPath("/checkout/theater_3/")?.id).toBe("theater_3");
     expect(planFromGatedPath("/checkout/free")).toBeUndefined();
     expect(planFromGatedPath("/checkout/nope")).toBeUndefined();
@@ -183,6 +184,12 @@ describe("tryHandleGatedCheckout — GET/HEAD never call Stripe", () => {
     expect(alias!.headers.get("location")).toBe(
       "/checkout/dpp_readiness?email=a%40b.co"
     );
+    const launch = await tryHandleGatedCheckout(
+      new Request("https://authichain.com/checkout/launch"),
+      {}
+    );
+    expect(launch!.status).toBe(301);
+    expect(launch!.headers.get("location")).toBe("/checkout/qron_launch");
     const unknown = await tryHandleGatedCheckout(
       new Request("https://authichain.com/checkout/nope"),
       {}

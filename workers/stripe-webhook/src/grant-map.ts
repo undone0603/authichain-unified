@@ -107,10 +107,21 @@ export function loopForPlan(plan: string | null | undefined): LoopIdentity | nul
   return LOOP_BY_PLAN[plan] ?? null;
 }
 
-/** Lockstep with src/lib/billing/live-catalog.ts FOUNDER_EMAILS. */
-export const FOUNDER_EMAILS = ["undone.k@gmail.com", "authichain@gmail.com"] as const;
+/**
+ * Lockstep with src/lib/billing/live-catalog.ts FOUNDER_EMAILS.
+ * Exact emails plus "@domain" entries (autonomy revenue-watch contract).
+ */
+export const FOUNDER_EMAILS = [
+  "undone.k@gmail.com",
+  "authichain@gmail.com",
+  "@authichain.com",
+] as const;
 
 export function isFounderEmail(email: string | null | undefined): boolean {
   const e = (email || "").toLowerCase().trim();
-  return (FOUNDER_EMAILS as readonly string[]).includes(e);
+  if (!e) return false;
+  if ((FOUNDER_EMAILS as readonly string[]).includes(e)) return true;
+  const at = e.lastIndexOf("@");
+  if (at < 0) return false;
+  return (FOUNDER_EMAILS as readonly string[]).includes(e.slice(at));
 }

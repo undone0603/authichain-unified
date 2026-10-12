@@ -257,8 +257,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
   verified: boolean;
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
-  if (cert.status === "active")
-    return { label: "", verified: true };
+  if (cert.status === "active") return { label: "", verified: true };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
@@ -407,6 +406,7 @@ function verifyPromptHtml(): string {
     description:
       "Look up an AuthiChain record. On-chain verification is in development.",
     canonicalPath: "/verify",
+    extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
@@ -1556,8 +1556,19 @@ function renderAuthenticate(c: Context): Response {
 // --- /generate — Living QR intake (qron.space CTA) -------------------------
 
 function generatePackLinksHtml(): string {
+  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP via /pricing.
   const packs = listedPlans("qron").filter(
-    p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
+    p =>
+      p.id === "starter" ||
+      p.id === "qron_launch" ||
+      p.id === "creator" ||
+      p.id === "dpp_readiness"
+  );
+  const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
+  packs.sort(
+    (a, b) =>
+      order.indexOf(a.id as (typeof order)[number]) -
+      order.indexOf(b.id as (typeof order)[number])
   );
   return packs
     .map(p => {
@@ -1565,13 +1576,17 @@ function generatePackLinksHtml(): string {
         p.id === "dpp_readiness"
           ? "/pricing"
           : planPaymentLink(p.id) || "/pricing";
+      const price =
+        p.price_suffix === "/month"
+          ? `$${p.price}/mo`
+          : `$${p.price}`;
       return (
         '<a href="' +
         escapeHtml(href) +
         '">' +
         escapeHtml(p.name) +
-        " — $" +
-        p.price +
+        " — " +
+        price +
         "</a>"
       );
     })
@@ -1579,27 +1594,35 @@ function generatePackLinksHtml(): string {
 }
 
 // The $9.99/$39.99/$99.99 credit packs were archived in the 2026-08-31
-// Stripe cleanup; the live top-ups are the catalogue Starter and Creator packs.
+// Stripe cleanup. Live top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary),
+// Creator $99.
 const QRON_CREDIT_LINKS = [
   PAYMENT_LINKS.qron.credits50,
+  {
+    name: "Launch",
+    price: "$19/mo",
+    url: planPaymentLink("qron_launch") || "/checkout/qron_launch",
+  },
   PAYMENT_LINKS.qron.credits250,
 ] as const;
 
 function generateCreditLinksHtml(): string {
   const buttons = QRON_CREDIT_LINKS.map(offer => {
+    const label =
+      offer.name === "Launch"
+        ? "Start Launch — " + offer.price
+        : "Buy " + offer.name + " — " + offer.price;
     return (
       '<a class="credit-btn" href="' +
       escapeHtml(offer.url) +
-      '" target="_blank" rel="noopener">Buy ' +
-      escapeHtml(offer.name) +
-      " — " +
-      escapeHtml(offer.price) +
+      '" target="_blank" rel="noopener">' +
+      escapeHtml(label) +
       "</a>"
     );
   }).join("\n");
   return (
     "<style>.credit-ctas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}.credit-btn{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 14px;border:1px solid #3f3f46;border-radius:.5rem;text-decoration:none;color:#fafafa;background:#18181b}.credit-btn:hover{border-color:#00FFD1}</style>\n" +
-    "<p>Sign in to use account credits. Starter Pack: 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+    "<p>Sign in to use account credits. Starter Pack: 100 generations for $29, one-time; or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
     '<p class="credit-ctas">\n' +
     buttons +
     "\n</p>\n"
@@ -1622,14 +1645,14 @@ function generateFormHtml(
   return htmlDocument({
     title: "Generate a Living QR",
     description:
-      "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time. A QR is not an authenticity proof.",
+      "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time; or Launch at $19/mo. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:
       "<main>\n" +
       "<h1>Generate a Living QR</h1>\n" +
       statusBlock +
-      "<p>Sign in to use account credits. Starter Pack includes 100 generations for $29, one-time; no subscription. A scannable QR is not an authenticity proof.</p>\n" +
+      "<p>Sign in to use account credits. Starter Pack includes 100 generations for $29, one-time; or Launch at $19/mo. A scannable QR is not an authenticity proof.</p>\n" +
       errorBlock +
       '<p id="generate-result" hidden></p>\n' +
       '<form id="generate-form" action="/generate" method="post">\n' +

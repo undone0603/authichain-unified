@@ -71,6 +71,7 @@
       "purpose": "Push/PR-triggered build, test, security and deploy. Always on.",
       "managed": true,
       "workflows": {
+        "agentz-ci.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
         "lint.yml": "on",
@@ -94,7 +95,7 @@
         "merge-autopilot.yml": "on",
         "node-pnpm-setup.yml": "on",
         "reusable-deploy.yml": "on",
-        "autonomy-reconcile.yml": "on",
+        "autonomy-reconcile.yml": "off",
         "stripe-webhook-reconcile.yml": "on",
         "mcp-registry-publish.yml": "on",
         "npm-publish-verify.yml": "on",

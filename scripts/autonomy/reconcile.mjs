@@ -6,6 +6,7 @@
 //   node scripts/autonomy/reconcile.mjs --check   # offline: every workflow file classified exactly once
 //   node scripts/autonomy/reconcile.mjs --plan    # read GitHub, print the diff, change nothing
 //   node scripts/autonomy/reconcile.mjs --apply   # read GitHub, enable/disable to match
+//   node scripts/autonomy/reconcile.mjs --suggest # print JSON snippets for missing classifications
 //
 // Needs GITHUB_TOKEN (actions:write for --apply) and GITHUB_REPOSITORY for --plan/--apply.
 // Only lanes with "managed": true are reconciled. "manual" workflows are never touched.
@@ -129,6 +130,35 @@ export function validateManifest(manifest, workflowFiles) {
   return errors;
 }
 
+/** Guess a lane + state for a new workflow by reading its `on:` block. */
+export function suggestClassification(filename, content) {
+  const on = content.match(/on:\s*([\s\S]*?)(?=\n\w|\npermissions|\njobs)/)?.[1] ?? "";
+  const hasSchedule = /schedule:/.test(on);
+  const hasDispatch = /workflow_dispatch:/.test(on);
+  const hasPushOrPR = /push:|pull_request:/.test(on);
+  const isManualOnly = hasDispatch && !hasSchedule && !hasPushOrPR;
+
+  if (isManualOnly) return { lane: "manual", state: "manual" };
+  if (hasSchedule) return { lane: "health", state: "on" };
+  if (hasPushOrPR) return { lane: "ship", state: "on" };
+  return { lane: "manual", state: "manual" };
+}
+
+/** Return missing classifications as JSON snippets ready to paste. */
+export function suggestMissing(manifest, workflowDir = WORKFLOW_DIR) {
+  const files = listWorkflowFiles(workflowDir);
+  const errors = validateManifest(manifest, files);
+  const missing = errors
+    .filter(e => e.includes("exists in .github/workflows but is not classified"))
+    .map(e => e.split(" ")[0]);
+
+  return missing.map(file => {
+    const content = readFileSync(join(workflowDir, file), "utf8");
+    const { lane, state } = suggestClassification(file, content);
+    return { file, lane, state, snippet: `"${file}": "${state}",` };
+  });
+}
+
 /**
  * Compare desired vs GitHub state.
  * remote: [{id, path, state}] from GET /actions/workflows (path like ".github/workflows/x.yml").
@@ -210,8 +240,22 @@ async function main(argv) {
     ? "apply"
     : argv.includes("--plan")
       ? "plan"
-      : "check";
+      : argv.includes("--suggest")
+        ? "suggest"
+        : "check";
   const manifest = loadManifest();
+  if (mode === "suggest") {
+    const missing = suggestMissing(manifest);
+    if (!missing.length) {
+      summary("No unclassified workflows.");
+      return 0;
+    }
+    const body = missing.map(m => 
+      `- \`${m.file}\` → add under \`${m.lane}\` lane:\n  \`${m.snippet}\``
+    ).join("\n");
+    summary(`### Suggested classifications\n\n${body}`);
+    return 0;
+  }
   const errors = validateManifest(manifest, listWorkflowFiles());
   if (errors.length) {
     summary(
