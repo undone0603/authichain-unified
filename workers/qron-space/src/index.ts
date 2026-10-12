@@ -19,6 +19,7 @@ import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discov
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
 import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2123,6 +2124,8 @@ type Env = {
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
   AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -2247,6 +2250,8 @@ export default {
     if (pricing) return pricing;
     // Canonical attestation verify — before x402/MCP so protocol truth is not
     // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
     const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
     if (canonicalVerify) return canonicalVerify;
     const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
