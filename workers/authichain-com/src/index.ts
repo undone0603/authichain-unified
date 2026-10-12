@@ -252,6 +252,21 @@ function assetResponse(svg: string): Response {
   });
 }
 
+// No service worker. /verify must not be cached: a stored page can show a
+// record that has since been revoked. This file is not a contract ABI and
+// the lookup is not an authenticity verdict.
+const VERIFY_MANIFEST = JSON.stringify({
+  name: 'AuthiChain',
+  short_name: 'AuthiChain',
+  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  start_url: '/verify',
+  scope: '/',
+  display: 'browser',
+  background_color: '#0c0c0d',
+  theme_color: '#0c0c0d',
+  icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+});
+
 // __OG_PNG_B64_START__
 const OG_IMAGE_PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAABLAAAAJ2CAYAAABPQHtcAAAACXBIWXMAAAsTAAALEwEAmpwYAAAgAElE' +
@@ -3397,6 +3412,15 @@ async function handleAuthichainCom(request: Request, env: Env) {
     }
     if (p === '/favicon.svg' || p === '/favicon.ico' || p === '/favicon.png') {
       return assetResponse(FAVICON_SVG);
+    }
+    if (p === '/manifest.webmanifest') {
+      return new Response(VERIFY_MANIFEST, {
+        headers: {
+          'content-type': 'application/manifest+json; charset=utf-8',
+          'cache-control': 'public, max-age=3600',
+          'x-content-type-options': 'nosniff',
+        },
+      });
     }
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
