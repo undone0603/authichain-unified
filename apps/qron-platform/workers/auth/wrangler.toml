@@ -27,3 +27,7 @@ database_id = "YOUR_PREVIEW_D1_ID"
 [[env.preview.kv_namespaces]]
 binding = "AUTH_SESSIONS"
 id = "YOUR_PREVIEW_KV_ID"
+
+
+[placement]
+mode = "smart"
