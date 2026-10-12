@@ -77,6 +77,8 @@ describe("tryHandleDppRoute", () => {
     const html = await res!.text();
     expect(html).toContain("fetch('/api/dpp/activate'");
     expect(html).toContain("cs_test_1");
+    expect(html).toContain("Download field file (JSON)");
+    expect(html).toContain("not a battery passport");
   });
 
   it("serves a missing-session page for /dpp/activate without session_id", async () => {

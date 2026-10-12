@@ -43,13 +43,15 @@ function esc(value: unknown): string {
   return String(value ?? "").replace(
     /[&<>"']/g,
     c =>
-      (({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      }) as Record<string, string>)[c] as string
+      (
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }) as Record<string, string>
+      )[c] as string
   );
 }
 
@@ -121,7 +123,7 @@ function activateHtml(sessionId: string, visitId: string): string {
     "Activate workspace | AuthiChain",
     `<p class="kicker">Self-serve activation</p>
      <h1>Activate your workspace</h1>
-     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call.</p>
+     <p>Complete this once. This records merchant activation for this workspace. It includes 50 workspace generations. It does not include a written assessment or a scheduled call. After it saves, you can download a field file of what you typed and what is still missing. That file is not a battery passport, not a certificate, and not EU registry filing.</p>
      <form id="f">
        <label>Product categories / SKU families in scope
          <textarea name="categories" rows="3" required></textarea></label>
@@ -153,6 +155,16 @@ function activateHtml(sessionId: string, visitId: string): string {
            var data = await res.json().catch(function () { return {}; });
            if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
            msg.textContent = 'Activated. This workspace includes 50 workspace generations.';
+           if (data.importer_file) {
+             var blob = new Blob([JSON.stringify(data.importer_file, null, 2)], { type: 'application/json' });
+             var url = URL.createObjectURL(blob);
+             var a = document.createElement('a');
+             a.href = url;
+             a.download = 'authichain-dpp-importer-file.json';
+             a.textContent = 'Download field file (JSON)';
+             msg.appendChild(document.createElement('br'));
+             msg.appendChild(a);
+           }
          } catch (err) {
            msg.textContent = err.message || 'Activation failed';
          }

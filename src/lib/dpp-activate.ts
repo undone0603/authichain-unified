@@ -4,6 +4,10 @@
  */
 
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
+import {
+  buildDppImporterFile,
+  type DppImporterFile,
+} from "./dpp-importer-file";
 
 export type DppActivateInput = {
   session_id?: string;
@@ -21,6 +25,8 @@ export type DppActivateOk = {
   already_activated: boolean;
   next: string;
   activate_url: string;
+  /** Present-vs-missing field list the buyer leaves with (not a passport). */
+  importer_file: DppImporterFile;
 };
 
 export type DppActivateErr = {
@@ -132,6 +138,21 @@ export async function activateDppMerchant(opts: {
       )
     : false;
 
+  const priorMatch = Array.isArray(prior)
+    ? prior.find(
+        (row: { metadata?: { stripe_session_id?: string } }) =>
+          row?.metadata?.stripe_session_id === sessionId
+      )
+    : undefined;
+  const priorImporter = (
+    priorMatch as { metadata?: { importer_file?: DppImporterFile } } | undefined
+  )?.metadata?.importer_file;
+
+  const importer_file =
+    priorImporter && priorImporter.schema
+      ? priorImporter
+      : buildDppImporterFile({ categories, markets, labeling });
+
   if (!alreadyActivated) {
     await recordDppLoopEvent(opts.supabase, {
       visitId,
@@ -146,6 +167,7 @@ export async function activateDppMerchant(opts: {
         labeling,
         call_windows: (opts.body.call_windows || "").trim() || null,
         activated_at: new Date().toISOString(),
+        importer_file,
       },
     });
   }
@@ -157,5 +179,6 @@ export async function activateDppMerchant(opts: {
     already_activated: alreadyActivated,
     next: "/dashboard",
     activate_url: dppActivateUrl(sessionId, visitId),
+    importer_file,
   };
 }
