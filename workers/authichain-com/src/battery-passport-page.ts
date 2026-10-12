@@ -43,7 +43,7 @@ const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
         c
       ]!
   );
@@ -426,4 +426,18 @@ ${estateFooter(
 )}
 </body>
 </html>`;
+}
+
+export function tryHandleBatteryPassport(req: Request): Response | null {
+  const url = new URL(req.url);
+  if (!isBatteryPassportPath(url.pathname)) return null;
+  if (req.method !== "GET" && req.method !== "HEAD") return null;
+  const html = renderBatteryPassportPage();
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 }
