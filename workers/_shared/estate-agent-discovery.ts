@@ -95,6 +95,14 @@ export function renderEstateLlmsTxt(brand: SisterDiscoveryBrand): string {
     "- Canonical MCP: GET https://authichain.com/mcp",
     "- Docs: https://authichain.com/x402",
     "",
+    "## Protocol (one issuer, this host proxies discovery)",
+    `- Issuer: ${ESTATE_BRANDS[brand].url}/protocol/issuer.json`,
+    `- JWKS: ${ESTATE_BRANDS[brand].url}/protocol/jwks.json`,
+    `- Well-known JWKS: ${ESTATE_BRANDS[brand].url}/.well-known/jwks.json`,
+    `- Decision v1 verify: POST ${ESTATE_BRANDS[brand].url}/api/verify`,
+    "- Canonical issuer: https://authichain.com/protocol/issuer.json",
+    "- Canonical verify: POST https://authichain.com/api/v1/attestation/verify",
+    "",
     ...humanCheckoutLines(brand),
     "",
     "## Positioning",
@@ -163,6 +171,36 @@ export function renderEstateOpenApi(
           responses: {
             "402": { description: "Payment required (x402)" },
             "200": { description: "Paid verification result" },
+          },
+        },
+      },
+      "/protocol/issuer.json": {
+        get: {
+          summary: "Canonical AuthiChain issuer document (proxied)",
+          responses: { "200": { description: "Issuer JSON" } },
+        },
+      },
+      "/protocol/jwks.json": {
+        get: {
+          summary: "Canonical AuthiChain JWKS (proxied, not a second issuer)",
+          responses: { "200": { description: "JWKS" } },
+        },
+      },
+      "/.well-known/jwks.json": {
+        get: {
+          summary: "Same canonical JWKS at the well-known path",
+          responses: { "200": { description: "JWKS" } },
+        },
+      },
+      "/api/verify": {
+        post: {
+          operationId: "estateCanonicalVerify",
+          summary:
+            "AuthiChain Verification Decision v1. Forwards to authichain.com. Not the paid x402 rail.",
+          responses: {
+            "200": { description: "Decision verified" },
+            "400": { description: "Fail-closed indeterminate" },
+            "409": { description: "Decision not verified" },
           },
         },
       },
