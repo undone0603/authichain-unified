@@ -7,6 +7,7 @@
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
 import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import { buildQronPresentation } from "./qron-presentation";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -201,6 +202,12 @@ export async function handleGeneratePost(opts: {
       return { status: 502, body: { message: "No image returned" } };
     }
     const deducted = await opts.deductCredit(opts.userId);
+    const presentation = buildQronPresentation({
+      destinationUrl: targetUrl,
+      imageUrl: generated.imageUrl,
+      mode,
+      prompt,
+    });
     return {
       status: 200,
       body: {
@@ -210,7 +217,9 @@ export async function handleGeneratePost(opts: {
           qrDataUrl: generated.imageUrl,
           prompt,
           mode,
+          objectId: presentation.object_id,
         },
+        presentation,
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
       },
     };

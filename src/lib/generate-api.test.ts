@@ -150,6 +150,22 @@ describe("handleGeneratePost", () => {
     expect((result.body.qron as { imageUrl: string }).imageUrl).toContain(
       "data:image/png"
     );
+    const presentation = result.body.presentation as {
+      schema: string;
+      status: string;
+      verify: { decision_contract: string };
+      attestation: null;
+      object_id: string;
+    };
+    expect(presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(presentation.status).toBe("image_issued");
+    expect(presentation.attestation).toBeNull();
+    expect(presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(
+      (result.body.qron as { objectId: string }).objectId
+    ).toBe(presentation.object_id);
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
