@@ -48,10 +48,17 @@ function mockRegistry(): AttestationRegistry {
       const eventId = "urn:authichain:event:v01:test-" + ++eventSequence;
       if (idempotencyKey)
         idempotency.set(input.issuerId + ":" + idempotencyKey, eventId);
+      const claimStatus =
+        input.eventType === "attestation.revoked"
+          ? ("revoked" as const)
+          : input.eventType === "attestation.expired"
+            ? ("expired" as const)
+            : input.eventType === "attestation.superseded"
+              ? ("superseded" as const)
+              : ("active" as const);
       statuses.set(input.attestationId, {
         attestationId: input.attestationId,
-        claimStatus:
-          input.eventType === "attestation.revoked" ? "revoked" : "active",
+        claimStatus,
         effectiveAt: new Date().toISOString(),
         ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
         issuerId: input.issuerId,
@@ -299,7 +306,63 @@ describe("registerAttestationApi", () => {
       claim_status: "superseded",
       supersedes_attestation_id: replacementId,
     });
+
+    // Superseded original must not remain authorized through verify.
+    const verify = await app.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(verify.status).toBe(409);
+    expect(await verify.json()).toMatchObject({
+      valid: false,
+      decision: "risk",
+      claim_status: "superseded",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: ["durable_status_superseded"],
+      trust: { policy: { authorized: false } },
+    });
   });
+
+  it("rejects verification under the wrong signing key", async () => {
+    await bindKey();
+    process.env.CRON_SECRET = "issuer-test-secret";
+    const app = new Hono();
+    registerJwksRoute(app);
+    registerAttestationApi(app, mockRegistry());
+    const signed = await app.request("/api/v1/attestation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer issuer-test-secret",
+      },
+      body: JSON.stringify(SAMPLE),
+    });
+    const { jws } = (await signed.json()) as { jws: string };
+
+    const { privateKey: other } = await generateKeyPair("EdDSA", {
+      crv: "Ed25519",
+      extractable: true,
+    });
+    process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 = Buffer.from(
+      await exportPKCS8(other),
+      "utf8"
+    ).toString("base64");
+    process.env.AUTHICHAIN_ATTESTATION_KEY_ID = "other-kid";
+    const otherApp = new Hono();
+    registerJwksRoute(otherApp);
+    registerAttestationApi(otherApp, mockRegistry());
+    const res = await otherApp.request("/api/v1/attestation/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jws }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { valid: boolean }).toMatchObject({
+      valid: false,
+    });
+  });
+
   it("GET /api/v1/attestation and aliases return the contract index", async () => {
     const app = new Hono();
     registerAttestationApi(app);
