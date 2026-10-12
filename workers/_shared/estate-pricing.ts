@@ -146,8 +146,10 @@ function cataloguePricingGrid(
   const cards = plans
     .map(plan => {
       const cta = planCheckoutCta(plan, origin);
+      // AuthiChain hero leads LOOP-03 first-dollar (Starter $29); QRON keeps
+      // the catalogue `highlighted` flag (Creator).
       const featured = Boolean(
-        origin === "authichain" ? plan.id === "dpp_readiness" : plan.highlighted
+        origin === "authichain" ? plan.id === "starter" : plan.highlighted
       );
       const suffix = plan.price_suffix ?? (plan.price === 0 ? "" : " one-time");
       const amount = plan.price === 0 ? "Free" : `$${plan.price}`;
@@ -321,10 +323,13 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       brand: "authichain",
       title: "Pricing — AuthiChain",
       description:
-        "Live AuthiChain prices from the published plan catalogue. EU DPP Readiness is $299 via Stripe checkout.",
+        "Live AuthiChain prices from the published plan catalogue. Start with QRON Launch at $19/mo or Starter Pack at $29.",
       canonical: "https://authichain.com/pricing",
       themeColor: "#4F46E5",
-      primary: { href: "https://authichain.com/checkout/dpp_readiness", label: "Start DPP checkout" },
+      primary: {
+        href: "https://authichain.com/checkout/starter",
+        label: "Buy Starter Pack",
+      },
       nav: [
         { href: "/", label: "Home" },
         { href: "/x402", label: "x402" },
@@ -334,19 +339,23 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       eyebrow: "Pricing",
       heroTitle: "Plans and prices",
       heroLede:
-        "Start with the $299 EU DPP Workspace, or request a free pilot seal. Every paid plan below checks out on Stripe.",
-      navLabel: "Open workspace",
-      secondary: { href: "/onboard", label: "Onboard", primary: false },
+        "Start with Launch at $19/mo or the Starter Pack at $29. The EU DPP Workspace is $299 when you need the battery passport path. Every paid plan below checks out on Stripe.",
+      navLabel: "Buy Starter",
+      secondary: {
+        href: "https://authichain.com/checkout/qron_launch",
+        label: "Start Launch $19/mo",
+        primary: false,
+      },
       plansNote:
-        "QRON generation packs and plans, the EU DPP Workspace, and a free pilot. E-bike and other LMT batteries need a passport from 18 February 2027.",
-      ctaTitle: "Open your EU DPP Workspace",
+        "QRON Launch and generation packs first, then the EU DPP Workspace. E-bike and other LMT batteries need a passport from 18 February 2027.",
+      ctaTitle: "Buy the Starter Pack",
       ctaLede:
-        "$299, one time. Pay on Stripe, or add your work email first so we can send your receipt.",
+        "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Add a work email first so we can send your receipt.",
       footerTagline: "AuthiChain, QRON, GovChain and StrainChain.",
       footerNote: "",
       footerStart: [
-        { href: "/pricing", label: "DPP checkout" },
-        { href: "/onboard", label: "Onboard" },
+        { href: "/checkout/starter", label: "Starter checkout" },
+        { href: "/checkout/qron_launch", label: "Launch $19/mo" },
         { href: "/pricing", label: "Pricing" },
       ],
       footerMore: [
