@@ -99,7 +99,8 @@
         "stripe-webhook-reconcile.yml": "on",
         "mcp-registry-publish.yml": "on",
         "npm-publish-verify.yml": "on",
-        "cloudflare-estate-audit.yml": "on"
+        "cloudflare-estate-audit.yml": "on",
+        "contract-tests.yml": "on"
       }
     },
     "health": {
