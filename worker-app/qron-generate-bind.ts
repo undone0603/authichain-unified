@@ -16,6 +16,10 @@ import {
   resolveAttestationKey,
   type AttestationEnv,
 } from "./jwks";
+import {
+  recordStatusEvent,
+  type AttestationRegistryEnv,
+} from "./attestation-registry";
 
 async function sha256Digest(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
@@ -67,6 +71,28 @@ export async function bindQronGenerateAttestation(
       privateKey,
       resolved.key.kid
     );
+    try {
+      const recorded = await recordStatusEvent(env as AttestationRegistryEnv, {
+        eventType: "attestation.issued",
+        attestationId: attestation.attestation_id,
+        issuerId: attestation.issuer.id,
+        reasonCode: "qron_generate",
+        subjectHash: destinationDigest,
+        evidenceDigest: imageDigest,
+        idempotencyKey: attestation.attestation_id,
+      });
+      if (!recorded.ok) {
+        console.error(
+          "[qron-generate-bind] status event not recorded:",
+          recorded.error
+        );
+      }
+    } catch (statusErr) {
+      console.error(
+        "[qron-generate-bind] status event failed:",
+        statusErr instanceof Error ? statusErr.message : statusErr
+      );
+    }
     return {
       jws,
       kid: resolved.key.kid,
