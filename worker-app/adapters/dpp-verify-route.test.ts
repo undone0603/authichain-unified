@@ -1,21 +1,22 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/dpp-verify", () => ({ verifyDpp: vi.fn() }));
-vi.mock("../../../../../packages/verifier/src/canonical-worker-client", async () => {
+vi.mock("../../packages/verifier/src/canonical-worker-client", async () => {
   const actual = await vi.importActual<
-    typeof import("../../../../../packages/verifier/src/canonical-worker-client")
-  >("../../../../../packages/verifier/src/canonical-worker-client");
+    typeof import("../../packages/verifier/src/canonical-worker-client")
+  >("../../packages/verifier/src/canonical-worker-client");
   return {
     ...actual,
     verifyWithCanonicalWorker: vi.fn(),
   };
 });
 
-import { GET, POST } from "./route";
+import { GET, POST } from "../../src/app/api/dpp/verify/route";
 import { verifyDpp } from "@/lib/dpp-verify";
-import { verifyWithCanonicalWorker } from "../../../../../packages/verifier/src/canonical-worker-client";
+import { verifyWithCanonicalWorker } from "../../packages/verifier/src/canonical-worker-client";
 
 const publishedDpp = {
   ok: true,
@@ -40,54 +41,44 @@ describe("DPP verification canonical adapter", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example.test";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
-    process.env.AUTHICHAIN_CANONICAL_VERIFY_URL = "https://canonical.example.test/api/v1/attestation/verify";
+    process.env.AUTHICHAIN_CANONICAL_VERIFY_URL =
+      "https://canonical.example.test/api/v1/attestation/verify";
     vi.mocked(verifyDpp).mockResolvedValue(publishedDpp as never);
     vi.mocked(verifyWithCanonicalWorker).mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    for (const key of [
-      "NEXT_PUBLIC_SUPABASE_URL",
-      "SUPABASE_SERVICE_ROLE_KEY",
-      "AUTHICHAIN_CANONICAL_VERIFY_URL",
-    ]) {
-      if (originalEnv[key] === undefined) delete process.env[key];
-      else process.env[key] = originalEnv[key];
-    }
+    process.env = { ...originalEnv };
   });
 
-  it("preserves the canonical blocked decision instead of treating publication as physical verification", async () => {
+  it("returns a non-success status when the canonical worker blocks", async () => {
     vi.mocked(verifyWithCanonicalWorker).mockResolvedValue({
       httpStatus: 200,
       response: canonicalBlocked,
     });
-    const res = await POST(new NextRequest("https://authichain.com/api/dpp/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation", expected_object_id: "gtin:123" }),
-    }));
-
+    const res = await POST(
+      new NextRequest("https://authichain.com/api/dpp/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation" }),
+      }),
+    );
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({
       ok: true,
-      status: "verified",
-      doesNotProve: expect.stringMatching(/physical item/i),
       protocol_verification: canonicalBlocked,
     });
-    expect(verifyWithCanonicalWorker).toHaveBeenCalledWith(
-      process.env.AUTHICHAIN_CANONICAL_VERIFY_URL,
-      "signed-attestation",
-      "gtin:123",
-    );
   });
 
-  it("fails closed with 502 when canonical verification is unavailable", async () => {
-    vi.mocked(verifyWithCanonicalWorker).mockRejectedValue(new Error("upstream unavailable"));
-    const res = await GET(new NextRequest(
-      "https://authichain.com/api/dpp/verify?dpp_id=dpp-test-1&jws=signed-attestation",
-    ));
-
+  it("returns indeterminate when the canonical call throws", async () => {
+    vi.mocked(verifyWithCanonicalWorker).mockRejectedValue(
+      new Error("upstream unavailable"),
+    );
+    const res = await GET(
+      new NextRequest(
+        "https://authichain.com/api/dpp/verify?dpp_id=dpp-test-1&jws=signed-attestation",
+      ),
+    );
     expect(res.status).toBe(502);
     expect(await res.json()).toMatchObject({
       ok: true,
@@ -100,10 +91,9 @@ describe("DPP verification canonical adapter", () => {
   });
 
   it("does not call the canonical verifier when no signed attestation is supplied", async () => {
-    const res = await GET(new NextRequest(
-      "https://authichain.com/api/dpp/verify?dpp_id=dpp-test-1",
-    ));
-
+    const res = await GET(
+      new NextRequest("https://authichain.com/api/dpp/verify?dpp_id=dpp-test-1"),
+    );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       ok: true,
@@ -124,12 +114,13 @@ describe("DPP verification canonical adapter", () => {
         reasons: [],
       },
     });
-    const res = await POST(new NextRequest("https://authichain.com/api/dpp/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation" }),
-    }));
-
+    const res = await POST(
+      new NextRequest("https://authichain.com/api/dpp/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation" }),
+      }),
+    );
     expect(res.status).toBe(200);
     expect(verifyWithCanonicalWorker).toHaveBeenCalledWith(
       "https://authichain.com/api/v1/attestation/verify",

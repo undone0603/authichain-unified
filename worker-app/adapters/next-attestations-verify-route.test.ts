@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -15,7 +16,7 @@ vi.mock("@authichain/verifier", async () => {
   };
 });
 
-import { POST } from "./route";
+import { POST } from "../../src/app/api/v1/attestations/verify/route";
 import { verifyWithCanonicalWorker } from "@authichain/verifier";
 import { checkAndIncrementUsage } from "@/lib/api-usage";
 
