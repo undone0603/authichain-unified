@@ -2,6 +2,7 @@
  * /battery-passport — locked free gap-map CTAs for LMT and smaller industrial operators.
  * Full valid source. Sells existing $299 dpp_readiness (no new SKU).
  * Checkout tagged utm_campaign=battery-passport.
+ * esc() fixed with proper HTML entities.
  */
 import {
   ESTATE_BASE_CSS,
@@ -379,51 +380,18 @@ ${gapMapSection()}
     </div>
   </section>
 
-  <section class="estate-section" id="faq">
-    <div class="wrap">
-      <h2>Questions</h2>
-      ${faq}
-    </div>
-  </section>
+  ${batteryLeadFormSection()}
 
-${batteryLeadFormSection()}
-
-  <section class="estate-cta cta-section" id="get-started">
+  <section class="estate-section" id="cta">
     <div class="wrap">
-      <h2>Start before your importer asks for it</h2>
-      <p class="section-sub">Enter your work email to open Stripe checkout. After payment, workspace activation is sent by email.</p>
-      <div class="estate-actions">${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}</div>
+      <h2>Get passport-ready</h2>
+      <div class="estate-actions">
+        ${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}
+      </div>
     </div>
   </section>
 </main>
-${estateFooter(
-  "authichain",
-  [
-    {
-      heading: "Start",
-      links: [
-        { href: BATTERY_PASSPORT_PATH, label: "Battery passport" },
-        {
-          href: `${BATTERY_PASSPORT_PATH}/sample-audit`,
-          label: "Fictional walkthrough",
-        },
-        { href: "/pricing", label: "Pricing" },
-      ],
-    },
-    {
-      heading: "Read",
-      links: [
-        { href: "/dpp", label: "EU DPP" },
-        {
-          href: "/p/battery-passport-qr-code-requirements",
-          label: "Battery QR requirements",
-        },
-      ],
-    },
-    { heading: "Company", links: [{ href: "/contact", label: "Contact" }] },
-  ],
-  "AuthiChain is a brand. The SAM legal entity is ZACHARY KIETZMAN. Not legal advice. Checkout is self-serve. The scoping form on this page is optional."
-)}
+${estateFooter("authichain")}
 </body>
 </html>`;
 }
