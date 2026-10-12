@@ -50,6 +50,27 @@ function hasJws(body: unknown): boolean {
   return typeof jws === "string" && jws.trim().length > 0;
 }
 
+const DECISION_CONTRACT = "AuthiChain Verification Decision v1";
+
+/** Fail-closed verify envelope so crypto/transport failures stay in the decision vocabulary. */
+function failClosedVerifyPayload(
+  error: string,
+  extras: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    valid: false,
+    decision: "indeterminate",
+    decision_contract: DECISION_CONTRACT,
+    overall_valid: false,
+    cryptographic_status:
+      typeof extras.cryptographic_status === "string"
+        ? extras.cryptographic_status
+        : "invalid",
+    error,
+    ...extras,
+  };
+}
+
 async function verifyResponse(
   body: unknown,
   publicJwk: Record<string, unknown>,
@@ -59,7 +80,12 @@ async function verifyResponse(
   const input = (body ?? {}) as Record<string, unknown>;
   const jws = input.jws;
   if (typeof jws !== "string" || !jws.trim()) {
-    return { status: 400, payload: { valid: false, error: "jws is required" } };
+    return {
+      status: 400,
+      payload: failClosedVerifyPayload("jws is required", {
+        cryptographic_status: "unknown",
+      }),
+    };
   }
   const expected = input.expected_object_id ?? input.expectedObjectId;
   let attestation;
@@ -70,10 +96,10 @@ async function verifyResponse(
   } catch (error) {
     return {
       status: 400,
-      payload: {
-        valid: false,
-        error: error instanceof Error ? error.message : "invalid signature",
-      },
+      payload: failClosedVerifyPayload(
+        error instanceof Error ? error.message : "invalid signature",
+        { cryptographic_status: "invalid" },
+      ),
     };
   }
   const evaluation = evaluateAttestation(attestation);
@@ -81,7 +107,10 @@ async function verifyResponse(
   if (!issuer.ok) {
     return {
       status: issuer.status,
-      payload: { valid: false, error: issuer.error, signature: "valid" },
+      payload: failClosedVerifyPayload(issuer.error, {
+        signature: "valid",
+        cryptographic_status: "valid",
+      }),
     };
   }
   const now = Date.now();
@@ -93,7 +122,10 @@ async function verifyResponse(
   if (!durable.ok) {
     return {
       status: durable.status as 503,
-      payload: { valid: false, error: durable.error, signature: "valid" },
+      payload: failClosedVerifyPayload(durable.error, {
+        signature: "valid",
+        cryptographic_status: "valid",
+      }),
     };
   }
   const durableStatus = durable.status?.claimStatus ?? null;
@@ -428,17 +460,23 @@ export function registerAttestationApi<
   app.put("/api/v1/attestation", async c => {
     const body = await c.req.json().catch(() => ({}));
     if (!hasJws(body)) {
-      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload("jws is required", {
+          cryptographic_status: "unknown",
+        }),
+        400,
+        NO_STORE,
+      );
     }
     let publicJwk: Record<string, unknown>;
     try {
       ({ publicJwk } = await loadPrivateKey(c.env));
     } catch (error) {
       return c.json(
-        {
-          valid: false,
-          error: error instanceof Error ? error.message : "key unavailable",
-        },
+        failClosedVerifyPayload(
+          error instanceof Error ? error.message : "key unavailable",
+          { cryptographic_status: "unknown" },
+        ),
         503,
         NO_STORE
       );
@@ -450,11 +488,23 @@ export function registerAttestationApi<
   app.post("/api/v1/attestation/verify", async c => {
     const body = await c.req.json().catch(() => ({}));
     if (!hasJws(body)) {
-      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload("jws is required", {
+          cryptographic_status: "unknown",
+        }),
+        400,
+        NO_STORE,
+      );
     }
     const resolved = await resolveAttestationKey(c.env);
     if (!resolved.ok) {
-      return c.json({ valid: false, error: resolved.error }, 503, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload(resolved.error, {
+          cryptographic_status: "unknown",
+        }),
+        503,
+        NO_STORE,
+      );
     }
     const { status, payload } = await verifyResponse(
       body,

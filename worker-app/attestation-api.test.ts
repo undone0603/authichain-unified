@@ -360,6 +360,9 @@ describe("registerAttestationApi", () => {
     expect(res.status).toBe(400);
     expect((await res.json()) as { valid: boolean }).toMatchObject({
       valid: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      cryptographic_status: "invalid",
     });
   });
 
@@ -388,8 +391,13 @@ describe("registerAttestationApi", () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { valid: boolean };
-    expect(body.valid).toBe(false);
+    expect(await res.json()).toMatchObject({
+      valid: false,
+      decision: "indeterminate",
+      decision_contract: "AuthiChain Verification Decision v1",
+      error: "jws is required",
+      cryptographic_status: "unknown",
+    });
   });
 });
 
