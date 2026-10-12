@@ -5,3 +5,6 @@ compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
+
+[placement]
+mode = "smart"
