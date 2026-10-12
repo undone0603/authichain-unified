@@ -2499,7 +2499,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 signed pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy the $29 pack</a>. EU DPP Readiness stays on the form below.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. Or <a href="${escHtml(planPaymentLink("qron_launch") ?? "/checkout/qron_launch")}">Launch at $19/mo</a>. EU DPP Readiness stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2511,28 +2511,34 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/pricing", label: "View pricing" },
+    { href: planPaymentLink("starter") ?? "/checkout/starter", label: "Buy Starter" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lede: "Start with the Starter Pack at $29 or Launch at $19/mo. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
     },
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout — $299",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack — $29",
     },
     actions: [
+      {
+        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
+        label: "Start Launch $19/mo",
+        primary: false,
+      },
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/onboard", label: "Onboard", primary: false },
+      { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
-    { value: "$299", label: "EU DPP Readiness" },
+    { value: "$29", label: "Starter Pack" },
+    { value: "$19/mo", label: "QRON Launch" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2581,7 +2587,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 or Launch $19/mo on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2592,13 +2598,18 @@ const HTML = `<!DOCTYPE html>
   ${communityHub(BRAND)}
   ${marketReality()}
   ${estateCtaBand({
-    title: "Start EU DPP Readiness",
-    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    title: "Buy the Starter Pack",
+    lede: "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack",
     },
     actions: [
+      {
+        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
+        label: "Start Launch $19/mo",
+        primary: false,
+      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],

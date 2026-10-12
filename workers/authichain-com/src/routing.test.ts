@@ -120,6 +120,9 @@ test("the apex still renders the homepage", async () => {
   assert.match(html, /href="\/passport"/);
   assert.doesNotMatch(html, /\/m\/mendo|Mendo/);
   assert.match(html, /href="\/partners\/brief"/);
+  // LOOP-03: hero + bottom email checkout lead Starter $29; DPP stays lower.
+  assert.match(html, /Buy Starter Pack/);
+  assert.match(html, /Start Launch \$19\/mo/);
   assert.match(html, /Start DPP checkout/);
   assert.match(html, /Signed QR seals for real products\./);
   assert.doesNotMatch(html, /Agent consensus/);
@@ -132,9 +135,13 @@ test("the apex still renders the homepage", async () => {
     "the $29 link has to appear before the $299 audit"
   );
   assert.match(html, /Buy a QRON Starter Pack — \$29/);
-  // Held pending decision: the $29 banner stays as it is.
-  assert.match(html, /The first checkout is the \$29 signed pack\./);
+  assert.match(html, /The first checkout is the \$29 Starter Pack\./);
   assert.match(html, /name="email"/);
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/starter"/
+  );
+  // DPP email form remains on the EU compliance section.
   assert.match(
     html,
     /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
@@ -190,6 +197,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   assert.doesNotMatch(html, /AuthiChain Starter/);
   assert.doesNotMatch(html, /28E8wP0EVf7M6mefTS1Nu1p/);
   assert.match(html, /\$299/);
+  // LOOP-03: /pricing hero email checkout is Starter; DPP stays on the grid.
+  assert.match(
+    html,
+    /action="https:\/\/authichain\.com\/checkout\/starter"/
+  );
   assert.match(
     html,
     /action="https:\/\/authichain\.com\/checkout\/dpp_readiness"/
