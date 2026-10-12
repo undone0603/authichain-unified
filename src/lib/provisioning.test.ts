@@ -5,6 +5,7 @@ function fakeProfiles(opts?: {
   existingId?: string | null;
   insertError?: { message: string; code?: string } | null;
   insertedId?: string | null;
+  lastGrantSessionId?: string | null;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
   const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
@@ -13,7 +14,12 @@ function fakeProfiles(opts?: {
       select: () => builder,
       eq: () => builder,
       maybeSingle: async () => ({
-        data: opts?.existingId ? { id: opts.existingId } : null,
+        data: opts?.existingId
+          ? {
+              id: opts.existingId,
+              last_grant_session_id: opts.lastGrantSessionId ?? null,
+            }
+          : null,
         error: null,
       }),
       insert: (row: Record<string, unknown>) => {
@@ -112,5 +118,48 @@ describe("provisionPurchase", () => {
       status: "no_identity",
     });
     expect(inserts).toHaveLength(0);
+  });
+
+  it("skips entitlement reset when last_grant_session_id already matches", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      lastGrantSessionId: "cs_same",
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "starter",
+      sessionId: "cs_same",
+    });
+
+    expect(result).toEqual({
+      profileId: "prof_1",
+      created: false,
+      status: "provisioned",
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("writes last_grant_session_id on a new session grant", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      lastGrantSessionId: "cs_old",
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "starter",
+      sessionId: "cs_new",
+      generationsGrant: 50,
+    });
+
+    expect(result.status).toBe("provisioned");
+    expect(updates).toHaveLength(1);
+    expect(updates[0].patch).toMatchObject({
+      generations_used: 0,
+      last_grant_session_id: "cs_new",
+    });
   });
 });

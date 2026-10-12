@@ -307,6 +307,7 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: subscriptionId,
           isTrial,
           generationsGrant,
+          sessionId: session.id,
         });
 
         if (prov.profileId) {
