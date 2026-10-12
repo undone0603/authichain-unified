@@ -977,6 +977,9 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
     const body = await res.text();
     expect(res.status).toBe(200);
+    expect(body).toContain(
+      "<title>Living QR generator | QRON — account credits and $29 Starter Pack</title>"
+    );
     expect(body).toContain("Generate a Living QR");
     expect(body).not.toContain("$QRON");
     expect(body).toContain(

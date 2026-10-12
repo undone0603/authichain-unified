@@ -1643,9 +1643,10 @@ function generateFormHtml(
     ? '<p role="alert" id="generate-error">' + escapeHtml(error) + "</p>\n"
     : '<p role="alert" id="generate-error" hidden></p>\n';
   return htmlDocument({
-    title: "Generate a Living QR",
+    // LOOP-03 meta (docs/growth/2026-09-28-first-dollar-loops.md).
+    title: "Living QR generator | QRON — account credits and $29 Starter Pack",
     description:
-      "Generate a scannable Living QR with account credits. Starter Pack: 100 generations for $29, one-time; or Launch at $19/mo. A QR is not an authenticity proof.",
+      "Generate scannable AI QR art with account credits. Starter Pack includes 100 generations for $29, one-time; or Launch at $19/mo. A QR is not an authenticity proof.",
     canonicalPath: "/generate",
     extraHead: "<style>" + SITE_FORM_CSS + "</style>",
     bodyHtml:

@@ -103,6 +103,12 @@ test("the apex still renders the homepage", async () => {
   const res = await get("/");
   assert.equal(res.status, 200);
   const html = await res.text();
+  // LOOP-03: share/search snippets lead Starter/Launch, not only DPP.
+  assert.match(html, /QRON Starter Pack \$29 or Launch \$19\/mo/);
+  assert.match(
+    html,
+    /property="og:description" content="Start with QRON Starter at \$29 or Launch at \$19\/mo/
+  );
   assert.match(html, /href="\/dashboard"/);
   assert.match(html, /href="\/onboard"/);
   assert.match(html, /name="email"/);
