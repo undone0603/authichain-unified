@@ -58,9 +58,10 @@ jobs:
   # (gs1-resolver's is workers/gs1-resolver/src/conformance.test.ts,
   # mirroring GS1's hosted suite) -- not just CI type/lint, which every
   # worker already has. `deploy` below consumes whatever this outputs
-  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED or workflow_dispatch),
-  # a narrowed one-or-few-worker list (auto-deploy), or an empty one (a
-  # plain push touching no allow-listed worker, or nothing to narrow) --
+  # unchanged: a full list (CLOUDFLARE_DEPLOY_ENABLED, or blank
+  # workflow_dispatch), a single-worker list (workflow_dispatch with
+  # inputs.worker set), a narrowed one-or-few-worker list (auto-deploy),
+  # or an empty one (a plain push touching no allow-listed worker) --
   # so no per-step gating anywhere below this job needs to change, and no
   # *other* worker's bind step can ever run on the auto-deploy path, because
   # no other worker is ever in that path's matrix.
@@ -82,6 +83,7 @@ jobs:
           DEPLOY_AGENTZ: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_agentz_containers == 'true' }}
           CLOUDFLARE_DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED }}
           EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_WORKER: ${{ github.event.inputs.worker }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_SHA: ${{ github.sha }}
         run: |
@@ -140,6 +142,22 @@ jobs:
           fi
 
           if [ "${CLOUDFLARE_DEPLOY_ENABLED}" = "true" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            # workflow_dispatch with a specific worker must not expand the
+            # full ~40-job matrix (install + checkout per skipped row).
+            # Validate against the known list, then emit a one-element matrix.
+            target="${DISPATCH_WORKER:-}"
+            target="${target#"${target%%[![:space:]]*}"}"
+            target="${target%"${target##*[![:space:]]}"}"
+            if [ -n "${target}" ]; then
+              if ! echo "${workers}" | jq -e --arg t "${target}" 'index($t) != null' >/dev/null; then
+                echo "::error::Unknown worker '${target}'. Pass a directory under workers/ from the deploy matrix (or leave blank for all)."
+                exit 1
+              fi
+              workers=$(jq -nc --arg t "${target}" '[$t]')
+              echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
+              echo "deploy matrix (workflow_dispatch single worker): ${workers}"
+              exit 0
+            fi
             echo "workers=${workers}" >> "${GITHUB_OUTPUT}"
             if [ "${DEPLOY_AGENTZ}" = "true" ]; then
               echo "deploy matrix (agentz opt-in): ${workers}"
