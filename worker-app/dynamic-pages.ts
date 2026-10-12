@@ -257,8 +257,7 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
   verified: boolean;
 } {
   if (!cert) return { label: "Pending Verification", verified: false };
-  if (cert.status === "active")
-    return { label: "", verified: true };
+  if (cert.status === "active") return { label: "", verified: true };
   if (cert.status === "revoked")
     return { label: "Certification Revoked", verified: false };
   return { label: "Pending Verification", verified: false };
@@ -407,6 +406,7 @@ function verifyPromptHtml(): string {
     description:
       "Look up an AuthiChain record. On-chain verification is in development.",
     canonicalPath: "/verify",
+    extraHead: '<link rel="manifest" href="/manifest.webmanifest">\n',
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
