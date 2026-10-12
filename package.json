@@ -9,7 +9,7 @@
     "npm": ">=11.3.0"
   },
   "scripts": {
-    "dev": "turbo dev --single-package",
+    "dev": "next dev",
     "build": "next build --webpack",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",
