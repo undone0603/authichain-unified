@@ -434,6 +434,9 @@ app.post("/api/generate", async c => {
       supabaseUrl,
       supabaseKey,
     });
+    const { bindQronGenerateAttestation } = await import(
+      "./qron-generate-bind"
+    );
     const result = await handleGeneratePost({
       body,
       userId,
@@ -446,6 +449,7 @@ app.post("/api/generate", async c => {
           style: args.style,
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
+      bindAttestation: args => bindQronGenerateAttestation(c.env, args),
     });
     // LOOP-03: a 401 here is a stranger who filled the form and was walled by
     // the auth requirement. /generate promises "Five generations are free", so

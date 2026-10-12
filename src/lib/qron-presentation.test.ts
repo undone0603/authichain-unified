@@ -4,10 +4,12 @@ import {
   DECISION_CONTRACT,
   QRON_PRESENTATION_SCHEMA,
   buildQronAttestationSubject,
+  buildQronLivingQrAttestation,
   buildQronPresentation,
   fnv1aHex,
   qronObjectIdForDestination,
 } from "./qron-presentation";
+import { validateAttestation } from "../../packages/verifier/src/index";
 import { resolveVerificationDecision } from "../../packages/verifier/src/verification-decision";
 
 describe("qron-presentation", () => {
@@ -87,5 +89,20 @@ describe("qron-presentation", () => {
         imageUrl: " ",
       })
     ).toThrow(/imageUrl/);
+  });
+
+  it("builds a schema-valid Living QR attestation payload for issuer bind", () => {
+    const digest =
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const payload = buildQronLivingQrAttestation({
+      destinationUrl: "https://example.com/sku",
+      imageUrl: "https://cdn.example/q.png",
+      destinationDigest: digest,
+      imageDigest: digest,
+    });
+    const attestation = validateAttestation(payload);
+    expect(attestation.subject.product_class).toBe("living_qr");
+    expect(attestation.subject.object_id).toMatch(/^qron:url:/);
+    expect(attestation.evidence[0]?.uri).toBe("https://example.com/sku");
   });
 });

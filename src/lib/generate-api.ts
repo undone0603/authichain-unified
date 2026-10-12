@@ -7,7 +7,10 @@
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
 import { listedPlans, planPaymentLink, type Plan } from "./plans";
-import { buildQronPresentation } from "./qron-presentation";
+import {
+  buildQronPresentation,
+  type QronPresentationAttestation,
+} from "./qron-presentation";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -140,6 +143,16 @@ export async function handleGeneratePost(opts: {
     presetId?: string;
     style?: QronImageStyle;
   }) => Promise<{ imageUrl: string }>;
+  /**
+   * Optional issuer bind after image generation. Failures must return null
+   * so generate still succeeds as image_issued.
+   */
+  bindAttestation?: (args: {
+    destinationUrl: string;
+    imageUrl: string;
+    objectId: string;
+    userId: string;
+  }) => Promise<QronPresentationAttestation | null>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
   if (!opts.userId) {
@@ -202,11 +215,35 @@ export async function handleGeneratePost(opts: {
       return { status: 502, body: { message: "No image returned" } };
     }
     const deducted = await opts.deductCredit(opts.userId);
+    const objectIdDraft = buildQronPresentation({
+      destinationUrl: targetUrl,
+      imageUrl: generated.imageUrl,
+      mode,
+      prompt,
+    }).object_id;
+
+    let bind: QronPresentationAttestation | null = null;
+    if (opts.bindAttestation) {
+      try {
+        bind = await opts.bindAttestation({
+          destinationUrl: targetUrl,
+          imageUrl: generated.imageUrl,
+          objectId: objectIdDraft,
+          userId: opts.userId,
+        });
+      } catch {
+        bind = null;
+      }
+    }
+
     const presentation = buildQronPresentation({
       destinationUrl: targetUrl,
       imageUrl: generated.imageUrl,
       mode,
       prompt,
+      jws: bind?.jws,
+      kid: bind?.kid,
+      jwksUrl: bind?.jwks_url,
     });
     return {
       status: 200,
