@@ -44,7 +44,9 @@ const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     c =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': """, "'": "&#39;" })[c]!
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ]!
   );
 
 /** Whole days from `now` until the deadline (UTC), floored at 0. */
