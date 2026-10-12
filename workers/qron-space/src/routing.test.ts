@@ -152,6 +152,62 @@ test("/llms.txt and /openapi.json point agents at Payment Links and unpaid POST 
   assert.equal(JSON.stringify(spec).includes("/api/checkout"), false);
 });
 
+test("POST /api/verify fails closed with the canonical decision contract", async () => {
+  const res = await worker.fetch(
+    new Request("https://qron.space/api/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }),
+  );
+  assert.equal(res.status, 400);
+  assert.equal(res.headers.get("cache-control"), "no-store");
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.equal(body.valid, false);
+  assert.equal(body.decision, "indeterminate");
+  assert.equal(body.decision_contract, "AuthiChain Verification Decision v1");
+  assert.equal(body.error, "jws is required");
+  // Must not be the HTML 404 page.
+  assert.equal(res.headers.get("content-type"), "application/json");
+});
+
+test("POST /api/verify forwards a blocked canonical decision as non-success", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    assert.match(url, /attestation\/verify/);
+    return new Response(
+      JSON.stringify({
+        valid: false,
+        decision: "blocked",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: ["decision_blocked"],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+  try {
+    const res = await worker.fetch(
+      new Request("https://qron.space/api/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jws: "signed-attestation" }),
+      }),
+    );
+    assert.equal(res.status, 409);
+    const body = (await res.json()) as {
+      valid: boolean;
+      decision: string;
+      reasons: string[];
+    };
+    assert.equal(body.valid, false);
+    assert.equal(body.decision, "blocked");
+    assert.ok(body.reasons.includes("canonical_response_not_positive"));
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test("unpaid POST /api/x402 is 402 v2 with published payTo; GET health is 200", async () => {
   const unpaid = await worker.fetch(
     new Request("https://qron.space/api/x402", { method: "POST" })
