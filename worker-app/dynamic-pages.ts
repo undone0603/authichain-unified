@@ -1527,24 +1527,28 @@ function authenticateHtml(): string {
   return htmlDocument({
     title: "Sign in | AuthiChain",
     description:
-      "Public authentic-economy console. Onboard a pilot or open the dashboard — no app.* login host required.",
+      "Start with QRON Starter Pack $29 or Launch $19/mo. Onboard a pilot or open the dashboard — no app.* login host required.",
     canonicalPath: "/authenticate",
     extraHead: "<style>" + CHECKOUT_EMAIL_FORM_CSS + "</style>\n",
     bodyHtml:
       "<main>\n" +
       "<h1>Sign in</h1>\n" +
-      "<p>The public console does not require a separate app host. Start a pilot or open the dashboard.</p>\n" +
+      "<p>The public console does not require a separate app host. Start with the Starter Pack at $29 or Launch at $19/mo, or open onboard / dashboard.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
       '<li><a href="/dashboard">Dashboard</a></li>\n' +
+      '<li><a href="/generate">Generate Living QR</a></li>\n' +
       '<li><a href="/dpp">EU DPP audit</a></li>\n' +
       "</ul>\n" +
       emailCheckoutWithPaymentLinkHtml({
-        action: "https://authichain.com/checkout/dpp_readiness",
-        label: "Start DPP checkout — $299",
-        formId: "auth-dpp-checkout",
-        inputId: "auth-dpp-email",
+        action: "https://authichain.com/checkout/starter",
+        label: "Buy Starter Pack — $29",
+        formId: "auth-starter-checkout",
+        inputId: "auth-starter-email",
       }) +
+      "<p><a href=\"" +
+      escapeHtml(planPaymentLink("qron_launch") || "/checkout/qron_launch") +
+      '">Start Launch $19/mo</a> · <a href="/pricing">All pricing</a> · <a href="https://authichain.com/checkout/dpp_readiness">EU DPP $299</a></p>\n' +
       "</main>",
   });
 }

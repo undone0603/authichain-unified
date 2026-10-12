@@ -911,12 +911,19 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("Sign in");
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
+      expect(body).toContain("/generate");
       expect(body).toContain('name="email"');
+      // LOOP-03: email checkout leads Starter; Launch + DPP remain as links.
       expect(body).toContain(
-        'action="https://authichain.com/checkout/dpp_readiness"'
+        'action="https://authichain.com/checkout/starter"'
       );
+      expect(body).toContain("Buy Starter Pack — $29");
+      expect(body).toContain("Start Launch $19/mo");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(body).not.toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
