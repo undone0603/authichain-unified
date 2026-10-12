@@ -370,7 +370,7 @@ function pricingPage(origin: PricingOrigin): PricingPage {
     brand: "qron",
     title: "Pricing — QRON",
     description:
-      "Live QRON prices from the published plan catalogue. Starter, Creator, and EU DPP Readiness use Stripe Payment Links or checkout.",
+      "Live QRON prices from the published plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.",
     canonical: "https://qron.space/pricing",
     themeColor: "#b45309",
     primary: { href: "/generate", label: "Generate Living QR" },
@@ -378,33 +378,34 @@ function pricingPage(origin: PricingOrigin): PricingPage {
       { href: "/", label: "Home" },
       { href: "/generate", label: "Generate" },
       {
-        href: "https://authichain.govchain.us/pricing",
-        label: "DPP checkout",
+        href: "https://authichain.com/checkout/starter",
+        label: "Buy Starter",
       },
     ],
     heroTitle: "QRON prices that already charge.",
     heroLede:
-      "These figures come from the AuthiChain plan catalogue. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card.",
+      "Start with Starter Pack at $29 or Launch at $19/mo. Generate a Living QR, or buy a pack on the Stripe Payment Link printed on the card. EU DPP Readiness is $299 when you need the passport path.",
     secondary: {
-      href: "https://authichain.govchain.us/pricing",
-      label: "Start DPP checkout",
+      href: "https://authichain.com/checkout/qron_launch",
+      label: "Start Launch $19/mo",
       primary: false,
     },
     plansNote:
       "Only plans with a Stripe price or Payment Link are listed.",
     ctaTitle: "Generate a Living QR",
     ctaLede:
-      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand.",
+      "qron.space/generate is proxied to the AuthiChain app. That is the first-dollar path for this brand — Starter $29 or Launch $19/mo.",
     footerStart: [
       { href: "/generate", label: "Generate Living QR" },
-      { href: "/pricing", label: "Pricing" },
+      { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
       {
-        href: "https://authichain.govchain.us/pricing",
-        label: "DPP checkout",
+        href: "https://authichain.com/checkout/qron_launch",
+        label: "Launch $19/mo",
       },
     ],
     footerMore: [
-      { href: "https://authichain.govchain.us/x402", label: "x402 agent pay" },
+      { href: "https://authichain.com/x402", label: "x402 agent pay" },
+      { href: "https://authichain.com/checkout/dpp_readiness", label: "EU DPP $299" },
     ],
     offers,
   };

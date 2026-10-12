@@ -205,7 +205,13 @@ test("qron /pricing HTML cites catalogue prices and generate", () => {
   const html = renderEstatePricingPage("qron");
   assert.match(html, /<title>Pricing — QRON<\/title>/);
   assert.match(html, /href="\/generate"/);
+  // LOOP-03: nav/footer lead Starter/Launch; DPP remains as a secondary link.
+  assert.match(html, /https:\/\/authichain\.com\/checkout\/starter/);
+  assert.match(html, /https:\/\/authichain\.com\/checkout\/qron_launch/);
+  assert.match(html, /Start Launch \$19\/mo/);
   assert.match(html, /https:\/\/authichain\.com\/checkout\/dpp_readiness/);
+  assert.doesNotMatch(html, />DPP checkout</);
+  assert.doesNotMatch(html, />Start DPP checkout</);
   assert.doesNotMatch(html, /\$2,990/);
 });
 
