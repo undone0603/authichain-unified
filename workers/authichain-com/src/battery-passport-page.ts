@@ -1,6 +1,6 @@
 const esc = (s: string) =>
-  s.replace(/&/g, "&amp;")
-   .replace(/</g, "&lt;")
-   .replace(/>/g, "&gt;")
+  s.replace(/&/g, "&")
+   .replace(/</g, "<")
+   .replace(/>/g, ">")
    .replace(/"/g, """)
    .replace(/'/g, "&#39;");
