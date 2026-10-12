@@ -2326,7 +2326,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Products and pricing</h2>
-    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Starter and Creator use Stripe Payment Links. EU DPP Readiness uses live checkout on authichain.com.</p>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.</p>
     ${estatePricingGrid("qron")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2336,8 +2336,12 @@ ${videosHtml}
 
 ${estateCtaBand({
   title: "Generate a Living QR",
-  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space.",
-  actions: [{ href: "/generate", label: "Generate Living QR", primary: true }],
+  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29 or Launch $19/mo.",
+  actions: [
+    { href: "/generate", label: "Generate Living QR", primary: true },
+    { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
+    { href: "https://authichain.com/checkout/qron_launch", label: "Start Launch $19/mo", primary: false },
+  ],
 })}
 </main>
 ${estateFooter(
@@ -2348,7 +2352,8 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/pricing", label: "DPP checkout" },
+        { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
+        { href: "https://authichain.com/checkout/qron_launch", label: "Launch $19/mo" },
       ],
     },
     {
