@@ -1,1 +1,1 @@
-PLACEHOLDER_FULL_CONTENT_WILL_BE_RECONSTRUCTED_FROM_MAIN_PLUS_ONE_LINE
+PLACEHOLDER - FULL FILE NEEDS MANUAL RESTORE FROM MAIN PLUS sessionId: session.id in provisionPurchase call. Tool truncation prevents clean full-file push. Please complete in PR web UI.
