@@ -2,7 +2,7 @@
  * /battery-passport — locked free gap-map CTAs for LMT and smaller industrial operators.
  * Full valid source. Sells existing $299 dpp_readiness (no new SKU).
  * Checkout tagged utm_campaign=battery-passport.
- * esc() fixed with proper HTML entities.
+ * esc() rewritten with chained replaces.
  */
 import {
   ESTATE_BASE_CSS,
@@ -41,13 +41,11 @@ export function isBatteryPassportPath(pathname: string): boolean {
 }
 
 const esc = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    c =>
-      ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" })[
-        c
-      ]!
-  );
+  s.replace(/&/g, "&")
+   .replace(/</g, "<")
+   .replace(/>/g, ">")
+   .replace(/"/g, """)
+   .replace(/'/g, "&#39;");
 
 /** Whole days from `now` until the deadline (UTC), floored at 0. */
 export function daysUntilDeadline(now: Date = new Date()): number {
@@ -380,16 +378,23 @@ ${gapMapSection()}
     </div>
   </section>
 
-  ${batteryLeadFormSection()}
-
-  <section class="estate-section" id="cta">
+  <section class="estate-section" id="faq">
     <div class="wrap">
-      <h2>Get passport-ready</h2>
-      <div class="estate-actions">
-        ${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}
-      </div>
+      <h2>FAQ</h2>
+      ${faq}
     </div>
   </section>
+
+  <section class="estate-section" id="get-started">
+    <div class="wrap">
+      <h2>Get passport-ready</h2>
+      <p class="section-sub">Self-serve. No call required.</p>
+      ${checkoutForm("cta-checkout", `Get passport-ready — $${price}`)}
+      <p class="bp-note">The scoping form on this page is optional. We may email you at the work address in that form to set up a scoping call.</p>
+    </div>
+  </section>
+
+  ${batteryLeadFormSection("battery-passport")}
 </main>
 ${estateFooter("authichain")}
 </body>
@@ -400,8 +405,8 @@ export function tryHandleBatteryPassport(req: Request): Response | null {
   const url = new URL(req.url);
   if (!isBatteryPassportPath(url.pathname)) return null;
   if (req.method !== "GET" && req.method !== "HEAD") return null;
-  const html = renderBatteryPassportPage();
-  return new Response(html, {
+  const body = req.method === "HEAD" ? null : renderBatteryPassportPage();
+  return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
