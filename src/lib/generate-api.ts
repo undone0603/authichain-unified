@@ -8,6 +8,11 @@
  */
 import { listedPlans, planPaymentLink, type Plan } from "./plans";
 import {
+  CANONICAL_VERIFY_URL,
+  DECISION_CONTRACT,
+  ESTATE_VERIFY_URLS,
+  QRON_ATTESTATION_JWKS_URL,
+  QRON_PRESENTATION_SCHEMA,
   buildQronPresentation,
   type QronPresentationAttestation,
 } from "./qron-presentation";
@@ -66,6 +71,17 @@ export function generateHealthBody(
   worker: string;
   auth: boolean;
   packs: CreditPack[];
+  presentation: {
+    schema: typeof QRON_PRESENTATION_SCHEMA;
+    bind: "attestation_bound_when_signing_key_present";
+    fallback: "image_issued";
+    verify: {
+      decision_contract: typeof DECISION_CONTRACT;
+      canonical_url: string;
+      estate_urls: readonly string[];
+      jwks_url: string;
+    };
+  };
 } {
   return {
     status: "ok",
@@ -74,6 +90,17 @@ export function generateHealthBody(
     worker: workerUrl || process.env.QRON_WORKER_URL || QRON_IMAGE_GEN_DEFAULT,
     auth: Boolean(opts?.authConfigured),
     packs: generateCreditPacks(),
+    presentation: {
+      schema: QRON_PRESENTATION_SCHEMA,
+      bind: "attestation_bound_when_signing_key_present",
+      fallback: "image_issued",
+      verify: {
+        decision_contract: DECISION_CONTRACT,
+        canonical_url: CANONICAL_VERIFY_URL,
+        estate_urls: ESTATE_VERIFY_URLS,
+        jwks_url: QRON_ATTESTATION_JWKS_URL,
+      },
+    },
   };
 }
 
