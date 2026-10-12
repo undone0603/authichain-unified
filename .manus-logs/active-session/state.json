@@ -3,9 +3,9 @@
   "pipeline_status": "monitoring",
   "cross_agent_context": {
     "last_audit": {
-      "file": "contracts/AuthToken.sol",
+      "file": "contracts/deployment-info.json",
       "status": "verified",
-      "timestamp": "2026-10-10T21:05:36.944Z"
+      "timestamp": "2026-10-11T20:53:16.824Z"
     }
   }
 }

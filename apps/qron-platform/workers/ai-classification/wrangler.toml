@@ -5,3 +5,25 @@ compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db-prod"
+database_id = "YOUR_PROD_D1_ID"
+
+[[kv_namespaces]]
+binding = "AUTH_SESSIONS"
+id = "YOUR_PROD_KV_ID"
+
+[env.preview]
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "authichain-db-preview"
+database_id = "YOUR_PREVIEW_D1_ID"
+
+[[env.preview.kv_namespaces]]
+binding = "AUTH_SESSIONS"
+id = "YOUR_PREVIEW_KV_ID"
