@@ -444,7 +444,7 @@ export function buildDppImporterFile(
     fields,
     qr: {
       status: "not_issued",
-      note: "No Living QR is issued in this file. QRON binding is MVP-2.",
+      note: "No Living QR is issued in this file. Living QR generate returns AuthiChain QRON Presentation v0 (Decision v1); attestation JWS bind is the next MVP-2 slice.",
     },
     generated_at: input.generatedAt ?? new Date().toISOString(),
   };
