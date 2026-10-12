@@ -17,6 +17,7 @@ function ActivateForm() {
   );
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [importerFile, setImporterFile] = useState<unknown>(null);
 
   const canSubmit = useMemo(
     () =>
@@ -48,6 +49,7 @@ function ActivateForm() {
         throw new Error(data.error || data.detail || `HTTP ${res.status}`);
       }
       setProfileId(data.profile_id || null);
+      setImporterFile(data.importer_file ?? null);
       setStatus("done");
     } catch (err) {
       setStatus("error");
@@ -87,12 +89,35 @@ function ActivateForm() {
         <p className="mt-4 text-zinc-400">
           This workspace includes self-serve activation and 50 workspace
           generations
-          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does
-          not include a written assessment or a scheduled call.
+          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does not
+          include a written assessment or a scheduled call.
+        </p>
+        {importerFile ? (
+          <button
+            type="button"
+            className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
+            onClick={() => {
+              const blob = new Blob([JSON.stringify(importerFile, null, 2)], {
+                type: "application/json",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "authichain-dpp-importer-file.json";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download field file (JSON)
+          </button>
+        ) : null}
+        <p className="mt-4 text-sm text-zinc-500">
+          The field file lists what you typed and what is still missing. It is
+          not a battery passport, not a certificate, and not EU registry filing.
         </p>
         <Link
           href="/dashboard"
-          className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
+          className="mt-6 inline-flex text-sm text-cyan-300 underline"
         >
           Open dashboard
         </Link>
@@ -109,9 +134,9 @@ function ActivateForm() {
         Activate your workspace
       </h1>
       <p className="mt-3 text-zinc-400">
-        Complete this once. This records merchant activation for this
-        workspace. It includes 50 workspace generations. It does not include a
-        written assessment or a scheduled call.
+        Complete this once. This records merchant activation for this workspace.
+        It includes 50 workspace generations. It does not include a written
+        assessment or a scheduled call.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
