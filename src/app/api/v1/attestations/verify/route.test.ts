@@ -5,9 +5,15 @@ vi.mock("@/lib/api-usage", () => ({
   checkAndIncrementUsage: vi.fn().mockResolvedValue(undefined),
   ApiUsageLimitError: class ApiUsageLimitError extends Error {},
 }));
-vi.mock("@authichain/verifier", () => ({
-  verifyWithCanonicalWorker: vi.fn(),
-}));
+vi.mock("@authichain/verifier", async () => {
+  const actual = await vi.importActual<typeof import("@authichain/verifier")>(
+    "@authichain/verifier",
+  );
+  return {
+    ...actual,
+    verifyWithCanonicalWorker: vi.fn(),
+  };
+});
 
 import { POST } from "./route";
 import { verifyWithCanonicalWorker } from "@authichain/verifier";
@@ -68,8 +74,17 @@ describe("POST /api/v1/attestations/verify Next adapter", () => {
     expect(checkAndIncrementUsage).toHaveBeenCalled();
   });
 
-  it("fails closed when the canonical endpoint is unset", async () => {
+  it("falls back to the public canonical verify URL when unset", async () => {
     delete process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
+    vi.mocked(verifyWithCanonicalWorker).mockResolvedValue({
+      httpStatus: 200,
+      response: {
+        valid: true,
+        decision: "verified",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: [],
+      },
+    });
     const res = await POST(
       new NextRequest("https://authichain.com/api/v1/attestations/verify", {
         method: "POST",
@@ -77,11 +92,11 @@ describe("POST /api/v1/attestations/verify Next adapter", () => {
         body: JSON.stringify({ jws: "signed" }),
       }),
     );
-    expect(res.status).toBe(503);
-    expect(await res.json()).toMatchObject({
-      valid: false,
-      decision: "indeterminate",
-    });
-    expect(verifyWithCanonicalWorker).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(verifyWithCanonicalWorker).toHaveBeenCalledWith(
+      "https://authichain.com/api/v1/attestation/verify",
+      "signed",
+      undefined,
+    );
   });
 });

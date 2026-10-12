@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWithCanonicalWorker } from "@authichain/verifier";
+import {
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+} from "@authichain/verifier";
 import { checkAndIncrementUsage, ApiUsageLimitError } from "@/lib/api-usage";
 
 export const dynamic = "force-dynamic";
@@ -25,21 +28,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const endpoint = process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
-    if (!endpoint) {
-      return NextResponse.json(
-        {
-          valid: false,
-          decision: "indeterminate",
-          decision_contract: "AuthiChain Verification Decision v1",
-          error: "AUTHICHAIN_CANONICAL_VERIFY_URL not configured",
-        },
-        { status: 503 },
-      );
-    }
-
     const result = await verifyWithCanonicalWorker(
-      endpoint,
+      resolveCanonicalVerifyUrl(),
       body.jws.trim(),
       typeof body.expected_object_id === "string"
         ? body.expected_object_id

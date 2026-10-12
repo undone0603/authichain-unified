@@ -403,6 +403,8 @@ export {
 } from "./verification-decision-response";
 export type { VerificationDecisionResponse } from "./verification-decision-response";
 export {
+  DEFAULT_CANONICAL_VERIFY_URL,
+  resolveCanonicalVerifyUrl,
   verifyWithCanonicalWorker,
   type CanonicalVerificationResponse,
 } from "./canonical-worker-client";

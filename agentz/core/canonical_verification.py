@@ -12,6 +12,19 @@ from typing import Any
 import requests
 
 
+DEFAULT_CANONICAL_VERIFY_URL = "https://authichain.com/api/v1/attestation/verify"
+
+
+def resolve_canonical_verify_url(endpoint: str | None = None) -> str:
+    """Prefer an explicit endpoint, then env, then the public production URL."""
+    if endpoint and endpoint.strip():
+        return endpoint.strip()
+    env = (os.getenv("AUTHICHAIN_CANONICAL_VERIFY_URL") or "").strip()
+    if env:
+        return env
+    return DEFAULT_CANONICAL_VERIFY_URL
+
+
 def verify_attestation(
     jws: str,
     *,
@@ -21,12 +34,9 @@ def verify_attestation(
 ) -> dict[str, Any]:
     """Return the actual canonical worker response, including its decision.
 
-    Raises when the canonical endpoint is not configured or unreachable. A
-    transport failure is deliberately not converted into ``verified``.
+    A transport failure is deliberately not converted into ``verified``.
     """
-    url = endpoint or os.getenv("AUTHICHAIN_CANONICAL_VERIFY_URL")
-    if not url:
-        raise RuntimeError("AUTHICHAIN_CANONICAL_VERIFY_URL not configured")
+    url = resolve_canonical_verify_url(endpoint)
     body: dict[str, str] = {"jws": jws}
     if expected_object_id:
         body["expected_object_id"] = expected_object_id

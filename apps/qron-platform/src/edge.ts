@@ -8,7 +8,10 @@
  * Intercepts /s/[shortcode] and executes redirect rules at the network edge.
  */
 
-import { verifyWithCanonicalWorker } from "../../../packages/verifier/src/canonical-worker-client";
+import {
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+} from "../../../packages/verifier/src/canonical-worker-client";
 
 interface Env {
   NEXT_PUBLIC_SUPABASE_URL: string;
@@ -63,17 +66,6 @@ const worker = {
     // Visual / gallery / redirect layers must not manufacture a positive authenticity
     // decision when the canonical worker blocks it.
     if (url.pathname === '/api/verify' && request.method === 'POST') {
-      if (!env.AUTHICHAIN_CANONICAL_VERIFY_URL) {
-        return new Response(JSON.stringify({
-          valid: false,
-          decision: 'indeterminate',
-          decision_contract: 'AuthiChain Verification Decision v1',
-          error: 'AUTHICHAIN_CANONICAL_VERIFY_URL not configured',
-        }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        });
-      }
       try {
         const body = await request.json() as { jws?: unknown; expected_object_id?: unknown };
         if (typeof body.jws !== 'string' || !body.jws.trim()) {
@@ -88,7 +80,7 @@ const worker = {
           });
         }
         const result = await verifyWithCanonicalWorker(
-          env.AUTHICHAIN_CANONICAL_VERIFY_URL,
+          resolveCanonicalVerifyUrl(env.AUTHICHAIN_CANONICAL_VERIFY_URL),
           body.jws.trim(),
           typeof body.expected_object_id === 'string' ? body.expected_object_id : undefined,
         );

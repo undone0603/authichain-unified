@@ -12,7 +12,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyDpp } from "@/lib/dpp-verify";
-import { verifyWithCanonicalWorker } from "../../../../../packages/verifier/src/canonical-worker-client";
+import {
+  resolveCanonicalVerifyUrl,
+  verifyWithCanonicalWorker,
+} from "../../../../../packages/verifier/src/canonical-worker-client";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +28,7 @@ function getSupabase() {
 
 async function canonicalVerification(jws: string | null, expectedObjectId?: string) {
   if (!jws) return null;
-  const endpoint = process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
-  if (!endpoint) throw new Error("AUTHICHAIN_CANONICAL_VERIFY_URL not configured");
+  const endpoint = resolveCanonicalVerifyUrl();
   return verifyWithCanonicalWorker(endpoint, jws, expectedObjectId);
 }
 

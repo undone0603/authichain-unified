@@ -118,7 +118,21 @@ describe("QRON edge POST /api/verify canonical adapter", () => {
     });
   });
 
-  it("fails closed when the canonical endpoint is not configured", async () => {
+  it("falls back to the public canonical verify URL when unset", async () => {
+    const canonical = {
+      valid: true,
+      decision: "verified",
+      decision_contract: "AuthiChain Verification Decision v1",
+      reasons: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(canonical), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
     const res = await worker.fetch(
       new Request("https://qron.space/api/verify", {
         method: "POST",
@@ -128,13 +142,12 @@ describe("QRON edge POST /api/verify canonical adapter", () => {
       {} as never,
     );
 
-    expect(res.status).toBe(503);
-    expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.json()).toMatchObject({
-      valid: false,
-      decision: "indeterminate",
-      error: "AUTHICHAIN_CANONICAL_VERIFY_URL not configured",
-    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(canonical);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://authichain.com/api/v1/attestation/verify",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("rejects requests without a JWS", async () => {

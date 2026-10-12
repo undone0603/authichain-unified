@@ -40,4 +40,4 @@ The existing attestation API remains backward compatible: its HTTP contract cont
 
 Canonical worker route: `POST /api/v1/attestation/verify` (aliases: `/api/v1/attestations/verify`, PUT `/api/v1/attestation`).
 
-Consumer adapters (DPP, QRON edge, Next metered verify, AgentZ, verticals) call that worker via `AUTHICHAIN_CANONICAL_VERIFY_URL` and fail closed when it is unset. They must not invent a local authenticity vocabulary.
+Consumer adapters (DPP, QRON edge, Next metered verify, AgentZ, verticals) call that worker via `resolveCanonicalVerifyUrl()` / `AUTHICHAIN_CANONICAL_VERIFY_URL`, defaulting to `https://authichain.com/api/v1/attestation/verify` when unset. They must not invent a local authenticity vocabulary.

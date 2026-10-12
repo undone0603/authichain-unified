@@ -1,4 +1,5 @@
 import {
+  resolveCanonicalVerifyUrl,
   verifyWithCanonicalWorker,
   type CanonicalVerificationResponse,
 } from "../../packages/verifier/src/canonical-worker-client";
@@ -15,9 +16,12 @@ export async function verifyVerticalAttestation(params: {
   expectedObjectId?: string;
   endpoint?: string;
 }): Promise<VerticalVerification> {
-  const endpoint = params.endpoint ?? process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
-  if (!endpoint) throw new Error("AUTHICHAIN_CANONICAL_VERIFY_URL not configured");
-  const result = await verifyWithCanonicalWorker(endpoint, params.jws, params.expectedObjectId);
+  const endpoint = resolveCanonicalVerifyUrl(params.endpoint);
+  const result = await verifyWithCanonicalWorker(
+    endpoint,
+    params.jws,
+    params.expectedObjectId,
+  );
   return { vertical: params.vertical, ...result };
 }
 

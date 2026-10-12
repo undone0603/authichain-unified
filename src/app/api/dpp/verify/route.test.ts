@@ -3,9 +3,15 @@ import { NextRequest } from "next/server";
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/dpp-verify", () => ({ verifyDpp: vi.fn() }));
-vi.mock("../../../../../packages/verifier/src/canonical-worker-client", () => ({
-  verifyWithCanonicalWorker: vi.fn(),
-}));
+vi.mock("../../../../../packages/verifier/src/canonical-worker-client", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../../../packages/verifier/src/canonical-worker-client")
+  >("../../../../../packages/verifier/src/canonical-worker-client");
+  return {
+    ...actual,
+    verifyWithCanonicalWorker: vi.fn(),
+  };
+});
 
 import { GET, POST } from "./route";
 import { verifyDpp } from "@/lib/dpp-verify";
@@ -107,22 +113,28 @@ describe("DPP verification canonical adapter", () => {
     expect(verifyWithCanonicalWorker).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the canonical endpoint is not configured", async () => {
+  it("falls back to the public canonical verify URL when unset", async () => {
     delete process.env.AUTHICHAIN_CANONICAL_VERIFY_URL;
+    vi.mocked(verifyWithCanonicalWorker).mockResolvedValue({
+      httpStatus: 200,
+      response: {
+        valid: true,
+        decision: "verified",
+        decision_contract: "AuthiChain Verification Decision v1",
+        reasons: [],
+      },
+    });
     const res = await POST(new NextRequest("https://authichain.com/api/dpp/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ dpp_id: "dpp-test-1", jws: "signed-attestation" }),
     }));
 
-    expect(res.status).toBe(502);
-    expect(await res.json()).toMatchObject({
-      protocol_verification: {
-        valid: false,
-        decision: "indeterminate",
-        reasons: ["canonical_verification_unavailable"],
-      },
-    });
-    expect(verifyWithCanonicalWorker).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(verifyWithCanonicalWorker).toHaveBeenCalledWith(
+      "https://authichain.com/api/v1/attestation/verify",
+      "signed-attestation",
+      undefined,
+    );
   });
 });
