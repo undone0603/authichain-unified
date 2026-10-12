@@ -30,6 +30,8 @@ export interface SupabaseEnv {
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
   /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
   AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
