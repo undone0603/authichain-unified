@@ -47,6 +47,7 @@ const PLAN_ALIASES: Record<string, PlanId> = {
   dpp: "dpp_readiness",
   passport: "strainchain_passport",
   farm: "strainchain_farm",
+  launch: "qron_launch",
 };
 
 /** Query/form keys carried from the landing into Stripe metadata. */
