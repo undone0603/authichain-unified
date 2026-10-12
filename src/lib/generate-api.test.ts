@@ -46,6 +46,12 @@ describe("generateHealthBody", () => {
     expect(body.worker).toBe("https://qron-image-gen.example.workers.dev");
     expect(body.auth).toBe(false);
     expect(body.packs.length).toBeGreaterThan(0);
+    expect(body.presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(body.presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(body.presentation.verify.jwks_url).toContain("protocol/jwks.json");
+    expect(body.presentation.fallback).toBe("image_issued");
   });
 
   it("reports whether a Supabase session can be resolved", () => {

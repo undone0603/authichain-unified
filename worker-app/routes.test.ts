@@ -207,6 +207,10 @@ describe("GET /api/generate", () => {
     expect(body.status).toBe("ok");
     expect(body.methods).toContain("POST");
     expect(body.auth).toBe(false);
+    expect(body.presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(body.presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
     expect(body.packs.some((p: { price: number }) => p.price === 29)).toBe(
       true
     );
