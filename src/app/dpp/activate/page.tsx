@@ -12,6 +12,10 @@ function ActivateForm() {
   const [categories, setCategories] = useState("");
   const [markets, setMarkets] = useState("");
   const [labeling, setLabeling] = useState("");
+  const [packModel, setPackModel] = useState("");
+  const [statedWh, setStatedWh] = useState("");
+  const [ah, setAh] = useState("");
+  const [nominalV, setNominalV] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">(
     "idle"
   );
@@ -42,6 +46,10 @@ function ActivateForm() {
           categories,
           markets,
           labeling,
+          pack_model: packModel.trim() || undefined,
+          stated_wh: statedWh.trim() || undefined,
+          ah: ah.trim() || undefined,
+          nominal_v: nominalV.trim() || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -170,6 +178,56 @@ function ActivateForm() {
             required
           />
         </label>
+        <p className="text-left text-sm text-zinc-500">
+          Optional pack figures (same as the free{" "}
+          <a href="/battery-passport" className="text-cyan-300 underline">
+            /battery-passport
+          </a>{" "}
+          gap map). Leave blank if unknown.
+        </p>
+        <label className="block text-left text-sm text-zinc-300">
+          Pack model
+          <input
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+            value={packModel}
+            onChange={e => setPackModel(e.target.value)}
+          />
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          <label className="block text-left text-sm text-zinc-300">
+            Wh
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={statedWh}
+              onChange={e => setStatedWh(e.target.value)}
+            />
+          </label>
+          <label className="block text-left text-sm text-zinc-300">
+            Ah
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={ah}
+              onChange={e => setAh(e.target.value)}
+            />
+          </label>
+          <label className="block text-left text-sm text-zinc-300">
+            V
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={nominalV}
+              onChange={e => setNominalV(e.target.value)}
+            />
+          </label>
+        </div>
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button

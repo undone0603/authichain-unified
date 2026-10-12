@@ -34,6 +34,16 @@ export type ImporterField = {
   value?: string;
 };
 
+/** Optional pack figures from the free /battery-passport gap map (or typed at activation). */
+export type ImporterPackFigures = {
+  model?: string | null;
+  statedWh?: number | null;
+  ah?: number | null;
+  nominalV?: number | null;
+  cyclesLow?: number | null;
+  cyclesHigh?: number | null;
+};
+
 export type DppImporterFile = {
   schema: typeof DPP_IMPORTER_FILE_SCHEMA;
   disclaimer: string;
@@ -41,6 +51,14 @@ export type DppImporterFile = {
     categories: string;
     markets: string;
     labeling: string;
+    pack?: {
+      model: string | null;
+      statedWh: number | null;
+      ah: number | null;
+      nominalV: number | null;
+      cyclesLow: number | null;
+      cyclesHigh: number | null;
+    };
   };
   summary: {
     present: number;
@@ -60,9 +78,58 @@ export type BuildDppImporterFileInput = {
   categories: string;
   markets: string;
   labeling: string;
+  /** Typed Wh/Ah/V (and optional model/cycles) from gap map or activation. */
+  pack?: ImporterPackFigures | null;
   /** ISO timestamp; defaults to now for production calls. */
   generatedAt?: string;
 };
+
+function finitePositive(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n) && n > 0;
+}
+
+function optionalFinite(n: unknown): number | null {
+  if (n === null || n === undefined || n === "") return null;
+  const v = typeof n === "number" ? n : Number(n);
+  return Number.isFinite(v) ? v : null;
+}
+
+/** Normalize loose activate/API pack payload into ImporterPackFigures. */
+export function parseImporterPackFigures(
+  raw: unknown
+): ImporterPackFigures | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const model =
+    typeof o.model === "string"
+      ? o.model.trim()
+      : typeof o.pack_model === "string"
+        ? o.pack_model.trim()
+        : "";
+  const statedWh = optionalFinite(o.statedWh ?? o.stated_wh ?? o.wh);
+  const ah = optionalFinite(o.ah ?? o.rated_ah);
+  const nominalV = optionalFinite(o.nominalV ?? o.nominal_v ?? o.volts);
+  const cyclesLow = optionalFinite(o.cyclesLow ?? o.cycles_low);
+  const cyclesHigh = optionalFinite(o.cyclesHigh ?? o.cycles_high);
+  if (
+    !model &&
+    statedWh === null &&
+    ah === null &&
+    nominalV === null &&
+    cyclesLow === null &&
+    cyclesHigh === null
+  ) {
+    return null;
+  }
+  return {
+    model: model || null,
+    statedWh,
+    ah,
+    nominalV,
+    cyclesLow,
+    cyclesHigh,
+  };
+}
 
 const PUBLIC = "Public (Art. 77 / Annex XIII)";
 const INTERESTED = "Persons with a legitimate interest";
@@ -144,6 +211,86 @@ export function buildDppImporterFile(
     throw new Error("categories, markets, and labeling are required");
   }
 
+  const pack = parseImporterPackFigures(input.pack ?? null);
+  const typedNote =
+    "Figure you typed (gap map or activation). Not verified against a test report.";
+
+  const energyFields: ImporterField[] = [];
+  if (pack?.model) {
+    energyFields.push(
+      present("model", "Battery model", pack.model, typedNote)
+    );
+  }
+  if (finitePositive(pack?.statedWh ?? null)) {
+    energyFields.push(
+      present("energy", "Stated energy (Wh)", `${pack!.statedWh} Wh`, typedNote)
+    );
+  } else {
+    energyFields.push(
+      missing(
+        "energy",
+        "Stated energy (Wh)",
+        "placing_on_market_operator",
+        "Type Wh on /battery-passport or on activation; otherwise the operator must supply it."
+      )
+    );
+  }
+  if (finitePositive(pack?.ah ?? null)) {
+    energyFields.push(
+      present("capacity", "Rated capacity (Ah)", `${pack!.ah} Ah`, typedNote)
+    );
+  } else {
+    energyFields.push(
+      missing(
+        "capacity",
+        "Rated capacity (Ah)",
+        "placing_on_market_operator",
+        "Type Ah on /battery-passport or on activation; otherwise the operator must supply it."
+      )
+    );
+  }
+  if (finitePositive(pack?.nominalV ?? null)) {
+    energyFields.push(
+      present(
+        "voltage",
+        "Nominal voltage (V)",
+        `${pack!.nominalV} V`,
+        typedNote
+      )
+    );
+  } else {
+    energyFields.push(
+      missing(
+        "voltage",
+        "Nominal voltage (V)",
+        "placing_on_market_operator",
+        "Type nominal V on /battery-passport or on activation; otherwise the operator must supply it."
+      )
+    );
+  }
+  const cyclesLow = pack?.cyclesLow ?? null;
+  const cyclesHigh = pack?.cyclesHigh ?? null;
+  if (cyclesLow !== null || cyclesHigh !== null) {
+    const cycles =
+      cyclesLow !== null && cyclesHigh !== null
+        ? `${cyclesLow}–${cyclesHigh} cycles`
+        : cyclesLow !== null
+          ? `≥ ${cyclesLow} cycles`
+          : `≤ ${cyclesHigh} cycles`;
+    energyFields.push(
+      present("cycles", "Expected lifetime in cycles", cycles, typedNote)
+    );
+  } else {
+    energyFields.push(
+      missing(
+        "cycles",
+        "Expected lifetime in cycles",
+        "supplier",
+        "Test-basis lifetime figures from the manufacturer or test lab."
+      )
+    );
+  }
+
   const fields: ImporterField[] = [
     present(
       "activation_categories",
@@ -187,18 +334,7 @@ export function buildDppImporterFile(
       "placing_on_market_operator",
       "Map activation categories to the regulated battery category, chemistry and weight."
     ),
-    missing(
-      "energy",
-      "Stated energy (Wh), rated capacity (Ah), nominal voltage (V)",
-      "placing_on_market_operator",
-      "Use the free /battery-passport gap map with typed Wh/Ah/V; those figures are not in activation intake."
-    ),
-    missing(
-      "cycles",
-      "Expected lifetime in cycles",
-      "supplier",
-      "Test-basis lifetime figures from the manufacturer or test lab."
-    ),
+    ...energyFields,
     missing(
       "hazardous",
       "Hazardous substances and critical raw materials",
@@ -287,7 +423,23 @@ export function buildDppImporterFile(
   return {
     schema: DPP_IMPORTER_FILE_SCHEMA,
     disclaimer: DPP_IMPORTER_FILE_DISCLAIMER,
-    product: { categories, markets, labeling },
+    product: {
+      categories,
+      markets,
+      labeling,
+      ...(pack
+        ? {
+            pack: {
+              model: pack.model ?? null,
+              statedWh: pack.statedWh ?? null,
+              ah: pack.ah ?? null,
+              nominalV: pack.nominalV ?? null,
+              cyclesLow: pack.cyclesLow ?? null,
+              cyclesHigh: pack.cyclesHigh ?? null,
+            },
+          }
+        : {}),
+    },
     summary,
     fields,
     qr: {

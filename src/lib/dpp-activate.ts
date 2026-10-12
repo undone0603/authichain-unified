@@ -6,6 +6,7 @@
 import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "./dpp-loop";
 import {
   buildDppImporterFile,
+  parseImporterPackFigures,
   type DppImporterFile,
 } from "./dpp-importer-file";
 
@@ -16,6 +17,14 @@ export type DppActivateInput = {
   markets?: string;
   labeling?: string;
   call_windows?: string;
+  /** Optional pack figures (Wh/Ah/V) from gap map or activation form. */
+  pack?: unknown;
+  pack_model?: string;
+  stated_wh?: number | string;
+  ah?: number | string;
+  nominal_v?: number | string;
+  cycles_low?: number | string;
+  cycles_high?: number | string;
 };
 
 export type DppActivateOk = {
@@ -148,10 +157,21 @@ export async function activateDppMerchant(opts: {
     priorMatch as { metadata?: { importer_file?: DppImporterFile } } | undefined
   )?.metadata?.importer_file;
 
+  const pack =
+    parseImporterPackFigures(opts.body.pack) ??
+    parseImporterPackFigures({
+      model: opts.body.pack_model,
+      stated_wh: opts.body.stated_wh,
+      ah: opts.body.ah,
+      nominal_v: opts.body.nominal_v,
+      cycles_low: opts.body.cycles_low,
+      cycles_high: opts.body.cycles_high,
+    });
+
   const importer_file =
     priorImporter && priorImporter.schema
       ? priorImporter
-      : buildDppImporterFile({ categories, markets, labeling });
+      : buildDppImporterFile({ categories, markets, labeling, pack });
 
   if (!alreadyActivated) {
     await recordDppLoopEvent(opts.supabase, {

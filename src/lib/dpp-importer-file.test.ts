@@ -62,4 +62,36 @@ describe("buildDppImporterFile", () => {
       })
     ).toThrow(/categories, markets, and labeling/);
   });
+
+  it("marks Wh/Ah/V present when pack figures are typed", () => {
+    const file = buildDppImporterFile({
+      ...base,
+      pack: {
+        model: "Pack-A",
+        statedWh: 500,
+        ah: 14,
+        nominalV: 36,
+        cyclesLow: 500,
+        cyclesHigh: 800,
+      },
+    });
+    const byId = Object.fromEntries(file.fields.map((f) => [f.id, f]));
+    expect(byId.model?.status).toBe("present");
+    expect(byId.energy?.status).toBe("present");
+    expect(byId.energy?.value).toBe("500 Wh");
+    expect(byId.capacity?.status).toBe("present");
+    expect(byId.voltage?.status).toBe("present");
+    expect(byId.cycles?.status).toBe("present");
+    expect(file.product.pack?.statedWh).toBe(500);
+    expect(file.summary.present).toBeGreaterThanOrEqual(7);
+  });
+
+  it("keeps energy/capacity/voltage missing without pack figures", () => {
+    const file = buildDppImporterFile(base);
+    const byId = Object.fromEntries(file.fields.map((f) => [f.id, f]));
+    expect(byId.energy?.status).toBe("missing");
+    expect(byId.capacity?.status).toBe("missing");
+    expect(byId.voltage?.status).toBe("missing");
+    expect(file.product.pack).toBeUndefined();
+  });
 });
