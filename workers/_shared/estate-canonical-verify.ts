@@ -4,13 +4,14 @@
  * Visual / gallery / redirect layers must not invent authenticity. This route
  * forwards a signed JWS to the canonical worker and fail-closes when the
  * worker does not return a positive verified decision.
+ *
+ * Keep this file free of packages/* imports so tsconfig.workers.json does not
+ * grow new TS5097 / graph errors (ratchet).
  */
-import {
-  resolveCanonicalVerifyUrl,
-  verifyWithCanonicalWorker,
-} from "../../packages/verifier/src/canonical-worker-client.ts";
 
 const DECISION_CONTRACT = "AuthiChain Verification Decision v1";
+const DEFAULT_CANONICAL_VERIFY_URL =
+  "https://authichain.com/api/v1/attestation/verify";
 const NO_STORE = {
   "content-type": "application/json",
   "cache-control": "no-store",
@@ -19,6 +20,36 @@ const NO_STORE = {
 export type EstateCanonicalVerifyEnv = {
   AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
 };
+
+type CanonicalVerificationResponse = {
+  valid: boolean;
+  decision: string;
+  decision_contract?: string;
+  reasons?: string[];
+  [key: string]: unknown;
+};
+
+function resolveCanonicalVerifyUrl(explicit?: string | null): string {
+  const fromArg = typeof explicit === "string" ? explicit.trim() : "";
+  if (fromArg) return fromArg;
+  return DEFAULT_CANONICAL_VERIFY_URL;
+}
+
+async function verifyWithCanonicalWorker(
+  endpoint: string,
+  jws: string,
+  expectedObjectId?: string,
+): Promise<{ httpStatus: number; response: CanonicalVerificationResponse }> {
+  const body: Record<string, string> = { jws };
+  if (expectedObjectId) body.expected_object_id = expectedObjectId;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const response = (await res.json()) as CanonicalVerificationResponse;
+  return { httpStatus: res.status, response };
+}
 
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: NO_STORE });

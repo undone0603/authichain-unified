@@ -18,7 +18,7 @@ import {
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
-import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
