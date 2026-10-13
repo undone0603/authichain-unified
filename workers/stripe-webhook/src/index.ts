@@ -229,8 +229,20 @@ export default {
           "email"
         );
         if (!upserted) return grantRetry("profile upsert failed");
-        // Unified grant rail: SET not +=. Matches provisionPurchase.
-        if (grant) {
+        // humanHold prices (DPP workspace, passport, MUSA) record the plan
+        // here and nothing else. generations_limit 50 is applied by
+        // provisionPurchase on POST /api/stripe/webhook. Stamping
+        // last_grant_session_id, or writing generations_used 0, would make
+        // that grant look finished or wipe it.
+        if (grant?.humanHold) {
+          console.log(
+            JSON.stringify({
+              evt: "stripe_grant_human_hold",
+              plan: grant.plan,
+              session: session.id,
+            })
+          );
+        } else if (grant) {
           const existing = await supabaseSelectOne(
             env,
             "profiles",
