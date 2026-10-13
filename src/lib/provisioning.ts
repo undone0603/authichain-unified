@@ -35,6 +35,8 @@ export interface ProvisionInput {
   isTrial?: boolean;
   /** Explicit generation grant; defaults to PLAN_CREDITS[plan] when omitted. */
   generationsGrant?: number;
+  /** Stripe checkout session id for session-level idempotency. */
+  sessionId?: string | null;
 }
 
 export interface ProvisionResult {
@@ -121,6 +123,25 @@ export async function provisionPurchase(
     return { profileId: null, created: false, status: "no_identity" };
   }
 
+  // Session-level idempotency: do not reset generations_used if this session already granted.
+  if (input.sessionId) {
+    const { data: existingGrant } = await supabase
+      .from("profiles")
+      .select("last_grant_session_id")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (existingGrant?.last_grant_session_id === input.sessionId) {
+      console.log(
+        JSON.stringify({
+          evt: "provision_skipped_idempotent",
+          session: input.sessionId,
+          profileId,
+        })
+      );
+      return { profileId, created, status: "provisioned" };
+    }
+  }
+
   // 2. Apply entitlements. Reset usage so the new period starts clean.
   const grant = grantFor(input.plan, input.generationsGrant);
   const update: Record<string, unknown> = {
@@ -137,6 +158,7 @@ export async function provisionPurchase(
   if (grant !== undefined) {
     update.generations_limit = grant;
     update.generations_used = 0;
+    if (input.sessionId) update.last_grant_session_id = input.sessionId;
   }
 
   await supabase.from("profiles").update(update).eq("id", profileId);

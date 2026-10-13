@@ -12,11 +12,16 @@ function ActivateForm() {
   const [categories, setCategories] = useState("");
   const [markets, setMarkets] = useState("");
   const [labeling, setLabeling] = useState("");
+  const [packModel, setPackModel] = useState("");
+  const [statedWh, setStatedWh] = useState("");
+  const [ah, setAh] = useState("");
+  const [nominalV, setNominalV] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">(
     "idle"
   );
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [importerFile, setImporterFile] = useState<unknown>(null);
 
   const canSubmit = useMemo(
     () =>
@@ -41,6 +46,10 @@ function ActivateForm() {
           categories,
           markets,
           labeling,
+          pack_model: packModel.trim() || undefined,
+          stated_wh: statedWh.trim() || undefined,
+          ah: ah.trim() || undefined,
+          nominal_v: nominalV.trim() || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -48,6 +57,7 @@ function ActivateForm() {
         throw new Error(data.error || data.detail || `HTTP ${res.status}`);
       }
       setProfileId(data.profile_id || null);
+      setImporterFile(data.importer_file ?? null);
       setStatus("done");
     } catch (err) {
       setStatus("error");
@@ -87,12 +97,35 @@ function ActivateForm() {
         <p className="mt-4 text-zinc-400">
           This workspace includes self-serve activation and 50 workspace
           generations
-          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does
-          not include a written assessment or a scheduled call.
+          {profileId ? ` (profile ${profileId.slice(0, 8)}…)` : ""}. It does not
+          include a written assessment or a scheduled call.
+        </p>
+        {importerFile ? (
+          <button
+            type="button"
+            className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
+            onClick={() => {
+              const blob = new Blob([JSON.stringify(importerFile, null, 2)], {
+                type: "application/json",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "authichain-dpp-importer-file.json";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download field file (JSON)
+          </button>
+        ) : null}
+        <p className="mt-4 text-sm text-zinc-500">
+          The field file lists what you typed and what is still missing. It is
+          not a battery passport, not a certificate, and not EU registry filing.
         </p>
         <Link
           href="/dashboard"
-          className="mt-8 inline-flex rounded-lg bg-cyan-300 px-5 py-3 font-semibold text-black"
+          className="mt-6 inline-flex text-sm text-cyan-300 underline"
         >
           Open dashboard
         </Link>
@@ -109,9 +142,9 @@ function ActivateForm() {
         Activate your workspace
       </h1>
       <p className="mt-3 text-zinc-400">
-        Complete this once. This records merchant activation for this
-        workspace. It includes 50 workspace generations. It does not include a
-        written assessment or a scheduled call.
+        Complete this once. This records merchant activation for this workspace.
+        It includes 50 workspace generations. It does not include a written
+        assessment or a scheduled call.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -145,6 +178,56 @@ function ActivateForm() {
             required
           />
         </label>
+        <p className="text-left text-sm text-zinc-500">
+          Optional pack figures (same as the free{" "}
+          <a href="/battery-passport" className="text-cyan-300 underline">
+            /battery-passport
+          </a>{" "}
+          gap map). Leave blank if unknown.
+        </p>
+        <label className="block text-left text-sm text-zinc-300">
+          Pack model
+          <input
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+            value={packModel}
+            onChange={e => setPackModel(e.target.value)}
+          />
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          <label className="block text-left text-sm text-zinc-300">
+            Wh
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={statedWh}
+              onChange={e => setStatedWh(e.target.value)}
+            />
+          </label>
+          <label className="block text-left text-sm text-zinc-300">
+            Ah
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={ah}
+              onChange={e => setAh(e.target.value)}
+            />
+          </label>
+          <label className="block text-left text-sm text-zinc-300">
+            V
+            <input
+              type="number"
+              min={0}
+              step="any"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+              value={nominalV}
+              onChange={e => setNominalV(e.target.value)}
+            />
+          </label>
+        </div>
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button

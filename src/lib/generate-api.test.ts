@@ -16,13 +16,23 @@ function toBase64Url(value: string): string {
 }
 
 describe("generateCreditPacks", () => {
-  it("exposes the live $29/$99/$299 catalogue, including Starter", () => {
+  it("exposes Starter → Launch → Creator → DPP in LOOP-03 order", () => {
     const packs = generateCreditPacks();
     const byId = Object.fromEntries(packs.map(p => [p.id, p]));
     expect(byId.starter.price).toBe(29);
+    expect(byId.qron_launch.price).toBe(19);
     expect(byId.creator.price).toBe(99);
     expect(byId.dpp_readiness.price).toBe(299);
-    expect(packs.some(p => p.id === "starter")).toBe(true);
+    expect(packs.map(p => p.id)).toEqual([
+      "starter",
+      "qron_launch",
+      "creator",
+      "dpp_readiness",
+    ]);
+    expect(byId.qron_launch.checkout).toBe(
+      "https://authichain.com/checkout/qron_launch"
+    );
+    expect(byId.qron_launch.cta).toMatch(/Launch/i);
   });
 });
 
@@ -36,6 +46,12 @@ describe("generateHealthBody", () => {
     expect(body.worker).toBe("https://qron-image-gen.example.workers.dev");
     expect(body.auth).toBe(false);
     expect(body.packs.length).toBeGreaterThan(0);
+    expect(body.presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(body.presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(body.presentation.verify.jwks_url).toContain("protocol/jwks.json");
+    expect(body.presentation.fallback).toBe("image_issued");
   });
 
   it("reports whether a Supabase session can be resolved", () => {
@@ -71,6 +87,9 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.message).toMatch(/Authentication required/i);
     expect(Array.isArray(result.body.packs)).toBe(true);
+    const packs = result.body.packs as Array<{ id: string }>;
+    expect(packs.map(p => p.id)).toContain("qron_launch");
+    expect(packs.map(p => p.id)).toContain("starter");
     expect(generateImage).not.toHaveBeenCalled();
     expect(checkCredit).not.toHaveBeenCalled();
     expect(deductCredit).not.toHaveBeenCalled();
@@ -137,6 +156,22 @@ describe("handleGeneratePost", () => {
     expect((result.body.qron as { imageUrl: string }).imageUrl).toContain(
       "data:image/png"
     );
+    const presentation = result.body.presentation as {
+      schema: string;
+      status: string;
+      verify: { decision_contract: string };
+      attestation: null;
+      object_id: string;
+    };
+    expect(presentation.schema).toBe("AuthiChain QRON Presentation v0");
+    expect(presentation.status).toBe("image_issued");
+    expect(presentation.attestation).toBeNull();
+    expect(presentation.verify.decision_contract).toBe(
+      "AuthiChain Verification Decision v1"
+    );
+    expect(
+      (result.body.qron as { objectId: string }).objectId
+    ).toBe(presentation.object_id);
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
@@ -149,6 +184,58 @@ describe("handleGeneratePost", () => {
     expect(generateImage.mock.invocationCallOrder[0]).toBeLessThan(
       deductCredit.mock.invocationCallOrder[0]
     );
+  });
+
+  it("binds attestation when bindAttestation returns jws/kid/jwks", async () => {
+    const bindAttestation = vi.fn(async () => ({
+      jws: "a.b.c",
+      kid: "kid-test",
+      jwks_url: "https://authichain.com/protocol/jwks.json",
+    }));
+    const result = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+    });
+    expect(result.status).toBe(200);
+    const presentation = result.body.presentation as {
+      status: string;
+      attestation: { jws: string; kid: string; jwks_url: string };
+    };
+    expect(presentation.status).toBe("attestation_bound");
+    expect(presentation.attestation.jws).toBe("a.b.c");
+    expect(bindAttestation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destinationUrl: "https://example.com/sku",
+        userId: "user_1",
+      })
+    );
+  });
+
+  it("stays image_issued when bindAttestation throws", async () => {
+    const result = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation: async () => {
+        throw new Error("signing down");
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(
+      (result.body.presentation as { status: string }).status
+    ).toBe("image_issued");
   });
 });
 

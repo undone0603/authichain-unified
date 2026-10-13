@@ -2,8 +2,7 @@ name: AgentZ Autonomous CI
 on: [push, pull_request]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   verify-and-heal:
@@ -11,31 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "20"
-
-      - name: TurboRepo Local Cache
-        uses: actions/cache@v3
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            \${{ runner.os }}-turbo-
-
-      - name: Run Integration Tests
+      - name: Confirm the web-client stub is not sold as an ABI
         run: |
-          echo "Executing full-stack integration tests..."
-          if grep -q "Placeholder" apps/web-client.ts; then
-            echo "❌ Error: Missing ABI definitions in web-client.ts"
+          # apps/web-client.ts is an unused stub. Nothing imports AuthTokenABI.
+          # Failing on the word "Placeholder" only triggered agentz/healing/auto-fix.js,
+          # which then died on a missing @modelcontextprotocol/sdk install and, when
+          # it ran, wrote { status: "secure" } and opened a pull request. That object
+          # is not an ABI. Do not treat this file as a contract.
+          test -f apps/web-client.ts
+          if grep -q 'status: "secure"' apps/web-client.ts; then
+            echo "web-client.ts must not claim a secure ABI that is not wired"
             exit 1
-          else
-            echo "✅ ABI is secure."
           fi
-
-      - name: Trigger AgentZ Self-Healing
-        if: failure()
-        env:
-          GH_TOKEN: \${{ github.token }}
-        run: node agentz/healing/auto-fix.js
+          echo "web-client.ts is a stub. No contract ABI is wired."

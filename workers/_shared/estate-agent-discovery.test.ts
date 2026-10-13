@@ -70,6 +70,19 @@ test("llms.txt points agents at Payment Links and unpaid POST x402", () => {
     );
     assert.ok(hasHttpsPath(text, "authichain.com", "/mcp"));
     assert.ok(hasHttpsPath(text, "authichain.com", "/openapi.json"));
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/protocol/jwks.json")
+    );
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/protocol/issuer.json")
+    );
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/.well-known/jwks.json")
+    );
+    assert.ok(
+      hasHttpsPath(text, new URL(sisterOrigin(brand)).hostname, "/api/verify")
+    );
+    assert.ok(text.includes("POST https://authichain.com/api/v1/attestation/verify"));
     assert.ok(text.includes(PASSPORT));
     assert.ok(text.includes(DPP));
     assert.equal(text.includes(FARM), false);
@@ -113,6 +126,10 @@ test("openapi.json declares x-payment-info and Payment Links, not GET checkout",
       String(x402PriceUsd())
     );
     assert.ok(post.post.responses["402"]);
+    assert.ok(spec.paths["/protocol/jwks.json"]);
+    assert.ok(spec.paths["/protocol/issuer.json"]);
+    assert.ok(spec.paths["/.well-known/jwks.json"]);
+    assert.ok(spec.paths["/api/verify"]);
     assert.equal(spec.info["x-human-checkout"].passportPaymentLink, PASSPORT);
     assert.equal(spec.info["x-human-checkout"].dppPaymentLink, DPP);
     assert.equal(spec.info["x-human-checkout"].farmPaymentLink, undefined);

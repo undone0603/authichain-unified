@@ -146,6 +146,6 @@ describe("battery passport offer page", () => {
     expect(html).not.toMatch(
       /gets your first passport published|publish your first passport/i
     );
-    expect(html).toContain("gets you ready for your first passport");
+    expect(html).toContain("Map the public-tier gaps in your browser");
   });
 });

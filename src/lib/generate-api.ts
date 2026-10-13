@@ -7,6 +7,15 @@
  * `src/lib/plans.ts`, and image generation proxies to qron-image-gen.
  */
 import { listedPlans, planPaymentLink, type Plan } from "./plans";
+import {
+  CANONICAL_VERIFY_URL,
+  DECISION_CONTRACT,
+  ESTATE_VERIFY_URLS,
+  QRON_ATTESTATION_JWKS_URL,
+  QRON_PRESENTATION_SCHEMA,
+  buildQronPresentation,
+  type QronPresentationAttestation,
+} from "./qron-presentation";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -21,9 +30,14 @@ export type CreditPack = {
 };
 
 export function generateCreditPacks(): CreditPack[] {
+  // LOOP-03 order: Starter $29 → Launch $19/mo → Creator; DPP last.
+  const order = ["starter", "qron_launch", "creator", "dpp_readiness"] as const;
   return listedPlans("qron")
-    .filter(
-      p => p.id === "starter" || p.id === "creator" || p.id === "dpp_readiness"
+    .filter(p => (order as readonly string[]).includes(p.id))
+    .sort(
+      (a, b) =>
+        order.indexOf(a.id as (typeof order)[number]) -
+        order.indexOf(b.id as (typeof order)[number])
     )
     .map(p => ({
       id: p.id,
@@ -57,6 +71,17 @@ export function generateHealthBody(
   worker: string;
   auth: boolean;
   packs: CreditPack[];
+  presentation: {
+    schema: typeof QRON_PRESENTATION_SCHEMA;
+    bind: "attestation_bound_when_signing_key_present";
+    fallback: "image_issued";
+    verify: {
+      decision_contract: typeof DECISION_CONTRACT;
+      canonical_url: string;
+      estate_urls: readonly string[];
+      jwks_url: string;
+    };
+  };
 } {
   return {
     status: "ok",
@@ -65,6 +90,17 @@ export function generateHealthBody(
     worker: workerUrl || process.env.QRON_WORKER_URL || QRON_IMAGE_GEN_DEFAULT,
     auth: Boolean(opts?.authConfigured),
     packs: generateCreditPacks(),
+    presentation: {
+      schema: QRON_PRESENTATION_SCHEMA,
+      bind: "attestation_bound_when_signing_key_present",
+      fallback: "image_issued",
+      verify: {
+        decision_contract: DECISION_CONTRACT,
+        canonical_url: CANONICAL_VERIFY_URL,
+        estate_urls: ESTATE_VERIFY_URLS,
+        jwks_url: QRON_ATTESTATION_JWKS_URL,
+      },
+    },
   };
 }
 
@@ -134,6 +170,16 @@ export async function handleGeneratePost(opts: {
     presetId?: string;
     style?: QronImageStyle;
   }) => Promise<{ imageUrl: string }>;
+  /**
+   * Optional issuer bind after image generation. Failures must return null
+   * so generate still succeeds as image_issued.
+   */
+  bindAttestation?: (args: {
+    destinationUrl: string;
+    imageUrl: string;
+    objectId: string;
+    userId: string;
+  }) => Promise<QronPresentationAttestation | null>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
   if (!opts.userId) {
@@ -196,6 +242,36 @@ export async function handleGeneratePost(opts: {
       return { status: 502, body: { message: "No image returned" } };
     }
     const deducted = await opts.deductCredit(opts.userId);
+    const objectIdDraft = buildQronPresentation({
+      destinationUrl: targetUrl,
+      imageUrl: generated.imageUrl,
+      mode,
+      prompt,
+    }).object_id;
+
+    let bind: QronPresentationAttestation | null = null;
+    if (opts.bindAttestation) {
+      try {
+        bind = await opts.bindAttestation({
+          destinationUrl: targetUrl,
+          imageUrl: generated.imageUrl,
+          objectId: objectIdDraft,
+          userId: opts.userId,
+        });
+      } catch {
+        bind = null;
+      }
+    }
+
+    const presentation = buildQronPresentation({
+      destinationUrl: targetUrl,
+      imageUrl: generated.imageUrl,
+      mode,
+      prompt,
+      jws: bind?.jws,
+      kid: bind?.kid,
+      jwksUrl: bind?.jwks_url,
+    });
     return {
       status: 200,
       body: {
@@ -205,7 +281,9 @@ export async function handleGeneratePost(opts: {
           qrDataUrl: generated.imageUrl,
           prompt,
           mode,
+          objectId: presentation.object_id,
         },
+        presentation,
         remaining_credits: deducted.ok ? deducted.remaining : credit.remaining,
       },
     };

@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { selectAutoDeployWorkers, AUTO_DEPLOY_ALLOWLIST } from "./select-autodeploy-workers.mjs";
+import {
+  selectAutoDeployWorkers,
+  AUTO_DEPLOY_ALLOWLIST,
+  expandSharedWorkerDirs,
+} from "./select-autodeploy-workers.mjs";
 
 // This is the Review Focus case from
 // docs/superpowers/plans/2026-09-30-gs1-resolver-autonomous-ops.md: a push
@@ -49,6 +53,21 @@ test("selectAutoDeployWorkers preserves allowlist order, not changed-dirs order"
     ["worker-a", "worker-b"]
   );
   assert.deepEqual(result, ["worker-a", "worker-b"]);
+});
+
+test("a workers/_shared-only change redeploys the sisters and authichain-com", () => {
+  const expanded = expandSharedWorkerDirs(["_shared"]);
+  const shipped = selectAutoDeployWorkers(expanded, AUTO_DEPLOY_ALLOWLIST);
+  assert.deepEqual(shipped, [
+    "authichain-com",
+    "qron-space",
+    "strainchain-io",
+    "govchain-us",
+  ]);
+});
+
+test("expandSharedWorkerDirs leaves a normal worker diff alone", () => {
+  assert.deepEqual(expandSharedWorkerDirs(["gs1-resolver"]), ["gs1-resolver"]);
 });
 
 test("the production allowlist ships the public workers and not paid or archived ones", () => {

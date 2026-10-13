@@ -25,6 +25,8 @@ import { tryHandleGovGift } from "./gov-gift.ts";
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2283,6 +2285,12 @@ export default {
     if (gift) return gift;
     const pricing = tryHandleGovchainPricing(request);
     if (pricing) return pricing;
+    // Canonical attestation verify — before x402/MCP so protocol truth is not
+    // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
+    const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
+    if (canonicalVerify) return canonicalVerify;
     const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(

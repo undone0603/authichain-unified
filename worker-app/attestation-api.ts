@@ -4,6 +4,7 @@ import {
   evaluateAttestation,
   inspectAttestationJws,
   publicJwkFromPrivateKey,
+  resolveVerificationDecision,
   signAttestation,
   validateAttestation,
 } from "../packages/verifier/src/index";
@@ -49,6 +50,27 @@ function hasJws(body: unknown): boolean {
   return typeof jws === "string" && jws.trim().length > 0;
 }
 
+const DECISION_CONTRACT = "AuthiChain Verification Decision v1";
+
+/** Fail-closed verify envelope so crypto/transport failures stay in the decision vocabulary. */
+function failClosedVerifyPayload(
+  error: string,
+  extras: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    valid: false,
+    decision: "indeterminate",
+    decision_contract: DECISION_CONTRACT,
+    overall_valid: false,
+    cryptographic_status:
+      typeof extras.cryptographic_status === "string"
+        ? extras.cryptographic_status
+        : "invalid",
+    error,
+    ...extras,
+  };
+}
+
 async function verifyResponse(
   body: unknown,
   publicJwk: Record<string, unknown>,
@@ -58,7 +80,12 @@ async function verifyResponse(
   const input = (body ?? {}) as Record<string, unknown>;
   const jws = input.jws;
   if (typeof jws !== "string" || !jws.trim()) {
-    return { status: 400, payload: { valid: false, error: "jws is required" } };
+    return {
+      status: 400,
+      payload: failClosedVerifyPayload("jws is required", {
+        cryptographic_status: "unknown",
+      }),
+    };
   }
   const expected = input.expected_object_id ?? input.expectedObjectId;
   let attestation;
@@ -69,10 +96,10 @@ async function verifyResponse(
   } catch (error) {
     return {
       status: 400,
-      payload: {
-        valid: false,
-        error: error instanceof Error ? error.message : "invalid signature",
-      },
+      payload: failClosedVerifyPayload(
+        error instanceof Error ? error.message : "invalid signature",
+        { cryptographic_status: "invalid" },
+      ),
     };
   }
   const evaluation = evaluateAttestation(attestation);
@@ -80,7 +107,10 @@ async function verifyResponse(
   if (!issuer.ok) {
     return {
       status: issuer.status,
-      payload: { valid: false, error: issuer.error, signature: "valid" },
+      payload: failClosedVerifyPayload(issuer.error, {
+        signature: "valid",
+        cryptographic_status: "valid",
+      }),
     };
   }
   const now = Date.now();
@@ -92,40 +122,100 @@ async function verifyResponse(
   if (!durable.ok) {
     return {
       status: durable.status as 503,
-      payload: { valid: false, error: durable.error, signature: "valid" },
+      payload: failClosedVerifyPayload(durable.error, {
+        signature: "valid",
+        cryptographic_status: "valid",
+      }),
     };
   }
-  const durableStatus = durable.status?.claimStatus;
-  const valid = !issuerActive || (durableStatus && durableStatus !== "active")
-    ? false
-    : evaluation.valid;
-  const reasons = [
-    ...evaluation.reasons,
-    ...(!issuerActive ? [`issuer_status_${issuer.issuer.status}`] : []),
-    ...(durableStatus && durableStatus !== "active" ? [`durable_status_${durableStatus}`] : []),
-  ];
+  const durableStatus = durable.status?.claimStatus ?? null;
+  const riskSignals = Array.isArray(input.risk_signals)
+    ? input.risk_signals.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    : Array.isArray(input.riskSignals)
+      ? input.riskSignals.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      : [];
+  const claimStatusForDecision =
+    (durableStatus ??
+      (evaluation.status === "expired"
+        ? "expired"
+        : evaluation.status === "revoked"
+          ? "revoked"
+          : evaluation.status === "active"
+            ? "active"
+            : null)) as "active" | "revoked" | "expired" | "superseded" | null;
+  const decisionResult = resolveVerificationDecision({
+    cryptographicValid: true,
+    issuerTrusted: issuerActive,
+    claimStatus: claimStatusForDecision,
+    signedDecision: attestation.decision,
+    expired: evaluation.expired,
+    found: true,
+    ...(riskSignals.length ? { riskSignals } : {}),
+  });
   const effectiveStatus = durableStatus ?? evaluation.status;
+  const authorized =
+    decisionResult.valid === true && decisionResult.decision === "verified";
   return {
-    status: valid ? 200 : 409,
+    status: decisionResult.valid ? 200 : 409,
     payload: {
-      valid,
+      valid: decisionResult.valid,
       contract: "AuthiChain Attestation Contract",
       version: "0.1",
-      decision: evaluation.decision,
+      decision: decisionResult.decision,
+      decision_contract: "AuthiChain Verification Decision v1",
       status: effectiveStatus,
       claim_status: effectiveStatus,
       cryptographic_status: "valid",
       issuer_status: issuer.issuer.status,
-      overall_valid: valid,
+      overall_valid: decisionResult.valid,
       ...(durable.status ? {
         status_event_id: durable.status.eventId,
         effective_at: durable.status.effectiveAt,
         ...(durable.status.reasonCode ? { reason_code: durable.status.reasonCode } : {}),
       } : {}),
       expired: evaluation.expired,
-      reasons,
+      reasons: decisionResult.reasons,
       signature: "valid",
       attestation,
+      // Structured decision surfaces for DPP / QRON / AgentZ consumers.
+      // Cryptographically valid ≠ authorized; not_found ≠ counterfeit.
+      trust: {
+        evidence: {
+          cryptographic_status: "valid",
+          signature: "valid",
+          issuer_id: attestation.issuer.id,
+          issuer_status: issuer.issuer.status,
+          subject_object_id: attestation.subject.object_id,
+          evidence_count: Array.isArray(attestation.evidence)
+            ? attestation.evidence.length
+            : 0,
+        },
+        lifecycle: {
+          claim_status: effectiveStatus,
+          expired: evaluation.expired,
+          durable: Boolean(durable.status),
+        },
+        risk: {
+          signals: riskSignals,
+          flagged: riskSignals.length > 0 || decisionResult.decision === "risk",
+        },
+        policy: {
+          authorized,
+          rules_evaluated: [
+            "cryptographic_validity",
+            "issuer_trust",
+            "durable_lifecycle",
+            "expiry",
+            "risk_signals",
+            "signed_decision",
+          ],
+        },
+        decision: {
+          code: decisionResult.decision,
+          valid: decisionResult.valid,
+          reasons: decisionResult.reasons,
+        },
+      },
     },
   };
 }
@@ -370,17 +460,23 @@ export function registerAttestationApi<
   app.put("/api/v1/attestation", async c => {
     const body = await c.req.json().catch(() => ({}));
     if (!hasJws(body)) {
-      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload("jws is required", {
+          cryptographic_status: "unknown",
+        }),
+        400,
+        NO_STORE,
+      );
     }
     let publicJwk: Record<string, unknown>;
     try {
       ({ publicJwk } = await loadPrivateKey(c.env));
     } catch (error) {
       return c.json(
-        {
-          valid: false,
-          error: error instanceof Error ? error.message : "key unavailable",
-        },
+        failClosedVerifyPayload(
+          error instanceof Error ? error.message : "key unavailable",
+          { cryptographic_status: "unknown" },
+        ),
         503,
         NO_STORE
       );
@@ -392,11 +488,23 @@ export function registerAttestationApi<
   app.post("/api/v1/attestation/verify", async c => {
     const body = await c.req.json().catch(() => ({}));
     if (!hasJws(body)) {
-      return c.json({ valid: false, error: "jws is required" }, 400, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload("jws is required", {
+          cryptographic_status: "unknown",
+        }),
+        400,
+        NO_STORE,
+      );
     }
     const resolved = await resolveAttestationKey(c.env);
     if (!resolved.ok) {
-      return c.json({ valid: false, error: resolved.error }, 503, NO_STORE);
+      return c.json(
+        failClosedVerifyPayload(resolved.error, {
+          cryptographic_status: "unknown",
+        }),
+        503,
+        NO_STORE,
+      );
     }
     const { status, payload } = await verifyResponse(
       body,

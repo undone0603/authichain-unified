@@ -54,6 +54,12 @@ describe("founder list stays in lockstep with live-catalog.ts", () => {
     expect(isFounderEmail(null)).toBe(false);
     expect(isFounderEmail(undefined)).toBe(false);
   });
+
+  it("treats owned @domain entries as founder", () => {
+    expect(isFounderEmail("ops@authichain.com")).toBe(true);
+    expect(isFounderEmail("smoke+dpp@authichain.com")).toBe(true);
+    expect(isFounderEmail("a@authichain.com.au")).toBe(false);
+  });
 });
 
 describe("an unmapped price must never look like a starter purchase", () => {

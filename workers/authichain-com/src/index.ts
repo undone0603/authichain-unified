@@ -156,21 +156,21 @@ const FONTS_LINK = ESTATE_FONTS_LINK;
 // structured-data blocks (Organization, WebSite, FAQPage).
 const SEO = {
   description:
-    'AuthiChain: product seals, EU DPP Readiness on Stripe checkout, and x402 pay-per-call for agents.',
+    'AuthiChain: QRON Starter Pack $29 or Launch $19/mo on Stripe, Living QR generation, and x402 pay-per-call for agents. EU DPP Readiness is $299 when you need the battery passport path.',
   keywords:
-    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain',
+    'authentic agentic economy, agentic economy, product authentication, digital product passport, EU DPP, x402, MCP, blockchain verification, Living QR, QRON, GovChain, StrainChain, Starter Pack, QRON Launch',
   ogTitle: 'AuthiChain — The authentic agentic economy',
   ogDescription:
-    'Agents can pay. They still need to know if it is real. Signed seals, MCP tools, x402 at $0.05 USDC, and EU DPP Readiness on live Stripe checkout.',
+    'Start with QRON Starter at $29 or Launch at $19/mo. Signed seals, MCP tools, x402 at $0.05 USDC. EU DPP Readiness is $299 on live Stripe checkout when you need it.',
   twitterTitle: 'AuthiChain — The authentic agentic economy',
   twitterDescription:
-    'The authenticity layer for the agentic economy. Issue → Bind → Verify. x402 for agents. DPP Readiness for humans.',
+    'Starter Pack $29 or Launch $19/mo. Issue → Bind → Verify. x402 for agents. EU DPP Readiness $299 when you need the passport path.',
   ogImage: 'https://authichain.com/og-image.png',
   themeColor: '#4F46E5',
   faqs: [
     {
       q: 'How much does AuthiChain cost?',
-      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
+      a: `The first checkout is QRON Starter at $29 at ${planPaymentLink("starter") ?? ""} or Launch at $19/mo at ${planPaymentLink("qron_launch") ?? ""}. StrainChain Passport is $49 at ${planPaymentLink("strainchain_passport") ?? ""}. EU DPP Readiness stays $299 at ${planPaymentLink("dpp_readiness") ?? ""} (or enter a work email so Stripe can recover that cart). Creator is $99 at ${planPaymentLink("creator") ?? ""}. See /pricing.`,
     },
     {
       q: 'What is EU DPP Readiness?',
@@ -252,6 +252,21 @@ function assetResponse(svg: string): Response {
     },
   });
 }
+
+// No service worker. /verify must not be cached: a stored page can show a
+// record that has since been revoked. This file is not a contract ABI and
+// the lookup is not an authenticity verdict.
+const VERIFY_MANIFEST = JSON.stringify({
+  name: 'AuthiChain',
+  short_name: 'AuthiChain',
+  description: 'Look up an AuthiChain record. On-chain verification is in development.',
+  start_url: '/verify',
+  scope: '/',
+  display: 'browser',
+  background_color: '#0c0c0d',
+  theme_color: '#0c0c0d',
+  icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+});
 
 // __OG_PNG_B64_START__
 const OG_IMAGE_PNG_B64 =
@@ -2500,7 +2515,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   ${estateSkipLink()}
-  <div class="banner">The first checkout is the $29 signed pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy the $29 pack</a>. EU DPP Readiness stays on the form below.</div>
+  <div class="banner">The first checkout is the $29 Starter Pack. <a href="${escHtml(planPaymentLink("starter") ?? "#hero")}">Buy Starter — $29</a>. Or <a href="${escHtml(planPaymentLink("qron_launch") ?? "/checkout/qron_launch")}">Launch at $19/mo</a>. EU DPP Readiness stays $299 further down.</div>
   ${estateNav(
     "authichain",
     [
@@ -2512,28 +2527,34 @@ const HTML = `<!DOCTYPE html>
       { href: "/x402", label: "x402" },
       { href: "/contact", label: "Contact" },
     ],
-    { href: "/pricing", label: "View pricing" },
+    { href: planPaymentLink("starter") ?? "/checkout/starter", label: "Buy Starter" },
   )}
   <main id="main">
   ${estateHero({
     eyebrow: "The authentic agentic economy",
     title: "Signed QR seals for real products.",
-    lede: "The first checkout on this page is the $29 signed pack. EU DPP Readiness remains $299 on the form below, or enter a work email so Stripe can recover that cart.",
+    lede: "Start with the Starter Pack at $29 or Launch at $19/mo. EU DPP Readiness is $299 when you need the battery passport path. Add a work email so Stripe can recover the cart.",
     lead: {
       href: planPaymentLink("starter") ?? "#hero",
       label: "Buy a QRON Starter Pack — $29",
     },
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout — $299",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack — $29",
     },
     actions: [
+      {
+        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
+        label: "Start Launch $19/mo",
+        primary: false,
+      },
       { href: "/pricing", label: "View pricing", primary: false },
-      { href: "/onboard", label: "Onboard", primary: false },
+      { href: "/generate", label: "Generate Living QR", primary: false },
     ],
   })}
   ${estateTrust([
-    { value: "$299", label: "EU DPP Readiness" },
+    { value: "$29", label: "Starter Pack" },
+    { value: "$19/mo", label: "QRON Launch" },
     { value: "x402", label: "Agent micropayments" },
   ])}
 
@@ -2582,7 +2603,7 @@ const HTML = `<!DOCTYPE html>
     "Agents can pay. They still need to know if the product is real. <a href=\"/authentic-agentic-economy\">Read the brief</a> — seals, MCP tools, and x402 at $0.05 USDC on Base.",
     [
       { title: "Identity", body: "Every product gets a seal. Public certificate lookup for people and agents is in development." },
-      { title: "Settlement", body: "Humans enroll EU DPP Readiness on Stripe. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
+      { title: "Settlement", body: "Humans start with Starter $29 or Launch $19/mo on Stripe. EU DPP Readiness is $299 when needed. Funded agents pay $0.05 USDC per verification on the live x402 rail." },
     ],
     "agentic",
   )}
@@ -2593,13 +2614,18 @@ const HTML = `<!DOCTYPE html>
   ${communityHub(BRAND)}
   ${marketReality()}
   ${estateCtaBand({
-    title: "Start EU DPP Readiness",
-    lede: "Enter a work email so abandoned-checkout recovery can reach you. Onboard and dashboard stay available. x402 is the secondary agent-pay rail.",
+    title: "Buy the Starter Pack",
+    lede: "$29, one time — 100 AI QR generations. Or Launch at $19/mo. Enter a work email so abandoned-checkout recovery can reach you.",
     emailCheckout: {
-      action: "https://authichain.com/checkout/dpp_readiness",
-      label: "Start DPP checkout",
+      action: "https://authichain.com/checkout/starter",
+      label: "Buy Starter Pack",
     },
     actions: [
+      {
+        href: planPaymentLink("qron_launch") ?? "/checkout/qron_launch",
+        label: "Start Launch $19/mo",
+        primary: false,
+      },
       { href: "/pricing", label: "View pricing", primary: false },
       { href: "/x402", label: "x402 agent pay", primary: false },
     ],
@@ -3388,6 +3414,15 @@ async function handleAuthichainCom(request: Request, env: Env) {
     if (p === '/favicon.svg' || p === '/favicon.ico' || p === '/favicon.png') {
       return assetResponse(FAVICON_SVG);
     }
+    if (p === '/manifest.webmanifest') {
+      return new Response(VERIFY_MANIFEST, {
+        headers: {
+          'content-type': 'application/manifest+json; charset=utf-8',
+          'cache-control': 'public, max-age=3600',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
@@ -3401,6 +3436,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
         { loc: 'https://authichain.com/', freq: 'weekly', pri: '1.0' },
         { loc: 'https://authichain.com/pricing', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/onboard', freq: 'weekly', pri: '0.95' },
+        // First-dollar LOOP-03 paths (live 200; generate proxies to APP_WORKER).
+        { loc: 'https://authichain.com/generate', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/starter', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/qron_launch', freq: 'weekly', pri: '0.95' },
+        { loc: 'https://authichain.com/checkout/creator', freq: 'weekly', pri: '0.9' },
         { loc: 'https://authichain.com/anchor', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/verify', freq: 'weekly', pri: '0.95' },
         { loc: 'https://authichain.com/protocol', freq: 'weekly', pri: '0.95' },

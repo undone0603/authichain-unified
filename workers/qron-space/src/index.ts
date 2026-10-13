@@ -18,6 +18,8 @@ import {
 import { tryHandleEstateAgentDiscovery } from "../../_shared/estate-agent-discovery.ts";
 import { tryHandleSisterX402 } from "../../_shared/estate-x402.ts";
 import { tryHandleSisterMcp } from "../../_shared/estate-mcp.ts";
+import { tryHandleEstateCanonicalVerify } from "../../_shared/estate-canonical-verify";
+import { tryHandleEstateProtocolDiscovery } from "../../_shared/estate-protocol-discovery";
 import {
   isSeoPassportPath,
   tryRedirectSeoRootCanonical,
@@ -2120,6 +2122,10 @@ type Env = {
   APP_ORIGIN?: string;
   /** Next app worker (authichain-app): paid x402 verify is forwarded here. */
   VERIFY_APP?: { fetch: (request: Request) => Promise<Response> };
+  /** Optional override; defaults to https://authichain.com/api/v1/attestation/verify */
+  AUTHICHAIN_CANONICAL_VERIFY_URL?: string;
+  /** Optional override; defaults to https://authichain.com for issuer/JWKS proxy */
+  AUTHICHAIN_PROTOCOL_ORIGIN?: string;
   X402_PAY_TO?: string;
   X402_FACILITATOR_URL?: string;
   X402_NETWORK?: string;
@@ -2242,6 +2248,12 @@ export default {
     if (indexNow) return indexNow;
     const pricing = tryHandleEstatePricing(request, "qron");
     if (pricing) return pricing;
+    // Canonical attestation verify — before x402/MCP so protocol truth is not
+    // confused with paid agent verify credit settlement.
+    const protocolDiscovery = await tryHandleEstateProtocolDiscovery(request, env);
+    if (protocolDiscovery) return protocolDiscovery;
+    const canonicalVerify = await tryHandleEstateCanonicalVerify(request, env);
+    if (canonicalVerify) return canonicalVerify;
     const x402 = await tryHandleSisterX402(request, env, env?.VERIFY_APP);
     if (x402) return x402;
     const mcp = await tryHandleSisterMcp(
@@ -2326,7 +2338,7 @@ ${estateFeatures(
 <section class="estate-section" id="pricing">
   <div class="wrap">
     <h2>Products and pricing</h2>
-    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Starter and Creator use Stripe Payment Links. EU DPP Readiness uses live checkout on authichain.com.</p>
+    <p class="section-sub">Figures from the published AuthiChain plan catalogue. Start with Starter Pack $29 or Launch $19/mo. Creator and EU DPP Readiness stay on the grid.</p>
     ${estatePricingGrid("qron")}
     <p class="section-sub" style="margin-top:20px"><a href="/pricing">Open the full pricing page</a></p>
   </div>
@@ -2336,8 +2348,12 @@ ${videosHtml}
 
 ${estateCtaBand({
   title: "Generate a Living QR",
-  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space.",
-  actions: [{ href: "/generate", label: "Generate Living QR", primary: true }],
+  lede: "The generate form is proxied to the AuthiChain app. That is the conversion path for qron.space — Starter $29 or Launch $19/mo.",
+  actions: [
+    { href: "/generate", label: "Generate Living QR", primary: true },
+    { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29", primary: false },
+    { href: "https://authichain.com/checkout/qron_launch", label: "Start Launch $19/mo", primary: false },
+  ],
 })}
 </main>
 ${estateFooter(
@@ -2348,7 +2364,8 @@ ${estateFooter(
       links: [
         { href: "/generate", label: "Generate Living QR" },
         { href: "/pricing", label: "Pricing" },
-        { href: "https://authichain.com/pricing", label: "DPP checkout" },
+        { href: "https://authichain.com/checkout/starter", label: "Buy Starter $29" },
+        { href: "https://authichain.com/checkout/qron_launch", label: "Launch $19/mo" },
       ],
     },
     {

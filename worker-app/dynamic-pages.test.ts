@@ -330,6 +330,10 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
     expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain(
+      '<link rel="manifest" href="/manifest.webmanifest">'
+    );
+    expect(body).not.toContain("serviceWorker");
     expect(body).not.toContain("authenticity status");
     expect(getProductById).not.toHaveBeenCalled();
   });
@@ -907,12 +911,19 @@ describe("renderDynamicPage: /login and /authenticate", () => {
       expect(body).toContain("Sign in");
       expect(body).toContain("/onboard");
       expect(body).toContain("/dashboard");
+      expect(body).toContain("/generate");
       expect(body).toContain('name="email"');
+      // LOOP-03: email checkout leads Starter; Launch + DPP remain as links.
       expect(body).toContain(
-        'action="https://authichain.com/checkout/dpp_readiness"'
+        'action="https://authichain.com/checkout/starter"'
       );
+      expect(body).toContain("Buy Starter Pack — $29");
+      expect(body).toContain("Start Launch $19/mo");
       expect(body).toContain(
         'href="https://authichain.com/checkout/dpp_readiness"'
+      );
+      expect(body).not.toContain(
+        'action="https://authichain.com/checkout/dpp_readiness"'
       );
       expect(body).not.toContain("app.authichain.com/login");
     }
@@ -959,6 +970,7 @@ describe("/onboard and /generate: walkthrough friction fixes", () => {
     expect(body).toContain('<label for="targetUrl">Product URL</label>');
     expect(body).toContain("Sign in to use account credits.");
     expect(body).toContain("100 generations for $29, one-time");
+    expect(body).toContain("Launch at $19/mo");
     expect(body).not.toContain("Five generations are free");
     expect(body).toContain("not an authenticity proof");
     expect(body).not.toContain("<code>POST /api/generate</code>");
@@ -972,6 +984,9 @@ describe("renderDynamicPage: /generate Living QR", () => {
     const res = await app.request("/generate", {}, makeEnv() as any);
     const body = await res.text();
     expect(res.status).toBe(200);
+    expect(body).toContain(
+      "<title>Living QR generator | QRON — account credits and $29 Starter Pack</title>"
+    );
     expect(body).toContain("Generate a Living QR");
     expect(body).not.toContain("$QRON");
     expect(body).toContain(
@@ -982,11 +997,14 @@ describe("renderDynamicPage: /generate Living QR", () => {
     expect(body).toContain("if(r.res.status===401)");
     expect(body).toContain("form.submit()");
     expect(body).toContain("$29");
+    expect(body).toContain("$19/mo");
     expect(body).toContain("$299");
-    // Top-ups are the live Starter/Creator packs; the retired credit bundles
-    // ($9.99/$39.99/$99.99) had links on no live Stripe account.
+    // Top-ups: Starter $29, Launch $19/mo (LOOP-03 tertiary), Creator $99.
+    // Retired credit bundles ($9.99/$39.99/$99.99) had no live Stripe account.
     expect(body).toContain('href="https://authichain.com/checkout/starter"');
+    expect(body).toContain('href="https://authichain.com/checkout/qron_launch"');
     expect(body).toContain('href="https://authichain.com/checkout/creator"');
+    expect(body).toContain("Start Launch — $19/mo");
     expect(body).not.toContain("$9.99");
     expect(body).not.toContain("$39.99");
     expect(

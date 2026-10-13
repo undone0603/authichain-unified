@@ -1,8 +1,13 @@
 name: Production Drizzle Audit
 
 on:
-  pull_request:
+  schedule:
+    - cron: "30 7 * * 1"
+  push:
     branches: [main]
+    paths:
+      - "drizzle/migrations/**"
+      - "src/db/schema.ts"
   workflow_dispatch:
 
 # GB-26 fix 4: a newer commit on the same PR cancels the older run. Pushes to
@@ -19,10 +24,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      # Dependabot and fork PRs run without repository secrets, so
-      # DATABASE_URL is empty there and the audit cannot connect. Skip the
-      # audit (the job still passes) instead of failing every dependency
-      # bump; runs that do have the secret audit as before.
+      # DATABASE_URL is gated empty on pull_request (CFA-215 / #1769). This
+      # workflow no longer triggers on PRs, but the gate stays as defense in
+      # depth. Skip the audit (the job still passes) when the secret is
+      # unavailable; runs that do have it audit as before.
       - name: Check database secret
         id: secret
         env:
@@ -32,7 +37,7 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Schema audit skipped::DATABASE_URL is not available to this run (Dependabot or fork PR), so the production schema audit was skipped."
+            echo "::notice title=Schema audit skipped::DATABASE_URL is not available on pull_request runs, so the production schema audit was skipped."
           fi
 
       - name: Checkout

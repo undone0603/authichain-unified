@@ -132,7 +132,7 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
     : null;
   const title = "Free EU Digital Product Passport readiness check | AuthiChain";
   const description =
-    "Answer eight quick questions and see how ready your products are for the EU Digital Product Passport: score, gaps, and the dated obligation for your category. Free, no sign-up.";
+    "Score DPP gaps for free. An AuthiChain workspace, self-serve activation, and 50 workspace generations are $299. AuthiChain does not operate the EU registry.";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -202,8 +202,8 @@ export function renderDppCheckPage(url: URL, now: Date = new Date()): string {
   <header class="estate-hero hero" id="hero">
     <div class="wrap hero-content">
       <p class="estate-badge hero-badge">Free tool · EU Digital Product Passport</p>
-      <h1>How ready are your products for the EU Digital Product Passport?</h1>
-      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, no sign-up, nothing stored.</p>
+      <h1>Map your EU DPP gaps. Free.</h1>
+      <p class="estate-lede hero-sub">Eight quick questions. You get a score, the gaps to close, and the dated obligation for your category. Free, nothing stored. AuthiChain does not operate the EU DPP registry. This is a readiness map, not a filing, not a notified-body opinion, and not legal advice.</p>
       <p class="bp-note">The $299 checkout opens a workspace. <a href="/battery-passport/sample-audit">See a fictional e-bike walkthrough</a>.</p>
       ${formHtml(input)}
     </div>
