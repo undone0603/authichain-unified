@@ -18,6 +18,28 @@ interface PageProps {
   searchParams: Promise<{ id?: string; hash?: string }>;
 }
 
+function ScanToGenerateCTA() {
+  return (
+    <div className="protocol-card p-8 mb-8 border-gold/20 bg-gold/5">
+      <div className="flex items-center gap-3 mb-4">
+        <Sparkles className="w-5 h-5 text-gold" />
+        <h3 className="text-sm font-black uppercase tracking-widest text-white">
+          Create your own Living QR
+        </h3>
+      </div>
+      <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+        This seal was created with QRON. Generate yours — Starter unlocks 1,000 verifications and 50 QRON generations for $29/mo.
+      </p>
+      <Link
+        href="https://authichain.com/onboard?tier=starter"
+        className="btn-gold w-full py-4 text-center rounded-xl font-black uppercase tracking-widest text-xs block shadow-gold"
+      >
+        Generate Living QR →
+      </Link>
+    </div>
+  );
+}
+
 export default async function VerifyPage({ searchParams }: PageProps) {
   const { id: productIdStr, hash } = await searchParams;
 
@@ -88,7 +110,7 @@ export default async function VerifyPage({ searchParams }: PageProps) {
       <div className="max-w-3xl mx-auto px-6 py-12">
 
         {/* Status Badge */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           {isAuthentic && (
             <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
               <ShieldCheck className="w-6 h-6" />
@@ -113,6 +135,9 @@ export default async function VerifyPage({ searchParams }: PageProps) {
             </div>
           )}
         </div>
+
+        {/* Scan-to-Generate CTA at top */}
+        <ScanToGenerateCTA />
 
         {/* Product Card */}
         <div className="protocol-card p-8 mb-8">
@@ -238,28 +263,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
             </div>
           </div>
         )}
-
-        {/* CTA */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link
-            href="/"
-            className="btn-gold w-full py-4 text-center rounded-xl font-black uppercase tracking-widest text-xs block shadow-gold"
-          >
-            Protect Your Brand &rarr;
-          </Link>
-          <div className="protocol-card p-6 bg-zinc-900/50 border-dashed border-zinc-800 text-center flex flex-col items-center justify-center gap-2">
-            <Sparkles className="w-5 h-5 text-gold" />
-            <p className="text-[10px] text-zinc-500 uppercase font-bold">
-              Want tamper-evident QR codes for your products?
-            </p>
-            <Link
-              href="/?utm_source=verify_page&utm_medium=viral_loop"
-              className="text-[10px] font-black text-gold hover:underline uppercase tracking-tighter"
-            >
-              Start Free &rarr;
-            </Link>
-          </div>
-        </div>
 
         {/* Footer */}
         <div className="text-center mt-12">
