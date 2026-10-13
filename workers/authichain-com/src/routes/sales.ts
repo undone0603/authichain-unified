@@ -1,45 +1,69 @@
-import Anthropic from "@anthropic-ai/sdk";
+/**
+ * POST /api/sales — catalogue reply for the battery-passport sales path.
+ * No model provider. No Stripe session. Private plans get no checkout URL.
+ */
+import {
+  answerSalesInquiry,
+  salesTextFromBody,
+  SALES_MAX_CHARS,
+} from "../../../../src/lib/sales-reply";
 
-export const SALES_SYSTEM_PROMPT = `
-CRITICAL DIRECTIVE - STRIPE INTEGRATION:
-If the user expresses a clear intent to purchase, upgrade, or start using the platform, serve them the direct checkout link immediately rather than redirecting to a generic pricing page.
-
-Format the response exactly like this:
-"Ready to get started? [Click here to begin your EU DPP Readiness Audit](/battery-passport)"
-`;
-
-export interface Env {
-  ANTHROPIC_API_KEY: string;
-}
+const JSON_HEADERS = {
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+};
 
 export async function handleSalesInquiry(
   request: Request,
-  env: Env
+  _env?: unknown
 ): Promise<Response> {
   if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-    });
+    return Response.json(
+      { error: "Method not allowed" },
+      { status: 405, headers: { ...JSON_HEADERS, Allow: "POST" } }
+    );
   }
+
+  let body: unknown;
   try {
-    const { messages } = await request.json<any>();
-    const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      system: SALES_SYSTEM_PROMPT,
-      messages: messages,
-    });
-    const textContent = response.content.find(
-      (block: any) => block.type === "text"
+    body = await request.json();
+  } catch {
+    return Response.json(
+      { error: "Malformed JSON payload" },
+      { status: 400, headers: JSON_HEADERS }
     );
-    return new Response(
-      JSON.stringify({ reply: textContent ? textContent.text : "Error" }),
-      { status: 200 }
-    );
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
   }
+
+  const text = salesTextFromBody(body);
+  if (text == null || text.trim().length === 0) {
+    return Response.json(
+      { error: "Missing message" },
+      { status: 400, headers: JSON_HEADERS }
+    );
+  }
+  if (text.length > SALES_MAX_CHARS) {
+    return Response.json(
+      { error: "Message too long" },
+      { status: 400, headers: JSON_HEADERS }
+    );
+  }
+
+  const answer = answerSalesInquiry(text);
+  console.log(
+    JSON.stringify({
+      event: "sales_inquiry",
+      intent: answer.intent,
+      plan: answer.plan,
+    })
+  );
+  return Response.json(
+    {
+      reply: answer.reply,
+      plan: answer.plan,
+      checkout_url: answer.checkout_url,
+      verify_url: answer.verify_url,
+      intent: answer.intent,
+    },
+    { status: 200, headers: JSON_HEADERS }
+  );
 }

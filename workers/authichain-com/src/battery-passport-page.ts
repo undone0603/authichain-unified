@@ -3,7 +3,7 @@
  * deadline: small e-bike / e-scooter (LMT) and industrial battery brands that
  * must ship an EU battery passport from 18 Feb 2027.
  *
- * Sells the existing $299 EU DPP Readiness Audit (price_1TwmD8…) — no new SKU,
+ * Sells the existing $299 EU DPP workspace (price_1TwmD8…) — no new SKU,
  * no new price. Checkout is tagged utm_campaign=battery-passport so the
  * Command Center and Stripe metadata show which sales this page produced.
  *

@@ -27,6 +27,7 @@
     "release": "npm run version:sync && npm run build && npm run build:all-platforms && npm publish",
     "start": "node dist/daemon.js",
     "dev": "tsx src/daemon.ts",
+    "dev:ui": "next dev --port 3311",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write 'src/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts'",

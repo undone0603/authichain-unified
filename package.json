@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:agent-browser": "pnpm --dir apps/agent-browser dev:ui",
     "build": "next build --webpack",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",
