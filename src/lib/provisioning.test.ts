@@ -177,6 +177,7 @@ describe("provisionPurchase", () => {
       generations_used: 0,
       last_grant_session_id: "cs_new",
     });
+    expect(updates[0].patch).not.toHaveProperty("subscribed_at");
   });
 
   it("does not insert a second profile when the email lookup fails", async () => {
