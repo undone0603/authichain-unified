@@ -31,6 +31,8 @@ The gate requires all of the following:
 7. The recipient is not suppressed, not a duplicate for that campaign, and inside agent, campaign, recipient, and cooldown limits.
 8. Email also requires `production_send` and `human_send_approved`. Both default to false.
 
+An allow records the contact immediately. Handing that same decision to a transport twice is refused. A missing email sender still consumes the slot and sends nothing.
+
 Denials use a stable `code`: `IDENTITY_INVALID`, `CAPABILITY_MISSING`, `POLICY_DENIED`, `RECIPIENT_INELIGIBLE`, `CAMPAIGN_UNAUTHORIZED`, `OFFER_NOT_PUBLIC`, `SUPPRESSED`, `RATE_LIMIT`, `DUPLICATE_CONTACT`, `KILL_SWITCH`, `PRODUCTION_SEND_DISABLED`, `REPLAY`, `ATTRIBUTION_MISSING`, `BINDING_MISMATCH`, `TRANSPORT_REFUSED`. Verifier reasons stay on the decision. Allowed and denied send attempts are rows in `AcquisitionLedger.audits`.
 
 `packages/policy` evaluates product manufacturing and inspection evidence. It is not this gate. Recipient provenance stays in `server/outreach/recipient-rules.ts`.

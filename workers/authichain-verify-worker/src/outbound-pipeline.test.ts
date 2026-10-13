@@ -540,7 +540,10 @@ describe("verifiable outbound", () => {
     expect(refused.decision.code).toBe("ALLOW");
     expect(refused.result.code).toBe("TRANSPORT_REFUSED");
     expect(refused.result.reason).toBe("sender_not_configured");
-    expect(unconfigured.ledger.sends).toHaveLength(0);
+    expect(unconfigured.ledger.sends).toHaveLength(1);
+    const second = await emailTransport.deliver(sent.decision, await ctx.sendMessage("msg:live-capable"));
+    expect(second.code).toBe("TRANSPORT_REFUSED");
+    expect(seen).toEqual(["standards@example.test"]);
   });
 
   it("rejects a content hash that does not match the signed body", async () => {

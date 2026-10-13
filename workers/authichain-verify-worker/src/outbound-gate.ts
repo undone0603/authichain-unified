@@ -22,6 +22,7 @@ import {
 } from "./outbound-types";
 
 const GATE_BRAND = Symbol("authichain.outbound.gate");
+const GATE_CONSUMED = Symbol("authichain.outbound.consumed");
 
 export interface BrandedDecision extends OutboundDecision {
   [GATE_BRAND]?: true;
@@ -302,13 +303,25 @@ export async function authorizeOutbound(input: {
     return finish("CAMPAIGN_UNAUTHORIZED", ["human_send_not_approved"], identityExtra);
   }
 
-  return finish("ALLOW", [], {
+  const decision = finish("ALLOW", [], {
     ...identityExtra,
     capability: "SEND_OUTBOUND",
     prospect_id: payload.prospect_id,
     opportunity_id: payload.opportunity_id,
     campaign_id: campaign.campaign_id,
   });
+  // Count the authorization itself. A later transport call cannot mint a second send.
+  input.ledger.recordSend({
+    at: now.toISOString(),
+    message_id: input.message.message_id,
+    agent_id: input.message.agent_id,
+    campaign_id: campaign.campaign_id,
+    prospect_id: payload.prospect_id,
+    opportunity_id: payload.opportunity_id,
+    recipient: recipient.email,
+    content_hash: payload.content_hash,
+  });
+  return decision;
 }
 
 function auditFrom(decision: OutboundDecision, now: Date): AuditRow {
@@ -349,6 +362,13 @@ export interface TransportResult {
   reason?: string;
 }
 
+function consumeDecision(decision: OutboundDecision): boolean {
+  const branded = decision as BrandedDecision & { [GATE_CONSUMED]?: true };
+  if (branded[GATE_CONSUMED]) return false;
+  Object.defineProperty(branded, GATE_CONSUMED, { value: true });
+  return true;
+}
+
 function decisionBindsMessage(
   decision: OutboundDecision,
   message: SignedAgentMessage<OutboundActionPayload>,
@@ -369,7 +389,7 @@ export class TestOutboundTransport {
     decision: OutboundDecision,
     message: SignedAgentMessage<OutboundActionPayload>,
   ): TransportResult {
-    if (!decisionIsGated(decision) || decision.transport !== "test" || !decisionBindsMessage(decision, message)) {
+    if (!decisionIsGated(decision) || decision.transport !== "test" || !decisionBindsMessage(decision, message) || !consumeDecision(decision)) {
       return { delivered: false, external: false, code: "TRANSPORT_REFUSED", reason: "ungated_decision" };
     }
     const delivered = decision.allow;
@@ -410,7 +430,7 @@ export class EmailTransport {
     decision: OutboundDecision,
     message: SignedAgentMessage<OutboundActionPayload>,
   ): Promise<TransportResult> {
-    if (!decisionIsGated(decision) || decision.transport !== "email" || !decisionBindsMessage(decision, message)) {
+    if (!decisionIsGated(decision) || decision.transport !== "email" || !decisionBindsMessage(decision, message) || !consumeDecision(decision)) {
       return { delivered: false, external: false, code: "TRANSPORT_REFUSED", reason: "ungated_decision" };
     }
     if (!decision.allow || !decision.production_send || !decision.human_send_approved) {
@@ -451,16 +471,6 @@ export async function performOutbound(input: {
     ? await (input.emailTransport ?? new EmailTransport(null)).deliver(decision, input.message)
     : (input.testTransport ?? new TestOutboundTransport()).deliver(decision, input.message);
   if (result.delivered) {
-    input.ledger.recordSend({
-      at,
-      message_id: input.message.message_id,
-      agent_id: input.message.agent_id,
-      campaign_id: input.message.payload.campaign_id,
-      prospect_id: input.message.payload.prospect_id,
-      opportunity_id: input.message.payload.opportunity_id,
-      recipient: normalizeEmail(input.message.payload.recipient),
-      content_hash: input.message.payload.content_hash,
-    });
     const offer = input.campaign?.offer_id;
     input.ledger.recordFunnel({
       type: "outbound_authorized",
