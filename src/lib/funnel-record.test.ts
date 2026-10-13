@@ -63,6 +63,20 @@ describe("recordFunnelEvent", () => {
     });
     expect(retained).toMatchObject({ ok: true, stage: "subscribe" });
 
+    const started = await recordFunnelEvent(supabase, {
+      prospect_id: "dpp_loop_1",
+      stage: "checkout_started",
+      source: "direct",
+    });
+    expect(started).toMatchObject({ ok: true, stage: "start_checkout" });
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: "start_checkout",
+        event_type: "dpp_loop:checkout_started",
+        metadata: { loop_stage: "checkout_started" },
+      })
+    );
+
     const visit = await recordFunnelEvent(supabase, {
       prospect_id: "dpp_loop_1",
       stage: "attributed_visit",

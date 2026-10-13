@@ -190,6 +190,93 @@ describe("checkout POST events", () => {
   });
 });
 
+describe("DPP checkout_started is recorded only after Stripe accepts", () => {
+  it("fires onSessionStarted with the visit id after a 303", async () => {
+    const started: Array<{
+      planId: string;
+      email: string;
+      visitId: string;
+      source: string;
+    }> = [];
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/dpp_readiness", {
+        email: "buyer@brand.com",
+        visit_id: "v_dpp",
+        utm_source: "email",
+      }),
+      ENV,
+      {
+        fetchImpl: stripeOk(),
+        ...protection,
+        onSessionStarted: info => void started.push(info),
+      }
+    );
+    expect(res!.status).toBe(303);
+    expect(started).toEqual([
+      {
+        planId: "dpp_readiness",
+        email: "buyer@brand.com",
+        visitId: "v_dpp",
+        source: "email",
+      },
+    ]);
+  });
+
+  it("does not fire on GET", async () => {
+    const started: unknown[] = [];
+    const res = await tryHandleGatedCheckout(
+      new Request(
+        "https://authichain.com/checkout/dpp_readiness?visit_id=v_dpp",
+        { headers: { "user-agent": HUMAN_UA } }
+      ),
+      ENV,
+      {
+        fetchImpl: vi.fn(),
+        onSessionStarted: info => void started.push(info),
+      }
+    );
+    expect(res!.status).toBe(200);
+    expect(started).toEqual([]);
+  });
+
+  it("does not fire when Stripe fails", async () => {
+    const started: unknown[] = [];
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/dpp_readiness", {
+        email: "buyer@brand.com",
+        visit_id: "v_dpp",
+      }),
+      ENV,
+      {
+        fetchImpl: vi.fn(async () => new Response("{}", { status: 500 })),
+        ...protection,
+        onSessionStarted: info => void started.push(info),
+      }
+    );
+    expect(res!.status).toBe(502);
+    expect(started).toEqual([]);
+  });
+
+  it("still 303s when onSessionStarted throws", async () => {
+    const res = await tryHandleGatedCheckout(
+      post("/checkout/dpp_readiness", {
+        email: "buyer@brand.com",
+        visit_id: "v_dpp",
+      }),
+      ENV,
+      {
+        fetchImpl: stripeOk(),
+        ...protection,
+        onSessionStarted: () => {
+          throw new Error("funnel sink exploded");
+        },
+      }
+    );
+    expect(res!.status).toBe(303);
+    expect(res!.headers.get("location")).toContain("checkout.stripe.com");
+  });
+});
+
 describe("analytics can never break checkout", () => {
   it("still 303s to Stripe when the sink throws", async () => {
     const res = await tryHandleGatedCheckout(

@@ -10,6 +10,10 @@ import {
   tryHandleProtocolCheckout,
 } from "./protocol-checkout";
 import { tryHandleGatedCheckout } from "../../../src/lib/checkout-gate";
+import {
+  deliverCheckoutGateEvent,
+  deliverDppCheckoutStarted,
+} from "./checkout-growth";
 import { tryHandleAppHost, tryHandleX402 } from "./x402-routes";
 import { tryHandleMcp } from "./mcp-routes";
 import { tryHandleApiV1 } from "./api-v1-routes";
@@ -3389,7 +3393,11 @@ ${catalogPaymentLinkHtml({ planId: "dpp_readiness", label: "EU DPP Readiness —
   });
 }
 
-async function handleAuthichainCom(request: Request, env: Env) {
+async function handleAuthichainCom(
+  request: Request,
+  env: Env,
+  ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+) {
     const url = new URL(request.url);
     // Canonical hub is authichain.com. www.authichain.com 301s to the apex;
     // authichain.govchain.us stays a working fallback host and serves the
@@ -3587,7 +3595,11 @@ async function handleAuthichainCom(request: Request, env: Env) {
     // (confirm page) never call Stripe; only the confirm form's POST does.
     const dppClick = await dppCheckoutClickEvent(request);
     if (dppClick) console.log(JSON.stringify(dppClick));
-    const gated = await tryHandleGatedCheckout(request, env);
+    const gated = await tryHandleGatedCheckout(request, env, {
+      onEvent: (event) => deliverCheckoutGateEvent(env, ctx, event),
+      onSessionStarted: (info) =>
+        deliverDppCheckoutStarted(env, ctx, info),
+    });
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
@@ -3680,7 +3692,14 @@ async function handleAuthichainCom(request: Request, env: Env) {
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    return withHtmlEgress(request, await handleAuthichainCom(request, env));
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx?: { waitUntil?: (promise: Promise<unknown>) => void }
+  ) {
+    return withHtmlEgress(
+      request,
+      await handleAuthichainCom(request, env, ctx)
+    );
   },
 };

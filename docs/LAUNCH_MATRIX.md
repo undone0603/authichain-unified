@@ -19,6 +19,7 @@ A row is LIVE only when this check saw the production response.
 | Farm and Theater | INTERNAL | Present in `PLANS`, absent from `PUBLIC_PLAN_IDS`. The sales route returns no checkout URL for them. |
 | AgentZ `--mode auto` | BLOCKED | Not enabled by this branch. |
 | Payment, provisioning, activation, retention | BLOCKED | No Stripe session was created and no webhook was sent. Branch code keeps one grant per checkout session and defines activation as `merchant_activated`, then publish or verification. Retention stays the existing 7-day cron. None of that ran against a paid customer. |
+| DPP checkout measurement | READY | The landing worker delivers declared checkout growth events and posts `dpp_loop:checkout_started` through the existing `/api/funnel` route only after Stripe returns a URL, and only for `dpp_readiness`. Not deployed. |
 
 ## Blockers
 
