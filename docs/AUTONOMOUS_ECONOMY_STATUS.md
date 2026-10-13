@@ -72,7 +72,7 @@ The single grant is the $0 demo above. The other profiles have `generations_limi
 
 The 2026-10-13 completed row is the $0 demo session. The expired successes show signature verification accepted those deliveries. A dummy signature returning 400 shows rejection, not fulfillment.
 
-`funnel_events` still holds five `dpp_loop:payment_succeeded` rows. Four have `amount_total` 0. The only positive amount is 1000 cents, plan `dpp_readiness`, founder payer, session prefix `cs_live_a1uJEBIoeOSPY1`, on 2026-09-20. A `dpp_loop:provisioned` row was written for that session. The profile grant was not. That is the defect PR 1830 fixes for the next delivery. The old event was not replayed and the profile was not edited. Demo and zero-amount rows, including DPP-SMOKE-E2E, are not customers. The single `dpp_loop:retained` row is `is_demo=true`.
+`funnel_events` holds six `dpp_loop:payment_succeeded` rows. Five have `amount_total` 0, including the 2026-10-13 demo. One 2026-09-17 zero-amount row has no `is_demo` flag. The only positive amount is 1000 cents, plan `dpp_readiness`, founder payer, session prefix `cs_live_a1uJEBIoeOSPY1`, on 2026-09-20. A `dpp_loop:provisioned` row was written for that session. The profile grant was not. That is the defect PR 1830 fixes for the next delivery. The old event was not replayed and the profile was not edited. Demo and zero-amount rows, including DPP-SMOKE-E2E, are not customers. The single `dpp_loop:retained` row is `is_demo=true`.
 
 ### Provider access
 
@@ -80,7 +80,7 @@ Stripe CLI 1.40.6 has a config for account `acct_1SXIyEGqTruSqV8T`. The stored l
 
 These remain different claims. A configured webhook secret, a valid signature, and a delivered demo webhook are verified. A fulfilled $299 checkout, a paying customer's entitlement, and an activated customer are not.
 
-PR 1831 (`81d0a70c`) merged with an empty tree identical to `d144c215` and was redeployed. `humanHold` is still set for the $299 price on `workers/stripe-webhook`. Open PR 1832 would clear that hold and can stamp `generations_limit` before the edge router. It was not merged. PR 1834 is on `main` as `a017ed5e` and publishes one signed AgentZ presentation. PR 1829 now conflicts with that change. PR 1835 makes a failed lead insert return 500. Its `Main quality gate` passed. It was not merged.
+PR 1831 (`81d0a70c`) merged with an empty tree identical to `d144c215` and was redeployed. `humanHold` is still set for the $299 price on `workers/stripe-webhook`. Open PR 1832 would clear that hold and can stamp `generations_limit` before the edge router. It fails lint, and it now has the `hold` label. It was not merged. PR 1834 is on `main` as `a017ed5e` and publishes one signed AgentZ presentation. PR 1829 contains that commit as `f0ea114d`. Its GitHub checks are green, including `Main quality gate`, Schema and AgentZ checks, and Workers Builds for `authichain-app`. It has the `hold` label, `production_send` stays false, and it is not merged or deployed. PR 1835 makes a failed lead insert return 500 and its checks are green. It was not merged, so the live form can still report success when the insert throws. `lead_captures` has no `battery-passport-page` row. The Merge autopilot workflow is `disabled_manually`. Its last run was 2026-10-09. `.github/autonomy.json` still sets `merge_autopilot.enabled` true. This session did not enable the workflow.
 
 ## Tests
 
@@ -96,7 +96,7 @@ PR 1829 tests, commit `6a8448a4a0729fc812a05b3a6077372f3775c545`, not on `main`:
 
 ## Agents and outbound
 
-PR 1829 stays open, mergeable, and clean. `Main quality gate` is green. It is not merged and its branch is not deployed. `production_send` remains false. No external message was sent. No eligible named inbox was approved in this session, so none was invented.
+PR 1829 stays open. Commit `f0ea114d` is even with `main`, mergeable, and clean, and its checks passed. The `hold` label keeps it off a future autopilot sweep. It is not merged and its branch is not deployed. `production_send` remains false. No external message was sent. No eligible named inbox was approved in this session, so none was invented.
 
 The dogfood sequence on that branch runs in memory through prospect discovery, qualification, agent assignment, an `ALLOW` decision, a signed test-transport capture, a fixture inbound `INTERESTED`, a catalogue checkout URL, and `ENTITLEMENT_NOT_GRANTED`. It does not open Stripe and does not grant generations.
 
