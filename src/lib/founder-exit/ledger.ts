@@ -6,8 +6,9 @@
  * public.stripe_events. Entitlements stay on public.profiles.
  * This module records whether an authorized action survived interruption.
  *
- * The memory and file stores are the tested implementation. They are not
- * wired to production Supabase, and this module does not call Stripe or send mail.
+ * The memory and file stores are the CI implementation. The Postgres store
+ * lives in postgres-log.ts and is not imported by the payment webhook.
+ * This module does not call Stripe or send mail.
  */
 
 import {
@@ -365,9 +366,9 @@ export class MemoryActionLedger {
   private rows = new Map<string, ActionRecord>();
   private byKey = new Map<string, string>();
   failNextMutation = false;
-  private onCommit?: () => void;
+  private onCommit?: (row: ActionRecord) => void;
 
-  constructor(onCommit?: () => void) {
+  constructor(onCommit?: (row: ActionRecord) => void) {
     this.onCommit = onCommit;
   }
 
@@ -496,9 +497,17 @@ export class MemoryActionLedger {
       throw new Error("database_timeout");
     }
     const stored = clone(row);
+    const previous = this.rows.get(stored.action_id) ?? null;
     this.rows.set(stored.action_id, stored);
     this.byKey.set(stored.idempotency_key, stored.action_id);
-    this.onCommit?.();
+    try {
+      this.onCommit?.(stored);
+    } catch (err) {
+      if (previous) this.rows.set(stored.action_id, previous);
+      else this.rows.delete(stored.action_id);
+      if (!previous) this.byKey.delete(stored.idempotency_key);
+      throw err;
+    }
     return clone(stored);
   }
 }
@@ -507,7 +516,7 @@ export class ContinuityLog {
   readonly ledger: MemoryActionLedger;
   readonly effects = new MemorySideEffects();
 
-  constructor(onCommit?: () => void) {
+  constructor(onCommit?: (row: ActionRecord) => void) {
     this.ledger = new MemoryActionLedger(onCommit);
   }
 

@@ -41,11 +41,11 @@ A missing secret blocks the action with `error_class` `secret_unavailable` and l
 
 ## Storage
 
-`MemoryActionLedger` and `FileContinuityLog` are the implementations covered by `src/lib/founder-exit/ledger.test.ts`. The file store writes a JSON snapshot with `rename` so a crash after the side-effect key is stored can be reloaded.
+`MemoryActionLedger` and `FileContinuityLog` are covered by `src/lib/founder-exit/ledger.test.ts`. The file store writes a JSON snapshot with `rename`. A commit hook that throws rolls the in-memory row back to the previous state. A `database_timeout` before the row is stored leaves the previous row in place.
 
-A mutation that throws `database_timeout` leaves the previous row in place.
+`PostgresContinuityLog` is the database store. It is Node-only and is not imported by the payment webhook. Action flushes are one transaction. The side-effect insert is a separate committed transaction, so a crash after that insert and before success is recoverable. On a flush failure the memory copy reloads from the database.
 
-No Supabase or D1 migration was added or applied.
+Migration `supabase/migrations/20261013232408_founder_exit_action_ledger.sql` creates `public.founder_exit_actions` and `public.founder_exit_side_effects`. It is applied on production Supabase `nhdnkzhtadfkkluiulhs` and recorded as version `20261013232408`. The tables were empty after that apply. This is not a D1 migration.
 
 ## Measurement
 

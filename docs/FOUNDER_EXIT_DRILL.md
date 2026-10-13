@@ -25,6 +25,17 @@ The clock is fixed at `2026-10-13T20:00:00.000Z`.
 9. A temp file is killed after the side-effect write and reloaded. The reloaded recovery still applies the effect once.
 10. Fault injections cover database timeout, duplicate create, worker termination, expired lease, provider timeout, duplicate side effect, revoked agent, missing capability, approval hold, missing evidence, economic separation, missing secret, scheduler delay, retry exhaustion, redaction, and append-only history.
 
+## Replica interruption
+
+Separate from the CI drill. Run Postgres 16 on `127.0.0.1:55432` with database `founder_exit`, then:
+
+```bash
+FOUNDER_EXIT_DATABASE_URL=postgres://postgres@127.0.0.1:55432/founder_exit \
+  pnpm exec tsx scripts/founder-exit-replica-drill.ts
+```
+
+The script refuses any host that is not loopback. It applies only `supabase/migrations/20261013232408_founder_exit_action_ledger.sql`, truncates the two new tables, leaves one action `running` with its side-effect key committed, dumps that local database, drops it, restores it, and then recovers the same action id. The machine-readable result is `docs/evidence/founder-exit-replica-drill.json`.
+
 ## What a pass does not mean
 
-Every criterion in the JSON can be `pass` while the company is still not founder-independent. The drill does not prove a live $299 grant, a restored backup, a deployed outbound send, or a production database binding. Those remain in `docs/FOUNDER_INDEPENDENCE.md`.
+Every criterion in the isolated JSON can be `pass` while the company is still not founder-independent. The replica drill proves dump, restore, and one recovered side effect on an empty local schema. It does not prove a live $299 grant, a restored production customer backup, or a deployed outbound send. The production ledger tables are empty and no live worker writes them yet. Those limits remain in `docs/FOUNDER_INDEPENDENCE.md`.

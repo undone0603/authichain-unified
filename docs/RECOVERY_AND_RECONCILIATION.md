@@ -18,6 +18,6 @@
 
 ## Residual risk
 
-The file snapshot is for the drill. Production payment duplicates are still prevented by `stripe_events`, not by this file. An external provider that has no idempotency key can still be double-submitted if a worker records `request_submitted` after the provider accepted the call and then crashes before that flag is stored. Those rows must stay `reconciliation_required` until a provider read confirms the outcome. This change does not add that live provider read. Stripe livemode reads are blocked on HTTP 401.
+The file snapshot is the CI drill. Production payment duplicates are still prevented by `stripe_events`, not by this ledger. An external provider that has no idempotency key can still be double-submitted if a worker records `request_submitted` after the provider accepted the call and then crashes before that flag is stored. Those rows must stay `reconciliation_required` until a provider read confirms the outcome. This change does not add that live provider read. Stripe livemode reads are blocked on HTTP 401.
 
-Database backups were not restored here. Do not treat this document as a passed disaster-recovery test.
+The Postgres store keeps the side-effect key in its own committed transaction. Recovery after a restored backup finalizes that same action id when the key is present. `docs/evidence/founder-exit-replica-drill.json` records that proof on a local Postgres 16 schema replica: the database was dumped, dropped, and restored, then one side effect was reconciled. No production rows were copied into that replica. A backup of production customer data was not restored.
