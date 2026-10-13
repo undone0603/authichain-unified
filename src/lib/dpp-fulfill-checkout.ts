@@ -103,6 +103,15 @@ export async function fulfillDppPaidSession(
     sessionId: session.id,
   });
 
+  // A resolved profile id does not mean the entitlement write succeeded.
+  // Recording provisioned here would make a failed grant look done, and
+  // Stripe would not retry.
+  if (prov.status === "upsert_failed") {
+    throw new Error(
+      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+    );
+  }
+
   if (visitId && prov.profileId) {
     await recordDppLoopEventOnce(supabase, {
       visitId: String(visitId),
@@ -132,10 +141,6 @@ export async function fulfillDppPaidSession(
         ...(demo ? { is_demo: true } : {}),
       },
     });
-  } else if (prov.status === "upsert_failed") {
-    throw new Error(
-      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
-    );
   }
 
   let activationEmail: ActivationEmailStatus = "skipped";

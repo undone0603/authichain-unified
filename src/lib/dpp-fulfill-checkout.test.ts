@@ -22,6 +22,7 @@ function fakeSupabase(opts?: {
   profileId?: string | null;
   existingProfile?: boolean;
   insertError?: { message: string } | null;
+  updateError?: { message: string } | null;
 }) {
   const rows: Array<Record<string, unknown>> = [];
   const profileUpdates: Array<Record<string, unknown>> = [];
@@ -50,11 +51,16 @@ function fakeSupabase(opts?: {
         return Promise.resolve({ error: null });
       },
       update: (patch: Record<string, unknown>) => {
-        if (table === "profiles" && profile) {
+        const result = opts?.updateError
+          ? { error: opts.updateError }
+          : { error: null };
+        if (table === "profiles" && profile && !opts?.updateError) {
           Object.assign(profile, patch);
           profileUpdates.push(patch);
         }
-        return builder;
+        return {
+          eq: async () => result,
+        };
       },
       select: () => builder,
       eq: (col: string, val: unknown) => {
@@ -255,6 +261,19 @@ describe("fulfillDppPaidSession", () => {
       loop_stage: "provisioned",
       skip_reason: "no_identity",
     });
+  });
+
+  it("throws when the entitlement update fails and does not record provisioned", async () => {
+    const { supabase, rows } = fakeSupabase({
+      updateError: {
+        message:
+          "Could not find the 'subscribed_at' column of 'profiles' in the schema cache",
+      },
+    });
+    await expect(fulfillDppPaidSession(supabase, paidSession)).rejects.toThrow(
+      /subscribed_at/
+    );
+    expect(rows.map(r => r.event_type)).toEqual(["dpp_loop:payment_succeeded"]);
   });
 
   it("throws on guest profile insert failure so Stripe retries; does not write provisioned", async () => {
