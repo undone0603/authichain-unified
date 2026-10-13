@@ -14,8 +14,14 @@ import {
   QRON_ATTESTATION_JWKS_URL,
   QRON_PRESENTATION_SCHEMA,
   buildQronPresentation,
+  qronObjectIdForDestination,
   type QronPresentationAttestation,
 } from "./qron-presentation";
+import {
+  qronResolveUrl,
+  scannableQrDataUrl,
+  type StoredQronPresentation,
+} from "./qron-resolve";
 
 export const QRON_IMAGE_GEN_DEFAULT =
   "https://qron-image-gen.undone-k.workers.dev";
@@ -180,6 +186,8 @@ export async function handleGeneratePost(opts: {
     objectId: string;
     userId: string;
   }) => Promise<QronPresentationAttestation | null>;
+  /** Persist the signed presentation so a scan of resolve_url can verify it. */
+  rememberPresentation?: (record: StoredQronPresentation) => Promise<void>;
 }): Promise<GeneratePostResult> {
   const packs = generateCreditPacks();
   if (!opts.userId) {
@@ -230,9 +238,12 @@ export async function handleGeneratePost(opts: {
     typeof opts.body.presetId === "string" ? opts.body.presetId.trim() : "";
   const style = parseQronImageStyle(opts.body.style);
 
+  const objectId = qronObjectIdForDestination(targetUrl);
+  const resolveUrl = qronResolveUrl(objectId);
+
   try {
     const generated = await opts.generateImage({
-      targetUrl,
+      targetUrl: resolveUrl,
       prompt,
       mode,
       ...(presetId ? { presetId } : {}),
@@ -242,20 +253,13 @@ export async function handleGeneratePost(opts: {
       return { status: 502, body: { message: "No image returned" } };
     }
     const deducted = await opts.deductCredit(opts.userId);
-    const objectIdDraft = buildQronPresentation({
-      destinationUrl: targetUrl,
-      imageUrl: generated.imageUrl,
-      mode,
-      prompt,
-    }).object_id;
-
     let bind: QronPresentationAttestation | null = null;
     if (opts.bindAttestation) {
       try {
         bind = await opts.bindAttestation({
           destinationUrl: targetUrl,
           imageUrl: generated.imageUrl,
-          objectId: objectIdDraft,
+          objectId,
           userId: opts.userId,
         });
       } catch {
@@ -272,13 +276,29 @@ export async function handleGeneratePost(opts: {
       kid: bind?.kid,
       jwksUrl: bind?.jwks_url,
     });
+    const qrDataUrl = await scannableQrDataUrl(presentation.resolve_url);
+    if (bind && opts.rememberPresentation) {
+      try {
+        await opts.rememberPresentation({
+          object_id: presentation.object_id,
+          destination_url: targetUrl,
+          resolve_url: presentation.resolve_url,
+          jws: bind.jws,
+          kid: bind.kid,
+          jwks_url: bind.jwks_url,
+        });
+      } catch {
+        // Generate still returns. A scan 404s until a later bind stores the JWS.
+      }
+    }
     return {
       status: 200,
       body: {
         qron: {
           imageUrl: generated.imageUrl,
           destinationUrl: targetUrl,
-          qrDataUrl: generated.imageUrl,
+          qrDataUrl,
+          resolveUrl: presentation.resolve_url,
           prompt,
           mode,
           objectId: presentation.object_id,

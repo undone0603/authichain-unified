@@ -440,6 +440,8 @@ app.post("/api/generate", async c => {
     });
     const { bindQronGenerateAttestation } =
       await import("./qron-generate-bind");
+    const { qronPresentationKvKey } = await import("../src/lib/qron-resolve");
+    const sessions = c.env?.SESSIONS;
     const result = await handleGeneratePost({
       body,
       userId,
@@ -453,6 +455,13 @@ app.post("/api/generate", async c => {
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
       bindAttestation: args => bindQronGenerateAttestation(c.env, args),
+      rememberPresentation: async record => {
+        if (!sessions) return;
+        await sessions.put(
+          qronPresentationKvKey(record.object_id),
+          JSON.stringify(record)
+        );
+      },
     });
     // LOOP-03: a 401 here is a stranger who filled the form and was walled by
     // the auth requirement. /generate promises "Five generations are free", so
@@ -471,6 +480,55 @@ app.post("/api/generate", async c => {
     console.error("[generate] Error:", err?.message || err);
     return c.json({ message: "Generation failed", detail: err?.message }, 500);
   }
+});
+
+// Living QR scan target. The image encodes https://authichain.com/qron/r/{object_id}.
+// GET loads the stored JWS and returns AuthiChain Verification Decision v1.
+app.all("/qron/r/*", async c => {
+  const { handleQronResolve, qronPresentationKvKey } = await import(
+    "../src/lib/qron-resolve"
+  );
+  const kv = c.env?.SESSIONS;
+  const response = await handleQronResolve(c.req.raw, {
+    load: async objectId => {
+      if (!kv) return null;
+      const raw = await kv.get(qronPresentationKvKey(objectId));
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as {
+          object_id?: string;
+          destination_url?: string;
+          resolve_url?: string;
+          jws?: string;
+          kid?: string;
+          jwks_url?: string;
+        };
+        if (
+          parsed.object_id !== objectId ||
+          typeof parsed.destination_url !== "string" ||
+          typeof parsed.resolve_url !== "string" ||
+          typeof parsed.jws !== "string" ||
+          !parsed.jws ||
+          typeof parsed.kid !== "string" ||
+          typeof parsed.jwks_url !== "string"
+        ) {
+          return null;
+        }
+        return {
+          object_id: parsed.object_id,
+          destination_url: parsed.destination_url,
+          resolve_url: parsed.resolve_url,
+          jws: parsed.jws,
+          kid: parsed.kid,
+          jwks_url: parsed.jwks_url,
+        };
+      } catch {
+        return null;
+      }
+    },
+  });
+  if (!response) return c.json({ error: "Not found" }, 404);
+  return response;
 });
 
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
