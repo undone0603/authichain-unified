@@ -5,6 +5,7 @@ import mcpServer from './mcp-server';
 // truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
 // inlines it at build time, so the worker stays self-contained at runtime.
 import { tryHandleDppRoute } from "./dpp-routes";
+import { tryHandleAgentPresentation } from "./agent-present-page";
 import {
   tryHandleApiCheckoutEmailGate,
   tryHandleProtocolCheckout,
@@ -3603,6 +3604,8 @@ async function handleAuthichainCom(
     if (gated) return gated;
     const dppPage = tryHandleDppRoute(request);
     if (dppPage) return dppPage;
+    const agentPage = await tryHandleAgentPresentation(request);
+    if (agentPage) return agentPage;
     const checkout = await tryHandleProtocolCheckout(request, env);
     if (checkout) return checkout;
     // Intercept before APP_PREFIXES — every GET /api/checkout/* 303s to the
