@@ -7,7 +7,7 @@ Checked 2026-10-13. No traffic or payments were created.
 | Traffic | PARTIAL | Public pages answered. No analytics source was read. |
 | Landing | PASS | authichain.com pricing and `/battery-passport`, qron.space/generate, strainchain.io/pricing, and govchain.us returned 200. |
 | Action | PARTIAL | The DPP confirm page loads. `POST /api/sales` is 404 in production and READY on this branch. |
-| Verification | PASS | `GET /api/verify?id=polygon-anchor-1` returned a verifier payload. `source` was `published_example`. The Agent Browser only links this endpoint. It does not invent a verdict. |
+| Verification | PASS | `GET /api/verify?id=polygon-anchor-1` returned a verifier payload. `source` was `published_example`. The HTML page `GET /verify?id=polygon-anchor-1` is 404 in production. This branch renders that id with the same open-verifier verdict and does not call it counterfeit. |
 | Checkout | PASS | `GET /checkout/dpp_readiness` returned the confirm page for the $299 workspace. The HTML did not include a raw `buy.stripe.com` link. |
 | Checkout measurement | READY | This branch records a declared growth event on the confirm page, and `dpp_loop:checkout_started` only after Stripe returns a Checkout URL. A failed write does not change the 303. Production does not record that stage until this branch is on `main`. No session was opened for this check. |
 | Payment | BLOCKED | No Checkout Session was opened and no card was charged. `POST /api/sales` returns a catalogue URL. It does not open Stripe. |

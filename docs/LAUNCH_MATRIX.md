@@ -10,6 +10,7 @@ A row is LIVE only when this check saw the production response.
 | Battery passport offer | LIVE | `GET https://authichain.com/battery-passport` returned 200. |
 | Pricing | LIVE | `GET https://authichain.com/pricing` returned 200. |
 | Open record verifier | LIVE | `GET https://authichain.com/api/verify?id=polygon-anchor-1` returned 200 with `verdict: verified`, `source: published_example`, and `unknowns` including `physical_binding_not_inspected`. That id is the published example, not a customer passport. |
+| HTML verify page | READY | Production `GET /verify?id=polygon-anchor-1` returned 404. This branch answers 200 from the same open verifier and says the record is a published example. |
 | QRON free generate | LIVE | `GET https://qron.space/generate` returned 200. |
 | StrainChain pricing | LIVE | `GET https://strainchain.io/pricing` returned a page that links `checkout/strainchain_passport` and `$49`. The response did not contain `strainchain_farm` or `$149`. |
 | GovChain home | LIVE | `GET https://govchain.us/` returned 200. GovChain has no id in `PUBLIC_PLAN_IDS`. |

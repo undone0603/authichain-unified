@@ -330,11 +330,33 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Verify a Product");
     expect(body).toContain("On-chain verification is in development.");
+    expect(body).toContain('href="/verify?id=polygon-anchor-1"');
     expect(body).toContain(
       '<link rel="manifest" href="/manifest.webmanifest">'
     );
     expect(body).not.toContain("serviceWorker");
     expect(body).not.toContain("authenticity status");
+    expect(getProductById).not.toHaveBeenCalled();
+  });
+
+  it("shows the open verifier verdict for the published demonstration record", async () => {
+    const res = await app.request(
+      "/verify?id=polygon-anchor-1",
+      {},
+      makeEnv() as any
+    );
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain('data-source="published_example"');
+    expect(body).toContain('data-verdict="verified"');
+    expect(body).toContain("Verdict: verified");
+    expect(body).toContain("physical binding was not inspected");
+    expect(body).toContain('href="/api/verify?id=polygon-anchor-1"');
+    expect(body).not.toContain("No record found");
+    expect(body).not.toContain("COUNTERFEIT");
+    expect(body).not.toContain("counterfeit");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
     expect(getProductById).not.toHaveBeenCalled();
   });
 
