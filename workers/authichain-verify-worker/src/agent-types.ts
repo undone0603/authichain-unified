@@ -4,7 +4,38 @@ export const AGENT_CAPABILITIES = [
   "CREATE_AUDIT_RECORD",
   "PROPOSE_LIFECYCLE_ACTION",
   "RESOLVE_IDENTIFIER",
+  "DISCOVER_PROSPECT",
+  "SCORE_PROSPECT",
+  "DRAFT_OUTBOUND",
+  "SEND_OUTBOUND",
+  "READ_INBOUND",
+  "MANAGE_CONVERSATION",
+  "CREATE_OPPORTUNITY",
+  "PROPOSE_OFFER",
 ] as const;
+
+/** Explicit grants. No role receives every capability. */
+export const SCOUT_CAPABILITIES = [
+  "DISCOVER_PROSPECT",
+  "READ_EVIDENCE",
+  "SCORE_PROSPECT",
+  "CREATE_OPPORTUNITY",
+] as const satisfies readonly AgentCapability[];
+
+export const AGENTZ_SALES_CAPABILITIES = [
+  "READ_EVIDENCE",
+  "DRAFT_OUTBOUND",
+  "SEND_OUTBOUND",
+  "READ_INBOUND",
+  "MANAGE_CONVERSATION",
+  "PROPOSE_OFFER",
+] as const satisfies readonly AgentCapability[];
+
+export const GUARDIAN_CAPABILITIES = [
+  "VERIFY_ATTESTATION",
+  "READ_EVIDENCE",
+  "CREATE_AUDIT_RECORD",
+] as const satisfies readonly AgentCapability[];
 
 export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
 
