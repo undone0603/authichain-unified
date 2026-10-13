@@ -220,6 +220,29 @@ describe("GET /api/generate", () => {
   });
 });
 
+describe("GET /qron/r/:objectId", () => {
+  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const json = await app.request(path, {
+      headers: { accept: "application/json" },
+    });
+    expect(json.status).toBe(404);
+    expect(json.headers.get("content-type")).toMatch(/json/);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("presentation_not_found");
+
+    const html = await app.request(path, {
+      headers: { accept: "text/html" },
+    });
+    expect(html.status).toBe(404);
+    expect(html.headers.get("content-type")).toMatch(/html/);
+    expect(await html.text()).toContain("<h1>indeterminate</h1>");
+  });
+});
+
 describe("POST /api/generate", () => {
   it("returns JSON 401 with credit packs when unauthenticated, not a plain-text 404", async () => {
     const res = await app.request("/api/generate", {
