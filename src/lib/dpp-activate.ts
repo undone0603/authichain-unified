@@ -99,14 +99,14 @@ export async function activateDppMerchant(opts: {
   const otherPlan =
     typeof md.plan === "string" && md.plan && md.plan !== "dpp_readiness";
   if (otherPlan && !isDppOffer(md)) {
-    return { ok: false, status: 400, error: "Not a DPP audit session" };
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   const linePriceId = session.line_items?.data?.[0]?.price?.id ?? null;
   if (linePriceId && !isDppOffer(md, linePriceId)) {
-    return { ok: false, status: 400, error: "Not a DPP audit session" };
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
   if (!isDppOffer(md) && session.amount_total !== 29900) {
-    return { ok: false, status: 400, error: "Not a DPP audit session" };
+    return { ok: false, status: 400, error: "Not a DPP workspace session" };
   }
 
   const email = (

@@ -3,7 +3,7 @@
  * Do not persist a stored total.
  */
 
-import { reconstructLoop, type LoopEventRow } from "./dpp-loop";
+import { reconstructLoop, stageOf, type LoopEventRow } from "./dpp-loop";
 
 export const REVENUE_PROOF_SIGNALS = [
   "verification_requests",
@@ -28,6 +28,7 @@ export type RevenueProof = {
   activated_merchants: number;
   provisioning_success: number;
   retained_merchants: number;
+  /** Count of payment_succeeded loop events by surface. Not Stripe cash. */
   revenue_by_surface: Record<string, number>;
   failed_autonomous_actions: number;
   visit_count: number;
@@ -70,18 +71,14 @@ export function buildRevenueProof(
     ) {
       verified_objects += 1;
     }
-    if (
-      loop.reached.includes("checkout_started") ||
-      loop.reached.includes("attributed_visit")
-    ) {
-      checkout_visits += 1;
-    }
+    if (loop.reached.includes("checkout_started")) checkout_visits += 1;
     if (loop.reached.includes("payment_succeeded")) stripe_conversions += 1;
     if (loop.reached.includes("merchant_activated")) activated_merchants += 1;
     if (loop.reached.includes("provisioned")) provisioning_success += 1;
     if (loop.reached.includes("retained")) retained_merchants += 1;
 
     for (const row of visitRows) {
+      if (stageOf(row) !== "payment_succeeded") continue;
       const meta = row.metadata as { surface?: string } | undefined;
       const surface = String(meta?.surface ?? "direct");
       revenue_by_surface[surface] = (revenue_by_surface[surface] ?? 0) + 1;

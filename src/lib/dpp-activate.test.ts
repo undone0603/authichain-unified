@@ -62,7 +62,7 @@ describe("activateDppMerchant", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.status).toBe(400);
-      expect(result.error).toMatch(/Not a DPP audit session/);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
     }
   });
 
@@ -88,7 +88,7 @@ describe("activateDppMerchant", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.status).toBe(400);
-      expect(result.error).toMatch(/Not a DPP audit session/);
+      expect(result.error).toMatch(/Not a DPP workspace session/);
     }
   });
 

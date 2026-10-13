@@ -310,6 +310,12 @@ export async function POST(req: NextRequest) {
           sessionId: session.id,
         });
 
+        if (prov.status === "upsert_failed") {
+          throw new Error(
+            `Provision failed: ${prov.error || "profiles upsert failed"}`
+          );
+        }
+
         if (prov.profileId) {
           await getSupabase()
             .from("checkout_sessions")
@@ -331,8 +337,8 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          // Brand-aware welcome email (replaces the cross-call to /api/email).
-          if (email) {
+          // A replay of the same checkout session already sent access.
+          if (email && !prov.skippedIdempotent) {
             const mail = dppOffer
               ? renderBillingEmail("dpp_audit_provisioned", brand, {
                   planName: "EU DPP Workspace",

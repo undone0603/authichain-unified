@@ -29,6 +29,7 @@ describe("buildRevenueProof", () => {
       row("v1", "retained"),
       row("v2", "attributed_visit"),
       row("v2", "checkout_started"),
+      row("v3", "attributed_visit"),
     ];
     const proof = buildRevenueProof(
       rows,
@@ -36,7 +37,7 @@ describe("buildRevenueProof", () => {
       [{ decision: "blocked" }, { decision: "verified" }],
       new Date("2026-09-21T12:00:00.000Z")
     );
-    expect(proof.visit_count).toBe(2);
+    expect(proof.visit_count).toBe(3);
     expect(proof.verification_requests).toBe(1);
     expect(proof.verified_objects).toBe(1);
     expect(proof.checkout_visits).toBe(2);
@@ -46,7 +47,7 @@ describe("buildRevenueProof", () => {
     expect(proof.retained_merchants).toBe(1);
     expect(proof.failed_counterfeit_review).toBe(1);
     expect(proof.failed_autonomous_actions).toBe(1);
-    expect(proof.revenue_by_surface["authichain.com"]).toBe(10);
+    expect(proof.revenue_by_surface["authichain.com"]).toBe(1);
     expect(proof.generated_at).toBe("2026-09-21T12:00:00.000Z");
   });
 });

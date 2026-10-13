@@ -519,6 +519,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       expect.objectContaining({
         plan: "starter",
         email: "buyer@example.com",
+        sessionId: "cs_starter_pack",
       })
     );
     expect(growthRecordRpc).toHaveBeenCalledWith(

@@ -36,6 +36,8 @@
 
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
+import { publishedRecord } from "../workers/authichain-verify-worker/src/published-record.mjs";
+import { verifySubmitted } from "../workers/authichain-verify-worker/src/protocol-verify.mjs";
 import { createHyperdriveRequestDb, getHyperdriveDb } from "../server/db";
 import {
   getCertificateByNumber,
@@ -410,12 +412,54 @@ function verifyPromptHtml(): string {
     bodyHtml:
       "<main>\n" +
       "<h1>Verify a Product</h1>\n" +
-      "<p>Enter a product ID to look up its record. On-chain verification is in development.</p>\n" +
+      "<p>Enter a registry product ID to look up its record. On-chain verification is in development.</p>\n" +
+      "<p>The open verifier checks the published demonstration record <a href=\"/verify?id=polygon-anchor-1\">polygon-anchor-1</a>. The same check as JSON is <a href=\"/api/verify?id=polygon-anchor-1\">/api/verify</a>.</p>\n" +
       '<form action="/verify" method="get">\n' +
       '<label for="id">Product ID</label>\n' +
       '<input id="id" name="id" type="text" required>\n' +
       '<button type="submit">Verify</button>\n' +
       "</form>\n" +
+      "</main>",
+  });
+}
+
+function openVerifierHtml(
+  identifier: string,
+  protocol: { verdict: string; reasons?: string[] }
+): string {
+  const reasons = Array.isArray(protocol.reasons) ? protocol.reasons : [];
+  const reasonList = reasons.length
+    ? "<ul>\n" +
+      reasons
+        .map(reason => "<li>" + escapeHtml(String(reason)) + "</li>\n")
+        .join("") +
+      "</ul>\n"
+    : "";
+  const jsonHref =
+    "/api/verify?id=" + encodeURIComponent(identifier);
+  return htmlDocument({
+    title: "Open verification | AuthiChain",
+    description:
+      "Published demonstration record. Verdict " +
+      protocol.verdict +
+      ". Not a customer product and not a physical inspection.",
+    canonicalPath: "/verify",
+    extraHead: '<meta name="robots" content="noindex">\n',
+    bodyHtml:
+      "<main>\n" +
+      "<h1>Open verification</h1>\n" +
+      '<p data-source="published_example">Published demonstration record. Not a customer product. Not a physical inspection.</p>\n' +
+      '<p data-verdict="' +
+      escapeHtml(protocol.verdict) +
+      '">Verdict: ' +
+      escapeHtml(protocol.verdict) +
+      "</p>\n" +
+      reasonList +
+      "<p>Unknown: physical binding was not inspected. This page did not read the anchor transaction.</p>\n" +
+      '<p><a href="' +
+      escapeHtml(jsonHref) +
+      '">JSON verifier</a></p>\n' +
+      '<p><a href="/verify">Look up another ID</a></p>\n' +
       "</main>",
   });
 }
@@ -545,6 +589,18 @@ async function renderVerify(c: Context): Promise<Response> {
 
     if (!identifier) {
       return htmlResponse(c, verifyPromptHtml(), 200);
+    }
+
+    const published = publishedRecord(identifier);
+    if (published) {
+      const protocol = verifySubmitted(published.record, published.anchor);
+      if (protocol && typeof protocol.verdict === "string") {
+        return htmlResponse(
+          c,
+          openVerifierHtml(identifier, protocol),
+          200
+        );
+      }
     }
 
     // Hyperdrive-recommended pattern: one pg.Client for this request,
@@ -1352,7 +1408,7 @@ function renderOnboardReceived(c: Context): Response {
       inputId: "onboard-dpp-email",
     }) +
     "<ul>\n" +
-    '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
+    '<li><a href="/verify?id=polygon-anchor-1">Open the published verification example</a></li>\n' +
     '<li><a href="/story/00000000-0000-4000-8000-000000000001">Launch-proof StoryMode</a></li>\n' +
     "</ul>\n" +
     "</main>";
@@ -1412,7 +1468,7 @@ function launchProofStoryHtml(): string {
       "<p>The production attestation is independently verified against the live public JWKS using its kid. A valid signature is signed evidence — not physical authenticity.</p>\n" +
       "<h2>Reveal</h2>\n" +
       "<p>Scanning the QRON launch code opens StoryMode. Tamper tests (altered payload, altered signature, wrong subject, revoked, stale) must reject.</p>\n" +
-      '<p><a href="/verify">Verify a seal (in development)</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
+      '<p><a href="/verify?id=polygon-anchor-1">Open the published verification example</a> · <a href="/onboard">Onboard a pilot</a></p>\n' +
       "</main>",
   });
 }
@@ -1510,7 +1566,7 @@ function dashboardHtml(): string {
       "<p>The authentic economy console. Pay or smoke-pay, then activate — no login code required for the public intake.</p>\n" +
       "<ul>\n" +
       '<li><a href="/onboard">Onboard a pilot</a></li>\n' +
-      '<li><a href="/verify">Verify a seal (in development)</a></li>\n' +
+      '<li><a href="/verify?id=polygon-anchor-1">Open the published verification example</a></li>\n' +
       '<li><a href="/generate">Generate a Living QR</a></li>\n' +
       '<li><a href="/protocol">Protocol</a></li>\n' +
       '<li><a href="/.well-known/jwks.json">JWKS</a></li>\n' +

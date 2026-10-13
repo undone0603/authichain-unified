@@ -7,12 +7,33 @@ import { describe, expect, it } from "vitest";
 import {
   FOUNDER_EMAILS,
   LOOP_BY_PLAN,
+  alreadyGrantedSession,
   grantForPrice,
+  grantReplayAction,
   isFounderEmail,
   loopForPlan,
 } from "./grant-map";
 import { GROWTH_LOOPS } from "../../../src/lib/growth/loops";
 import { FOUNDER_EMAILS as CANONICAL_FOUNDERS } from "../../../src/lib/billing/live-catalog";
+
+describe("checkout grant replay", () => {
+  it("skips a second grant for the same checkout session", () => {
+    expect(alreadyGrantedSession("cs_123", "cs_123")).toBe(true);
+    expect(alreadyGrantedSession("cs_old", "cs_123")).toBe(false);
+    expect(alreadyGrantedSession(null, "cs_123")).toBe(false);
+    expect(alreadyGrantedSession(undefined, "cs_123")).toBe(false);
+  });
+
+  it("retries when the prior-session lookup fails", () => {
+    expect(grantReplayAction({ ok: false }, "cs_123")).toBe("retry");
+    expect(
+      grantReplayAction({ ok: true, sessionId: "cs_123" }, "cs_123")
+    ).toBe("skip");
+    expect(
+      grantReplayAction({ ok: true, sessionId: null }, "cs_123")
+    ).toBe("grant");
+  });
+});
 
 describe("loop identity stays in lockstep with src/lib/growth/loops.ts", () => {
   it("covers exactly the skus that have a loop", () => {

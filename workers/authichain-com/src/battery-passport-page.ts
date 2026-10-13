@@ -1,8 +1,17 @@
 /**
- * /battery-passport — locked free gap-map CTAs for LMT and smaller industrial operators.
- * Full valid source. Sells existing $299 dpp_readiness (no new SKU).
- * Checkout tagged utm_campaign=battery-passport.
- * esc() with map-based replaces.
+ * /battery-passport — the offer page for the buyer with the nearest hard
+ * deadline: small e-bike / e-scooter (LMT) and industrial battery brands that
+ * must ship an EU battery passport from 18 Feb 2027.
+ *
+ * Sells the existing $299 EU DPP workspace (price_1TwmD8…) — no new SKU,
+ * no new price. Checkout is tagged utm_campaign=battery-passport so the
+ * Command Center and Stripe metadata show which sales this page produced.
+ *
+ * Truth rules: the $299 list on this page is the workspace, self-serve
+ * activation, and 50 generations. src/lib/plans.ts also names a written
+ * assessment and a Basic credit; those stay off this page until they exist.
+ * Regulatory facts are dated and hedged (not legal advice). No customer
+ * logos, testimonials, or counts.
  */
 import {
   ESTATE_BASE_CSS,

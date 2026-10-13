@@ -317,7 +317,7 @@ function htmlResponse(html: string, status = 200): Response {
 // ─── Stripe session (POST only) ─────────────────────────────────────────────
 
 export type GatedSessionResult =
-  | { ok: true; url: string }
+  | { ok: true; url: string; visitId: string }
   | { ok: false; status: number; error: string; detail?: string };
 
 function readCookie(cookieHeader: string, name: string): string {
@@ -516,7 +516,11 @@ export async function createGatedCheckoutSession(opts: {
       error: "Checkout session could not be safely recorded",
     };
   }
-  return { ok: true, url: data.url };
+  return {
+    ok: true,
+    url: data.url,
+    visitId: body.get("metadata[visit_id]") || "",
+  };
 }
 
 // ─── Request handler ────────────────────────────────────────────────────────
@@ -541,6 +545,16 @@ export type GatedCheckoutDeps = {
   recordSession?: typeof recordCheckoutSession;
   /** Optional sink. Exceptions from it are swallowed — analytics never breaks checkout. */
   onEvent?: (event: CheckoutGateEvent) => void;
+  /**
+   * Fires only after Stripe returns a Checkout URL. The DPP loop records
+   * checkout_started from this. Exceptions are swallowed.
+   */
+  onSessionStarted?: (info: {
+    planId: string;
+    email: string;
+    visitId: string;
+    source: string;
+  }) => void;
 };
 
 async function readFormFields(request: Request): Promise<URLSearchParams> {
@@ -695,6 +709,18 @@ export async function tryHandleGatedCheckout(
     );
   }
   report("checkout_session_started", email);
+  try {
+    deps.onSessionStarted?.({
+      planId: plan.id,
+      email,
+      visitId: result.visitId,
+      source: (fields.get("utm_source") || fields.get("source") || "direct")
+        .trim()
+        .slice(0, 64),
+    });
+  } catch {
+    /* analytics must never break checkout */
+  }
 
   return new Response(null, {
     status: 303,

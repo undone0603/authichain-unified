@@ -6,22 +6,35 @@ function fakeProfiles(opts?: {
   insertError?: { message: string; code?: string } | null;
   insertedId?: string | null;
   lastGrantSessionId?: string | null;
+  lookupError?: { message: string } | null;
+  grantReadError?: { message: string } | null;
+  updateError?: { message: string } | null;
 }) {
   const inserts: Array<Record<string, unknown>> = [];
   const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+  let reads = 0;
   const from = () => {
     const builder: Record<string, unknown> = {
       select: () => builder,
       eq: () => builder,
-      maybeSingle: async () => ({
-        data: opts?.existingId
-          ? {
-              id: opts.existingId,
-              last_grant_session_id: opts.lastGrantSessionId ?? null,
-            }
-          : null,
-        error: null,
-      }),
+      maybeSingle: async () => {
+        reads += 1;
+        if (reads === 1 && opts?.lookupError) {
+          return { data: null, error: opts.lookupError };
+        }
+        if (reads > 1 && opts?.grantReadError) {
+          return { data: null, error: opts.grantReadError };
+        }
+        return {
+          data: opts?.existingId
+            ? {
+                id: opts.existingId,
+                last_grant_session_id: opts.lastGrantSessionId ?? null,
+              }
+            : null,
+          error: null,
+        };
+      },
       insert: (row: Record<string, unknown>) => {
         inserts.push(row);
         const result = opts?.insertError
@@ -45,7 +58,9 @@ function fakeProfiles(opts?: {
         return {
           eq: (col: string, val: string) => {
             if (col === "id") target.id = val;
-            return Promise.resolve({ error: null });
+            return Promise.resolve({
+              error: opts?.updateError ?? null,
+            });
           },
         };
       },
@@ -137,6 +152,7 @@ describe("provisionPurchase", () => {
       profileId: "prof_1",
       created: false,
       status: "provisioned",
+      skippedIdempotent: true,
     });
     expect(updates).toHaveLength(0);
   });
@@ -161,5 +177,65 @@ describe("provisionPurchase", () => {
       generations_used: 0,
       last_grant_session_id: "cs_new",
     });
+  });
+
+  it("does not insert a second profile when the email lookup fails", async () => {
+    const { supabase, inserts, updates } = fakeProfiles({
+      lookupError: { message: "profile lookup timed out" },
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_retry",
+    });
+
+    expect(result).toMatchObject({
+      profileId: null,
+      status: "upsert_failed",
+      error: "profile lookup timed out",
+    });
+    expect(inserts).toHaveLength(0);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("does not grant when the prior-session read fails", async () => {
+    const { supabase, updates } = fakeProfiles({
+      existingId: "prof_1",
+      grantReadError: { message: "connection reset" },
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_retry",
+    });
+
+    expect(result.status).toBe("upsert_failed");
+    expect(result.error).toMatch(/connection reset/);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("reports upsert_failed when the entitlement update fails", async () => {
+    const { supabase } = fakeProfiles({
+      existingId: "prof_1",
+      updateError: { message: "profiles update rejected" },
+    });
+
+    const result = await provisionPurchase(supabase, {
+      email: "buyer@example.com",
+      brand: "authichain",
+      plan: "dpp_readiness",
+      sessionId: "cs_new",
+    });
+
+    expect(result).toMatchObject({
+      profileId: "prof_1",
+      status: "upsert_failed",
+      error: "profiles update rejected",
+    });
+    expect(result.skippedIdempotent).toBeUndefined();
   });
 });

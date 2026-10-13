@@ -1,5 +1,10 @@
 import Stripe from "stripe";
-import { grantForPrice, isFounderEmail, loopForPlan } from "./grant-map";
+import {
+  grantForPrice,
+  grantReplayAction,
+  isFounderEmail,
+  loopForPlan,
+} from "./grant-map";
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
@@ -13,19 +18,62 @@ async function supabaseUpsert(
   table: string,
   data: Record<string, unknown>,
   onConflict?: string
-): Promise<void> {
+): Promise<boolean> {
   const url = `${env.SUPABASE_URL}/rest/v1/${table}${
     onConflict ? `?on_conflict=${onConflict}` : ""
   }`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      Prefer: "resolution=merge-duplicates",
-    },
-    body: JSON.stringify(data),
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function supabaseSelectOne(
+  env: Env,
+  table: string,
+  match: Record<string, string>,
+  columns: string
+): Promise<
+  { ok: true; row: Record<string, unknown> | null } | { ok: false }
+> {
+  const params = Object.entries(match)
+    .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
+    .join("&");
+  const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}&select=${encodeURIComponent(columns)}&limit=1`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!res.ok) return { ok: false };
+    const rows = (await res.json()) as unknown;
+    if (!Array.isArray(rows)) return { ok: false };
+    if (rows.length === 0 || typeof rows[0] !== "object" || rows[0] === null) {
+      return { ok: true, row: null };
+    }
+    return { ok: true, row: rows[0] as Record<string, unknown> };
+  } catch {
+    return { ok: false };
+  }
+}
+
+function grantRetry(error: string): Response {
+  return new Response(JSON.stringify({ error }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -34,20 +82,25 @@ async function supabaseUpdate(
   table: string,
   match: Record<string, string>,
   data: Record<string, unknown>
-): Promise<void> {
+): Promise<boolean> {
   const params = Object.entries(match)
     .map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`)
     .join("&");
   const url = `${env.SUPABASE_URL}/rest/v1/${table}?${params}`;
-  await fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-    body: JSON.stringify(data),
-  });
+  try {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -162,7 +215,7 @@ export default {
       const plan = grant?.plan || session.metadata?.plan || "starter";
 
       if (email) {
-        await supabaseUpsert(
+        const upserted = await supabaseUpsert(
           env,
           "profiles",
           {
@@ -175,28 +228,69 @@ export default {
           },
           "email"
         );
-        // Unified grant rail: SET not +=. Matches provisionPurchase.
-        if (grant) {
+        if (!upserted) return grantRetry("profile upsert failed");
+        // humanHold prices (DPP workspace, passport, MUSA) record the plan
+        // here and nothing else. generations_limit 50 is applied by
+        // provisionPurchase on POST /api/stripe/webhook. Stamping
+        // last_grant_session_id, or writing generations_used 0, would make
+        // that grant look finished or wipe it.
+        if (grant?.humanHold) {
           console.log(
             JSON.stringify({
-              evt: "stripe_grant_set",
+              evt: "stripe_grant_human_hold",
               plan: grant.plan,
-              generations_limit: grant.generations,
-              generations_used: 0,
-              refill: grant.refillOnInvoicePaid,
+              session: session.id,
             })
           );
-          await supabaseUpdate(
+        } else if (grant) {
+          const existing = await supabaseSelectOne(
             env,
             "profiles",
             { email },
-            {
-              plan: grant.plan,
-              generations_limit: grant.generations,
-              generations_used: 0,
-              updated_at: new Date().toISOString(),
-            }
+            "last_grant_session_id"
           );
+          const prior =
+            existing.ok &&
+            typeof existing.row?.last_grant_session_id === "string"
+              ? existing.row.last_grant_session_id
+              : null;
+          const action = grantReplayAction(
+            existing.ok ? { ok: true, sessionId: prior } : { ok: false },
+            session.id
+          );
+          if (action === "retry") return grantRetry("grant lookup failed");
+          if (action === "skip") {
+            console.log(
+              JSON.stringify({
+                evt: "stripe_grant_skipped_idempotent",
+                session: session.id,
+                plan: grant.plan,
+              })
+            );
+          } else {
+            console.log(
+              JSON.stringify({
+                evt: "stripe_grant_set",
+                plan: grant.plan,
+                generations_limit: grant.generations,
+                generations_used: 0,
+                refill: grant.refillOnInvoicePaid,
+              })
+            );
+            const wrote = await supabaseUpdate(
+              env,
+              "profiles",
+              { email },
+              {
+                plan: grant.plan,
+                generations_limit: grant.generations,
+                generations_used: 0,
+                last_grant_session_id: session.id,
+                updated_at: new Date().toISOString(),
+              }
+            );
+            if (!wrote) return grantRetry("grant write failed");
+          }
         }
       }
 

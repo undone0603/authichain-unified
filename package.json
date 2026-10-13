@@ -9,7 +9,8 @@
     "npm": ">=11.3.0"
   },
   "scripts": {
-    "dev": "turbo dev --single-package",
+    "dev": "next dev",
+    "dev:agent-browser": "pnpm --dir apps/agent-browser dev:ui",
     "build": "bash scripts/build-with-retry.sh",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",

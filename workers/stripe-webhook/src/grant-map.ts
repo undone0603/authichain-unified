@@ -117,6 +117,29 @@ export const FOUNDER_EMAILS = [
   "@authichain.com",
 ] as const;
 
+/** True when this checkout session already wrote the generation grant. */
+export function alreadyGrantedSession(
+  existingSessionId: string | null | undefined,
+  sessionId: string
+): boolean {
+  return Boolean(existingSessionId) && existingSessionId === sessionId;
+}
+
+/**
+ * Same checkout session must not reset generations_used.
+ * A failed lookup is a retry, not a fresh grant.
+ */
+export function grantReplayAction(
+  lookup:
+    | { ok: true; sessionId: string | null | undefined }
+    | { ok: false },
+  sessionId: string
+): "skip" | "grant" | "retry" {
+  if (!lookup.ok) return "retry";
+  if (alreadyGrantedSession(lookup.sessionId, sessionId)) return "skip";
+  return "grant";
+}
+
 export function isFounderEmail(email: string | null | undefined): boolean {
   const e = (email || "").toLowerCase().trim();
   if (!e) return false;

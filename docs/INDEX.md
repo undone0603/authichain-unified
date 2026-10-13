@@ -30,6 +30,8 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 
 ## Operations
 
+- [LAUNCH_MATRIX.md](LAUNCH_MATRIX.md) — production status of public surfaces, checked 2026-10-13
+- [FUNNEL_HEALTH.md](FUNNEL_HEALTH.md) — landing through activation, with payment and provisioning blocked
 - [operations/CLOUDFLARE_FIRST_BASELINE.md](operations/CLOUDFLARE_FIRST_BASELINE.md) — main-only integration, Cloudflare deploy authority, smoke + repair loop
 - [architecture/THIN_COMMERCIAL_SURFACES.md](architecture/THIN_COMMERCIAL_SURFACES.md) — brand sites stay thin; verify is shared
 - [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist

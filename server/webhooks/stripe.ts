@@ -242,6 +242,7 @@ async function fulfillCatalogCreditsIfPaid(
       typeof session.customer === "string" ? session.customer : null,
     stripeSubscriptionId:
       typeof session.subscription === "string" ? session.subscription : null,
+    sessionId: session.id,
   });
   if (prov.status === "upsert_failed") {
     throw new Error(
