@@ -6,19 +6,19 @@ The founder's $10 charge is not qualifying revenue. `classifyRevenue` does not c
 
 ## Claims
 
-| Claim                          | State                         | What the evidence supports                                                                                                                         |
-| ------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Payment provider evidence      | BLOCKED                       | The stored livemode restricted key returns HTTP 401. No fresh livemode charge list was read. Test-mode charges are not production payments.        |
-| Webhook signature verification | VERIFIED                      | Invalid signatures are rejected. Historical `checkout.session.expired` deliveries were accepted through 2026-10-11. That is not a paid completion. |
-| Successful fulfillment         | IMPLEMENTED_NOT_LIVE_VERIFIED | The grant fix is deployed. No genuine non-founder paid checkout has been fulfilled since the deploy.                                               |
-| Entitlement persistence        | IMPLEMENTED_NOT_LIVE_VERIFIED | `provisionPurchase` no longer writes `subscribed_at`. Live `profiles` still has zero grants and zero `generations_limit = 50`.                     |
-| Customer activation            | BLOCKED                       | Activation requires a persisted paid grant. None exists. Demo activations are not customers.                                                       |
-| Agent identity verification    | IMPLEMENTED_NOT_LIVE_VERIFIED | PR 1829 verifies `authichain-agent/1` in tests. The branch is not merged and not deployed.                                                         |
-| Outbound authorization         | IMPLEMENTED_NOT_LIVE_VERIFIED | The gate on PR 1829 allows a test-transport capture only. `production_send` stays false.                                                           |
-| Actual message delivery        | NOT_IMPLEMENTED               | No production sender is configured. A test-transport capture is not a delivered message. No mail has been sent.                                    |
-| Inbound response handling      | IMPLEMENTED_NOT_LIVE_VERIFIED | The dogfood path records a fixture `INTERESTED` reply in memory. No live inbound reply exists.                                                     |
-| Customer acquisition           | BLOCKED                       | No named eligible inbox is authorized, and no non-founder $299 purchase is on record.                                                              |
-| Retention                      | IMPLEMENTED_NOT_LIVE_VERIFIED | The retention cron exists. The only `dpp_loop:retained` row is a demo. No paying customer has been retained.                                       |
+| Claim                          | State                         | What the evidence supports                                                                                                                      |
+| ------------------------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Payment provider evidence      | BLOCKED                       | The stored livemode restricted key returns HTTP 401. No fresh livemode charge list was read. Test-mode charges are not production payments.     |
+| Webhook signature verification | VERIFIED                      | Invalid signatures are rejected. One `checkout.session.completed` for the demo session was stored `success` / HTTP 200 at 2026-10-13 18:25:36Z. |
+| Successful fulfillment         | IMPLEMENTED_NOT_LIVE_VERIFIED | A $0 `is_demo` checkout was fulfilled on 2026-10-13. No non-founder $299 checkout has been fulfilled.                                           |
+| Entitlement persistence        | VERIFIED                      | One demo profile stores `generations_limit` 50 and session prefix `cs_live_a1YwNmpf7ODzyhHayglo` exactly once. It is not a paying customer.     |
+| Customer activation            | BLOCKED                       | That demo session has no `dpp_loop:merchant_activated` row. A demo grant is not an activated customer.                                          |
+| Agent identity verification    | IMPLEMENTED_NOT_LIVE_VERIFIED | PR 1829 verifies `authichain-agent/1` in tests. The branch is not merged and not deployed.                                                      |
+| Outbound authorization         | IMPLEMENTED_NOT_LIVE_VERIFIED | The gate on PR 1829 allows a test-transport capture only. `production_send` stays false.                                                        |
+| Actual message delivery        | NOT_IMPLEMENTED               | No production sender is configured. A test-transport capture is not a delivered message. No mail has been sent.                                 |
+| Inbound response handling      | IMPLEMENTED_NOT_LIVE_VERIFIED | The dogfood path records a fixture `INTERESTED` reply in memory. No live inbound reply exists.                                                  |
+| Customer acquisition           | BLOCKED                       | No named eligible inbox is authorized, and no non-founder $299 purchase is on record.                                                           |
+| Retention                      | IMPLEMENTED_NOT_LIVE_VERIFIED | The retention cron exists. The only `dpp_loop:retained` row is a demo. No paying customer has been retained.                                    |
 
 ## Payment and entitlement
 
@@ -37,7 +37,11 @@ Post-deploy smoke in that run: 10/10 passed, including unsigned `POST https://au
 
 Webhook endpoint `we_1UGTCSGqTruSqV8ThM9bXVWp` was reported `in sync` by `Stripe webhook reconcile` run [38433709051](https://github.com/undone0603/authichain-unified/actions/runs/38433709051). That is endpoint configuration, not a fulfilled checkout. `CI Main` run [38432899727](https://github.com/undone0603/authichain-unified/actions/runs/38432899727), `Lint` run [38432899420](https://github.com/undone0603/authichain-unified/actions/runs/38432899420), and `Security Scan` run [38432899752](https://github.com/undone0603/authichain-unified/actions/runs/38432899752) succeeded on the merge commit.
 
-`GET https://authichain.com/checkout/dpp_readiness` returns 200 and shows $299. The response does not contain `buy.stripe.com`. No checkout email was posted. No card was charged. No Stripe event was replayed. No entitlement row was inserted.
+`GET https://authichain.com/checkout/dpp_readiness` returns 200 and shows $299. The response does not contain `buy.stripe.com`. No card was charged for this check. No old event was replayed.
+
+### Demo grant, not a buyer
+
+Read at 2026-10-13 after 18:25Z. One profile on domain `authichain.com`, with a test/demo/smoke local-part, has `generations_limit` 50, `generations_used` 0, `subscription_plan` `dpp_readiness`, `subscription_status` `active`, `tier` `free`, and no `stripe_customer_id`. `last_grant_session_id` prefix `cs_live_a1YwNmpf7ODzyhHayglo` appears on exactly one profile. `stripe_events` has one matching `checkout.session.completed` row, `status=success`, `http_status=200`, `processed_at` 2026-10-13 18:25:36Z. The funnel recorded `dpp_loop:payment_succeeded` with `amount_total` 0 and `is_demo=true`, then `dpp_loop:provisioned` with `is_demo=true`. There is no `merchant_activated` row for that session. This shows the deployed grant path can persist a demo. It is not a $299 purchase and not qualifying revenue.
 
 ### Application database
 
@@ -47,15 +51,15 @@ Supabase project `nhdnkzhtadfkkluiulhs`, read after the deploy.
 
 | Measure                     | Count |
 | --------------------------- | ----- |
-| profiles                    | 3     |
-| `last_grant_session_id` set | 0     |
-| `generations_limit = 50`    | 0     |
-| `last_payment_at` set       | 0     |
+| profiles                    | 4     |
+| `last_grant_session_id` set | 1     |
+| `generations_limit = 50`    | 1     |
+| `last_payment_at` set       | 1     |
 | `stripe_customer_id` set    | 0     |
 | `entitlements`              | 0     |
 | `checkout_sessions`         | 0     |
 
-Two profiles match founder addresses and one does not. All three are `tier=free` with `generations_limit=0` and no grant session.
+The single grant is the $0 demo above. The other profiles have `generations_limit` 0.
 
 `public.stripe_events`:
 
@@ -63,9 +67,10 @@ Two profiles match founder addresses and one does not. All three are `tier=free`
 | ---------------------------- | ------- | ---- | ---- | -------------------- |
 | `checkout.session.expired`   | success | 200  | 129  | 2026-10-11 18:33:37Z |
 | `checkout.session.expired`   | error   | 400  | 75   | 2026-09-23 03:17:34Z |
+| `checkout.session.completed` | success | 200  | 1    | 2026-10-13 18:25:36Z |
 | `checkout.session.completed` | empty   | null | 4    | 2026-09-20 21:26:04Z |
 
-No `checkout.session.completed` row has been stored since 2026-09-20. The expired successes show that signature verification accepted those deliveries. They do not show a paid checkout. A dummy signature returning 400 shows rejection, not fulfillment.
+The 2026-10-13 completed row is the $0 demo session. The expired successes show signature verification accepted those deliveries. A dummy signature returning 400 shows rejection, not fulfillment.
 
 `funnel_events` still holds five `dpp_loop:payment_succeeded` rows. Four have `amount_total` 0. The only positive amount is 1000 cents, plan `dpp_readiness`, founder payer, session prefix `cs_live_a1uJEBIoeOSPY1`, on 2026-09-20. A `dpp_loop:provisioned` row was written for that session. The profile grant was not. That is the defect PR 1830 fixes for the next delivery. The old event was not replayed and the profile was not edited. Demo and zero-amount rows, including DPP-SMOKE-E2E, are not customers. The single `dpp_loop:retained` row is `is_demo=true`.
 
@@ -73,7 +78,9 @@ No `checkout.session.completed` row has been stored since 2026-09-20. The expire
 
 Stripe CLI 1.40.6 has a config for account `acct_1SXIyEGqTruSqV8T`. The stored livemode restricted key is rejected with HTTP 401 `Invalid API Key`. The test-mode key can list charges. Those three charges are `livemode=false` (one $1.00 with no email, two $2,500.00 founder) and are not production revenue. The Stripe MCP connector is not authenticated. The exact step that unblocks a livemode charge list is `stripe login`, or replacement of the revoked livemode restricted key. Do not invent a key.
 
-These remain different claims: a configured webhook secret, a valid signature, a delivered webhook, a fulfilled paid checkout, a persisted entitlement, and an activated customer. Only the first two are verified, and only for rejection of bad signatures plus historical expired deliveries.
+These remain different claims. A configured webhook secret, a valid signature, and a delivered demo webhook are verified. A fulfilled $299 checkout, a paying customer's entitlement, and an activated customer are not.
+
+PR 1831 (`81d0a70c`) merged with an empty tree identical to `d144c215` and was redeployed. `humanHold` is still set for the $299 price on `workers/stripe-webhook`. Open PR 1832 would clear that hold and can stamp `generations_limit` before the edge router. It was not merged. PR 1834 is on `main` as `a017ed5e` and publishes one signed AgentZ presentation. PR 1829 now conflicts with that change. PR 1835 makes a failed lead insert return 500. Its `Main quality gate` passed. It was not merged.
 
 ## Tests
 
