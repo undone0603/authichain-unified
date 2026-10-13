@@ -100,6 +100,7 @@ export async function fulfillDppPaidSession(
     brand,
     stripeCustomerId: toId(session.customer),
     stripeSubscriptionId: toId(session.subscription),
+    sessionId: session.id,
   });
 
   if (visitId && prov.profileId) {
@@ -138,7 +139,7 @@ export async function fulfillDppPaidSession(
   }
 
   let activationEmail: ActivationEmailStatus = "skipped";
-  if (prov.profileId && email && !demo) {
+  if (prov.profileId && email && !demo && !prov.skippedIdempotent) {
     const mail = renderBillingEmail("dpp_audit_provisioned", brand, {
       planName: "EU DPP Workspace",
       activateUrl: dppActivateUrl(session.id, visitId ? String(visitId) : null),

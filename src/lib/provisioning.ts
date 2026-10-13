@@ -44,6 +44,8 @@ export interface ProvisionResult {
   created: boolean;
   status: "provisioned" | "no_identity" | "upsert_failed";
   error?: string;
+  /** This checkout session already granted. Do not reset usage or resend access. */
+  skippedIdempotent?: boolean;
 }
 
 function grantFor(
@@ -70,11 +72,20 @@ export async function provisionPurchase(
   let created = false;
 
   if (!profileId && email) {
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
       .maybeSingle();
+    if (lookupError) {
+      console.error("[provisioning] profile lookup failed:", lookupError);
+      return {
+        profileId: null,
+        created: false,
+        status: "upsert_failed",
+        error: lookupError.message || "profile lookup failed",
+      };
+    }
     if (existing?.id) {
       profileId = existing.id as string;
     } else {
@@ -124,12 +135,25 @@ export async function provisionPurchase(
   }
 
   // Session-level idempotency: do not reset generations_used if this session already granted.
+  // A failed read must not look like "no prior grant" — that resets usage on retry.
   if (input.sessionId) {
-    const { data: existingGrant } = await supabase
+    const { data: existingGrant, error: grantReadError } = await supabase
       .from("profiles")
       .select("last_grant_session_id")
       .eq("id", profileId)
       .maybeSingle();
+    if (grantReadError) {
+      console.error(
+        "[provisioning] last_grant_session_id read failed:",
+        grantReadError
+      );
+      return {
+        profileId,
+        created,
+        status: "upsert_failed",
+        error: grantReadError.message || "grant lookup failed",
+      };
+    }
     if (existingGrant?.last_grant_session_id === input.sessionId) {
       console.log(
         JSON.stringify({
@@ -138,7 +162,12 @@ export async function provisionPurchase(
           profileId,
         })
       );
-      return { profileId, created, status: "provisioned" };
+      return {
+        profileId,
+        created,
+        status: "provisioned",
+        skippedIdempotent: true,
+      };
     }
   }
 
@@ -161,7 +190,19 @@ export async function provisionPurchase(
     if (input.sessionId) update.last_grant_session_id = input.sessionId;
   }
 
-  await supabase.from("profiles").update(update).eq("id", profileId);
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update(update)
+    .eq("id", profileId);
+  if (updateError) {
+    console.error("[provisioning] entitlement update failed:", updateError);
+    return {
+      profileId,
+      created,
+      status: "upsert_failed",
+      error: updateError.message || "profiles update failed",
+    };
+  }
 
   return { profileId, created, status: "provisioned" };
 }

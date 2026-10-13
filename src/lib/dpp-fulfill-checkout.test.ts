@@ -24,8 +24,11 @@ function fakeSupabase(opts?: {
   insertError?: { message: string } | null;
 }) {
   const rows: Array<Record<string, unknown>> = [];
+  const profileUpdates: Array<Record<string, unknown>> = [];
   const profileId = opts?.profileId === undefined ? "prof_1" : opts.profileId;
   const existingProfile = opts?.existingProfile ?? profileId != null;
+  const profile: { id: string; last_grant_session_id?: string } | null =
+    existingProfile && profileId ? { id: profileId } : null;
   const from = (table: string) => {
     const filters: Array<[string, unknown]> = [];
     const builder: Record<string, unknown> = {
@@ -46,7 +49,13 @@ function fakeSupabase(opts?: {
         }
         return Promise.resolve({ error: null });
       },
-      update: () => builder,
+      update: (patch: Record<string, unknown>) => {
+        if (table === "profiles" && profile) {
+          Object.assign(profile, patch);
+          profileUpdates.push(patch);
+        }
+        return builder;
+      },
       select: () => builder,
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
@@ -55,7 +64,7 @@ function fakeSupabase(opts?: {
       maybeSingle: async () => {
         if (table === "profiles") {
           return {
-            data: existingProfile && profileId ? { id: profileId } : null,
+            data: profile,
             error: null,
           };
         }
@@ -68,7 +77,7 @@ function fakeSupabase(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, rows };
+  return { supabase: { from }, rows, profileUpdates };
 }
 
 const paidSession = {
@@ -307,7 +316,7 @@ describe("fulfillDppPaidSession", () => {
   });
 
   it("does not double-count payment or provision on webhook replay", async () => {
-    const { supabase, rows } = fakeSupabase();
+    const { supabase, rows, profileUpdates } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     await fulfillDppPaidSession(supabase, paidSession);
     expect(
@@ -316,5 +325,14 @@ describe("fulfillDppPaidSession", () => {
     expect(
       rows.filter(r => r.event_type === "dpp_loop:provisioned")
     ).toHaveLength(1);
+    expect(
+      profileUpdates.filter(patch => patch.generations_used === 0)
+    ).toHaveLength(1);
+    expect(profileUpdates[0]).toMatchObject({
+      generations_limit: 50,
+      generations_used: 0,
+      last_grant_session_id: paidSession.id,
+    });
+    expect(sendEmail).toHaveBeenCalledOnce();
   });
 });
