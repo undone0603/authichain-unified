@@ -1,0 +1,20 @@
+DROP TABLE "brand_webhooks" CASCADE;--> statement-breakpoint
+DROP TABLE "brands" CASCADE;--> statement-breakpoint
+DROP TABLE "certifications" CASCADE;--> statement-breakpoint
+DROP TABLE "component_provenance" CASCADE;--> statement-breakpoint
+DROP TABLE "dpp_data" CASCADE;--> statement-breakpoint
+DROP TABLE "folders" CASCADE;--> statement-breakpoint
+DROP TABLE "lead_sequences" CASCADE;--> statement-breakpoint
+DROP TABLE "living_art_schedules" CASCADE;--> statement-breakpoint
+DROP TABLE "product_lifecycle_events" CASCADE;--> statement-breakpoint
+DROP TABLE "products" CASCADE;--> statement-breakpoint
+DROP TABLE "profiles" CASCADE;--> statement-breakpoint
+DROP TABLE "qron_generations" CASCADE;--> statement-breakpoint
+DROP TABLE "qron_tags" CASCADE;--> statement-breakpoint
+DROP TABLE "qrons" CASCADE;--> statement-breakpoint
+DROP TABLE "redirect_rules" CASCADE;--> statement-breakpoint
+DROP TABLE "scan_logs" CASCADE;--> statement-breakpoint
+DROP TABLE "tags" CASCADE;--> statement-breakpoint
+DROP TABLE "telemetry_events" CASCADE;--> statement-breakpoint
+DROP TABLE "white_label_clients" CASCADE;--> statement-breakpoint
+DROP TYPE "public"."tier";
