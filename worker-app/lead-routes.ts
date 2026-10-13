@@ -558,6 +558,9 @@ async function handleLeadCapture(c: LeadContext) {
       { email, source: lead.source },
       errorMessage(err)
     );
+    // A stored row is the only success. Automation must not run, and the
+    // form must not tell the visitor the request was saved.
+    return c.json({ error: "Could not store the request" }, 500);
   }
 
   await background(c, runLeadAutomation(c, lead));
