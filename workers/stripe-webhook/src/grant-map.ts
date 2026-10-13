@@ -38,9 +38,9 @@ export const GRANT_BY_PRICE: Record<string, Grant> = {
   price_1TwmD8GqTruSqV8TpAF8dfyA: {
     plan: "dpp_readiness",
     brand: "authichain",
-    generations: 0,
+    generations: 50,
     refillOnInvoicePaid: false,
-    humanHold: true,
+    humanHold: false,
   },
   price_1UHjCZGqTruSqV8T35M6AmoJ: {
     plan: "strainchain_passport",
