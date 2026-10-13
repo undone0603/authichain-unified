@@ -173,11 +173,12 @@ export async function provisionPurchase(
 
   // 2. Apply entitlements. Reset usage so the new period starts clean.
   const grant = grantFor(input.plan, input.generationsGrant);
+  // Live public.profiles has no subscribed_at column. PostgREST rejects the
+  // whole update when an unknown column is present, so the grant never lands.
   const update: Record<string, unknown> = {
     brand: input.brand,
     subscription_plan: input.plan ?? undefined,
     subscription_status: input.isTrial ? "trialing" : "active",
-    subscribed_at: new Date().toISOString(),
     last_payment_at: input.isTrial ? undefined : new Date().toISOString(),
   };
   if (input.stripeCustomerId)
