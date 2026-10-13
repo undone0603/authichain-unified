@@ -81,7 +81,8 @@ export default function RevenueProofPage() {
           </p>
           <h1 className="text-3xl font-black uppercase">Revenue proof</h1>
           <p className="text-zinc-500 text-sm mt-2">
-            Derived from funnel_events at read time. Not a stored total.
+            Derived from funnel_events at read time. Not a stored total and
+            not Stripe cash.
           </p>
         </header>
         {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -102,7 +103,7 @@ export default function RevenueProofPage() {
             </div>
             <section className="border border-zinc-900 bg-zinc-950 p-6">
               <h2 className="text-sm font-black uppercase tracking-widest mb-4">
-                Revenue by surface
+                Paid loop events by surface
               </h2>
               {Object.keys(data.revenue_by_surface).length === 0 ? (
                 <p className="text-zinc-600 text-sm">No surface events yet.</p>
