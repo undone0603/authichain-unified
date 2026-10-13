@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PUBLIC_PLAN_IDS } from "../../../src/lib/plans";
-import { decideProductCapability } from "./product-capabilities";
+import { decideProductCapability } from "../app/product-capabilities";
 
 describe("agent browser public capabilities", () => {
   it("lists only public catalogue checkouts", () => {

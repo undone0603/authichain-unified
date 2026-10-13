@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { decideProductCapability } from "../../../src/product-capabilities";
+import { decideProductCapability } from "../../product-capabilities";
 
 export const runtime = "nodejs";
 
