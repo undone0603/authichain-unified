@@ -8,13 +8,13 @@ and do not rename this SAM registration to AuthiChain, Inc.
 
 The federal applicant for this UEI is the individual SAM entity:
 
-| Field | Live value |
-| --- | --- |
-| Legal business name | ZACHARY KIETZMAN |
-| UEI | R34XKWRJY9A5 |
-| CAGE | 1PUJ6 |
-| Registration status | Active through 2027-04-20 |
-| Physical address | 109 N 4th St, Roscommon, MI 48653 |
+| Field               | Live value                        |
+| ------------------- | --------------------------------- |
+| Legal business name | ZACHARY KIETZMAN                  |
+| UEI                 | R34XKWRJY9A5                      |
+| CAGE                | 1PUJ6                             |
+| Registration status | Active through 2027-04-20         |
+| Physical address    | 109 N 4th St, Roscommon, MI 48653 |
 
 ## Brand vs legal framing
 
@@ -41,4 +41,4 @@ prep checklist rows; they must not be executed:
 - [ ] Confirm physical address: 109 N 4th St, Roscommon, MI 48653
 - [ ] Confirm Entity Administrator Login.gov access for this entity
 - [ ] Keep TIN and bank validation current for this individual entity
-- [ ] Prepare a notarized letter only if SAM requests one for *this* entity
+- [ ] Prepare a notarized letter only if SAM requests one for _this_ entity

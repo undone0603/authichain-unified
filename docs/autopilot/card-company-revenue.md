@@ -5,9 +5,11 @@ Source: AuthiChain Board autopilot
 Written: 2026-09-23T15:02:37.645Z
 
 ## Outcome
+
 Recognize a **first-sale close** only when Stripe reports a **succeeded** charge of **2900 or 4900** cents from a non-internal payer email. Surface existing $29 / $49 Checkout links first on high-traffic pages. No dunning, no outreach re-enable, no pending/$9.31 as revenue.
 
 ## Files to touch
+
 - `apps/web/app/(marketing)/page.tsx` (and any existing pricing/CTA partials already routed)
 - `apps/web/lib/stripe/links.ts` (export existing Payment Link URLs only)
 - `workers/stripe-webhook/src/index.ts`
@@ -16,6 +18,7 @@ Recognize a **first-sale close** only when Stripe reports a **succeeded** charge
 - `packages/shared/src/close.ts` (amount + email guards)
 
 ## Acceptance checks
+
 - [ ] Webhook treats `charge.succeeded` / `payment_intent.succeeded` with `amount_received ∈ {2900, 4900}` as close candidates
 - [ ] Payer email not in `{authichain@gmail.com, undone.k@gmail.com}` (case-insensitive)
 - [ ] Pending, incomplete, or $931 amounts never increment close/revenue
@@ -25,6 +28,7 @@ Recognize a **first-sale close** only when Stripe reports a **succeeded** charge
 - [ ] No new secrets committed; env-only Stripe keys
 
 ## Minimal patch sketch
+
 ```ts
 // packages/shared/src/close.ts
 export const CLOSE_CENTS = new Set([2900, 4900]);
@@ -63,3 +67,4 @@ export async function maybeRecordFirstClose(sb: Supabase, ev: StripeEvent) {
 
   await sb.from("closes").insert({
     payer_email: email!.toLowerCase(),
+```

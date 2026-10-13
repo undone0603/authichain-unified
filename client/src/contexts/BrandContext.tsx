@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo } from "react";
-import { BRANDS, DEFAULT_BRAND, resolveBrand, type Brand, type BrandId } from "@shared/brands";
+import {
+  BRANDS,
+  DEFAULT_BRAND,
+  resolveBrand,
+  type Brand,
+  type BrandId,
+} from "@shared/brands";
 
 declare global {
   interface Window {
@@ -9,7 +15,7 @@ declare global {
 
 interface BrandContextValue {
   brandId: BrandId;
-  brand:   Brand;
+  brand: Brand;
 }
 
 const BrandContext = createContext<BrandContextValue | undefined>(undefined);
@@ -37,9 +43,14 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     document.title = `${brand.displayName} — ${brand.tagline}`;
   }, [brandId, brand]);
 
-  const value = useMemo<BrandContextValue>(() => ({ brandId, brand }), [brandId, brand]);
+  const value = useMemo<BrandContextValue>(
+    () => ({ brandId, brand }),
+    [brandId, brand]
+  );
 
-  return <BrandContext.Provider value={value}>{children}</BrandContext.Provider>;
+  return (
+    <BrandContext.Provider value={value}>{children}</BrandContext.Provider>
+  );
 }
 
 export function useBrand(): BrandContextValue {

@@ -15,7 +15,9 @@ const body = readFileSync(
 
 (async () => {
   try {
-    console.log("Applying drizzle/migrations/025_economy_align.sql (additive only)…");
+    console.log(
+      "Applying drizzle/migrations/025_economy_align.sql (additive only)…"
+    );
     await sql.unsafe(body);
     console.log("✅ ECONOMY ALIGNED via Drizzle migration SQL.");
   } catch (err) {

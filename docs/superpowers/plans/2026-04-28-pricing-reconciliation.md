@@ -11,6 +11,7 @@
 **Spec:** `docs/superpowers/specs/2026-04-28-pricing-reconciliation-design.md`
 
 **Existing consumers to migrate (audited):**
+
 - `server/stripe-service.ts:6` — imports `STRIPE_PRODUCTS, PlanKey, getPlanQuota` from `./stripe-products`
 - `server/webhooks/stripe.ts:28` — imports `getPlanQuota` from `../stripe-products`
 - `server/subscriptions/router.ts:6` — imports `SUBSCRIPTION_PLANS` from `@shared/subscriptionPlans`
@@ -22,6 +23,7 @@
 ## Task 1: Create `shared/pricing.ts` with schema, helpers, and tests
 
 **Files:**
+
 - Create: `shared/pricing.ts`
 - Create: `shared/pricing.test.ts`
 
@@ -89,7 +91,11 @@ describe("CONTRACT", () => {
 
 describe("B2B_BRANDS", () => {
   it("contains exactly authichain, strainchain, govchain", () => {
-    expect([...B2B_BRANDS].sort()).toEqual(["authichain", "govchain", "strainchain"]);
+    expect([...B2B_BRANDS].sort()).toEqual([
+      "authichain",
+      "govchain",
+      "strainchain",
+    ]);
   });
 });
 
@@ -122,7 +128,9 @@ describe("getMonthlyAmountCents / getAnnualAmountCents", () => {
 
   it("annual is monthly * 12 with 20% discount", () => {
     const monthly = getMonthlyAmountCents("starter");
-    expect(getAnnualAmountCents("starter")).toBe(Math.round(monthly * 12 * 0.8));
+    expect(getAnnualAmountCents("starter")).toBe(
+      Math.round(monthly * 12 * 0.8)
+    );
   });
 });
 ```
@@ -216,7 +224,10 @@ export type AnyPlanKey = B2BPlanKey | QronPlanKey;
  * Webhook plan detection consults this lookup before falling back to
  * amount-based heuristics.
  */
-export const STRIPE_PRICE_TO_PLAN: Record<string, AnyPlanKey | "contract_setup"> = {
+export const STRIPE_PRICE_TO_PLAN: Record<
+  string,
+  AnyPlanKey | "contract_setup"
+> = {
   // Filled in by scripts/setup-stripe-products.ts output. Example:
   // "price_1ABC...": "starter",
 };
@@ -238,7 +249,7 @@ export function getPlanQuota(plan: B2BPlanKey): number {
 
 /** Looks up a Stripe price ID; undefined if unrecognized. */
 export function lookupPlanByPriceId(
-  priceId: string,
+  priceId: string
 ): AnyPlanKey | "contract_setup" | undefined {
   return STRIPE_PRICE_TO_PLAN[priceId];
 }
@@ -266,6 +277,7 @@ git commit -m "feat(pricing): add shared/pricing.ts as single source of truth"
 ## Task 2: Migrate `server/stripe-service.ts` to use `shared/pricing.ts` + thread brand metadata
 
 **Files:**
+
 - Modify: `server/stripe-service.ts`
 
 - [ ] **Step 1: Replace the import on line 6**
@@ -332,18 +344,18 @@ Find the function body (starts around line 31). Replace the `product` lookup and
 
 ```ts
 const product = STRIPE_PRODUCTS[params.plan];
-const priceAmount = params.billing === "annual"
-  ? product.priceAnnual
-  : product.priceMonthly;
+const priceAmount =
+  params.billing === "annual" ? product.priceAnnual : product.priceMonthly;
 ```
 
 With:
 
 ```ts
 const product = B2B_PLANS[params.plan];
-const priceAmount = params.billing === "annual"
-  ? getAnnualAmountCents(params.plan)
-  : getMonthlyAmountCents(params.plan);
+const priceAmount =
+  params.billing === "annual"
+    ? getAnnualAmountCents(params.plan)
+    : getMonthlyAmountCents(params.plan);
 ```
 
 Then replace the existing `metadata: { ... }` block in `sessionConfig` with:
@@ -403,6 +415,7 @@ git commit -m "refactor(stripe-service): use shared/pricing + thread brand & con
 ## Task 3: Upgrade webhook plan detection to lookup table + propagate brand/contract metadata
 
 **Files:**
+
 - Modify: `server/webhooks/stripe.ts`
 - Create: `server/webhooks/stripe-plan-detection.test.ts`
 
@@ -417,7 +430,8 @@ import { detectPlan } from "./stripe-plan-detection";
 
 afterEach(() => {
   // Tests mutate the lookup table; reset between tests.
-  for (const k of Object.keys(STRIPE_PRICE_TO_PLAN)) delete STRIPE_PRICE_TO_PLAN[k];
+  for (const k of Object.keys(STRIPE_PRICE_TO_PLAN))
+    delete STRIPE_PRICE_TO_PLAN[k];
 });
 
 describe("detectPlan", () => {
@@ -487,7 +501,7 @@ function detectPlanFromAmount(amountCents: number): B2BPlanKey {
  */
 export function detectPlan(
   priceId: string | null | undefined,
-  amountCents: number,
+  amountCents: number
 ): B2BPlanKey {
   if (priceId) {
     const known = lookupPlanByPriceId(priceId);
@@ -537,7 +551,7 @@ await logAutomationAudit(
     billingCycle,
     userId: userId ?? null,
   },
-  userId,
+  userId
 );
 ```
 
@@ -562,7 +576,7 @@ await logAutomationAudit(
     contract: isContract,
     userId: userId ?? null,
   },
-  userId,
+  userId
 );
 ```
 
@@ -657,6 +671,7 @@ git commit -m "refactor(webhook): lookup-table plan detection + brand/contract m
 ## Task 4: Update `server/subscriptions/router.ts` to accept brand input + use shared
 
 **Files:**
+
 - Modify: `server/subscriptions/router.ts`
 
 - [ ] **Step 1: Replace the import on line 6**
@@ -744,6 +759,7 @@ git commit -m "feat(subscriptions): accept brand + contractSetupOrderId on check
 ## Task 5: Update `client/src/pages/Subscriptions.tsx` to use shared pricing
 
 **Files:**
+
 - Modify: `client/src/pages/Subscriptions.tsx`
 
 - [ ] **Step 1: Read the file's import line and any uses of `SUBSCRIPTION_PLANS`**
@@ -809,6 +825,7 @@ git commit -m "refactor(subscriptions-page): import from shared/pricing via loca
 ## Task 6: Add `contract_setup` to the service catalog
 
 **Files:**
+
 - Modify: `server/service-catalog.ts`
 
 - [ ] **Step 1: Extend the `ServiceType` union (around line 22)**
@@ -895,6 +912,7 @@ git commit -m "feat(services): add contract_setup ($2,500) for B2B contract pilo
 ## Task 7: Rewrite `client/src/pages/Pricing.tsx` to switch by host + read from shared
 
 **Files:**
+
 - Modify: `client/src/pages/Pricing.tsx`
 
 - [ ] **Step 1: Read the existing file to capture any feature-list copy worth preserving**
@@ -910,7 +928,14 @@ Overwrite `client/src/pages/Pricing.tsx` with:
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -927,7 +952,11 @@ function clusterFromHost(host: string): Cluster {
 function brandFromHost(host: string): B2BBrand | undefined {
   if (host.startsWith("strainchain.")) return "strainchain";
   if (host.startsWith("govchain.")) return "govchain";
-  if (host.startsWith("authichain.") || host === "localhost" || host.startsWith("localhost:"))
+  if (
+    host.startsWith("authichain.") ||
+    host === "localhost" ||
+    host.startsWith("localhost:")
+  )
     return "authichain";
   return undefined;
 }
@@ -1028,7 +1057,10 @@ export default function Pricing() {
   useEffect(() => setHost(window.location.host), []);
 
   const cluster = useMemo<Cluster>(() => clusterFromHost(host), [host]);
-  const brand = useMemo<B2BBrand | undefined>(() => brandFromHost(host), [host]);
+  const brand = useMemo<B2BBrand | undefined>(
+    () => brandFromHost(host),
+    [host]
+  );
 
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const checkout = trpc.subscriptions.checkout.useMutation();
@@ -1070,20 +1102,23 @@ export default function Pricing() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {items.map((p) => {
+        {items.map(p => {
           const PlanIcon = p.icon;
           const priceLabel = isQron
-            ? (p as typeof QRON_DISPLAY[number]).priceLabel
+            ? (p as (typeof QRON_DISPLAY)[number]).priceLabel
             : `$${B2B_PLANS[p.id as keyof typeof B2B_PLANS].monthlyCents / 100}`;
           const period = isQron
-            ? (p as typeof QRON_DISPLAY[number]).period
+            ? (p as (typeof QRON_DISPLAY)[number]).period
             : "/mo";
           const displayName = isQron
             ? QRON_PLANS[p.id as keyof typeof QRON_PLANS].name
             : B2B_PLANS[p.id as keyof typeof B2B_PLANS].name;
 
           return (
-            <Card key={p.id} className={(p as any).featured ? "border-primary" : ""}>
+            <Card
+              key={p.id}
+              className={(p as any).featured ? "border-primary" : ""}
+            >
               <CardHeader>
                 {(p as any).featured && <Badge>Most Popular</Badge>}
                 <CardTitle className="flex items-center gap-2">
@@ -1092,12 +1127,15 @@ export default function Pricing() {
                 <CardDescription>{p.description}</CardDescription>
                 <div className="text-3xl font-bold mt-2">
                   {priceLabel}
-                  <span className="text-sm font-normal text-muted-foreground"> {period}</span>
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" "}
+                    {period}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {p.features.map((f) => (
+                  {p.features.map(f => (
                     <li key={f} className="flex items-start gap-2">
                       <Check className="w-4 h-4 mt-1 flex-shrink-0" />
                       <span>{f}</span>
@@ -1138,6 +1176,7 @@ Run: `pnpm dev`
 Expected: dev server starts.
 
 In a browser, open `http://localhost:5173/pricing`:
+
 - B2B view should show three tiers ($199 / $499 / $999), brand defaulted to `authichain` on localhost.
 - Click each Subscribe button — should hit the tRPC mutation. (It will fail without a logged-in user; that's fine — error toast confirms wiring.)
 
@@ -1157,6 +1196,7 @@ git commit -m "feat(pricing-page): host-aware B2B vs QRON view from shared/prici
 ## Task 8: Create `scripts/setup-stripe-products.ts` (idempotent product creation)
 
 **Files:**
+
 - Create: `scripts/setup-stripe-products.ts`
 
 - [ ] **Step 1: Create the script**
@@ -1200,20 +1240,63 @@ interface Spec {
 
 const specs: Spec[] = [
   // B2B
-  { canonicalName: B2B_PLANS.starter.product,      displayName: B2B_PLANS.starter.name,      monthlyCents: B2B_PLANS.starter.monthlyCents,      annualCents: Math.round(B2B_PLANS.starter.monthlyCents      * 12 * 0.8), planKey: "starter" },
-  { canonicalName: B2B_PLANS.professional.product, displayName: B2B_PLANS.professional.name, monthlyCents: B2B_PLANS.professional.monthlyCents, annualCents: Math.round(B2B_PLANS.professional.monthlyCents * 12 * 0.8), planKey: "professional" },
-  { canonicalName: B2B_PLANS.enterprise.product,   displayName: B2B_PLANS.enterprise.name,   monthlyCents: B2B_PLANS.enterprise.monthlyCents,   annualCents: Math.round(B2B_PLANS.enterprise.monthlyCents   * 12 * 0.8), planKey: "enterprise" },
+  {
+    canonicalName: B2B_PLANS.starter.product,
+    displayName: B2B_PLANS.starter.name,
+    monthlyCents: B2B_PLANS.starter.monthlyCents,
+    annualCents: Math.round(B2B_PLANS.starter.monthlyCents * 12 * 0.8),
+    planKey: "starter",
+  },
+  {
+    canonicalName: B2B_PLANS.professional.product,
+    displayName: B2B_PLANS.professional.name,
+    monthlyCents: B2B_PLANS.professional.monthlyCents,
+    annualCents: Math.round(B2B_PLANS.professional.monthlyCents * 12 * 0.8),
+    planKey: "professional",
+  },
+  {
+    canonicalName: B2B_PLANS.enterprise.product,
+    displayName: B2B_PLANS.enterprise.name,
+    monthlyCents: B2B_PLANS.enterprise.monthlyCents,
+    annualCents: Math.round(B2B_PLANS.enterprise.monthlyCents * 12 * 0.8),
+    planKey: "enterprise",
+  },
   // QRON
-  { canonicalName: QRON_PLANS.launch_pack.product, displayName: QRON_PLANS.launch_pack.name, oneTimeCents:   QRON_PLANS.launch_pack.oneTimeCents,                                                                              planKey: "launch_pack" },
-  { canonicalName: QRON_PLANS.studio.product,      displayName: QRON_PLANS.studio.name,      monthlyCents:   QRON_PLANS.studio.monthlyCents,                                                                                       planKey: "studio" },
-  { canonicalName: QRON_PLANS.studio_pro.product,  displayName: QRON_PLANS.studio_pro.name,  monthlyCents:   QRON_PLANS.studio_pro.monthlyCents,                                                                                   planKey: "studio_pro" },
+  {
+    canonicalName: QRON_PLANS.launch_pack.product,
+    displayName: QRON_PLANS.launch_pack.name,
+    oneTimeCents: QRON_PLANS.launch_pack.oneTimeCents,
+    planKey: "launch_pack",
+  },
+  {
+    canonicalName: QRON_PLANS.studio.product,
+    displayName: QRON_PLANS.studio.name,
+    monthlyCents: QRON_PLANS.studio.monthlyCents,
+    planKey: "studio",
+  },
+  {
+    canonicalName: QRON_PLANS.studio_pro.product,
+    displayName: QRON_PLANS.studio_pro.name,
+    monthlyCents: QRON_PLANS.studio_pro.monthlyCents,
+    planKey: "studio_pro",
+  },
   // Contract setup
-  { canonicalName: CONTRACT.setupProduct,          displayName: "AuthiChain Contract Pilot — Setup", oneTimeCents: CONTRACT.setupCents,                                                                                            planKey: "contract_setup" },
+  {
+    canonicalName: CONTRACT.setupProduct,
+    displayName: "AuthiChain Contract Pilot — Setup",
+    oneTimeCents: CONTRACT.setupCents,
+    planKey: "contract_setup",
+  },
 ];
 
-async function findOrCreateProduct(canonicalName: string, displayName: string): Promise<Stripe.Product> {
+async function findOrCreateProduct(
+  canonicalName: string,
+  displayName: string
+): Promise<Stripe.Product> {
   const list = await stripe.products.list({ limit: 100, active: true });
-  const existing = list.data.find(p => p.metadata?.canonical_name === canonicalName);
+  const existing = list.data.find(
+    p => p.metadata?.canonical_name === canonicalName
+  );
   if (existing) return existing;
   return await stripe.products.create({
     name: displayName,
@@ -1224,13 +1307,18 @@ async function findOrCreateProduct(canonicalName: string, displayName: string): 
 async function findOrCreatePrice(
   product: Stripe.Product,
   amountCents: number,
-  recurring: "month" | "year" | null,
+  recurring: "month" | "year" | null
 ): Promise<Stripe.Price> {
-  const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+  const prices = await stripe.prices.list({
+    product: product.id,
+    active: true,
+    limit: 100,
+  });
   const interval = recurring;
-  const match = prices.data.find(p =>
-    p.unit_amount === amountCents &&
-    (interval === null ? !p.recurring : p.recurring?.interval === interval),
+  const match = prices.data.find(
+    p =>
+      p.unit_amount === amountCents &&
+      (interval === null ? !p.recurring : p.recurring?.interval === interval)
   );
   if (match) return match;
   return await stripe.prices.create({
@@ -1245,11 +1333,18 @@ async function main() {
   const mappings: Record<string, string> = {};
 
   for (const spec of specs) {
-    const product = await findOrCreateProduct(spec.canonicalName, spec.displayName);
+    const product = await findOrCreateProduct(
+      spec.canonicalName,
+      spec.displayName
+    );
     console.log(`[product] ${spec.canonicalName} -> ${product.id}`);
 
     if (spec.monthlyCents !== undefined) {
-      const monthly = await findOrCreatePrice(product, spec.monthlyCents, "month");
+      const monthly = await findOrCreatePrice(
+        product,
+        spec.monthlyCents,
+        "month"
+      );
       mappings[monthly.id] = spec.planKey;
       console.log(`  monthly  ${monthly.id} ($${spec.monthlyCents / 100})`);
     }
@@ -1313,6 +1408,7 @@ git commit -m "feat(stripe-setup): idempotent product seeder + populate STRIPE_P
 ## Task 9: Delete obsolete files + verify clean
 
 **Files:**
+
 - Delete: `server/stripe-products.ts`
 - Delete: `shared/subscriptionPlans.ts`
 - Possibly delete: `.github-staging/webhooks/stripe.ts` (operator decision)
@@ -1372,6 +1468,7 @@ Expected: Frontend on `http://localhost:5173`, server logs show no errors.
 - [ ] **Step 2: Trigger a B2B Professional checkout (logged-in user required)**
 
 In a browser:
+
 1. Sign in.
 2. Visit `/pricing`.
 3. Click "Subscribe" on the Professional tier.
@@ -1399,6 +1496,7 @@ LIMIT 1;
 ```
 
 Expected:
+
 - `plan = 'professional'`
 - `brand = 'authichain'` (default for localhost)
 - `contract = 'false'`
@@ -1415,6 +1513,7 @@ LIMIT 1;
 ```
 
 Expected:
+
 - `plan = 'professional'`
 - `monthly_quota = 10000` (the new bumped value, NOT 5000)
 - `status = 'active'`
@@ -1442,6 +1541,7 @@ d. Re-run the query from Step 3. Expected: most recent revenue row has `contract
 - [ ] **Step 6: Document any drift in a follow-up issue**
 
 If real outputs diverge from the expected values, file an issue and link this plan. Common drift points:
+
 - `subscription_details` is missing on some Stripe invoice events (older API versions). Webhook fallback should still resolve `brand` from the customer metadata.
 - Quota mismatch (5000 vs 10000) means an existing subscription pre-dates the schema change; archive it.
 
@@ -1458,19 +1558,19 @@ git commit -m "test(pricing): end-to-end smoke verified" --allow-empty
 
 ## Self-review (against the spec)
 
-| Spec requirement | Implemented in |
-|---|---|
-| `shared/pricing.ts` as single source of truth | Task 1 |
-| B2B cluster: $199 / $499 / $999 with quotas 500 / 10K / 25K | Task 1 |
-| QRON cluster: $39 one-time / $49 / $99 monthly | Task 1 |
-| Contract: $2,500 setup + reuse `b2b_professional` recurring | Tasks 1, 6 |
-| Brand attribution via `metadata.brand` | Tasks 2, 3, 4 |
-| Contract origin via `metadata.contract` + `metadata.setup_order_id` | Tasks 2, 3 |
-| Webhook plan detection: lookup table → amount fallback | Task 3 |
-| Pricing page reads from shared, switches by host | Task 7 |
-| Service catalog gains `contract_setup` | Task 6 |
-| 7 Stripe products created idempotently | Task 8 |
-| Delete `server/stripe-products.ts` + `shared/subscriptionPlans.ts` | Task 9 |
-| End-to-end verification | Task 10 |
+| Spec requirement                                                    | Implemented in |
+| ------------------------------------------------------------------- | -------------- |
+| `shared/pricing.ts` as single source of truth                       | Task 1         |
+| B2B cluster: $199 / $499 / $999 with quotas 500 / 10K / 25K         | Task 1         |
+| QRON cluster: $39 one-time / $49 / $99 monthly                      | Task 1         |
+| Contract: $2,500 setup + reuse `b2b_professional` recurring         | Tasks 1, 6     |
+| Brand attribution via `metadata.brand`                              | Tasks 2, 3, 4  |
+| Contract origin via `metadata.contract` + `metadata.setup_order_id` | Tasks 2, 3     |
+| Webhook plan detection: lookup table → amount fallback              | Task 3         |
+| Pricing page reads from shared, switches by host                    | Task 7         |
+| Service catalog gains `contract_setup`                              | Task 6         |
+| 7 Stripe products created idempotently                              | Task 8         |
+| Delete `server/stripe-products.ts` + `shared/subscriptionPlans.ts`  | Task 9         |
+| End-to-end verification                                             | Task 10        |
 
 No spec requirement is unmapped.

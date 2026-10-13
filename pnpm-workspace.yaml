@@ -4,6 +4,7 @@ packages:
   - workers/*
   - worker
   - mcp
+
 allowBuilds:
   '@clerk/shared': true
   agent-browser: false
@@ -14,49 +15,47 @@ allowBuilds:
   unrs-resolver: true
   utf-8-validate: true
   workerd: true
+
 minimumReleaseAgeExclude:
   - miniflare@4.20260701.0
   - wrangler@4.107.0
-# pnpm settings (pnpm 10+ reads overrides from here, not package.json).
-# Scoped security overrides: each selector targets only the vulnerable range,
-# so unaffected versions (e.g. ws@7.x) are left untouched.
+
 overrides:
-  serialize-javascript: 7.0.3
-  # GHSA: deepmerge-ts prototype pollution (transitive via webdriverio; wdio pins ^7).
+  axios@<1.18.0: 1.20.0
+  basic-ftp@<=6.2.0: '>=6.2.1'
+  brace-expansion@<1.1.19: '>=1.1.19'
+  brace-expansion@<1.1.20: '>=1.1.20'
+  brace-expansion@<1.1.21: '>=1.1.21'
+  decode-uri-component@<=0.4.2: '>=0.5.0'
   deepmerge-ts: ^8.0.2
-  # GHSA high: form-data CRLF injection in multipart field/filenames.
-  'form-data@>=4.0.0 <4.0.6': 4.0.6
-  # GHSA high: js-cookie per-instance prototype hijack in assign().
-  'js-cookie@<=3.0.5': 3.0.7
-  # GHSA high: ws memory-exhaustion DoS from tiny fragments (8.x only).
-  # Bumped 2026-09-11 (Blocker Register recuyUrMAPEEwQIr1): 8.18.0 was itself
-  # vulnerable by the time this was re-audited. 8.21.3 dedupes onto a version
-  # already resolved elsewhere in the tree (openai, @solana/*) rather than
-  # introducing a new one.
-  'ws@>=8.0.0 <8.21.0': 8.21.3
-  # GHSA: vite server.fs.deny bypass + NTLMv2 hash disclosure (vitest peer pulls 5.x).
-  'vite@<6.4.3': 6.4.3
-  # GHSA moderate: postcss XSS via unescaped </style> (transitive via next).
-  # Bumped 2026-09-11 (recuyUrMAPEEwQIr1): 8.5.10 was itself vulnerable by the
-  # time this was re-audited. 8.5.26 dedupes onto the root devDependency version.
-  'postcss@<8.5.18': 8.5.26
-  # GHSA high: axios <1.18.0 SSRF/credential-leak on absolute-URL redirects.
-  # Added 2026-09-11 (recuyUrMAPEEwQIr1). 1.20.0 dedupes onto the version
-  # already resolved as a direct dependency and via @sendgrid/mail.
-  'axios@<1.18.0': 1.20.0
-  # GHSA high: js-yaml prototype pollution / code exec on untrusted input,
-  # AND CVE-2026-84375 (high, DoS via unbounded merge-key expansion) which
-  # affects 4.3.1 itself -- caught by re-auditing after landing the 4.3.1
-  # pin below, same day (recuyUrMAPEEwQIr1). 4.3.2 fixes both.
-  'js-yaml@>=4.0.0 <4.3.2': 4.3.2
-  # Runtime floor bumps requested 2026-10-07 (Zac, project thread).
-  # proxy-addr (via express) and fast-uri (via ajv) resolve in range; the
-  # floors stop a future re-resolution from landing back on the old patch.
-  'proxy-addr@<2.0.8': 2.0.8
-  'fast-uri@<3.1.7': 3.1.8
-  # GHSA critical (Dependabot #1901, 2026-10-09 PM-324): shell-quote <1.11.0.
-  'shell-quote@<1.11.0': 1.11.0
-  # sharp: next allows ^0.35.4, but miniflare pins exactly 0.35.4, so a
-  # lockfile update alone leaves two copies. Patch-level, same libvips ABI.
-  'sharp@>=0.35.0 <0.35.5': 0.35.5
+  esbuild@<=0.24.2: '>=0.25.0'
+  fast-uri@<3.1.7: 3.1.8
+  form-data@>=4.0.0 <4.0.6: 4.0.6
+  js-cookie@<=3.0.5: 3.0.7
+  js-yaml@>=4.0.0 <4.3.2: 4.3.2
+  next@>=15.0.0 <15.5.27: '>=15.5.27'
+  next@>=16.0.0 <16.3.8: '>=16.3.8'
+  next@>=16.3.0 <16.3.8: '>=16.3.8'
+  postcss@<8.5.18: 8.5.26
+  proxy-addr@<2.0.8: 2.0.8
+  qs@>=2.2.5 <6.16.0: '>=6.16.0'
+  qs@>=6.14.2 <=6.15.3: '>=6.16.0'
+  serialize-javascript: 7.0.3
+  serialize-javascript@>=5.0.0 <7.0.5: '>=7.0.5'
+  sharp@>=0.35.0 <0.35.5: 0.35.5
+  shell-quote@<1.11.0: 1.11.0
+  source-map-js@>=1.0.0 <1.2.2: '>=1.2.2'
+  tmp@>=0.2.6 <0.2.7: '>=0.2.7'
+  toml@<4.1.2: '>=4.1.2'
+  toml@<4.2.0: '>=4.2.0'
+  undici@>=7.0.0 <7.29.1: '>=7.29.1'
+  undici@>=7.1.0 <7.29.1: '>=7.29.1'
+  undici@>=7.11.0 <7.29.1: '>=7.29.1'
+  undici@>=7.15.0 <7.29.1: '>=7.29.1'
+  undici@>=7.24.1 <7.29.1: '>=7.29.1'
+  undici@>=7.28.0 <7.29.1: '>=7.29.1'
+  uuid@<11.1.1: '>=11.1.1'
+  vite@<6.4.3: 6.4.3
+  ws@>=8.0.0 <8.21.0: 8.21.3
+
 verifyDepsBeforeRun: false

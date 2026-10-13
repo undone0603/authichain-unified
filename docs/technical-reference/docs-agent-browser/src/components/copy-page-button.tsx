@@ -11,7 +11,7 @@ export function CopyPageButton() {
     setState("loading");
     try {
       const response = await fetch(
-        `/api/docs-markdown?path=${encodeURIComponent(pathname)}`,
+        `/api/docs-markdown?path=${encodeURIComponent(pathname)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch markdown");

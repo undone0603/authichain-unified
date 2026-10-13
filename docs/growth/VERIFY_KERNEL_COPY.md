@@ -17,6 +17,7 @@ H1: Check the record. Not the marketing.
 Subhead: Paste a seal ID, GTIN + serial, or scan the mark. You get signed evidence and a verdict — not a 92/100 score.
 
 Proof (live only):
+
 - Ed25519 JWKS at https://authichain.com/.well-known/jwks.json
 - Open Verification Protocol v0.1 draft — /protocol
 - Certificate contract 0x4da4D2675e52374639C9c954f4f653887A9972BE on Polygon

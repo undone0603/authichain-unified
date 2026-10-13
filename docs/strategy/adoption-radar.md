@@ -75,7 +75,7 @@ this search," not "did not happen."
 - **Offline verification with no server dependency** — still not something the DPP Registry,
   EPCIS, or Spherity's VRS-based flow claim; all three require a live registry or router call.
 - **Three verdicts, no score** — sharpened, not weakened, by this week's finding: W3C's own
-  Confidence Method is explicitly a *confidence/scoring* extension point layered on top of VCs.
+  Confidence Method is explicitly a _confidence/scoring_ extension point layered on top of VCs.
   That is a reason to say plainly, not quietly, that our verdict layer is deliberately narrower
   than what the working group is now standardizing — see "Spec gaps" below.
 - **Adversarial conformance suite validated against deliberately broken implementations** — no
@@ -236,7 +236,7 @@ finding below means "not found by this search," not "did not happen."
   remains the plausible mechanism.
 - **Signatures prove authorship, not truth** — unchanged, structural.
 - **New this week: no crypto-agility or post-quantum story.** `SPEC.md` §2 names Ed25519
-  (RFC 8032) as *the* signature suite, singular, with no versioning or algorithm-negotiation
+  (RFC 8032) as _the_ signature suite, singular, with no versioning or algorithm-negotiation
   mechanism. W3C is now actively standardizing both a forward path (Quantum-Resistant
   Cryptosuites) and a retrofit path (Forgery Defense) for exactly the class of signature our
   spec mandates. This isn't an urgent problem — "early 2030s" is the risk window cited — but a
@@ -478,7 +478,7 @@ search," not "did not happen."
   and the GS1 Web Vocabulary, emerging agentic-commerce protocols (**MCP, UCP, ACP** named
   explicitly), product discovery, connected packaging, trusted payments, verifiable credentials,
   and liability when an agent transacts on a person's behalf. This is the first item this radar
-  has found that sits at the exact intersection of *both* halves of our strategy at once: the two
+  has found that sits at the exact intersection of _both_ halves of our strategy at once: the two
   standards our spec aligns to (W3C VC, GS1 Digital Link) convening jointly, on an agenda that
   names agent-to-agent commerce protocols alongside verifiable credentials — i.e., Move 3 (own the
   spec) and Move 2 (agent-payable verification) are the same room this week. No minutes or
@@ -529,7 +529,7 @@ search," not "did not happen."
 ### Where we are genuinely differentiated
 
 - **Offline verification with no server dependency** — unchanged; the EU battery-passport
-  access-tiering story this week is a live counter-example of a *server-mediated, permissioned*
+  access-tiering story this week is a live counter-example of a _server-mediated, permissioned_
   access model for provenance-adjacent data, which sharpens rather than weakens the contrast.
 - **Three verdicts, no score** — unchanged from the 2026-08-26 correction.
 - **Adversarial conformance suite validated against deliberately broken implementations** — the
@@ -554,7 +554,7 @@ search," not "did not happen."
   battery-passport rules are landing on three distinct access tiers for passport data generally,
   and the Commission is actively defining who counts as a "legitimate interest" third party for
   the non-public tier. Our spec doesn't currently say anything about scope here — i.e., whether
-  "no-auth for everything" is a claim about the *verification record specifically* (narrower than
+  "no-auth for everything" is a claim about the _verification record specifically_ (narrower than
   a full product passport, and thus fine to keep fully public) or a position on product-data access
   generally (which would conflict with what regulators are actually building). Silence reads as
   the latter by default. See "Spec gaps."
@@ -658,7 +658,7 @@ individually. Absence of a finding below means "not found by this search," not "
   available via search summary than any prior week, but the primary text is still unreadable
   here.** Per those summaries: the paper is described as the first formal-methods analysis of
   C2PA's core protocols, finding that claim generators and validators achieve strong agreement on
-  a claim's *assertions* but not on its *trusted timestamp* — a specific, named protocol gap, not
+  a claim's _assertions_ but not on its _trusted timestamp_ — a specific, named protocol gap, not
   a vague "revocation is weak" claim. It also reports that C2PA v2.3 (January 2026) incorporated
   some of the researchers' suggested fixes, while v2.4 (April 2026) is reported to address none of
   the remaining concerns, and states the paper's own conclusion that C2PA "should not yet be
@@ -702,8 +702,8 @@ individually. Absence of a finding below means "not found by this search," not "
 - **No bridging to the EU's ESDC/ISO-IEC-20248 vocabulary** — unchanged; FprEN 18246 is reported
   closer (formal vote) but still not published.
 - **No access-tiering model** — unchanged from 2026-09-09's finding. This week's EU DPP Registry
-  identifier-format requirement is a confirmation of compatibility at the *identifier* layer, not
-  a resolution of the access-tiering gap at the *record* layer — those are separate questions and
+  identifier-format requirement is a confirmation of compatibility at the _identifier_ layer, not
+  a resolution of the access-tiering gap at the _record_ layer — those are separate questions and
   this week's finding only closes the first one.
 
 ### Named awareness targets
@@ -772,14 +772,14 @@ means "not found by this search," not "did not happen."
   ([UNCTAD](https://unctad.org/news/unlocking-transparency-promise-un-transparency-protocol-global-trade),
   [UNECE spec index](https://untp.unece.org/docs/specification/), fetch of the primary site blocked
   this session, read via search-result summary). Per search summaries, UNTP mandates **W3C VC Data
-  Model 2.0 using the JSON-LD Compacted Document Form with the W3C VC JOSE/COSE *enveloping* proof
+  Model 2.0 using the JSON-LD Compacted Document Form with the W3C VC JOSE/COSE _enveloping_ proof
   mechanism** — not the embedded Data Integrity proof (`Ed25519Signature2020`) our spec uses. That
   is a real, specific divergence between two VC-based provenance specs solving the same class of
   problem: UNTP wraps the credential in a signed JWT/JOSE envelope, ours signs a JCS-canonicalized
   (RFC 8785) JSON document directly per §3.2. Whether the two are cross-verifiable, or only
   cross-verifiable with extra tooling, was not established this week — no primary UNTP text was
-  read, so treat this as a confirmed *difference in mechanism*, not yet a confirmed *interop
-  problem*. UNTP v1.0 was reported, as of late summer, to be targeting release "by 1 September
+  read, so treat this as a confirmed _difference in mechanism_, not yet a confirmed _interop
+  problem_. UNTP v1.0 was reported, as of late summer, to be targeting release "by 1 September
   2026," "suitable for pre-production pilot implementations"; no independent confirmation was found
   this week that v1.0 actually shipped on that date, so treat it as targeted, not confirmed
   shipped. Named backers/implementers found this week: **Transmute** — already an adjacent
@@ -860,8 +860,8 @@ means "not found by this search," not "did not happen."
 
 - **Offline verification with no server dependency** — unchanged, and UNTP's JOSE-enveloping-proof
   choice doesn't itself change this comparison (a JOSE-signed VC can also be checked with just a
-  public key), but it's the first adjacent spec found using a *different* proof mechanism for the
-  *same* data model, which is a new and more precise kind of divergence than "they need a server
+  public key), but it's the first adjacent spec found using a _different_ proof mechanism for the
+  _same_ data model, which is a new and more precise kind of divergence than "they need a server
   and we don't."
 - **Three verdicts, no score** — unchanged; still can't be sharpened against Confidence Method
   while its status stays unconfirmed.
@@ -886,7 +886,7 @@ means "not found by this search," not "did not happen."
   the JOSE/COSE enveloping-proof form that W3C VC 2.0 also permits and that UNTP has now chosen.
   Two specs both claiming "we implement W3C VC 2.0" while using incompatible proof mechanisms is
   exactly the kind of silent divergence our own conformance suite's canonicalization vectors exist
-  to catch *within* one proof mechanism — this is the same failure mode one level up, *between*
+  to catch _within_ one proof mechanism — this is the same failure mode one level up, _between_
   proof mechanisms, and today nothing in `SPEC.md` even names it as a choice that was made.
 
 ### Named awareness targets
@@ -953,7 +953,7 @@ it. Absence of a finding below means "not found by this search," not "did not ha
   suites, conformance criteria, and trust-anchor requirements, and it names pharma, automotive,
   food & beverage, critical minerals, and luxury goods as target verticals. This radar has logged
   five weeks of W3C VC Working Group activity without once finding a venue this directly aimed at
-  *certifying* supply-chain verification implementations — which is exactly the problem
+  _certifying_ supply-chain verification implementations — which is exactly the problem
   `protocol/conformance/README.md` already ships a solution for. It's a Community Group (open
   participation, no membership fee, anyone can join or file input) and it's seven months old, not
   a mature venue with an established roster yet — this is early, not a place we're already
@@ -1203,8 +1203,7 @@ finding means "not found by this search," not "did not happen."
 
 ### What actually moved
 
-- **EN 18246 now has a publication date from a standards-body catalogue listing: 30 September
-  2026.** Search results for
+- **EN 18246 now has a publication date from a standards-body catalogue listing: 30 September 2026.** Search results for
   [BSI's catalogue entry](https://knowledge.bsigroup.com/products/digital-product-passport-data-authentication-reliability-and-integrity)
   list "BS EN 18246:2026 — Digital product passport. Data authentication, reliability and
   integrity," published 30 Sep 2026, scope: a framework for trust and interoperability via a

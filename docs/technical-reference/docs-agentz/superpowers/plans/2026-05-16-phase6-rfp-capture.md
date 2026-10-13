@@ -5,6 +5,7 @@
 **Goal:** Wire `authichain_rfp_capture` (Phase 6 of `power_launch`) to real SAM.gov opportunities from `gov_pursue_list.csv`, draft every qualifying opportunity instead of only the top one, and track each through a real `drafted | reviewed | submitted | won | lost` ledger.
 
 **Architecture:**
+
 - A new module `agentz.core.grants_pipeline` owns CSV loading and the pipeline ledger (JSON file at `agentz/logs/grants/pipeline_ledger.json`). It is the single source of truth for "what opportunities exist and where each one stands."
 - `agentz.core.grants.scout_grant_opportunities` becomes a thin wrapper that delegates to the pipeline loader and stops returning hardcoded mocks. The browser-use scout call (which today runs and then has its output thrown away) is removed; the existing CSV is the input.
 - `authichain_rfp_capture.run` loops over every qualified opportunity, drafts each, and records `drafted` in the ledger. Re-runs are idempotent — opportunities already in `drafted` (or later) status are skipped.
@@ -28,8 +29,9 @@
 ## Task 1: Pipeline module — CSV loader
 
 **Files:**
+
 - Create: `agentz/core/grants_pipeline.py`
-- Test:  `tests/test_grants_pipeline.py`
+- Test: `tests/test_grants_pipeline.py`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -116,8 +118,9 @@ git commit -m "feat(phase6): add grants_pipeline.load_pursue_list with int fit_s
 ## Task 2: Pipeline module — qualified-opportunity filter
 
 **Files:**
+
 - Modify: `agentz/core/grants_pipeline.py`
-- Test:  `tests/test_grants_pipeline.py`
+- Test: `tests/test_grants_pipeline.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -238,8 +241,9 @@ git commit -m "feat(phase6): qualified_opportunities filter by fit_score + futur
 ## Task 3: Pipeline module — ledger read/write/update
 
 **Files:**
+
 - Modify: `agentz/core/grants_pipeline.py`
-- Test:  `tests/test_grants_pipeline.py`
+- Test: `tests/test_grants_pipeline.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -365,8 +369,9 @@ git commit -m "feat(phase6): JSON-backed pipeline ledger with status history"
 ## Task 4: Strip mocks from `agentz.core.grants.scout_grant_opportunities`
 
 **Files:**
+
 - Modify: `agentz/core/grants.py:16-45`
-- Test:  `tests/test_grants_pipeline.py`
+- Test: `tests/test_grants_pipeline.py`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -420,7 +425,7 @@ async def scout_grant_opportunities(ctx: Optional[ExecutionContext] = None) -> L
     return qualified_opportunities()
 ```
 
-Also update the imports at the top of `agentz/core/grants.py` — remove the now-unused `browser_use`, `Controller`, `attach_interceptor`, `run_with_healing`, `get_llm` references *only* in `scout_grant_opportunities`; keep `get_llm` for `draft_federal_proposal`.
+Also update the imports at the top of `agentz/core/grants.py` — remove the now-unused `browser_use`, `Controller`, `attach_interceptor`, `run_with_healing`, `get_llm` references _only_ in `scout_grant_opportunities`; keep `get_llm` for `draft_federal_proposal`.
 
 Replace the existing `from typing import Dict, Any, List, Optional` line if needed so `Any` is still imported (it already is).
 
@@ -446,6 +451,7 @@ git commit -m "refactor(phase6): scout_grant_opportunities delegates to pipeline
 ## Task 5: Loop drafts in `authichain_rfp_capture`, write ledger entries
 
 **Files:**
+
 - Modify: `agentz/workflows/handlers/authichain_rfp_capture.py`
 - Create: `tests/test_phase6_rfp_capture.py`
 
@@ -615,6 +621,7 @@ def run(ctx: ExecutionContext) -> str:
 ```
 
 Notes for the implementer:
+
 - `draft_federal_proposal` accepts `Dict[str, str]` today but our rows include an `int` `fit_score` — that's fine, the function only reads `title`, `agency`, `deadline`.
 - The `lambda o=opp:` capture is deliberate (loop-binding).
 
@@ -640,8 +647,9 @@ git commit -m "feat(phase6): loop draft all qualified opportunities, record draf
 ## Task 6: Converge `govchain_proposal` onto the shared pipeline
 
 **Files:**
+
 - Modify: `agentz/workflows/handlers/govchain_proposal.py`
-- Test:  `tests/test_phase6_rfp_capture.py`
+- Test: `tests/test_phase6_rfp_capture.py`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -799,6 +807,7 @@ Expected: All previously-passing tests still pass. Tests that require live infra
 Run: `python -m agentz.cli run authichain_rfp_capture --mode dry-run`
 
 Expected output contains:
+
 - `INITIALIZING FEDERAL RFP CAPTURE MACHINE`
 - A `Found N qualified opportunities.` line where N matches `qualified_opportunities()` against the real `gov_pursue_list.csv` (≥1 given the present file)
 - No `Drafting Phase 1 response for: Supply Chain Zero-Trust` (the old mock)

@@ -7,14 +7,14 @@ Cost: $0 extra (SuperGrok quota). Work removed if briefs are used: ~5h/week of i
 
 ## Live Grok automations
 
-| Bot | When | May do | Must not |
-|---|---|---|---|
-| AuthiChain ship gate | 07:00 ET daily | Grade CI / Workers / PRs. HOLD if unknown. | Merge, deploy, rerun, print secrets |
-| AuthiChain revenue watch | 07:30 ET daily | Stripe MRR, charges, webhook proof watch | Change prices, refund, email buyers |
-| Daily X radar | 08:30 ET daily | Draft replies + 1 original post | Post as @Undone0603 |
-| Task Extractor | 17:00 ET daily | P0–P2 list from Gmail / Notion / GitHub | Invent metrics, spend SaaS |
-| First-dollar Stripe watch | Gmail `@stripe.com` | Label SELF-TEST vs FIRST-DOLLAR-CANDIDATE | Refund, send dunning |
-| CI red on authichain-unified | GitHub workflow failure on repo `1168058941` | Name the failed job vs known-red Workers Builds | Rerun / merge |
+| Bot                          | When                                         | May do                                          | Must not                            |
+| ---------------------------- | -------------------------------------------- | ----------------------------------------------- | ----------------------------------- |
+| AuthiChain ship gate         | 07:00 ET daily                               | Grade CI / Workers / PRs. HOLD if unknown.      | Merge, deploy, rerun, print secrets |
+| AuthiChain revenue watch     | 07:30 ET daily                               | Stripe MRR, charges, webhook proof watch        | Change prices, refund, email buyers |
+| Daily X radar                | 08:30 ET daily                               | Draft replies + 1 original post                 | Post as @Undone0603                 |
+| Task Extractor               | 17:00 ET daily                               | P0–P2 list from Gmail / Notion / GitHub         | Invent metrics, spend SaaS          |
+| First-dollar Stripe watch    | Gmail `@stripe.com`                          | Label SELF-TEST vs FIRST-DOLLAR-CANDIDATE       | Refund, send dunning                |
+| CI red on authichain-unified | GitHub workflow failure on repo `1168058941` | Name the failed job vs known-red Workers Builds | Rerun / merge                       |
 
 ## Paused on purpose
 

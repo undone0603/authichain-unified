@@ -1,32 +1,28 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
-import { getEnvStatus } from "./actions/browse";
-import type { EnvStatus } from "./actions/browse";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import { ALLOWED_URLS } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { getEnvStatus } from './actions/browse';
+import type { EnvStatus } from './actions/browse';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { ALLOWED_URLS } from '@/lib/constants';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Monitor, CircleX, Sun, Moon, Check } from "lucide-react";
+} from '@/components/ui/select';
+import { Loader2, Monitor, CircleX, Sun, Moon, Check } from 'lucide-react';
 
-const MOBILE_QUERY = "(max-width: 767px)";
+const MOBILE_QUERY = '(max-width: 767px)';
 const subscribe = (cb: () => void) => {
   const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", cb);
-  return () => mql.removeEventListener("change", cb);
+  mql.addEventListener('change', cb);
+  return () => mql.removeEventListener('change', cb);
 };
 const getMobileSnapshot = () => window.matchMedia(MOBILE_QUERY).matches;
 const getServerSnapshot = () => false;
@@ -36,34 +32,33 @@ function useIsMobile() {
 }
 
 function useTheme() {
-  const [theme, setThemeState] = useState<"light" | "dark">("light");
+  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
+    const stored = localStorage.getItem('theme');
     const initial =
-      stored === "dark" ||
-      (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)
-        ? "dark"
-        : "light";
+      stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ? 'dark'
+        : 'light';
     setThemeState(initial);
-    document.documentElement.classList.toggle("dark", initial === "dark");
+    document.documentElement.classList.toggle('dark', initial === 'dark');
   }, []);
 
   const toggle = () => {
-    const next = theme === "dark" ? "light" : "dark";
+    const next = theme === 'dark' ? 'light' : 'dark';
     setThemeState(next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    localStorage.setItem('theme', next);
   };
 
   return { theme, toggle };
 }
 
-type Action = "screenshot" | "snapshot";
+type Action = 'screenshot' | 'snapshot';
 
 type StepInfo = {
   step: string;
-  status: "running" | "done" | "error";
+  status: 'running' | 'done' | 'error';
   elapsed?: number;
 };
 
@@ -76,10 +71,13 @@ type BrowseResult = {
 };
 
 function formatError(raw: string): string {
-  let cleaned = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  let cleaned = raw
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const match = cleaned.match(/(?:error|Error)[:\s]*(.{1,200})/);
   if (match) cleaned = match[1].trim();
-  if (cleaned.length > 300) cleaned = cleaned.slice(0, 300) + "...";
+  if (cleaned.length > 300) cleaned = cleaned.slice(0, 300) + '...';
   return cleaned || raw.slice(0, 300);
 }
 
@@ -103,8 +101,8 @@ function SegmentedControl<T extends string>({
             flex-1 px-3 py-1.5 text-[13px] font-medium rounded-md transition-all cursor-pointer
             ${
               value === opt.value
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }
           `}
         >
@@ -119,9 +117,9 @@ function StepIndicator({ step }: { step: StepInfo }) {
   return (
     <div className="flex items-center gap-2.5 py-1">
       <div className="size-4 flex items-center justify-center shrink-0">
-        {step.status === "running" ? (
+        {step.status === 'running' ? (
           <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-        ) : step.status === "done" ? (
+        ) : step.status === 'done' ? (
           <Check className="size-3.5 text-emerald-500" />
         ) : (
           <CircleX className="size-3.5 text-destructive" />
@@ -129,16 +127,16 @@ function StepIndicator({ step }: { step: StepInfo }) {
       </div>
       <span
         className={`text-[13px] ${
-          step.status === "running"
-            ? "text-foreground"
-            : step.status === "done"
-              ? "text-muted-foreground"
-              : "text-destructive"
+          step.status === 'running'
+            ? 'text-foreground'
+            : step.status === 'done'
+              ? 'text-muted-foreground'
+              : 'text-destructive'
         }`}
       >
         {step.step}
       </span>
-      {step.elapsed != null && step.status !== "running" && (
+      {step.elapsed != null && step.status !== 'running' && (
         <span className="text-[11px] text-muted-foreground/60 tabular-nums ml-auto">
           {(step.elapsed / 1000).toFixed(1)}s
         </span>
@@ -176,11 +174,11 @@ function ErrorDisplay({ error }: { error: string }) {
 async function streamBrowse(
   url: string,
   action: Action,
-  onStep: (step: StepInfo) => void,
+  onStep: (step: StepInfo) => void
 ): Promise<BrowseResult> {
-  const res = await fetch("/api/browse", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const res = await fetch('/api/browse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url, action }),
   });
 
@@ -191,12 +189,12 @@ async function streamBrowse(
 
   const reader = res.body?.getReader();
   if (!reader) {
-    return { ok: false, error: "No response stream" };
+    return { ok: false, error: 'No response stream' };
   }
 
   const decoder = new TextDecoder();
-  let buffer = "";
-  let result: BrowseResult = { ok: false, error: "No result received" };
+  let buffer = '';
+  let result: BrowseResult = { ok: false, error: 'No result received' };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -204,8 +202,8 @@ async function streamBrowse(
 
     buffer += decoder.decode(value, { stream: true });
 
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() || "";
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
 
     for (const part of parts) {
       const eventMatch = part.match(/^event: (\w+)\ndata: ([\s\S]+)$/);
@@ -214,9 +212,9 @@ async function streamBrowse(
       const [, event, data] = eventMatch;
       try {
         const parsed = JSON.parse(data);
-        if (event === "step") {
+        if (event === 'step') {
           onStep(parsed as StepInfo);
-        } else if (event === "result") {
+        } else if (event === 'result') {
           result = parsed as BrowseResult;
         }
       } catch {
@@ -233,7 +231,7 @@ export default function Home() {
   const { theme, toggle: toggleTheme } = useTheme();
   const [url, setUrl] = useState<string>(ALLOWED_URLS[0]);
   const [loading, setLoading] = useState(false);
-  const [action, setAction] = useState<Action>("screenshot");
+  const [action, setAction] = useState<Action>('screenshot');
   const [result, setResult] = useState<BrowseResult | null>(null);
   const [steps, setSteps] = useState<StepInfo[]>([]);
   const [envStatus, setEnvStatus] = useState<EnvStatus | null>(null);
@@ -276,7 +274,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    stepsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    stepsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [steps]);
 
   const controlsForm = (
@@ -301,7 +299,7 @@ export default function Home() {
           <SelectContent>
             {ALLOWED_URLS.map((u) => (
               <SelectItem key={u} value={u}>
-                {u.replace("https://", "")}
+                {u.replace('https://', '')}
               </SelectItem>
             ))}
           </SelectContent>
@@ -309,9 +307,7 @@ export default function Home() {
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground uppercase tracking-wider">
-          Action
-        </Label>
+        <Label className="text-[11px] text-muted-foreground uppercase tracking-wider">Action</Label>
         <SegmentedControl<Action>
           value={action}
           onChange={(v) => {
@@ -319,32 +315,30 @@ export default function Home() {
             clearResults();
           }}
           options={[
-            { value: "screenshot", label: "Screenshot" },
-            { value: "snapshot", label: "Snapshot" },
+            { value: 'screenshot', label: 'Screenshot' },
+            { value: 'snapshot', label: 'Snapshot' },
           ]}
         />
         <p className="text-[11px] text-muted-foreground">
-          {action === "screenshot"
-            ? "Captures a full-page PNG image"
-            : "Returns the accessibility tree"}
+          {action === 'screenshot'
+            ? 'Captures a full-page PNG image'
+            : 'Returns the accessibility tree'}
         </p>
       </div>
 
       {envStatus && !envStatus.sandbox.hasSnapshot && (
         <Alert>
-          <AlertTitle className="text-[12px]">
-            Sandbox snapshot not configured
-          </AlertTitle>
+          <AlertTitle className="text-[12px]">Sandbox snapshot not configured</AlertTitle>
           <AlertDescription className="text-[11px]">
-            Without a sandbox snapshot, the VM installs agent-browser +
-            Chromium on every request (~30s). Create one with{" "}
+            Without a sandbox snapshot, the VM installs agent-browser + Chromium on every request
+            (~30s). Create one with{' '}
             <code className="text-[10px] bg-muted px-1 py-0.5 rounded">
               npx tsx scripts/create-snapshot.ts
-            </code>{" "}
-            and set{" "}
+            </code>{' '}
+            and set{' '}
             <code className="text-[10px] bg-muted px-1 py-0.5 rounded">
               AGENT_BROWSER_SNAPSHOT_ID
-            </code>{" "}
+            </code>{' '}
             for sub-second startup.
           </AlertDescription>
         </Alert>
@@ -352,7 +346,7 @@ export default function Home() {
 
       <Button type="submit" disabled={loading} className="w-full" size="lg">
         {loading && <Loader2 className="size-4 animate-spin" />}
-        {loading ? "Running..." : "Run"}
+        {loading ? 'Running...' : 'Run'}
       </Button>
     </form>
   );
@@ -376,13 +370,8 @@ export default function Home() {
       {result.ok && result.screenshot && (
         <div className="w-full max-w-3xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold truncate mr-3">
-              {result.title}
-            </h2>
-            <Badge
-              variant="outline"
-              className="font-mono text-[11px] shrink-0"
-            >
+            <h2 className="text-sm font-semibold truncate mr-3">{result.title}</h2>
+            <Badge variant="outline" className="font-mono text-[11px] shrink-0">
               screenshot
             </Badge>
           </div>
@@ -409,13 +398,8 @@ export default function Home() {
       {result.ok && result.snapshot && (
         <div className="w-full max-w-3xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold truncate mr-3">
-              {result.title}
-            </h2>
-            <Badge
-              variant="outline"
-              className="font-mono text-[11px] shrink-0"
-            >
+            <h2 className="text-sm font-semibold truncate mr-3">{result.title}</h2>
+            <Badge variant="outline" className="font-mono text-[11px] shrink-0">
               snapshot
             </Badge>
           </div>
@@ -437,7 +421,7 @@ export default function Home() {
 
       {!result.ok && (
         <div className="w-full max-w-2xl space-y-4">
-          <ErrorDisplay error={result.error ?? "Unknown error"} />
+          <ErrorDisplay error={result.error ?? 'Unknown error'} />
           {steps.length > 0 && (
             <div className="space-y-0.5">
               {steps.map((s, i) => (
@@ -461,9 +445,7 @@ export default function Home() {
       <header className="border-b border-border shrink-0">
         <div className="px-4 md:px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold tracking-tight">
-              agent-browser
-            </span>
+            <span className="text-sm font-semibold tracking-tight">agent-browser</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -472,22 +454,14 @@ export default function Home() {
               className="size-8 inline-flex items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               aria-label="Toggle theme"
             >
-              {theme === "dark" ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4" />
-              )}
+              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
             <a
               href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fagent-browser%2Ftree%2Fmain%2Fexamples%2Fenvironments&project-name=agent-browser-environments&repository-name=agent-browser-environments"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <img
-                src="https://vercel.com/button"
-                alt="Deploy with Vercel"
-                className="h-8"
-              />
+              <img src="https://vercel.com/button" alt="Deploy with Vercel" className="h-8" />
             </a>
           </div>
         </div>
@@ -507,9 +481,7 @@ export default function Home() {
           <ResizableHandle withHandle />
 
           <ResizablePanel defaultSize="70%">
-            <main className="h-full overflow-auto bg-surface">
-              {resultContent}
-            </main>
+            <main className="h-full overflow-auto bg-surface">{resultContent}</main>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}

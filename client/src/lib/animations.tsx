@@ -21,7 +21,7 @@ export function useReveal(options?: { threshold?: number; delay?: number }) {
           io.unobserve(el);
         }
       },
-      { threshold: options?.threshold ?? 0.12 },
+      { threshold: options?.threshold ?? 0.12 }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -73,9 +73,12 @@ export function useCounter(target: number, duration = 2000) {
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) { animate(); io.unobserve(el); }
+        if (e.isIntersecting) {
+          animate();
+          io.unobserve(el);
+        }
       },
-      { threshold: 0.3 },
+      { threshold: 0.3 }
     );
     io.observe(el);
     return () => io.disconnect();

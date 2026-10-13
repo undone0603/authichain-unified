@@ -72,15 +72,17 @@ export async function mergeAssets({ spaDir, mktDir, outDir }) {
   // 3. Copy the marketing manifest to the merged root explicitly.
   const manifestSrc = path.join(mktDir, "marketing-manifest.json");
   if (fs.existsSync(manifestSrc)) {
-    await fsp.copyFile(manifestSrc, path.join(outDir, "marketing-manifest.json"));
+    await fsp.copyFile(
+      manifestSrc,
+      path.join(outDir, "marketing-manifest.json")
+    );
   }
 }
 
 // CLI entry point: merge the real `dist/public` (Vite SPA) and
 // `dist/marketing` (Next marketing snapshot) build outputs into `dist/site`.
 const isMain =
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
   const spaDir = "dist/public";

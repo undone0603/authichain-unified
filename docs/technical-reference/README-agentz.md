@@ -25,15 +25,18 @@ The QRON platform operates as a unified codebase serving four distinct branded e
 - **strainchain.io**: Industrial Provenance & Digital Product Passports (DPP).
 
 ### Routing Logic
+
 Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
 
 ### Tech Stack
+
 - **Framework**: [Next.js](https://nextjs.org) (App Router)
 - **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL
 - **Edge Runtime**: Cloudflare Workers
 - **Styling**: Tailwind CSS
 
 ### Getting Started (Frontend)
+
 1. **Setup Environment**: `cp .env.example .env`
 2. **Install Dependencies**: `npm install`
 3. **Run Development Server**: `npm run dev`
@@ -45,12 +48,14 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 The `agentz/` directory contains the control-plane layer for autonomous operational workflows, providing declarative, dependency-aware execution.
 
 ### Key Features
+
 - **Workflow Registry**: Centralized declaration of operational tasks in YAML.
 - **Operational Modes**: `dry-run` (validation), `confirm` (interactive), and `auto` (autonomous).
 - **Dependency Resolution**: Automated ordering of prerequisite tasks.
 - **Audit Logging**: Comprehensive run history in `agentz/runs.jsonl`.
 
 ### Usage (Python Agents)
+
 ```powershell
 # Inspect registered workflows
 python -m agentz.cli list
@@ -74,7 +79,9 @@ python -m agentz.cli run --all --revenue-only --mode auto
 ## ⚖️ Legal & Intellectual Property
 
 ### Licensing
+
 This project is licensed under the **AuthiChain Proprietary License**. See `LICENSE.md` for full terms. Unauthorized reproduction, distribution, or reverse engineering of the AuthiChain Protocol or its multi-domain routing architecture is strictly prohibited.
 
 ### Copyright
+
 Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.

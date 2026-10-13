@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migrationSql = `
 -- Add fields to leads table
@@ -69,9 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_reply_sequences_scheduled ON reply_sequences(next
 async function run() {
   try {
     await sql.unsafe(migrationSql);
-    console.log('Migration applied successfully');
+    console.log("Migration applied successfully");
   } catch (err) {
-    console.error('Error applying migration:', err.message);
+    console.error("Error applying migration:", err.message);
   } finally {
     process.exit();
   }

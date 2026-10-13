@@ -66,13 +66,16 @@ authichain-unified/
 ## Components
 
 ### 1. Imports under `apps/`
+
 Copy each sibling excluding `node_modules/`, `.git/`, build outputs (`dist/`,
 `.next/`, `*.tsbuildinfo`), logs, venvs, and any `.env*`/key/credential files.
 Secret-scan (grep for `sk_live`, `whsec_`, `AKIA`, `-----BEGIN`, `api_key`-shaped
 literals) before staging each import.
 
 ### 2. Salvage from stale `agentz/` checkout
+
 Port into current main, adapting to today's schema/structure:
+
 - `server/routers/reputation.ts` + `server/reputation.test.ts` (+ router wiring)
 - `supabase/migrations/00002_create_reputation_tables.sql` (renumber to next free slot)
 - `client/src/pages/OpsDashboard.tsx` (+ route registration)
@@ -82,26 +85,30 @@ Port into current main, adapting to today's schema/structure:
   real changes that still apply
 - Docs: `docs/decoupling.md`, `docs/config-standardization.md`,
   `docs/platform-robustness.md`, `MONUMENTAL_RELEASE.md`/`WORKSPACE.md` → `docs/strategy/`
-Migration file is committed but NOT run against live Supabase (schema changes to
-prod need explicit owner action, consistent with June policy).
-`pnpm check` must remain green after porting; reputation tests must pass.
+  Migration file is committed but NOT run against live Supabase (schema changes to
+  prod need explicit owner action, consistent with June policy).
+  `pnpm check` must remain green after porting; reputation tests must pass.
 
 ### 3. Root sweep (reference-checked)
-For each loose root `*.js/*.cjs/*.sh` (~40 files: seed-*, verify-*, check-*,
-fix-*, *-migration.js, run-sql.cjs, setup-*, launch-*, stress-test-*, …):
+
+For each loose root `*.js/*.cjs/*.sh` (~40 files: seed-_, verify-_, check-_,
+fix-_, _-migration.js, run-sql.cjs, setup-_, launch-_, stress-test-_, …):
 grep package.json, `.github/workflows/`, and source for references.
+
 - Unreferenced → `scripts/ops/`
 - Referenced → stays, or moves with the reference updated in the same commit
-Loose strategy/report `*.md` (~25 files: REVENUE_STRATEGY.md, grant/proposal docs,
-SERIES_A_*, LAUNCH_CHECKLIST.md, …) → `docs/strategy/`. `CLAUDE.md`, `AGENTS.md`,
-`GEMINI.md`, `README.md`, `SECURITY.md`, `LICENSE.md`, `START_HERE.md` stay at root.
-Build/config files at root are out of scope for the sweep.
+  Loose strategy/report `*.md` (~25 files: REVENUE_STRATEGY.md, grant/proposal docs,
+  SERIES_A_*, LAUNCH_CHECKLIST.md, …) → `docs/strategy/`. `CLAUDE.md`, `AGENTS.md`,
+  `GEMINI.md`, `README.md`, `SECURITY.md`, `LICENSE.md`, `START_HERE.md` stay at root.
+  Build/config files at root are out of scope for the sweep.
 
 ### 4. `docs/NETWORK.md`
+
 Estate map: every app/site/service/worker; where it deploys (Vercel project,
 CF worker, domain); which repo folder owns it; deploy mechanics pointers.
 
 ### 5. Home-dir cleanup (non-destructive)
+
 After each import is committed: rename the source folder to `_absorbed-<name>`.
 Owner deletes at leisure. `agentz_backup/` is only renamed and flagged — its key
 files need owner review. The stale `agentz/` checkout is renamed only after

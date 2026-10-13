@@ -31,14 +31,14 @@ paths:
                   description: A general category description.
               required: [name]
       responses:
-        '200':
+        "200":
           description: Successful classification result.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassificationResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ClassificationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/verify:
     post:
@@ -62,14 +62,14 @@ paths:
                   type: string
                   description: Raw data from a scanned QronCode.
       responses:
-        '200':
+        "200":
           description: Verification status and provenance trail.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerificationResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/VerificationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/industries:
     get:
@@ -77,7 +77,7 @@ paths:
       description: Retrieve the current list of 10 supported industries and their market sizes.
       operationId: listIndustries
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -120,7 +120,7 @@ components:
                   icon: { type: string }
                   duration: { type: string }
             story: { type: string }
-    
+
     VerificationResponse:
       type: object
       properties:

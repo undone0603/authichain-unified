@@ -47,18 +47,18 @@ Request body:
 
 ```json
 {
-    "scan_id": "uuid",
-    "sku_id": "uuid",
-    "user_id": "uuid",
-    "claim_type": "enum ('authentic', 'suspicious', 'confirmed_fake')",
-    "details": {
-        "retailer": "text",
-        "price_paid": "float",
-        "condition": "enum ('new', 'used', 'refurbished')",
-        "packaging_integrity": "integer (1-5)",
-        "comments": "text"
-    },
-    "photos": ["url_1", "url_2"]
+  "scan_id": "uuid",
+  "sku_id": "uuid",
+  "user_id": "uuid",
+  "claim_type": "enum ('authentic', 'suspicious', 'confirmed_fake')",
+  "details": {
+    "retailer": "text",
+    "price_paid": "float",
+    "condition": "enum ('new', 'used', 'refurbished')",
+    "packaging_integrity": "integer (1-5)",
+    "comments": "text"
+  },
+  "photos": ["url_1", "url_2"]
 }
 ```
 
@@ -66,9 +66,9 @@ Response (201 Created):
 
 ```json
 {
-    "claim_id": "uuid",
-    "status": "pending_consensus",
-    "potential_reward": "float (QRON)"
+  "claim_id": "uuid",
+  "status": "pending_consensus",
+  "potential_reward": "float (QRON)"
 }
 ```
 
@@ -76,18 +76,20 @@ Response (201 Created):
 
 ```ts
 function calculateReward(
-    baseReward: number,
-    isHighRiskSku: boolean,
-    isEarlyDetection: boolean,
-    userReputation: number
+  baseReward: number,
+  isHighRiskSku: boolean,
+  isEarlyDetection: boolean,
+  userReputation: number
 ): number {
-    const rarityMultiplier = isHighRiskSku ? 2.5 : 1.0;
-    const earlyDetectionBonus = isEarlyDetection ? 5.0 : 0;
+  const rarityMultiplier = isHighRiskSku ? 2.5 : 1.0;
+  const earlyDetectionBonus = isEarlyDetection ? 5.0 : 0;
 
-    // Reward = (Base * Multiplier * Reputation) + EarlyBonus
-    let finalReward = (baseReward * rarityMultiplier * (userReputation / 100)) + earlyDetectionBonus;
+  // Reward = (Base * Multiplier * Reputation) + EarlyBonus
+  let finalReward =
+    baseReward * rarityMultiplier * (userReputation / 100) +
+    earlyDetectionBonus;
 
-    return Math.round(finalReward * 100) / 100;
+  return Math.round(finalReward * 100) / 100;
 }
 ```
 

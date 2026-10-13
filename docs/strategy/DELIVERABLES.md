@@ -19,6 +19,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
 ### Code Changes (2 Files)
 
 **1. `/scripts/score-opportunities.ts` (MODIFIED - 20 lines)**
+
 - Path: `/home/user/authichain-unified/scripts/score-opportunities.ts`
 - Status: Updated with threshold logic
 - Changes:
@@ -28,15 +29,16 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Backward compatible, no breaking changes
 
 **2. `/scripts/qualify-leads.ts` (NEW - 362 lines)**
+
 - Path: `/home/user/authichain-unified/scripts/qualify-leads.ts`
 - Status: New script, ready to deploy
 - Features:
   - Queries gov_opportunities with fit_score ≥ 70
   - Generates 4-dimension lead_score_detail JSON:
-    * Blockchain authentication fit (0-100)
-    * Agency sector match (0-100)
-    * Budget alignment (0-100)
-    * Timeline feasibility (0-100)
+    - Blockchain authentication fit (0-100)
+    - Agency sector match (0-100)
+    - Budget alignment (0-100)
+    - Timeline feasibility (0-100)
   - Creates/upserts entries in leads table
   - Full DRY_RUN support for safe testing
   - Error handling with fallback defaults
@@ -44,20 +46,22 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
 ### Database (1 File)
 
 **3. `/drizzle/migrations/015_lead_scoring_pipeline.sql` (NEW - 52 lines)**
+
 - Path: `/home/user/authichain-unified/drizzle/migrations/015_lead_scoring_pipeline.sql`
 - Status: Ready to apply
 - Changes:
   - Adds `qualified_at TIMESTAMPTZ` to gov_opportunities
   - Adds `threadId VARCHAR(256)` to leads
   - Creates 3 performance indexes:
-    * gov_opportunities_status_fit_score_idx (fast ≥70 queries)
-    * leads_source_status_contacted_idx (fast uncontacted lookups)
-    * leads_email_idx (fast suppression checks)
+    - gov_opportunities_status_fit_score_idx (fast ≥70 queries)
+    - leads_source_status_contacted_idx (fast uncontacted lookups)
+    - leads_email_idx (fast suppression checks)
   - All statements idempotent (safe to re-run)
 
 ### Documentation (6 Files)
 
 **4. `/docs/marketing/gov-engine-lead-pipeline.md` (NEW - 380 lines)**
+
 - Path: `/home/user/authichain-unified/docs/marketing/gov-engine-lead-pipeline.md`
 - Status: Complete architecture guide
 - Contents:
@@ -73,6 +77,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Audience: Developers, DevOps, Product Managers
 
 **5. `/docs/operations/INTEGRATION_CHECKLIST.md` (NEW - 240 lines)**
+
 - Path: `/home/user/authichain-unified/docs/operations/INTEGRATION_CHECKLIST.md`
 - Status: Step-by-step deployment guide
 - Contents:
@@ -87,6 +92,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Audience: DevOps, Release managers
 
 **6. `/docs/marketing/email-proposals-integration.md` (NEW - 280 lines)**
+
 - Path: `/home/user/authichain-unified/docs/marketing/email-proposals-integration.md`
 - Status: Email integration guide
 - Contents:
@@ -101,6 +107,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Audience: Backend developers
 
 **7. `/docs/marketing/QUICK_START.md` (NEW - 180 lines)**
+
 - Path: `/home/user/authichain-unified/docs/marketing/QUICK_START.md`
 - Status: Quick reference guide
 - Contents:
@@ -115,6 +122,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Audience: Developers in a hurry
 
 **8. `/LEAD_SCORING_SUMMARY.md` (NEW - 220 lines)**
+
 - Path: `/home/user/authichain-unified/LEAD_SCORING_SUMMARY.md`
 - Status: Executive summary
 - Contents:
@@ -132,6 +140,7 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Audience: Project leads, stakeholders
 
 **9. `/IMPLEMENTATION_MANIFEST.md` (NEW - 420 lines)**
+
 - Path: `/home/user/authichain-unified/IMPLEMENTATION_MANIFEST.md`
 - Status: Complete change inventory
 - Contents:
@@ -155,54 +164,60 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
 
 **For Different Audiences:**
 
-| Role | Start Here | Then Read | Purpose |
-|------|-----------|----------|---------|
-| **Developer** | `/docs/marketing/QUICK_START.md` | `/docs/operations/INTEGRATION_CHECKLIST.md` | Understand & deploy |
-| **DevOps** | `/IMPLEMENTATION_MANIFEST.md` | `/docs/operations/INTEGRATION_CHECKLIST.md` | Deploy & monitor |
-| **Code Reviewer** | `/IMPLEMENTATION_MANIFEST.md` | `/scripts/score-opportunities.ts`, `/scripts/qualify-leads.ts` | Review changes |
-| **Project Manager** | `/LEAD_SCORING_SUMMARY.md` | `/docs/marketing/gov-engine-lead-pipeline.md` | Track progress |
-| **Data Analyst** | `/docs/marketing/gov-engine-lead-pipeline.md` | SQL queries section | Monitor metrics |
+| Role                | Start Here                                    | Then Read                                                      | Purpose             |
+| ------------------- | --------------------------------------------- | -------------------------------------------------------------- | ------------------- |
+| **Developer**       | `/docs/marketing/QUICK_START.md`              | `/docs/operations/INTEGRATION_CHECKLIST.md`                    | Understand & deploy |
+| **DevOps**          | `/IMPLEMENTATION_MANIFEST.md`                 | `/docs/operations/INTEGRATION_CHECKLIST.md`                    | Deploy & monitor    |
+| **Code Reviewer**   | `/IMPLEMENTATION_MANIFEST.md`                 | `/scripts/score-opportunities.ts`, `/scripts/qualify-leads.ts` | Review changes      |
+| **Project Manager** | `/LEAD_SCORING_SUMMARY.md`                    | `/docs/marketing/gov-engine-lead-pipeline.md`                  | Track progress      |
+| **Data Analyst**    | `/docs/marketing/gov-engine-lead-pipeline.md` | SQL queries section                                            | Monitor metrics     |
 
 ---
 
 ## Code Statistics
 
-| Component | Lines | Status |
-|-----------|-------|--------|
-| score-opportunities.ts (modified) | 131 total, 20 changed | ✅ Ready |
-| qualify-leads.ts (new) | 362 | ✅ Ready |
-| Migration SQL | 52 | ✅ Ready |
-| Documentation | 1,720 | ✅ Ready |
-| **Total** | **2,265** | ✅ **Ready** |
+| Component                         | Lines                 | Status       |
+| --------------------------------- | --------------------- | ------------ |
+| score-opportunities.ts (modified) | 131 total, 20 changed | ✅ Ready     |
+| qualify-leads.ts (new)            | 362                   | ✅ Ready     |
+| Migration SQL                     | 52                    | ✅ Ready     |
+| Documentation                     | 1,720                 | ✅ Ready     |
+| **Total**                         | **2,265**             | ✅ **Ready** |
 
 ---
 
 ## Key Features
 
 ### 1. Threshold-Based Filtering
+
 - fit_score ≥ 70: pursue (email qualified prospects)
 - fit_score 60-69: qualify (manual review queue)
 - fit_score < 60: skip (no contact)
 
 ### 2. 4-Dimension Lead Scoring
+
 Each qualified lead receives a `lead_score_detail` JSON with:
+
 - Blockchain authentication fit (0-100)
 - Agency sector match (0-100)
 - Budget alignment (0-100)
 - Timeline feasibility (0-100)
 
 ### 3. Automated Lead Generation
+
 - Queries opportunities with fit_score ≥ 70
 - Upserts to leads table (no duplicates)
 - Stores all metadata for email personalization
 - Marks opportunities as status='qualified'
 
 ### 4. Email Integration Ready
+
 - Existing email-proposals.ts enhanced with two options
 - Option A: Minimal (keep using gov_proposals table)
 - Option B: Recommended (migrate to leads table + scoring breakdown)
 
 ### 5. Full Testing Support
+
 - DRY_RUN=true on all scripts
 - Preview changes before database writes
 - Dry run output shows exact actions
@@ -212,36 +227,42 @@ Each qualified lead receives a `lead_score_detail` JSON with:
 ## Deployment Checklist
 
 ### Phase 1: Preparation
+
 - [ ] Read QUICK_START.md (5 minutes)
 - [ ] Read INTEGRATION_CHECKLIST.md (understand steps)
 - [ ] Review score-opportunities.ts changes
 - [ ] Review qualify-leads.ts implementation
 
 ### Phase 2: Database
+
 - [ ] Apply migration: `supabase migration up`
 - [ ] Verify columns exist: `qualified_at`, `threadId`
 - [ ] Verify indexes created: 3 new indexes
 - [ ] Backup existing data (recommended)
 
 ### Phase 3: Testing
+
 - [ ] Test score-opportunities.ts: `DRY_RUN=true pnpm tsx scripts/score-opportunities.ts`
 - [ ] Test qualify-leads.ts: `DRY_RUN=true pnpm tsx scripts/qualify-leads.ts`
 - [ ] Verify DRY_RUN output shows expected categorization
 - [ ] Check for any LLM provider errors
 
 ### Phase 4: Deployment
+
 - [ ] Update GitHub Actions workflow (add qualify-leads.ts step)
 - [ ] Commit changes: `git add` + `git commit` + `git push`
 - [ ] Monitor first run in Actions
 - [ ] Verify no errors in logs
 
 ### Phase 5: Monitoring
+
 - [ ] Check lead qualification rate: `SELECT COUNT(*) FROM leads WHERE source='gov_engine'`
 - [ ] Monitor fit_score distribution
 - [ ] Track email delivery status
 - [ ] Set up alerts (optional)
 
 ### Phase 6: Email Integration (Optional)
+
 - [ ] Choose Option A or B from email-proposals-integration.md
 - [ ] Implement selected option
 - [ ] Test with DRY_RUN=true
@@ -252,6 +273,7 @@ Each qualified lead receives a `lead_score_detail` JSON with:
 ## Testing Procedures
 
 ### Dry Run (Safe)
+
 ```bash
 # Test scoring with thresholds
 DRY_RUN=true pnpm tsx scripts/score-opportunities.ts
@@ -263,10 +285,11 @@ DRY_RUN=true pnpm tsx scripts/qualify-leads.ts
 ```
 
 ### Manual Test (Controlled)
+
 ```sql
 -- Insert test opportunity
 INSERT INTO gov_opportunities (
-  notice_id, title, agency, status, fit_score, 
+  notice_id, title, agency, status, fit_score,
   ai_reasoning, key_requirements, recommended_action, scored_at
 ) VALUES (
   'TEST-001', 'Test Opportunity', 'Test Agency', 'scored', 78,
@@ -288,6 +311,7 @@ SELECT * FROM leads WHERE source='gov_engine' AND company LIKE 'Test%';
 ## Configuration Required
 
 ### Environment Variables (GitHub Secrets)
+
 ```
 SUPABASE_URL              # Required: Supabase project URL
 SUPABASE_SERVICE_KEY      # Required: Service role API key
@@ -297,6 +321,7 @@ RESEND_API_KEY            # Required: For email sending
 ```
 
 ### Optional
+
 ```
 DRY_RUN=true              # Preview changes without writing
 SUPPRESSION_LIST=...      # Comma-separated emails to skip
@@ -307,8 +332,9 @@ SUPPRESSION_LIST=...      # Comma-separated emails to skip
 ## Success Metrics (Post-Deployment)
 
 ### Qualification Rate
+
 ```sql
-SELECT 
+SELECT
   COUNT(CASE WHEN fit_score >= 70 THEN 1 END) as high_fit,
   COUNT(CASE WHEN fit_score BETWEEN 60 AND 69 THEN 1 END) as borderline,
   COUNT(CASE WHEN fit_score < 60 THEN 1 END) as low_fit,
@@ -318,8 +344,9 @@ FROM gov_opportunities;
 ```
 
 ### Email Engagement
+
 ```sql
-SELECT 
+SELECT
   COUNT(*) as emails_sent,
   SUM(CASE WHEN emailOpened THEN 1 ELSE 0 END) as opened,
   SUM(CASE WHEN emailClicked THEN 1 ELSE 0 END) as clicked,
@@ -355,6 +382,7 @@ ALTER TABLE leads DROP COLUMN IF EXISTS threadId;
 ## File Locations
 
 All files are in the repository at:
+
 ```
 /home/user/authichain-unified/
 ├── scripts/
@@ -377,28 +405,31 @@ All files are in the repository at:
 ## Support & Questions
 
 **For technical questions:**
+
 1. Check `/docs/marketing/QUICK_START.md` (quick answers)
 2. Check `/docs/marketing/gov-engine-lead-pipeline.md` (detailed architecture)
 3. Check script docstrings (inline documentation)
 
 **For deployment questions:**
+
 1. Check `/docs/operations/INTEGRATION_CHECKLIST.md` (step-by-step)
 2. Check `/IMPLEMENTATION_MANIFEST.md` (complete inventory)
 
 **For email integration:**
+
 1. Check `/docs/marketing/email-proposals-integration.md` (two options with code)
 
 ---
 
 ## Sign-Off
 
-| Component | Status | Notes |
-|-----------|--------|-------|
+| Component           | Status      | Notes                                     |
+| ------------------- | ----------- | ----------------------------------------- |
 | Code Implementation | ✅ Complete | score-opportunities.ts + qualify-leads.ts |
-| Database Migration | ✅ Complete | 3 indexes, 2 columns, idempotent |
-| Documentation | ✅ Complete | 6 docs + 2 summary files |
-| Testing | ✅ Ready | DRY_RUN support, example queries |
-| Deployment | ⏳ Pending | Awaiting code review & approval |
+| Database Migration  | ✅ Complete | 3 indexes, 2 columns, idempotent          |
+| Documentation       | ✅ Complete | 6 docs + 2 summary files                  |
+| Testing             | ✅ Ready    | DRY_RUN support, example queries          |
+| Deployment          | ⏳ Pending  | Awaiting code review & approval           |
 
 ---
 

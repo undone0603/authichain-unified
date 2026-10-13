@@ -12,6 +12,7 @@ Use one kit. Name: **AuthiChain**. Domain: **authichain.com**.
 AuthiChain is the authenticity layer for the authentic agentic economy. It lets humans and agents verify physical products, documents, and credentials with cryptographic seals, QR scans, and on-chain certificates. The mission is to authenticate global goods and stop counterfeits — positioned as U.S.-built infrastructure with public verification on authichain.com.
 
 Sister surfaces in the same product estate:
+
 - QRON (qron.space) — Living QR codes and artistic, scannable certificates
 - StrainChain (strainchain.io) — cannabis jar / COA provenance
 - GovChain (govchain.us) — contractor pursue + official document seals
@@ -25,6 +26,7 @@ Direct, founder-led, technical without jargon inflation. Concrete over slogans. 
 Founder-operator writing for procurement, compliance, brand protection, and developers who have to ship a scan that works.
 
 **Global writing rules:**
+
 - Customer CTAs use apex paths only: https://authichain.com/verify, https://authichain.com/dapp, https://qron.space/generate, https://govchain.us/onboard, https://strainchain.io/onboard. Never *.vercel.app.
 - Do not invent customers, certifications, revenue, partners, or scan counts.
 - Do not claim FedRAMP, SOC 2, HIPAA, or FDA authorization unless a public page states it as current.
@@ -38,15 +40,19 @@ Founder-operator writing for procurement, compliance, brand protection, and deve
 ## Product lines
 
 ### AuthiChain
+
 Public verification, certificates, billing, protocol. CTAs: /verify, /dapp, /onboard on authichain.com.
 
 ### QRON
+
 Living QR studio. Generate scannable artwork with on-chain certificates. CTA: https://qron.space/generate
 
 ### StrainChain
+
 Cannabis packaging / COA packs and seed-to-sale provenance. CTA: https://strainchain.io/onboard
 
 ### GovChain
+
 Government and contractor document seals. CTA: https://govchain.us/onboard
 
 ## Content types

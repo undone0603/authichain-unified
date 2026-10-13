@@ -15,7 +15,10 @@ interface WalletConnectProps {
 export function WalletConnect({ size = "md", className }: WalletConnectProps) {
   if (!thirdwebClient) {
     return (
-      <Badge variant="outline" className={`text-yellow-500 border-yellow-500/30 ${className || ""}`}>
+      <Badge
+        variant="outline"
+        className={`text-yellow-500 border-yellow-500/30 ${className || ""}`}
+      >
         <AlertCircle className="h-3 w-3 mr-1" />
         Wallet not configured
       </Badge>
@@ -33,8 +36,14 @@ export function WalletConnect({ size = "md", className }: WalletConnectProps) {
             backgroundColor: "hsl(var(--primary))",
             color: "hsl(var(--primary-foreground))",
             borderRadius: "0.5rem",
-            fontSize: size === "sm" ? "0.75rem" : size === "lg" ? "1rem" : "0.875rem",
-            padding: size === "sm" ? "0.25rem 0.75rem" : size === "lg" ? "0.75rem 1.5rem" : "0.5rem 1rem",
+            fontSize:
+              size === "sm" ? "0.75rem" : size === "lg" ? "1rem" : "0.875rem",
+            padding:
+              size === "sm"
+                ? "0.25rem 0.75rem"
+                : size === "lg"
+                  ? "0.75rem 1.5rem"
+                  : "0.5rem 1rem",
             fontWeight: "600",
           },
         }}
@@ -51,7 +60,13 @@ export function WalletConnect({ size = "md", className }: WalletConnectProps) {
   );
 }
 
-export function BlockchainStatusBadge({ connected, chain }: { connected: boolean; chain?: string }) {
+export function BlockchainStatusBadge({
+  connected,
+  chain,
+}: {
+  connected: boolean;
+  chain?: string;
+}) {
   return (
     <Badge variant={connected ? "default" : "secondary"} className="gap-1">
       <Wallet className="h-3 w-3" />

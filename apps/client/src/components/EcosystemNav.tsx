@@ -10,7 +10,11 @@ import { useBrand } from "@/contexts/BrandContext";
  * Hostnames are hard-coded from shared/brands.ts so these always route
  * across domains, not within the current SPA.
  */
-export function EcosystemNav({ variant = "footer" }: { variant?: "footer" | "ribbon" }) {
+export function EcosystemNav({
+  variant = "footer",
+}: {
+  variant?: "footer" | "ribbon";
+}) {
   const { brandId: active } = useBrand();
 
   if (variant === "ribbon") {
@@ -18,7 +22,7 @@ export function EcosystemNav({ variant = "footer" }: { variant?: "footer" | "rib
       <div className="w-full border-b border-border/40 bg-background/60 backdrop-blur-sm text-xs">
         <div className="container flex items-center justify-center gap-4 py-2 text-muted-foreground">
           <span className="hidden sm:inline">The ecosystem:</span>
-          {BRAND_IDS.map((id) => (
+          {BRAND_IDS.map(id => (
             <BrandLink key={id} id={id} active={active} />
           ))}
         </div>
@@ -28,7 +32,7 @@ export function EcosystemNav({ variant = "footer" }: { variant?: "footer" | "rib
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-      {BRAND_IDS.map((id) => (
+      {BRAND_IDS.map(id => (
         <BrandLink key={id} id={id} active={active} />
       ))}
     </div>

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migration = `
 -- Fix QRONs table for gallery and analytics
@@ -15,15 +15,14 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS generations_limit integer DEFAULT 
 
 async function migrate() {
   try {
-    console.log('Patching schema for gallery and onboarding...');
+    console.log("Patching schema for gallery and onboarding...");
     await sql.unsafe(migration);
-    console.log('✅ Schema patched.');
+    console.log("✅ Schema patched.");
   } catch (err) {
-    console.error('❌ Patch failed:', err.message);
+    console.error("❌ Patch failed:", err.message);
   } finally {
     process.exit();
   }
 }
 
 migrate();
-

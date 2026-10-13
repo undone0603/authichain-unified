@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -7,15 +13,41 @@ import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  TrendingUp, Users, DollarSign, Target, BarChart3,
-  ArrowUpRight, ArrowDownRight, Activity, Zap, Mail,
-  Globe, Sparkles, RefreshCw, CheckCircle2, Clock,
-  Percent, Eye, MousePointer, ShoppingCart
+  TrendingUp,
+  Users,
+  DollarSign,
+  Target,
+  BarChart3,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity,
+  Zap,
+  Mail,
+  Globe,
+  Sparkles,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  Percent,
+  Eye,
+  MousePointer,
+  ShoppingCart,
 } from "lucide-react";
 
-function MetricCard({ title, value, change, changeType, icon: Icon, subtitle }: {
-  title: string; value: string; change: string; changeType: "up" | "down" | "neutral";
-  icon: React.ElementType; subtitle?: string;
+function MetricCard({
+  title,
+  value,
+  change,
+  changeType,
+  icon: Icon,
+  subtitle,
+}: {
+  title: string;
+  value: string;
+  change: string;
+  changeType: "up" | "down" | "neutral";
+  icon: React.ElementType;
+  subtitle?: string;
 }) {
   return (
     <Card>
@@ -24,14 +56,22 @@ function MetricCard({ title, value, change, changeType, icon: Icon, subtitle }: 
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
             <p className="text-2xl font-bold mt-1">{value}</p>
-            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+            {subtitle && (
+              <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="p-2 rounded-lg bg-primary/10">
               <Icon className="h-4 w-4 text-primary" />
             </div>
-            <div className={`flex items-center text-xs ${changeType === "up" ? "text-green-500" : changeType === "down" ? "text-red-500" : "text-muted-foreground"}`}>
-              {changeType === "up" ? <ArrowUpRight className="h-3 w-3" /> : changeType === "down" ? <ArrowDownRight className="h-3 w-3" /> : null}
+            <div
+              className={`flex items-center text-xs ${changeType === "up" ? "text-green-500" : changeType === "down" ? "text-red-500" : "text-muted-foreground"}`}
+            >
+              {changeType === "up" ? (
+                <ArrowUpRight className="h-3 w-3" />
+              ) : changeType === "down" ? (
+                <ArrowDownRight className="h-3 w-3" />
+              ) : null}
               {change}
             </div>
           </div>
@@ -45,9 +85,19 @@ function ConversionFunnel() {
   const stages = [
     { name: "Visitors", count: 12450, icon: Eye, color: "bg-blue-500" },
     { name: "Sign-ups", count: 1867, icon: Users, color: "bg-indigo-500" },
-    { name: "Activated", count: 743, icon: MousePointer, color: "bg-purple-500" },
+    {
+      name: "Activated",
+      count: 743,
+      icon: MousePointer,
+      color: "bg-purple-500",
+    },
     { name: "Trial Started", count: 412, icon: Zap, color: "bg-pink-500" },
-    { name: "Paid Convert", count: 89, icon: ShoppingCart, color: "bg-green-500" },
+    {
+      name: "Paid Convert",
+      count: 89,
+      icon: ShoppingCart,
+      color: "bg-green-500",
+    },
   ];
 
   return (
@@ -59,7 +109,8 @@ function ConversionFunnel() {
       <CardContent className="space-y-3">
         {stages.map((stage, i) => {
           const prevCount = i > 0 ? stages[i - 1].count : stage.count;
-          const convRate = i > 0 ? ((stage.count / prevCount) * 100).toFixed(1) : "100";
+          const convRate =
+            i > 0 ? ((stage.count / prevCount) * 100).toFixed(1) : "100";
           const width = (stage.count / stages[0].count) * 100;
           return (
             <div key={stage.name} className="space-y-1">
@@ -69,7 +120,9 @@ function ConversionFunnel() {
                   <span>{stage.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono font-semibold">{stage.count.toLocaleString()}</span>
+                  <span className="font-mono font-semibold">
+                    {stage.count.toLocaleString()}
+                  </span>
                   {i > 0 && (
                     <Badge variant="outline" className="text-xs font-mono">
                       {convRate}%
@@ -78,7 +131,10 @@ function ConversionFunnel() {
                 </div>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className={`h-full ${stage.color} rounded-full transition-all`} style={{ width: `${width}%` }} />
+                <div
+                  className={`h-full ${stage.color} rounded-full transition-all`}
+                  style={{ width: `${width}%` }}
+                />
               </div>
             </div>
           );
@@ -100,8 +156,18 @@ function ABTestPanel() {
       name: "Pricing Page CTA",
       status: "running",
       variants: [
-        { name: "A: 'Start Free Trial'", visitors: 3240, conversions: 162, rate: 5.0 },
-        { name: "B: 'Protect Your Brand Now'", visitors: 3180, conversions: 191, rate: 6.0 },
+        {
+          name: "A: 'Start Free Trial'",
+          visitors: 3240,
+          conversions: 162,
+          rate: 5.0,
+        },
+        {
+          name: "B: 'Protect Your Brand Now'",
+          visitors: 3180,
+          conversions: 191,
+          rate: 6.0,
+        },
       ],
       confidence: 87,
       winner: null,
@@ -110,8 +176,18 @@ function ABTestPanel() {
       name: "Homepage Hero Text",
       status: "completed",
       variants: [
-        { name: "A: 'AI + Blockchain Authentication'", visitors: 5600, conversions: 336, rate: 6.0 },
-        { name: "B: 'Stop Counterfeits. Protect Revenue.'", visitors: 5450, conversions: 381, rate: 7.0 },
+        {
+          name: "A: 'AI + Blockchain Authentication'",
+          visitors: 5600,
+          conversions: 336,
+          rate: 6.0,
+        },
+        {
+          name: "B: 'Stop Counterfeits. Protect Revenue.'",
+          visitors: 5450,
+          conversions: 381,
+          rate: 7.0,
+        },
       ],
       confidence: 96,
       winner: "B",
@@ -120,8 +196,18 @@ function ABTestPanel() {
       name: "Email Subject Line",
       status: "running",
       variants: [
-        { name: "A: 'Your products are being counterfeited'", visitors: 1200, conversions: 288, rate: 24.0 },
-        { name: "B: 'How [Company] saved $2M with AuthiChain'", visitors: 1180, conversions: 354, rate: 30.0 },
+        {
+          name: "A: 'Your products are being counterfeited'",
+          visitors: 1200,
+          conversions: 288,
+          rate: 24.0,
+        },
+        {
+          name: "B: 'How [Company] saved $2M with AuthiChain'",
+          visitors: 1180,
+          conversions: 354,
+          rate: 30.0,
+        },
       ],
       confidence: 72,
       winner: null,
@@ -135,29 +221,48 @@ function ABTestPanel() {
         <CardDescription>Continuous optimization experiments</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {tests.map((test) => (
-          <div key={test.name} className="p-4 rounded-lg border border-border/50 space-y-3">
+        {tests.map(test => (
+          <div
+            key={test.name}
+            className="p-4 rounded-lg border border-border/50 space-y-3"
+          >
             <div className="flex items-center justify-between">
               <h4 className="font-semibold text-sm">{test.name}</h4>
-              <Badge variant={test.status === "running" ? "default" : "secondary"}>
-                {test.status === "running" ? <Activity className="h-3 w-3 mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+              <Badge
+                variant={test.status === "running" ? "default" : "secondary"}
+              >
+                {test.status === "running" ? (
+                  <Activity className="h-3 w-3 mr-1" />
+                ) : (
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                )}
                 {test.status}
               </Badge>
             </div>
-            {test.variants.map((v) => (
+            {test.variants.map(v => (
               <div key={v.name} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className={test.winner === v.name.charAt(0) ? "font-bold text-green-500" : "text-muted-foreground"}>
+                  <span
+                    className={
+                      test.winner === v.name.charAt(0)
+                        ? "font-bold text-green-500"
+                        : "text-muted-foreground"
+                    }
+                  >
                     {v.name} {test.winner === v.name.charAt(0) && "✓ Winner"}
                   </span>
-                  <span className="font-mono">{v.rate}% ({v.conversions}/{v.visitors})</span>
+                  <span className="font-mono">
+                    {v.rate}% ({v.conversions}/{v.visitors})
+                  </span>
                 </div>
                 <Progress value={v.rate * 5} className="h-1.5" />
               </div>
             ))}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Statistical Confidence</span>
-              <span className={`font-semibold ${test.confidence >= 95 ? "text-green-500" : test.confidence >= 80 ? "text-yellow-500" : "text-muted-foreground"}`}>
+              <span
+                className={`font-semibold ${test.confidence >= 95 ? "text-green-500" : test.confidence >= 80 ? "text-yellow-500" : "text-muted-foreground"}`}
+              >
                 {test.confidence}%
               </span>
             </div>
@@ -218,15 +323,22 @@ function AutomatedOutreach() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Automated Outreach Sequences</CardTitle>
-            <CardDescription>AI-powered email campaigns running on autopilot</CardDescription>
+            <CardTitle className="text-lg">
+              Automated Outreach Sequences
+            </CardTitle>
+            <CardDescription>
+              AI-powered email campaigns running on autopilot
+            </CardDescription>
           </div>
           <Button
             size="sm"
-            onClick={() => generateContent.mutate({
-              type: "email",
-              topic: "New cold outreach sequence for electronics manufacturers concerned about counterfeit components in their supply chain",
-            })}
+            onClick={() =>
+              generateContent.mutate({
+                type: "email",
+                topic:
+                  "New cold outreach sequence for electronics manufacturers concerned about counterfeit components in their supply chain",
+              })
+            }
             disabled={generateContent.isPending}
           >
             <Sparkles className="h-3 w-3 mr-1" />
@@ -236,14 +348,21 @@ function AutomatedOutreach() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {sequences.map((seq) => (
-            <div key={seq.name} className="p-4 rounded-lg border border-border/50">
+          {sequences.map(seq => (
+            <div
+              key={seq.name}
+              className="p-4 rounded-lg border border-border/50"
+            >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm">{seq.name}</span>
                 </div>
-                <Badge variant={seq.status === "active" ? "default" : "secondary"}>{seq.status}</Badge>
+                <Badge
+                  variant={seq.status === "active" ? "default" : "secondary"}
+                >
+                  {seq.status}
+                </Badge>
               </div>
               <div className="grid grid-cols-5 gap-2 text-center text-xs">
                 <div>
@@ -252,11 +371,15 @@ function AutomatedOutreach() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Opened</p>
-                  <p className="font-semibold">{((seq.opened / seq.sent) * 100).toFixed(0)}%</p>
+                  <p className="font-semibold">
+                    {((seq.opened / seq.sent) * 100).toFixed(0)}%
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Replied</p>
-                  <p className="font-semibold">{((seq.replied / seq.sent) * 100).toFixed(1)}%</p>
+                  <p className="font-semibold">
+                    {((seq.replied / seq.sent) * 100).toFixed(1)}%
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Meetings</p>
@@ -276,7 +399,18 @@ function AutomatedOutreach() {
 }
 
 function RevenueProjection() {
-  const months = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const projections = [
     { month: "Mar", mrr: 2400, arr: 28800, customers: 12 },
     { month: "Apr", mrr: 4800, arr: 57600, customers: 24 },
@@ -296,25 +430,35 @@ function RevenueProjection() {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Revenue Projection (10-Month)</CardTitle>
-        <CardDescription>Conservative growth model: 60-80% MoM early, tapering to 30% at scale</CardDescription>
+        <CardDescription>
+          Conservative growth model: 60-80% MoM early, tapering to 30% at scale
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {projections.map((p) => (
+          {projections.map(p => (
             <div key={p.month} className="flex items-center gap-3 text-sm">
-              <span className="w-8 text-muted-foreground font-mono">{p.month}</span>
+              <span className="w-8 text-muted-foreground font-mono">
+                {p.month}
+              </span>
               <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-primary/60 rounded flex items-center px-2"
                   style={{ width: `${(p.mrr / maxMrr) * 100}%` }}
                 >
                   {p.mrr >= 20000 && (
-                    <span className="text-xs text-primary-foreground font-mono">${(p.mrr / 1000).toFixed(0)}K</span>
+                    <span className="text-xs text-primary-foreground font-mono">
+                      ${(p.mrr / 1000).toFixed(0)}K
+                    </span>
                   )}
                 </div>
               </div>
-              <span className="w-16 text-right font-mono font-semibold">${(p.mrr / 1000).toFixed(0)}K</span>
-              <span className="w-20 text-right text-muted-foreground">{p.customers} cust</span>
+              <span className="w-16 text-right font-mono font-semibold">
+                ${(p.mrr / 1000).toFixed(0)}K
+              </span>
+              <span className="w-20 text-right text-muted-foreground">
+                {p.customers} cust
+              </span>
             </div>
           ))}
         </div>

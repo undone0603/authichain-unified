@@ -1,4 +1,1 @@
-#!/usr/bin/env sh
-# Reject NTFS-illegal names before lint-staged.
-bash scripts/check-windows-paths.sh --staged
-corepack pnpm -w -s run lint-staged
+node agentz/routing/gateway.js

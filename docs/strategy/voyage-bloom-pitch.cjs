@@ -467,9 +467,18 @@ function pageNum(s, n) {
   bottomBar(s, "POLYGON NFT  ·  QRON ART  ·  STRAINCHAIN  ·  SUPABASE LEDGER");
 
   const layers = [
-    { t: "QRON", d: "Artistic scannable codes · ControlNet · editable redirects · analytics" },
-    { t: "Hub", d: "/v/vb/{sku}/{batch}/{serial} · Verify · Storymode · Claim tabs" },
-    { t: "NFT", d: "AuthiChainNFT (Polygon) · serial-bound · EIP-2981 royalties" },
+    {
+      t: "QRON",
+      d: "Artistic scannable codes · ControlNet · editable redirects · analytics",
+    },
+    {
+      t: "Hub",
+      d: "/v/vb/{sku}/{batch}/{serial} · Verify · Storymode · Claim tabs",
+    },
+    {
+      t: "NFT",
+      d: "AuthiChainNFT (Polygon) · serial-bound · EIP-2981 royalties",
+    },
     { t: "Story", d: "Cinematic player · chapter unlocks · 9:16 mobile-first" },
   ];
   layers.forEach((L, i) => {
@@ -540,9 +549,18 @@ function pageNum(s, n) {
   });
 
   const econ = [
-    { t: "Physical uplift", d: "Collectors buy more SKUs for the set. Free NFT with purchase bootstraps claims." },
-    { t: "Primary / secondary NFT", d: "Optional paid rares. Automatic royalties forever on resale." },
-    { t: "Platform fees", d: "QRON generation + analytics tiers + white-label Pack-to-NFT SaaS." },
+    {
+      t: "Physical uplift",
+      d: "Collectors buy more SKUs for the set. Free NFT with purchase bootstraps claims.",
+    },
+    {
+      t: "Primary / secondary NFT",
+      d: "Optional paid rares. Automatic royalties forever on resale.",
+    },
+    {
+      t: "Platform fees",
+      d: "QRON generation + analytics tiers + white-label Pack-to-NFT SaaS.",
+    },
   ];
   econ.forEach((e, i) => {
     const x = 0.7 + i * 4.1;
@@ -709,9 +727,18 @@ function pageNum(s, n) {
   });
 
   const asks = [
-    { t: "Pilot SKU commitment", d: "Zangria + 2 more · print QRONs · free claim NFTs · Ch.0 trailer live" },
-    { t: "Creative license", d: "Packaging artist + brand rights for NFT + Storymode credits forever" },
-    { t: "Success metric", d: "Redemption rate, story completion, secondary interest — 90-day review" },
+    {
+      t: "Pilot SKU commitment",
+      d: "Zangria + 2 more · print QRONs · free claim NFTs · Ch.0 trailer live",
+    },
+    {
+      t: "Creative license",
+      d: "Packaging artist + brand rights for NFT + Storymode credits forever",
+    },
+    {
+      t: "Success metric",
+      d: "Redemption rate, story completion, secondary interest — 90-day review",
+    },
   ];
   asks.forEach((a, i) => {
     const y = 1.7 + i * 1.35;
@@ -750,10 +777,11 @@ function pageNum(s, n) {
 
 pres
   .writeFile({
-    fileName: "/home/zac/authichain-unified/docs/strategy/Voyage_Bloom_Pack_to_NFT_Pitch.pptx",
+    fileName:
+      "/home/zac/authichain-unified/docs/strategy/Voyage_Bloom_Pack_to_NFT_Pitch.pptx",
   })
   .then(() => console.log("Wrote Voyage_Bloom_Pack_to_NFT_Pitch.pptx"))
-  .catch((e) => {
+  .catch(e => {
     console.error(e);
     process.exit(1);
   });

@@ -3,21 +3,48 @@
  * Shows connection status, IPFS operations, NFT minting, and wallet management.
  */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { WalletConnect, BlockchainStatusBadge } from "@/components/WalletConnect";
+import {
+  WalletConnect,
+  BlockchainStatusBadge,
+} from "@/components/WalletConnect";
 import { trpc } from "@/lib/trpc";
-import { getChainName, getExplorerUrl, getIPFSUrl, shortenAddress } from "@/lib/thirdweb";
+import {
+  getChainName,
+  getExplorerUrl,
+  getIPFSUrl,
+  shortenAddress,
+} from "@/lib/thirdweb";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Link2, Shield, Gem, Upload, CheckCircle2, XCircle,
-  ExternalLink, Copy, Loader2, Boxes, Wallet, Globe,
-  FileJson, Image as ImageIcon, Hash, Sparkles
+  Link2,
+  Shield,
+  Gem,
+  Upload,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
+  Copy,
+  Loader2,
+  Boxes,
+  Wallet,
+  Globe,
+  FileJson,
+  Image as ImageIcon,
+  Hash,
+  Sparkles,
 } from "lucide-react";
 
 function ConnectionStatus() {
@@ -47,7 +74,9 @@ function ConnectionStatus() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-muted/50 space-y-1">
                 <p className="text-xs text-muted-foreground">Client ID</p>
-                <p className="font-mono text-sm">{shortenAddress(status.clientId || "")}</p>
+                <p className="font-mono text-sm">
+                  {shortenAddress(status.clientId || "")}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-muted/50 space-y-1">
                 <p className="text-xs text-muted-foreground">Active Chain</p>
@@ -81,11 +110,11 @@ function IPFSUploader() {
   const [lastUri, setLastUri] = useState<string | null>(null);
 
   const uploadMutation = trpc.blockchain.uploadToIPFS.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setLastUri(data.ipfsUri);
       toast.success("Metadata uploaded to IPFS!");
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   return (
@@ -95,30 +124,57 @@ function IPFSUploader() {
           <Upload className="h-5 w-5" />
           IPFS Upload
         </CardTitle>
-        <CardDescription>Upload metadata to IPFS via Thirdweb Storage</CardDescription>
+        <CardDescription>
+          Upload metadata to IPFS via Thirdweb Storage
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Name</Label>
-          <Input placeholder="Authentication Certificate #001" value={name} onChange={e => setName(e.target.value)} />
+          <Input
+            placeholder="Authentication Certificate #001"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label>Description</Label>
-          <Textarea placeholder="Blockchain-verified authentication certificate..." value={description} onChange={e => setDescription(e.target.value)} rows={3} />
+          <Textarea
+            placeholder="Blockchain-verified authentication certificate..."
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+          />
         </div>
         <div className="space-y-2">
           <Label>Image URL (optional)</Label>
-          <Input placeholder="https://..." value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+          <Input
+            placeholder="https://..."
+            value={imageUrl}
+            onChange={e => setImageUrl(e.target.value)}
+          />
         </div>
         <Button
-          onClick={() => uploadMutation.mutate({ name, description, imageUrl: imageUrl || undefined })}
+          onClick={() =>
+            uploadMutation.mutate({
+              name,
+              description,
+              imageUrl: imageUrl || undefined,
+            })
+          }
           disabled={!name || uploadMutation.isPending}
           className="w-full"
         >
           {uploadMutation.isPending ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Uploading...
+            </>
           ) : (
-            <><Upload className="h-4 w-4 mr-2" />Upload to IPFS</>
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload to IPFS
+            </>
           )}
         </Button>
         {lastUri && (
@@ -128,12 +184,25 @@ function IPFSUploader() {
               Upload Successful
             </div>
             <div className="flex items-center gap-2">
-              <code className="text-xs bg-muted p-1 rounded flex-1 overflow-hidden text-ellipsis">{lastUri}</code>
-              <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(lastUri); toast.success("Copied!"); }}>
+              <code className="text-xs bg-muted p-1 rounded flex-1 overflow-hidden text-ellipsis">
+                {lastUri}
+              </code>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  navigator.clipboard.writeText(lastUri);
+                  toast.success("Copied!");
+                }}
+              >
                 <Copy className="h-3 w-3" />
               </Button>
               <Button size="sm" variant="ghost" asChild>
-                <a href={getIPFSUrl(lastUri)} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={getIPFSUrl(lastUri)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </Button>
@@ -151,14 +220,22 @@ function NFTMinter() {
   const [nftImage, setNftImage] = useState("");
   const [walletAddr, setWalletAddr] = useState("");
   const [contractAddr, setContractAddr] = useState("");
-  const [lastTx, setLastTx] = useState<{ hash: string; chain: number; uri: string } | null>(null);
+  const [lastTx, setLastTx] = useState<{
+    hash: string;
+    chain: number;
+    uri: string;
+  } | null>(null);
 
   const mintMutation = trpc.blockchain.mintNFT.useMutation({
-    onSuccess: (data) => {
-      setLastTx({ hash: data.transactionHash, chain: data.chain, uri: data.metadataUri });
+    onSuccess: data => {
+      setLastTx({
+        hash: data.transactionHash,
+        chain: data.chain,
+        uri: data.metadataUri,
+      });
       toast.success("NFT minted successfully!");
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   return (
@@ -168,45 +245,81 @@ function NFTMinter() {
           <Gem className="h-5 w-5" />
           Mint NFT
         </CardTitle>
-        <CardDescription>Mint authentication NFTs on-chain via Thirdweb</CardDescription>
+        <CardDescription>
+          Mint authentication NFTs on-chain via Thirdweb
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>NFT Name</Label>
-            <Input placeholder="AuthiChain Certificate #001" value={nftName} onChange={e => setNftName(e.target.value)} />
+            <Input
+              placeholder="AuthiChain Certificate #001"
+              value={nftName}
+              onChange={e => setNftName(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Image URL</Label>
-            <Input placeholder="https://..." value={nftImage} onChange={e => setNftImage(e.target.value)} />
+            <Input
+              placeholder="https://..."
+              value={nftImage}
+              onChange={e => setNftImage(e.target.value)}
+            />
           </div>
         </div>
         <div className="space-y-2">
           <Label>Description</Label>
-          <Textarea placeholder="Blockchain-verified authentication certificate..." value={nftDesc} onChange={e => setNftDesc(e.target.value)} rows={2} />
+          <Textarea
+            placeholder="Blockchain-verified authentication certificate..."
+            value={nftDesc}
+            onChange={e => setNftDesc(e.target.value)}
+            rows={2}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Contract Address</Label>
-            <Input placeholder="0x..." value={contractAddr} onChange={e => setContractAddr(e.target.value)} />
+            <Input
+              placeholder="0x..."
+              value={contractAddr}
+              onChange={e => setContractAddr(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Recipient Wallet</Label>
-            <Input placeholder="0x..." value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
+            <Input
+              placeholder="0x..."
+              value={walletAddr}
+              onChange={e => setWalletAddr(e.target.value)}
+            />
           </div>
         </div>
         <Button
-          onClick={() => mintMutation.mutate({
-            name: nftName, description: nftDesc, imageUrl: nftImage || undefined,
-            walletAddress: walletAddr, contractAddress: contractAddr,
-          })}
-          disabled={!nftName || !walletAddr || !contractAddr || mintMutation.isPending}
+          onClick={() =>
+            mintMutation.mutate({
+              name: nftName,
+              description: nftDesc,
+              imageUrl: nftImage || undefined,
+              walletAddress: walletAddr,
+              contractAddress: contractAddr,
+            })
+          }
+          disabled={
+            !nftName || !walletAddr || !contractAddr || mintMutation.isPending
+          }
           className="w-full"
         >
           {mintMutation.isPending ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Minting...</>
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Minting...
+            </>
           ) : (
-            <><Sparkles className="h-4 w-4 mr-2" />Mint NFT</>
+            <>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Mint NFT
+            </>
           )}
         </Button>
         {lastTx && (
@@ -219,7 +332,12 @@ function NFTMinter() {
               <div className="flex items-center gap-2">
                 <Hash className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">TX:</span>
-                <a href={getExplorerUrl(lastTx.chain, lastTx.hash)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">
+                <a
+                  href={getExplorerUrl(lastTx.chain, lastTx.hash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-mono"
+                >
                   {shortenAddress(lastTx.hash)}
                   <ExternalLink className="h-3 w-3 inline ml-1" />
                 </a>
@@ -227,7 +345,12 @@ function NFTMinter() {
               <div className="flex items-center gap-2">
                 <FileJson className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">IPFS:</span>
-                <a href={getIPFSUrl(lastTx.uri)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">
+                <a
+                  href={getIPFSUrl(lastTx.uri)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-mono"
+                >
                   {lastTx.uri.substring(0, 30)}...
                   <ExternalLink className="h-3 w-3 inline ml-1" />
                 </a>
@@ -261,30 +384,48 @@ function ContractExplorer() {
           <Boxes className="h-5 w-5" />
           Contract Explorer
         </CardTitle>
-        <CardDescription>Query on-chain data from any ERC-721 contract</CardDescription>
+        <CardDescription>
+          Query on-chain data from any ERC-721 contract
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Contract Address</Label>
-          <Input placeholder="0x..." value={contractAddr} onChange={e => setContractAddr(e.target.value)} />
+          <Input
+            placeholder="0x..."
+            value={contractAddr}
+            onChange={e => setContractAddr(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label>Wallet Address (optional, for balance check)</Label>
-          <Input placeholder="0x..." value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
+          <Input
+            placeholder="0x..."
+            value={walletAddr}
+            onChange={e => setWalletAddr(e.target.value)}
+          />
         </div>
         {contractAddr.length >= 42 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-muted/50 space-y-1">
               <p className="text-xs text-muted-foreground">Total Supply</p>
               <p className="text-xl font-bold">
-                {supplyQuery.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : supplyQuery.data?.totalSupply || "—"}
+                {supplyQuery.isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  supplyQuery.data?.totalSupply || "—"
+                )}
               </p>
             </div>
             {walletAddr.length >= 42 && (
               <div className="p-3 rounded-lg bg-muted/50 space-y-1">
                 <p className="text-xs text-muted-foreground">Wallet Balance</p>
                 <p className="text-xl font-bold">
-                  {balanceQuery.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : balanceQuery.data?.balance || "—"}
+                  {balanceQuery.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    balanceQuery.data?.balance || "—"
+                  )}
                 </p>
               </div>
             )}
@@ -305,7 +446,8 @@ export default function Blockchain() {
             Blockchain Hub
           </h1>
           <p className="text-muted-foreground">
-            Thirdweb-powered blockchain operations: IPFS storage, NFT minting, and on-chain verification
+            Thirdweb-powered blockchain operations: IPFS storage, NFT minting,
+            and on-chain verification
           </p>
         </div>
         <WalletConnect size="md" />

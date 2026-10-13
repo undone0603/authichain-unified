@@ -14,9 +14,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
-    "types": ["node", "vite/client"],
+        "types": ["node", "vite/client"],
     "plugins": [
       {
         "name": "next"

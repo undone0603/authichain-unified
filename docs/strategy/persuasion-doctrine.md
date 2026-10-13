@@ -5,8 +5,8 @@ it cannot back, and without framing itself as a company recovering from
 something.
 
 This governs every autonomous Routine that writes outbound copy. The machine
-guardrail (`scripts/validate-social-bundle.mjs`) decides what is *permitted*.
-This decides what is *good*. Passing the validator is the floor, not the goal.
+guardrail (`scripts/validate-social-bundle.mjs`) decides what is _permitted_.
+This decides what is _good_. Passing the validator is the floor, not the goal.
 
 ---
 
@@ -20,7 +20,7 @@ reader can check without asking us.** The specification is public, the verifier
 runs offline with no account, and the conformance suite can be pointed at any
 implementation including ours.
 
-That converts the whole pitch from *trust us* to *check us*. A reader who can
+That converts the whole pitch from _trust us_ to _check us_. A reader who can
 verify does not need to be convinced, and an invitation to verify is the most
 credible thing an unknown company can say.
 
@@ -33,7 +33,7 @@ credible thing an unknown company can say.
 Engineering candour is a real asset internally. Pointed outward at strangers it
 misfires: a reader who has never heard of you does not experience "here is what
 we fixed about ourselves" as integrity. They experience it as a warning. Worse,
-it *implies prior dishonesty that the reader had no reason to suspect* — you
+it _implies prior dishonesty that the reader had no reason to suspect_ — you
 introduce a doubt, then ask to be credited for resolving it.
 
 Never open on a defect, an apology, a past mistake, or a correction. Never write
@@ -41,19 +41,19 @@ Never open on a defect, an apology, a past mistake, or a correction. Never write
 
 The honest version of the same material is simply the present tense:
 
-| Confessional (never ship) | Strong and equally true |
-|---|---|
+| Confessional (never ship)                                                  | Strong and equally true                                                               |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | "We shipped a status page that couldn't report an outage. Here's the fix." | "Our status page reports live probe results, and shows unknown when it doesn't know." |
-| "We removed the fake statistics from our marketing." | "Every number we publish is one you can reproduce." |
-| "We used to claim certifications we didn't hold." | "We claim Ed25519 under FIPS 186-5, because that's what the code does." |
+| "We removed the fake statistics from our marketing."                       | "Every number we publish is one you can reproduce."                                   |
+| "We used to claim certifications we didn't hold."                          | "We claim Ed25519 under FIPS 186-5, because that's what the code does."               |
 
 Both columns are true. The right column persuades. The left column volunteers a
 liability, and nobody asked.
 
 **A caveat that matters:** none of this licenses hiding a limitation a reader
 needs. Rule 5 requires stating real limits plainly. The distinction is between
-*disclosing a current limitation* (required, and persuasive) and *narrating your
-own reform* (never). "No revocation until v0.2" is the first. "We finally fixed
+_disclosing a current limitation_ (required, and persuasive) and _narrating your
+own reform_ (never). "No revocation until v0.2" is the first. "We finally fixed
 our misleading claims" is the second.
 
 ---
@@ -61,7 +61,7 @@ our misleading claims" is the second.
 ## Rule 2 — Specificity is the persuasion
 
 Vague superlatives read as filler because anyone can write them at zero cost. A
-precise number that is *checkable* costs something to state, which is exactly
+precise number that is _checkable_ costs something to state, which is exactly
 why it lands.
 
 - Not "rigorously tested" → **"28 adversarial fixtures, and the suite is
@@ -73,8 +73,8 @@ why it lands.
   enterprise legal team can sign off on implementing it."**
 
 Note what these have in common: each is a fact an adversary could disprove.
-Statistics about *our performance* are forbidden because we have not measured
-them. Facts about *what the system is* are unlimited, and they are better copy.
+Statistics about _our performance_ are forbidden because we have not measured
+them. Facts about _what the system is_ are unlimited, and they are better copy.
 
 ---
 
@@ -104,7 +104,7 @@ invitation to disprove them:
 > Assume we are overstating this. The spec, the verifier and the suite are
 > public — run it against our own output and see what it says.
 
-This is maximally persuasive *and* maximally honest, which is why it is the
+This is maximally persuasive _and_ maximally honest, which is why it is the
 house move. It only works if it is literally true, so never write it about
 anything not actually runnable.
 
@@ -126,7 +126,7 @@ Ours, stated plainly whenever technically relevant:
 - **Ed25519 is not post-quantum secure.** Like all elliptic-curve signatures it
   falls to Shor's algorithm.
 
-Placement matters: a limit belongs *after* the substance, never in the opening
+Placement matters: a limit belongs _after_ the substance, never in the opening
 line, and never as self-criticism. It is a specification detail, delivered flat.
 
 ---
@@ -174,12 +174,12 @@ has real routes. The brand workers handle assets, `sitemap.xml` and
 That is worse than a broken link: the reader clicks a specific promise and
 cannot tell they were sent somewhere else.
 
-| Domain | Linkable routes |
-|---|---|
+| Domain           | Linkable routes                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `authichain.com` | `/` `/protocol` `/spec` `/anchor` `/digital-product-passport` `/dpp` `/pricing` `/book` `/eu-dpp` `/enterprise` `/verify` |
-| `qron.space` | `/` only |
-| `govchain.us` | `/` only |
-| `strainchain.io` | `/` only |
+| `qron.space`     | `/` only                                                                                                                  |
+| `govchain.us`    | `/` only                                                                                                                  |
+| `strainchain.io` | `/` only                                                                                                                  |
 
 `authichain.com/roi-calculator` does not exist. Neither do `/about` or
 `/contact` — they appear in the sitemap but have no handler.
@@ -211,6 +211,6 @@ the reader's real deadline.
 certifications not held · absolutes · borrowed industry statistics · manufactured
 urgency · a link to a route that does not exist.
 
-**The test before shipping any line:** *Could a hostile expert check this in ten
-minutes, and would they come away agreeing?* If yes, it is both honest and as
+**The test before shipping any line:** _Could a hostile expert check this in ten
+minutes, and would they come away agreeing?_ If yes, it is both honest and as
 persuasive as it can be — those turn out to be the same sentence.

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 async function checkConstraints() {
   try {
@@ -11,9 +11,9 @@ async function checkConstraints() {
       FROM pg_constraint 
       WHERE conrelid = 'brands'::regclass
     `;
-    console.log('Constraints on brands:', constraints);
+    console.log("Constraints on brands:", constraints);
   } catch (err) {
-    console.error('Failed:', err.message);
+    console.error("Failed:", err.message);
   } finally {
     process.exit();
   }

@@ -1,5 +1,5 @@
-import { pageMetadata } from "@/lib/page-metadata"
-export const metadata = pageMetadata("security")
+import { pageMetadata } from '@/lib/page-metadata';
+export const metadata = pageMetadata('security');
 
 # Security
 
@@ -155,22 +155,90 @@ Example policy (restrictive):
 
 <table>
   <thead>
-    <tr><th>Category</th><th>Actions</th></tr>
+    <tr>
+      <th>Category</th>
+      <th>Actions</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>navigate</code></td><td>open, back, forward, reload, tab new</td></tr>
-    <tr><td><code>click</code></td><td>click, dblclick, tap</td></tr>
-    <tr><td><code>fill</code></td><td>fill, type, keyboard type/inserttext, select, check, uncheck</td></tr>
-    <tr><td><code>eval</code></td><td>eval, evalhandle, addscript, addinitscript, addstyle, expose, setcontent</td></tr>
-    <tr><td><code>download</code></td><td>download, waitfordownload</td></tr>
-    <tr><td><code>upload</code></td><td>upload</td></tr>
-    <tr><td><code>snapshot</code></td><td>snapshot, screenshot, pdf, diff</td></tr>
-    <tr><td><code>scroll</code></td><td>scroll, scrollintoview</td></tr>
-    <tr><td><code>wait</code></td><td>wait, waitforurl, waitforloadstate, waitforfunction</td></tr>
-    <tr><td><code>get</code></td><td>get text/html/url/title, count, isvisible, getbyrole, getbytext, getbylabel, etc.</td></tr>
-    <tr><td><code>interact</code></td><td>hover, focus, drag, press, keydown, keyup, mousemove, dispatch</td></tr>
-    <tr><td><code>network</code></td><td>network route/unroute, requests</td></tr>
-    <tr><td><code>state</code></td><td>state save/load, cookies set, storage set</td></tr>
+    <tr>
+      <td>
+        <code>navigate</code>
+      </td>
+      <td>open, back, forward, reload, tab new</td>
+    </tr>
+    <tr>
+      <td>
+        <code>click</code>
+      </td>
+      <td>click, dblclick, tap</td>
+    </tr>
+    <tr>
+      <td>
+        <code>fill</code>
+      </td>
+      <td>fill, type, keyboard type/inserttext, select, check, uncheck</td>
+    </tr>
+    <tr>
+      <td>
+        <code>eval</code>
+      </td>
+      <td>eval, evalhandle, addscript, addinitscript, addstyle, expose, setcontent</td>
+    </tr>
+    <tr>
+      <td>
+        <code>download</code>
+      </td>
+      <td>download, waitfordownload</td>
+    </tr>
+    <tr>
+      <td>
+        <code>upload</code>
+      </td>
+      <td>upload</td>
+    </tr>
+    <tr>
+      <td>
+        <code>snapshot</code>
+      </td>
+      <td>snapshot, screenshot, pdf, diff</td>
+    </tr>
+    <tr>
+      <td>
+        <code>scroll</code>
+      </td>
+      <td>scroll, scrollintoview</td>
+    </tr>
+    <tr>
+      <td>
+        <code>wait</code>
+      </td>
+      <td>wait, waitforurl, waitforloadstate, waitforfunction</td>
+    </tr>
+    <tr>
+      <td>
+        <code>get</code>
+      </td>
+      <td>get text/html/url/title, count, isvisible, getbyrole, getbytext, getbylabel, etc.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>interact</code>
+      </td>
+      <td>hover, focus, drag, press, keydown, keyup, mousemove, dispatch</td>
+    </tr>
+    <tr>
+      <td>
+        <code>network</code>
+      </td>
+      <td>network route/unroute, requests</td>
+    </tr>
+    <tr>
+      <td>
+        <code>state</code>
+      </td>
+      <td>state save/load, cookies set, storage set</td>
+    </tr>
   </tbody>
 </table>
 
@@ -216,16 +284,54 @@ Affected output types: `snapshot`, `get text`, `get html`, `eval`, `console`.
 
 <table>
   <thead>
-    <tr><th>Variable</th><th>Description</th></tr>
+    <tr>
+      <th>Variable</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>AGENT_BROWSER_CONTENT_BOUNDARIES</code></td><td>Wrap page output in boundary markers</td></tr>
-    <tr><td><code>AGENT_BROWSER_MAX_OUTPUT</code></td><td>Max characters for page output</td></tr>
-    <tr><td><code>AGENT_BROWSER_ALLOWED_DOMAINS</code></td><td>Comma-separated allowed domain patterns</td></tr>
-    <tr><td><code>AGENT_BROWSER_ACTION_POLICY</code></td><td>Path to action policy JSON file</td></tr>
-    <tr><td><code>AGENT_BROWSER_CONFIRM_ACTIONS</code></td><td>Comma-separated action categories requiring confirmation</td></tr>
-    <tr><td><code>AGENT_BROWSER_CONFIRM_INTERACTIVE</code></td><td>Enable interactive confirmation prompts</td></tr>
-    <tr><td><code>AGENT_BROWSER_ENCRYPTION_KEY</code></td><td>64-char hex key for AES-256-GCM encryption (auth vault + sessions)</td></tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_CONTENT_BOUNDARIES</code>
+      </td>
+      <td>Wrap page output in boundary markers</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_MAX_OUTPUT</code>
+      </td>
+      <td>Max characters for page output</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_ALLOWED_DOMAINS</code>
+      </td>
+      <td>Comma-separated allowed domain patterns</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_ACTION_POLICY</code>
+      </td>
+      <td>Path to action policy JSON file</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_CONFIRM_ACTIONS</code>
+      </td>
+      <td>Comma-separated action categories requiring confirmation</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_CONFIRM_INTERACTIVE</code>
+      </td>
+      <td>Enable interactive confirmation prompts</td>
+    </tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_ENCRYPTION_KEY</code>
+      </td>
+      <td>64-char hex key for AES-256-GCM encryption (auth vault + sessions)</td>
+    </tr>
   </tbody>
 </table>
 

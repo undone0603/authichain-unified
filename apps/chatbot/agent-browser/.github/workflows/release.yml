@@ -252,7 +252,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
-          
+
           # Check if release already exists
           if gh release view "$TAG" &>/dev/null; then
             echo "Release $TAG already exists, uploading binaries..."

@@ -7,17 +7,29 @@
  *
  * Usage: PLAYWRIGHT_AVAILABLE=1 pnpm tsx scripts/run-vision-tasks.ts
  */
-import { getDueTasks, markTaskRunning, markTaskDone, markTaskFailed, getDb } from '../server/db.js';
-import { runVisionResearchLead, runVisionFreeform } from '../server/agents/browser-vision.js';
+import {
+  getDueTasks,
+  markTaskRunning,
+  markTaskDone,
+  markTaskFailed,
+  getDb,
+} from "../server/db.js";
+import {
+  runVisionResearchLead,
+  runVisionFreeform,
+} from "../server/agents/browser-vision.js";
 
-const VISION_RUNNERS: Record<string, (task: any, db: any) => Promise<unknown>> = {
-  BROWSE_VISION_RESEARCH_LEAD: runVisionResearchLead,
-  BROWSE_VISION_FREEFORM: runVisionFreeform,
-};
+const VISION_RUNNERS: Record<string, (task: any, db: any) => Promise<unknown>> =
+  {
+    BROWSE_VISION_RESEARCH_LEAD: runVisionResearchLead,
+    BROWSE_VISION_FREEFORM: runVisionFreeform,
+  };
 
 async function main() {
-  if (process.env.PLAYWRIGHT_AVAILABLE !== '1') {
-    throw new Error('Set PLAYWRIGHT_AVAILABLE=1 (and install Chromium) before running vision tasks.');
+  if (process.env.PLAYWRIGHT_AVAILABLE !== "1") {
+    throw new Error(
+      "Set PLAYWRIGHT_AVAILABLE=1 (and install Chromium) before running vision tasks."
+    );
   }
 
   const db = await getDb();
@@ -36,7 +48,10 @@ async function main() {
       await markTaskDone(task.id);
       ran++;
     } catch (err) {
-      await markTaskFailed(task.id, err instanceof Error ? err.message : String(err));
+      await markTaskFailed(
+        task.id,
+        err instanceof Error ? err.message : String(err)
+      );
       errors++;
     }
   }
@@ -46,6 +61,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('run-vision-tasks failed:', err);
+  console.error("run-vision-tasks failed:", err);
   process.exit(1);
 });

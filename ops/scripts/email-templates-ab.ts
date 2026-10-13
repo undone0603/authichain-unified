@@ -6,7 +6,7 @@
  * Variant B: Conversational, ROI-focused, urgency + social proof
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 export interface EmailTemplate {
   name: string;
@@ -23,8 +23,8 @@ export const emailTemplates = {
   // ─ CTA: "Schedule a Demo" (formal)
   // ═════════════════════════════════════════════════════════════════════════
   proposal_a: {
-    name: 'proposal_a',
-    subject: 'Proposal: Blockchain Authentication for {{company}}',
+    name: "proposal_a",
+    subject: "Proposal: Blockchain Authentication for {{company}}",
     htmlContent: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -133,7 +133,8 @@ We believe blockchain authentication is the future of supply chain trust. Let's 
 ---
 AuthiChain • Product Authentication Infrastructure
 https://authichain.io`,
-    description: 'Professional, technical tone. Features-first. Best for enterprise/technical buyers.',
+    description:
+      "Professional, technical tone. Features-first. Best for enterprise/technical buyers.",
   },
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -142,8 +143,8 @@ https://authichain.io`,
   // ─ CTA: "Let's Talk" (conversational)
   // ═════════════════════════════════════════════════════════════════════════
   proposal_b: {
-    name: 'proposal_b',
-    subject: 'Your $2M Opportunity: Blockchain Authentication for {{company}}',
+    name: "proposal_b",
+    subject: "Your $2M Opportunity: Blockchain Authentication for {{company}}",
     htmlContent: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -280,7 +281,8 @@ The companies taking action now are locking in competitive advantage. Those wait
 AuthiChain • Blockchain Product Authentication
 Trusted by government agencies, manufacturers, and luxury brands
 https://authichain.io`,
-    description: 'Conversational, ROI-focused. Pain-point-driven with social proof. Best for decision-makers.',
+    description:
+      "Conversational, ROI-focused. Pain-point-driven with social proof. Best for decision-makers.",
   },
 };
 
@@ -298,48 +300,48 @@ export async function seedEmailTemplates(testId: number) {
   const variants = [
     {
       ab_test_id: testId,
-      variant_name: 'A',
-      variant_type: 'email',
+      variant_name: "A",
+      variant_type: "email",
       template_name: emailTemplates.proposal_a.name,
       subject: emailTemplates.proposal_a.subject,
       html_content: emailTemplates.proposal_a.htmlContent,
       text_content: emailTemplates.proposal_a.textContent,
       metadata: {
-        tone: 'professional',
-        focus: 'technical_benefits',
+        tone: "professional",
+        focus: "technical_benefits",
         description: emailTemplates.proposal_a.description,
       },
     },
     {
       ab_test_id: testId,
-      variant_name: 'B',
-      variant_type: 'email',
+      variant_name: "B",
+      variant_type: "email",
       template_name: emailTemplates.proposal_b.name,
       subject: emailTemplates.proposal_b.subject,
       html_content: emailTemplates.proposal_b.htmlContent,
       text_content: emailTemplates.proposal_b.textContent,
       metadata: {
-        tone: 'conversational',
-        focus: 'roi_social_proof',
+        tone: "conversational",
+        focus: "roi_social_proof",
         description: emailTemplates.proposal_b.description,
       },
     },
   ];
 
   const { error } = await supabase
-    .from('ab_test_variants')
-    .upsert(variants, { onConflict: 'ab_test_id,variant_name' });
+    .from("ab_test_variants")
+    .upsert(variants, { onConflict: "ab_test_id,variant_name" });
 
   if (error) {
-    console.error('❌ Failed to seed email templates:', error);
+    console.error("❌ Failed to seed email templates:", error);
     throw error;
   }
 
-  console.log('✅ Email templates seeded');
+  console.log("✅ Email templates seeded");
 }
 
 // CLI execution
-seedEmailTemplates(1).catch((err) => {
-  console.error('Fatal error:', err);
+seedEmailTemplates(1).catch(err => {
+  console.error("Fatal error:", err);
   process.exit(1);
 });

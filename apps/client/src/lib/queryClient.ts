@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 export async function apiRequest(
   method: string,
   url: string,
-  data?: unknown,
+  data?: unknown
 ): Promise<Response> {
   const res = await fetch(url, {
     method,

@@ -5,24 +5,24 @@
 - ✅ `/scripts/score-opportunities.ts` (UPDATED)
   - Added fit_score thresholds (70, 60)
   - Added recommended_action='qualify' for borderline (60-69)
-  
+
 - ✅ `/scripts/qualify-leads.ts` (NEW)
   - Converts fit_score >= 70 into qualified leads
   - Generates 4-dimension lead_score_detail
   - Creates/upserts entries in leads table
-  
+
 - ✅ `/scripts/email-proposals.ts` (EXISTING - ENHANCED)
   - Already sends proposals via Resend with HTML templates
   - NOW queries leads table (gov_engine source) instead of gov_proposals
   - Updated to include fit_score breakdown in email body
   - Tracks lastContactedAt and status='contacted'
   - Note: existing schema uses email_status='unsent/sent' and contact_email field
-  
+
 - ✅ `/drizzle/migrations/015_lead_scoring_pipeline.sql` (NEW)
   - Adds qualified_at to gov_opportunities
   - Adds threadId to leads
   - Creates indexes for efficient queries
-  
+
 - ✅ `/docs/marketing/gov-engine-lead-pipeline.md` (NEW)
   - Complete architecture & workflow guide
   - SQL query examples
@@ -98,11 +98,13 @@ echo $GMAIL_APP_PASSWORD      # Fallback SMTP
 ```
 
 If using Resend (recommended):
+
 - [ ] Resend API key set in `.env`
 - [ ] From email configured in Resend
 - [ ] Domain verified in Resend (for production)
 
 If using Gmail (fallback):
+
 - [ ] Gmail address configured
 - [ ] App password (not regular password) set
 - [ ] Less secure app access enabled (if not using app password)
@@ -110,11 +112,13 @@ If using Gmail (fallback):
 ### 5. Configure Suppression List
 
 Edit `.env`:
+
 ```bash
 SUPPRESSION_LIST=test@example.com,internal@authichain.us,noreply@example.com
 ```
 
 Or set as GitHub Secret:
+
 ```yaml
 SUPPRESSION_LIST: ${{ secrets.SUPPRESSION_LIST }}
 ```
@@ -126,8 +130,8 @@ SUPPRESSION_LIST: ${{ secrets.SUPPRESSION_LIST }}
 ```sql
 -- Insert a test opportunity
 INSERT INTO gov_opportunities (
-  notice_id, title, agency, deadline, description, 
-  status, fit_score, ai_reasoning, key_requirements, 
+  notice_id, title, agency, deadline, description,
+  status, fit_score, ai_reasoning, key_requirements,
   recommended_action, scored_at
 ) VALUES (
   'TEST-LEAD-001',
@@ -151,15 +155,17 @@ DRY_RUN=true pnpm tsx scripts/qualify-leads.ts
 ```
 
 **Then run for real:**
+
 ```bash
 pnpm tsx scripts/qualify-leads.ts
 
 # Verify lead was created
-SELECT email, company, leadScore, status FROM leads 
+SELECT email, company, leadScore, status FROM leads
 WHERE source = 'gov_engine' AND notice_id = 'TEST-LEAD-001';
 ```
 
 **Send test email:**
+
 ```bash
 pnpm tsx scripts/email-proposals.ts
 # (Will send to test@... email, check inbox)
@@ -171,14 +177,14 @@ After deploying, monitor:
 
 ```bash
 # Check scoring results
-SELECT status, COUNT(*) as count, 
+SELECT status, COUNT(*) as count,
        AVG(fit_score) as avg_fit,
        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY fit_score) as median_fit
 FROM gov_opportunities
 GROUP BY status;
 
 # Check lead qualification
-SELECT COUNT(*) as total_qualified, 
+SELECT COUNT(*) as total_qualified,
        AVG(leadScore) as avg_score,
        COUNT(DISTINCT company) as unique_agencies
 FROM leads
@@ -195,11 +201,12 @@ WHERE source = 'gov_engine' AND lastContactedAt IS NOT NULL;
 ### 8. Set Up Alerts (Optional)
 
 Monitor email quota usage:
+
 ```bash
 # After sending, check Resend dashboard or:
 SELECT COUNT(*) as emails_sent_today
 FROM leads
-WHERE source = 'gov_engine' 
+WHERE source = 'gov_engine'
   AND lastContactedAt >= now() - interval '1 day'
   AND status = 'contacted';
 
@@ -212,26 +219,26 @@ WHERE source = 'gov_engine'
 
 ### Environment Variables Required
 
-| Variable | Source | Purpose | Required |
-|----------|--------|---------|----------|
-| `SUPABASE_URL` | Supabase | Database URL | ✅ Yes |
-| `SUPABASE_SERVICE_KEY` | Supabase | Service role API key | ✅ Yes |
-| `OPENAI_API_KEY` | OpenAI | LLM for scoring & qualification | ⚠️ Or alternative |
-| `GROQ_API_KEY` | Groq | LLM fallback (free tier) | ⚠️ Or alternative |
-| `GEMINI_API_KEY` | Google | LLM fallback (free tier) | ⚠️ Or alternative |
-| `MISTRAL_API_KEY` | Mistral | LLM fallback (free tier) | ⚠️ Or alternative |
-| `RESEND_API_KEY` | Resend | Email sending | ✅ Yes |
-| `GMAIL_FROM_EMAIL` | Gmail | Email fallback | ⚠️ Or Resend |
-| `GMAIL_APP_PASSWORD` | Gmail | Email fallback auth | ⚠️ Or Resend |
-| `GOVCHAIN_URL` | AuthiChain | Portal link in emails | ✅ Yes |
+| Variable               | Source     | Purpose                         | Required          |
+| ---------------------- | ---------- | ------------------------------- | ----------------- |
+| `SUPABASE_URL`         | Supabase   | Database URL                    | ✅ Yes            |
+| `SUPABASE_SERVICE_KEY` | Supabase   | Service role API key            | ✅ Yes            |
+| `OPENAI_API_KEY`       | OpenAI     | LLM for scoring & qualification | ⚠️ Or alternative |
+| `GROQ_API_KEY`         | Groq       | LLM fallback (free tier)        | ⚠️ Or alternative |
+| `GEMINI_API_KEY`       | Google     | LLM fallback (free tier)        | ⚠️ Or alternative |
+| `MISTRAL_API_KEY`      | Mistral    | LLM fallback (free tier)        | ⚠️ Or alternative |
+| `RESEND_API_KEY`       | Resend     | Email sending                   | ✅ Yes            |
+| `GMAIL_FROM_EMAIL`     | Gmail      | Email fallback                  | ⚠️ Or Resend      |
+| `GMAIL_APP_PASSWORD`   | Gmail      | Email fallback auth             | ⚠️ Or Resend      |
+| `GOVCHAIN_URL`         | AuthiChain | Portal link in emails           | ✅ Yes            |
 
 ### Database Indexes (Auto-Created by Migration)
 
-| Index | Table | Purpose |
-|-------|-------|---------|
+| Index                                    | Table             | Purpose                        |
+| ---------------------------------------- | ----------------- | ------------------------------ |
 | `gov_opportunities_status_fit_score_idx` | gov_opportunities | Fast queries of high-fit leads |
-| `leads_source_status_contacted_idx` | leads | Fast uncontacted lead lookups |
-| `leads_email_idx` | leads | Suppression list checks |
+| `leads_source_status_contacted_idx`      | leads             | Fast uncontacted lead lookups  |
+| `leads_email_idx`                        | leads             | Suppression list checks        |
 
 ---
 

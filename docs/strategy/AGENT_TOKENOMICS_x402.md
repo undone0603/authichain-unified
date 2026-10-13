@@ -44,13 +44,13 @@ There is **no new token launch** in this work and none is required for agent-to-
 
 Stripe, x402 USDC, and `$QRON` are **three** paths. Full wallet map: [`WEB3_IDENTITY.md`](./WEB3_IDENTITY.md).
 
-|                 | Human checkout                       | Agent rail                                 | `$QRON` ERC-20                         |
-| --------------- | ------------------------------------ | ------------------------------------------ | -------------------------------------- |
-| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop) | n/a — not a payment rail               |
-| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                    | Polygon ERC-20                         |
-| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)            | 1B supply; speculative / theater       |
-| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                   | Token transfer, not agent settlement   |
-| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON       | `docs/strategy/WEB3_IDENTITY.md`       |
+|                 | Human checkout                       | Agent rail                                   | `$QRON` ERC-20                                 |
+| --------------- | ------------------------------------ | -------------------------------------------- | ---------------------------------------------- |
+| Buyer           | Person with a card                   | Funded agent wallet (KYC'd owner off-loop)   | n/a — not a payment rail                       |
+| Protocol        | Stripe Payment Link / Checkout       | HTTP 402 + x402 `exact`                      | Polygon ERC-20                                 |
+| SKUs            | Passport $49 · DPP $299 · QRON packs | $0.05 / verify call (Base USDC)              | 1B supply; speculative / theater               |
+| Receipt         | Stripe charge                        | On-chain USDC to `payTo`                     | Token transfer, not agent settlement           |
+| Source of truth | `src/lib/plans.ts`                   | `src/lib/x402.ts` + live health JSON         | `docs/strategy/WEB3_IDENTITY.md`               |
 | Wallet          | Stripe acct `acct_1SXIyEGqTruSqV8T`  | payTo / tokenomics EOA `0xaebf…e437` on Base | Former payTo `0x5db5…` holds the Polygon token |
 
 A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. Genetics public verify (`GET /api/genetics/verify`) remains **free** and is not a second paid skill.

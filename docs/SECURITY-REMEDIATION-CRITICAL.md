@@ -15,22 +15,23 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 1. Any repo containing leaked keys in history goes public.
 2. Any usage-billed service (OpenAI, Cloudflare, Stripe, Supabase) starts showing charges that can't be traced to the founder's own activity — signal someone else found the key.
-3. Real user traffic lands — at that point any still-valid leaked key is live exposure and must be rotated *before* launch.
+3. Real user traffic lands — at that point any still-valid leaked key is live exposure and must be rotated _before_ launch.
 
-**All code-level fixes in this document remain in force** regardless of the rotation decision — they prevent *future* leaks and were cheap to land.
+**All code-level fixes in this document remain in force** regardless of the rotation decision — they prevent _future_ leaks and were cheap to land.
 
 ---
 
 ## SEVERITY SUMMARY
 
-| Severity | Findings | Status |
-|----------|----------|--------|
-| CRITICAL | 6 | 4 FIXED (code), 2 PENDING (rotation) |
-| HIGH | 3 | 1 FIXED (code), 2 PENDING (rotation) |
-| MEDIUM | 5 | 3 FIXED (code), 2 PENDING (migration) |
-| LOW | 1 | No action needed |
+| Severity | Findings | Status                                |
+| -------- | -------- | ------------------------------------- |
+| CRITICAL | 6        | 4 FIXED (code), 2 PENDING (rotation)  |
+| HIGH     | 3        | 1 FIXED (code), 2 PENDING (rotation)  |
+| MEDIUM   | 5        | 3 FIXED (code), 2 PENDING (migration) |
+| LOW      | 1        | No action needed                      |
 
 **2026-04-24 update:**
+
 - CRIT-3b added: `authichain-autopilot` worker (missed by original audit). Fix prepared.
 - CRIT-3c added: `scripts/mi-cannabis-extraction.ts` + `scripts/test-truth-layer-loop.ts` leaked OpenAI + Supabase service_role. Fixed in code; rotation required.
 - MED-2 partial: `authichain-api` migrated to env secret (1 of 5).
@@ -48,6 +49,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Full financial access -- refunds, charges, customer PII, subscription modifications.
 
 **Remediation:**
+
 1. Go to https://dashboard.stripe.com/apikeys
 2. Roll the secret key (generate new, revoke old)
 3. Store new key as Cloudflare Worker secret: `wrangler secret put STRIPE_SECRET`
@@ -61,6 +63,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Attacker can forge webhook events (fake sales, fake fulfillment).
 
 **Remediation:**
+
 1. Go to Stripe Dashboard > Webhooks > regenerate signing secret
 2. Store as: `wrangler secret put WEBHOOK_SECRET`
 
@@ -72,11 +75,13 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Anyone with Cloudflare account access can send emails as authichain.com.
 
 **Fix Applied:**
+
 - Fixed worker code at `workers/resend-relay/index.js` (v1.1)
 - API key removed from source, reads from `env.RESEND_API_KEY`
 - Deploy script at `workers/resend-relay/deploy.sh`
 
 **Remaining Manual Steps:**
+
 1. Deploy via Cloudflare Dashboard or `wrangler deploy`
 2. Add secret: `wrangler secret put RESEND_API_KEY`
 3. Rotate the key at https://resend.com/api-keys
@@ -87,12 +92,14 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Added: 2026-04-24 (missed by original audit)**
 **Worker:** `authichain-autopilot`
 **Secrets:**
+
 - Resend API key `re_[REDACTED]` (same key as CRIT-3)
 - Supabase anon JWT (same instance as MED-2)
 
 **Risk:** Same as CRIT-3 + MED-2. Worker runs on 6-hour cron (cold outreach + drip follow-ups) — compromise means attacker can send email as authichain.com and read/write `drip_prospects` table.
 
 **Fix Applied:**
+
 - `workers/authichain-autopilot/index.js` bumped to v1.1
 - Removed hardcoded `ANON` and `RESEND_KEY` constants
 - Now reads `SUPABASE_ANON_KEY` and `RESEND_API_KEY` from Workers secret bindings (service-worker global injection)
@@ -101,6 +108,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 - Deploy script at `workers/authichain-autopilot/deploy.sh` (sets secrets first, then uploads code)
 
 **Remaining Manual Steps:**
+
 1. Run `bash workers/authichain-autopilot/deploy.sh` with `CLOUDFLARE_API_TOKEN`, `RESEND_API_KEY`, `SUPABASE_ANON_KEY` exported
 2. Verify `/health` returns `secrets_configured: true`
 3. When rotating the Resend key, update BOTH `resend-relay` AND `authichain-autopilot` — they share the same key
@@ -110,20 +118,24 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Status: FIXED (code), PENDING ROTATION**
 **Added: 2026-04-24 (missed by original audit)**
 **Files:**
+
 - `scripts/mi-cannabis-extraction.ts` — OpenAI `sk-proj-...` + Supabase service_role JWT for project `dbwoikpflfruikspdnfc`
 - `scripts/test-truth-layer-loop.ts` — same OpenAI `sk-proj-...` key
 
 **Risk:**
+
 - `service_role` keys **bypass RLS** — higher severity than anon keys. Full admin read/write to the Michigan cannabis extraction Supabase project.
 - `sk-proj-...` OpenAI keys are long-lived project keys; exposure = billing abuse + prompt-leak of anything previously sent through them.
 - Both were checked into git, so they live in history even after redaction. Rotation is required.
 
 **Fix Applied:**
+
 - Both scripts now read keys from `process.env` (`OPENAI_API_KEY`, `SUPABASE_MI_URL`, `SUPABASE_MI_SERVICE_KEY`).
 - Scripts `process.exit(1)` with a clear error message when the env vars are missing, instead of silently running with a stale hardcoded key.
 - `.env.example` updated with the two new `SUPABASE_MI_*` entries.
 
 **Remaining Manual Steps:**
+
 1. **Rotate the Supabase service_role key** at https://supabase.com/dashboard/project/dbwoikpflfruikspdnfc/settings/api
 2. **Rotate the OpenAI key** at https://platform.openai.com/api-keys (revoke `sk-proj-psYdqX1I1y3tpJQszNq...`)
 3. Populate `.env` locally with the new values before running either script again.
@@ -135,11 +147,13 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** PII exposure. Names + emails of real prospects in deployable source code.
 
 **Fix Applied:**
+
 - Migration worker at `scripts/qron-outreach-migration.js`
 - Clean worker at `scripts/qron-outreach-fixed.js` (reads from KV)
 - KV data files at `scripts/kv-data/outreach_queue.json` and `sender_config.json`
 
 **Remaining Manual Steps:**
+
 1. Deploy migration worker via Dashboard
 2. Hit `/migrate-to-kv?key=qron-ops-2026` to seed KV
 3. Verify with `/verify-kv?key=qron-ops-2026`
@@ -155,11 +169,13 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Status: PENDING REVOCATION**
 **Workers:** `qron-stripe-webhook`, `qrontoken-telegram-bot`
 **Tokens:**
+
 - `[REDACTED]` (QRON bot)
 - `[REDACTED]` (Ops bot)
-**Risk:** Bot impersonation, message exfiltration, spam.
+  **Risk:** Bot impersonation, message exfiltration, spam.
 
 **Remediation:**
+
 1. Message @BotFather on Telegram: `/revoke` for each bot
 2. Generate new tokens
 3. Store as Worker secrets: `wrangler secret put QRON_BOT_TOKEN` / `OPS_BOT_TOKEN`
@@ -172,6 +188,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Unauthorized LLM API usage, billing abuse.
 
 **Remediation:**
+
 1. Rotate at https://console.groq.com/keys
 2. Store as: `wrangler secret put GROQ_KEY`
 
@@ -182,6 +199,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Autonomous email sending without human approval even when `requireOutreachApproval=true`.
 
 **Fix Applied:**
+
 - Added `ENV.requireOutreachApproval` checks to all 4 email-sending functions
 - When approval required: creates `emailDrafts` entry + pauses task for human review
 - When approval not required: behavior unchanged (direct send)
@@ -196,12 +214,14 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Status: PENDING DELETION**
 **Location:** `C:\Users\rac\OneDrive\Documents\`
 **Files:**
+
 - `Chrome Passwords.csv`
 - `Chrome Passwords Exactly.k.csv`
 - `Microsoft Edge Passwords.csv`
-**Risk:** Plaintext passwords accessible via OneDrive sync.
+  **Risk:** Plaintext passwords accessible via OneDrive sync.
 
 **Remediation:**
+
 1. Verify all passwords migrated to 1Password (installed on this machine)
 2. Permanently delete all 3 files
 3. Empty OneDrive recycle bin
@@ -215,6 +235,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Remediation:** Move to `env.SUPABASE_ANON_KEY` (module) or `SUPABASE_ANON_KEY` global (service-worker) across all workers.
 
 **2026-04-24 progress:**
+
 - `authichain-api` v3.0.1: fix prepared in `workers/authichain-api/index.js` + `deploy.sh`. Also bumped autopilot (added as CRIT-3b) which shared the same key.
 - Remaining 4 workers (`gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify`) are not source-tracked in this repo — must be fixed via Cloudflare Dashboard Quick Edit or pulled into repo first.
 
@@ -226,6 +247,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Risk:** Trivially guessable, appears in logs/history/referer headers. Dashboard exposes internal links.
 
 **Fix Applied:**
+
 - Rewrote `workers/authichain-dashboard/src/index.ts`:
   - Password removed from source; reads from `env.ACCESS_TOKEN` secret binding
   - Auth is now cookie-based (HttpOnly, Secure, SameSite=Strict, 8-hour lifetime) set via POST /login
@@ -235,6 +257,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 - Deploy script at `workers/authichain-dashboard/deploy.sh` (requires wrangler because the TS worker needs a build)
 
 **Remaining Manual Steps:**
+
 1. Generate a strong token: `openssl rand -hex 32`
 2. `export ACCESS_TOKEN="..."` and run `bash workers/authichain-dashboard/deploy.sh`
 3. Update any bookmarks — `?key=...` URLs no longer work; visit root, log in, cookie sticks
@@ -267,12 +290,12 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 ### Bumped (in this session)
 
-| Package | Before | After | Advisories resolved |
-|---|---|---|---|
-| `@trpc/server` + `@trpc/client` + `@trpc/react-query` | ^11.6.0 | ^11.16.0 | Prototype pollution (high) |
-| `axios` | ^1.13.5 | ^1.15.2 | SSRF via NO_PROXY bypass + cloud metadata exfiltration (moderate ×2) |
-| `hono` | ^4.12.8 | ^4.12.15 | Cookie handling, path traversal in toSSG, serveStatic bypass, ipRestriction, JSX injection (moderate ×6) |
-| `nodemailer` | ^8.0.1 | ^8.0.6 | SMTP command injection via envelope.size + CRLF (low + moderate) |
+| Package                                               | Before  | After    | Advisories resolved                                                                                      |
+| ----------------------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `@trpc/server` + `@trpc/client` + `@trpc/react-query` | ^11.6.0 | ^11.16.0 | Prototype pollution (high)                                                                               |
+| `axios`                                               | ^1.13.5 | ^1.15.2  | SSRF via NO_PROXY bypass + cloud metadata exfiltration (moderate ×2)                                     |
+| `hono`                                                | ^4.12.8 | ^4.12.15 | Cookie handling, path traversal in toSSG, serveStatic bypass, ipRestriction, JSX injection (moderate ×6) |
+| `nodemailer`                                          | ^8.0.1  | ^8.0.6   | SMTP command injection via envelope.size + CRLF (low + moderate)                                         |
 
 Post-session: **24 advisories** (18 moderate / 6 high). All remaining are transitive — can only be fixed once upstream dependencies publish updated releases.
 
@@ -295,18 +318,18 @@ Grep of the codebase confirms **no `sql.identifier()` usage** — the vulnerable
 
 ## CODEBASE FIXES APPLIED (This Session)
 
-| File | Fix | Impact |
-|------|-----|--------|
-| `drizzle/schema.ts` | Added missing `drizzle-orm/mysql-core` imports | Eliminated 573 TS errors |
-| `drizzle/schema.ts` | Added staking, feedback, personalization tables | Resolved module export errors |
-| `drizzle/schema.ts` | Added `segment`, `nextActionAt` to leads; `taskId` to emailDrafts | Schema-code alignment |
-| `server/db.ts` | Implemented 60+ CRUD functions | Eliminated ~300 TS errors |
-| `server/db.ts` | Fixed field mismatches (timestamp/createdAt, read/isRead) | Runtime crash prevention |
-| `server/agents/closer.ts` | Added approval gate to 4 email functions | Security: no more bypass |
-| `server/_core/paddle.ts` | Created missing Paddle webhook verification | Resolved module not found |
-| `server/_core/types/crisp-api.d.ts` | Created ambient type declaration | Resolved module not found |
-| `workers/resend-relay/index.js` | Prepared fixed worker (API key to env) | Security: credential removal |
-| `scripts/qron-outreach-fixed.js` | Prepared fixed worker (emails to KV) | Security: PII removal |
+| File                                | Fix                                                               | Impact                        |
+| ----------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
+| `drizzle/schema.ts`                 | Added missing `drizzle-orm/mysql-core` imports                    | Eliminated 573 TS errors      |
+| `drizzle/schema.ts`                 | Added staking, feedback, personalization tables                   | Resolved module export errors |
+| `drizzle/schema.ts`                 | Added `segment`, `nextActionAt` to leads; `taskId` to emailDrafts | Schema-code alignment         |
+| `server/db.ts`                      | Implemented 60+ CRUD functions                                    | Eliminated ~300 TS errors     |
+| `server/db.ts`                      | Fixed field mismatches (timestamp/createdAt, read/isRead)         | Runtime crash prevention      |
+| `server/agents/closer.ts`           | Added approval gate to 4 email functions                          | Security: no more bypass      |
+| `server/_core/paddle.ts`            | Created missing Paddle webhook verification                       | Resolved module not found     |
+| `server/_core/types/crisp-api.d.ts` | Created ambient type declaration                                  | Resolved module not found     |
+| `workers/resend-relay/index.js`     | Prepared fixed worker (API key to env)                            | Security: credential removal  |
+| `scripts/qron-outreach-fixed.js`    | Prepared fixed worker (emails to KV)                              | Security: PII removal         |
 
 **TypeScript errors: 978 -> 0**
 **Build: Clean pass**
@@ -345,6 +368,7 @@ Founder confirmed: GitHub repos are private, and they are the only person who ha
 - [ ] Delete browser password CSVs from OneDrive (MED-1)
 
 **Rotations** — dropped for now per the founder risk call. Revisit this section **before shipping to any real user**, and immediately if either trigger fires:
+
 - GitHub repo(s) flip to public, OR
 - Any usage-billed service (OpenAI, Cloudflare, Stripe, Supabase) shows unexplained charges.
 
@@ -352,18 +376,18 @@ Founder confirmed: GitHub repos are private, and they are the only person who ha
 
 ## APPENDIX: Worker Security Scorecard
 
-| Worker | Secrets | Severity | Clean? |
-|--------|---------|----------|--------|
-| resend-relay | 1 (API key) | CRITICAL | FIX PREPARED |
-| authichain-autopilot | 2 (Resend + Supabase) | CRITICAL | FIX PREPARED |
-| qron-outreach | 10 (emails+token) | CRITICAL | FIX PREPARED |
-| qron-stripe-webhook | 5 | CRITICAL | PENDING |
-| qron-daily-ops | 4 | CRITICAL | PENDING |
-| qrontoken-telegram-bot | 1 | HIGH | PENDING |
-| gmail-relay-z | 1 | MEDIUM | PENDING |
-| authichain-api | 1 | MEDIUM | FIX PREPARED |
-| authichain-dashboard | 1 | MEDIUM | FIX PREPARED |
-| authichain-verify | 1 | MEDIUM | PENDING |
-| qron-seo-engine | 1 (public) | LOW | OK |
-| qron-self-heal | 0 | CLEAN | OK |
-| authichain-verifier | 0 | CLEAN | OK |
+| Worker                 | Secrets               | Severity | Clean?       |
+| ---------------------- | --------------------- | -------- | ------------ |
+| resend-relay           | 1 (API key)           | CRITICAL | FIX PREPARED |
+| authichain-autopilot   | 2 (Resend + Supabase) | CRITICAL | FIX PREPARED |
+| qron-outreach          | 10 (emails+token)     | CRITICAL | FIX PREPARED |
+| qron-stripe-webhook    | 5                     | CRITICAL | PENDING      |
+| qron-daily-ops         | 4                     | CRITICAL | PENDING      |
+| qrontoken-telegram-bot | 1                     | HIGH     | PENDING      |
+| gmail-relay-z          | 1                     | MEDIUM   | PENDING      |
+| authichain-api         | 1                     | MEDIUM   | FIX PREPARED |
+| authichain-dashboard   | 1                     | MEDIUM   | FIX PREPARED |
+| authichain-verify      | 1                     | MEDIUM   | PENDING      |
+| qron-seo-engine        | 1 (public)            | LOW      | OK           |
+| qron-self-heal         | 0                     | CLEAN    | OK           |
+| authichain-verifier    | 0                     | CLEAN    | OK           |

@@ -1,6 +1,6 @@
-import { pageMetadata } from "@/lib/page-metadata"
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata = pageMetadata("native-mode")
+export const metadata = pageMetadata("native-mode");
 
 # Native Mode (Experimental)
 
@@ -34,21 +34,57 @@ agent-browser close
 Add `"native": true` to your `agent-browser.json`:
 
 ```json
-{"native": true}
+{ "native": true }
 ```
 
 ## Architecture Comparison
 
 <table>
   <thead>
-    <tr><th></th><th>Default (Node.js)</th><th>Native (<code>--native</code>)</th></tr>
+    <tr>
+      <th></th>
+      <th>Default (Node.js)</th>
+      <th>
+        Native (<code>--native</code>)
+      </th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><strong>Runtime</strong></td><td>Node.js + Playwright</td><td>Pure Rust binary</td></tr>
-    <tr><td><strong>Protocol</strong></td><td>Playwright protocol</td><td>Direct CDP / WebDriver</td></tr>
-    <tr><td><strong>Install size</strong></td><td>Larger (Node.js + npm deps)</td><td>Smaller (single binary)</td></tr>
-    <tr><td><strong>Browser support</strong></td><td>Chromium, Firefox, WebKit</td><td>Chromium, Safari (via WebDriver)</td></tr>
-    <tr><td><strong>Stability</strong></td><td>Stable</td><td>Experimental</td></tr>
+    <tr>
+      <td>
+        <strong>Runtime</strong>
+      </td>
+      <td>Node.js + Playwright</td>
+      <td>Pure Rust binary</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Protocol</strong>
+      </td>
+      <td>Playwright protocol</td>
+      <td>Direct CDP / WebDriver</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Install size</strong>
+      </td>
+      <td>Larger (Node.js + npm deps)</td>
+      <td>Smaller (single binary)</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Browser support</strong>
+      </td>
+      <td>Chromium, Firefox, WebKit</td>
+      <td>Chromium, Safari (via WebDriver)</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Stability</strong>
+      </td>
+      <td>Stable</td>
+      <td>Experimental</td>
+    </tr>
   </tbody>
 </table>
 

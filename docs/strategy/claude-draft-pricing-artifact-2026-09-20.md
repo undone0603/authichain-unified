@@ -16,10 +16,10 @@
 
 ### Basic
 
-| Billing | Price shown | Annual savings text |
-|---|---:|---:|
-| Monthly | **$199/month** | — |
-| Annual | **$159/month** | **Save $480/year** |
+| Billing |    Price shown | Annual savings text |
+| ------- | -------------: | ------------------: |
+| Monthly | **$199/month** |                   — |
+| Annual  | **$159/month** |  **Save $480/year** |
 
 **Included features**
 
@@ -44,10 +44,10 @@
 
 ### Professional — MOST POPULAR
 
-| Billing | Price shown | Annual savings text |
-|---|---:|---:|
-| Monthly | **$499/month** | — |
-| Annual | **$399/month** | **Save $1,200/year** |
+| Billing |    Price shown |  Annual savings text |
+| ------- | -------------: | -------------------: |
+| Monthly | **$499/month** |                    — |
+| Annual  | **$399/month** | **Save $1,200/year** |
 
 **Included features**
 
@@ -73,10 +73,10 @@
 
 ### Enterprise
 
-| Billing | Price shown | Annual savings text |
-|---|---:|---:|
-| Monthly | **$999/month** | — |
-| Annual | **$799/month** | **Save $2,400/year** |
+| Billing |    Price shown |  Annual savings text |
+| ------- | -------------: | -------------------: |
+| Monthly | **$999/month** |                    — |
+| Annual  | **$799/month** | **Save $2,400/year** |
 
 **Included features**
 

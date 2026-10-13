@@ -9,6 +9,7 @@
 The estate (AuthiChain as flagship brand; QRON/StrainChain/GovChain as secondary) has working monetization plumbing (21 live Stripe payment links, a B2B `licensing_closer` subagent) but zero revenue to date — the audited constraint is traffic, not payment infrastructure. The owner wants the business to run with **full autonomy within hard caps**: no per-action human approval (including for licensing_closer's contract-value actions — the owner explicitly chose to drop its prior "founder must approve" gate), reviewed via dashboard/alerts instead. Ad/tool spend ceiling is fixed at **$0** — no paid channels are in scope for autonomous spend.
 
 Today there is no unified caps/suppression/kill-switch layer. Three disconnected mechanisms exist:
+
 - `agentz/core/runner.py` — a real, working per-workflow rate limiter (`max_runs_per_day`, JSONL-file-based, single-process, scoped to one workflow at a time — no cross-workflow or cross-channel concept).
 - `services/workers/qron-outreach` — a Cloudflare KV-based bounce/suppression list, siloed to that one worker (its own `wrangler.toml` KV binding; `ops/scripts/b2b-cold-outreach.ts` sends via Resend with no suppression check at all).
 - Env-var kill switches (`AUTONOMOUS_PIPELINE_ENABLED`, `REQUIRE_OUTREACH_APPROVAL`, `REQUIRE_DEV_APPROVAL` in `server/_core/env.ts`) — real and checked, but narrow/hardcoded per-feature, not a general mechanism.
@@ -57,6 +58,7 @@ New Drizzle tables, migrated the same way existing schema changes have been (add
 ## Anomaly detection / auto-trip
 
 A scheduled Vercel cron job (daily, consistent with the existing Hobby-plan daily-cron constraint noted in prior stabilization work) evaluates `guardrail_events` per channel over a rolling 24h window and auto-trips that channel's `kill_switches` row (via the same code path as a manual kill, `updated_by: "system"`) if:
+
 - bounce/complaint rate > 10% of sends in the window, or
 - send volume > 3x the channel's trailing 7-day daily average.
 

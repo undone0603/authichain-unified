@@ -26,6 +26,7 @@ qron-platform.vercel.app ─▶ ✅ full Next.js app, verified live
 ```
 
 ### Why it's fragile
+
 - **Two Vercel projects build the same repo** (`qron-platform` + `authichain-unified`)
   from the same `vercel.json`, but with different dashboard build-setting overrides →
   the same commit succeeds on one and ERRORs on the other.
@@ -56,6 +57,7 @@ authichain.com / strainchain.io / govchain.us / qron.space
 ## 3. Migration steps (ordered, each reversible)
 
 ### Phase A — make the apex serve the working app (fast unblock)
+
 Pick ONE:
 
 - **A1 (smallest, recommended first):** Fix `authichain-unified`'s build so the apex
@@ -76,7 +78,9 @@ Pick ONE:
   - Rollback: restore the worker route.
 
 ### Phase B — x402 go-live (on whichever project serves prod)
+
 Vercel → project → Settings → Environment Variables (Production):
+
 - `X402_PAY_TO = 0x5db511706FB6317cd23A7655F67450c5AC6e6AA2`
 - `X402_FACILITATOR_URL =` Base facilitator. Public/testing: `https://x402.org/facilitator`.
   Mainnet production: Coinbase CDP-hosted facilitator (via `@coinbase/x402`, free CDP keys)
@@ -84,6 +88,7 @@ Vercel → project → Settings → Environment Variables (Production):
 - Redeploy. Verify `/api/x402/health` → `"ready": true`.
 
 ### Phase C — decommission duplication
+
 1. Once `authichain.com` serves `qron-platform`, delete/retire the `authichain-unified`
    Vercel project (and `authichain-unified-v2` if also stale).
 2. Audit the 41 Cloudflare workers against `docs/superpowers/plans/worker-status-*.md`;
@@ -94,6 +99,7 @@ Vercel → project → Settings → Environment Variables (Production):
 ---
 
 ## 4. Risks & guardrails
+
 - **Brand routing**: the Next app already ships a middleware (33 kB) and `qron-platform`
   already serves strainchain.io/govchain.us/qron.space — verify each brand domain renders
   its correct brand after cutover before deleting the worker.
@@ -106,6 +112,7 @@ Vercel → project → Settings → Environment Variables (Production):
 ---
 
 ## 5. Definition of done
+
 - `authichain.com/api/x402/health` → 200 with `"ready": true`.
 - All four brand domains render their correct brand from `qron-platform`.
 - `authichain-unified` retired; repo auto-deploys exactly one Vercel project.

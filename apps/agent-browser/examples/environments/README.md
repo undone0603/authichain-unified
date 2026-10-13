@@ -20,7 +20,7 @@ For local development, set `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, and `VERCEL_PROJECT
 
 ## Sandbox Snapshots
 
-Without optimization, each Sandbox run installs system dependencies + agent-browser + Chromium from scratch (~30s). A **sandbox snapshot** is a saved VM image with everything pre-installed -- the sandbox boots from the image instead of installing, bringing startup down to sub-second. (This is unrelated to agent-browser's *accessibility snapshot* feature, which dumps a page's accessibility tree.)
+Without optimization, each Sandbox run installs system dependencies + agent-browser + Chromium from scratch (~30s). A **sandbox snapshot** is a saved VM image with everything pre-installed -- the sandbox boots from the image instead of installing, bringing startup down to sub-second. (This is unrelated to agent-browser's _accessibility snapshot_ feature, which dumps a page's accessibility tree.)
 
 Create a sandbox snapshot by running the helper script once:
 
@@ -33,16 +33,16 @@ Add the ID to your Vercel project environment variables or `.env.local`. Recomme
 
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `AGENT_BROWSER_SNAPSHOT_ID` | Sandbox snapshot ID for sub-second startup (see above) |
-| `VERCEL_TOKEN` | Vercel personal access token (for local dev; OIDC is automatic on Vercel) |
-| `VERCEL_TEAM_ID` | Vercel team ID (for local dev) |
-| `VERCEL_PROJECT_ID` | Vercel project ID (for local dev) |
-| `KV_REST_API_URL` | Upstash Redis URL for rate limiting (optional) |
-| `KV_REST_API_TOKEN` | Upstash Redis token for rate limiting (optional) |
-| `RATE_LIMIT_PER_MINUTE` | Max requests per minute per IP (default: 10) |
-| `RATE_LIMIT_PER_DAY` | Max requests per day per IP (default: 100) |
+| Variable                    | Description                                                               |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `AGENT_BROWSER_SNAPSHOT_ID` | Sandbox snapshot ID for sub-second startup (see above)                    |
+| `VERCEL_TOKEN`              | Vercel personal access token (for local dev; OIDC is automatic on Vercel) |
+| `VERCEL_TEAM_ID`            | Vercel team ID (for local dev)                                            |
+| `VERCEL_PROJECT_ID`         | Vercel project ID (for local dev)                                         |
+| `KV_REST_API_URL`           | Upstash Redis URL for rate limiting (optional)                            |
+| `KV_REST_API_TOKEN`         | Upstash Redis token for rate limiting (optional)                          |
+| `RATE_LIMIT_PER_MINUTE`     | Max requests per minute per IP (default: 10)                              |
+| `RATE_LIMIT_PER_DAY`        | Max requests per day per IP (default: 100)                                |
 
 ## Project Structure
 

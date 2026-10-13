@@ -6,14 +6,14 @@ Official plan page: [airops.com/pricing](https://www.airops.com/pricing)
 
 ## Stay on free
 
-| Cap | Use it this way |
-| --- | --- |
-| 1 Brand Kit | One kit named **AuthiChain**. Product lines cover QRON, StrainChain, GovChain. Do not create a second kit. |
-| 3 Knowledge Bases | `AC Public Product`, `AC Repo Docs`, `AC Live Sites`. Do not add a fourth. |
-| ChatGPT Insights only | Track ChatGPT prompts. Gemini / Perplexity / AI Overviews are paid. |
-| Tasks | Insights tracking does not burn Playbook/Workflow tasks. Do not turn on scheduled Playbooks or Workflows. Manual Quill / one Playbook test only. |
-| 1 seat | Sign up with `authichain@gmail.com`. Do not invite extra users. |
-| Overage | Solo overage is billed at $0.025 / task after the monthly allotment. Never enable auto-run grids. |
+| Cap                   | Use it this way                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 Brand Kit           | One kit named **AuthiChain**. Product lines cover QRON, StrainChain, GovChain. Do not create a second kit.                                       |
+| 3 Knowledge Bases     | `AC Public Product`, `AC Repo Docs`, `AC Live Sites`. Do not add a fourth.                                                                       |
+| ChatGPT Insights only | Track ChatGPT prompts. Gemini / Perplexity / AI Overviews are paid.                                                                              |
+| Tasks                 | Insights tracking does not burn Playbook/Workflow tasks. Do not turn on scheduled Playbooks or Workflows. Manual Quill / one Playbook test only. |
+| 1 seat                | Sign up with `authichain@gmail.com`. Do not invite extra users.                                                                                  |
+| Overage               | Solo overage is billed at $0.025 / task after the monthly allotment. Never enable auto-run grids.                                                |
 
 If the signup screen offers Insights vs Solo, take **Solo / Start for free**. It is the current public free entry on the pricing page.
 

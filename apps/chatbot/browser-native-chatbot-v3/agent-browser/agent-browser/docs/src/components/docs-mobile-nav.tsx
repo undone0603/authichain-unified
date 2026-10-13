@@ -1,15 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { navigation, allDocsPages } from "@/lib/docs-navigation";
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Sheet, SheetTrigger, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { navigation, allDocsPages } from '@/lib/docs-navigation';
 
 export function DocsMobileNav() {
   const [open, setOpen] = useState(false);
@@ -63,8 +58,8 @@ export function DocsMobileNav() {
                       onClick={() => setOpen(false)}
                       className={`text-sm block py-2 transition-colors ${
                         pathname === item.href
-                          ? "text-primary font-medium"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? 'text-primary font-medium'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {item.name}

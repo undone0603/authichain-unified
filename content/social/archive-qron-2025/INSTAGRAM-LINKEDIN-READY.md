@@ -1,6 +1,7 @@
 > Imported from Undone0603 sibling repo on 2026-09-20. Historical prices scrubbed — use live Stripe/`plans.ts` only.
 
 # 📸 INSTAGRAM - READY TO POST
+
 ## Complete Content Library
 
 ---
@@ -8,7 +9,9 @@
 # FEED POSTS
 
 ## Post 1: Launch (ATTACH: Sample 4 - Cosmic Nebula)
+
 **Caption:**
+
 ```
 Your QR code could look like this. ✨
 
@@ -30,7 +33,9 @@ Link in bio to create yours 🌌
 ---
 
 ## Post 2: Style Grid (Create carousel with ALL 8 samples)
+
 **Caption:**
+
 ```
 8 ways to make your QR code unforgettable 🎨
 
@@ -55,9 +60,11 @@ Which one matches YOUR brand? Comment below 👇
 ---
 
 ## Post 3: Before/After (Create split image)
+
 **Caption:**
+
 ```
-Same URL. Same functionality. 
+Same URL. Same functionality.
 Completely different energy. 💫
 
 Left: What most businesses use
@@ -75,7 +82,9 @@ Link in bio → qron.space
 ---
 
 ## Post 4: Restaurant Focus (ATTACH: Sample 7 - Teal Pulse)
+
 **Caption:**
+
 ```
 Restaurant owners 🍽️
 
@@ -96,7 +105,9 @@ Link in bio.
 ---
 
 ## Post 5: Event Focus (ATTACH: Sample 4 - Cosmic)
+
 **Caption:**
+
 ```
 Event planners, imagine this:
 
@@ -117,7 +128,9 @@ Link in bio 🌌
 ---
 
 ## Post 6: Tech/Gaming (ATTACH: Sample 1 - Neon Glitch)
+
 **Caption:**
+
 ```
 Built for brands that break the matrix. ⚡
 
@@ -138,7 +151,9 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ---
 
 ## Post 7: Luxury Focus (ATTACH: Sample 6 - Prism Shift)
+
 **Caption:**
+
 ```
 For brands that shine from every angle. 💎
 
@@ -158,7 +173,9 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ---
 
 ## Post 8: Wellness (ATTACH: Sample 8 - Aurora Dreams)
+
 **Caption:**
+
 ```
 Where dreams meet reality. 🌙
 
@@ -168,7 +185,7 @@ Ethereal. Calming. Transcendent.
 
 Perfect for:
 ✨ Wellness brands
-✨ Meditation apps  
+✨ Meditation apps
 ✨ Spa & retreat centers
 ✨ Yoga studios
 ✨ Dream journals
@@ -183,11 +200,13 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 # REELS SCRIPTS
 
 ## Reel 1: "3 Second Transformation"
+
 **Hook:** "Watch me turn a boring QR code into art in 3 seconds"
 
 **Script:**
+
 - Show standard QR code (0-2s)
-- "This is what most businesses use" (2-4s)  
+- "This is what most businesses use" (2-4s)
 - Open qron.space (4-6s)
 - Paste URL (6-8s)
 - Select style (8-10s)
@@ -202,25 +221,29 @@ See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [auth
 ---
 
 ## Reel 2: "POV: You're a restaurant owner"
+
 **Hook:** "POV: You just upgraded your menu QR"
 
 **Script:**
+
 - Show old boring QR on table (0-3s)
 - "Guests ignore it" (3-5s)
 - Dramatic pause (5-7s)
 - Replace with QRON portal (7-10s)
 - "Now they stop and ask about it" (10-13s)
 - Show guest interaction (mock) (13-17s)
-_Historical founder-story figures removed._
+  _Historical founder-story figures removed._
 - CTA (20-23s)
 
 ---
 
 ## Reel 3: "Which style are you?"
+
 **Hook:** "Which QRON style matches your business?"
 
 **Script:**
 Quick cuts (2s each):
+
 - Neon Glitch → "Tech/Gaming"
 - Holographic → "Fashion/Art"
 - Matrix → "Crypto/Dev"
@@ -235,26 +258,31 @@ End: "Comment your business type - I'll tell you which style!" (4s)
 # STORY TEMPLATES
 
 ## Story 1: Poll
+
 **Image:** Two QR codes side by side
 **Text:** "Which would you rather scan?"
 **Poll:** "Boring 🥱" | "Beautiful ✨"
 
 ## Story 2: Quiz
+
 **Image:** Sample QR
 **Text:** "Can you guess what industry this is for?"
 **Quiz sticker**
 
 ## Story 3: Countdown
+
 **Image:** Cosmic Nebula sample
 **Text:** "LAUNCH SPECIAL: First 10 portals at 50% off"
 **Countdown sticker**
 
 ## Story 4: Question
+
 **Image:** Portfolio collage
 **Text:** "What style should I create next?"
 **Question sticker**
 
 ## Story 5: Link
+
 **Image:** Best sample
 **Text:** "New drop: AURORA DREAMS mode"
 **Link sticker:** qron.space

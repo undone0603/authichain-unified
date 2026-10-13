@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migration = `
 -- Industrial Expansion: DPP & API
@@ -34,15 +34,14 @@ CREATE INDEX IF NOT EXISTS "idx_api_prefix" ON "api_keys" ("key_prefix");
 
 async function migrate() {
   try {
-    console.log('Enterprise Scaling: Activating DPP & API Key logic...');
+    console.log("Enterprise Scaling: Activating DPP & API Key logic...");
     await sql.unsafe(migration);
-    console.log('✅ Industrial tables live.');
+    console.log("✅ Industrial tables live.");
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    console.error("❌ Migration failed:", err.message);
   } finally {
     process.exit();
   }
 }
 
 migrate();
-

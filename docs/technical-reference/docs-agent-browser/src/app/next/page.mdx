@@ -1,6 +1,6 @@
-import { pageMetadata } from "@/lib/page-metadata"
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata = pageMetadata("next")
+export const metadata = pageMetadata("next");
 
 # Next.js + Vercel
 
@@ -28,11 +28,31 @@ import { Sandbox } from "@vercel/sandbox";
 const snapshotId = process.env.AGENT_BROWSER_SNAPSHOT_ID;
 
 const CHROMIUM_SYSTEM_DEPS = [
-  "nss", "nspr", "libxkbcommon", "atk", "at-spi2-atk", "at-spi2-core",
-  "libXcomposite", "libXdamage", "libXrandr", "libXfixes", "libXcursor",
-  "libXi", "libXtst", "libXScrnSaver", "libXext", "mesa-libgbm", "libdrm",
-  "mesa-libGL", "mesa-libEGL", "cups-libs", "alsa-lib", "pango", "cairo",
-  "gtk3", "dbus-libs",
+  "nss",
+  "nspr",
+  "libxkbcommon",
+  "atk",
+  "at-spi2-atk",
+  "at-spi2-core",
+  "libXcomposite",
+  "libXdamage",
+  "libXrandr",
+  "libXfixes",
+  "libXcursor",
+  "libXi",
+  "libXtst",
+  "libXScrnSaver",
+  "libXext",
+  "mesa-libgbm",
+  "libdrm",
+  "mesa-libGL",
+  "mesa-libEGL",
+  "cups-libs",
+  "alsa-lib",
+  "pango",
+  "cairo",
+  "gtk3",
+  "dbus-libs",
 ];
 
 function getSandboxCredentials() {
@@ -51,7 +71,7 @@ function getSandboxCredentials() {
 }
 
 async function withBrowser<T>(
-  fn: (sandbox: InstanceType<typeof Sandbox>) => Promise<T>,
+  fn: (sandbox: InstanceType<typeof Sandbox>) => Promise<T>
 ): Promise<T> {
   const credentials = getSandboxCredentials();
 
@@ -61,7 +81,11 @@ async function withBrowser<T>(
         source: { type: "snapshot", snapshotId },
         timeout: 120_000,
       })
-    : await Sandbox.create({ ...credentials, runtime: "node24", timeout: 120_000 });
+    : await Sandbox.create({
+        ...credentials,
+        runtime: "node24",
+        timeout: 120_000,
+      });
 
   if (!snapshotId) {
     await sandbox.runCommand("sh", [
@@ -80,11 +104,12 @@ async function withBrowser<T>(
 }
 
 export async function screenshotUrl(url: string) {
-  return withBrowser(async (sandbox) => {
+  return withBrowser(async sandbox => {
     await sandbox.runCommand("agent-browser", ["open", url]);
 
     const ssResult = await sandbox.runCommand("agent-browser", [
-      "screenshot", "--json",
+      "screenshot",
+      "--json",
     ]);
     const ssPath = JSON.parse(await ssResult.stdout())?.data?.path;
     const b64Result = await sandbox.runCommand("base64", ["-w", "0", ssPath]);
@@ -96,11 +121,13 @@ export async function screenshotUrl(url: string) {
 }
 
 export async function snapshotUrl(url: string) {
-  return withBrowser(async (sandbox) => {
+  return withBrowser(async sandbox => {
     await sandbox.runCommand("agent-browser", ["open", url]);
 
     const result = await sandbox.runCommand("agent-browser", [
-      "snapshot", "-i", "-c",
+      "snapshot",
+      "-i",
+      "-c",
     ]);
     const snapshot = await result.stdout();
 
@@ -119,7 +146,7 @@ for Vercel Sandbox. When `AGENT_BROWSER_SNAPSHOT_ID` is set, the sandbox
 boots from that image instead of installing, bringing startup down to
 sub-second.
 
-This is different from an agent-browser *accessibility snapshot* (which
+This is different from an agent-browser _accessibility snapshot_ (which
 dumps a page's accessibility tree). A sandbox snapshot is a Vercel
 infrastructure concept.
 
@@ -146,12 +173,30 @@ OIDC. For local development, provide explicit credentials:
 
 <table>
   <thead>
-    <tr><th>Variable</th><th>Description</th></tr>
+    <tr>
+      <th>Variable</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>VERCEL_TOKEN</code></td><td>Vercel personal access token</td></tr>
-    <tr><td><code>VERCEL_TEAM_ID</code></td><td>Vercel team ID</td></tr>
-    <tr><td><code>VERCEL_PROJECT_ID</code></td><td>Vercel project ID</td></tr>
+    <tr>
+      <td>
+        <code>VERCEL_TOKEN</code>
+      </td>
+      <td>Vercel personal access token</td>
+    </tr>
+    <tr>
+      <td>
+        <code>VERCEL_TEAM_ID</code>
+      </td>
+      <td>Vercel team ID</td>
+    </tr>
+    <tr>
+      <td>
+        <code>VERCEL_PROJECT_ID</code>
+      </td>
+      <td>Vercel project ID</td>
+    </tr>
   </tbody>
 </table>
 
@@ -165,12 +210,15 @@ For recurring tasks like daily monitoring, use Vercel Cron Jobs:
 ```ts
 // app/api/cron/monitor/route.ts
 export async function GET() {
-  const result = await withBrowser(async (sandbox) => {
+  const result = await withBrowser(async sandbox => {
     await sandbox.runCommand("agent-browser", [
-      "open", "https://example.com/pricing",
+      "open",
+      "https://example.com/pricing",
     ]);
     const snap = await sandbox.runCommand("agent-browser", [
-      "snapshot", "-i", "-c",
+      "snapshot",
+      "-i",
+      "-c",
     ]);
     await sandbox.runCommand("agent-browser", ["close"]);
     return await snap.stdout();
@@ -184,9 +232,7 @@ export async function GET() {
 ```json
 // vercel.json
 {
-  "crons": [
-    { "path": "/api/cron/monitor", "schedule": "0 9 * * *" }
-  ]
+  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 9 * * *" }]
 }
 ```
 
@@ -194,13 +240,39 @@ export async function GET() {
 
 <table>
   <thead>
-    <tr><th>Variable</th><th>Description</th></tr>
+    <tr>
+      <th>Variable</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>AGENT_BROWSER_SNAPSHOT_ID</code></td><td>Sandbox snapshot ID for sub-second startup (see above)</td></tr>
-    <tr><td><code>VERCEL_TOKEN</code></td><td>Vercel personal access token (for local dev; OIDC is automatic on Vercel)</td></tr>
-    <tr><td><code>VERCEL_TEAM_ID</code></td><td>Vercel team ID (for local dev)</td></tr>
-    <tr><td><code>VERCEL_PROJECT_ID</code></td><td>Vercel project ID (for local dev)</td></tr>
+    <tr>
+      <td>
+        <code>AGENT_BROWSER_SNAPSHOT_ID</code>
+      </td>
+      <td>Sandbox snapshot ID for sub-second startup (see above)</td>
+    </tr>
+    <tr>
+      <td>
+        <code>VERCEL_TOKEN</code>
+      </td>
+      <td>
+        Vercel personal access token (for local dev; OIDC is automatic on
+        Vercel)
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>VERCEL_TEAM_ID</code>
+      </td>
+      <td>Vercel team ID (for local dev)</td>
+    </tr>
+    <tr>
+      <td>
+        <code>VERCEL_PROJECT_ID</code>
+      </td>
+      <td>Vercel project ID (for local dev)</td>
+    </tr>
   </tbody>
 </table>
 

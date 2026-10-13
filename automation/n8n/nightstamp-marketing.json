@@ -2,7 +2,11 @@
   "name": "QRON Nightstamp Marketing Factory",
   "nodes": [
     {
-      "parameters": { "httpMethod": "POST", "path": "qron/nightstamp/purchased", "responseMode": "responseNode" },
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "qron/nightstamp/purchased",
+        "responseMode": "responseNode"
+      },
       "id": "nightstamp-webhook",
       "name": "Nightstamp Purchased",
       "type": "n8n-nodes-base.webhook",
@@ -36,7 +40,11 @@
       "position": [480, 0]
     },
     {
-      "parameters": { "respondWith": "json", "responseBody": "={{ { status: 'queued', posts: $input.all().map(i => i.json) } }}", "options": {} },
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'queued', posts: $input.all().map(i => i.json) } }}",
+        "options": {}
+      },
       "id": "respond",
       "name": "Return Queue",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -45,9 +53,19 @@
     }
   ],
   "connections": {
-    "Nightstamp Purchased": { "main": [[{ "node": "Build Marketing Manifest", "type": "main", "index": 0 }]] },
-    "Build Marketing Manifest": { "main": [[{ "node": "Fan Out Channel Posts", "type": "main", "index": 0 }]] },
-    "Fan Out Channel Posts": { "main": [[{ "node": "Return Queue", "type": "main", "index": 0 }]] }
+    "Nightstamp Purchased": {
+      "main": [
+        [{ "node": "Build Marketing Manifest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Marketing Manifest": {
+      "main": [
+        [{ "node": "Fan Out Channel Posts", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fan Out Channel Posts": {
+      "main": [[{ "node": "Return Queue", "type": "main", "index": 0 }]]
+    }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },

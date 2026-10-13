@@ -1,17 +1,16 @@
-import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { ImageResponse } from 'next/og';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
-export { getPageTitle } from "@/lib/page-titles";
+export { getPageTitle } from '@/lib/page-titles';
 
-let fontCache: { geistRegular: Buffer; geistPixelSquare: Buffer } | null =
-  null;
+let fontCache: { geistRegular: Buffer; geistPixelSquare: Buffer } | null = null;
 
 async function loadFonts() {
   if (fontCache) return fontCache;
   const [geistRegular, geistPixelSquare] = await Promise.all([
-    readFile(join(process.cwd(), "public/Geist-Regular.ttf")),
-    readFile(join(process.cwd(), "public/GeistPixel-Square.ttf")),
+    readFile(join(process.cwd(), 'public/Geist-Regular.ttf')),
+    readFile(join(process.cwd(), 'public/GeistPixel-Square.ttf')),
   ]);
   fontCache = { geistRegular, geistPixelSquare };
   return fontCache;
@@ -23,19 +22,19 @@ export async function renderOgImage(title: string) {
   return new ImageResponse(
     <div
       style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "black",
-        padding: "60px 80px",
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'black',
+        padding: '60px 80px',
       }}
     >
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
         }}
       >
         <svg width="36" height="36" viewBox="0 0 16 16" fill="white">
@@ -44,8 +43,8 @@ export async function renderOgImage(title: string) {
         <span
           style={{
             fontSize: 36,
-            color: "#666",
-            fontFamily: "Geist",
+            color: '#666',
+            fontFamily: 'Geist',
             fontWeight: 400,
           }}
         >
@@ -54,9 +53,9 @@ export async function renderOgImage(title: string) {
         <span
           style={{
             fontSize: 36,
-            fontFamily: "GeistPixelSquare",
+            fontFamily: 'GeistPixelSquare',
             fontWeight: 400,
-            color: "white",
+            color: 'white',
           }}
         >
           agent-browser
@@ -65,23 +64,23 @@ export async function renderOgImage(title: string) {
 
       <div
         style={{
-          display: "flex",
+          display: 'flex',
           flex: 1,
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {title.split("\n").map((line, i) => (
+        {title.split('\n').map((line, i) => (
           <span
             key={i}
             style={{
               fontSize: 72,
-              fontFamily: "Geist",
+              fontFamily: 'Geist',
               fontWeight: 400,
-              color: "white",
-              letterSpacing: "-0.02em",
-              textAlign: "center",
+              color: 'white',
+              letterSpacing: '-0.02em',
+              textAlign: 'center',
               lineHeight: 1.2,
             }}
           >
@@ -95,18 +94,18 @@ export async function renderOgImage(title: string) {
       height: 630,
       fonts: [
         {
-          name: "Geist",
+          name: 'Geist',
           data: geistRegular.buffer as ArrayBuffer,
-          style: "normal",
+          style: 'normal',
           weight: 400,
         },
         {
-          name: "GeistPixelSquare",
+          name: 'GeistPixelSquare',
           data: geistPixelSquare.buffer as ArrayBuffer,
-          style: "normal",
+          style: 'normal',
           weight: 400,
         },
       ],
-    },
+    }
   );
 }

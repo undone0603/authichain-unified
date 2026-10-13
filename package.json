@@ -1,4 +1,5 @@
 {
+  
   "name": "authichain-unified",
   "version": "1.0.0",
   "type": "module",
@@ -9,7 +10,7 @@
     "npm": ">=11.3.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "turbo run dev",
     "build": "next build --webpack",
     "start": "wrangler dev",
     "preview": "turbo preview --single-package",
@@ -34,7 +35,7 @@
     "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
     "lint-staged": "lint-staged",
     "preinstall": "node scripts/check-npm-version.cjs",
-    "prepare": "husky install",
+    "prepare": "husky",
     "build:server": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start:server": "NODE_ENV=production tsx server/_core/index.ts",
     "dev:server": "tsx watch server/_core/index.ts",
@@ -54,7 +55,6 @@
     "@hubspot/api-client": "^14.0.1",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@modelcontextprotocol/sdk": "^1.30.1",
-    "@modelcontextprotocol/server-memory": "^2026.8.31",
     "@paddle/paddle-node-sdk": "^3.10.0",
     "@paralleldrive/cuid2": "^2.3.0",
     "@radix-ui/react-accordion": "^1.2.20",

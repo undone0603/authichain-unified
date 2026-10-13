@@ -1,8 +1,8 @@
-import { pageMetadata } from "@/lib/page-metadata"
+import { pageMetadata } from '@/lib/page-metadata';
 
-export const metadata = pageMetadata("diffing")
+export const metadata = pageMetadata('diffing');
 
-import { DiffDemo } from "@/components/diff-demo"
+import { DiffDemo } from '@/components/diff-demo';
 
 # Diffing
 
@@ -14,13 +14,36 @@ Compare page states to detect changes -- structurally via accessibility tree sna
 
 <table>
   <thead>
-    <tr><th>Command</th><th>Description</th></tr>
+    <tr>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>diff snapshot</code></td><td>Compare current snapshot to last snapshot in session</td></tr>
-    <tr><td><code>diff snapshot --baseline &lt;file&gt;</code></td><td>Compare current snapshot to a saved file</td></tr>
-    <tr><td><code>diff screenshot --baseline &lt;file&gt;</code></td><td>Visual pixel diff against a baseline image</td></tr>
-    <tr><td><code>diff url &lt;url1&gt; &lt;url2&gt;</code></td><td>Compare two pages (snapshot + optional screenshot)</td></tr>
+    <tr>
+      <td>
+        <code>diff snapshot</code>
+      </td>
+      <td>Compare current snapshot to last snapshot in session</td>
+    </tr>
+    <tr>
+      <td>
+        <code>diff snapshot --baseline &lt;file&gt;</code>
+      </td>
+      <td>Compare current snapshot to a saved file</td>
+    </tr>
+    <tr>
+      <td>
+        <code>diff screenshot --baseline &lt;file&gt;</code>
+      </td>
+      <td>Visual pixel diff against a baseline image</td>
+    </tr>
+    <tr>
+      <td>
+        <code>diff url &lt;url1&gt; &lt;url2&gt;</code>
+      </td>
+      <td>Compare two pages (snapshot + optional screenshot)</td>
+    </tr>
   </tbody>
 </table>
 
@@ -45,13 +68,36 @@ Without `--baseline`, the command automatically compares against the most recent
 
 <table>
   <thead>
-    <tr><th>Flag</th><th>Description</th></tr>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>-b, --baseline &lt;file&gt;</code></td><td>Path to a saved snapshot file to compare against</td></tr>
-    <tr><td><code>-s, --selector &lt;sel&gt;</code></td><td>Scope the current snapshot to a CSS selector or @ref</td></tr>
-    <tr><td><code>-c, --compact</code></td><td>Use compact snapshot format</td></tr>
-    <tr><td><code>-d, --depth &lt;n&gt;</code></td><td>Limit snapshot tree depth</td></tr>
+    <tr>
+      <td>
+        <code>-b, --baseline &lt;file&gt;</code>
+      </td>
+      <td>Path to a saved snapshot file to compare against</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-s, --selector &lt;sel&gt;</code>
+      </td>
+      <td>Scope the current snapshot to a CSS selector or @ref</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-c, --compact</code>
+      </td>
+      <td>Use compact snapshot format</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-d, --depth &lt;n&gt;</code>
+      </td>
+      <td>Limit snapshot tree depth</td>
+    </tr>
   </tbody>
 </table>
 
@@ -84,14 +130,42 @@ agent-browser diff screenshot --baseline before.png --threshold 0.2 --selector "
 
 <table>
   <thead>
-    <tr><th>Flag</th><th>Description</th></tr>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>-b, --baseline &lt;file&gt;</code></td><td>Baseline PNG/JPEG image to compare against (required)</td></tr>
-    <tr><td><code>-o, --output &lt;file&gt;</code></td><td>Path for the generated diff image (default: temp dir)</td></tr>
-    <tr><td><code>-t, --threshold &lt;0-1&gt;</code></td><td>Color distance threshold (default: 0.1). Higher = more tolerant</td></tr>
-    <tr><td><code>-s, --selector &lt;sel&gt;</code></td><td>Scope the current screenshot to an element</td></tr>
-    <tr><td><code>--full</code></td><td>Take a full-page screenshot</td></tr>
+    <tr>
+      <td>
+        <code>-b, --baseline &lt;file&gt;</code>
+      </td>
+      <td>Baseline PNG/JPEG image to compare against (required)</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-o, --output &lt;file&gt;</code>
+      </td>
+      <td>Path for the generated diff image (default: temp dir)</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-t, --threshold &lt;0-1&gt;</code>
+      </td>
+      <td>Color distance threshold (default: 0.1). Higher = more tolerant</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-s, --selector &lt;sel&gt;</code>
+      </td>
+      <td>Scope the current screenshot to an element</td>
+    </tr>
+    <tr>
+      <td>
+        <code>--full</code>
+      </td>
+      <td>Take a full-page screenshot</td>
+    </tr>
   </tbody>
 </table>
 
@@ -124,15 +198,51 @@ After completion, the browser remains on the second URL.
 
 <table>
   <thead>
-    <tr><th>Flag</th><th>Description</th></tr>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td><code>--screenshot</code></td><td>Also perform visual screenshot comparison</td></tr>
-    <tr><td><code>--full</code></td><td>Use full-page screenshots</td></tr>
-    <tr><td><code>--wait-until &lt;strategy&gt;</code></td><td>Navigation wait strategy: <code>load</code>, <code>domcontentloaded</code>, <code>networkidle</code> (default: <code>load</code>)</td></tr>
-    <tr><td><code>-s, --selector &lt;sel&gt;</code></td><td>Scope snapshots to a CSS selector or @ref</td></tr>
-    <tr><td><code>-c, --compact</code></td><td>Use compact snapshot format</td></tr>
-    <tr><td><code>-d, --depth &lt;n&gt;</code></td><td>Limit snapshot tree depth</td></tr>
+    <tr>
+      <td>
+        <code>--screenshot</code>
+      </td>
+      <td>Also perform visual screenshot comparison</td>
+    </tr>
+    <tr>
+      <td>
+        <code>--full</code>
+      </td>
+      <td>Use full-page screenshots</td>
+    </tr>
+    <tr>
+      <td>
+        <code>--wait-until &lt;strategy&gt;</code>
+      </td>
+      <td>
+        Navigation wait strategy: <code>load</code>, <code>domcontentloaded</code>,{' '}
+        <code>networkidle</code> (default: <code>load</code>)
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>-s, --selector &lt;sel&gt;</code>
+      </td>
+      <td>Scope snapshots to a CSS selector or @ref</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-c, --compact</code>
+      </td>
+      <td>Use compact snapshot format</td>
+    </tr>
+    <tr>
+      <td>
+        <code>-d, --depth &lt;n&gt;</code>
+      </td>
+      <td>Limit snapshot tree depth</td>
+    </tr>
   </tbody>
 </table>
 

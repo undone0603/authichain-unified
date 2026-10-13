@@ -8,6 +8,7 @@ Public Drive folder linked from [THCV Seed Sampler](https://gtrseeds.com/product
 `https://drive.google.com/drive/folders/1nBvJhiEDYq37SKZ-9A_TAyUeq2LTSnkk`
 
 Seed COA subfolder files:
+
 - Double Durban.pdf — `1Qgnj7VIYBZoj9d5IfOpXHcNTOsmPYL9B` — PREE Laboratories South, sample **C231203-41**, accepted 2023-08-16, analyzed 2023-08-22. Matrix hemp / seeds. Informational use only. Every listed cannabinoid including THCV printed **<LOQ 0.010%**. THCVA not on the panel.
 - Garlic Berry.pdf — `1zM5jWmZKtD0ahLyo2F-Ku3sLec5vYI8-` — same lab and dates, sample **C231203-42**. THCA 3.49% (34.90 mg/g), Δ9-THC 0.313% (3.13 mg/g), Δ8-THC 0.563% (5.63 mg/g), THCV <LOQ. Published total THC **3.374%**. Derived total THC = 3.49 × 0.877 + 0.313 = **3.373%** (pass).
 

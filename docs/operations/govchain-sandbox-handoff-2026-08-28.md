@@ -2,13 +2,13 @@
 
 ## Gap fixes landed (same day)
 
-| Gap | Fix |
-|---|---|
-| Secret split `SAM_GOV_API_KEY` vs `SAM_API_KEY` | Engine accepts either. Preflight and ingest map both secrets. |
-| Scheduled runs defaulted live (`dry_run: false`) | Dispatch default is now `true`. Cron always passes `dry_run=true`. Uncheck only for a live manual run. |
-| 5-agent consensus was a keyword stub | Weighted Guardian 35 / Archivist 20 / Sentinel 25 / Scout 8 / Arbiter 12 scoring. |
-| `mintPilotNFT` threw when not dry-run | Records `gov_proposals` draft row; defers chain mint to `scripts/mint-govchain-nfts.ts`. Mint workflow secrets optional + `continue-on-error`. |
-| No `start:gov-engine` script | `pnpm start:gov-engine`, `pnpm gov:engine`, `pnpm gov:monitor`. |
+| Gap                                              | Fix                                                                                                                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secret split `SAM_GOV_API_KEY` vs `SAM_API_KEY`  | Engine accepts either. Preflight and ingest map both secrets.                                                                                  |
+| Scheduled runs defaulted live (`dry_run: false`) | Dispatch default is now `true`. Cron always passes `dry_run=true`. Uncheck only for a live manual run.                                         |
+| 5-agent consensus was a keyword stub             | Weighted Guardian 35 / Archivist 20 / Sentinel 25 / Scout 8 / Arbiter 12 scoring.                                                              |
+| `mintPilotNFT` threw when not dry-run            | Records `gov_proposals` draft row; defers chain mint to `scripts/mint-govchain-nfts.ts`. Mint workflow secrets optional + `continue-on-error`. |
+| No `start:gov-engine` script                     | `pnpm start:gov-engine`, `pnpm gov:engine`, `pnpm gov:monitor`.                                                                                |
 
 ## Local
 

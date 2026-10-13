@@ -1,6 +1,7 @@
 > Imported from Undone0603 sibling repo on 2026-09-20. Historical prices scrubbed — use live Stripe/`plans.ts` only.
 
 # 📱 QRON SOCIAL MEDIA CONTENT LIBRARY
+
 ## Ready-to-Post Content for All Platforms
 
 ---
@@ -8,7 +9,8 @@
 # 🐦 TWITTER/X CAMPAIGNS
 
 ## LAUNCH THREAD #1: THE PROBLEM
-*Post with your most stunning sample image*
+
+_Post with your most stunning sample image_
 
 ```
 Tweet 1:
@@ -42,7 +44,7 @@ Tweet 3:
 9 modes available:
 
 🌌 Cosmic - deep space vibes
-⚡ Glitch - cyberpunk aesthetic  
+⚡ Glitch - cyberpunk aesthetic
 🔮 Holographic - rainbow shimmer
 🎭 Matrix - digital rain
 ✨ Chromatic - color gradients
@@ -83,7 +85,8 @@ Try your first portal: qron.space
 ---
 
 ## LAUNCH THREAD #2: THE JOURNEY
-*For building in public audience*
+
+_For building in public audience_
 
 ```
 Tweet 1:
@@ -161,7 +164,8 @@ I'll update weekly.
 ---
 
 ## VIRAL BAIT TWEETS
-*High-engagement standalone posts*
+
+_High-engagement standalone posts_
 
 ```
 Tweet A (Comparison):
@@ -227,6 +231,7 @@ Yours could too: qron.space
 ## INDUSTRY-SPECIFIC TWEETS
 
 ### Restaurants
+
 ```
 Restaurant owners:
 
@@ -242,6 +247,7 @@ qron.space
 ```
 
 ### Real Estate
+
 ```
 Realtors:
 
@@ -257,6 +263,7 @@ qron.space
 ```
 
 ### Events
+
 ```
 Event planners:
 
@@ -272,12 +279,13 @@ qron.space
 ```
 
 ### Cannabis (AuthiChain Integration)
+
 ```
 Cannabis brands:
 
 Your authentication QR can do more than verify.
 
-QRON + AuthiChain = 
+QRON + AuthiChain =
 • Stunning strain-specific art
 • Blockchain verification
 • NFT collectible for customers
@@ -293,9 +301,11 @@ Coming soon: qron.space/cannabis
 ## POST TYPES
 
 ### 1. Portfolio Grid
-*9-post grid of your best QRs in different styles*
+
+_9-post grid of your best QRs in different styles_
 
 Caption template:
+
 ```
 🌌 [STYLE NAME] Portal
 
@@ -303,7 +313,7 @@ Transform any URL into scannable art.
 
 Features:
 ✨ AI-generated in 3 seconds
-📱 100% scannable guarantee  
+📱 100% scannable guarantee
 🎨 Matches your brand aesthetic
 💰 From See live pricing at [qron.space/pricing](https://qron.space/pricing) (also [authichain.com/pricing](https://authichain.com/pricing)).
 
@@ -313,9 +323,11 @@ Link in bio → qron.space
 ```
 
 ### 2. Before/After Carousel
-*Slide 1: Ugly standard QR / Slide 2: QRON portal*
+
+_Slide 1: Ugly standard QR / Slide 2: QRON portal_
 
 Caption:
+
 ```
 Swipe to see the transformation 👉
 
@@ -330,9 +342,11 @@ Create yours: link in bio
 ```
 
 ### 3. Process Reel
-*Screen recording of generating a QR in real-time*
+
+_Screen recording of generating a QR in real-time_
 
 Caption:
+
 ```
 3 seconds. That's all it takes.
 
@@ -347,9 +361,11 @@ Link in bio 🌌
 ```
 
 ### 4. Use Case Carousel
-*Each slide = different industry application*
+
+_Each slide = different industry application_
 
 Caption:
+
 ```
 9 ways businesses are using QRON:
 
@@ -373,6 +389,7 @@ Which would you use?
 ## INSTAGRAM STORY TEMPLATES
 
 ### Poll Story
+
 ```
 [Image of two QR codes]
 
@@ -384,6 +401,7 @@ Which would you scan?
 ```
 
 ### Question Story
+
 ```
 [Background: Stunning QR]
 
@@ -393,6 +411,7 @@ What industry should I create a QR for next?
 ```
 
 ### Countdown Story
+
 ```
 [Cosmic background]
 
@@ -566,3 +585,4 @@ _Historical revenue figures removed — see live Stripe/`plans.ts`._
 Following up on my launch post.
 
 **Quick recap:** I
+```

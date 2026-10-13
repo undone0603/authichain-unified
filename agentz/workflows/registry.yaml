@@ -19,7 +19,6 @@
 # ----------------------------------------------------------------------
 
 workflows:
-
   # =================================================================
   # CRITICAL — TIME-SENSITIVE
   # =================================================================
@@ -27,7 +26,7 @@ workflows:
   - id: pinecone_trial_decision
     title: "Pinecone trial expiry: renew, downgrade, or migrate gov-opportunities index"
     priority: critical
-    blocks_revenue: true   # gov-engine depends on this for SBIR/SVIP discovery
+    blocks_revenue: true # gov-engine depends on this for SBIR/SVIP discovery
     handler: handlers.pinecone_trial
     type: composite
     estimated_minutes: 15
@@ -89,7 +88,7 @@ workflows:
   - id: stripe_mcp_reconnect
     title: "Reconnect Stripe MCP server"
     priority: high
-    blocks_revenue: true   # required for autonomous payment ops
+    blocks_revenue: true # required for autonomous payment ops
     handler: handlers.stripe_mcp
     type: api
     estimated_minutes: 5
@@ -157,7 +156,7 @@ workflows:
     estimated_minutes: 45
     requires: [linkedin_session]
     prerequisites: []
-    confirm_before_run: false   # rate-limit risk
+    confirm_before_run: false # rate-limit risk
     max_runs_per_day: 1
     description: |
       Sales Nav search: title=(compliance OR operations OR COO),
@@ -300,7 +299,8 @@ workflows:
     handler: handlers.authichain_expansion
     type: composite
     estimated_minutes: 30
-    requires: [supabase_url, supabase_service_key, openai_api_key, gemini_api_key]
+    requires:
+      [supabase_url, supabase_service_key, openai_api_key, gemini_api_key]
     prerequisites: [authichain_pilot_deploy]
     description: |
       Autonomous Scaling in Detroit:
@@ -348,7 +348,8 @@ workflows:
     handler: handlers.authichain_growth_loop
     type: composite
     estimated_minutes: 20
-    requires: [supabase_url, supabase_service_key, hubspot_token, gemini_api_key]
+    requires:
+      [supabase_url, supabase_service_key, hubspot_token, gemini_api_key]
     prerequisites: [authichain_expansion_detroit]
     description: |
       Executes the closed-loop growth cycle:
@@ -474,7 +475,13 @@ workflows:
     type: composite
     estimated_minutes: 10
     requires: [supabase_url, supabase_service_key]
-    prerequisites: [gsc_setup_authichain, gsc_setup_qron, gsc_setup_strainchain, gsc_setup_govchain]
+    prerequisites:
+      [
+        gsc_setup_authichain,
+        gsc_setup_qron,
+        gsc_setup_strainchain,
+        gsc_setup_govchain,
+      ]
     description: |
       Executes a comprehensive SEO optimization cycle:
       1) Dynamically generates sitemap.xml for all 4 platforms based on Supabase data.
@@ -582,7 +589,8 @@ workflows:
     handler: handlers.authichain_apex_ops
     type: composite
     estimated_minutes: 30
-    requires: [supabase_url, supabase_service_key, stripe_secret, openai_api_key]
+    requires:
+      [supabase_url, supabase_service_key, stripe_secret, openai_api_key]
     prerequisites: [authichain_terminal_ops]
     description: |
       Activates the absolute peak of the ecosystem evolution:
@@ -624,7 +632,8 @@ workflows:
     handler: handlers.authichain_apex_orchestrator
     type: composite
     estimated_minutes: 45
-    requires: [supabase_url, supabase_service_key, stripe_secret, openai_api_key]
+    requires:
+      [supabase_url, supabase_service_key, stripe_secret, openai_api_key]
     prerequisites: [authichain_terminal_ops]
     description: |
       The absolute peak of ecosystem operations:
@@ -767,7 +776,6 @@ workflows:
       Iterates through drafted outreach DMs, presents them for approval,
       and uses browser-use to post approved messages to social profiles.
 
-
   - id: power_launch_all
     title: "Master Power Launch: Authichain, QRON, StrainChain, GovChain"
     priority: critical
@@ -775,7 +783,8 @@ workflows:
     handler: handlers.power_launch
     type: composite
     estimated_minutes: 120
-    requires: [supabase_url, supabase_service_key, gemini_api_key, openai_api_key]
+    requires:
+      [supabase_url, supabase_service_key, gemini_api_key, openai_api_key]
     prerequisites: []
     description: |
       Coordinates the absolute end-to-end launch sequence:

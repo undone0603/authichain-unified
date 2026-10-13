@@ -10,6 +10,7 @@ supabase db push
 ```
 
 **What it creates:**
+
 - `funnel_events` table with prospect_id, stage, source, metadata
 - Indexes for fast querying by prospect, stage, source, and timestamp
 - RLS policies for security
@@ -34,26 +35,26 @@ curl http://localhost:3000/api/funnel
 ### 3. Add to Email Campaign
 
 ```typescript
-import { addFunnelParams } from '@/lib/funnel-tracking';
+import { addFunnelParams } from "@/lib/funnel-tracking";
 
 // When sending emails, add these parameters to links:
 const prospectId = `prospect_${crypto.randomUUID()}`;
-const link = addFunnelParams('https://govchain.us', {
+const link = addFunnelParams("https://govchain.us", {
   prospectId,
-  source: 'gov_engine',
-  medium: 'email',
-  campaign: 'campaign_name'
+  source: "gov_engine",
+  medium: "email",
+  campaign: "campaign_name",
 });
 
 // Log the proposal_sent event
-await fetch('/api/funnel', {
-  method: 'POST',
+await fetch("/api/funnel", {
+  method: "POST",
   body: JSON.stringify({
     prospect_id: prospectId,
-    stage: 'proposal_sent',
-    source: 'gov_engine',
-    metadata: { campaign: 'campaign_name' }
-  })
+    stage: "proposal_sent",
+    source: "gov_engine",
+    metadata: { campaign: "campaign_name" },
+  }),
 });
 ```
 
@@ -63,7 +64,7 @@ Place FunnelTracker in your page layout:
 
 ```tsx
 // app/page.tsx or app/layout.tsx
-import { FunnelTracker } from '@/components/FunnelTracker';
+import { FunnelTracker } from "@/components/FunnelTracker";
 
 export default function Page() {
   return (
@@ -76,6 +77,7 @@ export default function Page() {
 ```
 
 The component automatically:
+
 - Detects prospect_id from `?prospect_id=X` URL param
 - Detects source from `?utm_source=gov_engine` URL param
 - Logs `visit_landing_page` event when both are present
@@ -96,18 +98,18 @@ pnpm tsx scripts/funnel-report.ts --days 7
 
 ## Integration Points (In Order)
 
-| Step | Action | Code |
-|------|--------|------|
-| 1 | **Send email** | Add prospect_id + utm params to link |
-| 2 | **Log proposal_sent** | POST /api/funnel with stage='proposal_sent' |
-| 3 | **Track email open** | Add tracking pixel: `<img src="/api/email/pixel?prospect_id=X&campaign=Y">` |
-| 4 | **Prospect clicks** | Link with prospect_id auto-logs via FunnelTracker on landing page |
-| 5 | **Log visit_landing_page** | FunnelTracker component auto-logs when loaded |
-| 6 | **Start checkout** | Checkout form sends prospectId to /api/checkout |
-| 7 | **Log start_checkout** | /api/checkout auto-logs before redirect to Stripe |
-| 8 | **Complete payment** | Stripe webhook confirms payment |
-| 9 | **Log complete_checkout** | Add to /api/webhook/route.ts (see below) |
-| 10 | **Activate subscription** | Log subscribe event in webhook |
+| Step | Action                     | Code                                                                        |
+| ---- | -------------------------- | --------------------------------------------------------------------------- |
+| 1    | **Send email**             | Add prospect_id + utm params to link                                        |
+| 2    | **Log proposal_sent**      | POST /api/funnel with stage='proposal_sent'                                 |
+| 3    | **Track email open**       | Add tracking pixel: `<img src="/api/email/pixel?prospect_id=X&campaign=Y">` |
+| 4    | **Prospect clicks**        | Link with prospect_id auto-logs via FunnelTracker on landing page           |
+| 5    | **Log visit_landing_page** | FunnelTracker component auto-logs when loaded                               |
+| 6    | **Start checkout**         | Checkout form sends prospectId to /api/checkout                             |
+| 7    | **Log start_checkout**     | /api/checkout auto-logs before redirect to Stripe                           |
+| 8    | **Complete payment**       | Stripe webhook confirms payment                                             |
+| 9    | **Log complete_checkout**  | Add to /api/webhook/route.ts (see below)                                    |
+| 10   | **Activate subscription**  | Log subscribe event in webhook                                              |
 
 ## Essential Additions
 
@@ -116,31 +118,36 @@ pnpm tsx scripts/funnel-report.ts --days 7
 Create `/src/app/api/email/pixel/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const GIF = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x01, 0x0A, 0x00, 0x01, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B]);
+const GIF = Buffer.from([
+  0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00,
+  0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x01, 0x0a, 0x00, 0x01,
+  0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02,
+  0x44, 0x01, 0x00, 0x3b,
+]);
 
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams;
-  const prospectId = params.get('prospect_id');
-  const campaignId = params.get('campaign_id');
+  const prospectId = params.get("prospect_id");
+  const campaignId = params.get("campaign_id");
 
   if (prospectId && campaignId) {
     // Track email open in background
-    fetch('http://localhost:3000/api/funnel', {
-      method: 'POST',
+    fetch("http://localhost:3000/api/funnel", {
+      method: "POST",
       body: JSON.stringify({
         prospect_id: prospectId,
-        stage: 'email_opened',
-        source: 'gov_engine',
-        event_type: 'email_open',
-        metadata: { campaign_id: campaignId }
-      })
+        stage: "email_opened",
+        source: "gov_engine",
+        event_type: "email_open",
+        metadata: { campaign_id: campaignId },
+      }),
     }).catch(() => {});
   }
 
   return new Response(GIF, {
-    headers: { 'Content-Type': 'image/gif', 'Cache-Control': 'no-cache' }
+    headers: { "Content-Type": "image/gif", "Cache-Control": "no-cache" },
   });
 }
 ```
@@ -150,35 +157,37 @@ export async function GET(request: NextRequest) {
 In `/src/app/api/webhook/route.ts`, add to checkout.session.completed handler:
 
 ```typescript
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session
+) {
   const prospectId = session.metadata?.prospect_id;
   const source = session.metadata?.source;
 
   if (prospectId) {
     // Log checkout completion
-    await fetch('http://localhost:3000/api/funnel', {
-      method: 'POST',
+    await fetch("http://localhost:3000/api/funnel", {
+      method: "POST",
       body: JSON.stringify({
         prospect_id: prospectId,
-        stage: 'complete_checkout',
-        source: source || 'direct',
+        stage: "complete_checkout",
+        source: source || "direct",
         metadata: {
           stripe_session_id: session.id,
-          amount: session.amount_total
-        }
-      })
+          amount: session.amount_total,
+        },
+      }),
     }).catch(console.error);
 
     // Log subscription (if applicable)
     if (session.subscription) {
-      await fetch('http://localhost:3000/api/funnel', {
-        method: 'POST',
+      await fetch("http://localhost:3000/api/funnel", {
+        method: "POST",
         body: JSON.stringify({
           prospect_id: prospectId,
-          stage: 'subscribe',
-          source: source || 'direct',
-          metadata: { subscription_id: session.subscription }
-        })
+          stage: "subscribe",
+          source: source || "direct",
+          metadata: { subscription_id: session.subscription },
+        }),
       }).catch(console.error);
     }
   }
@@ -193,12 +202,19 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 <p>We found contract opportunities for your business.</p>
 
 <!-- Tracked link (will log visit_landing_page when clicked) -->
-<a href="https://govchain.us/opportunities?prospect_id={{prospectId}}&utm_source=gov_engine&utm_medium=email&utm_campaign={{campaignId}}">
+<a
+  href="https://govchain.us/opportunities?prospect_id={{prospectId}}&utm_source=gov_engine&utm_medium=email&utm_campaign={{campaignId}}"
+>
   View Opportunities →
 </a>
 
 <!-- Open tracking pixel (logs email_opened) -->
-<img src="https://yourdomain.com/api/email/pixel?prospect_id={{prospectId}}&campaign_id={{campaignId}}" width="1" height="1" alt="" />
+<img
+  src="https://yourdomain.com/api/email/pixel?prospect_id={{prospectId}}&campaign_id={{campaignId}}"
+  width="1"
+  height="1"
+  alt=""
+/>
 ```
 
 ## Check Your Setup
@@ -253,21 +269,25 @@ email_opened             2         20.0 %      20.0 %      80.0 %
 ## Common URL Patterns
 
 ### Email link (gov_engine)
+
 ```
 https://govchain.us?prospect_id=prospect_abc123&utm_source=gov_engine&utm_medium=email&utm_campaign=q3_opportunities
 ```
 
 ### LinkedIn post
+
 ```
 https://authichain.com/demo?prospect_id=campaign_linkedin_1&utm_source=linkedin_post&utm_campaign=linkedin_organic
 ```
 
 ### Calendly (includes prospect in name field)
+
 ```
 https://calendly.com/john/30min?name=prospect_abc123&utm_source=gov_engine
 ```
 
 ### Success page (captures completion)
+
 ```
 https://yourdomain.com/success?session_id=cs_live_xxx&prospect_id=prospect_abc123&utm_source=gov_engine
 ```
@@ -288,7 +308,7 @@ echo "$REPORT" | mail -s "Daily Funnel Report" team@company.com
 
 ```typescript
 // scripts/funnel-to-slack.ts
-import { getFunnelReport } from './funnel-report';
+import { getFunnelReport } from "./funnel-report";
 
 const report = await getFunnelReport(1); // Last 1 day
 const message = formatReportForSlack(report);
@@ -298,17 +318,20 @@ await postToSlack(message);
 ## Troubleshooting
 
 **No events showing up?**
+
 - Check that funnel_events table exists: `supabase status`
 - Verify API endpoint is working: `curl http://localhost:3000/api/funnel`
 - Check browser console for errors in FunnelTracker component
 - Make sure prospect_id and utm_source are in the URL
 
 **Email pixel not tracking?**
+
 - Create `/src/app/api/email/pixel/route.ts` (see above)
 - Use `width="1" height="1" alt=""` on the img tag
 - Email clients must have image loading enabled
 
 **Low conversion rates?**
+
 - Check email open rate first (biggest bottleneck usually here)
 - Use `pnpm tsx scripts/funnel-report.ts --source gov_engine` to identify stage
 - Review BOTTLENECK section in report for optimization priority

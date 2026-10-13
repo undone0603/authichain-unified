@@ -105,7 +105,7 @@ public.
 
 v0.1.0 draft, not stable. No revocation yet — a record signed by a compromised
 key stays cryptographically valid; that's planned for v0.2 via
-`credentialStatus`. And a signature proves *who asserted something*, never that
+`credentialStatus`. And a signature proves _who asserted something_, never that
 it's true. An issuer can sign a false statement and this layer will correctly
 report `verified`. Defending against that lives above the spec, not in it.
 

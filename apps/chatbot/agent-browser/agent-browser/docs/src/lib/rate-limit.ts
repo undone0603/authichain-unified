@@ -1,5 +1,5 @@
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 // Lazy initialization to avoid errors when Redis env vars are not configured
 let _minuteRateLimit: Ratelimit | null = null;
@@ -32,8 +32,8 @@ export const minuteRateLimit = {
       if (!redis) return noopRateLimiter.limit();
       _minuteRateLimit = new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(MINUTE_LIMIT, "1 m"),
-        prefix: "ratelimit:minute",
+        limiter: Ratelimit.slidingWindow(MINUTE_LIMIT, '1 m'),
+        prefix: 'ratelimit:minute',
       });
     }
     return _minuteRateLimit.limit(identifier);
@@ -48,8 +48,8 @@ export const dailyRateLimit = {
       if (!redis) return noopRateLimiter.limit();
       _dailyRateLimit = new Ratelimit({
         redis,
-        limiter: Ratelimit.fixedWindow(DAILY_LIMIT, "1 d"),
-        prefix: "ratelimit:daily",
+        limiter: Ratelimit.fixedWindow(DAILY_LIMIT, '1 d'),
+        prefix: 'ratelimit:daily',
       });
     }
     return _dailyRateLimit.limit(identifier);

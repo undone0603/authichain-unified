@@ -193,14 +193,14 @@ function PageMockup({
 }
 
 const snapshotDiffLines = [
-  "  heading \"Sign Up\" [ref=e1]",
-  "  text \"Create your account\" [ref=e2]",
-  "- textbox \"Email\" [ref=e3]",
-  "+ textbox \"Email\" [ref=e3]: \"test@example.com\"",
-  "- button \"Submit\" [ref=e4]",
-  "+ button \"Submit\" [ref=e4] [disabled]",
-  "+ status \"Sending...\" [ref=e7]",
-  "  link \"Already have an account?\" [ref=e5]",
+  '  heading "Sign Up" [ref=e1]',
+  '  text "Create your account" [ref=e2]',
+  '- textbox "Email" [ref=e3]',
+  '+ textbox "Email" [ref=e3]: "test@example.com"',
+  '- button "Submit" [ref=e4]',
+  '+ button "Submit" [ref=e4] [disabled]',
+  '+ status "Sending..." [ref=e7]',
+  '  link "Already have an account?" [ref=e5]',
 ];
 
 export function DiffDemo() {
@@ -234,8 +234,8 @@ export function DiffDemo() {
             ))}
             <div className="mt-2 opacity-60">
               <span className="text-green-400">3</span> additions,{" "}
-              <span className="text-red-400">2</span> removals,{" "}
-              <span>3</span> unchanged
+              <span className="text-red-400">2</span> removals, <span>3</span>{" "}
+              unchanged
             </div>
           </div>
         </Terminal>
@@ -259,15 +259,13 @@ export function DiffDemo() {
             className="border-t pt-3"
             style={{ borderColor: "var(--border)" }}
           >
-            <div className="text-red-400">
-              &#x2717; 2.37% pixels differ
-            </div>
+            <div className="text-red-400">&#x2717; 2.37% pixels differ</div>
             <div className="opacity-50">
               Diff image: ~/.agent-browser/tmp/diffs/diff-1708473621.png
             </div>
             <div className="opacity-50">
-              <span className="text-red-400">1,137</span> different /{" "}
-              48,000 total pixels
+              <span className="text-red-400">1,137</span> different / 48,000
+              total pixels
             </div>
           </div>
         </Terminal>

@@ -19,6 +19,7 @@ SignWell's free tier provides 25 documents/month with testMode enabled. All work
 ## Environment Variables
 
 ### Old (DocuSign)
+
 ```
 DOCUSIGN_ACCOUNT_ID=xxxxx
 DOCUSIGN_USER_ID=xxxxx
@@ -29,6 +30,7 @@ DOCUSIGN_REDIRECT_URI=http://localhost:3000/api/auth/docusign/callback
 ```
 
 ### New (SignWell)
+
 ```
 SIGNWELL_API_KEY=your_signwell_api_key_here
 SIGNWELL_TEMPLATE_ID=your_template_id_here
@@ -38,40 +40,51 @@ SIGNWELL_TEST_MODE=true
 ```
 
 ### .env.example Update
+
 Replace all DOCUSIGN_ prefixed variables with SIGNWELL_ prefixed variables. Remove docusign_token entirely.
 
 ## File Changes
 
 ### 1. server/adapters/signwell.ts (NEW)
+
 SignWell adapter module implementing the signing document API.
 
 ```typescript
 // server/adapters/signwell.ts
-import { z } from 'zod';
+import { z } from "zod";
 
-const SIGNWELL_BASE_URL = process.env.SIGNWELL_BASE_URL || 'https://api.getsignwell.com/v1';
+const SIGNWELL_BASE_URL =
+  process.env.SIGNWELL_BASE_URL || "https://api.getsignwell.com/v1";
 const SIGNWELL_API_KEY = process.env.SIGNWELL_API_KEY;
-const SIGNWELL_TEST_MODE = process.env.SIGNWELL_TEST_MODE === 'true';
+const SIGNWELL_TEST_MODE = process.env.SIGNWELL_TEST_MODE === "true";
 
 const CreateDocumentSchema = z.object({
   template_id: z.string().optional(),
   name: z.string().min(1),
-  signers: z.array(z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    role: z.string().optional(),
-  })),
-  files: z.array(z.object({
-    name: z.string(),
-    url: z.string().url(),
-  })).optional(),
+  signers: z.array(
+    z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+      role: z.string().optional(),
+    })
+  ),
+  files: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().url(),
+      })
+    )
+    .optional(),
   test_mode: z.boolean().default(true),
   metadata: z.record(z.string()).optional(),
 });
 
-export async function createSignWellDocument(payload: z.infer<typeof CreateDocumentSchema>) {
+export async function createSignWellDocument(
+  payload: z.infer<typeof CreateDocumentSchema>
+) {
   if (!SIGNWELL_API_KEY) {
-    throw new Error('SIGNWELL_API_KEY is not configured');
+    throw new Error("SIGNWELL_API_KEY is not configured");
   }
 
   const normalized = CreateDocumentSchema.parse({
@@ -80,10 +93,10 @@ export async function createSignWellDocument(payload: z.infer<typeof CreateDocum
   });
 
   const res = await fetch(`${SIGNWELL_BASE_URL}/documents`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${SIGNWELL_API_KEY}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SIGNWELL_API_KEY}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(normalized),
   });
@@ -98,12 +111,12 @@ export async function createSignWellDocument(payload: z.infer<typeof CreateDocum
 
 export async function getSignWellDocument(documentId: string) {
   if (!SIGNWELL_API_KEY) {
-    throw new Error('SIGNWELL_API_KEY is not configured');
+    throw new Error("SIGNWELL_API_KEY is not configured");
   }
 
   const res = await fetch(`${SIGNWELL_BASE_URL}/documents/${documentId}`, {
     headers: {
-      'Authorization': `Bearer ${SIGNWELL_API_KEY}`,
+      Authorization: `Bearer ${SIGNWELL_API_KEY}`,
     },
   });
 
@@ -115,7 +128,9 @@ export async function getSignWellDocument(documentId: string) {
   return res.json();
 }
 
-export async function getSignWellSigningUrl(documentId: string): Promise<string> {
+export async function getSignWellSigningUrl(
+  documentId: string
+): Promise<string> {
   const doc = await getSignWellDocument(documentId);
   if (doc.signers && Array.isArray(doc.signers)) {
     const signer = doc.signers[0];
@@ -123,17 +138,17 @@ export async function getSignWellSigningUrl(documentId: string): Promise<string>
       return signer.signing_url;
     }
   }
-  throw new Error('No signing URL found for document');
+  throw new Error("No signing URL found for document");
 }
 
 export async function getSignWellTemplates() {
   if (!SIGNWELL_API_KEY) {
-    throw new Error('SIGNWELL_API_KEY is not configured');
+    throw new Error("SIGNWELL_API_KEY is not configured");
   }
 
   const res = await fetch(`${SIGNWELL_BASE_URL}/templates`, {
     headers: {
-      'Authorization': `Bearer ${SIGNWELL_API_KEY}`,
+      Authorization: `Bearer ${SIGNWELL_API_KEY}`,
     },
   });
 
@@ -147,11 +162,12 @@ export async function getSignWellTemplates() {
 ```
 
 ### 2. server/adapters/signwell-blitz.ts (NEW)
+
 Orchestrator/Blitz script for batch or outreach-signing workflows.
 
 ```typescript
 // server/adapters/signwell-blitz.ts
-import { createSignWellDocument, getSignWellSigningUrl } from './signwell';
+import { createSignWellDocument, getSignWellSigningUrl } from "./signwell";
 
 export interface SignWellBlitzOptions {
   template_id?: string;
@@ -165,8 +181,8 @@ export interface SignWellBlitzOptions {
 
 export async function signWellBlitz(contacts: SignWellBlitzOptions[]) {
   if (!process.env.SIGNWELL_API_KEY) {
-    console.error('[signwell-blitz] SIGNWELL_API_KEY not set, skipping');
-    return { skipped: true, reason: 'missing_key' };
+    console.error("[signwell-blitz] SIGNWELL_API_KEY not set, skipping");
+    return { skipped: true, reason: "missing_key" };
   }
 
   const results: Array<{
@@ -207,26 +223,34 @@ export async function signWellBlitz(contacts: SignWellBlitzOptions[]) {
   };
 }
 
-export async function createOutreachDocument(signer: { name: string; email: string }, docName: string) {
-  const result = await signWellBlitz([{
-    signers: [signer],
-    documentName: docName,
-    metadata: { source: 'outreach', created_at: new Date().toISOString() },
-  }]);
+export async function createOutreachDocument(
+  signer: { name: string; email: string },
+  docName: string
+) {
+  const result = await signWellBlitz([
+    {
+      signers: [signer],
+      documentName: docName,
+      metadata: { source: "outreach", created_at: new Date().toISOString() },
+    },
+  ]);
   return result.results[0];
 }
 ```
 
 ### 3. api/auth/route.ts (or similar auth callback)
+
 Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key usage.
 
 **Before (DocuSign):**
+
 - Obtain JWT assertion
 - Exchange for access token
 - Store docusign_token in session/env
 - Token refresh on expiry
 
 **After (SignWell):**
+
 - No token exchange needed
 - SIGNWELL_API_KEY used directly for all requests
 - No session storage required
@@ -234,23 +258,27 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 ## Migration Steps
 
 ### Phase 1: Scaffolding
+
 - [x] Create `server/adapters/signwell.ts` adapter
 - [x] Create `server/adapters/signwell-blitz.ts` orchestrator
 - [x] Update `.env.example` with SIGNWELL_ variables
 - [x] Remove DOCUSIGN_ variables from .env.example
 
 ### Phase 2: Integration
+
 - [ ] Replace all `docusign_token` references with `SIGNWELL_API_KEY`
 - [ ] Update outbound email/signing flows to use `signWellBlitz` or `createSignWellDocument`
 - [ ] Update webhook handlers to listen for SignWell document events
 - [ ] Test document creation with `testMode: true`
 
 ### Phase 3: Outreach Flow Replacement
+
 - [ ] Replace DocuSign-based outreach sequences with SignWell-based sequences
 - [ ] Update email templates to reference SignWell signing links
 - [ ] Update tracking/analytics for SignWell document events
 
 ### Phase 4: DNS/Domain (authichain.com)
+
 - [x] Root A record: authichain.com -> 76.76.21.21 (Vercel)
 - [x] www CNAME: www.authichain.com -> cb34f8b059d59433.vercel-dns-017.com
 - [x] Root domain authichain.com added to Vercel project authichain-unified
@@ -260,6 +288,7 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 - [x] Site live at https://www.authichain.com
 
 ### Phase 5: Production Cutover
+
 - [ ] Set SIGNWELL_TEST_MODE=false in production
 - [ ] Verify 25 document/month limit is not exceeded
 - [ ] Monitor SignWell dashboard for quota usage
@@ -268,6 +297,7 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 ## Test Plan
 
 ### Unit Tests
+
 1. **createSignWellDocument** - verify document creation with testMode
 2. **getSignWellDocument** - verify document retrieval by ID
 3. **getSignWellSigningUrl** - verify signing URL extraction
@@ -275,6 +305,7 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 5. **signWellBlitz** - verify batch creation (success + partial failure cases)
 
 ### Integration Tests
+
 1. Create document with template_id - verify signer receives email
 2. Create document with inline files (url-based) - verify attachment
 3. Verify testMode documents are marked as test and not billed
@@ -283,6 +314,7 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 6. Verify error handling when API key missing
 
 ### Browser Automation Tests (E2E)
+
 1. Navigate to https://www.authichain.com - verify page loads
 2. Trigger outreach flow -> verify SignWell document created
 3. Click signing link -> verify SignWell signing page renders
@@ -292,6 +324,7 @@ Remove DocuSign JWT grant / token exchange. Replace with simple SignWell API key
 7. Verify DNS propagation - both A and CNAME resolve correctly
 
 ### DNS/Infrastructure Tests
+
 1. `dig authichain.com A` -> 76.76.21.21
 2. `dig www.authichain.com CNAME` -> cb34f8b059d59433.vercel-dns-017.com
 3. TLS cert check: both root and www serve valid HTTPS
@@ -316,13 +349,16 @@ If SignWell integration fails or exceeds quota:
 ## API Reference
 
 ### SignWell Endpoints Used
+
 - `POST /v1/documents` - Create a document
 - `GET /v1/documents/{id}` - Get document details and signer URLs
 - `GET /v1/templates` - List available templates
 - Webhook events: document.delivered, document.signed, document.viewed, document.declined
 
 ### Auth Method
+
 Bearer token via Authorization header:
+
 ```
 Authorization: Bearer YOUR_SIGNWELL_API_KEY
 ```

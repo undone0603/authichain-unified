@@ -35,13 +35,17 @@ async function runChaosTest() {
 
   // Ensure OpenAI key is present for the fallback
   if (!ENV.openaiApiKey) {
-    (ENV as any).openaiApiKey = process.env.OPENAI_API_KEY || "sk-proj-valid-fallback-key-mock";
+    (ENV as any).openaiApiKey =
+      process.env.OPENAI_API_KEY || "sk-proj-valid-fallback-key-mock";
   }
 
   // Phase A: Vision Fallback Test
   console.log("\n--- Phase A: Vision Fallback ---");
   try {
-    const dnaResult = await analyzeProductVision("https://authichain.com/sample.jpg", "Cannabis");
+    const dnaResult = await analyzeProductVision(
+      "https://authichain.com/sample.jpg",
+      "Cannabis"
+    );
     console.log("✅ Vision Result (via fallback):", dnaResult.recommendation);
     if (dnaResult.recommendation.includes("Manual review")) {
       console.log("✨ SUCCESS: Vision gracefully handled the chaos.");
@@ -57,7 +61,7 @@ async function runChaosTest() {
       brandName: "Chaos Labs",
       strainName: "Static Kush",
       thcContent: "0%",
-      harvestDate: "2026-01-01"
+      harvestDate: "2026-01-01",
     });
     console.log("✅ Audio URL:", audioUrl);
     if (audioUrl.includes("default-verification-story.mp3")) {
@@ -74,12 +78,17 @@ async function runChaosTest() {
   const metrcResult = await syncMetrcTransfers({
     vendorKey: "fail",
     userKey: "fail",
-    licenseNumber: "fail"
+    licenseNumber: "fail",
   });
-  console.log("✅ METRC Result:", metrcResult.length === 0 ? "Safe Empty Array" : "Unexpected Data");
+  console.log(
+    "✅ METRC Result:",
+    metrcResult.length === 0 ? "Safe Empty Array" : "Unexpected Data"
+  );
   console.log("✨ SUCCESS: METRC retried and exited cleanly.");
 
-  console.log("\n🏁 Chaos Test Complete. Review logs for cascading performance.");
+  console.log(
+    "\n🏁 Chaos Test Complete. Review logs for cascading performance."
+  );
 }
 
 runChaosTest().catch(console.error);

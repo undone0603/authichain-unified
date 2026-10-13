@@ -2,19 +2,39 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plug, RefreshCw, Send, Database, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Loader2,
+  Plug,
+  RefreshCw,
+  Send,
+  Database,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Macrohard() {
-  const { data: status, isLoading: statusLoading, refetch: refetchStatus } = trpc.macrohard.status.useQuery();
+  const {
+    data: status,
+    isLoading: statusLoading,
+    refetch: refetchStatus,
+  } = trpc.macrohard.status.useQuery();
   const syncMutation = trpc.macrohard.sync.useMutation();
   const pushEventMutation = trpc.macrohard.pushEvent.useMutation();
 
-  const [syncEntity, setSyncEntity] = useState<"products" | "users" | "inventory" | "all">("all");
+  const [syncEntity, setSyncEntity] = useState<
+    "products" | "users" | "inventory" | "all"
+  >("all");
   const [queryResource, setQueryResource] = useState("");
   const queryResult = trpc.macrohard.query.useQuery(
     { resource: queryResource },
@@ -47,9 +67,16 @@ export default function Macrohard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">MACROHARD Integration</h1>
-          <p className="text-muted-foreground text-sm mt-1">Connect and sync with the MACROHARD internal system</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Connect and sync with the MACROHARD internal system
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetchStatus()} className="gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetchStatus()}
+          className="gap-1"
+        >
           <RefreshCw className="h-3 w-3" /> Refresh
         </Button>
       </div>
@@ -76,20 +103,37 @@ export default function Macrohard() {
         <CardContent className="space-y-2 text-sm">
           {!status?.configured ? (
             <div className="text-muted-foreground">
-              <p>Set the following environment variables to enable MACROHARD integration:</p>
+              <p>
+                Set the following environment variables to enable MACROHARD
+                integration:
+              </p>
               <ul className="mt-2 space-y-1 font-mono text-xs">
-                <li><code className="bg-muted px-1 rounded">MACROHARD_API_URL</code> — Base URL of the MACROHARD API</li>
-                <li><code className="bg-muted px-1 rounded">MACROHARD_API_KEY</code> — API key for authentication</li>
+                <li>
+                  <code className="bg-muted px-1 rounded">
+                    MACROHARD_API_URL
+                  </code>{" "}
+                  — Base URL of the MACROHARD API
+                </li>
+                <li>
+                  <code className="bg-muted px-1 rounded">
+                    MACROHARD_API_KEY
+                  </code>{" "}
+                  — API key for authentication
+                </li>
               </ul>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 text-muted-foreground">
               <span>Status:</span>
-              <span className="font-medium text-foreground">{status.connected ? "Online" : "Offline"}</span>
+              <span className="font-medium text-foreground">
+                {status.connected ? "Online" : "Offline"}
+              </span>
               {status.version && (
                 <>
                   <span>Version:</span>
-                  <span className="font-medium text-foreground">{status.version}</span>
+                  <span className="font-medium text-foreground">
+                    {status.version}
+                  </span>
                 </>
               )}
               {status.error && (
@@ -106,11 +150,18 @@ export default function Macrohard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sync Panel */}
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Database className="h-4 w-4" /> Data Sync</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Database className="h-4 w-4" /> Data Sync
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">
               <Label>Entity to Sync</Label>
-              <Select value={syncEntity} onValueChange={(v) => setSyncEntity(v as any)}>
+              <Select
+                value={syncEntity}
+                onValueChange={v => setSyncEntity(v as any)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -128,14 +179,19 @@ export default function Macrohard() {
               className="w-full"
             >
               {syncMutation.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Syncing…</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Syncing…
+                </>
               ) : (
-                <><RefreshCw className="mr-2 h-4 w-4" /> Sync {syncEntity}</>
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Sync {syncEntity}
+                </>
               )}
             </Button>
             {syncMutation.data && (
               <p className="text-sm text-green-600">
-                Synced {syncMutation.data.synced} records at {new Date(syncMutation.data.timestamp).toLocaleTimeString()}
+                Synced {syncMutation.data.synced} records at{" "}
+                {new Date(syncMutation.data.timestamp).toLocaleTimeString()}
               </p>
             )}
           </CardContent>
@@ -143,17 +199,28 @@ export default function Macrohard() {
 
         {/* Event Push Panel */}
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Send className="h-4 w-4" /> Push Events</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Send className="h-4 w-4" /> Push Events
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Send AuthiChain events (authentications, certificates, NFT mints) to MACROHARD in real-time.
+              Send AuthiChain events (authentications, certificates, NFT mints)
+              to MACROHARD in real-time.
             </p>
             <div className="text-sm space-y-1">
               <p className="text-muted-foreground">Configured event types:</p>
               <ul className="text-xs space-y-0.5 text-foreground">
-                <li>• <code>product_authenticated</code></li>
-                <li>• <code>certificate_issued</code></li>
-                <li>• <code>nft_minted</code></li>
+                <li>
+                  • <code>product_authenticated</code>
+                </li>
+                <li>
+                  • <code>certificate_issued</code>
+                </li>
+                <li>
+                  • <code>nft_minted</code>
+                </li>
               </ul>
             </div>
             <Button
@@ -163,9 +230,13 @@ export default function Macrohard() {
               className="w-full"
             >
               {pushEventMutation.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…
+                </>
               ) : (
-                <><Plug className="mr-2 h-4 w-4" /> Send Test Event</>
+                <>
+                  <Plug className="mr-2 h-4 w-4" /> Send Test Event
+                </>
               )}
             </Button>
           </CardContent>
@@ -174,7 +245,9 @@ export default function Macrohard() {
 
       {/* API Query */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Query MACROHARD API</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Query MACROHARD API</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
             <Input
@@ -197,7 +270,9 @@ export default function Macrohard() {
             </pre>
           )}
           {queryResult.error && (
-            <p className="text-sm text-destructive">{queryResult.error.message}</p>
+            <p className="text-sm text-destructive">
+              {queryResult.error.message}
+            </p>
           )}
         </CardContent>
       </Card>

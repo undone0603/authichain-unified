@@ -35,13 +35,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       const id = slugify(extractText(children));
       return <h3 id={id}>{children}</h3>;
     },
-    a: ({
-      href,
-      children,
-    }: {
-      href?: string;
-      children?: React.ReactNode;
-    }) => {
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
       if (href?.startsWith("/")) {
         return <Link href={href}>{children}</Link>;
       }

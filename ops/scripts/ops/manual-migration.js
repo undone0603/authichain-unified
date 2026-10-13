@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL || '');
+const postgres = require("postgres");
+const sql = postgres(process.env.DATABASE_URL || "");
 
 const migration = `
 -- Products
@@ -68,15 +68,14 @@ CREATE INDEX IF NOT EXISTS "idx_tags_user" ON "tags" ("user_id");
 
 async function migrate() {
   try {
-    console.log('Running manual migration for missing columns...');
+    console.log("Running manual migration for missing columns...");
     await sql.unsafe(migration);
-    console.log('✅ Migration complete.');
+    console.log("✅ Migration complete.");
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    console.error("❌ Migration failed:", err.message);
   } finally {
     process.exit();
   }
 }
 
 migrate();
-

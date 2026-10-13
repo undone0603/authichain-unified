@@ -1,17 +1,18 @@
 <!-- repo-audit-integrate:canonical:start -->
+
 # AuthiChain Network Map
 
 Refreshed by `repo_audit_integrate`. This banner is the deploy authority for this file. The July 15, 2026 inventory below is historical.
 
-| Surface | Authority |
-|---|---|
-| Code | `undone0603/authichain-unified` |
-| Runtime | Cloudflare Workers. See `docs/ESTATE.md`, `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`, and `config/cloudflare-estate.json`. |
-| Deploys | `deploy-workers.yml` (`workers/**`), `deploy-cloudflare.yml`, `deploy-edge-worker.yml`, `deploy-authichain-com.yml`, `deploy-verifier-web.yml`. `deploy-qron-ai-api.yml` is manual. |
-| Not a deploy | Vercel. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step. |
-| Data | Drizzle migrations into Supabase Postgres. D1 is not a second product schema. |
-| Workspace | `pnpm-workspace.yaml` includes `apps/*`, `packages/*`, `workers/*`, `worker`, and `mcp`. |
-| This agent | `python -m agentz.cli run repo_audit_integrate --mode dry-run` |
+| Surface      | Authority                                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code         | `undone0603/authichain-unified`                                                                                                                                                     |
+| Runtime      | Cloudflare Workers. See `docs/ESTATE.md`, `docs/operations/CLOUDFLARE_FIRST_BASELINE.md`, and `config/cloudflare-estate.json`.                                                      |
+| Deploys      | `deploy-workers.yml` (`workers/**`), `deploy-cloudflare.yml`, `deploy-edge-worker.yml`, `deploy-authichain-com.yml`, `deploy-verifier-web.yml`. `deploy-qron-ai-api.yml` is manual. |
+| Not a deploy | Vercel. `scripts/guard-vercel-deploy.mjs` fails a workflow that adds a Vercel deploy step.                                                                                          |
+| Data         | Drizzle migrations into Supabase Postgres. D1 is not a second product schema.                                                                                                       |
+| Workspace    | `pnpm-workspace.yaml` includes `apps/*`, `packages/*`, `workers/*`, `worker`, and `mcp`.                                                                                            |
+| This agent   | `python -m agentz.cli run repo_audit_integrate --mode dry-run`                                                                                                                      |
 
 Moving the repo to `AuthiChain2026/authichain-unified` is optional hygiene, not a launch gate. Worker retirement stays a dashboard decision after `node scripts/cloudflare/audit-estate.mjs`.
 <!-- repo-audit-integrate:canonical:end -->
@@ -25,13 +26,13 @@ _Consolidation spec: docs/superpowers/specs/2026-07-15-network-consolidation-des
 
 _Verified against the Vercel API 2026-07-15. All six team projects are linked to THIS repo (undone0603/authichain-unified); the old undone0603/qron-platform repo deploys nothing._
 
-| What | Folder | Deploys via | Domain(s) |
-|---|---|---|---|
-| **The network app** (one Next.js app serves every brand) | repo root (`src/` + `client/` + `server/`, `next build`) | Vercel **`qron-platform`** (prj_GD9ypyGrjibx4Ab88M52xufUf1ph, repo root, linked 2026-06-19) | qron.space, app.qron.space, authichain.com, app.authichain.com, govchain.us, strainchain.io (+ www variants). Hosts the registered Stripe webhooks and the `/api/cron/nurture-replies` cron. |
-| Brand-pitch microsites | repo root (same build, multi-tenant) | Vercel `authichain-unified` | ~50 `<pitch>.authichain.com` subdomains (diageo, lvmh, pfizer, …) |
-| Edge worker | `worker/` | Vercel `authichain-unified` (rootDirectory `worker`) | none attached |
-| Spares (linked, no domains) | — | Vercel `govchain-us`, `strainchain-io`, `authichain-portfolio` | none — candidates for deletion |
-| Apex landing / SEO layer | `workers/authichain-com/`, `workers/{govchain-us,strainchain-io,qron-space}/` | CF workers (route globs, where DNS is proxied through Cloudflare) | fronting authichain.com/* et al. |
+| What                                                     | Folder                                                                        | Deploys via                                                                                 | Domain(s)                                                                                                                                                                                    |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The network app** (one Next.js app serves every brand) | repo root (`src/` + `client/` + `server/`, `next build`)                      | Vercel **`qron-platform`** (prj_GD9ypyGrjibx4Ab88M52xufUf1ph, repo root, linked 2026-06-19) | qron.space, app.qron.space, authichain.com, app.authichain.com, govchain.us, strainchain.io (+ www variants). Hosts the registered Stripe webhooks and the `/api/cron/nurture-replies` cron. |
+| Brand-pitch microsites                                   | repo root (same build, multi-tenant)                                          | Vercel `authichain-unified`                                                                 | ~50 `<pitch>.authichain.com` subdomains (diageo, lvmh, pfizer, …)                                                                                                                            |
+| Edge worker                                              | `worker/`                                                                     | Vercel `authichain-unified` (rootDirectory `worker`)                                        | none attached                                                                                                                                                                                |
+| Spares (linked, no domains)                              | —                                                                             | Vercel `govchain-us`, `strainchain-io`, `authichain-portfolio`                              | none — candidates for deletion                                                                                                                                                               |
+| Apex landing / SEO layer                                 | `workers/authichain-com/`, `workers/{govchain-us,strainchain-io,qron-space}/` | CF workers (route globs, where DNS is proxied through Cloudflare)                           | fronting authichain.com/* et al.                                                                                                                                                             |
 
 ## Cloudflare workers
 
@@ -42,15 +43,15 @@ _Verified against the Vercel API 2026-07-15. All six team projects are linked to
 
 ## Other network members
 
-| What | Folder | Notes |
-|---|---|---|
-| AgentZ (python ops agent) | `agentz/` | `python -m agentz.cli run <id>`; ALL outbound gated; venv at `~/.agentz-venv` |
-| Agent-browser | `apps/agent-browser/` | git history remains at `undone0603/agent-browser` |
-| Chatbot | `apps/chatbot/` | previously un-versioned; repo copy is canonical |
-| Brand site sources | `apps/brand-sites/{authichain,govchain,strainchain}/` | static `public/` snapshots from `/home/zac/<Brand>/` |
-| Contracts | `contracts/` | AuthiChainNFT.sol + test infra |
-| Ops scripts | `scripts/ops/` (+ `scripts/ops/home/` June-2026 session archive) | one-shot helpers, unmaintained |
-| DB | Supabase `nhdnkzhtadfkkluiulhs` (Postgres, pooler `aws-1-us-east-2`, port 5432/6543) | real + populated; **Drizzle `drizzle/migrations` is the authoritative schema migration path going forward** |
+| What                      | Folder                                                                               | Notes                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| AgentZ (python ops agent) | `agentz/`                                                                            | `python -m agentz.cli run <id>`; ALL outbound gated; venv at `~/.agentz-venv`                               |
+| Agent-browser             | `apps/agent-browser/`                                                                | git history remains at `undone0603/agent-browser`                                                           |
+| Chatbot                   | `apps/chatbot/`                                                                      | previously un-versioned; repo copy is canonical                                                             |
+| Brand site sources        | `apps/brand-sites/{authichain,govchain,strainchain}/`                                | static `public/` snapshots from `/home/zac/<Brand>/`                                                        |
+| Contracts                 | `contracts/`                                                                         | AuthiChainNFT.sol + test infra                                                                              |
+| Ops scripts               | `scripts/ops/` (+ `scripts/ops/home/` June-2026 session archive)                     | one-shot helpers, unmaintained                                                                              |
+| DB                        | Supabase `nhdnkzhtadfkkluiulhs` (Postgres, pooler `aws-1-us-east-2`, port 5432/6543) | real + populated; **Drizzle `drizzle/migrations` is the authoritative schema migration path going forward** |
 
 ## Build & deploy mechanics
 

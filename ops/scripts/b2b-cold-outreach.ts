@@ -10,66 +10,84 @@
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=strainchain
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
 
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
-const isDryRun = process.env.DRY_RUN === 'true';
-const segment  = process.argv.find(a => a.startsWith('--segment='))?.split('=')[1] ?? 'all';
+const isDryRun = process.env.DRY_RUN === "true";
+const segment =
+  process.argv.find(a => a.startsWith("--segment="))?.split("=")[1] ?? "all";
 
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM     = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
+const FROM = process.env.OUTREACH_FROM_EMAIL ?? "hello@authichain.com";
 // Falls back to the built-in /book page — Calendly is optional, not required
-const CALENDLY = process.env.CALENDLY_LINK ?? 'https://app.authichain.com/book';
+const CALENDLY = process.env.CALENDLY_LINK ?? "https://app.authichain.com/book";
 
 // ── Apollo.io people-search: find work email by name + company domain ─────────
 // Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
 // Returns empty string when APOLLO_API_KEY is absent or API returns no result.
-async function apolloFindEmail(name: string, company: string, website: string): Promise<string> {
+async function apolloFindEmail(
+  name: string,
+  company: string,
+  website: string
+): Promise<string> {
   const key = process.env.APOLLO_API_KEY;
-  if (!key) return '';
+  if (!key) return "";
 
   try {
-    const domain = website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-    const [firstName, ...rest] = name.split(' ');
-    const lastName = rest.join(' ');
+    const domain = website.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
+    const [firstName, ...rest] = name.split(" ");
+    const lastName = rest.join(" ");
 
     // Apollo auth goes in the X-Api-Key header — body api_key is no longer
     // accepted for current keys (verified: header auth returns 200, body 401).
-    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key },
+    const res = await fetch("https://api.apollo.io/v1/mixed_people/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "X-Api-Key": key,
+      },
       body: JSON.stringify({
-        q_organization_name:  company,
-        person_titles:        [],          // broad — let name filter do the work
-        contact_email_status: ['verified', 'guessed'],
+        q_organization_name: company,
+        person_titles: [], // broad — let name filter do the work
+        contact_email_status: ["verified", "guessed"],
         organization_domains: [domain],
-        page:                 1,
-        per_page:             5,
+        page: 1,
+        per_page: 5,
       }),
     });
     if (!res.ok) {
       console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
-      return '';
+      return "";
     }
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     const people: any[] = data.people ?? [];
 
     // Find best name match
-    const match = people.find(p => {
-      const full = `${p.first_name ?? ''} ${p.last_name ?? ''}`.toLowerCase();
-      return full.includes(firstName.toLowerCase()) && (!lastName || full.includes(lastName.toLowerCase()));
-    }) ?? people[0];
+    const match =
+      people.find(p => {
+        const full = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
+        return (
+          full.includes(firstName.toLowerCase()) &&
+          (!lastName || full.includes(lastName.toLowerCase()))
+        );
+      }) ?? people[0];
 
-    const email: string = match?.email ?? '';
-    if (email) console.log(`  🔎 Apollo found: ${name} @ ${company} → ${email}`);
+    const email: string = match?.email ?? "";
+    if (email)
+      console.log(`  🔎 Apollo found: ${name} @ ${company} → ${email}`);
     return email;
   } catch (err: any) {
-    console.warn(`  ⚠️  Apollo lookup failed for ${name}: ${err.message?.slice(0, 80)}`);
-    return '';
+    console.warn(
+      `  ⚠️  Apollo lookup failed for ${name}: ${err.message?.slice(0, 80)}`
+    );
+    return "";
   }
 }
 
@@ -77,145 +95,152 @@ async function apolloFindEmail(name: string, company: string, website: string): 
 
 const GOVCHAIN_TARGETS = [
   {
-    company: 'Concurrent Technologies Corporation',
-    name: 'Danielle Bush Gerko',
-    title: 'Chief Information Security Officer',
-    email: '', // find via Apollo: dbgerko@ctc.com pattern
-    linkedin: 'https://www.linkedin.com/in/dbgerko-cyber/',
-    pain: 'Perfect SPRS score 110 achieved — now needs supply-chain traceability layer for subcontractor CUI handling before next C3PAO review',
-    contract_area: 'AFRL, Navy, DoD Advanced Manufacturing',
-    cmmc_status: 'Level 2 certified July 2025',
-    website: 'https://www.ctc.com',
+    company: "Concurrent Technologies Corporation",
+    name: "Danielle Bush Gerko",
+    title: "Chief Information Security Officer",
+    email: "", // find via Apollo: dbgerko@ctc.com pattern
+    linkedin: "https://www.linkedin.com/in/dbgerko-cyber/",
+    pain: "Perfect SPRS score 110 achieved — now needs supply-chain traceability layer for subcontractor CUI handling before next C3PAO review",
+    contract_area: "AFRL, Navy, DoD Advanced Manufacturing",
+    cmmc_status: "Level 2 certified July 2025",
+    website: "https://www.ctc.com",
   },
   {
-    company: 'ITC Federal',
-    name: 'Dr. Imran Bashir',
-    title: 'Chief Technology Officer',
-    email: '', // find via Apollo: ibashir@itcfederal.com pattern
-    linkedin: 'https://www.linkedin.com/in/drimranbashir/',
-    pain: 'DevSecOps + cloud team needs blockchain provenance for CUI artifact supply chain — current gap before next DoD audit',
-    contract_area: 'DoD, DHS, ICE, Coast Guard DevSecOps',
-    cmmc_status: 'Level 2 certified 2025',
-    website: 'https://itcfederal.com',
+    company: "ITC Federal",
+    name: "Dr. Imran Bashir",
+    title: "Chief Technology Officer",
+    email: "", // find via Apollo: ibashir@itcfederal.com pattern
+    linkedin: "https://www.linkedin.com/in/drimranbashir/",
+    pain: "DevSecOps + cloud team needs blockchain provenance for CUI artifact supply chain — current gap before next DoD audit",
+    contract_area: "DoD, DHS, ICE, Coast Guard DevSecOps",
+    cmmc_status: "Level 2 certified 2025",
+    website: "https://itcfederal.com",
   },
   {
-    company: 'Integrated Data Services',
-    name: 'Tammer Olibah',
-    title: 'President & CEO',
-    email: '', // find via Apollo: tolibah@get-integrated.com pattern
-    linkedin: 'https://www.linkedin.com/in/tammer-olibah-050b285/',
-    pain: 'Financial management systems (CCaR™) for 30 DoD locations need immutable audit trail; CMMC Level 2 April 2026 — subcontractor supply chain gap',
-    contract_area: 'Air Force, Army, Navy, Space Force financial systems',
-    cmmc_status: 'Level 2 certified April 2026',
-    website: 'https://www.get-integrated.com',
+    company: "Integrated Data Services",
+    name: "Tammer Olibah",
+    title: "President & CEO",
+    email: "", // find via Apollo: tolibah@get-integrated.com pattern
+    linkedin: "https://www.linkedin.com/in/tammer-olibah-050b285/",
+    pain: "Financial management systems (CCaR™) for 30 DoD locations need immutable audit trail; CMMC Level 2 April 2026 — subcontractor supply chain gap",
+    contract_area: "Air Force, Army, Navy, Space Force financial systems",
+    cmmc_status: "Level 2 certified April 2026",
+    website: "https://www.get-integrated.com",
   },
   {
-    company: 'RealmOne',
-    name: 'Jeff Little',
-    title: 'Director of Cybersecurity',
-    email: '', // find via Apollo
-    linkedin: 'https://www.linkedin.com/company/realm-one',
-    pain: 'Perfect 110 SPRS score, 30+ active contracts — needs automated chain-of-custody proof for intelligence data artifacts',
-    contract_area: 'DoD Intelligence Community AI/Cybersecurity',
-    cmmc_status: 'Level 2 certified March 2026 (110/110)',
-    website: 'https://realmone.com',
+    company: "RealmOne",
+    name: "Jeff Little",
+    title: "Director of Cybersecurity",
+    email: "", // find via Apollo
+    linkedin: "https://www.linkedin.com/company/realm-one",
+    pain: "Perfect 110 SPRS score, 30+ active contracts — needs automated chain-of-custody proof for intelligence data artifacts",
+    contract_area: "DoD Intelligence Community AI/Cybersecurity",
+    cmmc_status: "Level 2 certified March 2026 (110/110)",
+    website: "https://realmone.com",
   },
   {
-    company: 'Kampi Components',
-    name: 'Allan Goodman',
-    title: 'Owner',
-    email: '', // find via Apollo: agoodman@kampi.com pattern
-    linkedin: 'https://www.linkedin.com/in/allan-goodman-5744656/',
-    pain: 'Navy/Army OEM supplier with 110 SPRS — next audit will require component-level counterfeit part detection and supplier provenance',
-    contract_area: 'Navy, Army supply chain OEM components',
-    cmmc_status: 'Level 2 certified 2025 (110/110)',
-    website: 'https://kampi.com',
+    company: "Kampi Components",
+    name: "Allan Goodman",
+    title: "Owner",
+    email: "", // find via Apollo: agoodman@kampi.com pattern
+    linkedin: "https://www.linkedin.com/in/allan-goodman-5744656/",
+    pain: "Navy/Army OEM supplier with 110 SPRS — next audit will require component-level counterfeit part detection and supplier provenance",
+    contract_area: "Navy, Army supply chain OEM components",
+    cmmc_status: "Level 2 certified 2025 (110/110)",
+    website: "https://kampi.com",
   },
 ];
 
 const STRAINCHAIN_TARGETS = [
   {
-    company: 'Trulieve Cannabis',
-    name: 'Head of Compliance',
-    title: 'VP Compliance / Director of Operations',
-    email: 'compliance@trulieve.com',
-    linkedin: 'https://www.linkedin.com/company/trulieve/',
-    pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — blockchain DPP required for EU market entry by July 2026',
-    states: 'FL, PA, AZ, GA, WV',
-    website: 'https://trulieve.com',
+    company: "Trulieve Cannabis",
+    name: "Head of Compliance",
+    title: "VP Compliance / Director of Operations",
+    email: "compliance@trulieve.com",
+    linkedin: "https://www.linkedin.com/company/trulieve/",
+    pain: "Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — blockchain DPP required for EU market entry by July 2026",
+    states: "FL, PA, AZ, GA, WV",
+    website: "https://trulieve.com",
   },
   {
-    company: 'Curaleaf',
-    name: 'Compliance Team',
-    title: 'SVP Compliance',
-    email: 'compliance@curaleaf.com',
-    linkedin: 'https://www.linkedin.com/company/curaleaf/',
-    pain: 'Largest MSO by revenue (40+ states) — EU DPP mandate July 2026 creates export compliance gap; METRC + blockchain COA hashing needed',
-    states: '40+ states',
-    website: 'https://curaleaf.com',
+    company: "Curaleaf",
+    name: "Compliance Team",
+    title: "SVP Compliance",
+    email: "compliance@curaleaf.com",
+    linkedin: "https://www.linkedin.com/company/curaleaf/",
+    pain: "Largest MSO by revenue (40+ states) — EU DPP mandate July 2026 creates export compliance gap; METRC + blockchain COA hashing needed",
+    states: "40+ states",
+    website: "https://curaleaf.com",
   },
   {
-    company: 'Harvest Health & Recreation',
-    name: 'Head of Compliance',
-    title: 'Director of Compliance',
-    email: 'compliance@harvestinc.com',
-    linkedin: 'https://www.linkedin.com/company/harvest-health-recreation/',
-    pain: 'Mid-market MSO in 5 states — METRC compliance gaps in AZ + PA; wants blockchain COA as competitive differentiator for premium products',
-    states: 'AZ, PA, FL, MD, AR',
-    website: 'https://harvestinc.com',
+    company: "Harvest Health & Recreation",
+    name: "Head of Compliance",
+    title: "Director of Compliance",
+    email: "compliance@harvestinc.com",
+    linkedin: "https://www.linkedin.com/company/harvest-health-recreation/",
+    pain: "Mid-market MSO in 5 states — METRC compliance gaps in AZ + PA; wants blockchain COA as competitive differentiator for premium products",
+    states: "AZ, PA, FL, MD, AR",
+    website: "https://harvestinc.com",
   },
 ];
 
 const QRON_TARGETS = [
   {
-    company: 'FASTSIGNS',
-    name: 'Innovation Lead',
-    title: 'VP Product / Innovation',
-    email: 'innovation@fastsigns.com',
-    linkedin: 'https://www.linkedin.com/company/fastsigns/',
+    company: "FASTSIGNS",
+    name: "Innovation Lead",
+    title: "VP Product / Innovation",
+    email: "innovation@fastsigns.com",
+    linkedin: "https://www.linkedin.com/company/fastsigns/",
     pain: 'Franchise network looking for premium "smart label" upsell — AI QR codes with brand aesthetics at commercial print margins',
-    demo_prompt: 'bold industrial signage, glowing neon, sharp commercial aesthetic',
-    website: 'https://fastsigns.com',
+    demo_prompt:
+      "bold industrial signage, glowing neon, sharp commercial aesthetic",
+    website: "https://fastsigns.com",
   },
   {
-    company: 'MOO',
-    name: 'Product Manager',
-    title: 'Head of Product',
-    email: 'product@moo.com',
-    linkedin: 'https://www.linkedin.com/company/moo/',
-    pain: 'Premium print brand targeting luxury clients — QR codes on business cards / packaging need to match visual standards; current QR tools produce ugly codes',
-    demo_prompt: 'premium textured business card, gold foil embossing, luxury paper texture, minimalist',
-    website: 'https://moo.com',
+    company: "MOO",
+    name: "Product Manager",
+    title: "Head of Product",
+    email: "product@moo.com",
+    linkedin: "https://www.linkedin.com/company/moo/",
+    pain: "Premium print brand targeting luxury clients — QR codes on business cards / packaging need to match visual standards; current QR tools produce ugly codes",
+    demo_prompt:
+      "premium textured business card, gold foil embossing, luxury paper texture, minimalist",
+    website: "https://moo.com",
   },
   {
-    company: '4imprint',
-    name: 'B2B Sales Head',
-    title: 'VP B2B Sales',
-    email: 'b2b@4imprint.com',
-    linkedin: 'https://www.linkedin.com/company/4imprint/',
-    pain: 'Corporate promotional merchandise clients want branded QR codes on swag — current QR tools cannot match brand guidelines; white-label API needed',
-    demo_prompt: 'corporate promotional merchandise, high quality product photography, clean studio',
-    website: 'https://4imprint.com',
+    company: "4imprint",
+    name: "B2B Sales Head",
+    title: "VP B2B Sales",
+    email: "b2b@4imprint.com",
+    linkedin: "https://www.linkedin.com/company/4imprint/",
+    pain: "Corporate promotional merchandise clients want branded QR codes on swag — current QR tools cannot match brand guidelines; white-label API needed",
+    demo_prompt:
+      "corporate promotional merchandise, high quality product photography, clean studio",
+    website: "https://4imprint.com",
   },
   {
-    company: 'Signarama',
-    name: 'Franchise Director',
-    title: 'VP Franchise Development',
-    email: 'franchise@signarama.com',
-    linkedin: 'https://www.linkedin.com/company/signarama/',
-    pain: 'Franchise chain with 900 locations — needs white-label QR API for branded retail signage; clients want scannable QRs that match storefront aesthetics',
-    demo_prompt: 'vibrant commercial storefront sign, glowing neon colors, sharp vector art',
-    website: 'https://signarama.com',
+    company: "Signarama",
+    name: "Franchise Director",
+    title: "VP Franchise Development",
+    email: "franchise@signarama.com",
+    linkedin: "https://www.linkedin.com/company/signarama/",
+    pain: "Franchise chain with 900 locations — needs white-label QR API for branded retail signage; clients want scannable QRs that match storefront aesthetics",
+    demo_prompt:
+      "vibrant commercial storefront sign, glowing neon colors, sharp vector art",
+    website: "https://signarama.com",
   },
 ];
 
 // ── Email templates ───────────────────────────────────────────────────────────
 
-function govchainEmail(t: typeof GOVCHAIN_TARGETS[0]): { subject: string; html: string } {
+function govchainEmail(t: (typeof GOVCHAIN_TARGETS)[0]): {
+  subject: string;
+  html: string;
+} {
   const subject = `CMMC supply-chain gap — ${t.company} (${t.cmmc_status})`;
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
-  <p>Hi ${t.name.split(' ')[0]},</p>
+  <p>Hi ${t.name.split(" ")[0]},</p>
 
   <p>Congrats on ${t.company}'s ${t.cmmc_status} — that's a real achievement.
   Most contractors stop there, but C3PAOs are increasingly flagging the
@@ -251,7 +276,10 @@ function govchainEmail(t: typeof GOVCHAIN_TARGETS[0]): { subject: string; html: 
   return { subject, html };
 }
 
-function strainchaineEmail(t: typeof STRAINCHAIN_TARGETS[0]): { subject: string; html: string } {
+function strainchaineEmail(t: (typeof STRAINCHAIN_TARGETS)[0]): {
+  subject: string;
+  html: string;
+} {
   const subject = `EU Digital Product Passport for ${t.company} — July 2026 deadline`;
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
@@ -289,7 +317,10 @@ function strainchaineEmail(t: typeof STRAINCHAIN_TARGETS[0]): { subject: string;
   return { subject, html };
 }
 
-function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string } {
+function qronEmail(t: (typeof QRON_TARGETS)[0]): {
+  subject: string;
+  html: string;
+} {
   const subject = `AI QR codes for ${t.company} — white-label API (custom demo inside)`;
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
@@ -336,43 +367,61 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
 
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
-async function processTargets<T extends { company: string; email: string; name?: string; website?: string }>(
+async function processTargets<
+  T extends { company: string; email: string; name?: string; website?: string },
+>(
   targets: T[],
   buildEmail: (t: T) => { subject: string; html: string },
-  segmentName: string,
+  segmentName: string
 ) {
-  let sent = 0; let saved = 0; let queued = 0;
+  let sent = 0;
+  let saved = 0;
+  let queued = 0;
 
   if (!resend && !isDryRun) {
-    console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
+    console.warn(
+      `  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`
+    );
   }
 
   for (const t of targets) {
     // Auto-populate email via Apollo if missing
     let email = t.email;
     if (!email && (t as any).linkedin !== undefined) {
-      email = await apolloFindEmail((t as any).name ?? t.company, t.company, t.website ?? '');
+      email = await apolloFindEmail(
+        (t as any).name ?? t.company,
+        t.company,
+        t.website ?? ""
+      );
       if (email) (t as any).email = email; // mutate for DB save
     }
 
     const { subject, html } = buildEmail(t);
 
     // Determine initial status
-    const dbStatus = isDryRun ? 'draft'
-      : !email              ? 'pending_email'   // Apollo found nothing; manual lookup needed
-      : !resend             ? 'queued'           // Has email but no Resend key yet
-      :                       'draft';           // Ready to send
+    const dbStatus = isDryRun
+      ? "draft"
+      : !email
+        ? "pending_email" // Apollo found nothing; manual lookup needed
+        : !resend
+          ? "queued" // Has email but no Resend key yet
+          : "draft"; // Ready to send
 
-    const { error: dbErr } = await supabase.from('leads').upsert({
-      email:    email || `[pending]@${t.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-      name:     (t as any).name ?? t.company,
-      company:  t.company,
-      source:   `b2b_outreach_${segmentName}`,
-      status:   dbStatus,
-      metadata: { subject, html_preview: html.slice(0, 500), target: t },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }, { onConflict: 'email' });
+    const { error: dbErr } = await supabase.from("leads").upsert(
+      {
+        email:
+          email ||
+          `[pending]@${t.company.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+        name: (t as any).name ?? t.company,
+        company: t.company,
+        source: `b2b_outreach_${segmentName}`,
+        status: dbStatus,
+        metadata: { subject, html_preview: html.slice(0, 500), target: t },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { onConflict: "email" }
+    );
 
     if (dbErr) {
       console.warn(`  ⚠️  DB save failed for ${t.company}: ${dbErr.message}`);
@@ -382,31 +431,41 @@ async function processTargets<T extends { company: string; email: string; name?:
     }
 
     if (isDryRun) {
-      console.log(`     [DRY RUN] Would send to: ${email || '(no email)'}`);
+      console.log(`     [DRY RUN] Would send to: ${email || "(no email)"}`);
       queued++;
       continue;
     }
 
     if (!email) {
-      console.log(`     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`);
+      console.log(
+        `     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`
+      );
       queued++;
       continue;
     }
 
     if (!resend) {
-      console.log(`     📬 Queued: ${email} — will send when RESEND_API_KEY is set`);
+      console.log(
+        `     📬 Queued: ${email} — will send when RESEND_API_KEY is set`
+      );
       queued++;
       continue;
     }
 
     try {
-      const res = await resend.emails.send({ from: FROM, to: email, subject, html });
+      const res = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject,
+        html,
+      });
       if (res.data?.id) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
-        await supabase.from('leads')
-          .update({ status: 'contacted', updatedAt: new Date().toISOString() })
-          .eq('email', email);
+        await supabase
+          .from("leads")
+          .update({ status: "contacted", updatedAt: new Date().toISOString() })
+          .eq("email", email);
       } else {
         console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
         queued++;
@@ -417,66 +476,92 @@ async function processTargets<T extends { company: string; email: string; name?:
     }
   }
 
-  console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`);
+  console.log(
+    `\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`
+  );
 }
 
 // ── Flush queued leads: send emails that were saved with status=queued ─────────
 // Run this after setting RESEND_API_KEY to drain the queue without re-running
 // the full outreach script and risking duplicate outreach.
 export async function flushQueuedLeads(): Promise<void> {
-  if (!resend) { console.warn('RESEND_API_KEY still not set — nothing to flush'); return; }
+  if (!resend) {
+    console.warn("RESEND_API_KEY still not set — nothing to flush");
+    return;
+  }
 
   const { data: leads } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('status', 'queued')
-    .like('source', 'b2b_outreach_%');
+    .from("leads")
+    .select("*")
+    .eq("status", "queued")
+    .like("source", "b2b_outreach_%");
 
-  if (!leads?.length) { console.log('No queued leads to flush.'); return; }
+  if (!leads?.length) {
+    console.log("No queued leads to flush.");
+    return;
+  }
 
   for (const lead of leads) {
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
     try {
-      const res = await resend.emails.send({ from: FROM, to: lead.email, subject: meta.subject, html: meta.html_preview });
+      const res = await resend.emails.send({
+        from: FROM,
+        to: lead.email,
+        subject: meta.subject,
+        html: meta.html_preview,
+      });
       if (res.data?.id) {
-        await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
+        await supabase
+          .from("leads")
+          .update({ status: "contacted", updatedAt: new Date().toISOString() })
+          .eq("email", lead.email);
         console.log(`  ✉️  Flushed: ${lead.email}`);
       }
     } catch (err: any) {
-      console.warn(`  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`);
+      console.warn(
+        `  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`
+      );
     }
   }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-console.log(`\n🚀 B2B COLD OUTREACH — segment: ${segment} | dry-run: ${isDryRun}`);
-console.log('─'.repeat(60));
+console.log(
+  `\n🚀 B2B COLD OUTREACH — segment: ${segment} | dry-run: ${isDryRun}`
+);
+console.log("─".repeat(60));
 
-if (segment === 'all' || segment === 'govchain') {
-  console.log('\n📡 GOVCHAIN — Defense Contractors (CMMC Nov 2026 deadline)');
-  await processTargets(GOVCHAIN_TARGETS, govchainEmail, 'govchain');
+if (segment === "all" || segment === "govchain") {
+  console.log("\n📡 GOVCHAIN — Defense Contractors (CMMC Nov 2026 deadline)");
+  await processTargets(GOVCHAIN_TARGETS, govchainEmail, "govchain");
 }
 
-if (segment === 'all' || segment === 'strainchain') {
-  console.log('\n🌿 STRAINCHAIN — Cannabis MSO Compliance ($499/mo Theater 1)');
-  await processTargets(STRAINCHAIN_TARGETS, strainchaineEmail, 'strainchain');
+if (segment === "all" || segment === "strainchain") {
+  console.log("\n🌿 STRAINCHAIN — Cannabis MSO Compliance ($499/mo Theater 1)");
+  await processTargets(STRAINCHAIN_TARGETS, strainchaineEmail, "strainchain");
 }
 
-if (segment === 'all' || segment === 'qron') {
-  console.log('\n🎨 QRON — Print Shops & Brand Agencies ($29-99 quick wins)');
-  await processTargets(QRON_TARGETS, qronEmail, 'qron');
+if (segment === "all" || segment === "qron") {
+  console.log("\n🎨 QRON — Print Shops & Brand Agencies ($29-99 quick wins)");
+  await processTargets(QRON_TARGETS, qronEmail, "qron");
 }
 
-console.log('\n✅ OUTREACH COMPLETE');
-console.log('Next steps:');
+console.log("\n✅ OUTREACH COMPLETE");
+console.log("Next steps:");
 if (!resend) {
-  console.log('  ⚡ Set RESEND_API_KEY then flush queued leads:');
-  console.log('     pnpm exec tsx -e "import { flushQueuedLeads } from \'./scripts/b2b-cold-outreach.ts\'; await flushQueuedLeads()"');
+  console.log("  ⚡ Set RESEND_API_KEY then flush queued leads:");
+  console.log(
+    "     pnpm exec tsx -e \"import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; await flushQueuedLeads()\""
+  );
 }
 if (!process.env.APOLLO_API_KEY) {
-  console.log('  ⚡ Set APOLLO_API_KEY to auto-find emails for pending contacts on next run');
+  console.log(
+    "  ⚡ Set APOLLO_API_KEY to auto-find emails for pending contacts on next run"
+  );
 }
-console.log('  📅 Demo booking page (no Calendly needed): ' + CALENDLY);
-console.log('  📋 View all leads in Supabase: select * from leads where source like \'b2b_outreach_%\' order by created_at desc');
+console.log("  📅 Demo booking page (no Calendly needed): " + CALENDLY);
+console.log(
+  "  📋 View all leads in Supabase: select * from leads where source like 'b2b_outreach_%' order by created_at desc"
+);

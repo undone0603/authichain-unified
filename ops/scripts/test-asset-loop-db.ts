@@ -29,7 +29,7 @@ async function testAssetLoop() {
 
   try {
     const db = await getDb();
-    
+
     // 1. Create a Mock Product for testing (Raw SQL to bypass local schema columns)
     console.log("\nStep 1: Creating mock product in DB (Raw SQL)...");
     const sql = `INSERT INTO products (userId, name, brand, category, imageUrl, metadata) 
@@ -44,27 +44,40 @@ async function testAssetLoop() {
     // We expect the generation to work, but the UPDATE might fail if schema is missing
     try {
       await generateProductAssets(productId);
-      
+
       // 3. Verify Persistence
       console.log("\nStep 3: Verifying database persistence...");
-      const [updatedProduct] = await db.select().from(products).where(eq(products.id, productId));
+      const [updatedProduct] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, productId));
 
       console.log("📊 Result State:");
-      console.log(`- Audio URL: ${(updatedProduct as any).audioUrl || "❌ MISSING (Schema likely not migrated)"}`);
-      console.log(`- Vision Markers: ${JSON.stringify((updatedProduct as any).visionMarkers) || "❌ MISSING"}`);
+      console.log(
+        `- Audio URL: ${(updatedProduct as any).audioUrl || "❌ MISSING (Schema likely not migrated)"}`
+      );
+      console.log(
+        `- Vision Markers: ${JSON.stringify((updatedProduct as any).visionMarkers) || "❌ MISSING"}`
+      );
       console.log(`- Rarity Score: ${(updatedProduct as any).rarityScore}`);
 
-      if ((updatedProduct as any)?.audioUrl && (updatedProduct as any)?.visionMarkers) {
+      if (
+        (updatedProduct as any)?.audioUrl &&
+        (updatedProduct as any)?.visionMarkers
+      ) {
         console.log("\n✨ FINAL ASSET LOOP SUCCESSFUL.");
         console.log("The Truth Layer is fully stateful and persistent.");
       } else {
-        console.warn("\n⚠️ Asset Loop partially failed (Check service fallbacks).");
+        console.warn(
+          "\n⚠️ Asset Loop partially failed (Check service fallbacks)."
+        );
       }
     } catch (updateErr: any) {
-      console.warn("\n⚠️ Pipeline executed but DB Persistence failed (Schema Mismatch).");
+      console.warn(
+        "\n⚠️ Pipeline executed but DB Persistence failed (Schema Mismatch)."
+      );
       console.log("Details:", updateErr.message);
     }
-
   } catch (error: any) {
     console.error("\n❌ Asset Loop Test Failed:", error.message);
   }

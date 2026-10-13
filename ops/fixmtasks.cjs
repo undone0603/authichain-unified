@@ -5,10 +5,15 @@ const root = path.join(__dirname, "../server/");
 {
   const p = root + "pipeline-tick.test.ts";
   const before = fs.readFileSync(p, "utf8");
-  const after = before.split("error: null, order: 0, createdAt: new Date()")
-    .join("error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date()");
+  const after = before
+    .split("error: null, order: 0, createdAt: new Date()")
+    .join(
+      "error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date()"
+    );
   fs.writeFileSync(p, after);
-  console.log(`pipeline-tick.test.ts: ${before === after ? "NO CHANGE" : "updated"}`);
+  console.log(
+    `pipeline-tick.test.ts: ${before === after ? "NO CHANGE" : "updated"}`
+  );
 }
 
 // agents.test.ts + task-runner.test.ts — multiline makeTask return

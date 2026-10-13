@@ -104,8 +104,8 @@ export async function buildMarketingSnapshot({
 
   await fsp.mkdir(outDir, { recursive: true });
 
-  const htmlFiles = (await walkFiles(appDir)).filter((rel) =>
-    rel.endsWith(".html"),
+  const htmlFiles = (await walkFiles(appDir)).filter(rel =>
+    rel.endsWith(".html")
   );
 
   const routes = [];
@@ -142,7 +142,7 @@ export async function buildMarketingSnapshot({
   await fsp.writeFile(
     path.join(outDir, "marketing-manifest.json"),
     JSON.stringify(manifest, null, 2) + "\n",
-    "utf8",
+    "utf8"
   );
 
   return manifest;
@@ -151,8 +151,7 @@ export async function buildMarketingSnapshot({
 // CLI entry point: run `next build` then extract the marketing snapshot from
 // the resulting `.next` directory into `dist/marketing`.
 const isMain =
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
   execSync("next build", { stdio: "inherit" });
@@ -161,6 +160,6 @@ if (isMain) {
     outDir: "dist/marketing",
   });
   console.log(
-    `[build-marketing-snapshot] wrote ${manifest.routes.length} routes to dist/marketing/`,
+    `[build-marketing-snapshot] wrote ${manifest.routes.length} routes to dist/marketing/`
   );
 }

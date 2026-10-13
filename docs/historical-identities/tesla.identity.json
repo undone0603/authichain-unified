@@ -3,9 +3,7 @@
   "identity": {
     "identity_id": "hist:nikola-tesla",
     "canonical_name": "Nikola Tesla",
-    "alternate_names": [
-      "Tesla, Nikola"
-    ],
+    "alternate_names": ["Tesla, Nikola"],
     "birth": {
       "date": "1856"
     },
@@ -46,10 +44,7 @@
       "claim_id": "claim:tesla-identity",
       "subject": "hist:nikola-tesla",
       "predicate": "profession",
-      "object": [
-        "inventor",
-        "electrical engineer"
-      ],
+      "object": ["inventor", "electrical engineer"],
       "evidence_class": "direct"
     },
     {

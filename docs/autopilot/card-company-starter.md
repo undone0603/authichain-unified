@@ -5,9 +5,11 @@ Source: AuthiChain Board autopilot
 Written: 2026-09-23T15:03:29.582Z
 
 ## Outcome
+
 Surface the existing $29 signed pack (100 gens, Ed25519) and $49 Stripe Payment Links first on high-traffic pages users already open (home, generate, account). No email, outreach queues, revenue counting, or new checkout flows.
 
 ## Files to touch
+
 - `apps/web/app/page.tsx` (or home layout)
 - `apps/web/app/generate/page.tsx`
 - `apps/web/app/account/page.tsx`
@@ -15,6 +17,7 @@ Surface the existing $29 signed pack (100 gens, Ed25519) and $49 Stripe Payment 
 - `apps/web/lib/stripe-links.ts` (constants only)
 
 ## Acceptance checks
+
 - $29 link (`https://buy.stripe.com/eVq3cv2N3bVA8umazy1ND3E`) and $49 link render above the fold on home, generate, and account.
 - Links open Stripe checkout in same tab; no custom charge logic.
 - No outbound mail, queues, analytics revenue events, or “pending = paid” paths.
@@ -22,6 +25,7 @@ Surface the existing $29 signed pack (100 gens, Ed25519) and $49 Stripe Payment 
 - Build and typecheck pass; copy does not frame this as a design service.
 
 ## Patch sketch
+
 ```tsx
 // apps/web/lib/stripe-links.ts
 export const STRIPE_LINKS = {

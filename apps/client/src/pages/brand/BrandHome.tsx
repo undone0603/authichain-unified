@@ -1,6 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import { BRANDS, DEFAULT_BRAND, resolveBrand, type BrandId } from "@shared/brands";
+import {
+  BRANDS,
+  DEFAULT_BRAND,
+  resolveBrand,
+  type BrandId,
+} from "@shared/brands";
 
 const AuthiChainHome = lazy(() => import("./AuthiChainHome"));
 const QronHome = lazy(() => import("./QronHome"));

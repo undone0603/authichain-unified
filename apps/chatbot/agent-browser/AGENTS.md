@@ -35,14 +35,14 @@ The codebase has two daemon implementations:
 
 When modifying browser automation logic (commands, actions, protocol handling), changes **must** be made in **both** paths:
 
-| Node.js Path | Native Path |
-|---|---|
-| `src/actions.ts` | `cli/src/native/actions.rs` |
-| `src/browser.ts` | `cli/src/native/browser.rs` |
-| `src/daemon.ts` | `cli/src/native/daemon.rs` |
-| `src/protocol.ts` | `cli/src/native/cdp/client.rs` |
-| `src/snapshot.ts` | `cli/src/native/snapshot.rs` |
-| `src/state-utils.ts` | `cli/src/native/state.rs` |
+| Node.js Path         | Native Path                    |
+| -------------------- | ------------------------------ |
+| `src/actions.ts`     | `cli/src/native/actions.rs`    |
+| `src/browser.ts`     | `cli/src/native/browser.rs`    |
+| `src/daemon.ts`      | `cli/src/native/daemon.rs`     |
+| `src/protocol.ts`    | `cli/src/native/cdp/client.rs` |
+| `src/snapshot.ts`    | `cli/src/native/snapshot.rs`   |
+| `src/state-utils.ts` | `cli/src/native/state.rs`      |
 
 New commands must be implemented in both paths, or explicitly stubbed in the native path with a clear `"Not yet implemented: {action}"` error. The goal is eventual full migration to native, but until then both paths must stay in sync.
 

@@ -124,19 +124,19 @@ qron-starter-v2/
 
 ## QRON Modes Explained
 
-| Mode | Description | Requirements |
-|------|-------------|--------------|
-| **Static** | AI-styled QR with custom aesthetics | Fal.ai |
-| **Stereographic** | 3D depth effect viewable cross-eyed | Fal.ai |
-| **Kinetic** | Animated video QR that loops | Fal.ai + Runway |
-| **Holographic** | Iridescent color-shifting effect | Fal.ai |
-| **Memory** | Mintable as NFT on Base blockchain | Fal.ai + Thirdweb |
-| **Echo** | Ultrasonic proximity trigger | Fal.ai + Chirp.io |
-| **Temporal** | Time-based evolving design | Fal.ai + Custom logic |
-| **Reactive** | Environment-aware adaptive QR | Fal.ai + External APIs |
-| **Layered** | Multi-composition complex design | Fal.ai |
-| **Dimensional** | AR-ready spatial anchor | Fal.ai + AR SDKs |
-| **Living** | Self-evolving AI-driven QR | Fal.ai + Agent loop |
+| Mode              | Description                         | Requirements           |
+| ----------------- | ----------------------------------- | ---------------------- |
+| **Static**        | AI-styled QR with custom aesthetics | Fal.ai                 |
+| **Stereographic** | 3D depth effect viewable cross-eyed | Fal.ai                 |
+| **Kinetic**       | Animated video QR that loops        | Fal.ai + Runway        |
+| **Holographic**   | Iridescent color-shifting effect    | Fal.ai                 |
+| **Memory**        | Mintable as NFT on Base blockchain  | Fal.ai + Thirdweb      |
+| **Echo**          | Ultrasonic proximity trigger        | Fal.ai + Chirp.io      |
+| **Temporal**      | Time-based evolving design          | Fal.ai + Custom logic  |
+| **Reactive**      | Environment-aware adaptive QR       | Fal.ai + External APIs |
+| **Layered**       | Multi-composition complex design    | Fal.ai                 |
+| **Dimensional**   | AR-ready spatial anchor             | Fal.ai + AR SDKs       |
+| **Living**        | Self-evolving AI-driven QR          | Fal.ai + Agent loop    |
 
 ---
 
@@ -147,6 +147,7 @@ qron-starter-v2/
 Generate a new QRON.
 
 **Request Body:**
+
 ```json
 {
   "targetUrl": "https://example.com",
@@ -157,6 +158,7 @@ Generate a new QRON.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -195,6 +197,7 @@ Then add the `qron.space` domain in **Vercel → Project → Settings → Domain
 The workflow at `.github/workflows/deploy.yml` deploys on every push to `main`.
 
 **One-time setup:**
+
 1. Get a Vercel token: [vercel.com/account/tokens](https://vercel.com/account/tokens) → Create
 2. Add it as a GitHub secret:
    ```bash

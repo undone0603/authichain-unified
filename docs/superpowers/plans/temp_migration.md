@@ -23,24 +23,29 @@
 ### Task 1: Hyperdrive binding for the existing `pg` connection
 
 **Files:**
+
 - Modify: `wrangler.toml` (repo root)
 - Modify: `server/db.ts:1-3`
 - Test: `server/db.test.ts` (new)
 
 **Interfaces:**
+
 - Produces: `getDb(env: { HYPERDRIVE: Hyperdrive }): ReturnType<typeof drizzle>` — the DB accessor every other task in this plan calls instead of importing a module-level `db` singleton.
 
 - [ ] **Step 1: Create the Hyperdrive config against the existing Supabase Postgres**
 
 Run (requires `wrangler` ≥ 3.x, already a devDependency per `package.json`):
+
 ```bash
 npx wrangler hyperdrive create authichain-db --connection-string="$DATABASE_URL"
 ```
+
 This prints a `hyperdrive_id`. Copy it into `wrangler.toml` in the next step. Hyperdrive itself has no separate free-tier gate — it's a connection-pooling proxy in front of your existing Postgres, priced only by the Workers requests that use it.
 
 - [ ] **Step 2: Add the Hyperdrive binding to `wrangler.toml`**
 
 Append to `wrangler.toml`:
+
 ```toml
 [[hyperdrive]]
 binding = "HYPERDRIVE"
@@ -57,7 +62,9 @@ import { getDb } from "./db";
 describe("getDb", () => {
   it("builds a drizzle client from a Hyperdrive connection string", () => {
     const fakeEnv = {
-      HYPERDRIVE: { connectionString: "postgres://fake:fake@localhost:5432/fake" },
+      HYPERDRIVE: {
+        connectionString: "postgres://fake:fake@localhost:5432/fake",
+      },
     } as unknown as { HYPERDRIVE: Hyperdrive };
     const db = getDb(fakeEnv);
     expect(db).toBeDefined();
@@ -75,6 +82,7 @@ Expected: FAIL with `getDb is not exported` (or similar — `getDb` doesn't exis
 - [ ] **Step 4: Replace the module-level singleton with a per-request factory**
 
 `server/db.ts` currently opens `new Pool({ connectionString: process.env.DATABASE_URL })` at import time — this works on a long-lived Node process but not on Workers, where `env` bindings are only available inside the request handler, not at module load. Change the top of `server/db.ts` from:
+
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -83,7 +91,9 @@ import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema: /* existing schema object */ });
 ```
+
 to:
+
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -100,10 +110,13 @@ export function getDbForNode() {
   return getDb({ HYPERDRIVE: { connectionString: process.env.DATABASE_URL! } as Hyperdrive });
 }
 ```
+
 This is a **breaking change** to every one of the 239 files that does `import { db } from "../db"` — do not fix call sites in this task. Task 2 wires `getDb(c.env)` into the tRPC context, which is the single choke point through which every router accesses `ctx.db`; router files reference `ctx.db`, not the module import, per the sampling in the architecture investigation (only `server/auth/router.ts` reaches outside `ctx`). Grep to confirm before proceeding:
+
 ```bash
 grep -rl "^import { db } from" server --include="*.ts" | grep -v test
 ```
+
 If this returns files beyond `server/db.ts` itself and `server/_core/context.ts`, list them here as a follow-up task — do not silently patch them in this step.
 
 - [ ] **Step 5: Run test to verify it passes**
@@ -123,11 +136,13 @@ git commit -m "feat(workers): add Hyperdrive binding, convert db singleton to pe
 ### Task 2: Workers-native tRPC context (Fetch adapter instead of Express adapter)
 
 **Files:**
+
 - Create: `server/_core/context.workers.ts`
 - Modify: `server/_core/sdk.ts` (only if `authenticateRequest` isn't already Fetch-`Request`-typed — verify first)
 - Test: `server/_core/context.workers.test.ts`
 
 **Interfaces:**
+
 - Consumes: `getDb` from Task 1 (`server/db.ts`)
 - Produces: `createWorkersContext(opts: FetchCreateContextFnOptions, env: Env): Promise<TrpcContext>` — used by Task 3's Worker entrypoint.
 
@@ -136,6 +151,7 @@ git commit -m "feat(workers): add Hyperdrive binding, convert db singleton to pe
 ```bash
 grep -n "^import.*Request" server/_core/sdk.ts | head -5
 ```
+
 If it imports `Request` from `"express"` (or has no explicit import, meaning it's using the ambient DOM `Request` type only by accident), it needs a signature check against a real Fetch `Request` object before Task 2 can rely on it unchanged. If it's already the global Fetch `Request` (no import, or `import type {} from "@cloudflare/workers-types"`), skip straight to Step 2 — no source change needed here, note that finding in the commit message.
 
 - [ ] **Step 2: Write the failing test**
@@ -152,8 +168,13 @@ vi.mock("./sdk", () => ({
 describe("createWorkersContext", () => {
   it("builds a context with db, user, and repos from a Fetch Request", async () => {
     const req = new Request("https://authichain.com/api/trpc/health");
-    const env = { HYPERDRIVE: { connectionString: "postgres://fake/fake" } } as any;
-    const ctx = await createWorkersContext({ req, resHeaders: new Headers() } as any, env);
+    const env = {
+      HYPERDRIVE: { connectionString: "postgres://fake/fake" },
+    } as any;
+    const ctx = await createWorkersContext(
+      { req, resHeaders: new Headers() } as any,
+      env
+    );
     expect(ctx.user).toBeNull();
     expect(ctx.missionsRepo).toBeDefined();
     expect(ctx.adminRepo).toBeDefined();
@@ -208,6 +229,7 @@ export async function createWorkersContext(
   };
 }
 ```
+
 Note this drops `req`/`res` from `TrpcContext` entirely (the Express version kept them for the one router that used them directly — `server/auth/router.ts`, handled in Task 4) and adds `db` (previously a bare module import, now threaded through context per Task 1's factory change).
 
 - [ ] **Step 5: Run test to verify it passes**
@@ -227,10 +249,12 @@ git commit -m "feat(workers): add Fetch-adapter tRPC context alongside the exist
 ### Task 3: Adapt `server/auth/router.ts` off `ctx.req`/`ctx.res`
 
 **Files:**
+
 - Modify: `server/auth/router.ts` (read fully first — this task can't be completed blind; the exact diff depends on what it currently does with `req`/`res`, which the investigation for this plan did not enumerate beyond confirming it's the only file touching them)
 - Test: `server/auth/router.test.ts` (extend existing, or create if absent)
 
 **Interfaces:**
+
 - Consumes: `TrpcContext` from Task 2 (no `req`/`res` fields)
 - Produces: same public tRPC procedure surface as today (`auth.*` — do not rename procedures; anything importing `trpc.auth.*` on the frontend must keep working unchanged)
 
@@ -239,7 +263,9 @@ git commit -m "feat(workers): add Fetch-adapter tRPC context alongside the exist
 ```bash
 grep -n "ctx\.req\.\|ctx\.res\." server/auth/router.ts
 ```
+
 Common patterns and their Workers-compatible replacement:
+
 - `ctx.req.headers.cookie` / `ctx.req.cookies.x` → read from a `cookie` header parsed with a small helper (e.g. `hono/cookie`'s `getCookie`), threaded into context as `ctx.cookies: Record<string, string>` in Task 2's `createWorkersContext`.
 - `ctx.res.cookie(...)` / `ctx.res.clearCookie(...)` → tRPC's Fetch adapter can't mutate response headers mid-procedure the way Express `res` can; set-cookie must go through `responseMeta` on the router, or the procedure returns the cookie value and a thin Hono route sets it. Prefer: procedures return `{ ...data, setCookie?: string }`, and the Hono mount point (Task 5) checks for that key and calls `c.header("Set-Cookie", ...)`.
 - `ctx.res.status(...)` — tRPC errors already carry HTTP status via `TRPCError({ code })`; if this is being used to set a non-error status, that's unusual enough to flag rather than guess — write down what's found here before changing it.
@@ -274,11 +300,13 @@ git commit -m "fix(workers): remove ctx.req/ctx.res coupling from auth router"
 ### Task 4: Hono Worker entrypoint mounting tRPC + static assets
 
 **Files:**
+
 - Create: `worker-app/index.ts` (kept separate from the existing `worker/index.ts` marketing-page worker until Task 10's cutover — do not overwrite `worker/index.ts` yet, it's still live in production for `authichain.com`'s root path)
 - Create: `worker-app/wrangler.toml`
 - Test: manual (curl against `wrangler dev`, see Step 4 — this task is an integration point, not a unit-testable pure function)
 
 **Interfaces:**
+
 - Consumes: `createWorkersContext` (Task 2), `appRouter` from `server/routers.ts` (unchanged)
 - Produces: the `fetch(request, env, ctx)` handler that Task 5 (raw routes) and Task 10 (cutover) both extend.
 
@@ -319,15 +347,17 @@ app.use(
   })
 );
 
-app.get("/api/health", (c) => c.json({ status: "ok" }));
+app.get("/api/health", c => c.json({ status: "ok" }));
 
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
-app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+app.get("*", c => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
 ```
+
 Requires adding `@hono/trpc-server` to `package.json` dependencies:
+
 ```bash
 pnpm add hono @hono/trpc-server
 ```
@@ -353,6 +383,7 @@ id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from t
 binding = "HYPERDRIVE"
 id = "REPLACE_WITH_ID_FROM_TASK_1"
 ```
+
 This is intentionally a **separate** wrangler config/worker name (`authichain-app`, not `authichain`) from the root `worker/index.ts` — they stay independent deployments until Task 10 merges them, so a bad build here can't touch the currently-live marketing worker.
 
 - [ ] **Step 3: Build the frontend so `dist/public` exists**
@@ -364,12 +395,14 @@ Expected: `dist/public/` populated (same output the existing Vercel deploy and `
 
 Run: `cd worker-app && npx wrangler dev`
 Then in a second terminal:
+
 ```bash
 curl http://localhost:8787/api/health
 # Expected: {"status":"ok"}
 curl "http://localhost:8787/api/trpc/system.ping" # or whichever no-auth query exists in the system router
 # Expected: a valid tRPC JSON response, not a 500
 ```
+
 If the tRPC call 500s, read the error — it's almost certainly one of: a router file that does import something Node-only (the 3 files flagged by the `fs`/`child_process` grep in the architecture investigation — check if any are reachable from a no-auth query), or a missing env binding. Fix and re-run before moving on; do not proceed to Task 5 with a failing tRPC mount.
 
 - [ ] **Step 5: Commit**
@@ -384,11 +417,13 @@ git commit -m "feat(workers): scaffold Hono entrypoint mounting tRPC + static as
 ### Task 5: Port the raw (non-tRPC) Express routes
 
 **Files:**
+
 - Modify: `worker-app/index.ts`
 - Reference (read, do not modify — reuse the exported handler functions as-is): `server/webhooks/stripe.ts`, `server/webhooks/paddle.ts` (or wherever Paddle's handler lives per `app.ts:95` — confirm exact path), `server/_core/oauth.ts`, `.github-staging/gmail-oauth.ts`, `server/contact/router.ts` (or equivalent — confirm exact export used by `contactRouter` in `app.ts:189`), `server/gpt/router.ts`, `server/internal-api.ts`
 - Test: `worker-app/routes.test.ts`
 
 **Interfaces:**
+
 - Consumes: whatever each existing raw handler already exports (confirmed pattern for Stripe: `handleStripeWebhook(rawBody: string, sig: string)` — framework-agnostic, no change needed, just a new call site)
 - Produces: nothing new — this task's job is wiring, not new business logic.
 
@@ -403,13 +438,14 @@ For each of the 8 non-tRPC concerns found in `server/_core/app.ts` (excluding `/
 import { handleStripeWebhook } from "../server/webhooks/stripe";
 // import { handlePaddleWebhook } from "../server/webhooks/paddle"; // confirm exact path from Step 1
 
-app.post("/api/stripe/webhook", async (c) => {
+app.post("/api/stripe/webhook", async c => {
   const rawBody = await c.req.text();
   const sig = c.req.header("stripe-signature") ?? "";
   const result = await handleStripeWebhook(rawBody, sig);
   return c.json(result);
 });
 ```
+
 Repeat the same pattern for `/api/paddle/webhook` once Step 1 confirms its handler's exact signature.
 
 - [ ] **Step 3: Write the test for the webhook routes**
@@ -432,7 +468,10 @@ describe("POST /api/stripe/webhook", () => {
     });
     expect(res.status).toBe(200);
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
-    expect(handleStripeWebhook).toHaveBeenCalledWith("raw-stripe-payload", "t=123,v1=fake");
+    expect(handleStripeWebhook).toHaveBeenCalledWith(
+      "raw-stripe-payload",
+      "t=123,v1=fake"
+    );
   });
 });
 ```
@@ -460,12 +499,14 @@ git commit -m "feat(workers): port <route-name> off Express"
 ### Task 6: Rate limiting via Durable Object
 
 **Files:**
+
 - Create: `worker-app/rate-limiter.ts`
 - Modify: `worker-app/wrangler.toml` (add the Durable Object binding)
 - Modify: `worker-app/index.ts` (replace the Express `oauthRateLimit`/`contactRateLimit`/`gptRateLimit`/`globalApiRateLimit`/`adminRateLimit` middleware calls)
 - Test: `worker-app/rate-limiter.test.ts`
 
 **Interfaces:**
+
 - Produces: `checkRateLimit(stub: DurableObjectStub, key: string, limit: number, windowMs: number): Promise<boolean>` (`true` = allowed)
 
 - [ ] **Step 1: Write the failing test**
@@ -489,6 +530,7 @@ describe("RateLimiter", () => {
   });
 });
 ```
+
 This requires `@cloudflare/vitest-pool-workers` (add as a devDependency if not already present — check `package.json` first, several Cloudflare-adjacent packages are already installed per the earlier dependency audit).
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -505,13 +547,22 @@ import { DurableObject } from "cloudflare:workers";
 export class RateLimiter extends DurableObject {
   async check(limit: number, windowMs: number): Promise<boolean> {
     const now = Date.now();
-    const stored = await this.ctx.storage.get<{ count: number; resetAt: number }>("entry");
+    const stored = await this.ctx.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
     if (!stored || now >= stored.resetAt) {
-      await this.ctx.storage.put("entry", { count: 1, resetAt: now + windowMs });
+      await this.ctx.storage.put("entry", {
+        count: 1,
+        resetAt: now + windowMs,
+      });
       return true;
     }
     if (stored.count >= limit) return false;
-    await this.ctx.storage.put("entry", { count: stored.count + 1, resetAt: stored.resetAt });
+    await this.ctx.storage.put("entry", {
+      count: stored.count + 1,
+      resetAt: stored.resetAt,
+    });
     return true;
   }
 }
@@ -527,6 +578,7 @@ export async function checkRateLimit(
   return stub.check(limit, windowMs);
 }
 ```
+
 This mirrors the eviction/window logic already in `server/_core/rate-limit.ts`'s in-memory `Map` implementation (confirmed via `store.size > 10_000` eviction check during the architecture investigation) — same algorithm, durable/distributed storage instead of a process-local `Map`.
 
 - [ ] **Step 4: Wire the Durable Object binding**
@@ -548,16 +600,23 @@ new_classes = ["RateLimiter"]
 // worker-app/index.ts — example for the global API limit; repeat per limiter
 app.use("/api/*", async (c, next) => {
   const key = c.req.header("cf-connecting-ip") ?? "unknown";
-  const allowed = await checkRateLimit(c.env.RATE_LIMITER, `global:${key}`, 100, 60_000);
+  const allowed = await checkRateLimit(
+    c.env.RATE_LIMITER,
+    `global:${key}`,
+    100,
+    60_000
+  );
   if (!allowed) return c.json({ error: "rate limited" }, 429);
   await next();
 });
 ```
+
 Use the same per-route limit values already defined in `server/_core/rate-limit.ts` for `oauthRateLimit`/`contactRateLimit`/`gptRateLimit`/`adminRateLimit` — read that file's exact numbers before hardcoding new ones here, do not guess different limits.
 
 - [ ] **Step 6: Run test to verify it passes, then commit**
 
 Run: `pnpm vitest run worker-app/rate-limiter.test.ts`
+
 ```bash
 git add worker-app/rate-limiter.ts worker-app/wrangler.toml worker-app/index.ts worker-app/rate-limiter.test.ts
 git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable Object"
@@ -568,11 +627,13 @@ git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable
 ### Task 7: Scheduled jobs via Cron Triggers
 
 **Files:**
+
 - Read first: `server/scheduled-jobs.ts` (the `initializeScheduler` function called by `server/_core/index.ts` — enumerate every job it registers and each one's interval before writing this task's real steps)
 - Create: `worker-app/scheduled.ts`
 - Modify: `worker-app/wrangler.toml`
 
 **Interfaces:**
+
 - Consumes: whatever individual job functions `server/scheduled-jobs.ts` currently calls on a `setInterval` — reuse them unchanged, same framework-agnostic-function pattern as Task 5's webhook handlers.
 
 - [ ] **Step 1: Enumerate the existing jobs**
@@ -580,19 +641,27 @@ git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable
 ```bash
 grep -n "setInterval\|cron\|schedule" server/scheduled-jobs.ts
 ```
+
 List every job name and its interval here before proceeding — Cloudflare Cron Triggers are declared in `wrangler.toml` with cron expressions, not arbitrary millisecond intervals, so a job running every 90 seconds needs to become "every minute" (closest supported granularity) with an internal check, not a literal 90s trigger.
 
 - [ ] **Step 2: Write `worker-app/scheduled.ts`'s `scheduled()` handler**
 
 (Concrete implementation depends entirely on Step 1's enumeration — for each job, add a cron trigger in `wrangler.toml`:
+
 ```toml
 [triggers]
 crons = ["*/5 * * * *"]  # one line per distinct schedule found in Step 1, replace with real cadences
 ```
+
 and a dispatcher:
+
 ```typescript
 // worker-app/scheduled.ts
-export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+export async function scheduled(
+  event: ScheduledEvent,
+  env: Env,
+  ctx: ExecutionContext
+) {
   switch (event.cron) {
     case "*/5 * * * *":
       // ctx.waitUntil(existingJobFunction(getDb(env)));
@@ -601,6 +670,7 @@ export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionC
   }
 }
 ```
+
 Fill in the real job function calls once Step 1's enumeration exists — do not invent job names.)
 
 - [ ] **Step 3: Export the scheduled handler alongside the fetch handler**
@@ -637,6 +707,7 @@ git commit -m "feat(workers): move scheduled jobs from setInterval to Cron Trigg
 ```bash
 cd worker-app && npx wrangler deploy
 ```
+
 This publishes to `authichain-app.<your-subdomain>.workers.dev` — no DNS/domain risk, purely additive.
 
 - [ ] **Step 2: Set production secrets**
@@ -664,12 +735,12 @@ Check Vercel Analytics (or the existing `activity_log`/`analytics` tables the ap
 
 - [ ] **Step 2: Compare against free-tier ceilings**
 
-| Resource | Free tier | Check against |
-|---|---|---|
-| Workers requests | 100,000/day | Total combined requests/day across all 4 domains |
-| KV reads | 100,000/day | Session reads (~1 per authenticated request) |
-| KV writes | 1,000/day | Session writes (login events) |
-| Durable Object requests | 100,000/day | Rate-limiter checks (~1 per `/api/*` request) |
+| Resource                | Free tier   | Check against                                    |
+| ----------------------- | ----------- | ------------------------------------------------ |
+| Workers requests        | 100,000/day | Total combined requests/day across all 4 domains |
+| KV reads                | 100,000/day | Session reads (~1 per authenticated request)     |
+| KV writes               | 1,000/day   | Session writes (login events)                    |
+| Durable Object requests | 100,000/day | Rate-limiter checks (~1 per `/api/*` request)    |
 
 If any real number is within 2x of its ceiling, note it here as a blocker for the "free tier" framing specifically — the migration can still proceed, but "delete Vercel" doesn't have to mean "stay on Workers Free" if traffic doesn't fit; Workers Paid is $5/mo flat with 10M included requests, a much higher ceiling, and still far cheaper than Vercel Pro. Flag this explicitly to the user rather than silently assuming free tier is sufficient.
 
@@ -682,6 +753,7 @@ If any real number is within 2x of its ceiling, note it here as a blocker for th
 - [ ] **Step 1: Automated route diff**
 
 For every route Task 5 enumerated plus every tRPC procedure in the 44 routers, hit both the live production domain and the `workers.dev` URL (with a `Host` header override to select the right brand) and diff response status + shape:
+
 ```bash
 for path in /api/health /dashboard /login /pricing; do
   echo "=== $path ==="
@@ -689,6 +761,7 @@ for path in /api/health /dashboard /login /pricing; do
        <(curl -s -H "Host: govchain.us" "https://authichain-app.<subdomain>.workers.dev$path")
 done
 ```
+
 Expect meaningful diffs on anything involving session cookies (domain-scoped) or timestamps — filter those, but any diff in status code or structural JSON shape is a real gap to fix before Task 11.
 
 - [ ] **Step 2: Manual auth flow check**
@@ -704,6 +777,7 @@ Use Stripe CLI (`stripe listen --forward-to https://authichain-app.<subdomain>.w
 ### Task 11: DNS/Route cutover, per domain
 
 **Files:**
+
 - Modify: `worker-app/wrangler.toml` (add `routes` once Task 10 passes — same pattern already used by the existing `workers/govchain-us/wrangler.toml`: `pattern = "govchain.us/*"`, `zone_name = "govchain.us"`)
 
 - [ ] **Step 1: Cut over one domain first** (govchain.us — smallest brand by the stats shown on its own marketing page, lowest blast radius)
@@ -716,6 +790,7 @@ zone_name = "govchain.us"
 pattern = "www.govchain.us/*"
 zone_name = "govchain.us"
 ```
+
 Deploy: `npx wrangler deploy`. Cloudflare Routes activate near-instantly (not DNS-TTL-bound) — if something's wrong, delete the route block and redeploy to fall back to whatever the domain's Vercel/DNS config was serving before, without waiting on DNS propagation.
 
 - [ ] **Step 2: Monitor for 24–48h**, checking error rates via `npx wrangler tail` and the existing `activity_log` table for anomalies, before repeating Step 1 for `qron.space`, `strainchain.io`, and finally `authichain.com`/`app.authichain.com` (root domain last — it's the brand default and highest-traffic).
@@ -728,8 +803,10 @@ Deploy: `npx wrangler deploy`. Cloudflare Routes activate near-instantly (not DN
 
 - [ ] **Step 1:** Confirm all 4 domains + subdomains have been repointed and stable for the monitoring window in Task 11.
 - [ ] **Step 2:** Delete via the same pattern used earlier this session:
+
 ```bash
 curl -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" \
   "https://api.vercel.com/v9/projects/prj_GD9ypyGrjibx4Ab88M52xufUf1ph?teamId=team_PKVRDwUXPRFjmGTM7PZxjNys"
 ```
+
 Expected: HTTP 204. This is the last Vercel project — after this, "delete Vercel" is complete.

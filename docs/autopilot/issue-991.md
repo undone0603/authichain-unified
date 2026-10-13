@@ -7,9 +7,11 @@ Written: 2026-09-23T13:55:07.059Z
 ## Increment: QFS-ready profile (ISO 20022 carriage) — Issue 991
 
 ### Outcome
+
 Ship a **QFS-ready profile** that can carry ISO 20022 message payloads end-to-end, with docs and UI copy that state clearly: the profile is a **carriage layer**, not a QFS node.
 
 ### Files to touch
+
 - `packages/profile/src/iso20022/types.ts` — message envelope + profile flags
 - `packages/profile/src/iso20022/carriage.ts` — encode/decode carriage helpers
 - `apps/web/components/profile/QfsReadyBadge.tsx` — UI label + tooltip
@@ -18,6 +20,7 @@ Ship a **QFS-ready profile** that can carry ISO 20022 message payloads end-to-en
 - `packages/profile/README.md` — short pointer to the doc
 
 ### Acceptance checks
+
 - [ ] Profile type exposes `iso20022Carriage: true` and `isQfsNode: false` (or equivalent) and both are enforced in types.
 - [ ] Carriage helpers accept/return ISO 20022 XML/JSON payloads without implying node participation.
 - [ ] UI shows “QFS-ready (ISO 20022 carriage)” and explicit “Not a QFS node” copy on the profile view.
@@ -25,6 +28,7 @@ Ship a **QFS-ready profile** that can carry ISO 20022 message payloads end-to-en
 - [ ] Unit tests cover round-trip carriage and flag defaults; no network/deploy steps required.
 
 ### Minimal patch sketch
+
 ```ts
 // packages/profile/src/iso20022/types.ts
 export type Iso20022CarriageProfile = {

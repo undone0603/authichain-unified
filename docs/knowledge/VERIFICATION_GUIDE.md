@@ -6,13 +6,13 @@ AuthiChain uses a **5-Agent AI Consensus Protocol** to verify physical products.
 
 ### The Five Agents
 
-| Agent | Weight | What It Does |
-|-------|--------|--------------|
-| **Guardian** | 35% | Cryptographic hash validation, anti-counterfeit pattern detection |
-| **Archivist** | 20% | Provenance history lookup, SKU truth graph traversal |
-| **Sentinel** | 25% | Anomaly detection, geographic clustering analysis |
-| **Scout** | 8% | Product classification, category-specific heuristics |
-| **Arbiter** | 12% | Final consensus adjudication, confidence calibration |
+| Agent         | Weight | What It Does                                                      |
+| ------------- | ------ | ----------------------------------------------------------------- |
+| **Guardian**  | 35%    | Cryptographic hash validation, anti-counterfeit pattern detection |
+| **Archivist** | 20%    | Provenance history lookup, SKU truth graph traversal              |
+| **Sentinel**  | 25%    | Anomaly detection, geographic clustering analysis                 |
+| **Scout**     | 8%     | Product classification, category-specific heuristics              |
+| **Arbiter**   | 12%    | Final consensus adjudication, confidence calibration              |
 
 ### Verification Flow
 

@@ -47,5 +47,5 @@ export const navigation: NavSection[] = [
 ];
 
 export const allDocsPages: NavItem[] = navigation.flatMap(
-  (section) => section.items
+  section => section.items
 );

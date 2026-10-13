@@ -21,17 +21,12 @@ import { createServer } from "http";
 import { execFileSync } from "child_process";
 import { randomBytes } from "crypto";
 
-const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID     || "";
+const CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
-const REDIRECT_URI  = "http://localhost:9001/callback";
-const REPO          = "undone0603/authichain-unified";
+const REDIRECT_URI = "http://localhost:9001/callback";
+const REPO = "undone0603/authichain-unified";
 
-const SCOPES = [
-  "openid",
-  "profile",
-  "email",
-  "w_member_social",
-].join(" ");
+const SCOPES = ["openid", "profile", "email", "w_member_social"].join(" ");
 
 // ─── Step 0: No credentials yet ──────────────────────────────────────────────
 
@@ -71,12 +66,14 @@ const state = randomBytes(32).toString("hex");
 
 const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
 authUrl.searchParams.set("response_type", "code");
-authUrl.searchParams.set("client_id",     CLIENT_ID);
-authUrl.searchParams.set("redirect_uri",  REDIRECT_URI);
-authUrl.searchParams.set("state",         state);
-authUrl.searchParams.set("scope",         SCOPES);
+authUrl.searchParams.set("client_id", CLIENT_ID);
+authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
+authUrl.searchParams.set("state", state);
+authUrl.searchParams.set("scope", SCOPES);
 
-console.log("\n[linkedin-oauth] Opening LinkedIn consent page in your browser...");
+console.log(
+  "\n[linkedin-oauth] Opening LinkedIn consent page in your browser..."
+);
 console.log(`  ${authUrl.toString()}\n`);
 console.log("[linkedin-oauth] Sign in as undone.k@gmail.com when prompted.\n");
 
@@ -84,130 +81,187 @@ await open(authUrl.toString());
 
 // ─── Step 2: Local HTTP server to catch callback ──────────────────────────────
 
-console.log("[linkedin-oauth] Waiting for LinkedIn to redirect to http://localhost:9001/callback ...\n");
+console.log(
+  "[linkedin-oauth] Waiting for LinkedIn to redirect to http://localhost:9001/callback ...\n"
+);
 
-const { accessToken, refreshToken, personUrn } = await new Promise((resolve, reject) => {
-  const server = createServer(async (req, res) => {
-    const url = new URL(req.url, "http://localhost:9001");
-    if (url.pathname !== "/callback") { res.writeHead(404); res.end(); return; }
-
-    const code       = url.searchParams.get("code");
-    const errorParam = url.searchParams.get("error");
-    const retState   = url.searchParams.get("state");
-
-    if (errorParam || !code) {
-      const safe = String(errorParam || "no code").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      res.writeHead(400, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Error: ${safe}</h2>`);
-      server.close(() => reject(new Error(errorParam || "no code returned")));
-      return;
-    }
-
-    if (retState !== state) {
-      res.writeHead(400, { "Content-Type": "text/html" });
-      res.end("<h2 style='color:red'>State mismatch — possible CSRF</h2>");
-      server.close(() => reject(new Error("state mismatch")));
-      return;
-    }
-
-    // Exchange code for tokens
-    console.log("[linkedin-oauth] Authorization code received. Exchanging for tokens...");
-
-    const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type:    "authorization_code",
-        code,
-        redirect_uri:  REDIRECT_URI,
-        client_id:     CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      const errText = await tokenRes.text();
-      const safeErr = String(errText).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      res.writeHead(500, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Token exchange failed: ${safeErr}</h2>`);
-      server.close(() => reject(new Error(`Token exchange failed: ${errText}`)));
-      return;
-    }
-
-    const tokens = await tokenRes.json();
-    const accessToken  = tokens.access_token;
-    const refreshToken = tokens.refresh_token ?? "";   // LinkedIn may not return a refresh token on basic products
-
-    // Fetch person URN via OpenID Connect userinfo endpoint
-    let personUrn = "";
-    try {
-      // Try OpenID Connect userinfo first (modern API)
-      const userinfoRes = await fetch("https://api.linkedin.com/v2/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (userinfoRes.ok) {
-        const userinfo = await userinfoRes.json();
-        // sub is the person ID in OIDC responses
-        personUrn = userinfo.sub?.startsWith("urn:li:person:")
-          ? userinfo.sub
-          : `urn:li:person:${userinfo.sub}`;
-        console.log(`[linkedin-oauth] Person URN: ${personUrn} (${userinfo.name ?? userinfo.email ?? ""})`);
-      } else {
-        // Fallback: classic /v2/me endpoint
-        const meRes = await fetch("https://api.linkedin.com/v2/me", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "X-Restli-Protocol-Version": "2.0.0",
-          },
-        });
-        if (meRes.ok) {
-          const me = await meRes.json();
-          personUrn = `urn:li:person:${me.id}`;
-          console.log(`[linkedin-oauth] Person URN: ${personUrn}`);
-        }
+const { accessToken, refreshToken, personUrn } = await new Promise(
+  (resolve, reject) => {
+    const server = createServer(async (req, res) => {
+      const url = new URL(req.url, "http://localhost:9001");
+      if (url.pathname !== "/callback") {
+        res.writeHead(404);
+        res.end();
+        return;
       }
-    } catch (e) {
-      console.warn("[linkedin-oauth] Could not fetch profile URN:", e.message);
-    }
 
-    const safeUrn = String(personUrn).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(`
+      const code = url.searchParams.get("code");
+      const errorParam = url.searchParams.get("error");
+      const retState = url.searchParams.get("state");
+
+      if (errorParam || !code) {
+        const safe = String(errorParam || "no code")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        res.writeHead(400, { "Content-Type": "text/html" });
+        res.end(`<h2 style="color:red">Error: ${safe}</h2>`);
+        server.close(() => reject(new Error(errorParam || "no code returned")));
+        return;
+      }
+
+      if (retState !== state) {
+        res.writeHead(400, { "Content-Type": "text/html" });
+        res.end("<h2 style='color:red'>State mismatch — possible CSRF</h2>");
+        server.close(() => reject(new Error("state mismatch")));
+        return;
+      }
+
+      // Exchange code for tokens
+      console.log(
+        "[linkedin-oauth] Authorization code received. Exchanging for tokens..."
+      );
+
+      const tokenRes = await fetch(
+        "https://www.linkedin.com/oauth/v2/accessToken",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: REDIRECT_URI,
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+          }),
+        }
+      );
+
+      if (!tokenRes.ok) {
+        const errText = await tokenRes.text();
+        const safeErr = String(errText)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        res.writeHead(500, { "Content-Type": "text/html" });
+        res.end(`<h2 style="color:red">Token exchange failed: ${safeErr}</h2>`);
+        server.close(() =>
+          reject(new Error(`Token exchange failed: ${errText}`))
+        );
+        return;
+      }
+
+      const tokens = await tokenRes.json();
+      const accessToken = tokens.access_token;
+      const refreshToken = tokens.refresh_token ?? ""; // LinkedIn may not return a refresh token on basic products
+
+      // Fetch person URN via OpenID Connect userinfo endpoint
+      let personUrn = "";
+      try {
+        // Try OpenID Connect userinfo first (modern API)
+        const userinfoRes = await fetch(
+          "https://api.linkedin.com/v2/userinfo",
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        if (userinfoRes.ok) {
+          const userinfo = await userinfoRes.json();
+          // sub is the person ID in OIDC responses
+          personUrn = userinfo.sub?.startsWith("urn:li:person:")
+            ? userinfo.sub
+            : `urn:li:person:${userinfo.sub}`;
+          console.log(
+            `[linkedin-oauth] Person URN: ${personUrn} (${userinfo.name ?? userinfo.email ?? ""})`
+          );
+        } else {
+          // Fallback: classic /v2/me endpoint
+          const meRes = await fetch("https://api.linkedin.com/v2/me", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "X-Restli-Protocol-Version": "2.0.0",
+            },
+          });
+          if (meRes.ok) {
+            const me = await meRes.json();
+            personUrn = `urn:li:person:${me.id}`;
+            console.log(`[linkedin-oauth] Person URN: ${personUrn}`);
+          }
+        }
+      } catch (e) {
+        console.warn(
+          "[linkedin-oauth] Could not fetch profile URN:",
+          e.message
+        );
+      }
+
+      const safeUrn = String(personUrn)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(`
       <h2 style="color:green;font-family:sans-serif">✓ LinkedIn Authorized!</h2>
       <p>Person URN: <code>${safeUrn}</code></p>
       <p>You can close this tab and check your terminal.</p>
     `);
-    server.close();
-    resolve({ accessToken, refreshToken, personUrn });
-  });
+      server.close();
+      resolve({ accessToken, refreshToken, personUrn });
+    });
 
-  server.listen(9001);
-  server.on("error", reject);
-});
+    server.listen(9001);
+    server.on("error", reject);
+  }
+);
 
 // ─── Step 3: Push secrets to Cloudflare via GitHub Actions ───────────────────
 
-console.log("\n╔══════════════════════════════════════════════════════════════╗");
+console.log(
+  "\n╔══════════════════════════════════════════════════════════════╗"
+);
 console.log("║    ✓ Tokens obtained. Pushing to Cloudflare via GitHub...   ║");
-console.log("╚══════════════════════════════════════════════════════════════╝\n");
+console.log(
+  "╚══════════════════════════════════════════════════════════════╝\n"
+);
 console.log(`LINKEDIN_CLIENT_ID     = ${CLIENT_ID}`);
 console.log(`LINKEDIN_CLIENT_SECRET = ${CLIENT_SECRET.slice(0, 6)}...`);
 console.log(`LINKEDIN_ACCESS_TOKEN  = ${accessToken.slice(0, 12)}...`);
-console.log(`LINKEDIN_REFRESH_TOKEN = ${refreshToken ? refreshToken.slice(0, 12) + "..." : "(none — token is long-lived 60 days)"}`);
+console.log(
+  `LINKEDIN_REFRESH_TOKEN = ${refreshToken ? refreshToken.slice(0, 12) + "..." : "(none — token is long-lived 60 days)"}`
+);
 console.log(`LINKEDIN_PERSON_URN    = ${personUrn}\n`);
 
-execFileSync("gh", [
-  "workflow", "run", "set-social-secrets.yml",
-  "--repo", REPO,
-  "--field", `LINKEDIN_CLIENT_ID=${CLIENT_ID}`,
-  "--field", `LINKEDIN_CLIENT_SECRET=${CLIENT_SECRET}`,
-  "--field", `LINKEDIN_ACCESS_TOKEN=${accessToken}`,
-  "--field", `LINKEDIN_PERSON_URN=${personUrn}`,
-  ...(refreshToken ? ["--field", `LINKEDIN_REFRESH_TOKEN=${refreshToken}`] : []),
-], { stdio: "inherit" });
+execFileSync(
+  "gh",
+  [
+    "workflow",
+    "run",
+    "set-social-secrets.yml",
+    "--repo",
+    REPO,
+    "--field",
+    `LINKEDIN_CLIENT_ID=${CLIENT_ID}`,
+    "--field",
+    `LINKEDIN_CLIENT_SECRET=${CLIENT_SECRET}`,
+    "--field",
+    `LINKEDIN_ACCESS_TOKEN=${accessToken}`,
+    "--field",
+    `LINKEDIN_PERSON_URN=${personUrn}`,
+    ...(refreshToken
+      ? ["--field", `LINKEDIN_REFRESH_TOKEN=${refreshToken}`]
+      : []),
+  ],
+  { stdio: "inherit" }
+);
 
 console.log(`\n✓ Workflow dispatched!`);
-console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-social-secrets.yml`);
+console.log(
+  `  Progress: https://github.com/${REPO}/actions/workflows/set-social-secrets.yml`
+);
 console.log(`\nLinkedIn posting is now configured for ${personUrn}.`);
-console.log(`\nNOTE: If "Sign In with LinkedIn using OpenID Connect" product is not approved yet,`);
-console.log(`the token may expire in 60 days. Re-run this script before expiry to refresh.\n`);
+console.log(
+  `\nNOTE: If "Sign In with LinkedIn using OpenID Connect" product is not approved yet,`
+);
+console.log(
+  `the token may expire in 60 days. Re-run this script before expiry to refresh.\n`
+);

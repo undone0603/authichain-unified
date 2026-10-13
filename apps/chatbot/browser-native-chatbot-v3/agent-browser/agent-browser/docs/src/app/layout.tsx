@@ -1,48 +1,48 @@
-import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
-import { GeistPixelSquare } from "geist/font/pixel";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Header } from "@/components/header";
-import { DocsSidebar } from "@/components/docs-sidebar";
-import { DocsMobileNav } from "@/components/docs-mobile-nav";
-import { CopyPageButton } from "@/components/copy-page-button";
-import { DocsChat } from "@/components/docs-chat";
-import { cookies } from "next/headers";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from 'next';
+import { Inter, Geist_Mono } from 'next/font/google';
+import { GeistPixelSquare } from 'geist/font/pixel';
+import './globals.css';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Header } from '@/components/header';
+import { DocsSidebar } from '@/components/docs-sidebar';
+import { DocsMobileNav } from '@/components/docs-mobile-nav';
+import { CopyPageButton } from '@/components/copy-page-button';
+import { DocsChat } from '@/components/docs-chat';
+import { cookies } from 'next/headers';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+  variable: '--font-inter',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://agent-browser.dev"),
+  metadataBase: new URL('https://agent-browser.dev'),
   title: {
-    default: "agent-browser | Headless Browser Automation for AI",
-    template: "%s | agent-browser",
+    default: 'agent-browser | Headless Browser Automation for AI',
+    template: '%s | agent-browser',
   },
-  description: "Headless browser automation CLI for AI agents",
+  description: 'Headless browser automation CLI for AI agents',
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://agent-browser.dev",
-    siteName: "agent-browser",
-    title: "agent-browser | Headless Browser Automation for AI",
-    description: "Headless browser automation CLI for AI agents",
-    images: [{ url: "/og", width: 1200, height: 630, alt: "agent-browser" }],
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://agent-browser.dev',
+    siteName: 'agent-browser',
+    title: 'agent-browser | Headless Browser Automation for AI',
+    description: 'Headless browser automation CLI for AI agents',
+    images: [{ url: '/og', width: 1200, height: 630, alt: 'agent-browser' }],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "agent-browser | Headless Browser Automation for AI",
-    description: "Headless browser automation CLI for AI agents",
-    images: ["/og"],
+    card: 'summary_large_image',
+    title: 'agent-browser | Headless Browser Automation for AI',
+    description: 'Headless browser automation CLI for AI agents',
+    images: ['/og'],
   },
 };
 
@@ -52,8 +52,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const chatOpen = cookieStore.get("docs-chat-open")?.value === "true";
-  const chatWidth = Number(cookieStore.get("docs-chat-width")?.value) || 400;
+  const chatOpen = cookieStore.get('docs-chat-open')?.value === 'true';
+  const chatWidth = Number(cookieStore.get('docs-chat-width')?.value) || 400;
 
   return (
     <html lang="en" suppressHydrationWarning>

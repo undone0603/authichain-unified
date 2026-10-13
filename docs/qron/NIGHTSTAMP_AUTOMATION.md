@@ -24,15 +24,15 @@ Postiz is a useful optional publishing layer because its open-source project doc
 
 ## Use-case matrix
 
-| Segment | Offer | CTA |
-|---|---|---|
-| Couples | Wedding / anniversary Nightstamp | `/starmap` |
-| New parents | Birth-night keepsake | `/starmap` |
-| Families | Memorial star map | `/starmap` |
-| Photographers | $29 portal + referral commission | `/qron/star-map-for-wedding-photographers` |
-| Venues | Event-specific branded sky | `/starmap` |
-| Product brands | "Bottle under this sky" | `/starmap` |
-| StrainChain | Harvest sky add-on | `/starmap` |
+| Segment        | Offer                            | CTA                                        |
+| -------------- | -------------------------------- | ------------------------------------------ |
+| Couples        | Wedding / anniversary Nightstamp | `/starmap`                                 |
+| New parents    | Birth-night keepsake             | `/starmap`                                 |
+| Families       | Memorial star map                | `/starmap`                                 |
+| Photographers  | $29 portal + referral commission | `/qron/star-map-for-wedding-photographers` |
+| Venues         | Event-specific branded sky       | `/starmap`                                 |
+| Product brands | "Bottle under this sky"          | `/starmap`                                 |
+| StrainChain    | Harvest sky add-on               | `/starmap`                                 |
 
 ## SEO pages
 

@@ -1073,8 +1073,7 @@ const commandSchema = z.discriminatedUnion('action', [
 
 // Parse result type
 export type ParseResult =
-  | { success: true; command: Command }
-  | { success: false; error: string; id?: string };
+  { success: true; command: Command } | { success: false; error: string; id?: string };
 
 /**
  * Parse a JSON string into a validated command

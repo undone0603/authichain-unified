@@ -32,16 +32,16 @@ REPEAT
 
 ## Existing system that was reverse-engineered
 
-| Layer | Existing implementation | Adaptation role |
-|---|---|---|
-| Observe | `Governor._observe()` | gathers workflow, credential, protocol, deployment, trend and business state |
-| Measure | `Supervisor` + specialists | evaluates workflow health and failure rates |
-| Bottleneck | `calculate_launch_score()` | turns state into a prioritized constraint |
-| Plan | Governor LLM planner | generates candidate actions |
-| Risk | risk firewall | blocks unsafe actions |
-| Execute | Runner / registry | performs approved workflow actions |
-| Verify | post-cycle score/stage | measures whether the intervention helped |
-| Learn | score history + adaptive strategy | carries trends between cycles |
+| Layer      | Existing implementation           | Adaptation role                                                              |
+| ---------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| Observe    | `Governor._observe()`             | gathers workflow, credential, protocol, deployment, trend and business state |
+| Measure    | `Supervisor` + specialists        | evaluates workflow health and failure rates                                  |
+| Bottleneck | `calculate_launch_score()`        | turns state into a prioritized constraint                                    |
+| Plan       | Governor LLM planner              | generates candidate actions                                                  |
+| Risk       | risk firewall                     | blocks unsafe actions                                                        |
+| Execute    | Runner / registry                 | performs approved workflow actions                                           |
+| Verify     | post-cycle score/stage            | measures whether the intervention helped                                     |
+| Learn      | score history + adaptive strategy | carries trends between cycles                                                |
 
 ## New adaptation kernel
 

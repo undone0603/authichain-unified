@@ -1,0 +1,85 @@
+--- GIT STATUS ---
+## chore/cloudflare-deploy-config...origin/chore/cloudflare-deploy-config [ahead 2]
+?? baseline.txt
+--- GIT LOG ---
+37e3fa34 (HEAD -> chore/cloudflare-deploy-config) chore: configure all workers with wrangler stubs
+722894df zk
+7db8724a (origin/chore/cloudflare-deploy-config) chore: update worker entry and turbo configuration for unified setup
+acb5e94c feat: add native router and health endpoints to worker
+489b303e fix(deploy): correct assets directory path in wrangler config
+bfcd6d01 (main) ci: enable zero-touch auto-merging for AgentZ PRs
+572bde8e ci: configure full-stack Cloudflare deployment (Pages + Workers)
+13b6b5f1 ci: synchronize local agentz configurations and deployment scripts
+34b380d8 ci: activate live Vercel and Cloudflare production deployments
+d4367c32 ci: deploy AgentZ self-healing pipeline
+--- WORKSPACES ---
+packages:
+  - apps/*
+  - packages/*
+  - workers/*
+  - worker
+  - mcp
+
+allowBuilds:
+  '@clerk/shared': true
+  agent-browser: false
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  sharp: true
+  unrs-resolver: true
+  utf-8-validate: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - miniflare@4.20260701.0
+  - wrangler@4.107.0
+
+overrides:
+  axios@<1.18.0: 1.20.0
+  basic-ftp@<=6.2.0: '>=6.2.1'
+  brace-expansion@<1.1.19: '>=1.1.19'
+  brace-expansion@<1.1.20: '>=1.1.20'
+  brace-expansion@<1.1.21: '>=1.1.21'
+  decode-uri-component@<=0.4.2: '>=0.5.0'
+  deepmerge-ts: ^8.0.2
+  esbuild@<=0.24.2: '>=0.25.0'
+  fast-uri@<3.1.7: 3.1.8
+  form-data@>=4.0.0 <4.0.6: 4.0.6
+  js-cookie@<=3.0.5: 3.0.7
+  js-yaml@>=4.0.0 <4.3.2: 4.3.2
+  next@>=15.0.0 <15.5.27: '>=15.5.27'
+  next@>=16.0.0 <16.3.8: '>=16.3.8'
+  next@>=16.3.0 <16.3.8: '>=16.3.8'
+  postcss@<8.5.18: 8.5.26
+  proxy-addr@<2.0.8: 2.0.8
+  qs@>=2.2.5 <6.16.0: '>=6.16.0'
+  qs@>=6.14.2 <=6.15.3: '>=6.16.0'
+  serialize-javascript: 7.0.3
+  serialize-javascript@>=5.0.0 <7.0.5: '>=7.0.5'
+  sharp@>=0.35.0 <0.35.5: 0.35.5
+  shell-quote@<1.11.0: 1.11.0
+  source-map-js@>=1.0.0 <1.2.2: '>=1.2.2'
+  tmp@>=0.2.6 <0.2.7: '>=0.2.7'
+  toml@<4.1.2: '>=4.1.2'
+  toml@<4.2.0: '>=4.2.0'
+  undici@>=7.0.0 <7.29.1: '>=7.29.1'
+  undici@>=7.1.0 <7.29.1: '>=7.29.1'
+  undici@>=7.11.0 <7.29.1: '>=7.29.1'
+  undici@>=7.15.0 <7.29.1: '>=7.29.1'
+  undici@>=7.24.1 <7.29.1: '>=7.29.1'
+  undici@>=7.28.0 <7.29.1: '>=7.29.1'
+  uuid@<11.1.1: '>=11.1.1'
+  vite@<6.4.3: 6.4.3
+  ws@>=8.0.0 <8.21.0: 8.21.3
+
+verifyDepsBeforeRun: false
+--- PACKAGES ---
+apps/agent-browser/package.json
+apps/verifier-web/wrangler.toml
+apps/verifier-web/package.json
+apps/qron-platform/wrangler.toml
+apps/qron-platform/package.json
+packages/evidence/package.json
+packages/policy/package.json
+api/wrangler.toml

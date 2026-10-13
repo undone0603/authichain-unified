@@ -24,6 +24,7 @@ Public contract after `feat/verify-evaluate-wire`:
 No `trust_score`. No `authenticityScore`. No Lab brand page. Prices unchanged.
 
 Surfaces (same primitive):
+
 - `GET|POST https://authichain.com/verify` and `/api/verify` — free lookup depth
 - `/desk/verify` — same decision, desk chrome
 - `POST /api/x402` history depth — existing $0.05 USDC
@@ -55,7 +56,7 @@ CTA after a decision is only `/onboard` (register) or `/dapp` (manage). Never a 
 - **Mechanism:** same `evaluate()` JSON. Lookup is free on `/verify`. History depth stays the existing $0.05 x402 SKU. No new product.
 - **Expected conversion (estimate):** 1–4% of free lookups → paid history depth.
 - **Events:** `mcp_verify`, `x402_verify_paid` (`decision`, `depthUsed`).
-- **Kill:** if paid history is 0 after 2,000 free lookups *and* MCP callers exist, the depth upsell copy is wrong — rewrite, do not add a SKU.
+- **Kill:** if paid history is 0 after 2,000 free lookups _and_ MCP callers exist, the depth upsell copy is wrong — rewrite, do not add a SKU.
 
 ## Loop 4 — Anomaly → desk
 
@@ -68,6 +69,7 @@ CTA after a decision is only `/onboard` (register) or `/dapp` (manage). Never a 
 ## Proof that must be collected first
 
 Do not publish customer logos, case studies, or "X% authentic" rates. Collect, in order:
+
 1. 100 live `/verify` responses with the new JSON shape (instrument `verify_decision`).
 2. One object with a real (not mock) evidence digest and a passing history-depth scan.
 3. One paid x402 history-depth receipt that returns the same `evaluate()` shape.

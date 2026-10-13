@@ -5,6 +5,7 @@ This document describes the lead scoring and qualification system for the AuthiC
 ## Overview
 
 The pipeline converts 258 SAM.gov opportunities into qualified leads by:
+
 1. **Scoring** opportunities (fit_score 0-100)
 2. **Filtering** to qualified leads (fit_score ≥ 70)
 3. **Qualifying** into the leads table with detailed scoring breakdown
@@ -54,6 +55,7 @@ SAM.gov → ingest-sam.ts → gov_opportunities (status='new')
 **Purpose:** Score SAM.gov opportunities and categorize by fit.
 
 **Changes:**
+
 - Fit_score thresholds:
   - `≥ 70`: recommended_action = 'pursue', status = 'scored'
   - `60-69`: recommended_action = 'qualify', status = 'scored' (manual review queue)
@@ -67,6 +69,7 @@ SAM.gov → ingest-sam.ts → gov_opportunities (status='new')
   - status ('scored' | 'skipped')
 
 **Environment Variables:**
+
 ```bash
 SUPABASE_URL=your_project_url
 SUPABASE_SERVICE_KEY=your_service_role_key
@@ -76,11 +79,13 @@ DRY_RUN=true                    # (optional, preview changes)
 ```
 
 **Run:**
+
 ```bash
 pnpm tsx scripts/score-opportunities.ts
 ```
 
 **Output:**
+
 ```
   [82/100] GSA IEVV Vehicle Authentication → pursue
   [65/100] DHS Supply Chain Verification → qualify
@@ -95,10 +100,12 @@ pnpm tsx scripts/score-opportunities.ts
 **Purpose:** Convert high-fit opportunities (≥70) into qualified leads with detailed scoring.
 
 **Query Filters:**
+
 - `status='scored'`
 - `fit_score >= 70`
 
 **Generates:**
+
 - `lead_score_detail` JSON (4 dimensions × 0-100):
   - `blockchain_fit`: Blockchain authentication/provenance alignment
   - `agency_sector_match`: Agency mission & sector fit
@@ -112,10 +119,12 @@ pnpm tsx scripts/score-opportunities.ts
   - leadScore = opportunity.fit_score
 
 **Updates:**
+
 - `gov_opportunities.status = 'qualified'`
 - `gov_opportunities.qualified_at = now()`
 
 **Environment Variables:**
+
 ```bash
 SUPABASE_URL=your_project_url
 SUPABASE_SERVICE_KEY=your_service_role_key
@@ -124,11 +133,13 @@ DRY_RUN=true                    # (optional)
 ```
 
 **Run:**
+
 ```bash
 pnpm tsx scripts/qualify-leads.ts
 ```
 
 **Output:**
+
 ```
   ✅ Qualified: GSA IEVV Vehicle Authentication (82/100)
   ✅ Qualified: DHS Biometric Authorization (78/100)
@@ -136,6 +147,7 @@ pnpm tsx scripts/qualify-leads.ts
 ```
 
 **Leads Table Schema (Existing):**
+
 ```sql
 CREATE TABLE leads (
   id SERIAL PRIMARY KEY,
@@ -155,6 +167,7 @@ CREATE TABLE leads (
 ```
 
 **Metadata Structure (JSON):**
+
 ```json
 {
   "opportunity_id": "SAM-12345678",
@@ -192,17 +205,19 @@ CREATE TABLE leads (
 **Purpose:** Send proposal emails to qualified leads with fit score breakdown.
 
 **Query Filters:**
+
 - `leads.source = 'gov_engine'`
 - `leads.status = 'qualified'`
 - `leads.lastContactedAt IS NULL` (not yet contacted)
 
 **Email Template:**
+
 ```
 Subject: AuthiChain Proposal: [Opportunity Title]
 
 Dear [Agency],
 
-AuthiChain is excited to present our blockchain-powered authentication 
+AuthiChain is excited to present our blockchain-powered authentication
 platform for your procurement need:
 
 Title: [Opportunity Title]
@@ -231,11 +246,13 @@ AuthiChain Government Affairs Team
 ```
 
 **Updates:**
+
 - `leads.status = 'contacted'`
 - `leads.lastContactedAt = now()`
 - If reply received: `leads.emailReplied = true`, `leads.respondedAt = now()`
 
 **Environment Variables:**
+
 ```bash
 SUPABASE_URL=your_project_url
 SUPABASE_SERVICE_KEY=your_service_role_key
@@ -245,11 +262,13 @@ DRY_RUN=true                    # (optional)
 ```
 
 **Run:**
+
 ```bash
 pnpm tsx scripts/email-proposals.ts
 ```
 
 **Output:**
+
 ```
   ✉️  Sent proposal to General Services Administration (procurement@gsa.gov)
   ✉️  Sent proposal to Department of Homeland Security (procurement@dhs.gov)
@@ -268,7 +287,7 @@ name: Government Engine Pipeline
 on:
   schedule:
     # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -283,8 +302,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - run: pnpm install
 
@@ -331,6 +350,7 @@ jobs:
 ## Data Flow Example
 
 **Input:** SAM.gov opportunity
+
 ```json
 {
   "notice_id": "SAM-2026-06-25-001",
@@ -342,6 +362,7 @@ jobs:
 ```
 
 **After score-opportunities.ts:**
+
 ```json
 {
   "fit_score": 82,
@@ -353,10 +374,10 @@ jobs:
 ```
 
 **After qualify-leads.ts:**
+
 ```json
 {
-  "leads table":
-  {
+  "leads table": {
     "email": "procurement@gsa.gov",
     "company": "General Services Administration",
     "source": "gov_engine",
@@ -376,6 +397,7 @@ jobs:
 ```
 
 **After email-proposals.ts:**
+
 ```
 Email sent to procurement@gsa.gov with:
 - AI-generated 400-word capability statement
@@ -391,6 +413,7 @@ leads.status = 'contacted'
 ## Database Queries
 
 ### Find all qualified leads awaiting outreach:
+
 ```sql
 SELECT id, company, email, metadata->>'lead_score_detail' as scores
   FROM leads
@@ -401,6 +424,7 @@ SELECT id, company, email, metadata->>'lead_score_detail' as scores
 ```
 
 ### Find opportunities in manual review queue (60-69 fit_score):
+
 ```sql
 SELECT notice_id, title, fit_score, recommended_action
   FROM gov_opportunities
@@ -411,8 +435,9 @@ SELECT notice_id, title, fit_score, recommended_action
 ```
 
 ### Engagement metrics (replies to proposals):
+
 ```sql
-SELECT 
+SELECT
   company,
   COUNT(*) as total_leads,
   SUM(CASE WHEN emailReplied THEN 1 ELSE 0 END) as replies,
@@ -428,12 +453,14 @@ SELECT
 ## Testing
 
 ### Dry Run (no database writes):
+
 ```bash
 DRY_RUN=true pnpm tsx scripts/qualify-leads.ts
 DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 ```
 
 ### Manual Lead Creation (test email):
+
 ```sql
 INSERT INTO leads (
   email, name, company, source, leadScore, status, metadata, createdAt, updatedAt
@@ -451,6 +478,7 @@ INSERT INTO leads (
 ```
 
 Then:
+
 ```bash
 pnpm tsx scripts/email-proposals.ts
 ```
@@ -460,6 +488,7 @@ pnpm tsx scripts/email-proposals.ts
 ## Monitoring & Alerts
 
 ### Key Metrics:
+
 - **Opportunities ingested:** gov_opportunities count by status
 - **Fit score distribution:** P50, P75, P90 of fit_score
 - **Qualified lead rate:** (fit_score ≥ 70) / total
@@ -468,7 +497,9 @@ pnpm tsx scripts/email-proposals.ts
 - **Email quota:** 80% alert threshold
 
 ### Suppress Emails To:
+
 Edit `SUPPRESSION_LIST` in `.env`:
+
 ```
 SUPPRESSION_LIST=test@example.com,internal@authichain.us,spam@example.com
 ```
@@ -485,11 +516,13 @@ A: Yes. These have `recommended_action='qualify'` in gov_opportunities. Query th
 
 **Q: What if I want to change the fit_score threshold?**
 A: Edit the `FIT_THRESHOLD` constants in scripts:
+
 - score-opportunities.ts: `FIT_THRESHOLD_HIGH=70`, `FIT_THRESHOLD_BORDERLINE=60`
 - qualify-leads.ts: `FIT_THRESHOLD=70`
 
 **Q: Does email engagement get tracked?**
 A: Yes, via:
+
 - `leads.emailOpened` (webhook from Resend)
 - `leads.emailClicked` (Resend link tracking)
 - `leads.emailReplied` (Gmail thread reply detection)

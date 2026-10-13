@@ -1,6 +1,5 @@
 > Imported from Undone0603 sibling repo on 2026-09-20. **Legacy / non-live reference** — do not treat as current production architecture or pricing.
 
-
 # AuthiChain Unified Autonomous Revenue System: Architecture
 
 **Version:** 1.0
@@ -9,7 +8,7 @@
 
 ## 1. Introduction
 
-This document outlines the architecture for a fully autonomous, unified revenue-generating system for AuthiChain. The system integrates three core components—the **AuthiChain AI Business Manager**, the **AuthiChain Premium SaaS Platform**, and the **QRON Anti-Counterfeit Platform**—into a single, cohesive engine. 
+This document outlines the architecture for a fully autonomous, unified revenue-generating system for AuthiChain. The system integrates three core components—the **AuthiChain AI Business Manager**, the **AuthiChain Premium SaaS Platform**, and the **QRON Anti-Counterfeit Platform**—into a single, cohesive engine.
 
 The primary goal is to create a self-sustaining system that automates the entire customer lifecycle, from lead generation and nurturing to sales conversion and revenue collection, leveraging a suite of modern tools and AI capabilities.
 
@@ -111,13 +110,12 @@ AI is infused throughout the system to maximize efficiency and effectiveness:
 
 ## 5. Technology Stack
 
-| Component | Technology |
-| :--- | :--- |
-| **Automation Engine** | Cloudflare Workers, TypeScript |
-| **CRM & Database** | Airtable, Cloudflare D1, Supabase |
-| **SaaS Platform** | Next.js, React, Tailwind CSS |
-| **AI & Machine Learning** | OpenAI (GPT-4.1), Python |
-| **Email & Calendar** | Gmail MCP, Google Calendar MCP |
-| **Payments** | Stripe |
-| **Blockchain** | Ethers.js, Solidity |
-
+| Component                 | Technology                        |
+| :------------------------ | :-------------------------------- |
+| **Automation Engine**     | Cloudflare Workers, TypeScript    |
+| **CRM & Database**        | Airtable, Cloudflare D1, Supabase |
+| **SaaS Platform**         | Next.js, React, Tailwind CSS      |
+| **AI & Machine Learning** | OpenAI (GPT-4.1), Python          |
+| **Email & Calendar**      | Gmail MCP, Google Calendar MCP    |
+| **Payments**              | Stripe                            |
+| **Blockchain**            | Ethers.js, Solidity               |

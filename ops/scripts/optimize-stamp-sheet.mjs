@@ -1,9 +1,9 @@
-import sharp from 'sharp';
-import { stat } from 'node:fs/promises';
+import sharp from "sharp";
+import { stat } from "node:fs/promises";
 
-const SRC = 'public/media/roscommon-stamp-sheet.png';
-const OUT_PNG = 'public/media/roscommon-stamp-sheet.png';
-const OUT_WEBP = 'public/media/roscommon-stamp-sheet.webp';
+const SRC = "public/media/roscommon-stamp-sheet.png";
+const OUT_PNG = "public/media/roscommon-stamp-sheet.png";
+const OUT_WEBP = "public/media/roscommon-stamp-sheet.webp";
 
 const before = await stat(SRC);
 
@@ -22,7 +22,7 @@ await sharp(SRC)
 const afterPng = await stat(OUT_PNG);
 const afterWebp = await stat(OUT_WEBP);
 
-const fmt = (b) => `${(b / 1024 / 1024).toFixed(2)} MB`;
+const fmt = b => `${(b / 1024 / 1024).toFixed(2)} MB`;
 console.log(`Before: ${fmt(before.size)}`);
 console.log(`After PNG:  ${fmt(afterPng.size)}`);
 console.log(`After WebP: ${fmt(afterWebp.size)}`);

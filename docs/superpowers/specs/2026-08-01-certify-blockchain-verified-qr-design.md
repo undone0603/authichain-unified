@@ -25,6 +25,7 @@ self-serve path from a stranger with a product to a real, verifiable on-chain
 certificate, paid for without any human in the loop.
 
 **Verified this session, directly against Polygon mainnet (not assumed from code):**
+
 - `AuthiChainNFT` (`0x4da4D2675e52374639C9c954f4f653887A9972BE`) is a real,
   source-verified ERC-721 contract with 16 real "Mint Product" transactions from
   ~294 days ago, all from deployer address `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`.
@@ -38,6 +39,7 @@ certificate, paid for without any human in the loop.
   real trading/holder activity — not a revenue lever, out of scope here.
 
 **What's currently broken, found by reading the actual code (not assumed):**
+
 - `src/lib/blockchain.ts` / `src/actions/anchor.ts` (the real, honestly-written
   ethers.js anchoring code — it fails with a clear error rather than faking a tx
   hash) require `AUTHICHAIN_CONTRACT_ADDRESS` and `BLOCKCHAIN_PRIVATE_KEY` env
@@ -51,7 +53,7 @@ certificate, paid for without any human in the loop.
   success response for a certificate that was never actually anchored.
 - Separately, `/api/seal`'s generated verify URL (`/verify?seal=<uuid>&hash=...`)
   doesn't match what `src/app/verify/page.tsx` actually reads (`?id=<numeric
-  product id>&hash=...`, looked up in the `products` Drizzle table). **These two
+product id>&hash=...`, looked up in the `products` Drizzle table). **These two
   systems have diverged** — the industrial API's own QR codes point at a verify
   page that can't resolve them. The `/verify` page's data model (`products`,
   `qr_codes`, `supply_chain_events` via Drizzle) is the more complete one: it
@@ -61,7 +63,7 @@ certificate, paid for without any human in the loop.
   Supabase-client tables `/api/seal`/`/api/certificate` use.
 - `server/ordinals-service.ts` can genuinely check a real inscription's status
   (`api.hiro.so`, a real public Ordinals indexer) but has no code to actually
-  *create* a new Bitcoin inscription — `prepareOrdinalEnvelope` is an
+  _create_ a new Bitcoin inscription — `prepareOrdinalEnvelope` is an
   unimplemented stub. Reading is real; writing doesn't exist yet.
 - The repo has a duplicated app structure (`apps/qron-platform/` vs. root `src/`)
   with overlapping files. Per the established practice already used elsewhere in
@@ -113,6 +115,7 @@ additions once there's a real buyer to upsell.
 ## Architecture
 
 **Phase 1 — make the existing anchoring code real:**
+
 1. Add `AUTHICHAIN_CONTRACT_ADDRESS` and `BLOCKCHAIN_PRIVATE_KEY` as Vercel +
    relevant GitHub Actions secrets. The owner enters the actual key value
    directly via `vercel env add` / `gh secret set` — it must never be pasted into
@@ -131,6 +134,7 @@ additions once there's a real buyer to upsell.
    Polygonscan (not just a 200 response), before anything is sold.
 
 **Phase 2 — the self-serve flow:**
+
 1. New `PLANS` entry (`certify_single`, $19, `stripe_mode: 'payment'`) — reuses
    the existing `/api/checkout` route and `/api/stripe/webhook` handler already
    used by QRON's real packs, rather than a new payment integration.
@@ -153,7 +157,7 @@ additions once there's a real buyer to upsell.
    pattern in `shared/brands.ts`.
 6. `/verify/page.tsx` already shows real product/provenance data and links out to
    Polygonscan-style verification — confirm it surfaces the actual Polygon tx
-   hash/link prominently, since that live, checkable link *is* the entire trust
+   hash/link prominently, since that live, checkable link _is_ the entire trust
    claim this product is selling.
 
 **Deferred phase — real Bitcoin Ordinals anchoring:** once Phase 1+2 are live and

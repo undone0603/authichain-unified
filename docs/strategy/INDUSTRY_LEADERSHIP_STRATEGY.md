@@ -46,7 +46,7 @@ that nobody else in this industry has.
 
 An authenticity company cannot be caught fabricating its own evidence. Not "should not" —
 cannot. It is the one failure mode from which this specific business does not recover,
-because the product *is* the claim that claims can be trusted. Three concrete instances
+because the product _is_ the claim that claims can be trusted. Three concrete instances
 exist right now:
 
 **a) `src/app/api/social-proof/route.ts` — invented metrics on a public endpoint.**
@@ -61,8 +61,8 @@ countries_served: 34,
 ```
 
 The comment calls it "pad with realistic minimums if DB is empty (early traction)." With
-the database at zero, this endpoint publicly serves *1,200 users, 8,400 QRONs, 92,000 scans,
-and 4.8 stars from 47 reviews that do not exist.* No in-repo UI consumes it today, but it is
+the database at zero, this endpoint publicly serves _1,200 users, 8,400 QRONs, 92,000 scans,
+and 4.8 stars from 47 reviews that do not exist._ No in-repo UI consumes it today, but it is
 an unauthenticated public GET — it is scrapeable, and it is exactly what diligence finds.
 Delete the floors and the invented rating/review/country fields; serve real numbers or serve
 nothing.
@@ -100,7 +100,7 @@ Replace it with the opposite posture, which is also better marketing: publish a 
 transparency page** with real, small, verifiable numbers, real mainnet transaction hashes,
 and an explicit "these are demos, not customers" label on demo content. In a market
 saturated with vendors making unfalsifiable trust claims, being the one company whose
-numbers are independently checkable *is* the differentiated position. Lead with the honesty
+numbers are independently checkable _is_ the differentiated position. Lead with the honesty
 your competitors can't afford.
 
 ### 2.1 What the full sweep found
@@ -138,10 +138,10 @@ for the same defect found the problem is broader — the three were a sample, no
 **Left in place deliberately**
 
 - `client/src/pages/RegulatoryDemo.tsx:26` — mock rows (`REG-2024-001`…) in a compliance
-  *dashboard demo*, illustrating what the product displays rather than asserting
+  _dashboard demo_, illustrating what the product displays rather than asserting
   AuthiChain's own status. Worth an explicit "sample data" label, but restructuring a demo
   page is a product decision, not a credibility fix.
-- `server/agents/security.ts:21` — `'General SOC2'` is a default describing a *customer's*
+- `server/agents/security.ts:21` — `'General SOC2'` is a default describing a _customer's_
   compliance requirements inside a prompt. Not a self-claim.
 
 **One more accuracy gap, noted not fixed:** `docs/CAPABILITIES.md` §1 states
@@ -167,15 +167,15 @@ Shopify was a snowboard store's checkout.
 
 **Keep three, with distinct jobs:**
 
-| Brand | Job | Why |
-|---|---|---|
-| **StrainChain** (strainchain.io) | Revenue beachhead | Regulatory forcing function (METRC/BioTrack, state mandates), small enumerable buyer set, live Stripe links, existing MI pilot infrastructure (`strainchain-pilot-handler`, `strainchain-mi-blast`, `strainchain-day25`), and the incumbents (IBM, Avery Dennison) will not touch cannabis. Least-contested door. |
-| **AuthiChain** (authichain.com) | The protocol / category play | Where the agentic verification API and the open spec live. This is the long game (§4–5). |
-| **GovChain** (govchain.us) | Non-dilutive funding + credibility | CAGE 1PUJ6 / UEI R34XKWRJY9A5 are real, hard-won assets. DHS SVIP and NSF SBIR are the cheapest capital available and confer buyer-facing legitimacy. |
+| Brand                            | Job                                | Why                                                                                                                                                                                                                                                                                                               |
+| -------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **StrainChain** (strainchain.io) | Revenue beachhead                  | Regulatory forcing function (METRC/BioTrack, state mandates), small enumerable buyer set, live Stripe links, existing MI pilot infrastructure (`strainchain-pilot-handler`, `strainchain-mi-blast`, `strainchain-day25`), and the incumbents (IBM, Avery Dennison) will not touch cannabis. Least-contested door. |
+| **AuthiChain** (authichain.com)  | The protocol / category play       | Where the agentic verification API and the open spec live. This is the long game (§4–5).                                                                                                                                                                                                                          |
+| **GovChain** (govchain.us)       | Non-dilutive funding + credibility | CAGE 1PUJ6 / UEI R34XKWRJY9A5 are real, hard-won assets. DHS SVIP and NSF SBIR are the cheapest capital available and confer buyer-facing legitimacy.                                                                                                                                                             |
 
 Park the other ten: redirect the domains to the relevant one of the three, archive the
 workers, delete the vertical copy. Keep the registrations — they cost nothing and are cheap
-options for later expansion. This should take under a week and it will visibly *increase*
+options for later expansion. This should take under a week and it will visibly _increase_
 perceived seriousness.
 
 **QRON is the exception worth debating.** It is a genuine top-of-funnel lead magnet (free
@@ -191,13 +191,13 @@ StrainChain's and AuthiChain's acquisition channel.
 five columns, Verisart/Everledger/Certilogo/IBM have two or three. This is the classic
 superset trap, and it loses.
 
-Buyers in brand protection do not purchase supersets. They purchase *one specific painful
-thing, solved, with references.* A compliance officer facing a DSCSA deadline buys the vendor
+Buyers in brand protection do not purchase supersets. They purchase _one specific painful
+thing, solved, with references._ A compliance officer facing a DSCSA deadline buys the vendor
 with three pharma logos, not the vendor with more checkboxes. Against IBM and Avery
 Dennison, "we do more" reads as "we do many things shallowly, and we're small." The superset
 argument actively signals what you most need to hide: no depth in any one market yet.
 
-There is, however, a category where the incumbents' feature tables are *irrelevant* and your
+There is, however, a category where the incumbents' feature tables are _irrelevant_ and your
 architecture is genuinely ahead:
 
 > **Verification that autonomous agents call and pay for, per transaction.**
@@ -236,7 +236,7 @@ to this company, and it is roughly a week of work, not a quarter.
    `authichain.verify(...)` is a one-line adoption for any agent.
 5. **Surface per-agent spend and revenue** from the existing `fee_flows` table.
 
-Honest caveat to state publicly rather than paper over: fully autonomous *execution* is
+Honest caveat to state publicly rather than paper over: fully autonomous _execution_ is
 real, but a KYC'd legal entity must fund and own the wallet. Autonomous at runtime, one-time
 human setup, guardrails throughout. Saying that plainly is a credibility asset — it is the
 version that survives a security review.
@@ -250,7 +250,7 @@ and it is the part most technical founders skip.
 
 Categories are led by whoever owns the reference definition. Anthropic leads agent tooling
 through MCP, an open spec anyone can implement. Stripe led payments partly through docs and
-libraries that defined how developers *think* about the problem. In provenance specifically,
+libraries that defined how developers _think_ about the problem. In provenance specifically,
 GS1 Digital Link and W3C Verifiable Credentials are the existing gravitational centers — and
 you already implement Ed25519-signed W3C VCs, which means you are one publication away from
 being a named reference implementation rather than a proprietary silo.
@@ -263,7 +263,7 @@ being a named reference implementation rather than a proprietary silo.
 2. **Open-source the verifier.** Not the platform, not the AI council, not the business
    logic — just the client that takes an anchor and confirms it. A verifier anyone can run
    without trusting you is the strongest possible proof for a trust company, and it makes
-   your output the thing other systems check *against*.
+   your output the thing other systems check _against_.
 3. **Run a free public registry with a permanent-URL guarantee.** Verification pages that
    resolve forever, for anyone, free. This is the network-effect asset: every certificate
    in the wild is a link back, and switching cost compounds with every anchored item.
@@ -274,7 +274,7 @@ being a named reference implementation rather than a proprietary silo.
    industry's central problem sets the terms every competitor must then answer.
 
 This is also the highest-leverage use of the `LICENSE.md` proprietary posture: keep the
-platform closed, open the *protocol*. Closed protocols do not become standards, and vendors
+platform closed, open the _protocol_. Closed protocols do not become standards, and vendors
 who are not standards do not lead industries.
 
 **Tension worth naming:** `LICENSE.md` currently prohibits reproduction of "the AuthiChain
@@ -287,7 +287,7 @@ recommendation) or fully closed (viable, but then stop describing yourself as a 
 ## 6. Move 4 — Fix distribution before scaling anything
 
 Zero replies, ever, at 16% bounce. That is not a copy problem or a targeting problem — those
-produce *low* reply rates, not zero. Zero replies with a 16% bounce means messages are not
+produce _low_ reply rates, not zero. Zero replies with a 16% bounce means messages are not
 landing in inboxes.
 
 Known causes visible in the estate (`docs/CAPABILITIES.md` §risks, outreach-pipeline-audit):
@@ -306,7 +306,7 @@ exhausted while crons keep firing.
    that outreach is dead.
 4. **Then, and only then, go manual.** For the first 10 customers, automation is the wrong
    tool. Founder writes 20 personal emails a week to Michigan dispensaries and MSOs, by
-   hand, referencing the specific operator. The automated engine is worth building *after*
+   hand, referencing the specific operator. The automated engine is worth building _after_
    you know from manual conversations what actually converts — right now it is a machine
    for scaling a message that has never once worked.
 
@@ -327,7 +327,7 @@ are live. `docs/strategy/` already contains drafted DHS SVIP and NSF SBIR materi
   the program has repeatedly funded blockchain-credential companies (Transmute, Digital
   Bazaar, MATTR). Highest-fit item in the pipeline.
 
-Both are also *credibility* instruments: a federal award is third-party validation that no
+Both are also _credibility_ instruments: a federal award is third-party validation that no
 amount of self-published superiority documentation can substitute for — and it is the honest
 version of the "NSF SBIR Awardee" badge that had to be pulled from the site in `b31b2c2`.
 
@@ -339,28 +339,28 @@ containing them.
 
 ## 8. The 90-day sequence
 
-| Window | Objective | Done when |
-|---|---|---|
-| **Week 1** | Credibility repair | ~~`social-proof` floors deleted; `AUTHENTICITY_INDEX.md` removed; SOC 2 and other unearned certification claims pulled; simulated "Live Trust Feed" and invented protocol stats removed~~ **done on this branch** — remaining: public transparency page live with real numbers |
-| **Week 1–2** | Focus | 10 brands parked/redirected; StrainChain + AuthiChain + GovChain only; no-op outreach crons disabled |
-| **Week 2–3** | Email infrastructure | SPF/DKIM/DMARC green, dedicated warmed domain, human From:, bounce rate under 3% on a verified list |
-| **Week 2–6** | First revenue | Founder-led: 20 hand-written emails/week to Michigan cannabis operators. **Target: 10 paying customers.** Not 100 — 10 |
-| **Week 3–5** | Agentic wedge | Spend caps → x402 paywall on `/api/verify` → free tier → MCP published to registries |
-| **Week 4** | Non-dilutive capital | NSF SBIR Project Pitch submitted; DHS SVIP submitted |
-| **Week 6–10** | Standards position | Open verification spec published; verifier open-sourced; free public registry with permanent-URL guarantee |
-| **Week 10–13** | Category claim | Adversarial-provenance research published; press and developer-community push behind "the trust layer for the autonomous economy" |
+| Window         | Objective            | Done when                                                                                                                                                                                                                                                                      |
+| -------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Week 1**     | Credibility repair   | ~~`social-proof` floors deleted; `AUTHENTICITY_INDEX.md` removed; SOC 2 and other unearned certification claims pulled; simulated "Live Trust Feed" and invented protocol stats removed~~ **done on this branch** — remaining: public transparency page live with real numbers |
+| **Week 1–2**   | Focus                | 10 brands parked/redirected; StrainChain + AuthiChain + GovChain only; no-op outreach crons disabled                                                                                                                                                                           |
+| **Week 2–3**   | Email infrastructure | SPF/DKIM/DMARC green, dedicated warmed domain, human From:, bounce rate under 3% on a verified list                                                                                                                                                                            |
+| **Week 2–6**   | First revenue        | Founder-led: 20 hand-written emails/week to Michigan cannabis operators. **Target: 10 paying customers.** Not 100 — 10                                                                                                                                                         |
+| **Week 3–5**   | Agentic wedge        | Spend caps → x402 paywall on `/api/verify` → free tier → MCP published to registries                                                                                                                                                                                           |
+| **Week 4**     | Non-dilutive capital | NSF SBIR Project Pitch submitted; DHS SVIP submitted                                                                                                                                                                                                                           |
+| **Week 6–10**  | Standards position   | Open verification spec published; verifier open-sourced; free public registry with permanent-URL guarantee                                                                                                                                                                     |
+| **Week 10–13** | Category claim       | Adversarial-provenance research published; press and developer-community push behind "the trust layer for the autonomous economy"                                                                                                                                              |
 
 ---
 
 ## 8.1 Execution status
 
-| Move | State |
-|---|---|
-| **0 — credibility repair** | **Done.** All instances fixed; see §2.1 for the full sweep. Remaining: the public transparency page. |
-| **1 — cut to the live brands** | **Repo side done.** Only the four live domains remain — authichain.com, qron.space, govchain.us, strainchain.io. `luxechain-io` removed from the CI deploy matrix and the SEO regression sweep (it was the only one of the ten wired into CI); the nine dead `brand:` pointers in `shared/industries.ts` repointed to live domains. The nine unused worker sources are left in place, parked rather than deleted — they build from Cloudflare's Git integration, which is configured dashboard-side and is an operator action. |
-| **2 — agent-payable verification** | **Decided and started.** Price set at **$0.05 flat**, settlement **USDC only** with `$QRON` off the paid path. Step 1 (spend caps + rate limits) is built and tested — atomic quota consumption in SQL, failing closed throughout, enforced on `/api/verify`. Steps 2–5 (x402 paywall, free tier, MCP publication, spend dashboards) remain. |
-| **3 — own the spec** | **Unblocked and published.** `LICENSE.md` is now two-part: the platform stays proprietary, the protocol in `protocol/` is Apache-2.0. Ships with `protocol/SPEC.md` (aligned to W3C VC 2.0, GS1 Digital Link, CAIP-2) and `protocol/verifier.mjs`, a zero-dependency reference verifier that runs offline. Remaining: the free public registry with permanent-URL guarantees. |
-| **4 — fix distribution** | **Repo side done**, DNS side documented — `docs/outreach-deliverability-runbook.md`. Both no-op cron schedules disabled; `reply_to` added and the `noreply@` default removed from `server/outreach/send-guard.ts`, which had made replying literally impossible. SPF/DKIM/DMARC records are specified in the runbook but require DNS access. |
+| Move                               | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **0 — credibility repair**         | **Done.** All instances fixed; see §2.1 for the full sweep. Remaining: the public transparency page.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **1 — cut to the live brands**     | **Repo side done.** Only the four live domains remain — authichain.com, qron.space, govchain.us, strainchain.io. `luxechain-io` removed from the CI deploy matrix and the SEO regression sweep (it was the only one of the ten wired into CI); the nine dead `brand:` pointers in `shared/industries.ts` repointed to live domains. The nine unused worker sources are left in place, parked rather than deleted — they build from Cloudflare's Git integration, which is configured dashboard-side and is an operator action. |
+| **2 — agent-payable verification** | **Decided and started.** Price set at **$0.05 flat**, settlement **USDC only** with `$QRON`off the paid path. Step 1 (spend caps + rate limits) is built and tested — atomic quota consumption in SQL, failing closed throughout, enforced on`/api/verify`. Steps 2–5 (x402 paywall, free tier, MCP publication, spend dashboards) remain.                                                                                                                                                                                     |
+| **3 — own the spec**               | **Unblocked and published.** `LICENSE.md` is now two-part: the platform stays proprietary, the protocol in `protocol/` is Apache-2.0. Ships with `protocol/SPEC.md` (aligned to W3C VC 2.0, GS1 Digital Link, CAIP-2) and `protocol/verifier.mjs`, a zero-dependency reference verifier that runs offline. Remaining: the free public registry with permanent-URL guarantees.                                                                                                                                                  |
+| **4 — fix distribution**           | **Repo side done**, DNS side documented — `docs/outreach-deliverability-runbook.md`. Both no-op cron schedules disabled; `reply_to` added and the `noreply@` default removed from `server/outreach/send-guard.ts`, which had made replying literally impossible. SPF/DKIM/DMARC records are specified in the runbook but require DNS access.                                                                                                                                                                                   |
 
 ## 9. Stop doing
 

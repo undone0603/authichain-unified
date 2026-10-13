@@ -8,10 +8,10 @@ The signer for deploy + mint is the **NFT deployer EOA** (`0xbad4…`), not the 
 
 ## Live probe (2026-09-19)
 
-| Account | Base 8453 ETH | nonce | notes |
-|---|---|---|---|
-| Coinbase Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 (2026-09-17) | 1 | recipient / optional `verifyManufacturer` only; cannot sign with `ethers.Wallet` |
-| NFT deployer EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | **0.002** | **0** | signer for deploy + mint (`WALLET_PRIVATE_KEY`) |
+| Account                                                            | Base 8453 ETH         | nonce | notes                                                                            |
+| ------------------------------------------------------------------ | --------------------- | ----- | -------------------------------------------------------------------------------- |
+| Coinbase Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 (2026-09-17) | 1     | recipient / optional `verifyManufacturer` only; cannot sign with `ethers.Wallet` |
+| NFT deployer EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`      | **0.002**             | **0** | signer for deploy + mint (`WALLET_PRIVATE_KEY`)                                  |
 
 Fund tx: [`0x4c9ce401…b2145`](https://basescan.org/tx/0x4c9ce401ae191aa48a2703dc21a33638fe2e08a0922344638bcc0febeb2b2145).
 
@@ -24,14 +24,14 @@ Reconfirmed 2026-09-19 against `https://mainnet.base.org`:
 
 ## Item 5 status
 
-| Gate | Status |
-|---|---|
-| NFT deployer EOA funded on Base | yes |
-| Actions secrets `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | owner-confirmed present |
-| `ALCHEMY_API_KEY` | owner: likely present (public Base RPC is the fallback) |
-| AuthiChainNFT bytecode on 8453 | **no** |
-| GitHub secret `GOVCHAIN_NFT_CONTRACT` (Base) | **do not set until the live deploy prints an address** |
-| `gov-mint.yml` enabled | **no** — enable only after getCode proof, dry-run default true |
+| Gate                                                          | Status                                                         |
+| ------------------------------------------------------------- | -------------------------------------------------------------- |
+| NFT deployer EOA funded on Base                               | yes                                                            |
+| Actions secrets `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | owner-confirmed present                                        |
+| `ALCHEMY_API_KEY`                                             | owner: likely present (public Base RPC is the fallback)        |
+| AuthiChainNFT bytecode on 8453                                | **no**                                                         |
+| GitHub secret `GOVCHAIN_NFT_CONTRACT` (Base)                  | **do not set until the live deploy prints an address**         |
+| `gov-mint.yml` enabled                                        | **no** — enable only after getCode proof, dry-run default true |
 
 ## Deploy (Actions — preferred)
 
@@ -44,11 +44,11 @@ Hardhat `npx hardhat compile` does **not** emit AuthiChainNFT (sources stay `con
 
 ### Secrets (never paste values into issues, PR comments, or logs)
 
-| Secret | Required for live deploy | Role |
-|---|---|---|
-| `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | yes | NFT deployer EOA `0xbad4…` (not the Coinbase Smart Wallet, not the payTo / tokenomics EOA) |
-| `ALCHEMY_API_KEY` | no | Base RPC; falls back to `https://mainnet.base.org` |
-| `GOVCHAIN_NFT_CONTRACT` | no | if set and `getCode != 0x`, **grant-only** (no new create) |
+| Secret                                        | Required for live deploy | Role                                                                                       |
+| --------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| `WALLET_PRIVATE_KEY` or `POLYGON_PRIVATE_KEY` | yes                      | NFT deployer EOA `0xbad4…` (not the Coinbase Smart Wallet, not the payTo / tokenomics EOA) |
+| `ALCHEMY_API_KEY`                             | no                       | Base RPC; falls back to `https://mainnet.base.org`                                         |
+| `GOVCHAIN_NFT_CONTRACT`                       | no                       | if set and `getCode != 0x`, **grant-only** (no new create)                                 |
 
 ### Dispatch after this workflow is on `main`
 
@@ -105,14 +105,14 @@ gh workflow run gov-mint.yml --ref main -f dry_run=true -f chain=base
 
 Lowest blast first. Cron on `gov-engine` keeps score / proposals / mint / notify dry.
 
-| Order | Workflow | id | Notes |
-|---|---|---|---|
-| 1 | gov-ingest.yml | 304824543 | SAM.gov → Supabase; no chain writes |
-| 2 | gov-score.yml | 304825517 | model credits |
-| 3 | gov-proposals.yml | 304825758 | drafts outbound content |
-| 4 | gov-mint.yml | 304825951 | **this gate** — enable with dry_run default true |
-| 5 | gov-notify.yml | 304826125 | Slack digest |
-| 6 | gov-engine.yml | 261329391 | orchestrator; scheduled mint stays dry |
+| Order | Workflow          | id        | Notes                                            |
+| ----- | ----------------- | --------- | ------------------------------------------------ |
+| 1     | gov-ingest.yml    | 304824543 | SAM.gov → Supabase; no chain writes              |
+| 2     | gov-score.yml     | 304825517 | model credits                                    |
+| 3     | gov-proposals.yml | 304825758 | drafts outbound content                          |
+| 4     | gov-mint.yml      | 304825951 | **this gate** — enable with dry_run default true |
+| 5     | gov-notify.yml    | 304826125 | Slack digest                                     |
+| 6     | gov-engine.yml    | 261329391 | orchestrator; scheduled mint stays dry           |
 
 ```bash
 gh api -X PUT repos/undone0603/authichain-unified/actions/workflows/304824543/enable
@@ -157,11 +157,11 @@ Confirm `eth_getCode` on Polygon 137 (not Base) before enabling mint with `chain
 
 ## Split unchanged
 
-| Asset | Chain |
-|---|---|
-| ACPT + $QRON | Polygon 137 (`0x4da4D2675e52374639C9c954f4f653887A9972BE`) |
-| GovChain pilot NFTs | **Base 8453** (address TBD — fill after live deploy) |
-| SAM / PII / proposals | Supabase |
+| Asset                 | Chain                                                      |
+| --------------------- | ---------------------------------------------------------- |
+| ACPT + $QRON          | Polygon 137 (`0x4da4D2675e52374639C9c954f4f653887A9972BE`) |
+| GovChain pilot NFTs   | **Base 8453** (address TBD — fill after live deploy)       |
+| SAM / PII / proposals | Supabase                                                   |
 
 ## After a real Base address exists
 

@@ -7,9 +7,11 @@ Written: 2026-09-23T14:22:58.318Z
 ## Increment: Keep cold outreach disabled
 
 ### Outcome
+
 Cold outreach stays off. `outreach-trigger` and `dpp-outreach` remain disabled; EU DPP and QRON send paths stay inert. Genesis cron keeps its weekday tick only and does not send mail.
 
 ### Files to touch
+
 - `workers/cron/genesis.ts` (or equivalent Genesis schedule entry)
 - `workers/outreach/outreach-trigger.ts` — confirm disabled / no schedule bind
 - `workers/outreach/dpp-outreach.ts` — confirm disabled / no schedule bind
@@ -17,12 +19,14 @@ Cold outreach stays off. `outreach-trigger` and `dpp-outreach` remain disabled; 
 - `README.md` or `docs/ops-cron.md` — note outreach left off (domain bounce / empty queues)
 
 ### Acceptance checks
+
 - [ ] No cron, queue consumer, or route invokes `outreach-trigger` or `dpp-outreach`
 - [ ] Genesis weekday tick still registers; handler performs non-mail work only
 - [ ] No mail send calls on Genesis, DPP, or QRON paths in this change
 - [ ] Config/docs state cold outreach must not be re-enabled without explicit follow-up
 
 ### Patch sketch
+
 ```diff
 # wrangler.toml / cron bindings
 - # crons = ["...", "outreach-trigger", "dpp-outreach"]

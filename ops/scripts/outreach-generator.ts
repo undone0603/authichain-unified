@@ -1,6 +1,6 @@
-import { generateLivingQR } from '../src/lib/hf-generation';
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { generateLivingQR } from "../src/lib/hf-generation";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 dotenv.config();
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -8,18 +8,50 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
 
 const PRINT_SHOPS = [
-  { name: 'USPS Innovation', domain: 'usps.com', contact: 'Postmaster General - Innovation Office', prompt: 'patriotic american stamp, bald eagle in flight over vintage blue post box, sharp red white and blue oil painting style, high contrast for postal scanners' },
-  { name: 'FASTSIGNS', domain: 'fastsigns.com', contact: 'Innovation Lead', prompt: 'bold industrial signage, high contrast commercial printing, modern commercial aesthetic' },
-  { name: 'Signarama', domain: 'signarama.com', contact: 'Franchise Director', prompt: 'vibrant commercial storefront sign, glowing neon colors, sharp vector art' },
-  { name: 'MOO', domain: 'moo.com', contact: 'Product Manager', prompt: 'premium textured business card, gold foil embossing, luxury paper texture, minimalist design' },
-  { name: '4imprint', domain: '4imprint.com', contact: 'B2B Sales Head', prompt: 'corporate promotional merchandise, high quality product photography, clean studio lighting' },
+  {
+    name: "USPS Innovation",
+    domain: "usps.com",
+    contact: "Postmaster General - Innovation Office",
+    prompt:
+      "patriotic american stamp, bald eagle in flight over vintage blue post box, sharp red white and blue oil painting style, high contrast for postal scanners",
+  },
+  {
+    name: "FASTSIGNS",
+    domain: "fastsigns.com",
+    contact: "Innovation Lead",
+    prompt:
+      "bold industrial signage, high contrast commercial printing, modern commercial aesthetic",
+  },
+  {
+    name: "Signarama",
+    domain: "signarama.com",
+    contact: "Franchise Director",
+    prompt:
+      "vibrant commercial storefront sign, glowing neon colors, sharp vector art",
+  },
+  {
+    name: "MOO",
+    domain: "moo.com",
+    contact: "Product Manager",
+    prompt:
+      "premium textured business card, gold foil embossing, luxury paper texture, minimalist design",
+  },
+  {
+    name: "4imprint",
+    domain: "4imprint.com",
+    contact: "B2B Sales Head",
+    prompt:
+      "corporate promotional merchandise, high quality product photography, clean studio lighting",
+  },
 ];
 
 async function generateOutreach() {
-  console.log('🚀 INITIALIZING CHANNEL A OUTREACH GENERATOR...');
+  console.log("🚀 INITIALIZING CHANNEL A OUTREACH GENERATOR...");
 
   if (!process.env.HUGGINGFACE_TOKEN) {
-    console.error('❌ ERROR: HUGGINGFACE_TOKEN is missing. Cannot generate custom demos.');
+    console.error(
+      "❌ ERROR: HUGGINGFACE_TOKEN is missing. Cannot generate custom demos."
+    );
     return;
   }
 
@@ -30,30 +62,39 @@ async function generateOutreach() {
 
     try {
       // 1. Pre-register White-Label Schema (Simulated if it fails)
-      const apiKeyPrefix = `sk_${shop.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-      
+      const apiKeyPrefix = `sk_${shop.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+
       const { data: wlClient, error: wlError } = await admin
-        .from('white_label_clients')
+        .from("white_label_clients")
         .insert({
           name: shop.name,
           domain: shop.domain,
           api_key_prefix: apiKeyPrefix,
-          billing_plan: 'reseller_pilot',
-          is_active: true
+          billing_plan: "reseller_pilot",
+          is_active: true,
         })
         .select()
         .single();
 
-      if (wlError && wlError.code !== '23505') { // Ignore unique violation if already exists
-          console.warn(`⚠️ Could not register White-Label schema: ${wlError.message}`);
+      if (wlError && wlError.code !== "23505") {
+        // Ignore unique violation if already exists
+        console.warn(
+          `⚠️ Could not register White-Label schema: ${wlError.message}`
+        );
       } else if (wlClient?.id) {
-          console.log(`✅ White-Label schema pre-provisioned with prefix: ${apiKeyPrefix} (client_id: ${wlClient.id})`);
+        console.log(
+          `✅ White-Label schema pre-provisioned with prefix: ${apiKeyPrefix} (client_id: ${wlClient.id})`
+        );
       } else {
-          console.log(`✅ White-Label schema already exists for prefix: ${apiKeyPrefix}`);
+        console.log(
+          `✅ White-Label schema already exists for prefix: ${apiKeyPrefix}`
+        );
       }
 
       // 2. Generate Custom Demo Artifact
-      console.log(`🎨 Generating custom "Magic Try" QRON demo via Hugging Face...`);
+      console.log(
+        `🎨 Generating custom "Magic Try" QRON demo via Hugging Face...`
+      );
       const result = await generateLivingQR({
         url: `https://${shop.domain}`,
         prompt: shop.prompt,
@@ -79,7 +120,7 @@ I actually ran ${shop.domain} through our engine to show you what a ${shop.name}
 
 You charge your clients a premium for these "Smart Labels." You pay us fractions of a cent per scan via our API.
 
-We've already pre-provisioned a white-label sandbox for you (API Prefix: ${apiKeyPrefix}${wlClient?.id ? `, Client Ref: ${wlClient.id}` : ''}).
+We've already pre-provisioned a white-label sandbox for you (API Prefix: ${apiKeyPrefix}${wlClient?.id ? `, Client Ref: ${wlClient.id}` : ""}).
 
 Would you be open to a 10-minute call next week to see the dashboard?
 
@@ -93,13 +134,15 @@ https://qron.space/white-label
 
       // Wait between generations to respect HF rate limits
       await new Promise(resolve => setTimeout(resolve, 3000));
-
     } catch (err: unknown) {
-      console.error(`💥 Failed to process ${shop.name}:`, err instanceof Error ? err.message : String(err));
+      console.error(
+        `💥 Failed to process ${shop.name}:`,
+        err instanceof Error ? err.message : String(err)
+      );
     }
   }
 
-  console.log('\n✨ OUTREACH GENERATION COMPLETE. Ready for dispatch.');
+  console.log("\n✨ OUTREACH GENERATION COMPLETE. Ready for dispatch.");
 }
 
 generateOutreach();

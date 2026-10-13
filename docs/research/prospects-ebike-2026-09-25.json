@@ -1,9 +1,7 @@
 {
   "generatedAt": "2026-09-25T02:17:17.183Z",
   "segment": "ebike",
-  "qids": [
-    "Q924724"
-  ],
+  "qids": ["Q924724"],
   "sparqlUrl": "https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fc%20%3FcLabel%20%3Fsite%20%3FcountryLabel%20WHERE%20%7B%0A%20VALUES%20%3Fseg%20%7B%20wd%3AQ924724%20%7D%0A%20%7B%20%3Fc%20wdt%3AP1056%20%3Fseg%20%7D%20UNION%20%7B%20%3Fc%20wdt%3AP452%20%3Fseg%20%7D%0A%20%3Fc%20wdt%3AP856%20%3Fsite%20.%0A%20OPTIONAL%20%7B%20%3Fc%20wdt%3AP17%20%3Fcountry%20%7D%0A%20FILTER%20NOT%20EXISTS%20%7B%20%3Fc%20wdt%3AP576%20%3Fdissolved%20%7D%0A%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%0A%7D%20LIMIT%20200",
   "mode": "cache",
   "discovered": 32,
@@ -13,9 +11,7 @@
       "qid": "Q834489",
       "name": "Riese & Müller",
       "country": "Germany",
-      "sites": [
-        "https://www.r-m.de/"
-      ],
+      "sites": ["https://www.r-m.de/"],
       "site": "https://www.r-m.de/",
       "domain": "r-m.de",
       "emails": [
@@ -38,10 +34,7 @@
       "qid": "Q317263",
       "name": "Sachs",
       "country": "Germany",
-      "sites": [
-        "http://www.sachs-bikes.cc",
-        "https://www.sfm-bikes.de"
-      ],
+      "sites": ["http://www.sachs-bikes.cc", "https://www.sfm-bikes.de"],
       "site": "https://www.sfm-bikes.de",
       "domain": "sfm-bikes.de",
       "emails": [
@@ -64,9 +57,7 @@
       "qid": "Q141337155",
       "name": "Velca",
       "country": "Spain",
-      "sites": [
-        "https://www.velcamotor.com/"
-      ],
+      "sites": ["https://www.velcamotor.com/"],
       "site": "https://www.velcamotor.com/",
       "domain": "velcamotor.com",
       "emails": [
@@ -110,9 +101,7 @@
       "qid": "Q318730",
       "name": "Canyon Bicycles",
       "country": "Germany",
-      "sites": [
-        "http://www.canyon.com/"
-      ],
+      "sites": ["http://www.canyon.com/"],
       "site": "http://www.canyon.com/",
       "domain": "canyon.com",
       "emails": [],
@@ -128,9 +117,7 @@
       "qid": "Q138024388",
       "name": "CentrumRowerowe.pl",
       "country": "Poland",
-      "sites": [
-        "https://www.centrumrowerowe.pl/"
-      ],
+      "sites": ["https://www.centrumrowerowe.pl/"],
       "site": "https://www.centrumrowerowe.pl/",
       "domain": "centrumrowerowe.pl",
       "emails": [],
@@ -146,9 +133,7 @@
       "qid": "Q135399707",
       "name": "Dadelo",
       "country": "Poland",
-      "sites": [
-        "https://dadelo.pl/"
-      ],
+      "sites": ["https://dadelo.pl/"],
       "site": "https://dadelo.pl/",
       "domain": "dadelo.pl",
       "emails": [],
@@ -164,9 +149,7 @@
       "qid": "Q140391739",
       "name": "ECOX",
       "country": "France",
-      "sites": [
-        "https://www.ecox.fr"
-      ],
+      "sites": ["https://www.ecox.fr"],
       "site": "https://www.ecox.fr",
       "domain": "ecox.fr",
       "emails": [],
@@ -182,9 +165,7 @@
       "qid": "Q139381513",
       "name": "EZWLZ",
       "country": "Netherlands",
-      "sites": [
-        "https://www.ezwlz.com"
-      ],
+      "sites": ["https://www.ezwlz.com"],
       "site": "https://www.ezwlz.com",
       "domain": "ezwlz.com",
       "emails": [],
@@ -200,9 +181,7 @@
       "qid": "Q2704677",
       "name": "Fantic Motor",
       "country": "Italy",
-      "sites": [
-        "https://www.fantic.com/"
-      ],
+      "sites": ["https://www.fantic.com/"],
       "site": "https://www.fantic.com/",
       "domain": "fantic.com",
       "emails": [],
@@ -218,9 +197,7 @@
       "qid": "Q1495046",
       "name": "Gas Gas",
       "country": "Spain",
-      "sites": [
-        "https://www.gasgas.com/"
-      ],
+      "sites": ["https://www.gasgas.com/"],
       "site": "https://www.gasgas.com/",
       "domain": "gasgas.com",
       "emails": [],
@@ -236,9 +213,7 @@
       "qid": "Q86327186",
       "name": "GHOST-Bikes",
       "country": "Germany",
-      "sites": [
-        "https://ghost-bikes.com"
-      ],
+      "sites": ["https://ghost-bikes.com"],
       "site": "https://ghost-bikes.com",
       "domain": "ghost-bikes.com",
       "emails": [],
@@ -254,9 +229,7 @@
       "qid": "Q21180783",
       "name": "Mountfield",
       "country": "Czech Republic",
-      "sites": [
-        "https://www.mountfield.cz/"
-      ],
+      "sites": ["https://www.mountfield.cz/"],
       "site": "https://www.mountfield.cz/",
       "domain": "mountfield.cz",
       "emails": [],
@@ -272,9 +245,7 @@
       "qid": "Q109040551",
       "name": "Origine Cycles",
       "country": "France",
-      "sites": [
-        "https://www.origine-cycles.com"
-      ],
+      "sites": ["https://www.origine-cycles.com"],
       "site": "https://www.origine-cycles.com",
       "domain": "origine-cycles.com",
       "emails": [],
@@ -290,9 +261,7 @@
       "qid": "Q121774683",
       "name": "TENWAYS",
       "country": "Netherlands",
-      "sites": [
-        "https://www.tenways.com/"
-      ],
+      "sites": ["https://www.tenways.com/"],
       "site": "https://www.tenways.com/",
       "domain": "tenways.com",
       "emails": [],
@@ -308,9 +277,7 @@
       "qid": "Q5881409",
       "name": "VanMoof",
       "country": "Netherlands",
-      "sites": [
-        "https://www.vanmoof.com"
-      ],
+      "sites": ["https://www.vanmoof.com"],
       "site": "https://www.vanmoof.com",
       "domain": "vanmoof.com",
       "emails": [],
@@ -326,9 +293,7 @@
       "qid": "Q16841067",
       "name": "Grey Technology",
       "country": "United Kingdom",
-      "sites": [
-        "https://www.gtech.co.uk"
-      ],
+      "sites": ["https://www.gtech.co.uk"],
       "site": "https://www.gtech.co.uk",
       "domain": "gtech.co.uk",
       "emails": [],
@@ -344,9 +309,7 @@
       "qid": "Q141180643",
       "name": "Ride Opium",
       "country": "Switzerland",
-      "sites": [
-        "https://rideopium.com/"
-      ],
+      "sites": ["https://rideopium.com/"],
       "site": "https://rideopium.com/",
       "domain": "rideopium.com",
       "emails": [],

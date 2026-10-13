@@ -13,35 +13,48 @@ interface VerifyWidgetProps {
  * AuthiChain Embeddable Verification Widget
  * This can be dropped into any brand's product page.
  */
-export default function VerifyWidget({ certificateNumber, theme = "dark", compact = false }: VerifyWidgetProps) {
-  const { data: cert, isLoading, error } = trpc.certificates.verify.useQuery({ certificateNumber });
+export default function VerifyWidget({
+  certificateNumber,
+  theme = "dark",
+  compact = false,
+}: VerifyWidgetProps) {
+  const {
+    data: cert,
+    isLoading,
+    error,
+  } = trpc.certificates.verify.useQuery({ certificateNumber });
 
-  if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+  if (isLoading)
+    return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
   if (error || !cert) return null;
 
   const isDark = theme === "dark";
 
   if (compact) {
     return (
-      <a 
+      <a
         href={`https://authichain.com/verify/${certificateNumber}`}
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:scale-105 ${
-          isDark 
-            ? "bg-black/40 border-primary/30 text-primary hover:border-primary" 
+          isDark
+            ? "bg-black/40 border-primary/30 text-primary hover:border-primary"
             : "bg-white border-primary/20 text-primary-foreground bg-primary hover:shadow-md"
         }`}
       >
         <Shield className="h-3.5 w-3.5" />
-        <span className="text-[11px] font-bold tracking-tight">VERIFIED AUTHENTIC</span>
+        <span className="text-[11px] font-bold tracking-tight">
+          VERIFIED AUTHENTIC
+        </span>
         <CheckCircle2 className="h-3 w-3" />
       </a>
     );
   }
 
   return (
-    <Card className={`overflow-hidden border-primary/20 shadow-xl ${isDark ? "bg-black/60" : "bg-white"}`}>
+    <Card
+      className={`overflow-hidden border-primary/20 shadow-xl ${isDark ? "bg-black/60" : "bg-white"}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex gap-3">
@@ -50,10 +63,15 @@ export default function VerifyWidget({ certificateNumber, theme = "dark", compac
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h4 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
+                <h4
+                  className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                >
                   AuthiChain Certified
                 </h4>
-                <Badge variant="outline" className="text-[9px] uppercase tracking-tighter h-4 border-green-500/30 text-green-500 bg-green-500/5">
+                <Badge
+                  variant="outline"
+                  className="text-[9px] uppercase tracking-tighter h-4 border-green-500/30 text-green-500 bg-green-500/5"
+                >
                   Authentic
                 </Badge>
               </div>
@@ -72,7 +90,7 @@ export default function VerifyWidget({ certificateNumber, theme = "dark", compac
               </div>
             </div>
           </div>
-          <a 
+          <a
             href={`https://authichain.com/verify/${certificateNumber}`}
             target="_blank"
             rel="noopener noreferrer"

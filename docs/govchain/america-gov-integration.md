@@ -10,19 +10,19 @@ The September 29, 2026 America.gov executive order calls for participating agenc
 
 ## Current public API inventory
 
-| Method | Path | Owner | Auth | Response | Purpose |
-|---|---|---|---|---|---|
-| GET | /api/govchain/opportunities | govchain-us Worker | Public | JSON | Public SAM opportunity radar; min_fit, limit, q |
-| GET | /api/govchain/stats | govchain-us Worker | Public | JSON | Aggregate opportunity/proposal statistics |
-| GET | /api/govchain/grants | canonical app, proxied by govchain-us | Public read | JSON | Grant discovery; contact_email excluded |
-| GET/POST | /api/x402 | shared x402 surface | Public discovery / payment for POST | JSON | Paid machine-facing rail |
-| GET | /api/x402/health | shared x402 surface | Public | JSON | x402 readiness |
-| GET | /api/x402/catalog | shared x402 surface | Public | JSON | Payment-link catalog |
-| GET/POST | /api/mcp | shared MCP surface | Public discovery / payment for paid calls | JSON | Agent discovery/tool access |
-| GET/POST | /mcp | shared MCP surface | Public discovery / payment for paid calls | JSON | Canonical MCP surface |
-| GET | /.well-known/mcp.json | MCP discovery | Public | JSON | MCP discovery metadata |
-| GET/HEAD | /api/nft-metadata/:id | govchain-us Worker | Public | JSON | ACPT token metadata |
-| GET | /health | govchain-us Worker | Public | JSON | Worker health |
+| Method   | Path                        | Owner                                 | Auth                                      | Response | Purpose                                         |
+| -------- | --------------------------- | ------------------------------------- | ----------------------------------------- | -------- | ----------------------------------------------- |
+| GET      | /api/govchain/opportunities | govchain-us Worker                    | Public                                    | JSON     | Public SAM opportunity radar; min_fit, limit, q |
+| GET      | /api/govchain/stats         | govchain-us Worker                    | Public                                    | JSON     | Aggregate opportunity/proposal statistics       |
+| GET      | /api/govchain/grants        | canonical app, proxied by govchain-us | Public read                               | JSON     | Grant discovery; contact_email excluded         |
+| GET/POST | /api/x402                   | shared x402 surface                   | Public discovery / payment for POST       | JSON     | Paid machine-facing rail                        |
+| GET      | /api/x402/health            | shared x402 surface                   | Public                                    | JSON     | x402 readiness                                  |
+| GET      | /api/x402/catalog           | shared x402 surface                   | Public                                    | JSON     | Payment-link catalog                            |
+| GET/POST | /api/mcp                    | shared MCP surface                    | Public discovery / payment for paid calls | JSON     | Agent discovery/tool access                     |
+| GET/POST | /mcp                        | shared MCP surface                    | Public discovery / payment for paid calls | JSON     | Canonical MCP surface                           |
+| GET      | /.well-known/mcp.json       | MCP discovery                         | Public                                    | JSON     | MCP discovery metadata                          |
+| GET/HEAD | /api/nft-metadata/:id       | govchain-us Worker                    | Public                                    | JSON     | ACPT token metadata                             |
+| GET      | /health                     | govchain-us Worker                    | Public                                    | JSON     | Worker health                                   |
 
 The grants route is explicitly exposed through the Cloudflare service binding to the canonical app handler; business logic is not duplicated in the brand Worker.
 
@@ -53,6 +53,7 @@ The next security PR must require the existing issuer authorization mechanism (G
 Current verification understands a signed `status: revoked` value, but there is no durable public revocation registry that can invalidate a previously-issued JWS after issuance.
 
 The next lifecycle extension should add:
+
 - `GET /api/v1/attestations/:id/status`
 - issuer-authenticated revocation
 - append-only revocation event

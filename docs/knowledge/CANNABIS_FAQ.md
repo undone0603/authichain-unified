@@ -23,6 +23,7 @@ StrainChain is AuthiChain's cannabis-specific vertical (strainchain.io). It prov
 ## Rarity Score
 
 StrainChain calculates a "Rarity Score" for each strain based on:
+
 - Genetic uniqueness (fewer registered crossbreeds = rarer)
 - Terpene profile complexity
 - THC/CBD ratio distinctiveness
@@ -53,11 +54,11 @@ StrainChain calculates a "Rarity Score" for each strain based on:
 
 ## Pricing
 
-| Tier | Monthly | Verifications | Features |
-|------|---------|---------------|----------|
-| Starter | $29 | 500/mo | Basic strain verification |
-| Professional | $99 | 5,000/mo | + Lab cert anchoring, METRC sync |
-| Enterprise | $299 | Unlimited | + API access, white-label, priority support |
+| Tier         | Monthly | Verifications | Features                                    |
+| ------------ | ------- | ------------- | ------------------------------------------- |
+| Starter      | $29     | 500/mo        | Basic strain verification                   |
+| Professional | $99     | 5,000/mo      | + Lab cert anchoring, METRC sync            |
+| Enterprise   | $299    | Unlimited     | + API access, white-label, priority support |
 
 ## Frequently Asked Questions
 

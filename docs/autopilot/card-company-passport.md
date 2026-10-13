@@ -7,14 +7,17 @@ Written: 2026-09-23T15:03:05.437Z
 ## Increment: Surface $49 cultivar Stripe checkout
 
 ### Outcome
+
 Visitors on an existing cultivar detail route see the live $49 Stripe payment link first (with the $29 link secondary). Checkout uses the provided Payment Link only. No email, outreach queues, revenue counters, or Metrc changes.
 
 ### Files to touch
+
 - `apps/web/app/cultivars/[slug]/page.tsx` (or equivalent cultivar detail page)
 - `apps/web/components/cultivar/CheckoutCtas.tsx` (new or thin wrapper)
 - `apps/web/lib/commerce/stripeLinks.ts` (constants only)
 
 ### Acceptance checks
+
 - [ ] Cultivar page renders `$49` CTA above `$29`, both pointing at existing Stripe Payment Links
 - [ ] `$49` href is exactly `https://buy.stripe.com/cNi9ATdrH4t811U4ba1ND3y`
 - [ ] No outbound email, queue workers, or “pending charge = revenue” logic added
@@ -22,6 +25,7 @@ Visitors on an existing cultivar detail route see the live $49 Stripe payment li
 - [ ] Build/typecheck passes for touched packages only
 
 ### Minimal patch sketch
+
 ```ts
 // apps/web/lib/commerce/stripeLinks.ts
 export const STRIPE_LINKS = {

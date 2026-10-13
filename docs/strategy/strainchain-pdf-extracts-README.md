@@ -6,10 +6,10 @@
 
 ## Files in this repo
 
-| Archive | Source PDF |
-|---------|------------|
-| [`strainchain-business-proposal-2025-05.extract.md`](./strainchain-business-proposal-2025-05.extract.md) | StrainChain Partnership / Business Proposal (May 28, 2025) |
-| [`strainchain-technical-whitepaper-2025-05.extract.md`](./strainchain-technical-whitepaper-2025-05.extract.md) | Technical Whitepaper v1.0 (May 2025) |
+| Archive                                                                                                        | Source PDF                                                 |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`strainchain-business-proposal-2025-05.extract.md`](./strainchain-business-proposal-2025-05.extract.md)       | StrainChain Partnership / Business Proposal (May 28, 2025) |
+| [`strainchain-technical-whitepaper-2025-05.extract.md`](./strainchain-technical-whitepaper-2025-05.extract.md) | Technical Whitepaper v1.0 (May 2025)                       |
 
 ## Historical vs live product
 

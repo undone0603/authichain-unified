@@ -7,6 +7,7 @@ AuthiChain uses usage-based pricing with a monthly base fee. Each API call is me
 ## Tiers
 
 ### Free Tier
+
 - **Cost**: $0/month
 - **Limits**: 10 verifications/day
 - **Features**: Basic product verification only
@@ -14,6 +15,7 @@ AuthiChain uses usage-based pricing with a monthly base fee. Each API call is me
 - **Use Case**: Testing, evaluation, hobby projects
 
 ### Starter — $49/month
+
 - **Verify**: $0.02/call
 - **QR Generate**: $0.05/call
 - **AI Analysis**: $0.10/call
@@ -22,6 +24,7 @@ AuthiChain uses usage-based pricing with a monthly base fee. Each API call is me
 - **Use Case**: Small businesses, startups, single-brand operations
 
 ### Professional — $199/month
+
 - **Verify**: $0.008/call
 - **QR Generate**: $0.03/call
 - **AI Analysis**: $0.05/call
@@ -30,6 +33,7 @@ AuthiChain uses usage-based pricing with a monthly base fee. Each API call is me
 - **Use Case**: Growing brands, multi-product lines, agencies
 
 ### Enterprise — $799/month
+
 - **Verify**: $0.003/call
 - **QR Generate**: $0.01/call
 - **AI Analysis**: $0.02/call
@@ -39,19 +43,20 @@ AuthiChain uses usage-based pricing with a monthly base fee. Each API call is me
 
 ## What Counts as a Call?
 
-| Endpoint | Description | Metered As |
-|----------|-------------|-----------|
-| `/verify` | Product authenticity check | verify |
-| `/qr/generate` | QRON art generation | qr_generate |
-| `/trust-score` | Trust score computation | verify |
-| `/cannabis/verify` | Strain verification | verify |
-| `/certificates/verify` | Certificate lookup | verify |
-| `/products/register` | New product registration | verify |
-| `/analytics` | Usage analytics | Not metered |
+| Endpoint               | Description                | Metered As  |
+| ---------------------- | -------------------------- | ----------- |
+| `/verify`              | Product authenticity check | verify      |
+| `/qr/generate`         | QRON art generation        | qr_generate |
+| `/trust-score`         | Trust score computation    | verify      |
+| `/cannabis/verify`     | Strain verification        | verify      |
+| `/certificates/verify` | Certificate lookup         | verify      |
+| `/products/register`   | New product registration   | verify      |
+| `/analytics`           | Usage analytics            | Not metered |
 
 ## Volume Discounts
 
 For usage exceeding 100,000 calls/month, contact sales@authichain.com for custom pricing. Typical discounts:
+
 - 100K-500K calls: 20% off per-call rates
 - 500K-1M calls: 35% off per-call rates
 - 1M+ calls: Custom contract
@@ -67,6 +72,7 @@ For usage exceeding 100,000 calls/month, contact sales@authichain.com for custom
 ## White-Label Pricing
 
 Enterprise customers can resell AuthiChain verification under their own brand:
+
 - Custom domain (e.g., verify.yourbrand.com)
 - Branded QRON codes with your logo
 - Custom API key prefix

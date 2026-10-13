@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const postgres = require('postgres');
-require('dotenv').config();
+const postgres = require("postgres");
+require("dotenv").config();
 
-const sql = postgres(process.env.DATABASE_URL || '');
+const sql = postgres(process.env.DATABASE_URL || "");
 
 async function seed() {
-  console.log('Seeding Comprehensive Mock Data for Full Potential Showcase...');
+  console.log("Seeding Comprehensive Mock Data for Full Potential Showcase...");
   try {
-    const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
+    const DEMO_USER_ID = "00000000-0000-0000-0000-000000000000";
 
     // 2. Add detailed Certifications and Products for the Admin/DPP demo
-    console.log('Seeding products and certifications...');
-    
+    console.log("Seeding products and certifications...");
+
     // Create a high-end product
     const [product] = await sql`
       INSERT INTO products (name, manufacturer, description, model_number)
@@ -49,40 +49,76 @@ async function seed() {
       )
       VALUES (
         ${certResult.id},
-        ${JSON.stringify({ 'Titanium': '45%', 'Sapphire Crystal': '20%', 'Recycled Gold': '15%', 'Silicon': '20%' })},
+        ${JSON.stringify({ Titanium: "45%", "Sapphire Crystal": "20%", "Recycled Gold": "15%", Silicon: "20%" })},
         12.4,
         8,
         ${JSON.stringify([
-          { event: 'Material Sourcing', location: 'Swiss Alps', date: '2026-01-10' },
-          { event: 'Precision Machining', location: 'Theater 3 Labs', date: '2026-02-15' },
-          { event: 'Final Assembly', location: 'Polygon Mainnet', date: '2026-03-20' },
-          { event: 'Quality Seal Applied', location: 'AuthiChain Core', date: '2026-04-05' }
+          {
+            event: "Material Sourcing",
+            location: "Swiss Alps",
+            date: "2026-01-10",
+          },
+          {
+            event: "Precision Machining",
+            location: "Theater 3 Labs",
+            date: "2026-02-15",
+          },
+          {
+            event: "Final Assembly",
+            location: "Polygon Mainnet",
+            date: "2026-03-20",
+          },
+          {
+            event: "Quality Seal Applied",
+            location: "AuthiChain Core",
+            date: "2026-04-05",
+          },
         ])}
       )
     `;
 
     // 4. Add high-value Leads for the CRM demo
-    console.log('Seeding high-potential leads...');
+    console.log("Seeding high-potential leads...");
     try {
-        const leads = [
-          { email: 'mark.levinson@bmw.com', status: 'hot', product_interest: 'Industrial QR', source: 'Direct Scan' },
-          { email: 'sarah.chen@trulieve.com', status: 'customer', product_interest: 'StrainChain Protocol', source: 'Web Referral' },
-          { email: 'director@gilmorecarmuseum.org', status: 'new', product_interest: 'Artifact NFTs', source: 'Event Scan' },
-          { email: 'dev-ops@tesla.com', status: 'qualified', product_interest: 'API Access', source: 'Documentation' }
-        ];
+      const leads = [
+        {
+          email: "mark.levinson@bmw.com",
+          status: "hot",
+          product_interest: "Industrial QR",
+          source: "Direct Scan",
+        },
+        {
+          email: "sarah.chen@trulieve.com",
+          status: "customer",
+          product_interest: "StrainChain Protocol",
+          source: "Web Referral",
+        },
+        {
+          email: "director@gilmorecarmuseum.org",
+          status: "new",
+          product_interest: "Artifact NFTs",
+          source: "Event Scan",
+        },
+        {
+          email: "dev-ops@tesla.com",
+          status: "qualified",
+          product_interest: "API Access",
+          source: "Documentation",
+        },
+      ];
 
-        for (const lead of leads) {
-          await sql`
+      for (const lead of leads) {
+        await sql`
             INSERT INTO leads (email, status, product_interest, source, created_at)
             VALUES (${lead.email}, ${lead.status}, ${lead.product_interest}, ${lead.source}, ${new Date().toISOString()})
           `;
-        }
+      }
     } catch (e) {
-        console.warn('Leads seeding skipped:', e.message);
+      console.warn("Leads seeding skipped:", e.message);
     }
 
     // 5. Add some mock Folders and Tags for organization demo
-    console.log('Seeding organization metadata...');
+    console.log("Seeding organization metadata...");
     const [folder] = await sql`
       INSERT INTO folders (user_id, name, created_at)
       VALUES (${DEMO_USER_ID}, 'Industrial 2026', ${new Date().toISOString()})
@@ -111,9 +147,9 @@ async function seed() {
       `;
     }
 
-    console.log('✅ Full Potential Mock Data seeded successfully.');
+    console.log("✅ Full Potential Mock Data seeded successfully.");
   } catch (err) {
-    console.error('❌ Seeding failed:', err.message);
+    console.error("❌ Seeding failed:", err.message);
   } finally {
     process.exit();
   }

@@ -65,6 +65,7 @@ Every transition has measurable gates. The state machine persists to
 ### Gate Examples
 
 **PROTOCOL_READY**
+
 - attestation schema passes conformance tests
 - signature fixture validates
 - negative fixtures fail correctly
@@ -72,6 +73,7 @@ Every transition has measurable gates. The state machine persists to
 - key/status semantics documented
 
 **PRODUCTION_READY**
+
 - deployment healthy
 - DB migrations clean
 - secrets present
@@ -80,12 +82,14 @@ Every transition has measurable gates. The state machine persists to
 - verification API monitored
 
 **BETA_READY**
+
 - registration → attestation → QR → verification works end-to-end
 - evidence page works
 - customer onboarding exists
 - support/runbook exists
 
 **FIRST_REVENUE**
+
 - at least one real business is paying
 - payment event recorded
 - product usage recorded
@@ -94,6 +98,7 @@ Every transition has measurable gates. The state machine persists to
 ## The Six Specialist Agents
 
 ### 1. ProtocolGuardian (`agentz/core/specialists.py`)
+
 Owns the trust layer. Has **veto power**.
 
 Checks: schema validation, conformance testing, signature verification, key/JWKS
@@ -102,6 +107,7 @@ health, revocation/status checks, negative fixtures, protocol documentation drif
 **Never autonomously writes protocol semantics without escalation.**
 
 ### 2. LaunchBuilder
+
 Owns engineering execution. Maps onto the existing runner/registry.
 
 Can auto-fix: lint, formatting, broken tests with obvious fixes, configuration drift,
@@ -111,25 +117,27 @@ Requires approval for: production secrets, DB destruction, protocol changes, bil
 changes, security-policy changes, irreversible infrastructure changes.
 
 ### 3. GrowthScout
+
 The acquisition engine. Searches for manufacturers, distributors, product
 authentication problems, counterfeit/fraud pain, product-passport initiatives,
 supply-chain digitization, partnership opportunities.
 
 Scores prospects on a 100-point rubric:
 
-| Factor | Max |
-|--------|-----|
-| ICP fit | 25 |
-| Pain intensity | 20 |
-| AuthiChain fit | 20 |
-| Buying authority | 15 |
-| Deployment ease | 10 |
-| Revenue potential | 10 |
-| **TOTAL** | **100** |
+| Factor            | Max     |
+| ----------------- | ------- |
+| ICP fit           | 25      |
+| Pain intensity    | 20      |
+| AuthiChain fit    | 20      |
+| Buying authority  | 15      |
+| Deployment ease   | 10      |
+| Revenue potential | 10      |
+| **TOTAL**         | **100** |
 
 Only prospects above 60 enter outreach.
 
 ### 4. PilotCloser
+
 Owns the conversion funnel: Prospect → Qualified → Discovery → Demo → Pilot
 proposal → Pilot active → Paid → Expansion.
 
@@ -140,12 +148,14 @@ Outbound communication is **approval-gated** until messaging, compliance, and
 deliverability are proven.
 
 ### 5. RevenueOperator
+
 Owns economics. Tracks CAC, conversion rates, revenue/product, revenue/scan,
 revenue/customer, gross margin, API/AI/infra costs.
 
 Continuously answers: **Where should the next dollar of effort go?**
 
 ### 6. TrustHealer
+
 Strongest operational privileges after ProtocolGuardian. Watches for failed
 verification, abnormal scan patterns, copied QR behavior, suspicious geographic
 patterns, API errors, latency, authentication failures, deployment failures,
@@ -168,6 +178,7 @@ Launch Score =
 ```
 
 Example:
+
 ```
 Protocol       ██████████ 98%
 Production     █████████░ 92%
@@ -214,6 +225,7 @@ max_runs_per_day: 20
 ```
 
 The firewall enforces:
+
 - **Approval gating**: HIGH/CRITICAL risk workflows always require CONFIRM mode,
   even in AUTO
 - **Budget enforcement**: cumulative spend per workflow per day cannot exceed
@@ -271,13 +283,13 @@ OPTIMIZATION:
 
 ## Daily Autonomous Cadence
 
-| Frequency | Activity |
-|-----------|----------|
-| Every few minutes | Health + verification monitoring |
-| Every hour | Pipeline, product telemetry, incidents, deployment state |
-| Every 6 hours | Prospect discovery and scoring |
-| Daily | Launch score + bottleneck analysis + safe execution |
-| Weekly | Economic review: what generated revenue, what should be stopped/doubled |
+| Frequency         | Activity                                                                |
+| ----------------- | ----------------------------------------------------------------------- |
+| Every few minutes | Health + verification monitoring                                        |
+| Every hour        | Pipeline, product telemetry, incidents, deployment state                |
+| Every 6 hours     | Prospect discovery and scoring                                          |
+| Daily             | Launch score + bottleneck analysis + safe execution                     |
+| Weekly            | Economic review: what generated revenue, what should be stopped/doubled |
 
 ## Usage
 

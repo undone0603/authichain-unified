@@ -15,6 +15,7 @@ Built specifically for cannabis operators who are tired of compliance paperwork:
 **StrainChain** integrates directly with METRC and BioTrack to record every stage — cultivation → processing → dispensary — as on-chain events. Lab results get anchored to Bitcoin Ordinals for permanent provenance.
 
 What this means practically:
+
 - State auditors can verify any product's chain of custody in 10 seconds via QR scan
 - Dispensaries can show customers verified lab results at point of sale
 - Multi-state operators get unified compliance across jurisdictions

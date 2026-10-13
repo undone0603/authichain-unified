@@ -7,7 +7,9 @@ import { createThirdwebClient, defineChain } from "thirdweb";
 const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
 
 if (!clientId) {
-  console.warn("[Thirdweb] VITE_THIRDWEB_CLIENT_ID not set. Blockchain features will be limited.");
+  console.warn(
+    "[Thirdweb] VITE_THIRDWEB_CLIENT_ID not set. Blockchain features will be limited."
+  );
 }
 
 export const thirdwebClient = clientId
@@ -25,7 +27,9 @@ export const chains = {
 } as const;
 
 // Default chain (Amoy testnet for dev, Polygon for production)
-export const defaultChain = import.meta.env.PROD ? chains.polygon : chains.polygonAmoy;
+export const defaultChain = import.meta.env.PROD
+  ? chains.polygon
+  : chains.polygonAmoy;
 
 export function getChainName(chainId: number): string {
   const names: Record<number, string> = {
