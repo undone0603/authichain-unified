@@ -3,7 +3,9 @@ import { DPP_OFFER_KEY } from "./plans";
 import { DPP_PRICE_ID } from "./dpp-loop";
 
 vi.mock("./email", () => ({
-  sendEmail: vi.fn().mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
+  sendEmail: vi
+    .fn()
+    .mockResolvedValue({ ok: true, provider: "resend", status: 200 }),
 }));
 vi.mock("./billing-emails", () => ({
   renderBillingEmail: vi.fn().mockReturnValue({
@@ -15,7 +17,8 @@ vi.mock("./billing-emails", () => ({
 }));
 
 const { sendEmail } = await import("./email");
-const { fulfillDppPaidSession, redactForLog } = await import("./dpp-fulfill-checkout");
+const { fulfillDppPaidSession, redactForLog } =
+  await import("./dpp-fulfill-checkout");
 const { stageOf } = await import("./dpp-loop");
 
 function fakeSupabase(opts?: {
@@ -30,7 +33,49 @@ function fakeSupabase(opts?: {
   const existingProfile = opts?.existingProfile ?? profileId != null;
   const profile: { id: string; last_grant_session_id?: string } | null =
     existingProfile && profileId ? { id: profileId } : null;
+  const continuity = new Map<string, Record<string, unknown>[]>();
   const from = (table: string) => {
+    if (
+      table === "founder_exit_actions" ||
+      table === "founder_exit_side_effects"
+    ) {
+      const bucket = continuity.get(table) ?? [];
+      continuity.set(table, bucket);
+      const filters: Array<[string, unknown]> = [];
+      const builder = {
+        select: () => builder,
+        eq: (col: string, val: unknown) => {
+          filters.push([col, val]);
+          return builder;
+        },
+        maybeSingle: async () => {
+          const found =
+            bucket.find(row =>
+              filters.every(([col, val]) => row[col] === val)
+            ) ?? null;
+          return { data: found, error: null };
+        },
+        insert: async (row: Record<string, unknown>) => {
+          if (
+            bucket.some(
+              existing => existing.idempotency_key === row.idempotency_key
+            )
+          ) {
+            return { error: { code: "23505" } };
+          }
+          bucket.push({ ...row });
+          return { error: null };
+        },
+        update: (patch: Record<string, unknown>) => ({
+          eq: async (col: string, val: unknown) => {
+            const found = bucket.find(row => row[col] === val);
+            if (found) Object.assign(found, patch);
+            return { error: null };
+          },
+        }),
+      };
+      return builder;
+    }
     const filters: Array<[string, unknown]> = [];
     const builder: Record<string, unknown> = {
       insert: (row: Record<string, unknown>) => {
@@ -83,7 +128,7 @@ function fakeSupabase(opts?: {
     };
     return builder;
   };
-  return { supabase: { from }, rows, profileUpdates };
+  return { supabase: { from }, rows, profileUpdates, continuity };
 }
 
 const paidSession = {
@@ -114,19 +159,30 @@ describe("fulfillDppPaidSession", () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
-    const logged = errSpy.mock.calls.map(c => c.map(String).join(" ")).join("\n");
+    const logged = errSpy.mock.calls
+      .map(c => c.map(String).join(" "))
+      .join("\n");
     errSpy.mockRestore();
 
-    expect(result).toEqual({ handled: true, profileId: "prof_1", activationEmail: "failed" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_1",
+      activationEmail: "failed",
+    });
     expect(logged).toContain("[dpp-fulfill] activation email failed");
     expect(logged).toContain("session=cs_live_smoke_check");
     expect(logged).toContain("status=422");
     expect(logged).not.toContain("buyer@example.com");
     expect(logged).not.toMatch(/[^\s@]+@[^\s@]+\.[a-z]{2,}/i);
 
-    const failed = rows.filter(r => r.event_type === "dpp_activation_email:failed");
+    const failed = rows.filter(
+      r => r.event_type === "dpp_activation_email:failed"
+    );
     expect(failed).toHaveLength(1);
-    expect(failed[0]).toMatchObject({ prospect_id: "smoke_check_1", stage: "complete_checkout" });
+    expect(failed[0]).toMatchObject({
+      prospect_id: "smoke_check_1",
+      stage: "complete_checkout",
+    });
     expect(failed[0].metadata).toMatchObject({
       activation_email_status: "failed",
       stripe_session_id: "cs_live_smoke_check",
@@ -140,28 +196,38 @@ describe("fulfillDppPaidSession", () => {
   });
 
   it("records a failed status when the send throws instead of swallowing it", async () => {
-    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("connect ETIMEDOUT for buyer@example.com"));
+    vi.mocked(sendEmail).mockRejectedValueOnce(
+      new Error("connect ETIMEDOUT for buyer@example.com")
+    );
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
-    const logged = errSpy.mock.calls.map(c => c.map(String).join(" ")).join("\n");
+    const logged = errSpy.mock.calls
+      .map(c => c.map(String).join(" "))
+      .join("\n");
     errSpy.mockRestore();
 
     expect(result.activationEmail).toBe("failed");
     expect(logged).toContain("ETIMEDOUT");
     expect(logged).not.toContain("buyer@example.com");
-    expect(rows.filter(r => r.event_type === "dpp_activation_email:failed")).toHaveLength(1);
+    expect(
+      rows.filter(r => r.event_type === "dpp_activation_email:failed")
+    ).toHaveLength(1);
   });
 
   it("writes no failure row when the send succeeds", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
     expect(result.activationEmail).toBe("sent");
-    expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(false);
+    expect(rows.some(r => r.event_type === "dpp_activation_email:failed")).toBe(
+      false
+    );
   });
 
   it("redactForLog strips addresses and caps length", () => {
-    expect(redactForLog("bad to: a.b+c@sub.example.co.uk, retry")).toBe("bad to: [redacted], retry");
+    expect(redactForLog("bad to: a.b+c@sub.example.co.uk, retry")).toBe(
+      "bad to: [redacted], retry"
+    );
     expect(redactForLog(undefined)).toBe("unknown");
     expect(redactForLog("x".repeat(500))).toHaveLength(200);
   });
@@ -172,7 +238,11 @@ describe("fulfillDppPaidSession", () => {
       id: "cs_other",
       metadata: { plan: "starter" },
     });
-    expect(result).toEqual({ handled: false, profileId: null, activationEmail: "skipped" });
+    expect(result).toEqual({
+      handled: false,
+      profileId: null,
+      activationEmail: "skipped",
+    });
     expect(rows).toHaveLength(0);
   });
 
@@ -232,7 +302,11 @@ describe("fulfillDppPaidSession", () => {
   it("writes payment_succeeded before provision on a $0 promo session", async () => {
     const { supabase, rows } = fakeSupabase();
     const result = await fulfillDppPaidSession(supabase, paidSession);
-    expect(result).toEqual({ handled: true, profileId: "prof_1", activationEmail: "sent" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_1",
+      activationEmail: "sent",
+    });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
       prospect_id: "smoke_check_1",
@@ -252,7 +326,11 @@ describe("fulfillDppPaidSession", () => {
       customer_email: null,
       metadata: { ...paidSession.metadata, user_id: undefined },
     });
-    expect(result).toEqual({ handled: true, profileId: null, activationEmail: "skipped" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: null,
+      activationEmail: "skipped",
+    });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
@@ -321,7 +399,11 @@ describe("fulfillDppPaidSession", () => {
         promo: "DPP-SMOKE-E2E",
       },
     });
-    expect(result).toEqual({ handled: true, profileId: "prof_guest", activationEmail: "skipped" });
+    expect(result).toEqual({
+      handled: true,
+      profileId: "prof_guest",
+      activationEmail: "skipped",
+    });
     expect(rows.map(r => r.event_type)).toEqual([
       "dpp_loop:payment_succeeded",
       "dpp_loop:provisioned",
@@ -335,7 +417,7 @@ describe("fulfillDppPaidSession", () => {
   });
 
   it("does not double-count payment or provision on webhook replay", async () => {
-    const { supabase, rows, profileUpdates } = fakeSupabase();
+    const { supabase, rows, profileUpdates, continuity } = fakeSupabase();
     await fulfillDppPaidSession(supabase, paidSession);
     await fulfillDppPaidSession(supabase, paidSession);
     expect(
@@ -353,5 +435,9 @@ describe("fulfillDppPaidSession", () => {
       last_grant_session_id: paidSession.id,
     });
     expect(sendEmail).toHaveBeenCalledOnce();
+    const actions = continuity.get("founder_exit_actions") ?? [];
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.state).toBe("succeeded");
+    expect(continuity.get("founder_exit_side_effects")).toHaveLength(1);
   });
 });

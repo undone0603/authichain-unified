@@ -43,7 +43,7 @@ A missing secret blocks the action with `error_class` `secret_unavailable` and l
 
 `MemoryActionLedger` and `FileContinuityLog` are covered by `src/lib/founder-exit/ledger.test.ts`. The file store writes a JSON snapshot with `rename`. A commit hook that throws rolls the in-memory row back to the previous state. A `database_timeout` before the row is stored leaves the previous row in place.
 
-`PostgresContinuityLog` is the database store. It is Node-only and is not imported by the payment webhook. Action flushes are one transaction. The side-effect insert is a separate committed transaction, so a crash after that insert and before success is recoverable. On a flush failure the memory copy reloads from the database.
+`PostgresContinuityLog` is the Node store used by the replica drill. The apex webhook has no `DATABASE_URL`, so `fulfillDppPaidSession` writes through `src/lib/founder-exit/supabase-log.ts` and the Supabase service client. It inserts the `running` row before `provisionPurchase`, inserts the grant idempotency key after a non-failed grant, then updates that same action to `succeeded`. A failed grant throws before the success row. This does not recognize revenue.
 
 Migration `supabase/migrations/20261013232408_founder_exit_action_ledger.sql` creates `public.founder_exit_actions` and `public.founder_exit_side_effects`. It is applied on production Supabase `nhdnkzhtadfkkluiulhs` and recorded as version `20261013232408`. The tables were empty after that apply. This is not a D1 migration.
 

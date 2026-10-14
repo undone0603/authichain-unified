@@ -38,4 +38,4 @@ The script refuses any host that is not loopback. It applies only `supabase/migr
 
 ## What a pass does not mean
 
-Every criterion in the isolated JSON can be `pass` while the company is still not founder-independent. The replica drill proves dump, restore, and one recovered side effect on an empty local schema. It does not prove a live $299 grant, a restored production customer backup, or a deployed outbound send. The production ledger tables are empty and no live worker writes them yet. Those limits remain in `docs/FOUNDER_INDEPENDENCE.md`.
+Every criterion in the isolated JSON can be `pass` while the company is still not founder-independent. The replica drill proves dump, restore, and one recovered side effect on an empty local schema. It does not prove a live $299 grant, a restored production customer backup, or a deployed outbound send. The production ledger tables are still empty. Source on this branch writes them from `fulfillDppPaidSession`. Deployed workers do not until this branch ships. Those limits remain in `docs/FOUNDER_INDEPENDENCE.md`.
