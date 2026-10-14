@@ -35,6 +35,7 @@ export type QronPresentation = {
   destination_url: string;
   image_url: string;
   object_id: string;
+  resolve_url: string;
   mode?: string;
   prompt?: string;
   verify: {
@@ -211,6 +212,9 @@ export function buildQronPresentation(input: {
     destination_url,
     image_url,
     object_id: qronObjectIdForDestination(destination_url),
+    resolve_url: `https://authichain.com/qron/r/${encodeURIComponent(
+      qronObjectIdForDestination(destination_url)
+    )}`,
     ...(input.mode ? { mode: input.mode } : {}),
     ...(input.prompt ? { prompt: input.prompt } : {}),
     verify: {

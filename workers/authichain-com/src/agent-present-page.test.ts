@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  renderAgentDraft,
   renderAgentPresentation,
   tryHandleAgentPresentation,
 } from "./agent-present-page";
@@ -54,6 +55,52 @@ describe("GET /agent/agentz", () => {
     expect(body.valid).toBe(true);
     expect(body.capabilities).toEqual(["PRESENT_ONE_OFFER"]);
     expect(body.intent).toBe("present_one_draft");
+  });
+});
+
+describe("GET /agent/agentz/draft", () => {
+  it("lists one unnamed model with nothing supplied and nothing checked", async () => {
+    const rendered = await renderAgentDraft({ now: NOW });
+    expect(rendered.valid).toBe(true);
+    expect(rendered.html).toContain("One battery model");
+    expect(rendered.html).toContain("Buyer-supplied: 0");
+    expect(rendered.html).toContain("Checked: 0");
+    expect(rendered.html).toContain("Missing: 13");
+    expect(rendered.html).toContain("not a battery passport");
+    expect(rendered.html).toContain("not an EU registry filing");
+    expect(rendered.html).toContain("Stated energy (Wh)");
+    expect(rendered.html).not.toMatch(/\d+\s*Wh/);
+    expect(rendered.body.model).toBeNull();
+  });
+
+  it("does not show the draft when the signature fails", async () => {
+    const broken = await renderAgentDraft({
+      now: NOW,
+      message: {
+        ...(await messageFromIntact()),
+        signature: "not-a-signature",
+      },
+    });
+    expect(broken.valid).toBe(false);
+    expect(broken.html).toContain("Nothing in it is authorized");
+    expect(broken.html).not.toContain("Stated energy (Wh)");
+  });
+
+  it("serves the draft from the signature page", async () => {
+    const proof = await tryHandleAgentPresentation(
+      new Request("https://authichain.com/agent/agentz")
+    );
+    expect(await proof!.text()).toContain('href="/agent/agentz/draft"');
+
+    const draft = await tryHandleAgentPresentation(
+      new Request("https://authichain.com/agent/agentz/draft?format=json")
+    );
+    expect(draft!.status).toBe(200);
+    const body = await draft!.json();
+    expect(body.buyer_supplied).toBe(0);
+    expect(body.checked).toBe(0);
+    expect(body.missing).toContain("model");
+    expect(body.missing).toContain("conformity");
   });
 });
 

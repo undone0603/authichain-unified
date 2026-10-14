@@ -222,6 +222,75 @@ describe("GET /api/generate", () => {
   });
 });
 
+describe("GET /qron/r/:objectId", () => {
+  it("returns indeterminate when the presentation store is not bound", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const json = await app.request(path, {
+      headers: { accept: "application/json" },
+    });
+    expect(json.status).toBe(503);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("qron_store_unavailable");
+    expect(JSON.stringify(body)).not.toContain("counterfeit");
+  });
+
+  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const env = {
+      SESSIONS: {
+        get: async () => null,
+        put: async () => undefined,
+      },
+    };
+    const json = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      env
+    );
+    expect(json.status).toBe(404);
+    expect(json.headers.get("content-type")).toMatch(/json/);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("presentation_not_found");
+    expect(body.decision).not.toBe("counterfeit");
+
+    const html = await app.request(
+      path,
+      { headers: { accept: "text/html" } },
+      env
+    );
+    expect(html.status).toBe(404);
+    expect(html.headers.get("content-type")).toMatch(/html/);
+    const page = await html.text();
+    expect(page).toContain("<h1>indeterminate</h1>");
+    expect(page).not.toContain("counterfeit");
+  });
+
+  it("returns indeterminate when the stored presentation is malformed", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const res = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => "{",
+          put: async () => undefined,
+        },
+      }
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.error).toBe("presentation_malformed");
+  });
+});
+
 describe("POST /api/generate", () => {
   it("returns JSON 401 with credit packs when unauthenticated, not a plain-text 404", async () => {
     const res = await app.request("/api/generate", {
@@ -272,6 +341,27 @@ describe("app host /", () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/dashboard");
+  });
+
+  it.each([
+    ["/pricing", "https://authichain.com/pricing"],
+    ["/protocol", "https://authichain.com/protocol"],
+    ["/api/verify?id=polygon-anchor-1", "https://authichain.com/api/verify?id=polygon-anchor-1"],
+  ])("301s app.authichain.com%s to the apex", async (path, location) => {
+    const res = await app.request(path, {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(location);
+  });
+
+  it("leaves /pricing alone on the apex host", async () => {
+    const res = await app.request("/pricing", {
+      headers: { host: "authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).not.toBe(301);
   });
 });
 

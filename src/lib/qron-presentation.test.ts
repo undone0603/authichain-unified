@@ -39,6 +39,9 @@ describe("qron-presentation", () => {
     expect(presentation.object_id).toBe(
       qronObjectIdForDestination("https://example.com/sku")
     );
+    expect(presentation.resolve_url).toBe(
+      `https://authichain.com/qron/r/${encodeURIComponent(presentation.object_id)}`
+    );
     expect(buildQronAttestationSubject("https://example.com/sku")).toEqual({
       object_id: presentation.object_id,
       product_class: "living_qr",

@@ -32,3 +32,15 @@ test("an unknown docs slug is not a rendered article", () => {
   const html = renderDocsPage("/docs/attestations");
   assert.match(html, /Unknown docs page/);
 });
+
+test("docs links keep query strings escaped exactly once", () => {
+  const pages = ["/docs", ...DOCS_PAGES.map((slug) => `/docs/${slug}`)];
+  for (const path of pages) {
+    const html = renderDocsPage(path);
+    assert.equal(html.includes("&amp;amp;"), false, path);
+  }
+  const hub = renderDocsPage("/docs");
+  assert.ok(
+    hub.includes('href="/dpp-check?utm_source=docs&amp;utm_medium=authority&amp;utm_campaign=docs-hub"'),
+  );
+});

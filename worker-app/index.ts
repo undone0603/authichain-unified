@@ -238,6 +238,9 @@ function isAppHostname(host: string): boolean {
   return h.startsWith("app.");
 }
 
+// Paths the app host links to but only the apex serves; see the catch-all.
+const APEX_ONLY_PATHS = new Set(["/pricing", "/protocol", "/api/verify"]);
+
 // ─── DPP $299 + catalogue plan checkout (GET = click-to-confirm) ────────────
 // A GET never opens a Stripe session: link scanners, email security gateways
 // and chat previews were creating ~28 unpaid sessions/day. Every GET 303s to
@@ -440,6 +443,8 @@ app.post("/api/generate", async c => {
     });
     const { bindQronGenerateAttestation } =
       await import("./qron-generate-bind");
+    const { qronPresentationKvKey } = await import("../src/lib/qron-resolve");
+    const sessions = c.env?.SESSIONS;
     const result = await handleGeneratePost({
       body,
       userId,
@@ -453,6 +458,13 @@ app.post("/api/generate", async c => {
           workerUrl: c.env?.QRON_WORKER_URL || process.env.QRON_WORKER_URL,
         }),
       bindAttestation: args => bindQronGenerateAttestation(c.env, args),
+      rememberPresentation: async record => {
+        if (!sessions) return;
+        await sessions.put(
+          qronPresentationKvKey(record.object_id),
+          JSON.stringify(record)
+        );
+      },
     });
     // LOOP-03: a 401 here is a stranger who filled the form and was walled by
     // the auth requirement. /generate promises "Five generations are free", so
@@ -471,6 +483,69 @@ app.post("/api/generate", async c => {
     console.error("[generate] Error:", err?.message || err);
     return c.json({ message: "Generation failed", detail: err?.message }, 500);
   }
+});
+
+// Living QR scan target. The image encodes https://authichain.com/qron/r/{object_id}.
+// GET loads the stored JWS and returns AuthiChain Verification Decision v1.
+app.all("/qron/r/*", async c => {
+  const {
+    handleQronResolve,
+    qronPresentationKvKey,
+    QronPresentationMalformed,
+    QronStoreUnavailable,
+  } = await import("../src/lib/qron-resolve");
+  const kv = c.env?.SESSIONS;
+  const response = await handleQronResolve(c.req.raw, {
+    load: async objectId => {
+      if (!kv) throw new QronStoreUnavailable();
+      const raw = await kv.get(qronPresentationKvKey(objectId));
+      if (!raw) return null;
+      let parsed: {
+        object_id?: string;
+        destination_url?: string;
+        resolve_url?: string;
+        jws?: string;
+        kid?: string;
+        jwks_url?: string;
+      };
+      try {
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        throw new QronPresentationMalformed();
+      }
+      if (
+        parsed.object_id !== objectId ||
+        typeof parsed.destination_url !== "string" ||
+        typeof parsed.resolve_url !== "string" ||
+        typeof parsed.jws !== "string" ||
+        !parsed.jws ||
+        typeof parsed.kid !== "string" ||
+        typeof parsed.jwks_url !== "string"
+      ) {
+        throw new QronPresentationMalformed();
+      }
+      return {
+        object_id: parsed.object_id,
+        destination_url: parsed.destination_url,
+        resolve_url: parsed.resolve_url,
+        jws: parsed.jws,
+        kid: parsed.kid,
+        jwks_url: parsed.jwks_url,
+      };
+    },
+  });
+  if (!response) {
+    return c.json(
+      {
+        valid: false,
+        decision: "indeterminate",
+        decision_contract: "AuthiChain Verification Decision v1",
+        error: "presentation_not_found",
+      },
+      404
+    );
+  }
+  return response;
 });
 
 // ─── Funnel events (DPP attributed_visit + outreach) ────────────────────────
@@ -1836,6 +1911,12 @@ app.get("*", async c => {
     c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
   if ((rawPathname === "/" || rawPathname === "") && isAppHostname(appHost)) {
     return c.redirect("/dashboard", 302);
+  }
+  // The dashboard SPA links to these with relative hrefs, but they are only
+  // served on the apex (authichain-com worker), so on app.* they 404'd.
+  if (isAppHostname(appHost) && APEX_ONLY_PATHS.has(rawPathname)) {
+    const { search } = new URL(c.req.url);
+    return c.redirect(`https://authichain.com${rawPathname}${search}`, 301);
   }
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page
