@@ -149,6 +149,7 @@
       "managed": true,
       "workflows": {
         "gen-seo-pages.yml": "on",
+        "indexnow-submit.yml": "on",
         "content-publish.yml": "off",
         "marketing-autonomous.yml": "off",
         "reddit-monitor.yml": "on",
