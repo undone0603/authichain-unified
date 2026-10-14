@@ -6,6 +6,8 @@ import {
   handleGeneratePost,
   proxyQronImageGen,
 } from "./generate-api";
+import { qronObjectIdForDestination } from "./qron-presentation";
+import { qronResolveUrl } from "./qron-resolve";
 
 function toBase64Url(value: string): string {
   return Buffer.from(value, "utf8")
@@ -175,12 +177,26 @@ describe("handleGeneratePost", () => {
     expect(result.body.remaining_credits).toBe(9);
     expect(checkCredit).toHaveBeenCalledWith("user_1");
     expect(deductCredit).toHaveBeenCalledWith("user_1");
+    const resolveUrl = qronResolveUrl(
+      qronObjectIdForDestination("https://example.com/sku")
+    );
     expect(generateImage).toHaveBeenCalledWith(
       expect.objectContaining({
-        targetUrl: "https://example.com/sku",
+        targetUrl: resolveUrl,
         prompt: "gold vault",
       })
     );
+    const qron = result.body.qron as {
+      qrDataUrl: string;
+      resolveUrl: string;
+      destinationUrl: string;
+    };
+    expect(qron.destinationUrl).toBe("https://example.com/sku");
+    expect(qron.resolveUrl).toBe(resolveUrl);
+    expect(qron.qrDataUrl.startsWith("data:image/svg+xml;base64,")).toBe(true);
+    expect(
+      (result.body.presentation as { resolve_url: string }).resolve_url
+    ).toBe(resolveUrl);
     expect(generateImage.mock.invocationCallOrder[0]).toBeLessThan(
       deductCredit.mock.invocationCallOrder[0]
     );
@@ -213,9 +229,61 @@ describe("handleGeneratePost", () => {
     expect(bindAttestation).toHaveBeenCalledWith(
       expect.objectContaining({
         destinationUrl: "https://example.com/sku",
+        objectId: qronObjectIdForDestination("https://example.com/sku"),
         userId: "user_1",
       })
     );
+    const rememberPresentation = vi.fn(async () => undefined);
+    const stored = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation,
+      rememberPresentation,
+    });
+    expect(stored.status).toBe(200);
+    expect(rememberPresentation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        object_id: qronObjectIdForDestination("https://example.com/sku"),
+        destination_url: "https://example.com/sku",
+        jws: "a.b.c",
+        kid: "kid-test",
+        jwks_url: "https://authichain.com/protocol/jwks.json",
+        resolve_url: qronResolveUrl(
+          qronObjectIdForDestination("https://example.com/sku")
+        ),
+      })
+    );
+  });
+
+  it("still returns the presentation when rememberPresentation throws", async () => {
+    const result = await handleGeneratePost({
+      body: {
+        url: "https://example.com/sku",
+        prompt: "gold vault",
+      },
+      userId: "user_1",
+      checkCredit,
+      deductCredit,
+      generateImage,
+      bindAttestation: async () => ({
+        jws: "a.b.c",
+        kid: "kid-test",
+        jwks_url: "https://authichain.com/protocol/jwks.json",
+      }),
+      rememberPresentation: async () => {
+        throw new Error("kv down");
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(
+      (result.body.presentation as { status: string }).status
+    ).toBe("attestation_bound");
   });
 
   it("stays image_issued when bindAttestation throws", async () => {
