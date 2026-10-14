@@ -29,7 +29,7 @@
     "title": "Blockchain Product Authentication | AuthiChain",
     "metaDescription": "Blockchain product authentication with signed records.",
     "h1": "Blockchain Product Authentication",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AuthiChain</h2><ul><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li></ul><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -252,7 +252,7 @@
     "title": "AI Counterfeit Detection | AuthiChain",
     "metaDescription": "Check products against signed records. Verification starts from a single QR scan.",
     "h1": "AI-Powered Counterfeit Detection",
-    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p>",
+    "bodyHtml": "<p>Product certification through verify is in development.</p><h2>Why AI plus blockchain</h2><ul><li>W3C Verifiable Credentials keep proofs portable and interoperable.</li></ul><p>Used across luxury, pharma (DSCSA), electronics, agriculture, art and cannabis.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -5973,7 +5973,7 @@
     "title": "Blockchain QR Code For Luxury | AuthiChain",
     "metaDescription": "Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs. AuthiChain — EU.",
     "h1": "Blockchain QR Code For Luxury",
-    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Workspace is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Workspace is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
+    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can check its signed record on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>Product certification through verify is in development</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10193,7 +10193,7 @@
     "title": "Vechain Alternative Without Tokens Or Gas Fees | AuthiChain",
     "metaDescription": "VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing.",
     "h1": "Vechain Alternative Without Tokens Or Gas Fees",
-    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
+    "bodyHtml": "<p>VeChain is a general-purpose enterprise L1 blockchain that brands usually reach through ToolChain or an integration partner; AuthiChain is a brand-facing product instead, where the seal, the certificate and the public verifier are the thing you buy, and you pay in USD by card rather than holding a token.</p><h2>Why AuthiChain</h2><ul><li>No token and no gas to manage: AuthiChain plans are billed in US dollars through Stripe, so a brand never has to fund a wallet before it can issue a record</li><li>Signing keys are published at /.well-known/jwks.json. Product certification through verify is in development.</li><li>Self-serve issuance and EU DPP export are still in development. The $299 checkout opens a workspace; it is not a readiness audit.</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is AuthiChain built on VeChain?</h3><p>No. VeChain is a separate L1 blockchain that other authentication vendors build on.</p><h3>What does it cost to start?</h3><p>The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -10241,7 +10241,7 @@
               "name": "What does it cost to start?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The live self-serve entry point is the EU DPP Readiness checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
+                "text": "The live self-serve entry point is the EU DPP Workspace checkout at $299. It opens an AuthiChain workspace with self-serve activation and 50 workspace generations."
               }
             }
           ]
@@ -11391,6 +11391,262 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "No. It identifies an item, and anyone can print one on a label. The signature on the linked record shows who made the statements about it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "run-a-verifier-conformance-suite-against-your-own-implementation",
+    "keyword": "run a verifier conformance suite against your own implementation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Run A Verifier Conformance Suite Against Your | AuthiChain",
+    "metaDescription": "The AuthiChain conformance suite has 28 fixtures and runs against any command that reads a record file and prints a JSON verdict, so an implementation in.",
+    "h1": "Run A Verifier Conformance Suite Against Your Own Implementation",
+    "bodyHtml": "<p>The AuthiChain conformance suite has 28 fixtures and runs against any command that reads a record file and prints a JSON verdict, so an implementation in Python, Go or Rust can be tested without importing our code: node run.mjs --strict -- &lt;your command&gt;.</p><h2>Why AuthiChain</h2><ul><li>Each fixture targets one failure: tampered fields, wrong keys, missing required fields, key-order changes, expired and not-yet-valid dates, and malformed or testnet anchors</li><li>Fixtures use the years 2000 and 2099 for time checks, so any plausible system clock gives the same expected verdict</li><li>Signing keys derive from fixed seeds and generate.mjs reproduces every fixture byte for byte, so you can audit how each one was made</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does --strict check beyond the verdict?</h3><p>It also compares the reason strings. An implementation can return the right verdict for the wrong reason, so a published conformance claim should cite strict mode.</p><h3>Does passing the suite make an implementation secure?</h3><p>No. It shows the implementation returns the expected verdict on 28 cases. It does not cover key management, the platform around the verifier, or cases the fixtures do not include.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Run A Verifier Conformance Suite Against Your Own Implementation",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The AuthiChain conformance suite has 28 fixtures and runs against any command that reads a record file and prints a JSON verdict, so an implementation in Python, Go or Rust can be tested without importing our code: node run.mjs --strict -- <your command>.",
+          "url": "https://authichain.com/p/run-a-verifier-conformance-suite-against-your-own-implementation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Run A Verifier Conformance Suite Against Your Own Implementation",
+              "item": "https://authichain.com/p/run-a-verifier-conformance-suite-against-your-own-implementation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does --strict check beyond the verdict?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It also compares the reason strings. An implementation can return the right verdict for the wrong reason, so a published conformance claim should cite strict mode."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does passing the suite make an implementation secure?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It shows the implementation returns the expected verdict on 28 cases. It does not cover key management, the platform around the verifier, or cases the fixtures do not include."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "did-key-issuer-key-rotation-verifiable-credential",
+    "keyword": "did:key issuer key rotation verifiable credential",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DID:Key Issuer Key Rotation Verifiable | AuthiChain",
+    "metaDescription": "A did:key identifier is the public key itself, encoded, so the key cannot be rotated in place: changing keys means issuing under a new did:key, and records.",
+    "h1": "DID:Key Issuer Key Rotation Verifiable Credential",
+    "bodyHtml": "<p>A did:key identifier is the public key itself, encoded, so the key cannot be rotated in place: changing keys means issuing under a new did:key, and records signed earlier keep verifying against the old identifier.</p><h2>Why AuthiChain</h2><ul><li>The verifier reads the Ed25519 public key straight from the identifier, which is why verification needs no network call and no account</li><li>Version 0.1 of the specification defines no revocation, so a record signed by a compromised key still verifies; credentialStatus is planned for v0.2</li><li>An anchor adds a checkable time, which lets a reader see that a record existed no later than the anchor, though it cannot show the signing key was uncompromised at that moment</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Can I move to a new key and keep my old records?</h3><p>Yes. Old records stay valid under the old did:key and new records are signed under the new one. Readers need a way to learn that both identifiers belong to you, which lies outside the v0.1 record format.</p><h3>Which DID method fits key rotation better?</h3><p>Methods that resolve through a document, such as did:web, can change the key behind a stable identifier, at the cost of a network lookup at verification time. did:key trades that flexibility for offline verification.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DID:Key Issuer Key Rotation Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A did:key identifier is the public key itself, encoded, so the key cannot be rotated in place: changing keys means issuing under a new did:key, and records signed earlier keep verifying against the old identifier.",
+          "url": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DID:Key Issuer Key Rotation Verifiable Credential",
+              "item": "https://authichain.com/p/did-key-issuer-key-rotation-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I move to a new key and keep my old records?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Old records stay valid under the old did:key and new records are signed under the new one. Readers need a way to learn that both identifiers belong to you, which lies outside the v0.1 record format."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which DID method fits key rotation better?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Methods that resolve through a document, such as did:web, can change the key behind a stable identifier, at the cost of a network lookup at verification time. did:key trades that flexibility for offline verification."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "recompute-sha-256-record-hash-to-check-a-blockchain-anchor",
+    "keyword": "recompute sha-256 record hash to check a blockchain anchor",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Recompute Sha-256 Record Hash To Check A | AuthiChain",
+    "metaDescription": "To check an anchor yourself, canonicalise the record without proof.proofValue per RFC 8785, hash the UTF-8 bytes with SHA-256, and compare the result with.",
+    "h1": "Recompute Sha-256 Record Hash To Check A Blockchain Anchor",
+    "bodyHtml": "<p>To check an anchor yourself, canonicalise the record without proof.proofValue per RFC 8785, hash the UTF-8 bytes with SHA-256, and compare the result with the anchor's recordHash, which is written as sha256: followed by 64 hex characters.</p><h2>Why AuthiChain</h2><ul><li>The reference verifier exports canonicalize, signingBytes and sha256Hex, so each step runs separately and you can inspect the intermediate bytes</li><li>The bundled Polygon example has a record, an anchor and a hash file; run the verifier on the record and anchor to get verified, then look up the transaction on a Polygon explorer</li><li>The verifier stays offline, so it confirms the hash and the anchor's form; confirming the transaction on-chain is a separate lookup you make yourself</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>What does a matching hash show?</h3><p>That the record you hold is byte-identical, after canonicalisation, to the one whose hash was committed, and that it existed no later than the anchor time. It does not show the item exists or that the statements are true.</p><h3>Why does reordering JSON keys not change the hash?</h3><p>Canonicalisation sorts keys before hashing, so key order in the file does not affect the bytes. The suite includes fixtures for key order and Unicode to check that implementations agree.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Recompute Sha-256 Record Hash To Check A Blockchain Anchor",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "To check an anchor yourself, canonicalise the record without proof.proofValue per RFC 8785, hash the UTF-8 bytes with SHA-256, and compare the result with the anchor's recordHash, which is written as sha256: followed by 64 hex characters.",
+          "url": "https://authichain.com/p/recompute-sha-256-record-hash-to-check-a-blockchain-anchor"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Recompute Sha-256 Record Hash To Check A Blockchain Anchor",
+              "item": "https://authichain.com/p/recompute-sha-256-record-hash-to-check-a-blockchain-anchor"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does a matching hash show?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That the record you hold is byte-identical, after canonicalisation, to the one whose hash was committed, and that it existed no later than the anchor time. It does not show the item exists or that the statements are true."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why does reordering JSON keys not change the hash?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Canonicalisation sorts keys before hashing, so key order in the file does not affect the bytes. The suite includes fixtures for key order and Unicode to check that implementations agree."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-passport-registry-404-unknown-item-fake-record",
+    "keyword": "product passport registry 404 unknown item fake record",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Passport Registry 404 Unknown Item | AuthiChain",
+    "metaDescription": "The AuthiChain specification requires a registry to return 404 for an item it does not know, never an empty or synthesised record, so a scan of a printed GS1.",
+    "h1": "Product Passport Registry 404 Unknown Item Fake Record",
+    "bodyHtml": "<p>The AuthiChain specification requires a registry to return 404 for an item it does not know, never an empty or synthesised record, so a scan of a printed GS1 Digital Link for a non-existent item fails visibly.</p><h2>Why AuthiChain</h2><ul><li>Records are served at a permanent URL without authentication, because verification that requires an account is not public verification</li><li>A fetched record is checked against its own signature, so a registry cannot alter a record without the verifier reporting invalid</li><li>A printed label can carry any URL, so a resolving page alone proves little; the verdict from the signature and issuer is what to read</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Does a 404 mean the product is counterfeit?</h3><p>No. It means the registry holds no record for that identifier. The item may be genuine and unregistered, or the code may be copied from somewhere else.</p><h3>Can a counterfeiter copy a real record onto a fake item?</h3><p>Yes. A valid record copied beside a fake item still verifies, because the signature covers the record and not the physical object. Binding a record to a specific item, for example with a unique serial checked against a registry, lies above this specification.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Product Passport Registry 404 Unknown Item Fake Record",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The AuthiChain specification requires a registry to return 404 for an item it does not know, never an empty or synthesised record, so a scan of a printed GS1 Digital Link for a non-existent item fails visibly.",
+          "url": "https://authichain.com/p/product-passport-registry-404-unknown-item-fake-record"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Passport Registry 404 Unknown Item Fake Record",
+              "item": "https://authichain.com/p/product-passport-registry-404-unknown-item-fake-record"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a 404 mean the product is counterfeit?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It means the registry holds no record for that identifier. The item may be genuine and unregistered, or the code may be copied from somewhere else."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a counterfeiter copy a real record onto a fake item?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. A valid record copied beside a fake item still verifies, because the signature covers the record and not the physical object. Binding a record to a specific item, for example with a unique serial checked against a registry, lies above this specification."
               }
             }
           ]
