@@ -15,9 +15,12 @@
 //   wait / skip  anything else (draft, fork, untrusted author, hold label,
 //            checks pending or red, GitHub still computing mergeability)
 //
-// Owner decision 2026-10-02: every trusted PR is eligible, including ones
-// touching security, revenue, schema or the charter (docs/OPERATING_CHARTER.md,
-// "Merge autopilot"). The switch is `merge_autopilot` in .github/autonomy.json.
+// Owner decision 2026-10-02 made every trusted PR eligible; the owner narrowed
+// it on 2026-10-13: a PR that touches RESTRICTED_PATHS, or whose changed code
+// lines mention RESTRICTED_SYMBOLS, is skipped and waits for the owner to merge
+// it by hand (docs/OPERATING_CHARTER.md, "Merge autopilot"). The lists live in
+// this file, which is itself restricted, so no PR can loosen them unattended.
+// The switch is `merge_autopilot` in .github/autonomy.json.
 //
 // Env: GITHUB_TOKEN, GITHUB_REPOSITORY, AUTOPILOT_TOKEN_KIND (pat|default),
 //      DRY_RUN=1 to log decisions without acting.
@@ -39,6 +42,97 @@ const GREEN = new Set(["success", "neutral", "skipped"]);
 export const BASE_BRANCH = "main";
 export const MERGE_METHOD = "squash";
 export const CONFLICT_LABEL = "merge-conflict";
+
+// Payment trust, paid fulfilment, outbound-send gating, secrets, migrations,
+// deploys and the autonomy controls themselves. `*` stays inside one path
+// segment, `**` crosses segments.
+export const RESTRICTED_PATHS = [
+  ".github/autonomy.json",
+  ".github/CODEOWNERS",
+  ".github/workflows/merge-autopilot.yml",
+  ".github/workflows/deploy-*.yml",
+  ".github/workflows/bind-*.yml",
+  ".github/workflows/set-*.yml",
+  ".github/workflows/*outreach*.yml",
+  ".github/workflows/stripe-webhook-reconcile.yml",
+  "scripts/autonomy/**",
+  "docs/OPERATING_CHARTER.md",
+  "CLAUDE.md",
+  "src/lib/plans.ts",
+  "src/lib/x402.ts",
+  "src/lib/stripe-*.ts",
+  "src/lib/dpp-fulfill*.ts",
+  "src/app/api/stripe/webhook/**",
+  "src/app/api/webhook/**",
+  "src/app/api/webhooks/stripe/**",
+  "server/webhooks/**",
+  "server/subscriptions-rest.ts",
+  "server/outreach/**",
+  "scripts/outreach-optout-check.ts",
+  "scripts/lib/b2b-send-policy.ts",
+  "**/stripe/webhook/**",
+  "**/webhooks/stripe/**",
+  "**/stripe-webhook/**",
+  "workers/dpp-fulfillment/**",
+  "workers/authichain-license-issuer/**",
+  "workers/*outreach*/**",
+  "workers/resend-relay/**",
+  "agentz/api/billing_webhook.py",
+  "supabase/migrations/**",
+  "drizzle/**",
+];
+
+// Webhook verification and fulfilment calls live inside the big router files
+// (worker-app/index.ts, worker/index.ts), which nearly every PR touches, so
+// those are matched by what the diff changes rather than by path.
+export const RESTRICTED_SYMBOLS =
+  /fulfillDppPaidSession|constructEvent|stripe-signature|STRIPE_WEBHOOK_SECRET|OWNER_LIVE_SEND|guardedSend|cold_outreach|launch_mode|merge_autopilot|MERGE_AUTOPILOT_TOKEN/i;
+
+const CODE_FILE = /\.(m?[jt]sx?|cjs|py|json|ya?ml|toml|sql|sh)$/;
+// GitHub omits the patch for huge lockfile diffs; they hold no call sites.
+const LOCKFILE = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|poetry\.lock)$/;
+
+const globToRegExp = glob =>
+  new RegExp(
+    "^" +
+      glob
+        .split("**")
+        .map(part =>
+          part
+            .split("*")
+            .map(s => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+            .join("[^/]*")
+        )
+        .join(".*") +
+      "$"
+  );
+const RESTRICTED_RES = RESTRICTED_PATHS.map(globToRegExp);
+
+/**
+ * Pure. Why a PR must wait for the owner, or null if it may auto-merge.
+ * Fails closed: an incomplete file list or an unreadable code diff is restricted.
+ * @param files        GET /pulls/{n}/files (all pages)
+ * @param changedFiles pr.changed_files
+ */
+export function restrictedChange(files, changedFiles) {
+  if (!Array.isArray(files)) return "changed files unavailable";
+  if (files.length !== changedFiles)
+    return `file list incomplete (${files.length} of ${changedFiles})`;
+  for (const f of files) {
+    for (const name of [f.filename, f.previous_filename].filter(Boolean)) {
+      if (RESTRICTED_RES.some(re => re.test(name)))
+        return `restricted path ${name}`;
+    }
+    if (!CODE_FILE.test(f.filename) || LOCKFILE.test(f.filename)) continue;
+    if (typeof f.patch !== "string") return `diff not readable: ${f.filename}`;
+    const changed = f.patch
+      .split("\n")
+      .filter(l => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l));
+    const hit = changed.map(l => l.match(RESTRICTED_SYMBOLS)).find(Boolean);
+    if (hit) return `changes ${hit[0]} in ${f.filename}`;
+  }
+  return null;
+}
 
 /** Pure. Read and default the manifest block. */
 export function loadConfig(manifest) {
@@ -174,6 +268,21 @@ async function coreRemaining(token) {
   }
 }
 
+// GitHub caps this endpoint at 3000 files; restrictedChange() treats a
+// shorter list than pr.changed_files as restricted.
+async function listFiles(repo, n, token) {
+  const files = [];
+  for (let page = 1; page <= 30; page++) {
+    const batch = await gh(
+      `/repos/${repo}/pulls/${n}/files?per_page=100&page=${page}`,
+      { token }
+    );
+    files.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return files;
+}
+
 async function main() {
   const manifest = JSON.parse(
     readFileSync(resolve(process.cwd(), ".github/autonomy.json"), "utf8")
@@ -236,6 +345,11 @@ async function main() {
       decision = decide(pr, checks.check_runs, status, cmp.behind_by, cfg, {
         canUpdate,
       });
+      if (decision.action === "merge") {
+        const files = await listFiles(repo, n, token);
+        const why = restrictedChange(files, pr.changed_files);
+        if (why) decision = { action: "skip", reason: `owner merges: ${why}` };
+      }
 
       const labels = labelNames(pr);
       if (
