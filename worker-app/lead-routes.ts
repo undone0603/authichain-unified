@@ -331,7 +331,7 @@ async function handleBook(c: LeadContext) {
     if (!admin) return c.json({ error: "Supabase not configured" }, 503);
 
     const now = new Date().toISOString();
-    await admin.from("leads").upsert(
+    const { error } = await admin.from("leads").upsert(
       {
         email,
         name,
@@ -350,6 +350,18 @@ async function handleBook(c: LeadContext) {
       },
       { onConflict: "email" }
     );
+    if (error) {
+      console.error("[api/book] DB error:", error.message);
+      await logAutomation(
+        c,
+        "book.db_upsert",
+        "failure",
+        { email, source: prospectId ? "b2b_outreach_reply" : "book_page" },
+        error.message
+      );
+      // A stored row is the only success. HubSpot and mail must not run.
+      return c.json({ error: "Could not store the request" }, 500);
+    }
 
     const token = hubspotToken(c);
     if (token) {
