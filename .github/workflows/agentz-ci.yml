@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       allow_healing:
-        description: "Allow AgentZ to attempt an autonomous repair"
+        description: "Allow AgentZ to attempt autonomous repair"
         required: false
         default: true
         type: boolean
@@ -25,17 +25,15 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22.9.0"
+  PNPM_VERSION: "10.28.2"
   CI: "true"
 
 jobs:
   baseline:
     name: Baseline Verification
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    outputs:
-      tests_passed: ${{ steps.tests.outcome == 'success' }}
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -47,81 +45,67 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${PNPM_VERSION} --activate
+
+      - name: Verify toolchain
+        run: |
+          node --version
+          npm --version
+          pnpm --version
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Repository status
         run: |
           git status --short --branch
           git log -1 --oneline
 
-      - name: Run AgentZ preflight
+      - name: Focused Slice 1 tests
         run: |
-          if [ -f agentz/healing/preflight.js ]; then
-            node agentz/healing/preflight.js
-          else
-            echo "AgentZ preflight not present; continuing."
-          fi
-
-      - name: Run attestation worker tests
-        id: attestation
-        run: |
-          npx vitest run \
+          pnpm exec vitest run \
             worker-app/attestation-failure-causes.test.ts \
             worker-app/attestation-registry.test.ts \
-            --reporter=verbose
-
-      - name: Run verifier tests
-        id: verifier
-        run: |
-          npx vitest run \
             packages/verifier/src/index.test.ts \
             --reporter=verbose
 
-      - name: Run full test suite
-        id: tests
-        run: |
-          npm test
+      - name: Full test suite
+        run: pnpm test
 
-      - name: Run typecheck
-        id: typecheck
+      - name: Typecheck
         run: |
-          npm run typecheck
-
-      - name: Run Hardhat contract tests
-        id: hardhat
-        run: |
-          if [ -f hardhat.config.ts ] || [ -f hardhat.config.js ]; then
-            npx hardhat test
+          if pnpm run | grep -q "typecheck"; then
+            pnpm run typecheck
           else
-            echo "No Hardhat configuration found; skipping."
+            echo "No root typecheck script; running repository verification."
+            pnpm verify
           fi
 
-      - name: Verify generated artifacts are not dirty
-        run: |
-          git status --short
+      - name: Hardhat contracts
+        run: pnpm test:contracts
 
+      - name: Check generated artifacts
+        run: |
           if git status --short | grep -E \
             '(^|/)(artifacts|cache|coverage|dist|\.next)/'; then
-            echo "::error::Generated build artifacts changed the working tree."
+            echo "::error::Generated artifacts changed the working tree."
+            git status --short
             exit 1
           fi
 
-      - name: Upload baseline logs
+      - name: Final repository status
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: agentz-baseline-${{ github.run_id }}
-          path: |
-            coverage/
-            test-results/
-            artifacts/
-          if-no-files-found: ignore
+        run: git status --short --branch
 
-  heal:
-    name: AgentZ Autonomous Diagnosis and Repair
+  agentz-heal:
+    name: AgentZ Diagnosis
     needs: baseline
     if: |
       always() &&
@@ -138,28 +122,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.AGENTZ_GITHUB_TOKEN || github.token }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${PNPM_VERSION} --activate
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Capture failure context
         run: |
           mkdir -p .agentz/run
 
           {
-            echo "=== AgentZ CI FAILURE CONTEXT ==="
+            echo "=== AGENTZ CI FAILURE ==="
             echo "Repository: $GITHUB_REPOSITORY"
             echo "SHA: $GITHUB_SHA"
-            echo "Ref: $GITHUB_REF"
-            echo "Run: $GITHUB_RUN_ID"
-            echo "Event: $GITHUB_EVENT_NAME"
+            echo "REF: $GITHUB_REF"
+            echo "RUN: $GITHUB_RUN_ID"
+            echo "EVENT: $GITHUB_EVENT_NAME"
             echo
             echo "=== STATUS ==="
             git status --short --branch
@@ -168,219 +158,112 @@ jobs:
             git log -1 --oneline
           } | tee .agentz/run/context.txt
 
-      - name: Download baseline artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: agentz-baseline-*
-          path: .agentz/baseline
-        continue-on-error: true
+      - name: AgentZ preflight
+        run: |
+          if [ -f agentz/healing/preflight.js ]; then
+            node agentz/healing/preflight.js
+          else
+            echo "No AgentZ preflight implementation."
+          fi
 
-      - name: Run AgentZ autonomous diagnosis
-        id: diagnose
-        env:
-          AGENTZ_MODE: autonomous
-          AGENTZ_REPOSITORY: ${{ github.repository }}
-          AGENTZ_SHA: ${{ github.sha }}
-          AGENTZ_RUN_ID: ${{ github.run_id }}
-          AGENTZ_EVENT_NAME: ${{ github.event_name }}
+      - name: Diagnose failure
         run: |
           if [ ! -f agentz/healing/auto-fix.js ]; then
-            echo "::error::AgentZ healing entrypoint not found."
+            echo "::error::AgentZ healing entrypoint does not exist."
             exit 1
           fi
 
-          node agentz/healing/auto-fix.js \
-            --mode diagnose-and-fix \
-            --ci \
-            --non-interactive \
-            --failure-context .agentz/run/context.txt
+          echo "::warning::AgentZ diagnosis requested."
+          echo "Failure context:"
+          cat .agentz/run/context.txt
+
+          # IMPORTANT:
+          # Do not invoke the legacy auto-fix.js blindly yet.
+          # It currently contains a hard-coded ABI repair and auto-merge path.
+          #
+          # Replace this gate with the new trust-aware AgentZ repair runner
+          # once it accepts CI failure context and produces a validated patch.
+          exit 1
 
       - name: Inspect AgentZ changes
+        if: always()
         run: |
           git status --short
           git diff --stat
           git diff --check
 
-      - name: Reject protected-file modifications
-        run: |
-          protected=(
-            ".github/workflows/production-deployment-gate.yml"
-            ".github/workflows/deploy-workers.yml"
-            ".github/workflows/deploy-cloudflare.yml"
-            ".github/workflows/deploy-edge-worker.yml"
-          )
-
-          for file in "${protected[@]}"; do
-            if git diff --name-only | grep -Fxq "$file"; then
-              echo "::error::AgentZ attempted to modify protected deployment workflow: $file"
-              exit 1
-            fi
-          done
-
-      - name: Re-run focused Slice 1 tests
-        run: |
-          npx vitest run \
-            worker-app/attestation-failure-causes.test.ts \
-            worker-app/attestation-registry.test.ts \
-            packages/verifier/src/index.test.ts \
-            --reporter=verbose
-
-      - name: Re-run full regression suite
-        run: |
-          npm test
-
-      - name: Re-run typecheck
-        run: |
-          npm run typecheck
-
-      - name: Re-run Hardhat tests
-        run: |
-          if [ -f hardhat.config.ts ] || [ -f hardhat.config.js ]; then
-            npx hardhat test
-          fi
-
-      - name: Check generated artifacts
-        run: |
-          git status --short
-
-          if git status --short | grep -E \
-            '(^|/)(artifacts|cache|coverage|dist|\.next)/'; then
-            echo "::error::Generated artifacts remain in working tree."
-            exit 1
-          fi
-
-      - name: AgentZ repair summary
-        if: always()
-        run: |
-          {
-            echo "## AgentZ Autonomous Repair"
-            echo
-            echo "**Commit:** $GITHUB_SHA"
-            echo "**Run:** $GITHUB_RUN_ID"
-            echo
-            echo "### Changed files"
-            git diff --name-only || true
-            echo
-            echo "### Diff stat"
-            git diff --stat || true
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Commit verified repair
-        if: success() && github.event_name == 'push' && github.ref != 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ secrets.AGENTZ_GITHUB_TOKEN || github.token }}
-        run: |
-          if git diff --quiet; then
-            echo "No AgentZ changes to commit."
-            exit 0
-          fi
-
-          git config user.name "AgentZ"
-          git config user.email "agentz@authichain.com"
-
-          git add -A
-          git diff --cached --check
-
-          git commit \
-            -m "fix(agentz): autonomous verified repair" \
-            -m "Generated by AgentZ after CI failure." \
-            -m "CI run: $GITHUB_RUN_ID"
-
-          git push origin HEAD:"${GITHUB_REF_NAME}"
-
   verify-repair:
     name: Verify AgentZ Repair
-    needs: heal
-    if: always() && needs.heal.result == 'success'
+    needs: agentz-heal
+    if: needs.agentz-heal.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout repaired revision
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${PNPM_VERSION} --activate
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Verify focused tests
+      - name: Focused Slice 1 verification
         run: |
-          npx vitest run \
+          pnpm exec vitest run \
             worker-app/attestation-failure-causes.test.ts \
             worker-app/attestation-registry.test.ts \
-            packages/verifier/src/index.test.ts
+            packages/verifier/src/index.test.ts \
+            --reporter=verbose
 
-      - name: Verify complete test suite
-        run: npm test
+      - name: Full regression
+        run: pnpm test
 
-      - name: Verify type safety
-        run: npm run typecheck
-
-      - name: Verify repository integrity
+      - name: Typecheck
         run: |
-          git diff HEAD^ HEAD --check
-          git status --short
+          if pnpm run | grep -q "typecheck"; then
+            pnpm run typecheck
+          else
+            pnpm verify
+          fi
+
+      - name: Hardhat contracts
+        run: pnpm test:contracts
+
+      - name: Repository integrity
+        run: |
+          git diff --check
 
           if git status --short | grep -E \
             '(^|/)(artifacts|cache|coverage|dist|\.next)/'; then
             echo "::error::Generated artifacts detected."
+            git status --short
             exit 1
           fi
 
-      - name: Publish successful repair
+      - name: Verified repair summary
         run: |
           {
             echo "## AgentZ Repair Verified"
             echo
-            echo "All focused and regression gates passed."
+            echo "✅ Focused Slice 1 tests"
+            echo "✅ Full regression suite"
+            echo "✅ Type verification"
+            echo "✅ Hardhat contracts"
+            echo "✅ Generated-artifact check"
             echo
-            echo "- Slice 1 verification tests: PASS"
-            echo "- Full test suite: PASS"
-            echo "- Typecheck: PASS"
-            echo "- Repository integrity: PASS"
-            echo
-            echo "No deployment was performed by this workflow."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  production-gate:
-    name: Production Authorization Gate
-    needs:
-      - baseline
-      - heal
-      - verify-repair
-    if: |
-      always() &&
-      (
-        needs.baseline.result == 'success' ||
-        needs.verify-repair.result == 'success'
-      ) &&
-      github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    environment:
-      name: production
-      url: ${{ vars.PRODUCTION_URL }}
-
-    steps:
-      - name: Production deployment authorization
-        run: |
-          echo "Production verification gates passed."
-          echo "Deployment remains separately authorized."
-          echo "No automatic production deployment is performed here."
-
-      - name: Publish production gate status
-        run: |
-          {
-            echo "## Production Gate"
-            echo
-            echo "✅ Verification passed."
-            echo
-            echo "Deployment authorization remains separate from AgentZ healing."
+            echo "Production deployment was NOT performed."
           } >> "$GITHUB_STEP_SUMMARY"
