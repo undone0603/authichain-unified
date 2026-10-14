@@ -1,0 +1,95 @@
+{
+  "drill_id": "founder-exit-2026-10-13",
+  "environment": "isolated_memory_and_temp_file",
+  "production_side_effects": false,
+  "stripe_called": false,
+  "mail_sent": false,
+  "migration_applied": false,
+  "policy_version": "founder-exit-2026-10-13",
+  "generated_at": "2026-10-13T20:01:04.000Z",
+  "action_ids": {
+    "interrupted": "act_interrupt",
+    "continued": "act_continue",
+    "denied_after_revocation": "act_denied",
+    "resumed_by_replacement": "act_resume",
+    "blocked_send": "act_send",
+    "blocked_charge": "act_charge"
+  },
+  "idempotency_key": "effect-1",
+  "side_effect_applications": 1,
+  "duplicate_side_effects": 1,
+  "recovery_outcome": "reconciled_existing_side_effect",
+  "final_state": "succeeded",
+  "verification_status": "verified",
+  "file_restart_applications": 1,
+  "revoked_agent_denied": true,
+  "replacement_resumed": true,
+  "unapproved_production_operations": 0,
+  "open_blockers": ["act_charge", "act_send"],
+  "economic": {
+    "demo_zero": {
+      "payment": "simulated",
+      "entitlement": "blocked",
+      "activation": "blocked",
+      "recognized_revenue": "blocked",
+      "notes": [
+        "recognized revenue is not decided here; classifyRevenue is the cash classifier",
+        "demo or zero amount is not a customer payment",
+        "entitlement flag ignored without a verified non-founder payment"
+      ]
+    },
+    "founder_1000": {
+      "payment": "observed_unverified",
+      "entitlement": "blocked",
+      "activation": "blocked",
+      "recognized_revenue": "blocked",
+      "notes": [
+        "recognized revenue is not decided here; classifyRevenue is the cash classifier",
+        "founder charge is not qualifying revenue"
+      ]
+    },
+    "unverified_entitlement": {
+      "payment": "unknown",
+      "entitlement": "blocked",
+      "activation": "blocked",
+      "recognized_revenue": "blocked",
+      "notes": [
+        "recognized revenue is not decided here; classifyRevenue is the cash classifier",
+        "payment is unknown until a signature-verified provider event exists",
+        "entitlement flag ignored without a verified non-founder payment"
+      ]
+    }
+  },
+  "faults": {
+    "database_timeout": "pass",
+    "duplicate_delivery": "pass",
+    "worker_termination": "pass",
+    "expired_lease": "pass",
+    "provider_timeout_unknown": "pass",
+    "duplicate_webhook": "pass",
+    "revoked_agent": "pass",
+    "missing_capability": "pass",
+    "policy_denial": "pass",
+    "missing_evidence": "pass",
+    "inconsistent_economic_records": "pass",
+    "secret_unavailable": "pass",
+    "scheduler_unavailable": "pass",
+    "retry_exhaustion": "pass",
+    "redaction": "pass",
+    "history_append_only": "pass"
+  },
+  "criteria": {
+    "durability": "pass",
+    "recoverability": "pass",
+    "idempotency": "pass",
+    "auditability": "pass",
+    "unrelated_work_continues": "pass",
+    "revocation": "pass",
+    "replacement": "pass",
+    "no_unapproved_production": "pass",
+    "blockers_remain_visible": "pass",
+    "file_restart_no_duplicate": "pass",
+    "economic_separation": "pass",
+    "faults": "pass"
+  }
+}

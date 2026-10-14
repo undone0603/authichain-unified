@@ -16,6 +16,11 @@ import {
   isDppOffer,
   recordDppLoopEventOnce,
 } from "./dpp-loop";
+import {
+  beginProvisionContinuity,
+  finishProvisionContinuity,
+} from "./founder-exit/supabase-log";
+import { markRetryableFulfillment } from "./retryable-fulfillment";
 
 type SupabaseLike = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,6 +98,17 @@ export async function fulfillDppPaidSession(
     });
   }
 
+  try {
+    await beginProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
+  }
+
   const prov = await provisionPurchase(supabase, {
     email: email || null,
     userId: md.user_id || null,
@@ -107,9 +123,23 @@ export async function fulfillDppPaidSession(
   // Recording provisioned here would make a failed grant look done, and
   // Stripe would not retry.
   if (prov.status === "upsert_failed") {
-    throw new Error(
-      `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+    throw markRetryableFulfillment(
+      new Error(
+        `DPP provision failed: ${prov.error || "profiles upsert failed"}`
+      )
     );
+  }
+
+  try {
+    await finishProvisionContinuity(supabase, {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? null,
+      isDemo: demo,
+      plan,
+      grantAlreadyPresent: prov.skippedIdempotent === true,
+    });
+  } catch (err) {
+    throw markRetryableFulfillment(err);
   }
 
   if (visitId && prov.profileId) {
@@ -153,7 +183,12 @@ export async function fulfillDppPaidSession(
     // a failed send must be visible (log + funnel_events row), never swallowed.
     // The payment and the grant above are already done; we do not throw here,
     // because a Stripe retry would re-run provisioning, not just the email.
-    let result: { ok: boolean; provider?: string; status?: number; error?: string };
+    let result: {
+      ok: boolean;
+      provider?: string;
+      status?: number;
+      error?: string;
+    };
     try {
       result = await sendEmail({
         to: email,
@@ -207,7 +242,10 @@ const EMAIL_LIKE = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[^\s@<>"'(),;:]+/g;
 /** Strip anything address-shaped from a provider error and cap its length. */
 export function redactForLog(message: string | undefined | null): string {
   if (!message) return "unknown";
-  return message.replace(EMAIL_LIKE, "[redacted]").replace(/\s+/g, " ").slice(0, 200);
+  return message
+    .replace(EMAIL_LIKE, "[redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 200);
 }
 
 /**
@@ -231,7 +269,15 @@ async function recordActivationEmailFailed(
     const { error } = await supabase.from("funnel_events").insert({
       prospect_id: input.prospectId,
       stage: "complete_checkout",
-      source: ["seo", "direct", "email", "affiliate", "linkedin_post", "reddit_post", "gov_engine"].includes(input.source)
+      source: [
+        "seo",
+        "direct",
+        "email",
+        "affiliate",
+        "linkedin_post",
+        "reddit_post",
+        "gov_engine",
+      ].includes(input.source)
         ? input.source
         : "direct",
       event_type: "dpp_activation_email:failed",

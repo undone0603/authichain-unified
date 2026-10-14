@@ -740,7 +740,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
         eventId: "evt_dpp_fail",
         sessionId: "cs_live_a1y4Tu_fail",
         status: "error",
-        httpStatus: 400,
+        httpStatus: 500,
         error: "supabase down",
       })
     );
