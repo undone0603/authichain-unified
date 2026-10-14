@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from "vitest";
 
 vi.mock("../server/webhooks/stripe", () => ({
   handleStripeWebhook: vi.fn().mockResolvedValue({ received: true }),
@@ -979,6 +979,14 @@ describe("GET /api/generate requires the service role", () => {
     expect((await res.json()).auth).toBe(false);
   });
   it("stays 401 for a bearer token when credit checks cannot run", async () => {
+    // The bearer token goes to Supabase Auth at SUPABASE_URL. Without this stub
+    // that was a real request to example.supabase.co, which timed out CI at 5s.
+    // Unreachable auth must still fail closed.
+    const authFetch = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    vi.stubGlobal("fetch", authFetch);
+    onTestFinished(() => vi.unstubAllGlobals());
     const res = await app.request("/api/generate", {
       method: "POST",
       headers: {
@@ -991,6 +999,8 @@ describe("GET /api/generate requires the service role", () => {
       }),
     });
     expect(res.status).toBe(401);
+    expect(authFetch).toHaveBeenCalled();
+    expect(String(authFetch.mock.calls[0]?.[0])).toContain("example.supabase.co/auth/");
   });
 });
 
