@@ -38,6 +38,10 @@ import {
   planById,
   planByStripePriceId,
 } from "../../src/lib/plans";
+import {
+  isRetryableFulfillment,
+  markRetryableFulfillment,
+} from "../../src/lib/retryable-fulfillment";
 import { accrueAffiliateCommission } from "../../src/lib/affiliate-accrual";
 import {
   claimStripeEvent,
@@ -660,10 +664,10 @@ export async function handleStripeWebhook(
         handled: true,
       };
     } catch (dppErr) {
-      const msg = dppErr instanceof Error ? dppErr.message : String(dppErr);
+      const retryable = markRetryableFulfillment(dppErr);
       console.error("[stripe-webhook] DPP fulfill failed", dppErr);
-      await logDelivery("error", { httpStatus: 400, error: msg });
-      throw dppErr;
+      await logDelivery("error", { httpStatus: 500, error: retryable.message });
+      throw retryable;
     }
   }
 
@@ -1029,7 +1033,7 @@ export async function handleStripeWebhook(
           }
         } catch (dppErr) {
           console.error("[stripe-webhook] checkout fulfill failed", dppErr);
-          throw dppErr;
+          throw markRetryableFulfillment(dppErr);
         }
 
         await optionalDb(
@@ -1166,7 +1170,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type, handled };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await logDelivery("error", { httpStatus: 400, error: msg });
+    const httpStatus = isRetryableFulfillment(err) ? 500 : 400;
+    await logDelivery("error", { httpStatus, error: msg });
     throw err;
   }
 }

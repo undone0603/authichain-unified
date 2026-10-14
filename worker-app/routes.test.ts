@@ -145,7 +145,9 @@ describe("GET /api/checkout/plan/:planId", () => {
       "https://authichain.com/checkout/strainchain_passport?email=ops%40brand.com&utm_source=pricing"
     );
     const unknown = await app.request("/api/checkout/plan/nope");
-    expect(unknown.headers.get("location")).toBe("https://authichain.com/checkout");
+    expect(unknown.headers.get("location")).toBe(
+      "https://authichain.com/checkout"
+    );
     expect(dppCreate).not.toHaveBeenCalled();
   });
 });
@@ -220,6 +222,75 @@ describe("GET /api/generate", () => {
   });
 });
 
+describe("GET /qron/r/:objectId", () => {
+  it("returns indeterminate when the presentation store is not bound", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const json = await app.request(path, {
+      headers: { accept: "application/json" },
+    });
+    expect(json.status).toBe(503);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("qron_store_unavailable");
+    expect(JSON.stringify(body)).not.toContain("counterfeit");
+  });
+
+  it("returns Decision v1 indeterminate when the presentation is not stored", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const env = {
+      SESSIONS: {
+        get: async () => null,
+        put: async () => undefined,
+      },
+    };
+    const json = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      env
+    );
+    expect(json.status).toBe(404);
+    expect(json.headers.get("content-type")).toMatch(/json/);
+    const body = await json.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.decision_contract).toBe("AuthiChain Verification Decision v1");
+    expect(body.error).toBe("presentation_not_found");
+    expect(body.decision).not.toBe("counterfeit");
+
+    const html = await app.request(
+      path,
+      { headers: { accept: "text/html" } },
+      env
+    );
+    expect(html.status).toBe(404);
+    expect(html.headers.get("content-type")).toMatch(/html/);
+    const page = await html.text();
+    expect(page).toContain("<h1>indeterminate</h1>");
+    expect(page).not.toContain("counterfeit");
+  });
+
+  it("returns indeterminate when the stored presentation is malformed", async () => {
+    const objectId = "qron:url:deadbeef";
+    const path = `/qron/r/${encodeURIComponent(objectId)}`;
+    const res = await app.request(
+      path,
+      { headers: { accept: "application/json" } },
+      {
+        SESSIONS: {
+          get: async () => "{",
+          put: async () => undefined,
+        },
+      }
+    );
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.decision).toBe("indeterminate");
+    expect(body.error).toBe("presentation_malformed");
+  });
+});
+
 describe("POST /api/generate", () => {
   it("returns JSON 401 with credit packs when unauthenticated, not a plain-text 404", async () => {
     const res = await app.request("/api/generate", {
@@ -270,6 +341,27 @@ describe("app host /", () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/dashboard");
+  });
+
+  it.each([
+    ["/pricing", "https://authichain.com/pricing"],
+    ["/protocol", "https://authichain.com/protocol"],
+    ["/api/verify?id=polygon-anchor-1", "https://authichain.com/api/verify?id=polygon-anchor-1"],
+  ])("301s app.authichain.com%s to the apex", async (path, location) => {
+    const res = await app.request(path, {
+      headers: { host: "app.authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(location);
+  });
+
+  it("leaves /pricing alone on the apex host", async () => {
+    const res = await app.request("/pricing", {
+      headers: { host: "authichain.com" },
+      redirect: "manual",
+    });
+    expect(res.status).not.toBe(301);
   });
 });
 
@@ -882,9 +974,13 @@ describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback
   });
 });
 
-
 describe("GET /api/generate requires the service role", () => {
-  const keys = ["SUPABASE_URL","SUPABASE_ANON_KEY","NEXT_PUBLIC_SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"] as const;
+  const keys = [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ] as const;
   const saved: Partial<Record<(typeof keys)[number], string | undefined>> = {};
   beforeEach(() => {
     for (const key of keys) saved[key] = process.env[key];
@@ -894,14 +990,27 @@ describe("GET /api/generate requires the service role", () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   });
   afterEach(() => {
-    for (const key of keys) saved[key] === undefined ? delete process.env[key] : process.env[key] = saved[key]!;
+    for (const key of keys)
+      saved[key] === undefined
+        ? delete process.env[key]
+        : (process.env[key] = saved[key]!);
   });
   it("does not report auth from the anon key", async () => {
     const res = await app.request("/api/generate");
     expect((await res.json()).auth).toBe(false);
   });
   it("stays 401 for a bearer token when credit checks cannot run", async () => {
-    const res = await app.request("/api/generate", { method:"POST", headers:{"content-type":"application/json",authorization:"Bearer eyJhbGciOiJub3Q"}, body:JSON.stringify({targetUrl:"https://example.com",prompt:"neon"}) });
+    const res = await app.request("/api/generate", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer eyJhbGciOiJub3Q",
+      },
+      body: JSON.stringify({
+        targetUrl: "https://example.com",
+        prompt: "neon",
+      }),
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -919,6 +1028,22 @@ describe("POST /api/stripe/webhook — claim unavailable (PM-338)", () => {
       headers: { "stripe-signature": "t=123,v1=fake" },
     });
     expect(res.status).toBe(500);
+  });
+
+  it("answers 500 when paid fulfillment fails so Stripe retries", async () => {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const err = new Error("continuity_insert_failed");
+    err.name = "RetryableFulfillmentError";
+    (handleStripeWebhook as any).mockRejectedValueOnce(err);
+    const res = await app.request("/api/stripe/webhook", {
+      method: "POST",
+      body: "raw-stripe-payload",
+      headers: { "stripe-signature": "t=123,v1=fake" },
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Temporarily unavailable; retry");
+    expect(JSON.stringify(body)).not.toContain("continuity_insert_failed");
   });
 
   it("still answers 400 for other handler errors (bad signature)", async () => {

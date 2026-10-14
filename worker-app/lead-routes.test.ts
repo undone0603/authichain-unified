@@ -10,13 +10,22 @@ import {
 const { inserts, upserts, db } = vi.hoisted(() => ({
   inserts: [] as Array<{ table: string; row: unknown }>,
   upserts: [] as Array<{ table: string; row: unknown }>,
-  db: { formColumnsMissing: false },
+  db: { formColumnsMissing: false, insertFails: false, upsertFails: false },
 }));
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     from: (table: string) => ({
       insert: async (row: unknown) => {
+        if (db.insertFails && table === "lead_captures") {
+          return {
+            error: {
+              code: "23502",
+              message:
+                'null value in column "email" of relation "lead_captures"',
+            },
+          };
+        }
         if (
           db.formColumnsMissing &&
           table === "lead_captures" &&
@@ -36,6 +45,14 @@ vi.mock("@supabase/supabase-js", () => ({
         return { error: null };
       },
       upsert: async (row: unknown) => {
+        if (db.upsertFails && table === "leads") {
+          return {
+            error: {
+              code: "23502",
+              message: 'null value in column "email" of relation "leads"',
+            },
+          };
+        }
         upserts.push({ table, row });
         return { error: null };
       },
@@ -83,6 +100,8 @@ function hubspotCalls() {
 
 beforeEach(() => {
   db.formColumnsMissing = false;
+  db.insertFails = false;
+  db.upsertFails = false;
   inserts.length = 0;
   upserts.length = 0;
   fetchCalls = [];
@@ -126,6 +145,34 @@ describe("POST /api/book", () => {
     expect(urls).toContain("https://api.hubapi.com/crm/v3/objects/deals");
     expect(urls).toContain(
       "https://api.hubapi.com/crm/v4/objects/deals/202/associations/contacts/101/3"
+    );
+  });
+
+  it("does not report success or notify when the booking row is not stored", async () => {
+    db.upsertFails = true;
+    const res = await makeApp().request(
+      "/api/book",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Ada Lovelace",
+          email: "ada@acme.com",
+          company: "Acme",
+        }),
+      },
+      {
+        ...env,
+        RESEND_API_KEY: "re_test",
+        SALES_NOTIFY_EMAIL: "sales@example.com",
+      } as LeadEnv
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Could not store the request" });
+    expect(upserts).toHaveLength(0);
+    expect(hubspotCalls()).toHaveLength(0);
+    expect(fetchCalls.some(call => call.url.includes("api.resend.com"))).toBe(
+      false
     );
   });
 
@@ -227,6 +274,19 @@ describe("POST /api/lead-capture and /api/leads/capture", () => {
     expect(sent.jobtitle).toBe("Compliance lead");
     expect(sent.firstname).toBe("Ada");
     expect(sent.lastname).toBe("Lovelace");
+  });
+
+  it("does not report success or sync HubSpot when the lead row is not stored", async () => {
+    db.insertFails = true;
+    const res = await post("/api/leads/capture", {
+      email: "buyer@acme.com",
+      source: "battery-passport-page",
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Could not store the request" });
+    expect(inserts.some(i => i.table === "lead_captures")).toBe(false);
+    expect(hubspotCalls()).toHaveLength(0);
   });
 
   it("keeps the lead when the form-field migration is not applied yet", async () => {
